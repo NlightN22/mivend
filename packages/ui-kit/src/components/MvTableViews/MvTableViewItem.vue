@@ -54,7 +54,7 @@ function commitRename(): void {
             :class="{ 'mv-table-views__row--active': active }"
             @click="emit('pick', view.id)"
         >
-            {{ view.name }}
+            <span class="mv-table-views__name-text">{{ view.name }}</span>
             <span
                 v-if="view.isDefault"
                 class="mv-table-views__badge"
@@ -62,115 +62,49 @@ function commitRename(): void {
                 >Team default</span
             >
         </button>
-        <button
-            v-if="manageable && view.shared"
-            type="button"
-            class="mv-table-views__act"
-            :title="view.isDefault ? 'Clear team default' : 'Set as team default'"
-            data-testid="table-views-toggle-default"
-            :disabled="busy"
-            @click="emit('setDefault', view.id, !view.isDefault)"
-        >
-            {{ view.isDefault ? 'Unset' : 'Default' }}
-        </button>
-        <button
-            v-if="manageable"
-            type="button"
-            class="mv-table-views__act"
-            title="Rename"
-            :disabled="busy"
-            @click="startRename"
-        >
-            Rename
-        </button>
-        <button
-            type="button"
-            class="mv-table-views__act"
-            :title="view.shared ? 'Copy to my views' : 'Duplicate'"
-            :disabled="busy"
-            @click="emit('duplicate', view.id)"
-        >
-            Copy
-        </button>
-        <button
-            v-if="manageable"
-            type="button"
-            class="mv-table-views__act mv-table-views__act--danger"
-            title="Delete"
-            :disabled="busy"
-            @click="emit('delete', view.id)"
-        >
-            Delete
-        </button>
+        <div class="mv-table-views__acts">
+            <button
+                v-if="manageable && view.shared"
+                type="button"
+                class="mv-table-views__act"
+                :title="view.isDefault ? 'Clear team default' : 'Set as team default'"
+                data-testid="table-views-toggle-default"
+                :disabled="busy"
+                @click="emit('setDefault', view.id, !view.isDefault)"
+            >
+                {{ view.isDefault ? 'Unset' : 'Default' }}
+            </button>
+            <button
+                v-if="manageable"
+                type="button"
+                class="mv-table-views__act"
+                title="Rename"
+                :disabled="busy"
+                @click="startRename"
+            >
+                Rename
+            </button>
+            <button
+                type="button"
+                class="mv-table-views__act"
+                :title="view.shared ? 'Copy to my views' : 'Duplicate'"
+                :disabled="busy"
+                @click="emit('duplicate', view.id)"
+            >
+                Copy
+            </button>
+            <button
+                v-if="manageable"
+                type="button"
+                class="mv-table-views__act mv-table-views__act--danger"
+                title="Delete"
+                :disabled="busy"
+                @click="emit('delete', view.id)"
+            >
+                Delete
+            </button>
+        </div>
     </div>
 </template>
 
-<style scoped>
-.mv-table-views__item {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
-.mv-table-views__row {
-    flex: 1;
-    min-width: 0;
-    text-align: left;
-    border: 0;
-    border-radius: 8px;
-    padding: 6px 8px;
-    background: transparent;
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-    cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mv-table-views__row:hover {
-    background: var(--el-fill-color-light);
-}
-
-.mv-table-views__row--active {
-    background: var(--el-color-primary-light-9);
-    color: var(--el-color-primary-dark-2);
-    font-weight: 700;
-}
-
-.mv-table-views__badge {
-    margin-left: 6px;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--app-text-grey);
-}
-
-.mv-table-views__act {
-    border: 0;
-    background: transparent;
-    color: var(--app-text-grey);
-    font-size: 11px;
-    cursor: pointer;
-    padding: 4px;
-}
-
-.mv-table-views__act:hover:not(:disabled) {
-    color: var(--app-text-deep);
-}
-
-.mv-table-views__act--danger:hover:not(:disabled) {
-    color: var(--app-danger-fg);
-}
-
-.mv-table-views__input {
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 6px 8px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 8px;
-    background: var(--app-surface);
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-}
-</style>
+<style scoped src="./MvTableViewItem.css"></style>

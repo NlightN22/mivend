@@ -25,3 +25,9 @@ export const Dirty: Story = { args: { dirty: true } };
 export const Empty: Story = { args: { views: [], activeId: '' } };
 export const TeamManager: Story = { args: { canManageShared: true, activeId: '3', dirty: true } };
 export const TeamReadOnly: Story = { args: { canManageShared: false, activeId: '3', dirty: true } };
+export const NearRightEdge: Story = {
+    args: { canManageShared: true, activeId: '3', dirty: true },
+    decorators: [
+        () => ({ template: '<div style="display:flex;justify-content:flex-end"><story /></div>' }),
+    ],
+};

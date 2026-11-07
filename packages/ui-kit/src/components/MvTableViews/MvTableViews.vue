@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import { Collection } from '@element-plus/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvTableViewItem, { type TableViewItem } from './MvTableViewItem.vue';
@@ -30,6 +31,9 @@ const emit = defineEmits<{
 
 const open = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
+const panelEl = ref<HTMLElement | null>(null);
+const isMobile = useIsMobileViewport(640);
+const panelPos = ref<Record<string, string>>({});
 const newName = ref('');
 const newScope = ref<TableViewSaveScope>('PERSONAL');
 
@@ -44,8 +48,46 @@ const canUpdateActive = computed(
 function manageable(view: TableViewItem): boolean {
     return !view.shared || !!props.canManageShared;
 }
+const PANEL_WIDTH = 340;
+const GAP = 6;
+const EDGE = 8;
+
+function place(): void {
+    const trigger = rootEl.value;
+    if (!trigger || isMobile.value) {
+        panelPos.value = {};
+        return;
+    }
+    const r = trigger.getBoundingClientRect();
+    const width = Math.min(PANEL_WIDTH, window.innerWidth - EDGE * 2);
+    const left = Math.max(EDGE, Math.min(r.left, window.innerWidth - width - EDGE));
+    const below = window.innerHeight - r.bottom - GAP - EDGE;
+    const above = r.top - GAP - EDGE;
+    const flip = below < 240 && above > below;
+    panelPos.value = flip
+        ? {
+              left: `${left}px`,
+              bottom: `${window.innerHeight - r.top + GAP}px`,
+              width: `${width}px`,
+              maxHeight: `${above}px`,
+          }
+        : {
+              left: `${left}px`,
+              top: `${r.bottom + GAP}px`,
+              width: `${width}px`,
+              maxHeight: `${below}px`,
+          };
+}
+watch(open, async value => {
+    if (!value) return;
+    place();
+    await nextTick();
+    place();
+});
 function onDocClick(e: MouseEvent): void {
-    if (rootEl.value && !rootEl.value.contains(e.target as Node)) open.value = false;
+    const target = e.target as Node;
+    if (rootEl.value?.contains(target) || panelEl.value?.contains(target)) return;
+    open.value = false;
 }
 function onEscape(e: KeyboardEvent): void {
     if (e.key === 'Escape') open.value = false;
@@ -53,10 +95,14 @@ function onEscape(e: KeyboardEvent): void {
 onMounted(() => {
     document.addEventListener('click', onDocClick);
     document.addEventListener('keydown', onEscape);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
 });
 onBeforeUnmount(() => {
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onEscape);
+    window.removeEventListener('resize', place);
+    window.removeEventListener('scroll', place, true);
 });
 
 function create(): void {
@@ -84,194 +130,103 @@ function pick(id: string): void {
             <span class="mv-table-views__label">{{ activeName || 'Views' }}</span>
             <span v-if="dirty" class="mv-table-views__dirty" title="Unsaved changes">*</span>
         </MvButton>
-        <div v-if="open" class="mv-table-views__panel" role="menu">
-            <div class="mv-table-views__title">Views</div>
-            <button
-                type="button"
-                class="mv-table-views__row"
-                :class="{ 'mv-table-views__row--active': !activeId }"
-                @click="pick('')"
+        <Teleport to="body">
+            <div v-if="open && isMobile" class="mv-table-views__backdrop" @click="open = false" />
+            <div
+                v-if="open"
+                ref="panelEl"
+                class="mv-table-views__panel"
+                :class="{ 'mv-table-views__panel--sheet': isMobile }"
+                :style="panelPos"
+                role="menu"
+                data-testid="table-views-panel"
             >
-                Default view
-            </button>
-            <template
-                v-for="group in [
-                    { key: 'mine', label: 'My views', items: mine },
-                    { key: 'team', label: 'Team views', items: team },
-                ]"
-                :key="group.key"
-            >
-                <div
-                    v-if="group.items.length"
-                    class="mv-table-views__group"
-                    :data-testid="`table-views-group-${group.key}`"
+                <div class="mv-table-views__title">Views</div>
+                <button
+                    type="button"
+                    class="mv-table-views__row"
+                    :class="{ 'mv-table-views__row--active': !activeId }"
+                    @click="pick('')"
                 >
-                    {{ group.label }}
-                </div>
-                <MvTableViewItem
-                    v-for="view in group.items"
-                    :key="view.id"
-                    :view="view"
-                    :active="view.id === activeId"
-                    :manageable="manageable(view)"
-                    :busy="busy"
-                    @pick="pick"
-                    @rename="(id, name) => emit('rename', id, name)"
-                    @duplicate="emit('duplicate', $event)"
-                    @delete="emit('delete', $event)"
-                    @set-default="(id, value) => emit('setDefault', id, value)"
-                />
-            </template>
-            <div class="mv-table-views__footer">
-                <div v-if="activeId && dirty && canUpdateActive" class="mv-table-views__actions">
-                    <MvButton size="sm" variant="primary" :disabled="busy" @click="emit('update')"
-                        >Update "{{ activeName }}"</MvButton
+                    Default view
+                </button>
+                <template
+                    v-for="group in [
+                        { key: 'mine', label: 'My views', items: mine },
+                        { key: 'team', label: 'Team views', items: team },
+                    ]"
+                    :key="group.key"
+                >
+                    <div
+                        v-if="group.items.length"
+                        class="mv-table-views__group"
+                        :data-testid="`table-views-group-${group.key}`"
                     >
-                    <MvButton size="sm" variant="ghost" @click="emit('reset')">Discard</MvButton>
-                </div>
-                <div class="mv-table-views__new">
-                    <input
-                        v-model="newName"
-                        class="mv-table-views__input"
-                        placeholder="Save current table as…"
-                        data-testid="table-views-name"
-                        @keyup.enter="create"
+                        {{ group.label }}
+                    </div>
+                    <MvTableViewItem
+                        v-for="view in group.items"
+                        :key="view.id"
+                        :view="view"
+                        :active="view.id === activeId"
+                        :manageable="manageable(view)"
+                        :busy="busy"
+                        @pick="pick"
+                        @rename="(id, name) => emit('rename', id, name)"
+                        @duplicate="emit('duplicate', $event)"
+                        @delete="emit('delete', $event)"
+                        @set-default="(id, value) => emit('setDefault', id, value)"
                     />
-                    <select
-                        v-if="canManageShared"
-                        v-model="newScope"
-                        class="mv-table-views__input mv-table-views__scope"
-                        data-testid="table-views-scope"
+                </template>
+                <div class="mv-table-views__footer">
+                    <div
+                        v-if="activeId && dirty && canUpdateActive"
+                        class="mv-table-views__actions"
                     >
-                        <option value="PERSONAL">Only me</option>
-                        <option value="SHARED">Team</option>
-                    </select>
-                    <MvButton
-                        size="sm"
-                        variant="primary"
-                        :disabled="busy || !newName.trim()"
-                        data-testid="table-views-save"
-                        @click="create"
-                        >Save</MvButton
-                    >
+                        <MvButton
+                            size="sm"
+                            variant="primary"
+                            :disabled="busy"
+                            @click="emit('update')"
+                            >Update "{{ activeName }}"</MvButton
+                        >
+                        <MvButton size="sm" variant="ghost" @click="emit('reset')"
+                            >Discard</MvButton
+                        >
+                    </div>
+                    <div class="mv-table-views__new">
+                        <input
+                            v-model="newName"
+                            class="mv-table-views__input mv-table-views__name"
+                            placeholder="Save current table as…"
+                            data-testid="table-views-name"
+                            @keyup.enter="create"
+                        />
+                        <div class="mv-table-views__new-row">
+                            <select
+                                v-if="canManageShared"
+                                v-model="newScope"
+                                class="mv-table-views__input mv-table-views__scope"
+                                data-testid="table-views-scope"
+                            >
+                                <option value="PERSONAL">Only me</option>
+                                <option value="SHARED">Team</option>
+                            </select>
+                            <MvButton
+                                size="sm"
+                                variant="primary"
+                                class="mv-table-views__save"
+                                :disabled="busy || !newName.trim()"
+                                data-testid="table-views-save"
+                                @click="create"
+                                >Save</MvButton
+                            >
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Teleport>
     </div>
 </template>
 
-<style scoped>
-.mv-table-views {
-    position: relative;
-    display: inline-block;
-}
-
-.mv-table-views__icon {
-    width: 15px;
-    height: 15px;
-}
-
-.mv-table-views__label {
-    margin-left: 6px;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mv-table-views__dirty {
-    margin-left: 2px;
-    color: var(--app-warn-fg);
-    font-weight: 800;
-}
-
-.mv-table-views__panel {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 6px);
-    z-index: var(--mv-z-dropdown);
-    width: 320px;
-    max-width: calc(100vw - 32px);
-    padding: 12px;
-    background: var(--app-surface);
-    border: 1px solid var(--el-border-color);
-    border-radius: 10px;
-    box-shadow: 0 10px 30px var(--app-ink-10);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.mv-table-views__title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--app-nav-text-strong);
-}
-
-.mv-table-views__row {
-    flex: 1;
-    min-width: 0;
-    text-align: left;
-    border: 0;
-    border-radius: 8px;
-    padding: 6px 8px;
-    background: transparent;
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-    cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mv-table-views__row:hover {
-    background: var(--el-fill-color-light);
-}
-
-.mv-table-views__row--active {
-    background: var(--el-color-primary-light-9);
-    color: var(--el-color-primary-dark-2);
-    font-weight: 700;
-}
-
-.mv-table-views__group {
-    margin-top: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--app-text-grey);
-}
-
-.mv-table-views__scope {
-    flex: 0 0 auto;
-    width: auto;
-}
-
-.mv-table-views__footer {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 6px;
-    padding-top: 8px;
-    border-top: 1px solid var(--el-border-color);
-}
-
-.mv-table-views__actions,
-.mv-table-views__new {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.mv-table-views__input {
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 6px 8px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 8px;
-    background: var(--app-surface);
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-}
-</style>
+<style scoped src="./MvTableViews.css"></style>
