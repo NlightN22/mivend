@@ -52,6 +52,7 @@ export default {
         products: 'Products',
         button: 'Search',
         open: 'Open search',
+        close: 'Close search',
         clear: 'Clear',
         removeScope: 'Remove category',
         noResults: 'No results found for "{query}"',

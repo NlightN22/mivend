@@ -98,4 +98,16 @@ const emit = defineEmits<{
     color: var(--el-text-color-secondary);
     white-space: nowrap;
 }
+
+@media (max-width: 600px) {
+    .mv-search-dropdown__item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .mv-search-dropdown__item-sub {
+        white-space: normal;
+    }
+}
 </style>

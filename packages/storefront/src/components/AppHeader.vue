@@ -26,6 +26,7 @@ import { activeBottomTab } from '../composables/bottomTabActive';
 import { useAccountMenu } from '../composables/useAccountMenu';
 import { useLogout } from '../composables/useLogout';
 import { useHeaderSearch } from '../composables/useHeaderSearch';
+import MobileSearch from './MobileSearch.vue';
 import { useNotificationPanelLabels } from '../composables/useNotificationPanelLabels';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
@@ -185,7 +186,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     <span>{{ catalogOpen ? '✕' : '☰' }}</span> {{ t('nav.catalog') }}
                 </button>
 
-                <div class="app-header__search">
+                <div v-if="!phone" class="app-header__search">
                     <MvSearchInput
                         v-model="searchQuery"
                         :placeholder="
@@ -253,6 +254,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         <span>{{ t('nav.signIn') }}</span>
                     </RouterLink>
                 </template>
+
+                <MobileSearch
+                    v-if="phone"
+                    v-model:query="searchQuery"
+                    :scope-label="scopeLabel"
+                    :suggestions="suggestions"
+                    @search="onSearch"
+                    @select="onSelectSuggestion"
+                    @remove-scope="onRemoveScope"
+                />
 
                 <MvNotificationBell
                     v-if="notificationsStore"

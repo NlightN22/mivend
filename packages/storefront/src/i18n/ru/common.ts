@@ -54,6 +54,7 @@ const ru: typeof en = {
         products: 'Товары',
         button: 'Найти',
         open: 'Открыть поиск',
+        close: 'Закрыть поиск',
         clear: 'Очистить',
         removeScope: 'Убрать категорию',
         noResults: 'По запросу «{query}» ничего не найдено',
