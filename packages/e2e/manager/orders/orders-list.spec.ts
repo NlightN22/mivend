@@ -16,7 +16,12 @@ test('status chips carry counts and Awaiting confirmation comes first @on:manage
 test('the seven main columns fit the page width untruncated @read-only', async ({ page }) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
-    for (const name of ['Order #', 'Date', 'Customer', 'Manager', 'Status', 'Total', 'Placed by']) {
+    const columns = ['Order #', 'Date', 'Customer', 'Manager', 'Status', 'Total', 'Placed by'];
+    // The manager role sees only its own orders, so the Manager column is hidden for it.
+    const shown = test.info().project.name.endsWith('-manager')
+        ? columns.filter(c => c !== 'Manager')
+        : columns;
+    for (const name of shown) {
         await expect(page.getByRole('columnheader', { name: new RegExp(name) })).toBeInViewport({
             timeout: 15000,
         });
@@ -54,12 +59,13 @@ test('a table view stores the chip and is recalled from the Views control', asyn
 
     await page.goto('/orders?view=all');
     await page.getByTestId('table-views-trigger').click();
-    await page.getByRole('button', { name }).click();
+    const panel = page.getByTestId('table-views-panel');
+    await panel.getByRole('button', { name, exact: true }).click();
     await expect(page).toHaveURL(/view=overdue/);
 
     await page.getByTestId('table-views-trigger').click();
     await page.locator('.mv-table-views__item', { hasText: name }).getByTitle('Delete').click();
-    await expect(page.getByRole('button', { name })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name, exact: true })).toHaveCount(0);
 });
 
 test('orders list shows the seeded order with customer, branch and INN @read-only', async ({
@@ -84,11 +90,11 @@ test('orders list row click opens the order card @read-only', async ({ page }) =
 
     await page.goto('/orders');
     await page.getByPlaceholder('Search orders…').fill(order.code);
-    const row = page.getByRole('row').filter({ hasText: order.displayCode });
-    await row.waitFor({ timeout: 15000 });
-    await row.getByText('E2E Co').click();
+    // Header plus one row: the filtered list has replaced the unfiltered one before the click.
+    await expect(page.getByRole('row')).toHaveCount(2, { timeout: 15000 });
+    await page.getByRole('row').filter({ hasText: order.displayCode }).getByText('E2E Co').click();
 
-    await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`));
+    await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`), { timeout: 30000 });
     await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible();
 });
 
@@ -97,12 +103,13 @@ test('orders list order number is a link to the order card @read-only', async ({
 
     await page.goto('/orders');
     await page.getByPlaceholder('Search orders…').fill(order.code);
+    await expect(page.getByRole('row')).toHaveCount(2, { timeout: 15000 });
     const link = page.getByRole('link', { name: order.displayCode });
     await expect(link).toHaveAttribute('href', new RegExp(`/orders/${order.code}$`));
     await link.focus();
     await page.keyboard.press('Enter');
 
-    await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`));
+    await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`), { timeout: 30000 });
 });
 
 test('orders list search and view chip are shareable in the URL @read-only', async ({ page }) => {

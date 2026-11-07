@@ -21,7 +21,7 @@ test('a portal admin shares a view with the team and makes it the team default @
         await page.getByTestId('table-views-save').click();
         await expect(trigger(page)).toContainText(name);
 
-        await trigger(page).click();
+        // Saving leaves the panel open; a second trigger click would close it.
         const group = page.getByTestId('table-views-group-team');
         await expect(group).toBeVisible();
         const item = page.locator('.mv-table-views__item', { hasText: name });
@@ -41,7 +41,9 @@ test('a portal admin shares a view with the team and makes it the team default @
     } finally {
         await deleteTeamView(page, name);
     }
-    await expect(page.getByRole('button', { name })).toHaveCount(0);
+    await expect(page.getByTestId('table-views-panel').getByRole('button', { name })).toHaveCount(
+        0,
+    );
 });
 
 test('an operator cannot save a view for the team @on:manager-operator @read-only', async ({

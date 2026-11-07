@@ -130,7 +130,8 @@ test('customer detail Documents tab shows the customer document list @on:manager
 }) => {
     await openE2eCustomerDetail(page);
 
-    await page.getByRole('button', { name: 'Documents' }).click();
+    // The sidebar has a "Documents" group button too, so scope to the card.
+    await page.locator('.customer-detail').getByRole('button', { name: 'Documents' }).click();
     // Newer proforma invoices push the seeded contract off the first page, so search for it.
     await page.getByPlaceholder('Search documents…').fill('E2E-CONTRACT-001');
     await expect(page.getByText('contract').first()).toBeVisible({ timeout: 15000 });
