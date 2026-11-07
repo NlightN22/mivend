@@ -58,6 +58,6 @@ export class GeoResolver {
     }
 }
 
-function isCoordinate(lat: number, lng: number): boolean {
+export function isCoordinate(lat: number, lng: number): boolean {
     return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 }

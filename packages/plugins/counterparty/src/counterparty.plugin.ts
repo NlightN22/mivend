@@ -68,6 +68,7 @@ import { shopApiSchema } from './trading-point.schema';
 import { myContractsSchema } from './my-contracts.schema';
 import { MyContractsResolver } from './my-contracts.resolver';
 import { AddressSuggestResolver } from './address-suggest.resolver';
+import { AdminGeoResolver } from './geo/admin-geo.resolver';
 import { GeoResolver } from './geo/geo.resolver';
 import { geoSchema } from './geo/geo.schema';
 import { GeoService } from './geo/geo.service';
@@ -97,6 +98,7 @@ const adminResolvers = [
     CounterpartyCreditResolver,
     CounterpartyCustomerLinkResolver,
     TradingPointAdminResolver,
+    AdminGeoResolver,
     CreditTermResolver,
     CounterpartyTeamFieldResolver,
     CounterpartyTeamMutationResolver,
@@ -129,6 +131,7 @@ const adminResolvers = [
         schema: gql`
             ${adminApiSchema}
             ${visibilitySchema}
+            ${geoSchema}
         `,
         resolvers: adminResolvers,
     },
