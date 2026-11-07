@@ -93,6 +93,14 @@ separate permission so viewing a page never implies being able to act on it. `Re
 gates requeueing failed and rebuilding skipped outbound events (issue #200); it is granted explicitly
 to a role, nothing inherits it from `ManageErpIntegration`.
 
+### Team table views (#320)
+
+`ManageSharedTableViews` (department-head, general-director, portal-admin) creates, edits, deletes team-wide
+table views and assigns the team default of a list. Reading and applying a team view needs only an
+authenticated staff member: a view stores filters, sort and column choices (UI state), never rows, so it
+cannot widen data scope; the data a view shows still passes the list's own permission and scope. Personal views
+stay private to their administrator; a foreign personal view is a silent no-op.
+
 ### Check results and policies (#237)
 
 `ReadCheckResults` is granted to every role that sees orders in the manager portal (operator, manager,

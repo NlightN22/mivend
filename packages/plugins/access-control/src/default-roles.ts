@@ -77,6 +77,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCounterpartyTeam',
             'ManageVisibilityGrants',
             'ReadEntityHistory',
+            'ManageSharedTableViews',
         ],
         accessScopeConfig: {
             counterparty: 'department',
@@ -114,6 +115,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'RequestCreditTermApproval',
             'ApproveSecurityLimit',
             'ManageApprovalWorkflows',
+            'ManageSharedTableViews',
             'ReadCheckResults',
             'ManageCheckPolicies',
             'ReassignCounterpartyManager',
@@ -170,6 +172,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageAccessControl',
             'ManageAdministratorLifecycle',
             'ManageApprovalWorkflows',
+            'ManageSharedTableViews',
             'ReadCheckResults',
             'ManageCheckPolicies',
             'ReassignCounterpartyManager',

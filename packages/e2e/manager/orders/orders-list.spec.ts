@@ -13,16 +13,35 @@ test('status chips carry counts and Awaiting confirmation comes first @on:manage
     await expect(page.getByTestId('orders-kpis')).toHaveCount(0);
 });
 
-test('the seven main columns fit the page width without horizontal scroll @read-only', async ({
-    page,
-}) => {
+test('the seven main columns fit the page width untruncated @read-only', async ({ page }) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
-    for (const name of ['Order #', 'Date created', 'Customer', 'Status', 'Total', 'Placed by']) {
+    for (const name of ['Order #', 'Date', 'Customer', 'Manager', 'Status', 'Total', 'Placed by']) {
         await expect(page.getByRole('columnheader', { name: new RegExp(name) })).toBeInViewport({
             timeout: 15000,
         });
     }
+    await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
+    const clipped = await page.evaluate(
+        () =>
+            [...document.querySelectorAll('[role=grid] *, table *')].filter(
+                el =>
+                    getComputedStyle(el).textOverflow === 'ellipsis' &&
+                    el.scrollWidth > el.clientWidth,
+            ).length,
+    );
+    expect(clipped).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        1360,
+    );
+});
+
+test('status chips wrap on desktop and none is clipped @read-only', async ({ page }) => {
+    await page.setViewportSize({ width: 1360, height: 900 });
+    await page.goto('/orders');
+    const chips = page.locator('.mv-filter-chip');
+    await expect(chips.first()).toBeVisible({ timeout: 15000 });
+    for (let i = 0; i < (await chips.count()); i++) await expect(chips.nth(i)).toBeInViewport();
 });
 
 test('a table view stores the chip and is recalled from the Views control', async ({ page }) => {

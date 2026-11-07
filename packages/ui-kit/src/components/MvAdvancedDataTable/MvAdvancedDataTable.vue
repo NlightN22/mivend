@@ -632,6 +632,8 @@ const isMobile = useIsMobileViewport(800);
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .mv-advanced-data-table__toolbar-end {

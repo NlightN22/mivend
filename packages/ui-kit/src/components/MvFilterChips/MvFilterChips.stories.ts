@@ -53,3 +53,28 @@ export const WithCounts: Story = {
             '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
     }),
 };
+
+const MANY_CHIPS: FilterChip[] = [
+    { key: 'awaiting', label: 'Awaiting confirmation', variant: 'warning', count: 169 },
+    { key: 'all', label: 'All', count: 1358 },
+    { key: 'processing', label: 'Processing', variant: 'info', count: 0 },
+    { key: 'shipment', label: 'Awaiting shipment', variant: 'info', count: 1 },
+    { key: 'overdue', label: 'Overdue', variant: 'danger', count: 1 },
+    { key: 'rejected', label: 'Rejected by ERP', variant: 'danger', count: 0 },
+    { key: 'failed', label: 'Reservation failed', variant: 'warning', count: 119 },
+    { key: 'blocked', label: 'Blocked by ERP requirements', variant: 'warning', count: 232 },
+];
+
+const manyTemplate = {
+    components: { MvFilterChips },
+    setup: () => ({ active: ref('awaiting'), chips: MANY_CHIPS }),
+    template:
+        '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
+};
+
+export const ScrollableWrapsOnDesktop: Story = { render: () => manyTemplate };
+
+export const ScrollableScrollsOnPhone: Story = {
+    render: () => manyTemplate,
+    parameters: { viewport: { defaultViewport: 'mvMobile' } },
+};

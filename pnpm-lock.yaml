@@ -1495,6 +1495,9 @@ importers:
 
   packages/plugins/saved-views:
     dependencies:
+      '@mivend/plugin-access-control':
+        specifier: workspace:*
+        version: link:../access-control
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.7(graphql@16.14.2)

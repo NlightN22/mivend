@@ -60,3 +60,16 @@ describe('default roles: category visibility', () => {
         }
     });
 });
+
+describe('default roles: shared table views', () => {
+    it('only leadership, department heads and the portal admin manage team views', () => {
+        const managers = DEFAULT_ROLES.filter(r =>
+            r.permissions.includes('ManageSharedTableViews'),
+        );
+        expect(managers.map(r => r.code).sort()).toEqual([
+            'department-head',
+            'general-director',
+            'portal-admin',
+        ]);
+    });
+});

@@ -106,7 +106,10 @@ describe('orders list rows', () => {
     });
 
     it('shows the customer for a storefront order', () => {
-        expect(toOrderRows([order(null)], ctx)[0].placedBy).toBe('Ann Buyer (customer)');
+        expect(toOrderRows([order(null)], ctx)[0]).toMatchObject({
+            placedBy: 'Ann Buyer',
+            placedByMeta: 'customer',
+        });
     });
 
     it('flags a shipment-pending order as overdue attention', () => {

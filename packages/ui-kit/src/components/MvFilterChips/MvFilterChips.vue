@@ -108,15 +108,18 @@ const emit = defineEmits<{ select: [key: string] }>();
     color: var(--app-warn-bg);
 }
 
-.mv-filter-chips--scrollable {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    max-width: 100%;
-    scrollbar-width: none;
-}
+/* Wraps on desktop; on a phone the row scrolls sideways instead of growing tall. */
+@media (max-width: 800px) {
+    .mv-filter-chips--scrollable {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        max-width: 100%;
+        scrollbar-width: none;
+    }
 
-.mv-filter-chips--scrollable .mv-filter-chip {
-    flex: none;
+    .mv-filter-chips--scrollable .mv-filter-chip {
+        flex: none;
+    }
 }
 
 .mv-filter-chip:hover {

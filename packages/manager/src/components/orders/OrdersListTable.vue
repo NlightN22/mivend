@@ -233,6 +233,15 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
             </div>
         </template>
 
+        <template #cell-placedBy="{ data }">
+            <div class="orders-list-table__customer">
+                <span>{{ (data as OrderListRow).placedBy }}</span>
+                <span class="orders-list-table__customer-meta">{{
+                    (data as OrderListRow).placedByMeta
+                }}</span>
+            </div>
+        </template>
+
         <template #cell-reservationState="{ data }">
             <MvStatusBadge :variant="(data as OrderListRow).reservationVariant">{{
                 (data as OrderListRow).reservation

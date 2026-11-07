@@ -12,11 +12,18 @@ const adminApiSchema = gql`
         name: String!
         filters: String!
         visibleColumns: [String!]!
+        scope: SavedTableViewScope!
+        isDefault: Boolean!
         createdAt: DateTime!
     }
 
+    enum SavedTableViewScope {
+        PERSONAL
+        SHARED
+    }
+
     extend type Query {
-        myTableViews(pageKey: String!): [SavedTableView!]!
+        tableViews(pageKey: String!): [SavedTableView!]!
     }
 
     extend type Mutation {
@@ -25,7 +32,15 @@ const adminApiSchema = gql`
             name: String!
             filters: String!
             visibleColumns: [String!]!
+            scope: SavedTableViewScope
         ): SavedTableView!
+        updateTableView(
+            id: ID!
+            name: String
+            filters: String
+            visibleColumns: [String!]
+        ): SavedTableView
+        setTableViewDefault(id: ID!, isDefault: Boolean!): SavedTableView
         deleteTableView(id: ID!): Boolean!
     }
 `;

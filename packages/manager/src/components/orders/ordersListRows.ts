@@ -28,6 +28,7 @@ export type OrderListRow = {
     total: string;
     currencyCode: string;
     placedBy: string;
+    placedByMeta: string;
     reservation: string;
     reservationVariant: StatusBadgeVariant;
     attention: string;
@@ -54,9 +55,7 @@ function lookup<T extends { id: string }>(
 function placedByLabel(order: OrderListItem, managers: ManagerOption[]): string {
     const adminId = order.customFields?.placedByAdministratorId;
     if (adminId) return lookup(managers, adminId, m => m.name);
-    return order.customer
-        ? `${order.customer.firstName} ${order.customer.lastName} (customer)`
-        : '—';
+    return order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : '—';
 }
 
 function flagsFor(order: OrderListItem, ctx: OrderRowContext): OrderFlag[] {
@@ -100,6 +99,7 @@ export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): Order
             }).format(order.totalWithTax / 100),
             currencyCode: order.currencyCode,
             placedBy: placedByLabel(order, ctx.managers),
+            placedByMeta: order.customFields?.placedByAdministratorId ? '' : 'customer',
             reservation: reservationRaw
                 ? (ORDER_RESERVATION_STATE_OPTIONS.find(o => o.value === reservationRaw)?.label ??
                   reservationRaw)

@@ -65,6 +65,11 @@ export const CustomPermission = {
         description:
             'Read and change the consequence policy of each check (docs/checks-and-policies.md)',
     }),
+    ManageSharedTableViews: new PermissionDefinition({
+        name: 'ManageSharedTableViews',
+        description:
+            'Create, edit, delete team-wide table views and assign the team default view of a list',
+    }),
     ReassignCounterpartyManager: new PermissionDefinition({
         name: 'ReassignCounterpartyManager',
         description:

@@ -3,7 +3,7 @@ import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
 import { Permission } from '@vendure/common/lib/generated-types';
 
 import { SavedTableView } from './entities/saved-table-view.entity';
-import { SavedViewsService } from './saved-views.service';
+import { SavedViewsService, SaveTableViewInput, UpdateTableViewInput } from './saved-views.service';
 
 @Resolver()
 export class SavedViewsResolver {
@@ -11,7 +11,7 @@ export class SavedViewsResolver {
 
     @Query()
     @Allow(Permission.Authenticated)
-    async myTableViews(
+    async tableViews(
         @Ctx() ctx: RequestContext,
         @Args() args: { pageKey: string },
     ): Promise<SavedTableView[]> {
@@ -23,14 +23,29 @@ export class SavedViewsResolver {
     @Allow(Permission.Authenticated)
     async saveTableView(
         @Ctx() ctx: RequestContext,
-        @Args() args: { pageKey: string; name: string; filters: string; visibleColumns: string[] },
+        @Args() args: SaveTableViewInput,
     ): Promise<SavedTableView> {
-        return this.savedViewsService.save(ctx, {
-            pageKey: args.pageKey,
-            name: args.name,
-            filters: args.filters,
-            visibleColumns: args.visibleColumns,
-        });
+        return this.savedViewsService.save(ctx, args);
+    }
+
+    @Mutation()
+    @Transaction()
+    @Allow(Permission.Authenticated)
+    async updateTableView(
+        @Ctx() ctx: RequestContext,
+        @Args() args: UpdateTableViewInput,
+    ): Promise<SavedTableView | null> {
+        return this.savedViewsService.update(ctx, args);
+    }
+
+    @Mutation()
+    @Transaction()
+    @Allow(Permission.Authenticated)
+    async setTableViewDefault(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string; isDefault: boolean },
+    ): Promise<SavedTableView | null> {
+        return this.savedViewsService.setDefault(ctx, args.id, args.isDefault);
     }
 
     @Mutation()
