@@ -102,6 +102,8 @@ export async function seedMasterData(target: ImportTarget): Promise<void> {
             counterpartyErpId: erpId,
             name: `Point of ${erpId}`,
             address: 'Test street 1',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         })),
     );

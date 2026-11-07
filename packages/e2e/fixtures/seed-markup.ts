@@ -90,6 +90,8 @@ export const markupSeedRecords = [
             counterpartyErpId: MARKUP_COUNTERPARTY_ID,
             name: 'E2E Markup Point',
             address: 'Markup Street 1',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         },
     },
@@ -120,7 +122,10 @@ export async function prepareMarkupCustomer(
         `mutation($id: ID!, $input: TradingPointDetailsInput!) {
             updateTradingPointDetails(id: $id, input: $input) { id }
         }`,
-        { id: point.id, input: { servicingBranchId: centralBranchId } },
+        {
+            id: point.id,
+            input: { servicingBranchId: centralBranchId, latitude: 55.75, longitude: 37.62 },
+        },
         adminToken,
     );
     const cookie = await shopLoginCookie(MARKUP_CUSTOMER.email, MARKUP_CUSTOMER.password);

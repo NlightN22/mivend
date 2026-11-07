@@ -153,7 +153,14 @@ export default async function globalSetup(): Promise<void> {
                 `mutation($id: ID!, $input: TradingPointDetailsInput!) {
                     updateTradingPointDetails(id: $id, input: $input) { id }
                 }`,
-                { id: tp.id, input: { servicingBranchId: centralBranchId } },
+                {
+                    id: tp.id,
+                    input: {
+                        servicingBranchId: centralBranchId,
+                        latitude: 55.75,
+                        longitude: 37.62,
+                    },
+                },
                 adminToken,
             );
         }

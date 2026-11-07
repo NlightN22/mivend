@@ -53,7 +53,7 @@ export async function seedRelations(superadmin: string, ids: VisIds): Promise<vo
     );
 
     await call(
-        `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b }) { id } }`,
+        `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b, latitude: 55.75, longitude: 37.62 }) { id } }`,
         { id: ids.points[POINT_OVERRIDE.client], b: ids.branches[POINT_OVERRIDE.branch] },
     );
 }

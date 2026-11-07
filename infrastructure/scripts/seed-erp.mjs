@@ -1400,6 +1400,8 @@ async function main() {
             contactName: 'Ivan Petrov',
             contactPhone: '+7 913 100 0001',
             workingHours: 'Mon–Fri 08:00–18:00',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         },
         {
@@ -1410,6 +1412,8 @@ async function main() {
             contactName: 'Alexey Smirnov',
             contactPhone: '+7 913 200 0002',
             workingHours: 'Mon–Sat 09:00–17:00',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         },
         {
@@ -1417,6 +1421,8 @@ async function main() {
             counterpartyErpId: 'cnt-001',
             name: 'Warehouse B',
             address: 'Warehouse Zone, 8',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         },
         // The checkout buyers need a point of their own: an order takes its branch from it.
@@ -1425,6 +1431,8 @@ async function main() {
             counterpartyErpId,
             name: 'Pickup point',
             address: 'Depot Rd, 1',
+            latitude: 55.75,
+            longitude: 37.62,
             isActive: true,
         })),
     ];
