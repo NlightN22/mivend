@@ -24,12 +24,16 @@ watch(open, isOpen => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     // After the opening click reaches MvSearchInput's outside-click handler, or it resets its focus state.
     if (isOpen) setTimeout(() => overlayRef.value?.querySelector('input')?.focus(), 0);
-    else nextTick(() => triggerRef.value?.focus());
 });
 
 onBeforeUnmount(() => {
     document.body.style.overflow = '';
 });
+
+function dismiss(): void {
+    open.value = false;
+    nextTick(() => triggerRef.value?.focus());
+}
 
 function onSearch(value: string): void {
     open.value = false;
@@ -61,7 +65,7 @@ function onSelect(item: SuggestionItem): void {
             role="dialog"
             aria-modal="true"
             :aria-label="t('search.open')"
-            @keydown.esc="open = false"
+            @keydown.esc="dismiss"
         >
             <MvSearchInput
                 :model-value="props.query"
@@ -78,7 +82,7 @@ function onSelect(item: SuggestionItem): void {
                         type="button"
                         class="mobile-search__close"
                         :aria-label="t('search.close')"
-                        @click="open = false"
+                        @click="dismiss"
                     >
                         <IconX :size="22" aria-hidden="true" />
                     </button>
