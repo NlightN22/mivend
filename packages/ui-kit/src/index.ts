@@ -94,6 +94,7 @@ export type {
 
 export { default as MvModal } from './components/MvModal/MvModal.vue';
 export { default as MvLocationPicker } from './components/MvLocationPicker/MvLocationPicker.vue';
+export { searchesThroughHost } from './components/MvLocationPicker/adapters';
 export type {
     GeoConfig,
     GeoProviderInfo,

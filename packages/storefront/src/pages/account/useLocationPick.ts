@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
-import type { GeoConfig, GeoPoint } from '@mivend/ui-kit';
+import { searchesThroughHost, type GeoConfig, type GeoPoint } from '@mivend/ui-kit';
 import { useGeoStore } from '../../stores/geo';
 
 export interface LocationPick {
@@ -29,7 +29,8 @@ export function useLocationPick(
     async function firstHit(loaded: GeoConfig): Promise<GeoPoint | null> {
         const text = address().trim();
         const provider = loaded.defaultProvider ?? loaded.providers[0]?.key;
-        if (current() || text.length < 3 || !provider) return null;
+        if (current() || text.length < 3 || !provider || !searchesThroughHost(provider))
+            return null;
         try {
             const hit = (await geo.search(text, sibling(), provider)).find(
                 s => s.latitude != null && s.longitude != null,

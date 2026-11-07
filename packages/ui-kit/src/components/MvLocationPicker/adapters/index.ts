@@ -11,3 +11,7 @@ export const createAdapter: AdapterFactory = async key => {
     if (!loader) throw new Error(`unknown provider ${key}`);
     return loader();
 };
+
+const hostSearchProviders = new Set(['open']);
+
+export const searchesThroughHost = (key: string): boolean => hostSearchProviders.has(key);
