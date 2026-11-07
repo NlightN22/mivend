@@ -93,6 +93,7 @@ test('orders list row click opens the quick panel and Open goes to the order car
     await expect(panel).toBeVisible();
     await expect(panel).toContainText(order.displayCode);
     await expect(panel).toContainText('E2E Co');
+    await expect(panel).not.toContainText(/NOT_REQUIRED|Customer details|INN —/);
     await expect(page).toHaveURL(/\/orders(\?|$)/);
 
     await panel.getByRole('button', { name: 'Open' }).click();
@@ -132,4 +133,68 @@ test('orders list has a Placed by column @read-only', async ({ page }) => {
     await expect(page.getByRole('columnheader', { name: /Placed by/ })).toBeVisible({
         timeout: 15000,
     });
+});
+
+test('the Filter builder narrows the list by a column, shows a chip and survives a reload @read-only', async ({
+    page,
+}) => {
+    const order = readE2eOrder();
+
+    await page.goto('/orders');
+    await page.getByTestId('filter-trigger').click();
+    await page.getByTestId('filter-column-code').click();
+    await page.getByTestId('filter-operator').selectOption('eq');
+    await page.getByTestId('filter-value').fill(order.code);
+    await page.getByRole('button', { name: 'Apply filter' }).click();
+
+    const chip = page.getByTestId('filter-chip');
+    await expect(chip).toHaveCount(1);
+    await expect(chip).toContainText('Order # is equal to');
+    await expect(page.getByRole('row').filter({ hasText: order.displayCode })).toBeVisible();
+    await expect(page.getByRole('row')).toHaveCount(2);
+    await expect(page).toHaveURL(/filters=code/);
+
+    await page.reload();
+    await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+    await expect(page.getByRole('row').filter({ hasText: order.displayCode })).toBeVisible();
+
+    await page
+        .getByTestId('filter-chip')
+        .getByRole('button', { name: /Remove/ })
+        .click();
+    await expect(page.getByTestId('filter-chip')).toHaveCount(0);
+    await expect(page).not.toHaveURL(/filters=/);
+});
+
+test('a number condition with no match shows the empty state and a chip can be edited @read-only', async ({
+    page,
+}) => {
+    await page.goto('/orders');
+    await page.getByTestId('filter-trigger').click();
+    await page.getByTestId('filter-column-total').click();
+    await page.getByTestId('filter-operator').selectOption('gt');
+    await page.getByTestId('filter-value').fill('999999999');
+    await page.getByRole('button', { name: 'Apply filter' }).click();
+    await expect(page.getByText('No orders match your filters')).toBeVisible();
+
+    await page.getByTestId('filter-chip').getByRole('button').first().click();
+    await page.getByTestId('filter-operator').selectOption('between');
+    await page.getByTestId('filter-value-from').fill('0');
+    await page.getByTestId('filter-value-to').fill('999999999');
+    await page.getByRole('button', { name: 'Apply filter' }).click();
+    await expect(page.getByTestId('filter-chip')).toContainText('Total 0 – 999999999');
+    await expect(page.getByText('No orders match your filters')).toBeHidden();
+});
+
+test('the Filter panel opens as a bottom sheet on a phone and stays inside the viewport @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/orders');
+    await page.getByTestId('filter-trigger').click();
+    const box = await page.getByTestId('filter-panel').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(800);
 });

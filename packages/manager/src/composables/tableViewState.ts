@@ -1,9 +1,16 @@
+import type { FilterCondition, FilterValue } from '@mivend/ui-kit';
 import type { SavedTableView } from '../api/tableViews';
 
-// What a view remembers. `filters` is opaque to the storage: the table that owns the viewsKey
-// shapes it, and it includes the search term.
+// The filters of every list: the search term, the quick-filter chip and the Filter builder conditions.
+export interface TableViewFilters {
+    search: string;
+    view: string;
+    conditions: FilterCondition[];
+}
+
+// What a view remembers.
 export interface TableViewState {
-    filters: Record<string, unknown>;
+    filters: TableViewFilters;
     sort: { field: string; dir: 'ASC' | 'DESC' };
     columnOrder: string[];
     hiddenColumns: string[];
@@ -21,6 +28,17 @@ function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every(v => typeof v === 'string');
 }
 
+function isCondition(value: unknown): value is FilterCondition {
+    if (typeof value !== 'object' || value === null) return false;
+    const c = value as Record<string, unknown>;
+    const v = c.value as FilterValue;
+    return (
+        typeof c.columnKey === 'string' &&
+        typeof c.operator === 'string' &&
+        (typeof v === 'string' || isStringArray(v))
+    );
+}
+
 export function parseTableViewState(json: string): TableViewState | null {
     let raw: unknown;
     try {
@@ -31,12 +49,19 @@ export function parseTableViewState(json: string): TableViewState | null {
     if (typeof raw !== 'object' || raw === null) return null;
     const r = raw as Record<string, unknown>;
     const sort = r.sort as Record<string, unknown> | null;
-    if (typeof r.filters !== 'object' || r.filters === null) return null;
+    const filters = r.filters as Record<string, unknown> | null;
+    if (!filters || typeof filters.search !== 'string' || typeof filters.view !== 'string')
+        return null;
+    if (!Array.isArray(filters.conditions) || !filters.conditions.every(isCondition)) return null;
     if (!sort || typeof sort.field !== 'string' || (sort.dir !== 'ASC' && sort.dir !== 'DESC'))
         return null;
     if (!isStringArray(r.columnOrder) || !isStringArray(r.hiddenColumns)) return null;
     return {
-        filters: r.filters as Record<string, unknown>,
+        filters: {
+            search: filters.search,
+            view: filters.view,
+            conditions: filters.conditions,
+        },
         sort: { field: sort.field, dir: sort.dir },
         columnOrder: r.columnOrder,
         hiddenColumns: r.hiddenColumns,

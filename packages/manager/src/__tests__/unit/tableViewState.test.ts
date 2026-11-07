@@ -11,7 +11,11 @@ import {
 } from '../../composables/tableViewState';
 
 const STATE: TableViewState = {
-    filters: { search: '1001', view: 'overdue', state: ['Shipped'] },
+    filters: {
+        search: '1001',
+        view: 'overdue',
+        conditions: [{ columnKey: 'state', operator: 'in', value: ['Shipped'] }],
+    },
     sort: { field: 'totalWithTax', dir: 'ASC' },
     columnOrder: ['code', 'date', 'state'],
     hiddenColumns: ['date'],
@@ -27,6 +31,14 @@ describe('table view state', () => {
         ['a non-object', '7'],
         ['missing sort', JSON.stringify({ ...STATE, sort: undefined })],
         ['bad sort direction', JSON.stringify({ ...STATE, sort: { field: 'code', dir: 'UP' } })],
+        ['filters of the old flat shape', JSON.stringify({ ...STATE, filters: { state: ['A'] } })],
+        [
+            'a malformed condition',
+            JSON.stringify({
+                ...STATE,
+                filters: { search: '', view: '', conditions: [{ columnKey: 1 }] },
+            }),
+        ],
         ['non-string columns', JSON.stringify({ ...STATE, columnOrder: [1] })],
     ])('rejects %s', (_label, json) => {
         expect(parseTableViewState(json)).toBeNull();
@@ -47,7 +59,11 @@ describe('table view state', () => {
     it('compares states regardless of key order', () => {
         const shuffled: TableViewState = {
             ...STATE,
-            filters: { state: ['Shipped'], view: 'overdue', search: '1001' },
+            filters: {
+                conditions: [{ value: ['Shipped'], operator: 'in', columnKey: 'state' }],
+                view: 'overdue',
+                search: '1001',
+            },
         };
         expect(sameTableViewState(STATE, shuffled)).toBe(true);
         expect(sameTableViewState(STATE, { ...STATE, hiddenColumns: [] })).toBe(false);

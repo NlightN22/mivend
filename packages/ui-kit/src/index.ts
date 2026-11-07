@@ -235,6 +235,8 @@ export {
     describeValue,
 } from './components/MvColumnFilter/columnFilterDispatch';
 
+export { default as MvFilterBuilder } from './components/MvFilterBuilder/MvFilterBuilder.vue';
+export * from './components/MvFilterBuilder/filterLogic';
 export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export { default as MvActiveFilters } from './components/MvActiveFilters/MvActiveFilters.vue';
@@ -248,6 +250,7 @@ export type {
     AdvancedDataTableSearchConfig,
     AdvancedDataTableRowClickPayload,
 } from './components/MvAdvancedDataTable/advancedDataTableTypes';
+export { toFilterColumns } from './components/MvAdvancedDataTable/advancedDataTableTypes';
 
 export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 

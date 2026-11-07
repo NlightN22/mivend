@@ -1,0 +1,118 @@
+.mv-filter-builder {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mv-filter-builder__icon {
+    width: 15px;
+    height: 15px;
+}
+
+.mv-filter-builder__label {
+    margin-left: 6px;
+}
+
+.mv-filter-builder__chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    border: 1px solid var(--el-border-color);
+    border-radius: 999px;
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mv-filter-builder__chip-edit,
+.mv-filter-builder__chip-remove {
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.mv-filter-builder__chip-edit {
+    min-width: 0;
+    padding: 4px 4px 4px 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mv-filter-builder__chip-remove {
+    padding: 4px 9px 4px 2px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.mv-filter-builder__clear {
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    cursor: pointer;
+}
+
+.mv-filter-builder__panel {
+    position: fixed;
+    z-index: var(--mv-z-popover);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px var(--app-ink-10);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mv-filter-builder__panel--sheet {
+    inset: auto 0 0 0;
+    width: auto;
+    max-height: 80vh;
+    z-index: calc(var(--mv-z-popover) + 1);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+}
+
+.mv-filter-builder__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--mv-z-popover);
+    background: var(--app-ink-10);
+}
+
+.mv-filter-builder__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--app-nav-text-strong);
+}
+
+.mv-filter-builder__column {
+    text-align: left;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 8px;
+    background: transparent;
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.mv-filter-builder__column:hover {
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+}
+
+.mv-filter-builder__empty {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+}

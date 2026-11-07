@@ -14,7 +14,7 @@ import { useTableViews, type TableViews } from '../../composables/useTableViews'
 import type { TableViewState } from '../../composables/tableViewState';
 
 const STATE: TableViewState = {
-    filters: { view: 'overdue' },
+    filters: { search: '', view: 'overdue', conditions: [] },
     sort: { field: 'createdAt', dir: 'DESC' },
     columnOrder: ['code', 'date'],
     hiddenColumns: ['date'],
@@ -52,7 +52,7 @@ function setup(skipRestore = false): TableViews {
 beforeEach(() => {
     store.clear();
     vi.clearAllMocks();
-    state.value = { ...STATE, filters: { view: 'all' } };
+    state.value = { ...STATE, filters: { search: '', view: 'all', conditions: [] } };
     vi.stubGlobal('localStorage', {
         getItem: (k: string) => store.get(k) ?? null,
         setItem: (k: string, v: string) => void store.set(k, v),
@@ -116,7 +116,7 @@ describe('useTableViews', () => {
         await v.init();
         v.select('7');
         expect(v.dirty.value).toBe(false);
-        state.value = { ...state.value, filters: { view: 'all' } };
+        state.value = { ...state.value, filters: { search: '', view: 'all', conditions: [] } };
         expect(v.dirty.value).toBe(true);
         v.reset();
         expect(v.dirty.value).toBe(false);
@@ -126,7 +126,7 @@ describe('useTableViews', () => {
         const v = setup();
         await v.init();
         v.select('7');
-        state.value = { ...state.value, filters: { view: 'all' } };
+        state.value = { ...state.value, filters: { search: '', view: 'all', conditions: [] } };
         await v.update();
         expect(api.updateTableView).toHaveBeenCalledWith('7', {
             filters: JSON.stringify(state.value),

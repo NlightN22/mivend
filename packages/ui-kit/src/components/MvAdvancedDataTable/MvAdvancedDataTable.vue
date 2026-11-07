@@ -17,6 +17,8 @@ import {
     hasValue,
     describeValue,
 } from '../MvColumnFilter/columnFilterDispatch';
+import MvFilterBuilder from '../MvFilterBuilder/MvFilterBuilder.vue';
+import type { FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
 import MvAdvancedMobileCardList from './MvAdvancedMobileCardList.vue';
 import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { DataTableState, DataTableSortMeta } from '../../composables/useDataTableState';
@@ -28,6 +30,7 @@ import type {
     AdvancedDataTableSearchConfig,
     AdvancedDataTableRowClickPayload,
 } from './advancedDataTableTypes';
+import { toFilterColumns } from './advancedDataTableTypes';
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill) —
 // column toggle/resize, per-column typed filters, active filter chips, server pagination,
@@ -100,6 +103,9 @@ const emit = defineEmits<{
 }>();
 
 const tableState = defineModel<DataTableState>('tableState', { required: true });
+// Conditions of the toolbar Filter builder, for columns that declare `filterType`.
+const conditions = defineModel<FilterCondition[]>('conditions', { default: () => [] });
+const filterColumns = computed(() => toFilterColumns(props.columns));
 
 // PrimeVue's default cell rendering only applies to columns with no `#cell-<field>` slot
 // override. null/undefined render as empty; primitives as text; objects/arrays never render
@@ -279,6 +285,7 @@ function onRemoveFilterChip(key: string): void {
 // of "Reset columns" above.
 function clearFilters(): void {
     tableState.value.filters = { ...props.defaultFilters };
+    conditions.value = [];
     emit('clear-filters');
 }
 
@@ -309,7 +316,7 @@ const first = ref(0);
 // the fetched data updated correctly (the consumer's own `page` ref did reset via `reset-page`
 // firing... except it never fired at all here, since the guard swallowed it).
 watch(
-    () => tableState.value.filters,
+    [() => tableState.value.filters, conditions],
     () => {
         first.value = 0;
         emit('reset-page');
@@ -441,6 +448,11 @@ const isMobile = useIsMobileViewport(800);
                     }"
                     :model-value="(tableState.filters[search.filterKey] as string) ?? ''"
                     @update:model-value="setFilter(search.filterKey, $event)"
+                />
+                <MvFilterBuilder
+                    v-if="filterColumns.length"
+                    v-model="conditions"
+                    :columns="filterColumns"
                 />
                 <slot name="toolbar-start" />
             </div>
@@ -631,6 +643,7 @@ const isMobile = useIsMobileViewport(800);
     display: flex;
     align-items: center;
     gap: 10px;
+    flex: 1 1 0;
     flex-wrap: wrap;
     min-width: 0;
     max-width: 100%;

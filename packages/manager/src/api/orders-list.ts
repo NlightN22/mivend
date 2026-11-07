@@ -1,7 +1,11 @@
-import type { DateRangeFilterValue, StatusBadgeVariant } from '@mivend/ui-kit';
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import {
+    sanitizeConditions,
+    type FilterCondition,
+} from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import { adminApi } from './client';
 import { OrdersPageDocument } from './generated/graphql';
-import { PLACED_BY_CUSTOMER_VALUE } from './customers';
+import { ORDERS_FILTER_COLUMNS, conditionsToOrdersFilter, mergeFilters } from './orders-filter';
 import { ORDER_STATE_BADGE_VARIANT, type OrderListItem, type OrderSortField } from './orders';
 
 export type OrdersView =
@@ -42,14 +46,8 @@ export interface OrdersListFilters {
     // Matches order number, company, INN and phone on the server (the `search` argument).
     search: string;
     view: OrdersView;
-    state: string[];
-    reservationState: string;
-    dateRange: DateRangeFilterValue;
-    managerId: string;
-    placedBy: string;
-    // Minor currency units, either bound may be open.
-    totalMin: number | undefined;
-    totalMax: number | undefined;
+    // Toolbar Filter builder, ANDed with the view.
+    conditions: FilterCondition[];
 }
 
 // A preset is applied on top of the user's filters and never rendered in the filter UI.
@@ -61,13 +59,7 @@ export interface OrdersListPreset {
 export const BLANK_ORDERS_FILTERS: OrdersListFilters = {
     search: '',
     view: 'all',
-    state: [],
-    reservationState: '',
-    dateRange: { preset: '', from: '', to: '' },
-    managerId: '',
-    placedBy: '',
-    totalMin: undefined,
-    totalMax: undefined,
+    conditions: [],
 };
 
 export interface OrdersListQuery {
@@ -78,11 +70,7 @@ export interface OrdersListQuery {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function oneOf(values: string[]): Record<string, unknown> {
-    return values.length === 1 ? { eq: values[0] } : { in: values };
-}
-
-// The view pins its own state/reservation filters and wins over the same column filter.
+// The view's own fields are ANDed with the same column filters from the builder.
 function applyView(
     filter: Record<string, unknown>,
     view: OrdersView,
@@ -124,36 +112,12 @@ export function buildOrdersListQuery(
     rejectedCodes: string[],
     now: Date = new Date(),
 ): OrdersListQuery {
-    const filter: Record<string, unknown> = {};
-    if (filters.state.length) filter.state = oneOf(filters.state);
-    if (filters.reservationState) filter.reservationState = { eq: filters.reservationState };
-    const { from, to } = filters.dateRange;
-    if (from || to) {
-        // createdAt, not orderPlacedAt: unplaced orders must stay listed. `before` is the day after `to`.
-        const createdAt: Record<string, string> = {};
-        if (from) createdAt.after = new Date(`${from}T00:00:00`).toISOString();
-        if (to) {
-            const end = new Date(`${to}T00:00:00`);
-            createdAt.before = new Date(end.getTime() + DAY_MS).toISOString();
-        }
-        filter.createdAt = createdAt;
-    }
-    if (filters.totalMin !== undefined || filters.totalMax !== undefined) {
-        filter.totalWithTax = {
-            ...(filters.totalMin !== undefined ? { gte: filters.totalMin } : {}),
-            ...(filters.totalMax !== undefined ? { lte: filters.totalMax } : {}),
-        };
-    }
-    if (filters.placedBy) {
-        filter.placedByAdministratorId =
-            filters.placedBy === PLACED_BY_CUSTOMER_VALUE
-                ? { isNull: true }
-                : { eq: filters.placedBy };
-    }
-    applyView(filter, filters.view, rejectedCodes, now);
+    const built = conditionsToOrdersFilter(filters.conditions);
+    const viewFilter: Record<string, unknown> = {};
+    applyView(viewFilter, filters.view, rejectedCodes, now);
     return {
-        filter,
-        managerId: filters.managerId || undefined,
+        filter: mergeFilters(built.filter, viewFilter),
+        managerId: built.managerId,
         search: filters.search || undefined,
     };
 }
@@ -185,9 +149,6 @@ export async function fetchOrdersList(
 function str(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
 }
-function num(value: unknown): number | undefined {
-    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
 
 // Rebuilds list filters from a stored view; anything missing or of the wrong type falls back to blank.
 export function restoreOrdersFilters(raw: unknown): OrdersListFilters {
@@ -196,19 +157,6 @@ export function restoreOrdersFilters(raw: unknown): OrdersListFilters {
     const r = raw as Record<string, unknown>;
     restored.search = str(r.search) ?? '';
     if (ORDERS_VIEWS.some(v => v.key === r.view)) restored.view = r.view as OrdersView;
-    if (Array.isArray(r.state)) restored.state = r.state.filter(v => typeof v === 'string');
-    restored.reservationState = str(r.reservationState) ?? '';
-    restored.managerId = str(r.managerId) ?? '';
-    restored.placedBy = str(r.placedBy) ?? '';
-    restored.totalMin = num(r.totalMin);
-    restored.totalMax = num(r.totalMax);
-    const range = r.dateRange as Record<string, unknown> | null;
-    if (range && typeof range === 'object') {
-        restored.dateRange = {
-            preset: str(range.preset) ?? '',
-            from: str(range.from) ?? '',
-            to: str(range.to) ?? '',
-        };
-    }
+    restored.conditions = sanitizeConditions(r.conditions, ORDERS_FILTER_COLUMNS);
     return restored;
 }

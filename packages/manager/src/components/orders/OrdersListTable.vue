@@ -10,25 +10,18 @@ import {
     type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
 } from '@mivend/ui-kit';
-import { useCurrency } from '../../composables/useCurrency';
 import type { ManagerOption } from '../../api/orders';
 import { ALL_COLUMNS, DEFAULT_HIDDEN_COLUMNS } from './ordersColumns';
 import { PLACED_BY_CUSTOMER_VALUE } from '../../api/customers';
-import {
-    restoreOrdersFilters,
-    type OrdersListFilters,
-    type OrdersView,
-} from '../../api/orders-list';
+import { restoreOrdersFilters, type OrdersListFilters } from '../../api/orders-list';
 import { ORDERS_URL_DEFAULTS, type OrdersSort } from '../../composables/ordersListUrl';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { OrderListRow } from './ordersListRows';
 import {
     BLANK_TABLE_FILTERS,
-    listFiltersToTable,
     sortFromState,
     sortToState,
-    tableFiltersToList,
     type OrdersTableFilters,
 } from './ordersTableFilters';
 
@@ -56,9 +49,6 @@ const emit = defineEmits<{
     'row-click': [row: OrderListRow];
 }>();
 
-const { currencyCode: channelCurrency } = useCurrency();
-const currencyCode = computed(() => props.rows[0]?.currencyCode ?? channelCurrency.value ?? '');
-
 const managerOptions = computed(() => props.managers.map(m => ({ value: m.id, label: m.name })));
 const placedByOptions = computed(() => [
     { value: PLACED_BY_CUSTOMER_VALUE, label: 'Customer (self)' },
@@ -71,13 +61,8 @@ const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
             !(c.field === 'customer' && props.customerPreset) &&
             !(c.field === 'manager' && !props.showManagerColumn),
     ).map(col => {
-        const config = col.filterConfig;
-        if (col.field === 'total' && config.type === 'amount-range')
-            return { ...col, filterConfig: { ...config, currencyCode: currencyCode.value } };
-        if (col.field === 'manager' && config.type === 'enum')
-            return { ...col, filterConfig: { ...config, options: managerOptions.value } };
-        if (col.field === 'placedBy' && config.type === 'enum')
-            return { ...col, filterConfig: { ...config, options: placedByOptions.value } };
+        if (col.field === 'manager') return { ...col, filterOptions: managerOptions.value };
+        if (col.field === 'placedBy') return { ...col, filterOptions: placedByOptions.value };
         return col;
     }),
 );
@@ -89,27 +74,28 @@ const { state: tableState } = useDataTableState<OrdersTableFilters>(
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
         hiddenColumns: DEFAULT_HIDDEN_COLUMNS,
         sort: sortToState(props.sort, ALL_COLUMNS),
-        filters: listFiltersToTable(props.filters),
+        filters: { code: props.filters.search },
         pageSize: props.pageSize,
     },
     {
         columns: ALL_COLUMNS,
         allowedFilterKeys: [],
-        // Filters, sort and page size come from the URL, never from a previous session.
+        // Search, filters, sort and page size come from the URL, never from a previous session.
         externallyOwned: { pageSize: true, filterKeys: Object.keys(BLANK_TABLE_FILTERS) },
     },
 );
 tableState.value.sort = sortToState(props.sort, ALL_COLUMNS);
 
 // The chips own `view`; the table never emits it, the parent merges it back in.
-function currentView(): OrdersView {
-    return props.filters.view;
-}
 watch(
-    () => tableState.value.filters,
-    f => emit('update:filters', tableFiltersToList(f, currentView())),
-    { deep: true },
+    () => tableState.value.filters.code,
+    search => {
+        if (search !== props.filters.search) emit('update:filters', { ...props.filters, search });
+    },
 );
+function onConditions(conditions: OrdersListFilters['conditions']): void {
+    emit('update:filters', { ...props.filters, conditions });
+}
 watch(
     () => tableState.value.sort,
     s => emit('update:sort', sortFromState(s, ALL_COLUMNS)),
@@ -126,11 +112,9 @@ watch(
     },
 );
 watch(
-    () => props.filters,
-    f => {
-        const next = listFiltersToTable(f);
-        if (JSON.stringify(next) !== JSON.stringify(tableState.value.filters))
-            tableState.value.filters = next;
+    () => props.filters.search,
+    search => {
+        if (search !== tableState.value.filters.code) tableState.value.filters.code = search;
     },
 );
 
@@ -139,7 +123,11 @@ const openedWithLink = Object.keys(ORDERS_URL_DEFAULTS).some(k => k in useRoute(
 
 function captureView(): TableViewState {
     return {
-        filters: { ...props.filters },
+        filters: {
+            search: props.filters.search,
+            view: props.filters.view,
+            conditions: props.filters.conditions,
+        },
         sort: { ...props.sort },
         columnOrder: [...tableState.value.columnOrder],
         hiddenColumns: [...tableState.value.hiddenColumns],
@@ -179,8 +167,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
         :row-height-px="61"
         :header-height-px="65"
         :search="{ filterKey: 'code', placeholder: 'Search orders…' }"
+        :conditions="filters.conditions"
         :default-filters="BLANK_TABLE_FILTERS"
         empty-message="No orders match your filters"
+        @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
         @clear-filters="emit('clear-filters')"

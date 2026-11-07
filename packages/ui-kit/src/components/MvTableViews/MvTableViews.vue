@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
+import { useAnchoredPanel } from '../../composables/useAnchoredPanel';
 import { Collection } from '@element-plus/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvTableViewItem, { type TableViewItem } from './MvTableViewItem.vue';
@@ -33,7 +34,6 @@ const open = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
 const panelEl = ref<HTMLElement | null>(null);
 const isMobile = useIsMobileViewport(640);
-const panelPos = ref<Record<string, string>>({});
 const newName = ref('');
 const newScope = ref<TableViewSaveScope>('PERSONAL');
 
@@ -48,42 +48,13 @@ const canUpdateActive = computed(
 function manageable(view: TableViewItem): boolean {
     return !view.shared || !!props.canManageShared;
 }
-const PANEL_WIDTH = 340;
-const GAP = 6;
-const EDGE = 8;
-
-function place(): void {
-    const trigger = rootEl.value;
-    if (!trigger || isMobile.value) {
-        panelPos.value = {};
-        return;
-    }
-    const r = trigger.getBoundingClientRect();
-    const width = Math.min(PANEL_WIDTH, window.innerWidth - EDGE * 2);
-    const left = Math.max(EDGE, Math.min(r.left, window.innerWidth - width - EDGE));
-    const below = window.innerHeight - r.bottom - GAP - EDGE;
-    const above = r.top - GAP - EDGE;
-    const flip = below < 240 && above > below;
-    panelPos.value = flip
-        ? {
-              left: `${left}px`,
-              bottom: `${window.innerHeight - r.top + GAP}px`,
-              width: `${width}px`,
-              maxHeight: `${above}px`,
-          }
-        : {
-              left: `${left}px`,
-              top: `${r.bottom + GAP}px`,
-              width: `${width}px`,
-              maxHeight: `${below}px`,
-          };
-}
-watch(open, async value => {
-    if (!value) return;
-    place();
-    await nextTick();
-    place();
+const panel = useAnchoredPanel({
+    open,
+    anchor: () => rootEl.value,
+    width: 340,
+    sheet: isMobile,
 });
+const panelPos = panel.style;
 function onDocClick(e: MouseEvent): void {
     const target = e.target as Node;
     if (rootEl.value?.contains(target) || panelEl.value?.contains(target)) return;
@@ -95,14 +66,10 @@ function onEscape(e: KeyboardEvent): void {
 onMounted(() => {
     document.addEventListener('click', onDocClick);
     document.addEventListener('keydown', onEscape);
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
 });
 onBeforeUnmount(() => {
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onEscape);
-    window.removeEventListener('resize', place);
-    window.removeEventListener('scroll', place, true);
 });
 
 function create(): void {

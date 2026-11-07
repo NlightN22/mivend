@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BLANK_ORDERS_FILTERS, type OrdersListFilters } from '../../api/orders-list';
 import { ORDERS_URL_DEFAULTS, fromUrlState, toUrlState } from '../../composables/ordersListUrl';
-import {
-    listFiltersToTable,
-    sortFromState,
-    sortToState,
-    tableFiltersToList,
-} from '../../components/orders/ordersTableFilters';
+import { sortFromState, sortToState } from '../../components/orders/ordersTableFilters';
 import { toOrderRows } from '../../components/orders/ordersListRows';
 import type { OrderListItem } from '../../api/orders';
 
@@ -16,11 +11,12 @@ describe('orders list URL state', () => {
             ...BLANK_ORDERS_FILTERS,
             search: '1001',
             view: 'processing',
-            state: ['Shipped', 'Delivered'],
-            dateRange: { preset: '', from: '2026-11-01', to: '2026-11-05' },
-            placedBy: '4',
-            totalMin: 500,
-            totalMax: 9000,
+            conditions: [
+                { columnKey: 'state', operator: 'in', value: ['Shipped', 'Delivered'] },
+                { columnKey: 'date', operator: 'between', value: ['2026-11-01', '2026-11-05'] },
+                { columnKey: 'placedBy', operator: 'notEq', value: 'a b;c:d' },
+                { columnKey: 'total', operator: 'gte', value: '500.5' },
+            ],
         };
         const url = toUrlState(filters, { field: 'totalWithTax', dir: 'ASC' }, 20);
         expect(fromUrlState(url)).toEqual({
@@ -41,18 +37,19 @@ describe('orders list URL state', () => {
         expect(parsed.sort).toEqual({ field: 'createdAt', dir: 'DESC' });
         expect(parsed.pageSize).toBe(10);
     });
+
+    it('drops condition parts of a hand-edited link that name no known column or operator', () => {
+        const parsed = fromUrlState({
+            ...ORDERS_URL_DEFAULTS,
+            filters: 'nope:eq:1;total:contains:5;total:gt:7',
+        });
+        expect(parsed.filters.conditions).toEqual([
+            { columnKey: 'total', operator: 'gt', value: '7' },
+        ]);
+    });
 });
 
-describe('orders table filter mapping', () => {
-    it('converts the amount range between major and minor units and keeps the view', () => {
-        const table = listFiltersToTable({ ...BLANK_ORDERS_FILTERS, totalMin: 12345 });
-        expect(table.total.min).toBe(123.45);
-        expect(tableFiltersToList(table, 'overdue')).toMatchObject({
-            totalMin: 12345,
-            view: 'overdue',
-        });
-    });
-
+describe('orders table sort mapping', () => {
     it('maps sort between column fields and server sort fields', () => {
         const columns = [
             { field: 'code', sortField: 'code' },
@@ -110,6 +107,12 @@ describe('orders list rows', () => {
             placedBy: 'Ann Buyer',
             placedByMeta: 'customer',
         });
+    });
+
+    it('reads the reservation code as text, including NOT_REQUIRED', () => {
+        const item = order(null);
+        item.customFields = { ...item.customFields!, reservationState: 'NOT_REQUIRED' };
+        expect(toOrderRows([item], ctx)[0].reservation).toBe('Not required');
     });
 
     it('flags a shipment-pending order as overdue attention', () => {

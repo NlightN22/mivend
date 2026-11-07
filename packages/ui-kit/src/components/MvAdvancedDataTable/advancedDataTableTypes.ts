@@ -1,4 +1,10 @@
 import type { ColumnFilterConfig } from '../MvColumnFilter/columnFilterTypes';
+import type {
+    FilterColumn,
+    FilterOperator,
+    FilterOption,
+    FilterType,
+} from '../MvFilterBuilder/filterBuilderTypes';
 
 // `field` is a stable string id, not checked against TRow; it keys column state and slot names.
 // Nested values (e.g. `order.code`) must use a `#cell-<field>` slot, not a dotted `field`.
@@ -15,6 +21,12 @@ export interface AdvancedDataTableColumn {
     // Omit entirely for a column with no server-side sort support — no sort UI renders for it.
     sortField?: string;
     filterConfig: ColumnFilterConfig;
+    // Takes the column into the toolbar Filter builder; leave `filterConfig` as `none` then.
+    filterType?: FilterType;
+    filterOptions?: FilterOption[];
+    filterOperators?: FilterOperator[];
+    filterField?: string;
+    filterScale?: number;
     // Mirrors MvMobileColumnMeta minus `actions`/`highlight`; add them here if a consumer needs them.
     mobile?: {
         // Card title — at most one column should set this.
@@ -36,4 +48,22 @@ export interface AdvancedDataTableSearchConfig {
 export interface AdvancedDataTableRowClickPayload<TRow = unknown> {
     row: TRow;
     originalEvent: Event;
+}
+
+export function toFilterColumns(columns: AdvancedDataTableColumn[]): FilterColumn[] {
+    return columns.flatMap(c =>
+        c.filterType
+            ? [
+                  {
+                      key: c.field,
+                      label: c.header,
+                      type: c.filterType,
+                      options: c.filterOptions,
+                      operators: c.filterOperators,
+                      serverField: c.filterField,
+                      scale: c.filterScale,
+                  },
+              ]
+            : [],
+    );
 }

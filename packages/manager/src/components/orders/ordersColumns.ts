@@ -1,14 +1,12 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
-import {
-    ORDER_STATE_OPTIONS,
-    ORDER_STATE_BADGE_VARIANT,
-    ORDER_RESERVATION_STATE_OPTIONS,
-    ORDER_RESERVATION_STATE_BADGE_VARIANT,
-} from '../../api/orders';
+import { ORDER_STATE_OPTIONS, ORDER_RESERVATION_STATE_OPTIONS } from '../../api/orders';
 
 const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
 const NON_BLANK_RESERVATIONS = ORDER_RESERVATION_STATE_OPTIONS.filter(o => o.value);
+const NOT_FILTERED = { type: 'none' } as const;
 
+// Filtering is the toolbar Filter builder (`filterType`); the search box covers order, company, INN
+// and phone. Customer, branch and attention have no server-side filter.
 export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'code',
@@ -16,7 +14,8 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         sortField: 'code',
         width: 140,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Order, company, INN or phone contains…' },
+        filterConfig: NOT_FILTERED,
+        filterType: 'string',
         mobile: { primary: true },
     },
     {
@@ -24,30 +23,28 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         header: 'Date',
         sortField: 'createdAt',
         width: 125,
-        filterConfig: { type: 'date-range' },
+        filterConfig: NOT_FILTERED,
+        filterType: 'date',
+        filterField: 'createdAt',
     },
-    // customer, branch and attention have no server-side filter; the search box covers the customer.
-    { field: 'customer', header: 'Customer', width: 190, filterConfig: { type: 'none' } },
+    { field: 'customer', header: 'Customer', width: 190, filterConfig: NOT_FILTERED },
     {
         field: 'manager',
         header: 'Manager',
         width: 135,
-        filterConfig: { type: 'enum', placeholder: 'Any manager', options: [] },
+        filterConfig: NOT_FILTERED,
+        filterType: 'select',
+        filterOptions: [],
+        filterOperators: ['eq'],
     },
     {
         field: 'state',
         header: 'Status',
         sortField: 'state',
         width: 175,
-        filterConfig: {
-            type: 'status',
-            multiple: true,
-            placeholder: 'All statuses',
-            options: NON_BLANK_STATES.map(o => ({
-                ...o,
-                variant: ORDER_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
-            })),
-        },
+        filterConfig: NOT_FILTERED,
+        filterType: 'select',
+        filterOptions: NON_BLANK_STATES.map(o => ({ value: o.value, label: o.label })),
         mobile: { badge: true },
     },
     {
@@ -55,41 +52,43 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         header: 'Total',
         sortField: 'totalWithTax',
         width: 125,
-        filterConfig: { type: 'amount-range', currencyCode: '' },
+        filterConfig: NOT_FILTERED,
+        filterType: 'number',
+        filterField: 'totalWithTax',
+        filterScale: 100,
     },
     {
         field: 'placedBy',
         header: 'Placed by',
         width: 150,
-        filterConfig: { type: 'enum', placeholder: 'Anyone', options: [] },
+        filterConfig: NOT_FILTERED,
+        filterType: 'select',
+        filterOptions: [],
+        filterField: 'placedByAdministratorId',
+        filterOperators: ['eq', 'notEq'],
         mobile: { hidden: true },
     },
     {
         field: 'reservationState',
         header: 'Reservation',
         width: 160,
-        filterConfig: {
-            type: 'status',
-            placeholder: 'Any reservation state',
-            options: NON_BLANK_RESERVATIONS.map(o => ({
-                ...o,
-                variant: ORDER_RESERVATION_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
-            })),
-        },
+        filterConfig: NOT_FILTERED,
+        filterType: 'select',
+        filterOptions: NON_BLANK_RESERVATIONS.map(o => ({ value: o.value, label: o.label })),
         mobile: { hidden: true },
     },
     {
         field: 'branch',
         header: 'Branch',
         width: 140,
-        filterConfig: { type: 'none' },
+        filterConfig: NOT_FILTERED,
         mobile: { hidden: true },
     },
     {
         field: 'attention',
         header: 'Attention',
         width: 170,
-        filterConfig: { type: 'none' },
+        filterConfig: NOT_FILTERED,
         mobile: { hidden: true },
     },
 ];

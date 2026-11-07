@@ -69,6 +69,21 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   permission (the save form then offers a scope). A list opens with: link filters, else the person's
   remembered choice (including the plain default view), else the team default, else the built-in state.
   Rename, duplicate, delete and "Default" live in the control.
+- **Filter builder** (`MvFilterBuilder`, built into `MvAdvancedDataTable`): the search box stays the main
+  text filter; next to it one **Filter** button opens a column picker, then "Filter by <column>" with an
+  operator select (options depend on the column type) and a value input of that kind. Applied conditions
+  are removable chips (`Total > 1000 x`); a chip click edits it. Columns opt in with `filterType`
+  (`string`, `number`, `date`, `boolean`, `select`, `id`), plus `filterOptions` for selects and, when
+  needed, `filterField` (server field), `filterScale` (major to minor units) and `filterOperators`
+  (a narrower operator list). The state is a list of `{ columnKey, operator, value }`; `toVendureFilter`
+  turns it into Vendure `StringOperators`/`NumberOperators`/`DateOperators`/`BooleanOperators`/
+  `IDOperators`, `conditionsToQuery`/`conditionsFromQuery` carry it in the URL, and a saved view stores the
+  same list. Offer only operators the server accepts and no column the server cannot filter. Per-column
+  header funnels are not used on a list that has the builder. Operators: string (contains, does not
+  contain, is equal to, is not equal to, starts with, ends with, is empty, is not empty; starts/ends with
+  go to the server as an escaped `regex`), number (equal, greater, greater or equal, less, less or equal,
+  between, is empty), date (before, after, between, is empty; whole local days), boolean (true, false),
+  select (is, is not, is any of, is none of), id (equal, not equal, is empty, is not empty).
 - **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
   request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.

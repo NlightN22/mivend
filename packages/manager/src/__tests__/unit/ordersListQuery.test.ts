@@ -28,25 +28,36 @@ describe('buildOrdersListQuery', () => {
         expect(q.filter).not.toHaveProperty('code');
     });
 
-    it('uses eq for one status and in for several', () => {
-        expect(buildOrdersListQuery(filters({ state: ['Shipped'] }), [], NOW).filter.state).toEqual(
-            {
-                eq: 'Shipped',
-            },
-        );
-        expect(
-            buildOrdersListQuery(filters({ state: ['Shipped', 'Delivered'] }), [], NOW).filter
-                .state,
-        ).toEqual({ in: ['Shipped', 'Delivered'] });
-    });
-
-    it('lets a view that pins the state win over the status column filter', () => {
+    it('maps builder conditions to Vendure operators', () => {
         const q = buildOrdersListQuery(
-            filters({ view: 'processing', state: ['Delivered'] }),
+            filters({
+                conditions: [
+                    { columnKey: 'state', operator: 'in', value: ['Shipped', 'Delivered'] },
+                    { columnKey: 'total', operator: 'gt', value: '1000' },
+                ],
+            }),
             [],
             NOW,
         );
-        expect(q.filter.state).toEqual({ eq: 'PaymentAuthorized' });
+        expect(q.filter).toEqual({
+            state: { in: ['Shipped', 'Delivered'] },
+            totalWithTax: { gt: 100000 },
+        });
+    });
+
+    it('ANDs a view that pins the state with the status condition instead of replacing it', () => {
+        const q = buildOrdersListQuery(
+            filters({
+                view: 'processing',
+                conditions: [{ columnKey: 'state', operator: 'in', value: ['Delivered'] }],
+            }),
+            [],
+            NOW,
+        );
+        expect(q.filter).toEqual({
+            state: { in: ['Delivered'] },
+            _and: [{ state: { eq: 'PaymentAuthorized' } }],
+        });
     });
 
     it('builds the rejected-by-ERP view from the dictionary codes', () => {
@@ -72,30 +83,50 @@ describe('buildOrdersListQuery', () => {
     });
 
     it('maps the customer-placed sentinel to isNull and a manager id to eq', () => {
-        expect(
-            buildOrdersListQuery(filters({ placedBy: PLACED_BY_CUSTOMER_VALUE }), [], NOW).filter
-                .placedByAdministratorId,
-        ).toEqual({ isNull: true });
-        expect(
-            buildOrdersListQuery(filters({ placedBy: '7' }), [], NOW).filter
-                .placedByAdministratorId,
-        ).toEqual({ eq: '7' });
+        const placed = (operator: 'eq' | 'notEq', value: string): unknown =>
+            buildOrdersListQuery(
+                filters({ conditions: [{ columnKey: 'placedBy', operator, value }] }),
+                [],
+                NOW,
+            ).filter.placedByAdministratorId;
+        expect(placed('eq', PLACED_BY_CUSTOMER_VALUE)).toEqual({ isNull: true });
+        expect(placed('notEq', PLACED_BY_CUSTOMER_VALUE)).toEqual({ isNull: false });
+        expect(placed('eq', '7')).toEqual({ eq: '7' });
     });
 
-    it('treats the date range as inclusive of the last day and totals as open-ended bounds', () => {
+    it('sends the manager condition as the managerId argument, not as a filter', () => {
+        const q = buildOrdersListQuery(
+            filters({ conditions: [{ columnKey: 'manager', operator: 'eq', value: '3' }] }),
+            [],
+            NOW,
+        );
+        expect(q.managerId).toBe('3');
+        expect(q.filter).toEqual({});
+    });
+
+    it('treats a date range as inclusive of the last day', () => {
         const q = buildOrdersListQuery(
             filters({
-                dateRange: { preset: '', from: '2026-11-01', to: '2026-11-02' },
-                totalMin: 1000,
+                conditions: [
+                    { columnKey: 'date', operator: 'between', value: ['2026-11-01', '2026-11-02'] },
+                ],
             }),
             [],
             NOW,
         );
-        const createdAt = q.filter.createdAt as { after: string; before: string };
-        expect(new Date(createdAt.before).getTime() - new Date(createdAt.after).getTime()).toBe(
-            2 * 24 * 60 * 60 * 1000,
+        const createdAt = q.filter.createdAt as { between: { start: string; end: string } };
+        expect(
+            new Date(createdAt.between.end).getTime() - new Date(createdAt.between.start).getTime(),
+        ).toBe(2 * 24 * 60 * 60 * 1000);
+    });
+
+    it('skips a condition whose column the server cannot filter', () => {
+        const q = buildOrdersListQuery(
+            filters({ conditions: [{ columnKey: 'customer', operator: 'contains', value: 'x' }] }),
+            [],
+            NOW,
         );
-        expect(q.filter.totalWithTax).toEqual({ gte: 1000 });
+        expect(q.filter).toEqual({});
     });
 });
 
@@ -130,7 +161,9 @@ describe('fetchOrdersList preset', () => {
         vi.unstubAllGlobals();
         const preset = mockFetch();
         await fetchOrdersList(
-            filters({ state: ['Cancelled'] }),
+            filters({
+                conditions: [{ columnKey: 'state', operator: 'in', value: ['Cancelled'] }],
+            }),
             { customerId: 'customer-123' },
             [],
             2,
@@ -139,7 +172,7 @@ describe('fetchOrdersList preset', () => {
         );
         expect(preset()).toMatchObject({
             customerId: 'customer-123',
-            options: { skip: 10, take: 10, filter: { state: { eq: 'Cancelled' } } },
+            options: { skip: 10, take: 10, filter: { state: { in: ['Cancelled'] } } },
         });
     });
 });
@@ -148,16 +181,21 @@ describe('saved views', () => {
     it('restores every filter of the current shape', () => {
         const saved = filters({
             view: 'overdue',
-            state: ['Shipped'],
-            managerId: '3',
-            dateRange: { preset: '', from: '2026-11-01', to: '2026-11-05' },
-            totalMin: 500,
+            search: '10',
+            conditions: [
+                { columnKey: 'state', operator: 'in', value: ['Shipped'] },
+                { columnKey: 'total', operator: 'between', value: ['5', '9'] },
+            ],
         });
         expect(restoreOrdersFilters(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
     });
 
-    it('drops values of the wrong type and unknown views', () => {
-        const restored = restoreOrdersFilters({ state: 'PaymentSettled', view: 'nope', search: 7 });
+    it('drops values of the wrong type, unknown views and unknown columns', () => {
+        const restored = restoreOrdersFilters({
+            conditions: [{ columnKey: 'nope', operator: 'eq', value: '1' }, 'x'],
+            view: 'nope',
+            search: 7,
+        });
         expect(restored).toEqual(BLANK_ORDERS_FILTERS);
     });
 

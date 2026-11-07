@@ -40,6 +40,17 @@ tab or a top-level `*Page.vue`.
    in whatever order makes sense for that table. `mobile: { primary: true }` still goes on the
    number column only (point 5 below) — the date column has no special mobile hint by default.
 
+2a. **Every list filters through the shared Filter builder, never per-column header funnels.**
+   The search box (point 1) is the main text filter; every other filterable column declares
+   `filterType` (and `filterOptions` for selects; `filterField`, `filterScale`, `filterOperators` when the
+   server field, unit or operator set differs) on its `AdvancedDataTableColumn`, with `filterConfig:
+   { type: 'none' }`. The table holds the conditions as `v-model:conditions`; the list query uses
+   `toVendureFilter(conditions, toFilterColumns(columns))`, the URL uses `conditionsToQuery`/
+   `conditionsFromQuery`, and saved views store the same list (`TableViewFilters`). Operators per type are
+   fixed in ui-kit (`docs/ui-standards.md`, "Filter builder"); never build a second filter mechanism. A
+   list still on header funnels is migrated when it is next touched. Reference: the orders list
+   (`ordersColumns.ts`, `api/orders-filter.ts`).
+
 3. **Every filter shown in the UI must be backed by a real server-side (or, for a justified
    bounded/exempt list, real client-side) filter — never a funnel icon with nothing behind it.**
    Before adding `filterConfig` for a column, confirm the backend query actually supports
