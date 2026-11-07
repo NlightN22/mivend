@@ -276,7 +276,8 @@ export class CounterpartyService {
             this.connection,
             ctx,
             `SELECT cu.id AS id FROM customer cu
-             WHERE cu."customFieldsCounterpartyid"::text = $1`,
+             WHERE cu."customFieldsCounterpartyid"::text = $1 AND cu."deletedAt" IS NULL
+             ORDER BY cu.id`,
             [String(counterpartyId)],
         );
         return result[0]?.id ?? null;
