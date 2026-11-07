@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import type { GeoPoint } from '@mivend/ui-kit';
 import type { TradingPointAddForm } from './useTradingPoints';
 import { isTradingPointValid } from './tradingPointValidation';
 import TradingPointFields from './TradingPointFields.vue';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
 
-defineProps<{ saving: boolean }>();
+defineProps<{ saving: boolean; sibling: GeoPoint | null }>();
 const emit = defineEmits<{ submit: []; cancel: [] }>();
 </script>
 
 <template>
     <div class="tp-add-card">
         <div class="tp-add-title">{{ $t('tradingPoints.newTitle') }}</div>
-        <TradingPointFields v-model="model" />
+        <TradingPointFields v-model="model" :sibling="sibling" />
         <div class="tp-add-actions">
             <button
                 class="tp-btn tp-btn--primary"

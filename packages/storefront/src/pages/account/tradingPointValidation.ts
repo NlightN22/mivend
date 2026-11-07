@@ -3,7 +3,7 @@ import { isValidPhone } from '@mivend/ui-kit/src/utils/phoneFormat';
 import type { TradingPointAddForm } from './useTradingPoints';
 
 export type TradingPointErrors = Partial<
-    Record<'name' | 'address' | 'contactName' | 'contactPhone', string>
+    Record<'name' | 'address' | 'contactName' | 'contactPhone' | 'location', string>
 >;
 
 // Values that came from the ERP and were not touched stay as they arrived.
@@ -21,6 +21,8 @@ export function tradingPointErrors(
         errors.contactName = 'tradingPoints.error.contactName';
     if (changed('contactPhone') && form.contactPhone && !isValidPhone(form.contactPhone))
         errors.contactPhone = 'tradingPoints.error.phone';
+    if (form.latitude === null || form.longitude === null)
+        errors.location = 'tradingPoints.error.location';
     return errors;
 }
 

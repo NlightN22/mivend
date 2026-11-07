@@ -68,6 +68,12 @@ export type Address = Node & {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type AddressSuggestion = {
+    address: Scalars['String']['output'];
+    latitude?: Maybe<Scalars['Float']['output']>;
+    longitude?: Maybe<Scalars['Float']['output']>;
+};
+
 export type Adjustment = {
     adjustmentSource: Scalars['String']['output'];
     amount: Scalars['Money']['output'];
@@ -1301,6 +1307,19 @@ export type FulfillmentLine = {
     quantity: Scalars['Int']['output'];
 };
 
+export type GeoConfig = {
+    defaultLatitude?: Maybe<Scalars['Float']['output']>;
+    defaultLongitude?: Maybe<Scalars['Float']['output']>;
+    defaultProvider?: Maybe<Scalars['String']['output']>;
+    defaultZoom?: Maybe<Scalars['Int']['output']>;
+    providers: Array<GeoProviderInfo>;
+};
+
+export type GeoProviderInfo = {
+    key: Scalars['String']['output'];
+    publicKey?: Maybe<Scalars['String']['output']>;
+};
+
 export enum GlobalFlag {
     False = 'FALSE',
     Inherit = 'INHERIT',
@@ -2046,6 +2065,8 @@ export type MutationCustomerAddTradingPointArgs = {
     contactName?: InputMaybe<Scalars['String']['input']>;
     contactPhone?: InputMaybe<Scalars['String']['input']>;
     deliveryComment?: InputMaybe<Scalars['String']['input']>;
+    latitude?: InputMaybe<Scalars['Float']['input']>;
+    longitude?: InputMaybe<Scalars['Float']['input']>;
     name: Scalars['String']['input'];
     workingHours?: InputMaybe<Scalars['String']['input']>;
 };
@@ -2060,6 +2081,8 @@ export type MutationCustomerEditTradingPointArgs = {
     contactPhone?: InputMaybe<Scalars['String']['input']>;
     deliveryComment?: InputMaybe<Scalars['String']['input']>;
     id: Scalars['ID']['input'];
+    latitude?: InputMaybe<Scalars['Float']['input']>;
+    longitude?: InputMaybe<Scalars['Float']['input']>;
     name: Scalars['String']['input'];
     workingHours?: InputMaybe<Scalars['String']['input']>;
 };
@@ -3614,6 +3637,7 @@ export type Query = {
     facet?: Maybe<Facet>;
     /** A list of Facets available to the shop */
     facets: FacetList;
+    geoConfig: GeoConfig;
     /** Returns information about the current authenticated User */
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
@@ -3652,9 +3676,11 @@ export type Query = {
     /** Get a list of Products */
     products: ProductList;
     proformaInvoice?: Maybe<ProformaInvoice>;
+    reverseGeocode?: Maybe<Scalars['String']['output']>;
     saleProductIds: Array<Scalars['ID']['output']>;
     /** Search Products based on the criteria set by the `SearchInput` */
     search: SearchResponse;
+    searchAddress: Array<AddressSuggestion>;
     searchCapabilities: SearchCapabilities;
     settlementBalances: Array<SettlementBalanceCard>;
     settlementDocuments: SettlementDocumentPage;
@@ -3734,12 +3760,25 @@ export type QueryProformaInvoiceArgs = {
     id: Scalars['ID']['input'];
 };
 
+export type QueryReverseGeocodeArgs = {
+    latitude: Scalars['Float']['input'];
+    longitude: Scalars['Float']['input'];
+    provider?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type QuerySaleProductIdsArgs = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySearchArgs = {
     input: SearchInput;
+};
+
+export type QuerySearchAddressArgs = {
+    biasLatitude?: InputMaybe<Scalars['Float']['input']>;
+    biasLongitude?: InputMaybe<Scalars['Float']['input']>;
+    provider?: InputMaybe<Scalars['String']['input']>;
+    query: Scalars['String']['input'];
 };
 
 export type QuerySettlementBalancesArgs = {
@@ -5791,6 +5830,37 @@ export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
 
+export type GeoConfigQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GeoConfigQuery = {
+    geoConfig: {
+        defaultProvider?: string | null;
+        defaultLatitude?: number | null;
+        defaultLongitude?: number | null;
+        defaultZoom?: number | null;
+        providers: Array<{ key: string; publicKey?: string | null }>;
+    };
+};
+
+export type SearchAddressQueryVariables = Exact<{
+    query: Scalars['String']['input'];
+    biasLatitude?: InputMaybe<Scalars['Float']['input']>;
+    biasLongitude?: InputMaybe<Scalars['Float']['input']>;
+    provider?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type SearchAddressQuery = {
+    searchAddress: Array<{ address: string; latitude?: number | null; longitude?: number | null }>;
+};
+
+export type ReverseGeocodeQueryVariables = Exact<{
+    latitude: Scalars['Float']['input'];
+    longitude: Scalars['Float']['input'];
+    provider?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type ReverseGeocodeQuery = { reverseGeocode?: string | null };
+
 export type OrderStatusesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type OrderStatusesQuery = {
@@ -7301,6 +7371,39 @@ export const DefaultCurrencyDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
+export const GeoConfigDocument = new TypedDocumentString(`
+    query GeoConfig {
+  geoConfig {
+    providers {
+      key
+      publicKey
+    }
+    defaultProvider
+    defaultLatitude
+    defaultLongitude
+    defaultZoom
+  }
+}
+    `) as unknown as TypedDocumentString<GeoConfigQuery, GeoConfigQueryVariables>;
+export const SearchAddressDocument = new TypedDocumentString(`
+    query SearchAddress($query: String!, $biasLatitude: Float, $biasLongitude: Float, $provider: String) {
+  searchAddress(
+    query: $query
+    biasLatitude: $biasLatitude
+    biasLongitude: $biasLongitude
+    provider: $provider
+  ) {
+    address
+    latitude
+    longitude
+  }
+}
+    `) as unknown as TypedDocumentString<SearchAddressQuery, SearchAddressQueryVariables>;
+export const ReverseGeocodeDocument = new TypedDocumentString(`
+    query ReverseGeocode($latitude: Float!, $longitude: Float!, $provider: String) {
+  reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
+}
+    `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
 export const OrderStatusesDocument = new TypedDocumentString(`
     query OrderStatuses {
   orderStatuses {

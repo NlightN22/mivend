@@ -22,11 +22,19 @@ export default {
         saving: 'Saving…',
         saveChanges: 'Save changes',
         addPoint: 'Add point',
+        location: {
+            title: 'Location',
+            empty: 'Not set',
+            pick: 'Pick on map',
+            change: 'Change on map',
+            unavailable: 'The map settings could not be loaded. Try again.',
+        },
         error: {
             name: 'Enter a name',
             address: 'Enter a street and a house number',
             contactName: 'Enter first and last name',
             phone: 'Enter the full number with the country code',
+            location: 'Pick the location on the map',
         },
         field: {
             name: 'Name',

@@ -1,14 +1,26 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
 import { MvAddressInput, MvFormField, MvInput, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
+import type { GeoPoint } from '@mivend/ui-kit';
+import TradingPointLocation from './TradingPointLocation.vue';
 import type { TradingPointAddForm } from './useTradingPoints';
 import { suggestAddress } from './suggestAddress';
 import { tradingPointErrors } from './tradingPointValidation';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
-const props = defineProps<{ original?: TradingPointAddForm }>();
+const props = defineProps<{ original?: TradingPointAddForm; sibling: GeoPoint | null }>();
 const touched = reactive({ name: false, address: false, contactName: false, contactPhone: false });
 const errors = computed(() => tradingPointErrors(model.value, props.original));
+const location = computed<GeoPoint | null>({
+    get: () =>
+        model.value.latitude !== null && model.value.longitude !== null
+            ? { latitude: model.value.latitude, longitude: model.value.longitude }
+            : null,
+    set: point => {
+        model.value.latitude = point?.latitude ?? null;
+        model.value.longitude = point?.longitude ?? null;
+    },
+});
 </script>
 
 <template>
@@ -37,6 +49,14 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
                 :placeholder="$t('tradingPoints.field.addressPlaceholder')"
                 :error="touched.address && !!errors.address"
                 @blur="touched.address = true"
+            />
+        </MvFormField>
+        <MvFormField class="tp-field--wide" :label="$t('tradingPoints.location.title')" required>
+            <TradingPointLocation
+                v-model="location"
+                :address="model.address"
+                :sibling="sibling"
+                :error="touched.address && errors.location ? $t(errors.location) : undefined"
             />
         </MvFormField>
         <MvFormField

@@ -1,5 +1,6 @@
 import { actingCredentials, actingHeaders } from '../../api/actingToken';
-import { ref, type Ref } from 'vue';
+import { computed, ref, type ComputedRef, type Ref } from 'vue';
+import type { GeoPoint } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { isTradingPointValid } from './tradingPointValidation';
 import type { TradingPoint } from './TradingPointCard.vue';
@@ -11,6 +12,8 @@ export interface TradingPointAddForm {
     contactPhone: string;
     workingHours: string;
     deliveryComment: string;
+    latitude: number | null;
+    longitude: number | null;
 }
 
 function emptyAddForm(): TradingPointAddForm {
@@ -21,10 +24,12 @@ function emptyAddForm(): TradingPointAddForm {
         contactPhone: '',
         workingHours: '',
         deliveryComment: '',
+        latitude: null,
+        longitude: null,
     };
 }
 
-const POINT_FIELDS = `id name address workingHours deliveryComment customerStatus customerOwned
+const POINT_FIELDS = `id name address latitude longitude workingHours deliveryComment customerStatus customerOwned
   contacts { id name phone isPrimary }`;
 
 function gql(
@@ -41,6 +46,7 @@ function gql(
 
 export function useTradingPoints(): {
     visiblePoints: Ref<TradingPoint[]>;
+    siblingPoint: ComputedRef<GeoPoint | null>;
     hiddenPoints: Ref<TradingPoint[]>;
     showHidden: Ref<boolean>;
     loading: Ref<boolean>;
@@ -57,6 +63,8 @@ export function useTradingPoints(): {
             contactPhone: string | null;
             workingHours: string | null;
             deliveryComment: string | null;
+            latitude: number | null;
+            longitude: number | null;
         },
     ) => Promise<void>;
     handleRemove: (id: string) => Promise<void>;
@@ -74,6 +82,11 @@ export function useTradingPoints(): {
     const addOpen = ref(false);
     const addSaving = ref(false);
     const addForm = ref<TradingPointAddForm>(emptyAddForm());
+
+    const siblingPoint = computed<GeoPoint | null>(() => {
+        const other = visiblePoints.value.find(p => p.latitude !== null && p.longitude !== null);
+        return other ? { latitude: other.latitude!, longitude: other.longitude! } : null;
+    });
 
     async function loadPoints(): Promise<void> {
         loading.value = true;
@@ -95,11 +108,13 @@ export function useTradingPoints(): {
             contactPhone: string | null;
             workingHours: string | null;
             deliveryComment: string | null;
+            latitude: number | null;
+            longitude: number | null;
         },
     ): Promise<void> {
         await gql(
-            `mutation($id:ID! $name:String! $address:String! $contactName:String $contactPhone:String $workingHours:String $deliveryComment:String){
-      customerEditTradingPoint(id:$id name:$name address:$address contactName:$contactName contactPhone:$contactPhone workingHours:$workingHours deliveryComment:$deliveryComment){ id }
+            `mutation($id:ID! $name:String! $address:String! $contactName:String $contactPhone:String $workingHours:String $deliveryComment:String $latitude:Float $longitude:Float){
+      customerEditTradingPoint(id:$id name:$name address:$address contactName:$contactName contactPhone:$contactPhone workingHours:$workingHours deliveryComment:$deliveryComment latitude:$latitude longitude:$longitude){ id }
     }`,
             { id, ...data },
         );
@@ -130,8 +145,8 @@ export function useTradingPoints(): {
         if (!isTradingPointValid(addForm.value)) return;
         addSaving.value = true;
         await gql(
-            `mutation($name:String! $address:String! $contactName:String $contactPhone:String $workingHours:String $deliveryComment:String){
-      customerAddTradingPoint(name:$name address:$address contactName:$contactName contactPhone:$contactPhone workingHours:$workingHours deliveryComment:$deliveryComment){ id }
+            `mutation($name:String! $address:String! $contactName:String $contactPhone:String $workingHours:String $deliveryComment:String $latitude:Float $longitude:Float){
+      customerAddTradingPoint(name:$name address:$address contactName:$contactName contactPhone:$contactPhone workingHours:$workingHours deliveryComment:$deliveryComment latitude:$latitude longitude:$longitude){ id }
     }`,
             {
                 name: addForm.value.name,
@@ -140,6 +155,8 @@ export function useTradingPoints(): {
                 contactPhone: addForm.value.contactPhone || null,
                 workingHours: addForm.value.workingHours || null,
                 deliveryComment: addForm.value.deliveryComment || null,
+                latitude: addForm.value.latitude,
+                longitude: addForm.value.longitude,
             },
         );
         addSaving.value = false;
@@ -149,6 +166,7 @@ export function useTradingPoints(): {
 
     return {
         visiblePoints,
+        siblingPoint,
         hiddenPoints,
         showHidden,
         loading,

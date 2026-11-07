@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { GeoProviderInfo } from './types';
 
-defineProps<{ providers: GeoProviderInfo[]; current: string; label: string }>();
+defineProps<{
+    providers: GeoProviderInfo[];
+    current: string;
+    label: string;
+    names?: Record<string, string>;
+}>();
 defineEmits<{ select: [key: string] }>();
 </script>
 
@@ -16,7 +21,7 @@ defineEmits<{ select: [key: string] }>();
             :aria-pressed="p.key === current"
             @click="$emit('select', p.key)"
         >
-            {{ p.key }}
+            {{ names?.[p.key] ?? p.key }}
         </button>
     </div>
 </template>

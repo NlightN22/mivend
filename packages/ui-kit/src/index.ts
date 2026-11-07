@@ -96,6 +96,7 @@ export { default as MvModal } from './components/MvModal/MvModal.vue';
 export { default as MvLocationPicker } from './components/MvLocationPicker/MvLocationPicker.vue';
 export type {
     GeoConfig,
+    GeoProviderInfo,
     GeoPoint,
     GeoSuggestion,
     LocationPickerLabels,

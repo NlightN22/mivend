@@ -24,6 +24,7 @@ const props = withDefaults(
         initialQuery?: string;
         cooperative?: boolean;
         labels?: Partial<LocationPickerLabels>;
+        providerNames?: Record<string, string>;
         createAdapter?: AdapterFactory;
     }>(),
     { createAdapter: defaultAdapterFactory, cooperative: false },
@@ -98,6 +99,7 @@ onBeforeUnmount(() => {
                             :providers="geoConfig.providers"
                             :current="picker.provider.value"
                             :label="text.provider"
+                            :names="providerNames"
                             @select="picker.switchProvider"
                         />
                     </div>
@@ -122,7 +124,7 @@ onBeforeUnmount(() => {
                             variant="ghost"
                             @click="picker.switchProvider(p.key)"
                         >
-                            {{ text.tryProvider }}: {{ p.key }}
+                            {{ text.tryProvider }}: {{ providerNames?.[p.key] ?? p.key }}
                         </MvButton>
                     </div>
                     <LocationManualInputs

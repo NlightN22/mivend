@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import type { GeoPoint } from '@mivend/ui-kit';
 import type { TradingPointAddForm } from './useTradingPoints';
 import { isTradingPointValid } from './tradingPointValidation';
 import TradingPointFields from './TradingPointFields.vue';
@@ -14,6 +15,8 @@ export interface TradingPoint {
     id: string;
     name: string;
     address: string;
+    latitude: number | null;
+    longitude: number | null;
     workingHours: string | null;
     deliveryComment: string | null;
     customerStatus: string;
@@ -24,6 +27,7 @@ export interface TradingPoint {
 const props = defineProps<{
     point: TradingPoint;
     isCurrent: boolean;
+    sibling?: GeoPoint | null;
 }>();
 
 const emit = defineEmits<{
@@ -36,6 +40,8 @@ const emit = defineEmits<{
             contactPhone: string | null;
             workingHours: string | null;
             deliveryComment: string | null;
+            latitude: number | null;
+            longitude: number | null;
         },
     ];
     remove: [id: string];
@@ -57,6 +63,8 @@ const form = ref({
     contactPhone: '',
     workingHours: '',
     deliveryComment: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
 });
 
 function startEdit() {
@@ -68,6 +76,8 @@ function startEdit() {
         contactPhone: c?.phone ?? '',
         workingHours: props.point.workingHours ?? '',
         deliveryComment: props.point.deliveryComment ?? '',
+        latitude: props.point.latitude,
+        longitude: props.point.longitude,
     };
     original.value = { ...form.value };
     editing.value = true;
@@ -87,6 +97,8 @@ async function handleSave() {
         contactPhone: form.value.contactPhone || null,
         workingHours: form.value.workingHours || null,
         deliveryComment: form.value.deliveryComment || null,
+        latitude: form.value.latitude,
+        longitude: form.value.longitude,
     });
     saving.value = false;
     editing.value = false;
@@ -187,7 +199,11 @@ watch(
         <template v-else>
             <div class="tp-card__edit-title">{{ $t('tradingPoints.editTitle') }}</div>
             <div class="tp-card__form">
-                <TradingPointFields v-model="form" :original="original" />
+                <TradingPointFields
+                    v-model="form"
+                    :original="original"
+                    :sibling="sibling ?? null"
+                />
             </div>
             <div class="tp-card__edit-actions">
                 <button

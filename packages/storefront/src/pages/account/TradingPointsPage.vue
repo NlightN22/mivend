@@ -17,6 +17,7 @@ const preferredId = computed(
 
 const {
     visiblePoints,
+    siblingPoint,
     hiddenPoints,
     showHidden,
     loading,
@@ -79,6 +80,7 @@ onMounted(loadPoints);
                 v-if="addOpen"
                 v-model="addForm"
                 :saving="addSaving"
+                :sibling="siblingPoint"
                 @submit="onSubmitAdd"
                 @cancel="addOpen = false"
             />
@@ -94,6 +96,7 @@ onMounted(loadPoints);
                     :key="pt.id"
                     :point="pt"
                     :is-current="pt.id === preferredId"
+                    :sibling="siblingPoint"
                     @save="handleSave"
                     @remove="handleRemove"
                     @set-current="handleSetCurrent"
