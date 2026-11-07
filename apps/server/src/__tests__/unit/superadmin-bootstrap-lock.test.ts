@@ -1,75 +1,59 @@
 import type { Client } from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-    withServerBootstrapLock,
-    withSuperadminBootstrapLock,
-} from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
 
-function fakeClient(ready: boolean, exists: boolean) {
-    const query = vi.fn(async (sql: string) => {
-        if (sql.includes('to_regclass')) return { rows: [{ ready }] };
-        if (sql.includes('pg_advisory_lock')) return { rows: [] };
-        return { rows: exists ? [{ '?column?': 1 }] : [] };
-    });
+function fakeClient(...attempts: boolean[]) {
+    const query = vi.fn(async () => ({ rows: [{ locked: attempts.shift() ?? true }] }));
     const client = { connect: vi.fn(), end: vi.fn(), query } as unknown as Client;
     return { client, query };
 }
-const locked = (q: ReturnType<typeof fakeClient>['query']) =>
-    q.mock.calls.some(c => String(c[0]).includes('pg_advisory_lock'));
 
-describe('withSuperadminBootstrapLock', () => {
-    it('takes the lock when the schema is not created yet', async () => {
-        const { client, query } = fakeClient(false, false);
-        await withSuperadminBootstrapLock(
-            async () => 1,
-            'admin',
-            () => client,
-        );
-        expect(locked(query)).toBe(true);
+describe('withBootstrapLock', () => {
+    it('runs the work under the lock and closes the connection', async () => {
+        const { client, query } = fakeClient(true);
+        await expect(
+            withBootstrapLock(
+                async () => 'done',
+                () => client,
+            ),
+        ).resolves.toBe('done');
+        expect(query).toHaveBeenCalledTimes(1);
+        expect(client.end).toHaveBeenCalled();
     });
 
-    it('takes the lock when the superadmin is missing', async () => {
-        const { client, query } = fakeClient(true, false);
-        await withSuperadminBootstrapLock(
+    it('keeps polling while another process holds the lock, then runs', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const { client, query } = fakeClient(false, false, true);
+        await withBootstrapLock(
             async () => 1,
-            'admin',
             () => client,
+            10_000,
         );
-        expect(locked(query)).toBe(true);
+        expect(query).toHaveBeenCalledTimes(3);
+        expect(warn).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
     });
 
-    it('skips the lock once the superadmin exists', async () => {
-        const { client, query } = fakeClient(true, true);
-        await withSuperadminBootstrapLock(
-            async () => 1,
-            'admin',
-            () => client,
+    it('fails loudly and never runs the work when the lock is not acquired in time', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const { client } = fakeClient(...Array(50).fill(false));
+        const work = vi.fn(async () => 1);
+        await expect(withBootstrapLock(work, () => client, 600)).rejects.toThrow(
+            /not acquired within 600 ms/,
         );
-        expect(locked(query)).toBe(false);
+        expect(work).not.toHaveBeenCalled();
+        expect(client.end).toHaveBeenCalled();
     });
 
     it('closes the connection and rethrows when the work fails', async () => {
-        const { client } = fakeClient(true, false);
+        const { client } = fakeClient(true);
         await expect(
-            withSuperadminBootstrapLock(
+            withBootstrapLock(
                 async () => Promise.reject(new Error('boom')),
-                'admin',
                 () => client,
             ),
         ).rejects.toThrow('boom');
-        expect(client.end).toHaveBeenCalled();
-    });
-});
-
-describe('withServerBootstrapLock', () => {
-    it('takes the lock even when the superadmin already exists', async () => {
-        const { client, query } = fakeClient(true, true);
-        await withServerBootstrapLock(
-            async () => 1,
-            () => client,
-        );
-        expect(locked(query)).toBe(true);
         expect(client.end).toHaveBeenCalled();
     });
 });

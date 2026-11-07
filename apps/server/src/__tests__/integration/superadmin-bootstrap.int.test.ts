@@ -9,7 +9,7 @@ import {
 } from 'shared';
 
 import { AdministratorEmailUnique1791535000000 } from '../../migrations/1791535000000-administrator-email-unique';
-import { withSuperadminBootstrapLock } from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
 
 const { schema, extra } = testSchemaOptions('superadmin_bootstrap');
 const IDENTIFIER = 'superadmin';
@@ -97,22 +97,10 @@ describe('superadmin first boot (integration, real Postgres)', () => {
     it('with the lock N parallel bootstraps end with one user and one administrator', async () => {
         await Promise.all(
             Array.from({ length: 5 }, () =>
-                withSuperadminBootstrapLock(() => checkThenCreate(), IDENTIFIER, schemaClient),
+                withBootstrapLock(() => checkThenCreate(), schemaClient),
             ),
         );
         expect(await counts()).toEqual({ users: 1, admins: 1 });
-    });
-
-    it('a boot after the account exists does not wait for a held lock', async () => {
-        await checkThenCreate();
-        const holder = schemaClient();
-        await holder.connect();
-        await holder.query(`SELECT pg_advisory_lock(hashtextextended('superadmin-bootstrap', 0))`);
-        try {
-            await withSuperadminBootstrapLock(async () => undefined, IDENTIFIER, schemaClient);
-        } finally {
-            await holder.end();
-        }
     });
 });
 

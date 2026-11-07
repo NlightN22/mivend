@@ -62,6 +62,8 @@ x-server-env: &server-env
     SITE_NAME: ${SITE_NAME:-}
     SITE_DEFAULT_LANGUAGE: ${SITE_DEFAULT_LANGUAGE:-}
     EMAIL_FOOTER_TEXT: ${EMAIL_FOOTER_TEXT:-}
+    NOTIFICATION_RETENTION_READ_DAYS: ${NOTIFICATION_RETENTION_READ_DAYS:-90}
+    NOTIFICATION_RETENTION_UNREAD_DAYS: ${NOTIFICATION_RETENTION_UNREAD_DAYS:-365}
     # REST surfaces are closed by default (docs/environments.md); keep these false in production.
     EMAIL_DEV_MAILBOX_ENABLED: 'false'
     API_DOCS_ENABLED: 'false'
@@ -121,7 +123,7 @@ services:
             interval: 30s
             timeout: 10s
             retries: 5
-            start_period: 120s
+            start_period: 240s
         deploy:
             resources:
                 limits:
@@ -152,7 +154,7 @@ services:
             interval: 30s
             timeout: 10s
             retries: 5
-            start_period: 120s
+            start_period: 240s
         deploy:
             resources:
                 limits:

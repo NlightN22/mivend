@@ -82,7 +82,7 @@ The frontends take their own optional variable, `STOREFRONT_IMAGE_TAG`, `MANAGER
 
 Two server processes run from one image on one database: `server` (storefront traffic, ERP callbacks, the host
 port) and `server-admin` (the manager portal and the dashboard, via their `API_TARGET`). Both serve both APIs; the
-frontends' nginx decides which one a user reaches. Startup is serialized by a database lock (`withServerBootstrapLock`),
+frontends' nginx decides which one a user reaches. Startup is serialized by a database lock (`withBootstrapLock`),
 so the second one waits for the first to finish booting. Roll them one after the other, not together, to keep one of
 them answering during a server release; a migration that breaks the old code still needs both stopped.
 

@@ -1,7 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { Allow, Ctx, ForbiddenError, Permission, RequestContext } from '@vendure/core';
 import { Inject } from '@nestjs/common';
-import { PubSub } from 'graphql-subscriptions';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
@@ -35,7 +35,7 @@ export class NotificationShopResolver {
     constructor(
         private notificationService: NotificationService,
         private recipientService: NotificationRecipientService,
-        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSub,
+        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSubEngine,
     ) {}
 
     @Query()

@@ -1,8 +1,8 @@
 import { Client } from 'pg';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { testDataSourceConnectionOptions } from 'shared';
 
-import { withServerBootstrapLock } from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
 
 function client(): Client {
     const o = testDataSourceConnectionOptions();
@@ -15,8 +15,8 @@ function client(): Client {
     });
 }
 
-describe('withServerBootstrapLock (real Postgres)', () => {
-    it('never lets two server bootstraps overlap', async () => {
+describe('withBootstrapLock (real Postgres)', () => {
+    it('never lets two bootstraps overlap', async () => {
         let running = 0;
         let maxRunning = 0;
         const bootstrap = async (): Promise<void> => {
@@ -26,16 +26,34 @@ describe('withServerBootstrapLock (real Postgres)', () => {
             running--;
         };
         await Promise.all([
-            withServerBootstrapLock(bootstrap, client),
-            withServerBootstrapLock(bootstrap, client),
+            withBootstrapLock(bootstrap, client),
+            withBootstrapLock(bootstrap, client),
         ]);
         expect(maxRunning).toBe(1);
     });
 
     it('releases the lock when a bootstrap fails, so the next one starts', async () => {
         await expect(
-            withServerBootstrapLock(() => Promise.reject(new Error('boom')), client),
+            withBootstrapLock(() => Promise.reject(new Error('boom')), client),
         ).rejects.toThrow('boom');
-        await expect(withServerBootstrapLock(async () => 'ok', client)).resolves.toBe('ok');
+        await expect(withBootstrapLock(async () => 'ok', client)).resolves.toBe('ok');
+    });
+
+    it('gives up with an error when a stuck holder does not release in time', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        let release!: () => void;
+        const holder = withBootstrapLock(
+            () => new Promise<void>(resolve => (release = resolve)),
+            client,
+        );
+        await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+        try {
+            await expect(withBootstrapLock(async () => 1, client, 700)).rejects.toThrow(
+                /not acquired/,
+            );
+        } finally {
+            release();
+            await holder;
+        }
     });
 });

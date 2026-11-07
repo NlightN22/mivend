@@ -3,53 +3,42 @@ import type { Client } from 'pg';
 import { createDbClient } from './db-client';
 
 const LOCK_KEY = 'superadmin-bootstrap';
+const POLL_MS = 500;
+const DEFAULT_TIMEOUT_MS = 600_000;
 
-async function superadminExists(client: Client, identifier: string): Promise<boolean> {
-    const { rows } = await client.query(
-        `SELECT to_regclass('"user"') IS NOT NULL AND to_regclass('administrator') IS NOT NULL AS "ready"`,
-    );
-    if (!rows[0]?.ready) return false;
-    const found = await client.query(
-        `SELECT 1 FROM "user" u JOIN administrator a ON a."userId" = u.id
-         WHERE lower(u.identifier) = lower($1) AND u."deletedAt" IS NULL AND a."deletedAt" IS NULL`,
-        [identifier],
-    );
-    return found.rows.length > 0;
+async function acquire(client: Client, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    let announced = false;
+    for (;;) {
+        const { rows } = await client.query(
+            'SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS "locked"',
+            [LOCK_KEY],
+        );
+        if (rows[0]?.locked) return;
+        if (Date.now() >= deadline) {
+            throw new Error(
+                `Bootstrap lock not acquired within ${timeoutMs} ms; another process is stuck in bootstrap`,
+            );
+        }
+        if (!announced) console.warn('Waiting for another process to finish bootstrap');
+        announced = true;
+        await new Promise(resolve => setTimeout(resolve, POLL_MS));
+    }
 }
 
-async function withLock<T>(
+// Vendure's superadmin check-then-create (#285) and our default-role/default-entity bootstrap are not
+// atomic and run on every boot of every process (shop and admin servers, workers): take turns.
+export async function withBootstrapLock<T>(
     work: () => Promise<T>,
-    needsLock: (client: Client) => Promise<boolean>,
-    createClient: () => Client,
+    createClient: () => Client = createDbClient,
+    timeoutMs: number = parseInt(process.env.BOOTSTRAP_LOCK_TIMEOUT_MS ?? `${DEFAULT_TIMEOUT_MS}`),
 ): Promise<T> {
     const client = createClient();
     await client.connect();
     try {
-        if (await needsLock(client)) {
-            // eslint-disable-next-line locks/no-raw-advisory-lock
-            await client.query('SELECT pg_advisory_lock(hashtextextended($1, 0))', [LOCK_KEY]);
-        }
+        await acquire(client, timeoutMs);
         return await work();
     } finally {
         await client.end();
     }
-}
-
-// Vendure's superadmin check-then-create is not atomic and runs in every process (#285): hold a
-// session lock across bootstrap while the account is missing; later boots skip the lock.
-export function withSuperadminBootstrapLock<T>(
-    work: () => Promise<T>,
-    identifier: string = process.env.SUPERADMIN_USERNAME ?? 'superadmin',
-    createClient: () => Client = createDbClient,
-): Promise<T> {
-    return withLock(work, async c => !(await superadminExists(c, identifier)), createClient);
-}
-
-// Server processes also rewrite default roles and settings on every boot, so two servers starting
-// together (shop and admin, #321) must always take turns, not only on a fresh database.
-export function withServerBootstrapLock<T>(
-    work: () => Promise<T>,
-    createClient: () => Client = createDbClient,
-): Promise<T> {
-    return withLock(work, async () => true, createClient);
 }

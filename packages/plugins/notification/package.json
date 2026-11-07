@@ -16,6 +16,7 @@
     "dependencies": {
         "graphql-tag": "^2.12.6",
         "graphql-subscriptions": "^3.0.0",
+        "pg": "^8.11.0",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*"
     },
@@ -25,6 +26,7 @@
         "@nestjs/graphql": "^13.0.0",
         "@vendure/common": "^3.7.3",
         "@vendure/core": "^3.7.3",
+        "@types/pg": "^8.23.1",
         "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0",

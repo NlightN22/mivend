@@ -1,7 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { Allow, Ctx, ForbiddenError, Permission, RequestContext } from '@vendure/core';
 import { Inject } from '@nestjs/common';
-import { PubSub } from 'graphql-subscriptions';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { Notification } from './entities/notification.entity';
@@ -54,7 +54,7 @@ export class NotificationAdminResolver {
         private notificationService: NotificationService,
         private recipientService: NotificationRecipientService,
         private orderVisibility: OrderVisibilityService,
-        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSub,
+        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSubEngine,
     ) {}
 
     @Query()

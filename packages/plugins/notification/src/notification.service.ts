@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, IsNull, Not } from 'typeorm';
-import { PubSub } from 'graphql-subscriptions';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 import {
     Notification,
@@ -66,7 +66,7 @@ const MAX_LIST_TAKE = 100;
 export class NotificationService {
     constructor(
         private connection: TransactionalConnection,
-        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSub,
+        @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSubEngine,
     ) {}
 
     // An open notification for the same (sourceType, sourceId) is updated in place, not duplicated.
