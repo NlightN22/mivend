@@ -69,6 +69,16 @@ describe('TradingPointLocationReportService (real Postgres)', () => {
         expect(await service.countMissing(ctx)).toBe(2);
     });
 
+    it('also counts (0, 0) and out-of-range coordinates', async () => {
+        await seed('a-ok', 1, 2);
+        await seed('b-zero', 0, 0);
+        await seed('c-lat', 91, 2);
+        await seed('d-lng', 1, -181);
+        await seed('e-equator', 0, 5);
+
+        expect(await service.countMissing(ctx)).toBe(3);
+    });
+
     it('is zero when every active point has a location', async () => {
         await seed('a-ok', 1, 2);
         expect(await service.countMissing(ctx)).toBe(0);
