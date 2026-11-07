@@ -382,6 +382,8 @@ If a new data type needs seeding — **add a record type to `erp-import` first**
 
 Use **`make seed-all`** to run the full local seeding order in one command: `seed` → `seed-approvals` (also what `dev-fresh.sh` runs) — manager-portal roles are no longer part of this order, they self-provision at server boot. The targets stay separate (and order-dependent — `seed-approvals` needs administrators/counterparty `cnt-001` already existing) only for the occasional case of re-running just one without wiping the others.
 
+A trading point written outside the ERP stream (staff edit, customer add, `upsertTradingPoint`) must carry a valid location (`resolveTradingPointLocation`); ERP points without one are reported by the drift check (`tradingPointsWithoutLocation`).
+
 ---
 
 ## Concurrency

@@ -39,6 +39,10 @@ Forbidden at the page/feature level:
 If a ui-kit component does not support a required variant, **add the variant to the ui-kit** and use it everywhere.
 This keeps the design consistent and changes visible across the whole application.
 
+### Location input
+
+Use `MvLocationPicker` for any location input and never hand-roll a map; map-provider code stays in the picker adapters (`packages/ui-kit/src/components/MvLocationPicker/adapters/`).
+
 ### Icon kit
 
 **`@tabler/icons-vue` is the recommended first source for any new icon.** Check it before adding
