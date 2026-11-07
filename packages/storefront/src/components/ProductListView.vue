@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { MvErrorState } from '@mivend/ui-kit';
-import { IconAdjustmentsHorizontal, IconLayoutGrid, IconList, IconX } from '@tabler/icons-vue';
+import { IconAdjustmentsHorizontal, IconLayoutGrid, IconList } from '@tabler/icons-vue';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConnectedProductCard from './ConnectedProductCard.vue';
+import ScopeChip from './ScopeChip.vue';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 import { useProductQuantity } from '../composables/useProductQuantity';
 
@@ -69,17 +70,7 @@ onBeforeUnmount(() => observer?.disconnect());
                 <div class="plv-toolbar__count">
                     {{ loading ? t('common.loading') : t('productList.count', totalItems) }}
                 </div>
-                <span v-if="scopeLabel" class="plv-toolbar__scope">
-                    <span class="plv-toolbar__scope-label">{{ scopeLabel }}</span>
-                    <button
-                        class="plv-toolbar__scope-remove"
-                        type="button"
-                        :aria-label="t('search.removeScope')"
-                        @click="emit('removeScope')"
-                    >
-                        <IconX :size="14" aria-hidden="true" />
-                    </button>
-                </span>
+                <ScopeChip v-if="scopeLabel" :label="scopeLabel" @remove="emit('removeScope')" />
             </div>
             <div class="plv-toolbar__right">
                 <button
@@ -225,39 +216,6 @@ onBeforeUnmount(() => observer?.disconnect());
     font-size: 13px;
     color: var(--app-nav-label);
     margin-top: 2px;
-}
-.plv-toolbar__scope {
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
-    gap: 4px;
-    margin-top: 6px;
-    padding: 2px 4px 2px 10px;
-    border-radius: 999px;
-    background: var(--app-chip-bg);
-    color: var(--app-chip-fg);
-    font-size: 12px;
-    font-weight: 600;
-}
-.plv-toolbar__scope-label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.plv-toolbar__scope-remove {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: inherit;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
 }
 .plv-toolbar__right {
     display: flex;

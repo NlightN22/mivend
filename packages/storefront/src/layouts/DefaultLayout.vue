@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { MvScrollNav } from '@mivend/ui-kit';
+import { useI18n } from 'vue-i18n';
 import AppHeader from '../components/AppHeader.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="default-layout">
         <AppHeader />
         <RouterView />
-        <MvScrollNav :down="false" />
+        <MvScrollNav :down="false" :up-label="t('common.scrollToTop')" />
     </div>
 </template>
 

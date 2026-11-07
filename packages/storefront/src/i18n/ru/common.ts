@@ -2,6 +2,7 @@ import type en from '../en/common';
 
 const ru: typeof en = {
     common: {
+        scrollToTop: 'Наверх',
         loading: 'Загрузка...',
         close: 'Закрыть',
         error: 'Произошла ошибка',

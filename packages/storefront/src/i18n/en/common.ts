@@ -1,5 +1,6 @@
 export default {
     common: {
+        scrollToTop: 'Back to top',
         loading: 'Loading...',
         close: 'Close',
         error: 'Something went wrong',

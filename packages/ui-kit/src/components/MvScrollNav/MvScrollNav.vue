@@ -2,7 +2,10 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
 
-const props = withDefaults(defineProps<{ down?: boolean }>(), { down: true });
+const props = withDefaults(
+    defineProps<{ down?: boolean; upLabel?: string; downLabel?: string }>(),
+    { down: true, upLabel: 'Scroll to top', downLabel: 'Scroll to bottom' }
+);
 
 const SHOW_UP_THRESHOLD_PX = 400;
 const NEAR_BOTTOM_SLACK_PX = 24;
@@ -60,8 +63,8 @@ onBeforeUnmount(() => {
         <MvRoundIconButton
             v-if="showUp"
             variant="primary"
-            aria-label="Scroll to top"
-            title="Scroll to top"
+            :aria-label="props.upLabel"
+            :title="props.upLabel"
             @click="scrollToTop"
         >
             ↑
@@ -69,8 +72,8 @@ onBeforeUnmount(() => {
         <MvRoundIconButton
             v-if="props.down && showDown"
             variant="primary"
-            aria-label="Scroll to bottom"
-            title="Scroll to bottom"
+            :aria-label="props.downLabel"
+            :title="props.downLabel"
             @click="scrollToBottom"
         >
             ↓
@@ -82,7 +85,7 @@ onBeforeUnmount(() => {
 .mv-scroll-nav {
     position: fixed;
     right: 16px;
-    bottom: calc(24px + env(safe-area-inset-bottom));
+    bottom: calc(var(--mv-scroll-nav-offset, 24px) + env(safe-area-inset-bottom));
     z-index: calc(var(--mv-z-floating) - 1);
     display: flex;
     flex-direction: column;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IconSearch, IconX } from '@tabler/icons-vue';
 import { MvSearchInput, type SuggestionGroup, type SuggestionItem } from '@mivend/ui-kit';
@@ -18,11 +18,17 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const open = ref(false);
 const overlayRef = ref<HTMLElement | null>(null);
+const triggerRef = ref<HTMLButtonElement | null>(null);
 
 watch(open, isOpen => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     // After the opening click reaches MvSearchInput's outside-click handler, or it resets its focus state.
     if (isOpen) setTimeout(() => overlayRef.value?.querySelector('input')?.focus(), 0);
+    else nextTick(() => triggerRef.value?.focus());
+});
+
+onBeforeUnmount(() => {
+    document.body.style.overflow = '';
 });
 
 function onSearch(value: string): void {
@@ -38,6 +44,7 @@ function onSelect(item: SuggestionItem): void {
 
 <template>
     <button
+        ref="triggerRef"
         type="button"
         class="mobile-search__trigger"
         :aria-label="t('search.open')"
@@ -47,7 +54,15 @@ function onSelect(item: SuggestionItem): void {
     </button>
 
     <Teleport to="body">
-        <div v-if="open" ref="overlayRef" class="mobile-search__overlay">
+        <div
+            v-if="open"
+            ref="overlayRef"
+            class="mobile-search__overlay"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="t('search.open')"
+            @keydown.esc="open = false"
+        >
             <MvSearchInput
                 :model-value="props.query"
                 :placeholder="t('header.searchPlaceholderShort')"
