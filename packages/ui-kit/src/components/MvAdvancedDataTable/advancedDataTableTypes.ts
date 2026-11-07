@@ -16,6 +16,9 @@ export interface AdvancedDataTableColumn {
     // Or a legibility floor, such as a status badge that must not shrink.
     minWidth?: number;
     maxWidth?: number;
+    // Higher keeps its width when the table is tight: lower ones shrink to minWidth first, then
+    // drop out of view (still in the column settings). Set minWidth = width to never shrink.
+    priority?: number;
     // Never hideable via the column toggle.
     required?: boolean;
     // Omit entirely for a column with no server-side sort support — no sort UI renders for it.

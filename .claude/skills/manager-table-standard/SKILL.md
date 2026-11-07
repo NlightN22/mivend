@@ -126,7 +126,7 @@ bottom margin shifts the visible content off-center within it.
   (see `api/orders-counts.ts`); the most operational chip is first with `emphasis`. Chips replace KPI tiles
   and attention banners that show the same numbers.
 - Pass `scrollable` to `MvFilterChips` so chips become one scrolling row on a phone.
-- No default quick panel: row click opens the card, the identifying cell is a link.
+- No default quick panel: row click opens the card, the identifying cell is a link. Give columns a `priority` (higher is kept) with `minWidth = width` for ones that must not truncate.
 - The default visible columns must fit the page at 1360px with no horizontal scroll; the rest start hidden.
 
 5. **Every column gets a deliberate `mobile` hint**, not a default/omitted one:

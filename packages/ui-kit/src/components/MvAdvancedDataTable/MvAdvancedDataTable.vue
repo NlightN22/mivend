@@ -30,6 +30,7 @@ import type {
     AdvancedDataTableSearchConfig,
     AdvancedDataTableRowClickPayload,
 } from './advancedDataTableTypes';
+import { fitColumnWidths } from '../../utils/fitColumnWidths';
 import { toFilterColumns } from './advancedDataTableTypes';
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill) —
@@ -130,15 +131,21 @@ function defaultCellText(field: string, row: unknown): string {
 
 // Column order/width/visibility comes entirely from the consumer-owned `tableState` (v-model) —
 // this component only ever reads/writes it, never persists it itself.
+const containerWidth = ref(0);
 const visibleColumns = computed(() => {
     const byField = new Map(props.columns.map(c => [c.field, c]));
     const hidden = new Set(tableState.value.hiddenColumns);
-    return tableState.value.columnOrder
+    const shown = tableState.value.columnOrder
         .filter(field => byField.has(field) && (!hidden.has(field) || byField.get(field)!.required))
         .map(field => {
             const col = byField.get(field)!;
             return { ...col, width: tableState.value.columnWidths[field] ?? col.width };
         });
+    const selectWidth = props.selectable ? 48 : 0;
+    const fit = fitColumnWidths(shown, containerWidth.value - selectWidth);
+    return shown
+        .filter(c => fit.widths.has(c.field))
+        .map(c => ({ ...c, width: fit.widths.get(c.field) ?? c.width }));
 });
 
 const columnToggleItems = computed(() =>
@@ -409,6 +416,20 @@ function getScrollContainer(): HTMLElement | null {
     return tableWrapper.value?.querySelector<HTMLElement>('.p-datatable-table-container') ?? null;
 }
 const { canScrollLeft, canScrollRight, scrollBy } = useHorizontalScrollFade(getScrollContainer);
+
+let widthObserver: ResizeObserver | null = null;
+watch(tableWrapper, el => {
+    widthObserver?.disconnect();
+    widthObserver = null;
+    if (!el) {
+        containerWidth.value = 0;
+        return;
+    }
+    containerWidth.value = el.clientWidth;
+    widthObserver = new ResizeObserver(() => (containerWidth.value = el.clientWidth));
+    widthObserver.observe(el);
+});
+onBeforeUnmount(() => widthObserver?.disconnect());
 
 // Same breakpoint MvTable/MvAppTopbar/MvAppMobileNav already standardize on (max-width: 800px) —
 // see MvAdvancedMobileCardList.vue's own doc comment for why this is a separate render path

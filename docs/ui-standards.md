@@ -90,6 +90,7 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
 - **Preset filter** where the list is also shown inside another entity (a fixed customer): narrows the
   list, is never shown as a filter, and does not widen server-side scope.
 - **Row click** opens the entity card (the identifying cell is a real link, so ctrl/middle-click and Enter work). There is no default quick panel; a list gets one only when its entity page type asks for it.
+- **Column `priority`** (optional number, higher wins): when the table is narrower than its columns, the lowest priority columns shrink first, down to their `minWidth` (72px if unset), then drop out of view (still in the column settings). Set `minWidth` equal to `width` for columns that must never be truncated. Without any `priority` the widths stay as declared.
 
 Layout: the table takes the full page width; at a 1360px viewport the identifying columns fit without
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
