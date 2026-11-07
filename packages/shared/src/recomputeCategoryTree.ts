@@ -54,10 +54,11 @@ export async function recomputeCategoryTree(
 ): Promise<number> {
     const unlocked = await planTree(ctx, deps);
     if (!unlocked) return 0;
+    const nodeById = new Map(unlocked.nodes.map(n => [n.id, n]));
     const chunkRoots = [
         ...new Set(
             [...unlocked.filterUpdates, ...unlocked.visibilityUpdates].map(u =>
-                topLevelRoot(u.id, unlocked.nodes),
+                topLevelRoot(u.id, nodeById),
             ),
         ),
     ];
@@ -170,8 +171,7 @@ async function planTree(
     return { nodes, nativeIdByString, translationsById, filterUpdates, visibilityUpdates };
 }
 
-function topLevelRoot(id: string, nodes: CategoryCollectionNode[]): string {
-    const byId = new Map(nodes.map(n => [n.id, n]));
+function topLevelRoot(id: string, byId: ReadonlyMap<string, CategoryCollectionNode>): string {
     let current = id;
     const seen = new Set<string>([id]);
     for (;;) {
