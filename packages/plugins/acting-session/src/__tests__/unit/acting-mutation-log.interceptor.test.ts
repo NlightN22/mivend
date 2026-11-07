@@ -2,7 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const state = vi.hoisted(() => ({ parent: 'Mutation', logged: [] as string[] }));
 
-vi.mock('@nestjs/graphql', () => ({
+vi.mock('@nestjs/graphql', async importOriginal => ({
+    ...(await importOriginal<typeof import('@nestjs/graphql')>()),
     GqlExecutionContext: {
         create: () => ({
             getInfo: () => ({ parentType: { name: state.parent }, fieldName: 'addItemToOrder' }),
