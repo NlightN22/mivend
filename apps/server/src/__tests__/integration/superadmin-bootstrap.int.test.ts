@@ -9,7 +9,7 @@ import {
 } from 'shared';
 
 import { AdministratorEmailUnique1791535000000 } from '../../migrations/1791535000000-administrator-email-unique';
-import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../bootstrap-lock';
 
 const { schema, extra } = testSchemaOptions('superadmin_bootstrap');
 const IDENTIFIER = 'superadmin';

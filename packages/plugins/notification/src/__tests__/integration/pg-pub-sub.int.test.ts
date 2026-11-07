@@ -1,5 +1,5 @@
 import { Client } from 'pg';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testDataSourceConnectionOptions } from 'shared';
 
 import { PgPubSub } from '../../notification-pg-pub-sub';
@@ -76,6 +76,55 @@ describe('PgPubSub (real Postgres, two processes)', () => {
         await a.publish('received', { createdAt: new Date(iso), title: iso });
 
         expect(await received()).toEqual({ createdAt: new Date(iso), title: iso });
+    });
+
+    it('carries a realistic Cyrillic notification of a couple of thousand characters', async () => {
+        const a = newProcess();
+        const b = newProcess();
+        const received = await nextMessage(b, 'received');
+        const notificationReceived = { id: '1', title: 'Заказ', message: 'ж'.repeat(2500) };
+
+        await a.publish('received', { notificationReceived });
+
+        expect(await received()).toEqual({ notificationReceived });
+    });
+
+    it('resumes after the listener connection is killed, and delivers each message once', async () => {
+        const a = newProcess();
+        const b = newProcess();
+        const seen: unknown[] = [];
+        await b.subscribe('received', p => seen.push(p));
+        const o = testDataSourceConnectionOptions();
+        const killer = new Client({
+            host: o.host,
+            port: o.port,
+            user: o.username,
+            password: o.password,
+            database: o.database,
+        });
+        await killer.connect();
+        try {
+            await killer.query(
+                `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query = $1 AND pid <> pg_backend_pid()`,
+                [`LISTEN ${channel}`],
+            );
+        } finally {
+            await killer.end();
+        }
+
+        await vi.waitFor(
+            async () => {
+                await a.publish('received', 'after-reconnect');
+                expect(seen).toContain('after-reconnect');
+            },
+            { timeout: 10_000, interval: 500 },
+        );
+        const before = seen.filter(p => p === 'after-reconnect').length;
+        await a.publish('received', 'final');
+        await vi.waitFor(() => expect(seen).toContain('final'));
+
+        expect(seen.filter(p => p === 'final')).toHaveLength(1);
+        expect(before).toBeGreaterThanOrEqual(1);
     });
 
     it('fails loudly when the payload is over the NOTIFY limit', async () => {

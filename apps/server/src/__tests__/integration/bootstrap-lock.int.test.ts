@@ -2,7 +2,7 @@ import { Client } from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 import { testDataSourceConnectionOptions } from 'shared';
 
-import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../bootstrap-lock';
 
 function client(): Client {
     const o = testDataSourceConnectionOptions();

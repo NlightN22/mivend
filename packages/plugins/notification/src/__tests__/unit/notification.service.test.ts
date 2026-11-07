@@ -70,6 +70,19 @@ describe('NotificationService.create (upsert-by-source)', () => {
         );
     });
 
+    it('still saves and returns the row when the live push fails (oversized payload, dead connection)', async () => {
+        const { service, save, publish } = makeService(null);
+        publish.mockRejectedValue(new Error('exceeds the NOTIFY size limit'));
+
+        const created = await service.create({} as never, {
+            ...baseInput,
+            message: 'ж'.repeat(5000),
+        });
+
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(created.title).toBe(baseInput.title);
+    });
+
     it('updates the existing row in place when it is still unread for the same source', async () => {
         const existing = new Notification({
             id: 'notif-1',

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, IsNull, Not } from 'typeorm';
 import { PubSubEngine } from 'graphql-subscriptions';
 
@@ -118,9 +118,15 @@ export class NotificationService {
         }
 
         const saved = await repo.save(notification);
-        await this.pubSub.publish(NOTIFICATION_RECEIVED, {
-            notificationReceived: saved,
-        });
+        // best-effort: the row is saved, a failed live push must not fail the caller's flow (clients refetch)
+        await this.pubSub
+            .publish(NOTIFICATION_RECEIVED, { notificationReceived: saved })
+            .catch(err =>
+                Logger.error(
+                    `Live push of notification ${saved.id} failed: ${String(err)}`,
+                    'NotificationService',
+                ),
+            );
         return saved;
     }
 

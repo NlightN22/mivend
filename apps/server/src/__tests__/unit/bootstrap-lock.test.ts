@@ -1,11 +1,16 @@
 import type { Client } from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 
-import { withBootstrapLock } from '../../superadmin-bootstrap-lock';
+import { withBootstrapLock } from '../../bootstrap-lock';
 
 function fakeClient(...attempts: boolean[]) {
     const query = vi.fn(async () => ({ rows: [{ locked: attempts.shift() ?? true }] }));
-    const client = { connect: vi.fn(), end: vi.fn(), query } as unknown as Client;
+    const client = {
+        connect: vi.fn(),
+        end: vi.fn().mockResolvedValue(undefined),
+        on: vi.fn(),
+        query,
+    } as unknown as Client;
     return { client, query };
 }
 

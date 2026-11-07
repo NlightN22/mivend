@@ -15,7 +15,8 @@ env file (`INSTANCE_TYPE`/`INSTANCE_ID`), never a different file.
 | `rabbitmq`      | yes      | Stock image; hub/branch sync transport, the app declares its own queues.         |
 | `garage`        | yes      | S3 storage for product photos; bucket and key created by `make prod-init-storage`. |
 | `migrate`       | yes      | One-shot, runs before the rest; never at app boot.                              |
-| `server`        | yes      | API, scheduler is NOT here (worker-only).                                       |
+| `server`        | yes      | Shop API, ERP callbacks and the host port; scheduler is NOT here (worker-only). |
+| `server-admin`  | yes      | Same image; Admin API for the manager portal and the dashboard (`API_TARGET`).  |
 | `worker`        | yes      | Job queue and scheduled tasks (Kafka consumer/outbox on central).               |
 | `worker-email`  | yes      | Dedicated email queue, isolated from `worker` via `activeQueues`.               |
 | `storefront`    | yes      | Customer portal (nginx, static bundle, proxies `/shop-api`).                    |
@@ -47,16 +48,16 @@ Nothing is configured inside a container by hand.
 
 ## Operations
 
-- **Frontends** re-resolve the `server` address every 10 s (nginx `resolver`), so recreating `server` needs no frontend restart.
+- **Frontends** re-resolve the `server` address every 10 s (nginx `resolver`), so recreating `server` or `server-admin` needs no frontend restart.
 - **Health**: `server` is checked on `/health`; postgres, rabbitmq, garage, elasticsearch have
   native checks; others depend on them (`service_healthy`). Every service has
   `restart: unless-stopped`.
-- **Limits**: memory limits for server, workers and postgres are variables (`*_MEM_LIMIT`).
+- **Limits**: memory limits for server, `server-admin` (`SERVER_ADMIN_MEM_LIMIT`), workers and postgres are variables (`*_MEM_LIMIT`).
 - **Logs**: `json-file`, 10 MB x 5 files per service.
 - **Kafka TLS**: put the CA file in `KAFKA_TLS_DIR` (mounted at `/run/kafka-tls`) and set `INTEGRATION_KAFKA_CA_PATH=/run/kafka-tls/<file>`.
 - **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, creates the photo bucket and key,
   runs migrations, starts the rest).
-- **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. A frontend-only release pins just `STOREFRONT_IMAGE_TAG`, `MANAGER_IMAGE_TAG` or `DASHBOARD_IMAGE_TAG` (empty = follows `IMAGE_TAG`); server, workers and `migrate` always follow `IMAGE_TAG`. It runs `migrate` (plain, forward-only) before
+- **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. A frontend-only release pins just `STOREFRONT_IMAGE_TAG`, `MANAGER_IMAGE_TAG` or `DASHBOARD_IMAGE_TAG` (empty = follows `IMAGE_TAG`); server, `server-admin`, workers and `migrate` always follow `IMAGE_TAG`. It runs `migrate` (plain, forward-only) before
   the new server starts; if it fails the command stops and the old containers keep running. `server` and the workers also `depends_on` the completed `migrate`, so even a plain `up -d` or a host reboot never boots them against an unmigrated schema.
 - **Heavy migrations**: stop the workers, run the `migrate` service alone (`docker compose run --rm migrate`)
   before `up -d`. The purge migration `1791537000000` deletes retired-stream inbox rows in batches of 50k and can take
@@ -109,11 +110,11 @@ non-atomic check-then-create, and `user.identifier` is deliberately not unique (
 staff, and soft-deleted users keep their identifier). Three layers prevent two superadmins:
 
 - `worker` and `worker-email` start only after `server` is healthy, so on an empty database the server creates the account alone.
-- `server`, `server-admin` and both workers wrap their bootstrap in `withBootstrapLock` (`apps/server/src/superadmin-bootstrap-lock.ts`): a Postgres advisory lock held until the process finished booting, so processes boot one after the other and roles and defaults are never written twice at once. A waiting process logs "Waiting for another process to finish bootstrap" and fails after `BOOTSTRAP_LOCK_TIMEOUT_MS` (default 600000). Size healthcheck `start_period` for two serialized boots (240s for both servers).
-- `server-admin` runs the same image on the same database; the manager portal and dashboard point `API_TARGET` at it, the storefront and ERP callbacks stay on `server`. Live notifications cross the two through Postgres `LISTEN/NOTIFY` (`PgPubSub`, channel `mivend_notification`), not process memory; a payload must stay under 8000 bytes.
+- `server`, `server-admin` and both workers wrap their bootstrap in `withBootstrapLock` (`apps/server/src/bootstrap-lock.ts`): a Postgres advisory lock held until the process finished booting, so processes boot one after the other and roles and defaults are never written twice at once. A waiting process logs "Waiting for another process to finish bootstrap" and fails after `BOOTSTRAP_LOCK_TIMEOUT_MS` (default 300000, below the roughly 390 s after which a server is reported unhealthy). The workers also wait for both servers to be healthy. If the lock connection drops mid-boot the process exits. Record the measured serialized boot time of both servers here after the first staging run and size `start_period` (240s) from it.
+- `server-admin` runs the same image on the same database; the manager portal and dashboard point `API_TARGET` at it, the storefront and ERP callbacks stay on `server`. Live notifications cross the two through Postgres `LISTEN/NOTIFY` (`PgPubSub`, channel `mivend_notification`), not process memory; a payload must stay under 8000 bytes. The push is best-effort: it is sent before the caller's transaction commits (a subscriber can briefly see a notification for a row that is not visible yet, or one that gets rolled back), it is lost while a listener reconnects (about a second), and a failed push is logged without failing the caller; clients refetch the list.
 - The `notification-cleanup` scheduled task (worker, daily 03:00) deletes read and resolved notifications after `NOTIFICATION_RETENTION_READ_DAYS` (default 90) and unread ones after `NOTIFICATION_RETENTION_UNREAD_DAYS` (default 365), in batches of 1000.
 - Process-local caches (access scope, branch assignment, facets and similar) are per process: an admin change made through `server-admin` reaches the shop process when its cache entry expires, not instantly. Vendure's session cache (24 h) behaves the same way, so deactivating a customer ends their session in the shop process only after that TTL.
-- Connections: each of `server`, `server-admin`, `worker` and `worker-email` holds a pool of `DB_POOL_SIZE` (default 10) plus one `LISTEN` connection, so about 44 at most against Postgres's default limit of 100.
+- Connections: each of `server`, `server-admin`, `worker` and `worker-email` holds a pool of `DB_POOL_SIZE` (default 10) plus one `LISTEN` connection, so about 44 at most (plus one short-lived lock connection per booting process) against Postgres's default limit of 100. Any process that publishes a notification keeps its `LISTEN` connection, workers included.
 - Scheduled tasks (`DefaultSchedulerPlugin`) and the Kafka consumer run only in the workers; the RabbitMQ sync consumer runs in both servers and deduplicates by `SyncProcessedEvent`.
 - Migration `1791535000000-administrator-email-unique` adds a partial unique index on `administrator."emailAddress"` (active rows only). It refuses to run and lists the ids if an active duplicate already exists.
 

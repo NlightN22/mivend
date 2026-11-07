@@ -62,6 +62,7 @@ x-server-env: &server-env
     SITE_NAME: ${SITE_NAME:-}
     SITE_DEFAULT_LANGUAGE: ${SITE_DEFAULT_LANGUAGE:-}
     EMAIL_FOOTER_TEXT: ${EMAIL_FOOTER_TEXT:-}
+    BOOTSTRAP_LOCK_TIMEOUT_MS: ${BOOTSTRAP_LOCK_TIMEOUT_MS:-300000}
     NOTIFICATION_RETENTION_READ_DAYS: ${NOTIFICATION_RETENTION_READ_DAYS:-90}
     NOTIFICATION_RETENTION_UNREAD_DAYS: ${NOTIFICATION_RETENTION_UNREAD_DAYS:-365}
     # REST surfaces are closed by default (docs/environments.md); keep these false in production.
@@ -167,6 +168,8 @@ services:
                 condition: service_completed_successfully
             server:
                 condition: service_healthy
+            server-admin:
+                condition: service_healthy
             postgres:
                 condition: service_healthy
             rabbitmq:
@@ -195,6 +198,8 @@ services:
             migrate:
                 condition: service_completed_successfully
             server:
+                condition: service_healthy
+            server-admin:
                 condition: service_healthy
             postgres:
                 condition: service_healthy
@@ -310,7 +315,7 @@ services:
         ports:
             - '${MANAGER_BIND_ADDRESS:-127.0.0.1}:${MANAGER_PORT:-8005}:80'
         depends_on:
-            - server
+            - server-admin
         healthcheck:
             test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
             interval: 30s
@@ -327,7 +332,7 @@ services:
         ports:
             - '${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8006}:80'
         depends_on:
-            - server
+            - server-admin
         healthcheck:
             test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
             interval: 30s

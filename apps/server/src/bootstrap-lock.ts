@@ -4,7 +4,7 @@ import { createDbClient } from './db-client';
 
 const LOCK_KEY = 'superadmin-bootstrap';
 const POLL_MS = 500;
-const DEFAULT_TIMEOUT_MS = 600_000;
+const DEFAULT_TIMEOUT_MS = 300_000;
 
 async function acquire(client: Client, timeoutMs: number): Promise<void> {
     const deadline = Date.now() + timeoutMs;
@@ -34,11 +34,17 @@ export async function withBootstrapLock<T>(
     timeoutMs: number = parseInt(process.env.BOOTSTRAP_LOCK_TIMEOUT_MS ?? `${DEFAULT_TIMEOUT_MS}`),
 ): Promise<T> {
     const client = createClient();
+    // A dropped connection releases the session lock mid-bootstrap, so fail the boot instead of racing.
+    client.on('error', err => {
+        console.error(`Bootstrap lock connection lost: ${err.message}`);
+        process.exit(1);
+    });
     await client.connect();
     try {
         await acquire(client, timeoutMs);
         return await work();
     } finally {
-        await client.end();
+        // best-effort: the lock is released with the connection, a close error must not mask the bootstrap result
+        await client.end().catch(() => undefined);
     }
 }

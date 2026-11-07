@@ -2,7 +2,7 @@ import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
-import { withBootstrapLock } from './superadmin-bootstrap-lock';
+import { withBootstrapLock } from './bootstrap-lock';
 
 // Isolated so stuck jobs in other queues can't starve password-reset emails — see the
 // vendure-workers skill.

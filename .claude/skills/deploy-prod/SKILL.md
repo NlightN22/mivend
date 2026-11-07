@@ -109,7 +109,8 @@ browser console for GraphQL validation errors (a sign of an incompatible schema)
 ### Backend, no migration
 
     $COMPOSE pull server server-admin worker worker-email
-    $COMPOSE up -d --wait server server-admin
+    $COMPOSE up -d --wait server
+    $COMPOSE up -d --wait server-admin
     $COMPOSE up -d --wait worker worker-email
 
 `migrate` still runs as a dependency and must exit 0 (no pending migrations is a no-op).
@@ -121,7 +122,8 @@ browser console for GraphQL validation errors (a sign of an incompatible schema)
     $COMPOSE pull migrate server server-admin worker worker-email
     $COMPOSE run --rm migrate             # must exit 0; non-zero: stop, do not start the new server
     echo $?
-    $COMPOSE up -d --wait server server-admin
+    $COMPOSE up -d --wait server
+    $COMPOSE up -d --wait server-admin
     $COMPOSE up -d --wait worker worker-email
 
 Then pull and recreate changed frontends as above. If `migrate` fails, the old server keeps running on the old

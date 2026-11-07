@@ -15,6 +15,7 @@ function reviveDates(key: string, value: unknown): unknown {
 }
 
 // Delivers across processes (shop and admin servers, workers) through Postgres LISTEN/NOTIFY.
+// Best-effort: pushes sent while the listener connection is down are lost, clients refetch.
 export class PgPubSub extends PubSubEngine {
     private readonly listeners = new Map<number, { trigger: string; onMessage: Listener }>();
     private nextId = 1;
@@ -52,15 +53,19 @@ export class PgPubSub extends PubSubEngine {
         this.closed = true;
         const pending = this.client;
         this.client = null;
-        if (pending) await (await pending).end();
+        // best-effort: shutting down, a connection that never opened has nothing to close
+        const client = await pending?.catch(() => null);
+        // best-effort: the connection is going away either way
+        await client?.end().catch(() => undefined);
     }
 
     private connect(): Promise<Client> {
         if (!this.client) {
-            this.client = this.open().catch(err => {
-                this.client = null;
+            const opening = this.open().catch(err => {
+                if (this.client === opening) this.client = null;
                 throw err;
             });
+            this.client = opening;
         }
         return this.client;
     }
@@ -71,32 +76,57 @@ export class PgPubSub extends PubSubEngine {
         client.on('error', err =>
             Logger.error(`Listener connection failed: ${err.message}`, LOGGER_CTX),
         );
-        client.on('end', () => this.reconnect());
+        client.on('end', () => this.onEnd(client));
         await client.connect();
-        await client.query(`LISTEN ${this.channel}`);
+        try {
+            await client.query(`LISTEN ${this.channel}`);
+        } catch (err) {
+            // best-effort: the LISTEN error below is the one worth reporting
+            await client.end().catch(() => undefined);
+            throw err;
+        }
         return client;
     }
 
-    private reconnect(): void {
+    private onEnd(ended: Client): void {
         if (this.closed) return;
-        this.client = null;
+        void this.client?.then(current => {
+            if (current !== ended) return;
+            this.client = null;
+            Logger.warn(
+                'Listener connection lost; pushes are lost until it reconnects',
+                LOGGER_CTX,
+            );
+            this.scheduleReconnect();
+        });
+    }
+
+    private scheduleReconnect(): void {
         setTimeout(() => {
-            if (this.closed || this.listeners.size === 0) return;
+            if (this.closed || this.client || this.listeners.size === 0) return;
             this.connect().catch(err => {
                 Logger.error(`Reconnect failed: ${err.message}`, LOGGER_CTX);
-                this.reconnect();
+                this.scheduleReconnect();
             });
         }, RECONNECT_DELAY_MS).unref();
     }
 
     private dispatch(raw: string | undefined): void {
         if (!raw) return;
-        const { trigger, payload } = JSON.parse(raw, reviveDates) as {
-            trigger: string;
-            payload: unknown;
-        };
+        let message: { trigger: string; payload: unknown };
+        try {
+            message = JSON.parse(raw, reviveDates);
+        } catch (err) {
+            Logger.error(`Dropped an unreadable notification payload: ${String(err)}`, LOGGER_CTX);
+            return;
+        }
         for (const l of this.listeners.values()) {
-            if (l.trigger === trigger) l.onMessage(payload);
+            if (l.trigger !== message.trigger) continue;
+            try {
+                l.onMessage(message.payload);
+            } catch (err) {
+                Logger.error(`A subscriber threw: ${String(err)}`, LOGGER_CTX);
+            }
         }
     }
 }

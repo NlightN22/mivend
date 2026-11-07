@@ -5,7 +5,7 @@ import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
-import { withBootstrapLock } from './superadmin-bootstrap-lock';
+import { withBootstrapLock } from './bootstrap-lock';
 
 // Mounted only with API_DOCS_ENABLED=true; must run in `onBeforeAppListen` (later routes 404).
 // (Nest finalizes routing at app.listen()). REST-only docs, see issue #28.

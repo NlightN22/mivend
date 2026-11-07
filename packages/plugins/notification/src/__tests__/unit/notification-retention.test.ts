@@ -15,4 +15,13 @@ describe('retentionFromEnv', () => {
             }),
         ).toEqual({ handledDays: 30, unreadDays: 180 });
     });
+
+    it('falls back to the defaults for a value that is not a positive number', () => {
+        expect(
+            retentionFromEnv({
+                NOTIFICATION_RETENTION_READ_DAYS: 'abc',
+                NOTIFICATION_RETENTION_UNREAD_DAYS: '-5',
+            }),
+        ).toEqual({ handledDays: 90, unreadDays: 365 });
+    });
 });
