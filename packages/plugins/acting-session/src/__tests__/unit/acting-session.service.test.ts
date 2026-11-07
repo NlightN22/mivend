@@ -30,7 +30,14 @@ function setup(
         getRepository: (_ctx: unknown, entity: { name: string }) =>
             entity.name === 'User'
                 ? { findOneOrFail: async () => ({ id: 'u-1' }) }
-                : { save, query: vi.fn().mockResolvedValue([{ id: '1' }]) },
+                : entity.name === 'Administrator'
+                  ? {
+                        findOne: async () => {
+                            if (over.nameLookupFails) throw new Error('db down');
+                            return { id: 7, firstName: 'Ivan', lastName: 'Manager' };
+                        },
+                    }
+                  : { save, query: vi.fn().mockResolvedValue([{ id: '1' }]) },
     };
     const cacheDelete = vi.fn();
     const tickets = {
@@ -48,10 +55,6 @@ function setup(
         { authOptions: { sessionCacheStrategy: { delete: cacheDelete } } } as never,
         {
             findOneByUserId: async () => ('admin' in over ? over.admin : { id: 7 }),
-            findOne: async () => {
-                if (over.nameLookupFails) throw new Error('db down');
-                return { id: 7, firstName: 'Ivan', lastName: 'Manager' };
-            },
         } as never,
         eligibility as never,
         tickets as never,

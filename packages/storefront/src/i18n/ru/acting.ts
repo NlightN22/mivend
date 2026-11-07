@@ -2,7 +2,7 @@ import type en from '../en/acting';
 
 const ru: typeof en = {
     acting: {
-        line: 'Менеджер {manager} →',
+        line: '{manager} →',
         lineUnknown: 'Менеджер →',
         entryLoading: 'Открываем сессию клиента…',
         entryFailedTitle: 'Ссылка недействительна или устарела',

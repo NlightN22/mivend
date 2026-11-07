@@ -1,6 +1,6 @@
 export default {
     acting: {
-        line: 'Manager {manager} →',
+        line: '{manager} →',
         lineUnknown: 'Manager →',
         entryLoading: 'Opening the customer session…',
         entryFailedTitle: 'The link is invalid or expired',
