@@ -1,0 +1,110 @@
+/* A td's height is a floor, so skeleton rows reach the real row height and the page does not jump. */
+:deep(.mv-advanced-data-table__skeleton-row td) {
+    height: var(--mv-skeleton-row-height);
+}
+
+.mv-advanced-data-table__grid {
+    width: 100%;
+}
+
+/* `fixed` makes a column's `width` authoritative, so long cell text ellipsizes instead of
+   pushing later columns off-screen. */
+.mv-advanced-data-table__grid :deep(table) {
+    table-layout: fixed;
+}
+
+.mv-advanced-data-table__cell-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+/* Keeps the sort and funnel icons next to the title instead of at opposite ends. */
+:deep(.p-datatable-column-header-content) {
+    justify-content: flex-start;
+    gap: 2px;
+}
+
+.mv-advanced-data-table__col-title {
+    cursor: default;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.mv-advanced-data-table__sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-inline-start: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--el-text-color-secondary);
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
+}
+
+.mv-advanced-data-table__sort-btn:hover {
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+}
+
+.mv-advanced-data-table__sort-btn--active {
+    color: var(--el-color-primary);
+}
+
+.mv-advanced-data-table__sort-icon {
+    width: 16px;
+    height: 16px;
+}
+
+:deep(.p-datatable-column-resizer)::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: var(--el-border-color);
+}
+
+:deep(.p-datatable-column-resizer:hover)::after {
+    width: 2px;
+    background: var(--el-color-primary);
+}
+
+:deep(.p-datatable-filter) {
+    margin-inline-start: 0;
+}
+
+:deep(.p-datatable-column-filter-button:hover) {
+    background: var(--el-color-primary-light-9) !important;
+    color: var(--el-color-primary) !important;
+}
+
+:deep(.p-datatable-column-filter-button) {
+    width: 22px;
+    height: 22px;
+}
+
+/* The flag sits in the header slot because a dynamic class/pt on Column rebuilds the cell and closes an open filter overlay mid-typing. */
+:deep(.mv-advanced-data-table__filter-flag) {
+    display: none;
+}
+
+:deep(
+    .mv-advanced-data-table__filter-flag.is-on
+        ~ .p-datatable-filter
+        .p-datatable-column-filter-button
+) {
+    color: var(--el-color-primary);
+}
