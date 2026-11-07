@@ -50,7 +50,7 @@ function until(iso: string | null): string {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 .reservation-holds__row {
     display: flex;
@@ -58,7 +58,7 @@ function until(iso: string | null): string {
     align-items: center;
     gap: 8px;
     padding: 6px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-row-border);
     font-size: 13px;
 }
 .reservation-holds__sku {
@@ -66,6 +66,6 @@ function until(iso: string | null): string {
 }
 .reservation-holds__meta {
     margin-left: auto;
-    color: #66736e;
+    color: var(--app-text-grey);
 }
 </style>

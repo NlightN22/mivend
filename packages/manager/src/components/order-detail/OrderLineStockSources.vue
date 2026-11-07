@@ -50,7 +50,7 @@ defineProps<{ availability: OrderLineAvailability }>();
 
 .sources__limit {
     margin: 0 0 4px;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
 }
 
 .sources__list {
@@ -64,13 +64,13 @@ defineProps<{ availability: OrderLineAvailability }>();
     justify-content: space-between;
     gap: 12px;
     padding: 3px 0;
-    border-top: 1px solid var(--el-border-color-lighter, #eef0f3);
+    border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .sources__title {
     font-size: 11px;
     text-transform: uppercase;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .sources__sell {
@@ -83,7 +83,7 @@ defineProps<{ availability: OrderLineAvailability }>();
 }
 
 .sources__bad {
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
     font-weight: 700;
 }
 </style>

@@ -74,7 +74,7 @@ void statuses.load();
 }
 
 .order-detail__rejection-label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 </style>

@@ -106,7 +106,7 @@ onMounted(() => void load());
     display: grid;
     gap: 4px;
     padding: 8px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-row-border);
 }
 .pi-main {
     display: flex;
@@ -120,7 +120,7 @@ onMounted(() => void load());
 }
 .pi-meta,
 .pi-empty {
-    color: #66736e;
+    color: var(--app-text-grey);
     font-size: 13px;
     margin: 0;
 }

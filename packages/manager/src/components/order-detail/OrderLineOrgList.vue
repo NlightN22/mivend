@@ -35,7 +35,7 @@ defineProps<{ rows: OrgRow[]; mode: 'stock' | 'contract' }>();
     align-items: center;
     gap: 6px;
     padding: 3px 0;
-    border-top: 1px solid var(--el-border-color-lighter, #eef0f3);
+    border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .org-list__row--selling {
@@ -49,7 +49,7 @@ defineProps<{ rows: OrgRow[]; mode: 'stock' | 'contract' }>();
 .org-list__name em {
     font-style: normal;
     font-weight: 400;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .org-list__value {
@@ -60,10 +60,10 @@ defineProps<{ rows: OrgRow[]; mode: 'stock' | 'contract' }>();
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--el-color-success, #059669);
+    background: var(--el-color-success);
 }
 
 .org-list__dot--bad {
-    background: var(--el-color-danger, #dc2626);
+    background: var(--el-color-danger);
 }
 </style>

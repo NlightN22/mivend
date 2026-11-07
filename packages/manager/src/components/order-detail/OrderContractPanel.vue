@@ -87,6 +87,6 @@ watch(() => props.orderId, load, { immediate: true });
 
 .order-contract__hint {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

@@ -47,7 +47,7 @@ const failedAtLabel = computed(() =>
     gap: 2px;
 }
 .reservation-failure__meta {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 </style>

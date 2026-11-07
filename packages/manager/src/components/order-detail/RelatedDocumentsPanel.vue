@@ -45,17 +45,17 @@ function variant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
 }
 
 .related-documents__link {
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     text-decoration: none;
     font-weight: 600;
 }
 
 .related-documents__link:hover {
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
 }
 
 .related-documents__empty {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 </style>

@@ -70,7 +70,7 @@ const { formatWhole } = useCurrency();
     justify-content: space-between;
     gap: 14px;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
 }
 
 .order-context__row:last-of-type {
@@ -79,7 +79,7 @@ const { formatWhole } = useCurrency();
 }
 
 .order-context__label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -89,12 +89,12 @@ const { formatWhole } = useCurrency();
 }
 
 .order-context__value--danger {
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
 }
 
 .order-context__link {
     margin-top: 4px;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
     font-weight: 700;
     font-size: 13px;
     text-decoration: none;
