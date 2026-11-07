@@ -1,0 +1,140 @@
+.mv-loc {
+    position: fixed;
+    inset: 0;
+    z-index: var(--mv-z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--app-ink-14);
+    overscroll-behavior: contain;
+}
+
+.mv-loc--inline {
+    position: static;
+    padding: 0;
+    background: none;
+}
+
+.mv-loc__dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 960px;
+    height: min(720px, 100%);
+    padding: 16px 20px 20px;
+    background: var(--app-surface);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px var(--app-ink-14);
+}
+
+.mv-loc--inline .mv-loc__dialog {
+    height: 420px;
+    max-width: none;
+    box-shadow: none;
+}
+
+.mv-loc__head,
+.mv-loc__foot,
+.mv-loc__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mv-loc__head {
+    justify-content: space-between;
+}
+
+.mv-loc__title {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--app-nav-text-strong);
+}
+
+.mv-loc__close {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--app-fill-soft);
+    color: var(--app-nav-label);
+    cursor: pointer;
+}
+
+.mv-loc__mapbox {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+}
+
+.mv-loc__map {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: var(--app-fill-soft);
+}
+
+.mv-loc__switch {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: var(--mv-z-sticky);
+}
+
+.mv-loc__overlay,
+.mv-loc__coop {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--app-surface);
+    font-size: 12px;
+    color: var(--app-nav-label);
+}
+
+.mv-loc__failed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--app-danger-fg);
+}
+
+.mv-loc__failed p {
+    margin: 0;
+}
+
+.mv-loc__foot {
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.mv-loc__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 14px;
+    color: var(--app-nav-text-strong);
+}
+
+.mv-loc__address {
+    color: var(--app-nav-label);
+}
+
+@media (max-width: 800px) {
+    .mv-loc {
+        padding: 0;
+    }
+
+    .mv-loc__dialog {
+        height: 100%;
+        max-width: none;
+        border-radius: 0;
+    }
+}
