@@ -166,6 +166,7 @@ function pick(id: string): void {
                             v-model="newName"
                             class="mv-table-views__input mv-table-views__name"
                             placeholder="Save current table as…"
+                            maxlength="80"
                             data-testid="table-views-name"
                             @keyup.enter="create"
                         />

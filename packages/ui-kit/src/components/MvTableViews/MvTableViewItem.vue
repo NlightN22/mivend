@@ -42,6 +42,7 @@ function commitRename(): void {
         <input
             v-if="renaming"
             v-model="renameValue"
+            maxlength="80"
             class="mv-table-views__input"
             data-testid="table-views-rename"
             @keyup.enter="commitRename"
