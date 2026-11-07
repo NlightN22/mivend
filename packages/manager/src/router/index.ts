@@ -32,12 +32,6 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'orders/new',
-                    name: 'orders-new',
-                    component: () => import('../pages/orders/NewOrderPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
                     path: 'orders/:code',
                     name: 'order-detail',
                     component: () => import('../pages/orders/OrderDetailPage.vue'),
@@ -83,18 +77,6 @@ export const router = createRouter({
                     path: 'discounts',
                     name: 'discounts',
                     component: () => import('../pages/discounts/DiscountsPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'catalog',
-                    name: 'catalog',
-                    component: () => import('../pages/catalog/CatalogPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'catalog/:slug',
-                    name: 'catalog-detail',
-                    component: () => import('../pages/catalog/ProductDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {
@@ -232,6 +214,7 @@ export const router = createRouter({
                 },
                 ...[
                     { path: 'customers/new', title: 'New client' },
+                    { path: 'analytics', title: 'Analytics' },
                     { path: 'profile', title: 'Profile' },
                 ].map(({ path, title }) => ({
                     path,

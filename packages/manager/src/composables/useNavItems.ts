@@ -7,31 +7,26 @@ import { availableBulkOperations } from '../pages/bulk-operations/operations';
 export function useNavItems(approvalsBadgeCount: Ref<number>) {
     const authStore = useAuthStore();
 
-    // Full menu per docs/ai/manager-portal-pages/00-shared-conventions.md — only Dashboard has a
-    // real page so far, the rest route to a shared "coming soon" placeholder (see router/index.ts)
-    // until they're built out one at a time.
+    // Order per docs/manager-portal-ui-concept.md; Analytics routes to the shared "coming soon" page.
     const menuItems = computed<AppSidebarItem[]>(() => {
+        // Proforma invoices/Payments are gated on the same permissions as their visible* queries.
+        const documents: AppSidebarItem[] = [{ label: 'Orders', path: '/orders' }];
+        if (authStore.hasPermission('ReadProformaInvoice'))
+            documents.push({ label: 'Proforma invoices', path: '/proforma-invoices' });
+        if (authStore.hasPermission('ReadPayment'))
+            documents.push({ label: 'Payments', path: '/payments' });
+        documents.push({ label: 'Discount requests', path: '/discounts' });
         const items: AppSidebarItem[] = [
             { label: 'Dashboard', path: '/' },
-            { label: 'Orders', path: '/orders' },
-        ];
-        // Gated on the same CustomPermission.ReadProformaInvoice/ReadPayment the visibleProformaInvoices/
-        // visiblePayments queries themselves check — see AdminProformaInvoiceVisibilityResolver/
-        // AdminPaymentVisibilityResolver.
-        if (authStore.hasPermission('ReadProformaInvoice'))
-            items.push({ label: 'Proforma invoices', path: '/proforma-invoices' });
-        if (authStore.hasPermission('ReadPayment'))
-            items.push({ label: 'Payments', path: '/payments' });
-        items.push(
             { label: 'Customers', path: '/customers' },
-            { label: 'Catalog', path: '/catalog' },
-            { label: 'Discounts', path: '/discounts' },
+            { label: 'Documents', children: documents },
             { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
             { label: 'Team', path: '/team' },
-        );
+        ];
         if (availableBulkOperations(authStore.hasPermission).length) {
             items.push({ label: 'Bulk operations', path: '/bulk-operations' });
         }
+        items.push({ label: 'Analytics', path: '/analytics' });
         // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
         // itself checks — not a role-code allowlist, so granting/revoking this via the native
         // Vendure admin UI (any role) is enough, no manager-portal code change needed.
@@ -74,9 +69,9 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         if (authStore.hasPermission('ReadPayment'))
             items.push({ key: 'payments', label: 'Payments', path: '/payments' });
         items.push(
-            { key: 'catalog', label: 'Catalog', path: '/catalog' },
-            { key: 'discounts', label: 'Discounts', path: '/discounts' },
+            { key: 'discounts', label: 'Discount requests', path: '/discounts' },
             { key: 'team', label: 'Team', path: '/team' },
+            { key: 'analytics', label: 'Analytics', path: '/analytics' },
         );
         if (authStore.hasPermission('ManageAccessControl')) {
             items.push({ key: 'settings', label: 'Settings', path: '/settings' });

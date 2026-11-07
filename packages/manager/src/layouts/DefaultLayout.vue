@@ -7,7 +7,6 @@ import {
     MvAppSidebar,
     MvAppMobileNav,
     MvAppMobileMoreSheet,
-    MvFab,
     MvScrollNav,
     MvConnectionBar,
     MvNotice,
@@ -32,23 +31,6 @@ const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const moreSheetOpen = ref(false);
-// FAB only makes sense where "create a new order" is the obvious next action — the orders
-// list, any order-scoped page, and a customer's Orders tab (same route, tab tracked via
-// ?tab= per the manager-portal URL-sync rule, since tab switching there doesn't change path).
-const onCustomerOrdersTab = computed(
-    () => route.path.startsWith('/customers/') && route.query.tab === 'orders',
-);
-const showCreateOrderFab = computed(
-    () => route.path.startsWith('/orders') || onCustomerOrdersTab.value,
-);
-const createOrderFabTarget = computed(() => {
-    if (onCustomerOrdersTab.value) {
-        const customerId = route.params.id;
-        return `/orders/new?customerId=${customerId}`;
-    }
-    return '/orders/new';
-});
-
 const initials = computed(() => {
     const [first, last] = authStore.fullName.split(' ');
     return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase();
@@ -115,7 +97,6 @@ function handleRelogin(): void {
                     :unread-count="unreadCount"
                     @click="notificationPanelOpen = !notificationPanelOpen"
                 />
-                <RouterLink class="layout__new-order" to="/orders/new">+ New order</RouterLink>
             </template>
         </MvAppTopbar>
         <div v-if="notificationPanelOpen" class="layout__notification-panel">
@@ -133,10 +114,7 @@ function handleRelogin(): void {
         </div>
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
-            <main
-                class="layout__content"
-                :class="{ 'layout__content--with-fab': showCreateOrderFab }"
-            >
+            <main class="layout__content">
                 <MvNotice
                     v-if="authStore.isDefaultSuperadminAccount"
                     variant="warning"
@@ -165,7 +143,6 @@ function handleRelogin(): void {
             @close="moreSheetOpen = false"
             @logout="handleLogout"
         />
-        <MvFab v-if="showCreateOrderFab" :to="createOrderFabTarget" aria-label="Create order" />
         <MvScrollNav />
     </div>
 </template>
@@ -175,7 +152,7 @@ function handleRelogin(): void {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: var(--el-bg-color-page, #f6f8fb);
+    background: var(--el-bg-color-page);
 }
 
 .layout__notification-panel {
@@ -198,24 +175,6 @@ function handleRelogin(): void {
     min-width: 0;
 }
 
-.layout__new-order {
-    display: inline-flex;
-    align-items: center;
-    height: 38px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: var(--el-color-primary, #00b894);
-    color: #fff;
-    font-weight: 700;
-    font-size: 13px;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.layout__new-order:hover {
-    filter: brightness(1.05);
-}
-
 .layout__default-account {
     margin-bottom: 16px;
 }
@@ -231,14 +190,6 @@ function handleRelogin(): void {
     .layout__content {
         padding: 12px;
         padding-bottom: calc(74px + env(safe-area-inset-bottom));
-    }
-
-    /* MvFab sits at bottom: 84px, height 54px — its top edge reaches ~138px from the viewport
-       bottom. Real incident: on /orders (or a customer's Orders tab), the default 74px of
-       clearance (sized only for the bottom nav) let the FAB visually cover the pagination
-       row's "Next" button once a page was scrolled to its natural end, making it untappable. */
-    .layout__content--with-fab {
-        padding-bottom: calc(160px + env(safe-area-inset-bottom));
     }
 }
 </style>

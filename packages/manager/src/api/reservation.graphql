@@ -75,15 +75,3 @@ query OrderReservationDetails($orderId: ID!) {
         status
     }
 }
-
-query VariantReservationHolders($productVariantId: ID!) {
-    variantReservationHolders(productVariantId: $productVariantId) {
-        orderId
-        orderCode
-        counterpartyName
-        managerName
-        source
-        quantity
-        until
-    }
-}

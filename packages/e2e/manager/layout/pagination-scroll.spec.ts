@@ -9,7 +9,6 @@ const PAGES = [
     '/discounts',
     '/customers',
     '/approvals',
-    '/catalog',
 ];
 
 for (const path of PAGES) {

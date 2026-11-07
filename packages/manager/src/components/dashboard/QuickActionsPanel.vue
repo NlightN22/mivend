@@ -1,11 +1,6 @@
 <script setup lang="ts">
 const actions = [
     {
-        label: 'New order',
-        description: 'Create an order on behalf of a customer.',
-        to: '/orders/new',
-    },
-    {
         label: 'Find customer',
         description: 'Open customer card, orders and documents.',
         to: '/customers',

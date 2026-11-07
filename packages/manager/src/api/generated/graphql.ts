@@ -10137,62 +10137,6 @@ export type ChangeOwnPasswordMutationVariables = Exact<{
 
 export type ChangeOwnPasswordMutation = { updateActiveAdministrator: { id: string } };
 
-export type ActingCounterpartiesQueryVariables = Exact<{
-    search: Scalars['String']['input'];
-}>;
-
-export type ActingCounterpartiesQuery = {
-    counterparties: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            shortName: string;
-            legalName: string;
-            inn: string | null;
-            priceType: string | null;
-            linkedCustomerId: string | null;
-            tradingPoints: Array<{
-                id: string;
-                name: string;
-                address: string;
-                isActive: boolean;
-                customerStatus: string;
-            }>;
-        }>;
-    };
-};
-
-export type ActingCounterpartyQueryVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type ActingCounterpartyQuery = {
-    counterparty: {
-        id: string;
-        shortName: string;
-        legalName: string;
-        inn: string | null;
-        priceType: string | null;
-        linkedCustomerId: string | null;
-        tradingPoints: Array<{
-            id: string;
-            name: string;
-            address: string;
-            isActive: boolean;
-            customerStatus: string;
-        }>;
-    } | null;
-};
-
-export type StartActingSessionMutationVariables = Exact<{
-    counterpartyId: Scalars['ID']['input'];
-    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type StartActingSessionMutation = {
-    startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
-};
-
 export type PendingApprovalsBadgeCountQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PendingApprovalsBadgeCountQuery = {
@@ -10576,127 +10520,6 @@ export type SetBranchSettingsMutation = {
         prepaymentReserveDays: number;
         proformaPaymentTermDays: number;
     };
-};
-
-export type CatalogFacetsQueryVariables = Exact<{
-    term?: InputMaybe<Scalars['String']['input']>;
-}>;
-
-export type CatalogFacetsQuery = {
-    search: {
-        facetValues: Array<{
-            count: number;
-            facetValue: {
-                id: string;
-                code: string;
-                name: string;
-                facet: { code: string; name: string };
-            };
-        }>;
-    };
-};
-
-export type CategoryTreeQueryVariables = Exact<{
-    skip: Scalars['Int']['input'];
-    take: Scalars['Int']['input'];
-}>;
-
-export type CategoryTreeQuery = {
-    collections: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            name: string;
-            slug: string;
-            isPrivate: boolean;
-            breadcrumbs: Array<{ id: string; name: string; slug: string }>;
-        }>;
-    };
-};
-
-export type CatalogPageQueryVariables = Exact<{
-    term?: InputMaybe<Scalars['String']['input']>;
-    collectionSlug?: InputMaybe<Scalars['String']['input']>;
-    facetValueFilters?: InputMaybe<Array<FacetValueFilterInput> | FacetValueFilterInput>;
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-export type CatalogPageQuery = {
-    search: {
-        totalItems: number;
-        skuMatches: {
-            items: Array<{
-                productId: string;
-                productVariantId: string;
-                productName: string;
-                sku: string;
-                slug: string;
-                facetValueIds: Array<string>;
-                availableForOrder: boolean;
-                productAsset: { preview: string } | null;
-            }>;
-        } | null;
-        partNumberMatches: {
-            items: Array<{
-                productId: string;
-                productVariantId: string;
-                productName: string;
-                sku: string;
-                slug: string;
-                facetValueIds: Array<string>;
-                availableForOrder: boolean;
-                productAsset: { preview: string } | null;
-            }>;
-        } | null;
-        manufacturerCodeMatches: {
-            items: Array<{
-                productId: string;
-                productVariantId: string;
-                productName: string;
-                sku: string;
-                slug: string;
-                facetValueIds: Array<string>;
-                availableForOrder: boolean;
-                productAsset: { preview: string } | null;
-            }>;
-        } | null;
-        items: Array<{
-            productId: string;
-            productVariantId: string;
-            productName: string;
-            sku: string;
-            slug: string;
-            facetValueIds: Array<string>;
-            availableForOrder: boolean;
-            productAsset: { preview: string } | null;
-        }>;
-    };
-};
-
-export type CatalogVariantStockQueryVariables = Exact<{
-    ids: Array<Scalars['String']['input']> | Scalars['String']['input'];
-}>;
-
-export type CatalogVariantStockQuery = {
-    productVariants: { items: Array<{ id: string; stockLevels: Array<{ stockOnHand: number }> }> };
-};
-
-export type CatalogFloorPricesForVariantsQueryVariables = Exact<{
-    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-}>;
-
-export type CatalogFloorPricesForVariantsQuery = {
-    floorPricesForVariants: Array<{ variantId: string; price: number }>;
-};
-
-export type CatalogPriceEntriesForVariantsQueryVariables = Exact<{
-    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-    priceTypeCode: Scalars['String']['input'];
-}>;
-
-export type CatalogPriceEntriesForVariantsQuery = {
-    priceEntriesForVariants: Array<{ variantId: string; price: number }>;
 };
 
 export type CategoryCollectionFieldsFragment = {
@@ -12222,29 +12045,6 @@ export type PriceTypeGapCounterpartiesQuery = {
     };
 };
 
-export type ProductBySlugQueryVariables = Exact<{
-    slug?: InputMaybe<Scalars['String']['input']>;
-}>;
-
-export type ProductBySlugQuery = {
-    product: {
-        id: string;
-        name: string;
-        slug: string;
-        customFields: { manufacturer: { name: string | null } | null } | null;
-        facetValues: Array<{ id: string; name: string; facet: { code: string } }>;
-        variants: Array<{ id: string; sku: string; stockLevels: Array<{ stockOnHand: number }> }>;
-    } | null;
-};
-
-export type ProductCrossReferencesQueryVariables = Exact<{
-    productId: Scalars['ID']['input'];
-}>;
-
-export type ProductCrossReferencesQuery = {
-    productCrossReferences: Array<{ oemCode: string; oemBrand: string }>;
-};
-
 export type ProformaInvoiceListItemFieldsFragment = {
     id: string;
     number: string;
@@ -12451,22 +12251,6 @@ export type OrderReservationDetailsQuery = {
         quantity: number;
         until: any | null;
         status: string;
-    }>;
-};
-
-export type VariantReservationHoldersQueryVariables = Exact<{
-    productVariantId: Scalars['ID']['input'];
-}>;
-
-export type VariantReservationHoldersQuery = {
-    variantReservationHolders: Array<{
-        orderId: string;
-        orderCode: string;
-        counterpartyName: string | null;
-        managerName: string | null;
-        source: ReservationSource;
-        quantity: number;
-        until: any | null;
     }>;
 };
 
@@ -13360,65 +13144,6 @@ export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     ChangeOwnPasswordMutation,
     ChangeOwnPasswordMutationVariables
 >;
-export const ActingCounterpartiesDocument = new TypedDocumentString(`
-    query ActingCounterparties($search: String!) {
-  counterparties(options: {search: $search, take: 20, status: "active"}) {
-    totalItems
-    items {
-      id
-      shortName
-      legalName
-      inn
-      priceType
-      linkedCustomerId
-      tradingPoints {
-        id
-        name
-        address
-        isActive
-        customerStatus
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ActingCounterpartiesQuery,
-    ActingCounterpartiesQueryVariables
->;
-export const ActingCounterpartyDocument = new TypedDocumentString(`
-    query ActingCounterparty($id: ID!) {
-  counterparty(id: $id) {
-    id
-    shortName
-    legalName
-    inn
-    priceType
-    linkedCustomerId
-    tradingPoints {
-      id
-      name
-      address
-      isActive
-      customerStatus
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<ActingCounterpartyQuery, ActingCounterpartyQueryVariables>;
-export const StartActingSessionDocument = new TypedDocumentString(`
-    mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
-  startActingSession(
-    counterpartyId: $counterpartyId
-    tradingPointId: $tradingPointId
-  ) {
-    ticket
-    storefrontUrl
-    expiresAt
-  }
-}
-    `) as unknown as TypedDocumentString<
-    StartActingSessionMutation,
-    StartActingSessionMutationVariables
->;
 export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
     query PendingApprovalsBadgeCount {
   myApprovalRequestsSummary(recentLimit: 0) {
@@ -13751,142 +13476,6 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables
->;
-export const CatalogFacetsDocument = new TypedDocumentString(`
-    query CatalogFacets($term: String) {
-  search(input: {term: $term, take: 0, skip: 0, groupByProduct: true}) {
-    facetValues {
-      facetValue {
-        id
-        code
-        name
-        facet {
-          code
-          name
-        }
-      }
-      count
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<CatalogFacetsQuery, CatalogFacetsQueryVariables>;
-export const CategoryTreeDocument = new TypedDocumentString(`
-    query CategoryTree($skip: Int!, $take: Int!) {
-  collections(options: {skip: $skip, take: $take}) {
-    items {
-      id
-      name
-      slug
-      isPrivate
-      breadcrumbs {
-        id
-        name
-        slug
-      }
-    }
-    totalItems
-  }
-}
-    `) as unknown as TypedDocumentString<CategoryTreeQuery, CategoryTreeQueryVariables>;
-export const CatalogPageDocument = new TypedDocumentString(`
-    query CatalogPage($term: String, $collectionSlug: String, $facetValueFilters: [FacetValueFilterInput!], $skip: Int, $take: Int) {
-  search(
-    input: {term: $term, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, groupByProduct: true, skip: $skip, take: $take}
-  ) {
-    totalItems
-    skuMatches {
-      items {
-        productId
-        productVariantId
-        productName
-        sku
-        slug
-        facetValueIds
-        availableForOrder
-        productAsset {
-          preview
-        }
-      }
-    }
-    partNumberMatches {
-      items {
-        productId
-        productVariantId
-        productName
-        sku
-        slug
-        facetValueIds
-        availableForOrder
-        productAsset {
-          preview
-        }
-      }
-    }
-    manufacturerCodeMatches {
-      items {
-        productId
-        productVariantId
-        productName
-        sku
-        slug
-        facetValueIds
-        availableForOrder
-        productAsset {
-          preview
-        }
-      }
-    }
-    items {
-      productId
-      productVariantId
-      productName
-      sku
-      slug
-      facetValueIds
-      availableForOrder
-      productAsset {
-        preview
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<CatalogPageQuery, CatalogPageQueryVariables>;
-export const CatalogVariantStockDocument = new TypedDocumentString(`
-    query CatalogVariantStock($ids: [String!]!) {
-  productVariants(options: {filter: {id: {in: $ids}}}) {
-    items {
-      id
-      stockLevels {
-        stockOnHand
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CatalogVariantStockQuery,
-    CatalogVariantStockQueryVariables
->;
-export const CatalogFloorPricesForVariantsDocument = new TypedDocumentString(`
-    query CatalogFloorPricesForVariants($ids: [ID!]!) {
-  floorPricesForVariants(variantIds: $ids) {
-    variantId
-    price
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CatalogFloorPricesForVariantsQuery,
-    CatalogFloorPricesForVariantsQueryVariables
->;
-export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
-    query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
-  priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
-    variantId
-    price
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CatalogPriceEntriesForVariantsQuery,
-    CatalogPriceEntriesForVariantsQueryVariables
 >;
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
     query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
@@ -15489,45 +15078,6 @@ export const PriceTypeGapCounterpartiesDocument = new TypedDocumentString(`
     PriceTypeGapCounterpartiesQuery,
     PriceTypeGapCounterpartiesQueryVariables
 >;
-export const ProductBySlugDocument = new TypedDocumentString(`
-    query ProductBySlug($slug: String) {
-  product(slug: $slug) {
-    id
-    name
-    slug
-    customFields {
-      manufacturer {
-        name
-      }
-    }
-    facetValues {
-      id
-      name
-      facet {
-        code
-      }
-    }
-    variants {
-      id
-      sku
-      stockLevels {
-        stockOnHand
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<ProductBySlugQuery, ProductBySlugQueryVariables>;
-export const ProductCrossReferencesDocument = new TypedDocumentString(`
-    query ProductCrossReferences($productId: ID!) {
-  productCrossReferences(productId: $productId) {
-    oemCode
-    oemBrand
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ProductCrossReferencesQuery,
-    ProductCrossReferencesQueryVariables
->;
 export const ProformaInvoicesPageDocument = new TypedDocumentString(`
     query ProformaInvoicesPage($options: ProformaInvoiceListOptions, $counterpartyId: ID) {
   visibleProformaInvoices(options: $options, counterpartyId: $counterpartyId) {
@@ -15724,22 +15274,6 @@ export const OrderReservationDetailsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     OrderReservationDetailsQuery,
     OrderReservationDetailsQueryVariables
->;
-export const VariantReservationHoldersDocument = new TypedDocumentString(`
-    query VariantReservationHolders($productVariantId: ID!) {
-  variantReservationHolders(productVariantId: $productVariantId) {
-    orderId
-    orderCode
-    counterpartyName
-    managerName
-    source
-    quantity
-    until
-  }
-}
-    `) as unknown as TypedDocumentString<
-    VariantReservationHoldersQuery,
-    VariantReservationHoldersQueryVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {

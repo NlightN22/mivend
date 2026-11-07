@@ -4,7 +4,6 @@ import type { VisIds } from '../../fixtures/visibility/ids';
 import {
     ALLOWED_PRICE_TYPES,
     GRANTS,
-    PRODUCT,
     VIS_PRICE_TYPES,
     grantJustification,
 } from '../../fixtures/visibility/plan';
@@ -54,12 +53,9 @@ test.describe('05: manager-a (branch A) sees only allowed price types', () => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
             const paths = ['/', '/orders', '/customers', `/customers/${ids.clients['a-own']}`];
-            paths.push('/discounts', '/catalog', '/approvals', '/proforma-invoices', '/payments');
-            paths.push(`/catalog/${PRODUCT.slug}`);
+            paths.push('/discounts', '/approvals', '/proforma-invoices', '/payments');
             const texts: string[] = [];
             for (const path of paths) texts.push(await settle(s, path));
-            await expect(s.page.getByText(PRODUCT.sku).first()).toBeVisible({ timeout: 15000 });
-            await shot(s.page, 'manager-product-manager-a');
             expect(s.bodies.length, 'GraphQL responses were captured').toBeGreaterThan(
                 paths.length,
             );
