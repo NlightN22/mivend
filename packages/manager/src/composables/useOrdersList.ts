@@ -28,6 +28,7 @@ export interface OrdersListState {
     pageSize: Ref<number>;
     managers: Ref<ManagerOption[]>;
     branches: Ref<BranchOption[]>;
+    reload: () => Promise<void>;
 }
 
 // Filters, sort, page and page size live in the URL, so a filtered list is a shareable link.
@@ -90,5 +91,6 @@ export function useOrdersList(preset: OrdersListPreset): OrdersListState {
         pageSize,
         managers,
         branches,
+        reload: run,
     };
 }
