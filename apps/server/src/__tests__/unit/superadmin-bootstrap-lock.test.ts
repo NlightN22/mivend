@@ -1,7 +1,10 @@
 import type { Client } from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 
-import { withSuperadminBootstrapLock } from '../../superadmin-bootstrap-lock';
+import {
+    withServerBootstrapLock,
+    withSuperadminBootstrapLock,
+} from '../../superadmin-bootstrap-lock';
 
 function fakeClient(ready: boolean, exists: boolean) {
     const query = vi.fn(async (sql: string) => {
@@ -55,6 +58,18 @@ describe('withSuperadminBootstrapLock', () => {
                 () => client,
             ),
         ).rejects.toThrow('boom');
+        expect(client.end).toHaveBeenCalled();
+    });
+});
+
+describe('withServerBootstrapLock', () => {
+    it('takes the lock even when the superadmin already exists', async () => {
+        const { client, query } = fakeClient(true, true);
+        await withServerBootstrapLock(
+            async () => 1,
+            () => client,
+        );
+        expect(locked(query)).toBe(true);
         expect(client.end).toHaveBeenCalled();
     });
 });

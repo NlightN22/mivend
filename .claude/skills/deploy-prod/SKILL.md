@@ -80,9 +80,11 @@ The frontends take their own optional variable, `STOREFRONT_IMAGE_TAG`, `MANAGER
   version. Before every deploy, list the pins (`grep -E '^(STOREFRONT|MANAGER|DASHBOARD)_IMAGE_TAG=' .env.production`)
   and tell the owner which services will not follow `IMAGE_TAG`.
 
-Not supported yet: two server instances on one database. Session cache, the scheduled-task runner and the Kafka
-consumer-group behaviour with two servers have not been verified, so there is no rolling or blue-green server
-update; the server restart is a short outage.
+Two server processes run from one image on one database: `server` (storefront traffic, ERP callbacks, the host
+port) and `server-admin` (the manager portal and the dashboard, via their `API_TARGET`). Both serve both APIs; the
+frontends' nginx decides which one a user reaches. Startup is serialized by a database lock (`withServerBootstrapLock`),
+so the second one waits for the first to finish booting. Roll them one after the other, not together, to keep one of
+them answering during a server release; a migration that breaks the old code still needs both stopped.
 
 ## 5. Procedure
 
@@ -106,8 +108,8 @@ browser console for GraphQL validation errors (a sign of an incompatible schema)
 
 ### Backend, no migration
 
-    $COMPOSE pull server worker worker-email
-    $COMPOSE up -d --wait server
+    $COMPOSE pull server server-admin worker worker-email
+    $COMPOSE up -d --wait server server-admin
     $COMPOSE up -d --wait worker worker-email
 
 `migrate` still runs as a dependency and must exit 0 (no pending migrations is a no-op).
@@ -116,10 +118,10 @@ browser console for GraphQL validation errors (a sign of an incompatible schema)
 
     make prod-backup                      # pg_dump to ./backups; copy it off the host; prod-restore-check periodically
     $COMPOSE stop worker worker-email     # heavy migrations only
-    $COMPOSE pull migrate server worker worker-email
+    $COMPOSE pull migrate server server-admin worker worker-email
     $COMPOSE run --rm migrate             # must exit 0; non-zero: stop, do not start the new server
     echo $?
-    $COMPOSE up -d --wait server
+    $COMPOSE up -d --wait server server-admin
     $COMPOSE up -d --wait worker worker-email
 
 Then pull and recreate changed frontends as above. If `migrate` fails, the old server keeps running on the old
@@ -136,7 +138,7 @@ image; fix forward or restore from the backup, and report to the owner before re
 ## 6. Post-deploy verification and report
 
 - `$COMPOSE ps`: every service `healthy` or `running`, `migrate` exited 0, no restart loops (`RestartCount`).
-- `$COMPOSE logs --since 10m server worker worker-email`: no repeating errors; the worker healthcheck depends on
+- `$COMPOSE logs --since 10m server server-admin worker worker-email`: no repeating errors; the worker healthcheck depends on
   the Kafka consumer connecting when the integration is enabled.
 - Server `/health` OK; shop and admin APIs answer; changed UI pages render in both modes the release touched.
 - If the release touched order or ERP exchange, confirm a fresh event is processed (read-only checks only).

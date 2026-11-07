@@ -127,6 +127,37 @@ services:
                 limits:
                     memory: ${SERVER_MEM_LIMIT:-2g}
 
+    server-admin:
+        <<: *server
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            garage:
+                condition: service_healthy
+        environment:
+            <<: *server-env
+            PORT: 3000
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 120s
+        deploy:
+            resources:
+                limits:
+                    memory: ${SERVER_ADMIN_MEM_LIMIT:-2g}
+
     worker:
         <<: *server
         depends_on:
@@ -271,7 +302,7 @@ services:
     manager:
         image: ghcr.io/nlightn22/mivend-manager:${MANAGER_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
-            API_TARGET: http://server:3000
+            API_TARGET: http://server-admin:3000
             SITE_NAME: ${SITE_NAME:-Shop}
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
         ports:
@@ -289,7 +320,7 @@ services:
     dashboard:
         image: ghcr.io/nlightn22/mivend-dashboard:${DASHBOARD_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
-            API_TARGET: http://server:3000
+            API_TARGET: http://server-admin:3000
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.png}
         ports:
             - '${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8006}:80'

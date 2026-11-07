@@ -109,7 +109,7 @@ non-atomic check-then-create, and `user.identifier` is deliberately not unique (
 staff, and soft-deleted users keep their identifier). Three layers prevent two superadmins:
 
 - `worker` and `worker-email` start only after `server` is healthy, so on an empty database the server creates the account alone.
-- Each process wraps its bootstrap in `withSuperadminBootstrapLock` (`apps/server/src/superadmin-bootstrap-lock.ts`): while no active superadmin administrator exists it holds a Postgres advisory lock for the whole bootstrap; boots after the account exists skip it. This also covers dev/e2e stacks that start several processes at once.
+- `server` and `server-admin` (same image, same database; the manager portal and dashboard point `API_TARGET` at `server-admin`) wrap their bootstrap in `withServerBootstrapLock`, which always takes the lock, so they boot one after the other. The workers wrap theirs in `withSuperadminBootstrapLock` (`apps/server/src/superadmin-bootstrap-lock.ts`): while no active superadmin administrator exists it holds a Postgres advisory lock for the whole bootstrap; boots after the account exists skip it. This also covers dev/e2e stacks that start several processes at once.
 - Migration `1791535000000-administrator-email-unique` adds a partial unique index on `administrator."emailAddress"` (active rows only). It refuses to run and lists the ids if an active duplicate already exists.
 
 If the migration reports a duplicate (or two identical superadmins exist), keep the lowest ids and delete the extra

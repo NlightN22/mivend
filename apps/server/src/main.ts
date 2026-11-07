@@ -5,7 +5,7 @@ import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
-import { withSuperadminBootstrapLock } from './superadmin-bootstrap-lock';
+import { withServerBootstrapLock } from './superadmin-bootstrap-lock';
 
 // Mounted only with API_DOCS_ENABLED=true; must run in `onBeforeAppListen` (later routes 404).
 // (Nest finalizes routing at app.listen()). REST-only docs, see issue #28.
@@ -28,7 +28,7 @@ function mountApiDocs(app: INestApplication): void {
 assertDatabaseLocale()
     .then(carryOverOrderLineIdentity)
     .then(() =>
-        withSuperadminBootstrapLock(() =>
+        withServerBootstrapLock(() =>
             bootstrap(config, {
                 onBeforeAppListen: app => {
                     if (process.env.API_DOCS_ENABLED === 'true') mountApiDocs(app);
