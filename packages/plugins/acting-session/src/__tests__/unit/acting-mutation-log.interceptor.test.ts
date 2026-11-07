@@ -10,7 +10,8 @@ vi.mock('@nestjs/graphql', () => ({
         }),
     },
 }));
-vi.mock('@vendure/core', () => ({
+vi.mock('@vendure/core', async importOriginal => ({
+    ...(await importOriginal<typeof import('@vendure/core')>()),
     internal_getRequestContext: () => ({
         apiType: 'shop',
         session: { token: 't' },
