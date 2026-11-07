@@ -111,7 +111,8 @@ export function useLocationPicker(input: LocationPickerInput) {
             next.onMarkerChange(p => setPoint(p, false));
             adapter = next;
             status.value = 'ready';
-        } catch {
+        } catch (error) {
+            console.warn('MvLocationPicker: map failed to load', error);
             if (mine === generation) status.value = 'failed';
         }
     }

@@ -48,6 +48,7 @@ interface GoogleMaps {
     Marker: new (o: Record<string, unknown>) => GMarker;
 }
 
+const READY_CALLBACK = '__mvProviderBReady';
 const BIAS_RADIUS_METERS = 50_000;
 const MAX_SUGGESTIONS = 6;
 const toLiteral = (p: GeoPoint) => ({ lat: p.latitude, lng: p.longitude });
@@ -64,9 +65,13 @@ export class ProviderBAdapter implements MapAdapter {
         if (!o.publicKey) throw new Error('missing key');
         const w = window as unknown as { google?: { maps?: GoogleMaps } };
         if (!w.google?.maps?.Map) {
+            const ready = new Promise<void>(resolve => {
+                (window as unknown as Record<string, () => void>)[READY_CALLBACK] = resolve;
+            });
             await loadScript(
-                `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(o.publicKey)}&loading=async&v=weekly`,
+                `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(o.publicKey)}&loading=async&v=weekly&callback=${READY_CALLBACK}`,
             );
+            await ready;
         }
         const maps = w.google?.maps;
         await maps?.importLibrary?.('maps');
