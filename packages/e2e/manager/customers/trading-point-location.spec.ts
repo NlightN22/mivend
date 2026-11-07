@@ -81,7 +81,7 @@ test('a manager picks a trading point location on the map and it is saved @on:ma
 
         await form.getByTestId('tp-pick-on-map').click();
         const picker = page.getByRole('dialog', { name: 'Pick location on map' });
-        const map = picker.locator('.mv-loc__map.leaflet-container');
+        const map = picker.locator('.mv-loc__map .leaflet-container');
         await expect(map).toBeVisible({ timeout: 15000 });
         await map.click({ position: { x: 120, y: 90 } });
         await expect(picker.getByText('Stubbed Street 1')).toBeVisible({ timeout: 10000 });

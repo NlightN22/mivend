@@ -79,10 +79,8 @@
 }
 
 .mv-loc__switch {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: var(--mv-z-sticky);
+    display: flex;
+    justify-content: flex-end;
 }
 
 .mv-loc__overlay,

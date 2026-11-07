@@ -130,16 +130,16 @@ onBeforeUnmount(() => {
                     @submit="search.submit"
                     @pick="picker.pickSuggestion"
                 />
+                <div class="mv-loc__switch">
+                    <LocationProviderSwitch
+                        :providers="geoConfig.providers"
+                        :current="picker.provider.value"
+                        :label="text.provider"
+                        :names="providerNames"
+                        @select="picker.switchProvider"
+                    />
+                </div>
                 <div class="mv-loc__mapbox">
-                    <div class="mv-loc__switch">
-                        <LocationProviderSwitch
-                            :providers="geoConfig.providers"
-                            :current="picker.provider.value"
-                            :label="text.provider"
-                            :names="providerNames"
-                            @select="picker.switchProvider"
-                        />
-                    </div>
                     <div
                         ref="mapEl"
                         class="mv-loc__map"
