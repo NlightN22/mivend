@@ -2,38 +2,48 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Collection } from '@element-plus/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
+import MvTableViewItem, { type TableViewItem } from './MvTableViewItem.vue';
 
-export interface TableViewItem {
-    id: string;
-    name: string;
-}
+export type { TableViewItem };
+export type TableViewSaveScope = 'PERSONAL' | 'SHARED';
 
 // Presentational "Views" menu for a table toolbar; the owner holds the storage and the table state.
+// Team views (`shared`) can be applied by anyone; `canManageShared` unlocks editing them.
 const props = defineProps<{
     views: TableViewItem[];
     activeId: string;
     // The table differs from the active view.
     dirty: boolean;
     busy?: boolean;
+    canManageShared?: boolean;
 }>();
 const emit = defineEmits<{
     select: [id: string];
     reset: [];
-    create: [name: string];
+    create: [name: string, scope: TableViewSaveScope];
     update: [];
     rename: [id: string, name: string];
     duplicate: [id: string];
     delete: [id: string];
+    setDefault: [id: string, value: boolean];
 }>();
 
 const open = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
 const newName = ref('');
-const renamingId = ref('');
-const renameValue = ref('');
+const newScope = ref<TableViewSaveScope>('PERSONAL');
 
-const activeName = computed(() => props.views.find(v => v.id === props.activeId)?.name ?? '');
+const active = computed(() => props.views.find(v => v.id === props.activeId));
+const activeName = computed(() => active.value?.name ?? '');
+const mine = computed(() => props.views.filter(v => !v.shared));
+const team = computed(() => props.views.filter(v => v.shared));
+const canUpdateActive = computed(
+    () => !!active.value && (!active.value.shared || !!props.canManageShared),
+);
 
+function manageable(view: TableViewItem): boolean {
+    return !view.shared || !!props.canManageShared;
+}
 function onDocClick(e: MouseEvent): void {
     if (rootEl.value && !rootEl.value.contains(e.target as Node)) open.value = false;
 }
@@ -52,17 +62,8 @@ onBeforeUnmount(() => {
 function create(): void {
     const name = newName.value.trim();
     if (!name) return;
-    emit('create', name);
+    emit('create', name, props.canManageShared ? newScope.value : 'PERSONAL');
     newName.value = '';
-}
-function startRename(view: TableViewItem): void {
-    renamingId.value = view.id;
-    renameValue.value = view.name;
-}
-function commitRename(): void {
-    const name = renameValue.value.trim();
-    if (name && renamingId.value) emit('rename', renamingId.value, name);
-    renamingId.value = '';
 }
 function pick(id: string): void {
     emit('select', id);
@@ -93,54 +94,36 @@ function pick(id: string): void {
             >
                 Default view
             </button>
-            <div v-for="view in views" :key="view.id" class="mv-table-views__item">
-                <input
-                    v-if="renamingId === view.id"
-                    v-model="renameValue"
-                    class="mv-table-views__input"
-                    data-testid="table-views-rename"
-                    @keyup.enter="commitRename"
-                    @keyup.escape="renamingId = ''"
+            <template
+                v-for="group in [
+                    { key: 'mine', label: 'My views', items: mine },
+                    { key: 'team', label: 'Team views', items: team },
+                ]"
+                :key="group.key"
+            >
+                <div
+                    v-if="group.items.length"
+                    class="mv-table-views__group"
+                    :data-testid="`table-views-group-${group.key}`"
+                >
+                    {{ group.label }}
+                </div>
+                <MvTableViewItem
+                    v-for="view in group.items"
+                    :key="view.id"
+                    :view="view"
+                    :active="view.id === activeId"
+                    :manageable="manageable(view)"
+                    :busy="busy"
+                    @pick="pick"
+                    @rename="(id, name) => emit('rename', id, name)"
+                    @duplicate="emit('duplicate', $event)"
+                    @delete="emit('delete', $event)"
+                    @set-default="(id, value) => emit('setDefault', id, value)"
                 />
-                <button
-                    v-else
-                    type="button"
-                    class="mv-table-views__row"
-                    :class="{ 'mv-table-views__row--active': view.id === activeId }"
-                    @click="pick(view.id)"
-                >
-                    {{ view.name }}
-                </button>
-                <button
-                    type="button"
-                    class="mv-table-views__act"
-                    title="Rename"
-                    :disabled="busy"
-                    @click="startRename(view)"
-                >
-                    Rename
-                </button>
-                <button
-                    type="button"
-                    class="mv-table-views__act"
-                    title="Duplicate"
-                    :disabled="busy"
-                    @click="emit('duplicate', view.id)"
-                >
-                    Copy
-                </button>
-                <button
-                    type="button"
-                    class="mv-table-views__act mv-table-views__act--danger"
-                    title="Delete"
-                    :disabled="busy"
-                    @click="emit('delete', view.id)"
-                >
-                    Delete
-                </button>
-            </div>
+            </template>
             <div class="mv-table-views__footer">
-                <div v-if="activeId && dirty" class="mv-table-views__actions">
+                <div v-if="activeId && dirty && canUpdateActive" class="mv-table-views__actions">
                     <MvButton size="sm" variant="primary" :disabled="busy" @click="emit('update')"
                         >Update "{{ activeName }}"</MvButton
                     >
@@ -154,6 +137,15 @@ function pick(id: string): void {
                         data-testid="table-views-name"
                         @keyup.enter="create"
                     />
+                    <select
+                        v-if="canManageShared"
+                        v-model="newScope"
+                        class="mv-table-views__input mv-table-views__scope"
+                        data-testid="table-views-scope"
+                    >
+                        <option value="PERSONAL">Only me</option>
+                        <option value="SHARED">Team</option>
+                    </select>
                     <MvButton
                         size="sm"
                         variant="primary"
@@ -216,12 +208,6 @@ function pick(id: string): void {
     color: var(--app-nav-text-strong);
 }
 
-.mv-table-views__item {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
 .mv-table-views__row {
     flex: 1;
     min-width: 0;
@@ -248,21 +234,17 @@ function pick(id: string): void {
     font-weight: 700;
 }
 
-.mv-table-views__act {
-    border: 0;
-    background: transparent;
-    color: var(--app-text-grey);
+.mv-table-views__group {
+    margin-top: 6px;
     font-size: 11px;
-    cursor: pointer;
-    padding: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--app-text-grey);
 }
 
-.mv-table-views__act:hover:not(:disabled) {
-    color: var(--app-text-deep);
-}
-
-.mv-table-views__act--danger:hover:not(:disabled) {
-    color: var(--app-danger-fg);
+.mv-table-views__scope {
+    flex: 0 0 auto;
+    width: auto;
 }
 
 .mv-table-views__footer {
