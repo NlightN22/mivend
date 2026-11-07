@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed } from 'vue';
 import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
@@ -14,14 +13,12 @@ import {
     type OrdersView,
 } from '../../api/orders-list';
 import OrdersListTable from './OrdersListTable.vue';
-import OrderQuickPanel from './OrderQuickPanel.vue';
-import { toOrderRows, type OrderListRow } from './ordersListRows';
+import { toOrderRows } from './ordersListRows';
 
 // `customerId` is a preset: it narrows the list, is never shown as a filter, and the server
 // scopes the result exactly as it does the unfiltered list.
 const props = defineProps<{ customerId?: string }>();
 
-const router = useRouter();
 const authStore = useAuthStore();
 const statuses = useOrderStatusesStore();
 void statuses.load();
@@ -51,8 +48,6 @@ const chips = computed<FilterChip[]>(() =>
     })),
 );
 
-const selected = ref<OrderListRow | null>(null);
-
 function selectView(view: string): void {
     list.filters.value = { ...list.filters.value, view: view as OrdersView };
 }
@@ -63,10 +58,6 @@ function applyFilters(next: OrdersListFilters): void {
     list.filters.value = next;
 }
 defineExpose({ filters: list.filters, applyFilters });
-
-function openOrder(code: string): void {
-    void router.push(`/orders/${code}`);
-}
 </script>
 
 <template>
@@ -89,7 +80,6 @@ function openOrder(code: string): void {
         @update:page-size="list.pageSize.value = $event"
         @clear-filters="clearFilters"
         @retry="list.reload"
-        @row-click="selected = $event"
     >
         <template #view-chips>
             <MvFilterChips
@@ -100,5 +90,4 @@ function openOrder(code: string): void {
             />
         </template>
     </OrdersListTable>
-    <OrderQuickPanel v-if="selected" :row="selected" @close="selected = null" @open="openOrder" />
 </template>

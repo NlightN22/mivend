@@ -110,7 +110,7 @@ started being used inline in the toolbar too — visibly pushed the chips upward
 search box, because `align-items: center` centers a flex item's *margin box\*, and a one-sided
 bottom margin shifts the visible content off-center within it.
 
-4b. **Every list has a Views control, counted status chips, a preset filter where it is embedded, and a quick panel**
+4b. **Every list has a Views control, counted status chips, a preset filter where it is embedded; a row opens the entity card**
 (see `docs/ui-standards.md`, "Manager list tables").
 
 - The Views control is `components/TableViewsMenu.vue` placed in `MvAdvancedDataTable`'s `#toolbar-end`, with a
@@ -126,6 +126,7 @@ bottom margin shifts the visible content off-center within it.
   (see `api/orders-counts.ts`); the most operational chip is first with `emphasis`. Chips replace KPI tiles
   and attention banners that show the same numbers.
 - Pass `scrollable` to `MvFilterChips` so chips become one scrolling row on a phone.
+- No default quick panel: row click opens the card, the identifying cell is a link.
 - The default visible columns must fit the page at 1360px with no horizontal scroll; the rest start hidden.
 
 5. **Every column gets a deliberate `mobile` hint**, not a default/omitted one:

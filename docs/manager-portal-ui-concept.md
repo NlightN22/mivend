@@ -28,8 +28,8 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 | Type | Shape |
 | --- | --- |
 | Dashboard | KPI row and widgets (deferred, see below) |
-| List | Title, search, filters, table, pagination; row opens a quick side panel; multi-select opens a bulk action bar |
-| Quick side panel | Key data and the actions that need no deep context; "Open" goes to the full card |
+| List | Title, search, filters, table, pagination; row opens the entity card; multi-select opens a bulk action bar |
+| Quick side panel | Optional per entity, not part of the list by default and not used for orders (a row opens the card); key data and actions that need no deep context |
 | Card | Header (name, status, key attributes, primary actions), compact KPI row, tabs; tabs reuse the entity lists with preset filters |
 | Wizard | Bulk operations, step by step |
 | Settings | Sub-menu and forms |

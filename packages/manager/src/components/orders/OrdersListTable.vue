@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
     MvAdvancedDataTable,
@@ -18,7 +18,7 @@ import { restoreOrdersFilters, type OrdersListFilters } from '../../api/orders-l
 import { ORDERS_URL_DEFAULTS, type OrdersSort } from '../../composables/ordersListUrl';
 import type { TableViewState } from '../../composables/tableViewState';
 import { usePriceTypeNames } from '../../composables/usePriceTypeNames';
-import { customerMetaText } from './orderQuickPanelRows';
+import { customerMetaText } from './orderCustomerMeta';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { OrderListRow } from './ordersListRows';
 import {
@@ -51,7 +51,6 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
     'clear-filters': [];
     retry: [];
-    'row-click': [row: OrderListRow];
 }>();
 
 const priceTypes = usePriceTypeNames();
@@ -76,7 +75,7 @@ const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
 );
 
 const { state: tableState } = useDataTableState<OrdersTableFilters>(
-    `orders-list-v2:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
+    `orders-list-v3:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
     {
         columnOrder: ALL_COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
@@ -158,8 +157,14 @@ function applyView(state: TableViewState): void {
     emit('update:filters', restoreOrdersFilters(state.filters));
 }
 
+const router = useRouter();
 function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void {
-    emit('row-click', event.row);
+    const target = event.originalEvent.target;
+    if (target instanceof Element && target.closest('a, button')) return;
+    const href = router.resolve(`/orders/${event.row.code}`).href;
+    const mouse = event.originalEvent as MouseEvent;
+    if (mouse.ctrlKey || mouse.metaKey) window.open(href, '_blank', 'noopener');
+    else void router.push(href);
 }
 </script>
 
@@ -208,9 +213,13 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
             />
         </template>
 
-        <template #cell-code="{ data }">{{
-            formatDocumentNumber((data as OrderListRow).code)
-        }}</template>
+        <template #cell-code="{ data }">
+            <RouterLink
+                class="orders-list-table__code"
+                :to="`/orders/${(data as OrderListRow).code}`"
+                >{{ formatDocumentNumber((data as OrderListRow).code) }}</RouterLink
+            >
+        </template>
 
         <template #cell-date="{ data }">
             <MvDateTimeCell :value="(data as OrderListRow).createdAt" />
@@ -261,6 +270,17 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
 </template>
 
 <style scoped>
+.orders-list-table__code {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.orders-list-table__code:hover,
+.orders-list-table__code:focus-visible {
+    text-decoration: underline;
+}
+
 .orders-list-table__customer {
     display: flex;
     flex-direction: column;

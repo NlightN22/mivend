@@ -102,7 +102,6 @@ export type {
     GeoSuggestion,
     LocationPickerLabels,
 } from './components/MvLocationPicker/types';
-export { default as MvSidePanel } from './components/MvSidePanel/MvSidePanel.vue';
 
 export { default as MvLogo } from './components/MvLogo/MvLogo.vue';
 export type { LogoSize } from './components/MvLogo/MvLogo.vue';

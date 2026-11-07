@@ -89,7 +89,7 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.
 - **Preset filter** where the list is also shown inside another entity (a fixed customer): narrows the
   list, is never shown as a filter, and does not widen server-side scope.
-- **Quick panel** (`MvSidePanel`) on row click for a glance; full-screen on a phone.
+- **Row click** opens the entity card (the identifying cell is a real link, so ctrl/middle-click and Enter work). There is no default quick panel; a list gets one only when its entity page type asks for it.
 
 Layout: the table takes the full page width; at a 1360px viewport the identifying columns fit without
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card

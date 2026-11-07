@@ -79,42 +79,30 @@ test('orders list shows the seeded order with customer, branch and INN @read-onl
     await expect(row).not.toContainText(/INN —/);
 });
 
-test('orders list row click opens the quick panel and Open goes to the order card @read-only', async ({
-    page,
-}) => {
+test('orders list row click opens the order card @read-only', async ({ page }) => {
     const order = readE2eOrder();
 
     await page.goto('/orders');
     await page.getByPlaceholder('Search orders…').fill(order.code);
     const row = page.getByRole('row').filter({ hasText: order.displayCode });
     await row.waitFor({ timeout: 15000 });
-    await row.click({ position: { x: 20, y: 10 } });
+    await row.getByText('E2E Co').click();
 
-    const panel = page.getByTestId('order-quick-panel');
-    await expect(panel).toBeVisible();
-    await expect(panel).toContainText(order.displayCode);
-    await expect(panel).toContainText('E2E Co');
-    await expect(panel).not.toContainText(/NOT_REQUIRED|Customer details|INN —/);
-    await expect(page).toHaveURL(/\/orders(\?|$)/);
-
-    await panel.getByRole('button', { name: 'Open' }).click();
     await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`));
     await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible();
 });
 
-test('quick panel closes with Escape and leaves the list in place @read-only', async ({ page }) => {
+test('orders list order number is a link to the order card @read-only', async ({ page }) => {
     const order = readE2eOrder();
 
     await page.goto('/orders');
     await page.getByPlaceholder('Search orders…').fill(order.code);
-    const row = page.getByRole('row').filter({ hasText: order.displayCode });
-    await row.waitFor({ timeout: 15000 });
-    await row.click({ position: { x: 20, y: 10 } });
-    await expect(page.getByTestId('order-quick-panel')).toBeVisible();
+    const link = page.getByRole('link', { name: order.displayCode });
+    await expect(link).toHaveAttribute('href', new RegExp(`/orders/${order.code}$`));
+    await link.focus();
+    await page.keyboard.press('Enter');
 
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('order-quick-panel')).toBeHidden();
-    await expect(row).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/orders/${order.code}$`));
 });
 
 test('orders list search and view chip are shareable in the URL @read-only', async ({ page }) => {
