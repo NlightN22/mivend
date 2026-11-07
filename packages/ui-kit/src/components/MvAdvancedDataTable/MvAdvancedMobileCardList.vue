@@ -49,9 +49,9 @@ function rowKey(row: TRow): unknown {
 
 <template>
     <div class="mv-advanced-mobile-cards">
-        <p v-if="!loading && !rows.length" class="mv-advanced-mobile-cards__empty">
+        <div v-if="!loading && !rows.length" class="mv-advanced-mobile-cards__empty">
             <slot name="empty">{{ emptyMessage }}</slot>
-        </p>
+        </div>
         <article
             v-for="row in rows"
             :key="String(rowKey(row))"
@@ -125,15 +125,17 @@ function rowKey(row: TRow): unknown {
 
 .mv-advanced-mobile-card__head {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 10px;
+    gap: 6px 10px;
 }
 
+/* The identifier never breaks mid-number; badges wrap under it instead. */
 .mv-advanced-mobile-card__title {
     font-weight: 800;
     font-size: 14px;
-    min-width: 0;
+    flex-shrink: 0;
     overflow-wrap: anywhere;
 }
 

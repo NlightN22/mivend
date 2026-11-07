@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
-import MvDatePicker from '../MvDatePicker/MvDatePicker.vue';
+import MvDateField from '../MvDateField/MvDateField.vue';
 import MvInput from '../MvInput/MvInput.vue';
 import MvMultiSelect from '../MvMultiSelect/MvMultiSelect.vue';
 import MvSelect from '../MvSelect/MvSelect.vue';
@@ -79,7 +79,7 @@ function apply(): void {
             @update:model-value="onOperator"
         />
         <template v-if="kind === 'single'">
-            <MvDatePicker
+            <MvDateField
                 v-if="column.type === 'date'"
                 :model-value="value as string"
                 @update:model-value="value = $event"
@@ -105,7 +105,7 @@ function apply(): void {
         <template v-else-if="kind === 'range'">
             <label class="mv-filter-editor__part">
                 <span>From</span>
-                <MvDatePicker
+                <MvDateField
                     v-if="column.type === 'date'"
                     :model-value="(value as string[])[0] ?? ''"
                     @update:model-value="setPart(0, $event)"
@@ -121,7 +121,7 @@ function apply(): void {
             </label>
             <label class="mv-filter-editor__part">
                 <span>To</span>
-                <MvDatePicker
+                <MvDateField
                     v-if="column.type === 'date'"
                     :model-value="(value as string[])[1] ?? ''"
                     @update:model-value="setPart(1, $event)"

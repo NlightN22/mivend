@@ -72,8 +72,9 @@ function remove(index: number): void {
 function onDocClick(e: MouseEvent): void {
     // composedPath, not contains(): the clicked column button is already re-rendered away.
     const path = e.composedPath();
-    if (path.includes(rootEl.value as EventTarget) || path.includes(panelEl.value as EventTarget))
-        return;
+    const inNested = path.some(n => n instanceof HTMLElement && 'mvNested' in n.dataset);
+    if (inNested || path.includes(rootEl.value as EventTarget)) return;
+    if (path.includes(panelEl.value as EventTarget)) return;
     open.value = false;
 }
 function onEscape(e: KeyboardEvent): void {
