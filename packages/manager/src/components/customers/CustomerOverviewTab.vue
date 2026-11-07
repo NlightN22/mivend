@@ -10,13 +10,20 @@ import {
 import { useCurrency } from '../../composables/useCurrency';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 
-defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
+const props = defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
 const emit = defineEmits<{ changed: [] }>();
 
 const editingTradingPoint = ref<TradingPointInfo | null>(null);
 const reactivating = ref<string | null>(null);
 
 const { formatWhole } = useCurrency();
+
+function siblingOf(tp: TradingPointInfo): { latitude: number; longitude: number } | null {
+    const other = props.customer.tradingPoints.find(
+        p => p.id !== tp.id && p.latitude != null && p.longitude != null,
+    );
+    return other ? { latitude: other.latitude!, longitude: other.longitude! } : null;
+}
 
 function handleEdited(): void {
     editingTradingPoint.value = null;
@@ -84,6 +91,12 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                     <div>
                         <strong>{{ tp.name }}</strong>
                         <div class="overview-tab__contact-meta">{{ tp.address }}</div>
+                        <div
+                            v-if="tp.latitude == null || tp.longitude == null"
+                            class="overview-tab__contact-meta overview-tab__no-location"
+                        >
+                            No location set
+                        </div>
                     </div>
                     <div class="overview-tab__tp-actions">
                         <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
@@ -118,6 +131,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
         >
             <TradingPointEditForm
                 :trading-point="editingTradingPoint"
+                :sibling-point="siblingOf(editingTradingPoint)"
                 @submitted="handleEdited"
                 @cancel="editingTradingPoint = null"
             />
@@ -126,6 +140,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 </template>
 
 <style scoped>
+.overview-tab__no-location {
+    color: var(--el-color-warning-dark-2, var(--el-color-warning));
+    font-weight: 700;
+}
+
 .overview-tab {
     display: grid;
     grid-template-columns: 1fr 1fr;

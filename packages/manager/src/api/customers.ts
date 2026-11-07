@@ -144,6 +144,8 @@ export async function reassignCounterpartyManager(
 export interface TradingPointDetailsPatch {
     name?: string;
     address?: string;
+    latitude?: number;
+    longitude?: number;
     workingHours?: string | null;
     deliveryComment?: string | null;
     contacts?: {

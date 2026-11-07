@@ -82,6 +82,12 @@ export type Address = Node & {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type AddressSuggestion = {
+    address: Scalars['String']['output'];
+    latitude: Maybe<Scalars['Float']['output']>;
+    longitude: Maybe<Scalars['Float']['output']>;
+};
+
 export type AdjustDraftOrderLineInput = {
     customFields?: InputMaybe<OrderLineCustomFieldsInput>;
     orderLineId: Scalars['ID']['input'];
@@ -2902,6 +2908,19 @@ export type FulfillmentStateTransitionError = ErrorResult & {
     message: Scalars['String']['output'];
     toState: Scalars['String']['output'];
     transitionError: Scalars['String']['output'];
+};
+
+export type GeoConfig = {
+    defaultLatitude: Maybe<Scalars['Float']['output']>;
+    defaultLongitude: Maybe<Scalars['Float']['output']>;
+    defaultProvider: Maybe<Scalars['String']['output']>;
+    defaultZoom: Maybe<Scalars['Int']['output']>;
+    providers: Array<GeoProviderInfo>;
+};
+
+export type GeoProviderInfo = {
+    key: Scalars['String']['output'];
+    publicKey: Maybe<Scalars['String']['output']>;
 };
 
 export type GlobalFlag = 'FALSE' | 'INHERIT' | 'TRUE';
@@ -7607,6 +7626,7 @@ export type Query = {
     floorPrice: Maybe<Scalars['Float']['output']>;
     floorPricesForVariants: Array<FloorPriceEntry>;
     fulfillmentHandlers: Array<ConfigurableOperationDefinition>;
+    geoConfig: GeoConfig;
     /** Get value for a specific key (automatically scoped based on field configuration) */
     getSettingsStoreValue: Maybe<Scalars['JSON']['output']>;
     /** Get multiple key-value pairs (each automatically scoped) */
@@ -7716,12 +7736,14 @@ export type Query = {
     rejectedOrderCount: Scalars['Int']['output'];
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     retroBonusRules: Array<RetroBonusRule>;
+    reverseGeocode: Maybe<Scalars['String']['output']>;
     role: Maybe<Role>;
     roleAccessScopeConfig: Maybe<Scalars['String']['output']>;
     roleAccessScopeProvisioningStatus: Array<RoleAccessScopeProvisioningStatusItem>;
     roles: RoleList;
     scheduledTasks: Array<ScheduledTask>;
     search: SearchResponse;
+    searchAddress: Array<AddressSuggestion>;
     seller: Maybe<Seller>;
     sellers: SellerList;
     /** Returns all registered settings store field definitions with their current values */
@@ -7746,6 +7768,8 @@ export type Query = {
     testEligibleShippingMethods: Array<ShippingMethodQuote>;
     testShippingMethod: TestShippingMethodResult;
     tradingPoint: Maybe<TradingPoint>;
+    /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
+    tradingPointsWithoutLocation: TradingPointList;
     unassignedCounterpartyCount: Scalars['Int']['output'];
     unsortedAdministrators: UnsortedAdministratorPage;
     unsortedCounterparties: UnsortedCounterpartyPage;
@@ -8213,6 +8237,12 @@ export type QueryRetroBonusRulesArgs = {
     counterpartyId: Scalars['ID']['input'];
 };
 
+export type QueryReverseGeocodeArgs = {
+    latitude: Scalars['Float']['input'];
+    longitude: Scalars['Float']['input'];
+    provider?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type QueryRoleArgs = {
     id: Scalars['ID']['input'];
 };
@@ -8227,6 +8257,13 @@ export type QueryRolesArgs = {
 
 export type QuerySearchArgs = {
     input: SearchInput;
+};
+
+export type QuerySearchAddressArgs = {
+    biasLatitude?: InputMaybe<Scalars['Float']['input']>;
+    biasLongitude?: InputMaybe<Scalars['Float']['input']>;
+    provider?: InputMaybe<Scalars['String']['input']>;
+    query: Scalars['String']['input'];
 };
 
 export type QuerySellerArgs = {
@@ -8295,6 +8332,10 @@ export type QueryTestShippingMethodArgs = {
 
 export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryTradingPointsWithoutLocationArgs = {
+    options?: InputMaybe<OpenErpReconciliationIssueListOptions>;
 };
 
 export type QueryUnsortedAdministratorsArgs = {
@@ -9533,9 +9574,16 @@ export type TradingPointDetailsInput = {
     address?: InputMaybe<Scalars['String']['input']>;
     contacts?: InputMaybe<Array<ContactPersonInput>>;
     deliveryComment?: InputMaybe<Scalars['String']['input']>;
+    latitude?: InputMaybe<Scalars['Float']['input']>;
+    longitude?: InputMaybe<Scalars['Float']['input']>;
     name?: InputMaybe<Scalars['String']['input']>;
     servicingBranchId?: InputMaybe<Scalars['String']['input']>;
     workingHours?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type TradingPointList = {
+    items: Array<TradingPoint>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type TransitionFulfillmentToStateResult = Fulfillment | FulfillmentStateTransitionError;
@@ -10832,6 +10880,8 @@ export type CustomerListItemFieldsFragment = {
         id: string;
         name: string;
         address: string;
+        latitude: number | null;
+        longitude: number | null;
         workingHours: string | null;
         deliveryComment: string | null;
         isActive: boolean;
@@ -10866,6 +10916,8 @@ export type CustomersPageQuery = {
                 id: string;
                 name: string;
                 address: string;
+                latitude: number | null;
+                longitude: number | null;
                 workingHours: string | null;
                 deliveryComment: string | null;
                 isActive: boolean;
@@ -10923,6 +10975,8 @@ export type HighUsageCustomersQuery = {
             id: string;
             name: string;
             address: string;
+            latitude: number | null;
+            longitude: number | null;
             workingHours: string | null;
             deliveryComment: string | null;
             isActive: boolean;
@@ -10956,6 +11010,8 @@ export type CustomerByIdQuery = {
             id: string;
             name: string;
             address: string;
+            latitude: number | null;
+            longitude: number | null;
             workingHours: string | null;
             deliveryComment: string | null;
             isActive: boolean;
@@ -11361,6 +11417,37 @@ export type DiscountCounterpartySearchQueryVariables = Exact<{
 export type DiscountCounterpartySearchQuery = {
     counterparties: { items: Array<{ id: string; legalName: string }> };
 };
+
+export type GeoConfigQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GeoConfigQuery = {
+    geoConfig: {
+        defaultProvider: string | null;
+        defaultLatitude: number | null;
+        defaultLongitude: number | null;
+        defaultZoom: number | null;
+        providers: Array<{ key: string; publicKey: string | null }>;
+    };
+};
+
+export type SearchAddressQueryVariables = Exact<{
+    query: Scalars['String']['input'];
+    biasLatitude?: InputMaybe<Scalars['Float']['input']>;
+    biasLongitude?: InputMaybe<Scalars['Float']['input']>;
+    provider?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type SearchAddressQuery = {
+    searchAddress: Array<{ address: string; latitude: number | null; longitude: number | null }>;
+};
+
+export type ReverseGeocodeQueryVariables = Exact<{
+    latitude: Scalars['Float']['input'];
+    longitude: Scalars['Float']['input'];
+    provider?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type ReverseGeocodeQuery = { reverseGeocode: string | null };
 
 export type EntityVersionRowFieldsFragment = {
     id: string;
@@ -12969,6 +13056,8 @@ export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
     id
     name
     address
+    latitude
+    longitude
     workingHours
     deliveryComment
     isActive
@@ -14005,6 +14094,8 @@ export const CustomersPageDocument = new TypedDocumentString(`
     id
     name
     address
+    latitude
+    longitude
     workingHours
     deliveryComment
     isActive
@@ -14065,6 +14156,8 @@ export const HighUsageCustomersDocument = new TypedDocumentString(`
     id
     name
     address
+    latitude
+    longitude
     workingHours
     deliveryComment
     isActive
@@ -14097,6 +14190,8 @@ export const CustomerByIdDocument = new TypedDocumentString(`
     id
     name
     address
+    latitude
+    longitude
     workingHours
     deliveryComment
     isActive
@@ -14606,6 +14701,39 @@ export const DiscountCounterpartySearchDocument = new TypedDocumentString(`
     DiscountCounterpartySearchQuery,
     DiscountCounterpartySearchQueryVariables
 >;
+export const GeoConfigDocument = new TypedDocumentString(`
+    query GeoConfig {
+  geoConfig {
+    providers {
+      key
+      publicKey
+    }
+    defaultProvider
+    defaultLatitude
+    defaultLongitude
+    defaultZoom
+  }
+}
+    `) as unknown as TypedDocumentString<GeoConfigQuery, GeoConfigQueryVariables>;
+export const SearchAddressDocument = new TypedDocumentString(`
+    query SearchAddress($query: String!, $biasLatitude: Float, $biasLongitude: Float, $provider: String) {
+  searchAddress(
+    query: $query
+    biasLatitude: $biasLatitude
+    biasLongitude: $biasLongitude
+    provider: $provider
+  ) {
+    address
+    latitude
+    longitude
+  }
+}
+    `) as unknown as TypedDocumentString<SearchAddressQuery, SearchAddressQueryVariables>;
+export const ReverseGeocodeDocument = new TypedDocumentString(`
+    query ReverseGeocode($latitude: Float!, $longitude: Float!, $provider: String) {
+  reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
+}
+    `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
 export const EntityVersionsDocument = new TypedDocumentString(`
     query EntityVersions($entityName: String!, $entityId: ID!) {
   entityVersions(entityName: $entityName, entityId: $entityId) {

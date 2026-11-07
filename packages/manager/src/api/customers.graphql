@@ -13,6 +13,8 @@ fragment CustomerListItemFields on Counterparty {
         id
         name
         address
+        latitude
+        longitude
         workingHours
         deliveryComment
         isActive

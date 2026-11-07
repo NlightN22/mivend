@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { MvInput, MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvInput, MvButton, MvNotice, type GeoPoint } from '@mivend/ui-kit';
 import { updateTradingPointDetails, type TradingPointInfo } from '../../api/customers';
+import TradingPointLocationField from './TradingPointLocationField.vue';
 
-const props = defineProps<{ tradingPoint: TradingPointInfo }>();
+const props = defineProps<{ tradingPoint: TradingPointInfo; siblingPoint?: GeoPoint | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
 const submitting = ref(false);
@@ -12,6 +13,13 @@ const error = ref('');
 const form = reactive({
     name: props.tradingPoint.name,
     address: props.tradingPoint.address,
+    location:
+        props.tradingPoint.latitude != null && props.tradingPoint.longitude != null
+            ? ({
+                  latitude: props.tradingPoint.latitude,
+                  longitude: props.tradingPoint.longitude,
+              } as GeoPoint | null)
+            : null,
     workingHours: props.tradingPoint.workingHours ?? '',
     deliveryComment: props.tradingPoint.deliveryComment ?? '',
     contacts: props.tradingPoint.contacts.map(c => ({ ...c })),
@@ -31,6 +39,10 @@ async function submit(): Promise<void> {
         error.value = 'Name and address are required';
         return;
     }
+    if (!form.location) {
+        error.value = 'Pick the trading point location on the map';
+        return;
+    }
     if (form.contacts.some(c => !c.name.trim())) {
         error.value = 'Every contact needs a name (remove the row instead of leaving it blank)';
         return;
@@ -40,6 +52,8 @@ async function submit(): Promise<void> {
         await updateTradingPointDetails(props.tradingPoint.id, {
             name: form.name.trim(),
             address: form.address.trim(),
+            latitude: form.location.latitude,
+            longitude: form.location.longitude,
             workingHours: form.workingHours.trim() || null,
             deliveryComment: form.deliveryComment.trim() || null,
             contacts: form.contacts.map(c => ({
@@ -87,6 +101,13 @@ async function submit(): Promise<void> {
             </label>
         </div>
 
+        <TradingPointLocationField
+            v-model="form.location"
+            :address="form.address"
+            :sibling="siblingPoint ?? null"
+            :legacy="tradingPoint.latitude == null || tradingPoint.longitude == null"
+        />
+
         <label class="tp-edit-form__comment">
             Delivery comment
             <textarea v-model="form.deliveryComment" rows="2" />
@@ -132,7 +153,7 @@ async function submit(): Promise<void> {
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="tp-edit-form__actions">
-            <MvButton :loading="submitting" @click="submit">Save changes</MvButton>
+            <MvButton :loading="submitting" :disabled="!form.location" @click="submit">Save changes</MvButton>
             <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
                 Cancel
             </button>
