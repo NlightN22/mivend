@@ -1,6 +1,12 @@
 # Project Context
 
-Updated: 2026-11-06 12:45
+Updated: 2026-11-07 12:00
+
+## #322 manager order creation as the customer (acting mode) (2026-11-06, DONE: audited, prod 0.0.47, closed with #316-#318; follow-ups #323 change journal, #324 done in 0.0.48)
+- Flow: manager portal NewOrderPage (customer picker + trading point) -> Admin `startActingSession` (CreateOrder) gives a one-time hashed ticket (~60s) -> opens storefront `/acting#ticket=` -> Shop `exchangeActingTicket` returns a session token in the body (no cookie). Storefront keeps it in `sessionStorage`, sends `Authorization: Bearer` + `x-acting-session: 1`, `credentials: 'omit'`. `finishActingSession` ends it. Plugin: `packages/plugins/acting-session/` (migration 1791550000000).
+- Isolation: middleware drops the Cookie header and swaps `req.session` for a detached object (`detachCookieSession`) so Set-Cookie never leaves; liveness = 4h from createdAt, parent manager session alive, CreateOrder/SuperAdmin. Acting cart is linked to the customer at creation and marked `actingSessionId`; `ActingActiveOrderStrategy` self-heals real sessions; cleanup task `acting-session-cleanup` (24h carts). Acting sessions are excluded from session cap, mySessions, login history. Attribution: `placedByAdministratorId` + private order note.
+- Core untouched; divergences (logout/endAllSessions override, password change ends acting sessions) in `docs/vendure-core-divergences.md`, tripwire test `vendure-core-assumptions.test.ts`. Env `STOREFRONT_PUBLIC_URL`, storefront `MANAGER_PUBLIC_URL`.
+- Open: prod smoke needs the owner's word (writes data; customer and depth not chosen); mutation journal #323; `trading-point.service.ts` is 648 lines (split debt); matrix scenarios 1,3,4,8 are e2e-only (group `manager-acting`).
 
 ## Product card photo corners (2026-11-06, DONE: audited, commit 7b74d48e on main, NOT on origin/main, not in 0.0.45)
 - `MvProductCard.vue`: photo has `border-radius: var(--app-radius-md)` and `height: 100%` so small photos scale up; the `.mv-product-card__img` container is a `grid-template: minmax(0, 1fr) / minmax(0, 1fr)` grid with 6px padding (a percent max-height did not clamp inside an auto track and big photos overflowed).
