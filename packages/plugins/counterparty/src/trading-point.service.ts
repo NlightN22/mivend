@@ -588,6 +588,12 @@ export class TradingPointService {
         input = normalizeCustomerInput(input);
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `SELECT id FROM trading_point WHERE id = $1 FOR UPDATE`,
+            [String(id)],
+        );
         const record = await repo.findOne({
             where: { id: String(id), counterpartyId },
             relations: ['contacts'],

@@ -134,4 +134,42 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
             .findOneByOrFail({ id: pointId });
         expect(row.name).toBe(b.to);
     });
+
+    describe('customerEdit vs staff location change on one point', () => {
+        const customerEdit = (): Promise<unknown> =>
+            dataSource.transaction(async em => {
+                const row = await em
+                    .getRepository(TestTradingPoint)
+                    .findOneByOrFail({ id: pointId });
+                return service.customerEdit(
+                    { em } as unknown as RequestContext,
+                    pointId,
+                    row.counterpartyId,
+                    { name: 'customer', address: 'addr' },
+                );
+            });
+        const staffMove = (): Promise<unknown> =>
+            dataSource.transaction(em =>
+                service.updateDetails({ em } as unknown as RequestContext, pointId, {
+                    latitude: 55,
+                    longitude: 37,
+                }),
+            );
+        const pause = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
+
+        it.each([
+            ['staff first', true],
+            ['customer first', false],
+        ])('keeps the staff location and the customer name (%s)', async (_label, staffFirst) => {
+            const first = staffFirst ? staffMove() : customerEdit();
+            await pause(30);
+            const second = staffFirst ? customerEdit() : staffMove();
+            await Promise.all([first, second]);
+
+            const row = await dataSource
+                .getRepository(TestTradingPoint)
+                .findOneByOrFail({ id: pointId });
+            expect([row.latitude, row.longitude, row.name]).toEqual([55, 37, 'customer']);
+        });
+    });
 });
