@@ -90,15 +90,19 @@ export class PgPubSub extends PubSubEngine {
 
     private onEnd(ended: Client): void {
         if (this.closed) return;
-        void this.client?.then(current => {
-            if (current !== ended) return;
-            this.client = null;
-            Logger.warn(
-                'Listener connection lost; pushes are lost until it reconnects',
-                LOGGER_CTX,
-            );
-            this.scheduleReconnect();
-        });
+        // best-effort: a failed open is already reported by connect(); only act on the client that ended
+        void this.client?.then(
+            current => {
+                if (current !== ended) return;
+                this.client = null;
+                Logger.warn(
+                    'Listener connection lost; pushes are lost until it reconnects',
+                    LOGGER_CTX,
+                );
+                this.scheduleReconnect();
+            },
+            () => undefined,
+        );
     }
 
     private scheduleReconnect(): void {
