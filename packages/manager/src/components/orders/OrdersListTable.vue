@@ -75,7 +75,7 @@ const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
 );
 
 const { state: tableState } = useDataTableState<OrdersTableFilters>(
-    `orders-list-v3:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
+    `orders-list-v4:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
     {
         columnOrder: ALL_COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),

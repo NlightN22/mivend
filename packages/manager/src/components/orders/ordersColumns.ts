@@ -5,6 +5,7 @@ const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
 const NON_BLANK_RESERVATIONS = ORDER_RESERVATION_STATE_OPTIONS.filter(o => o.value);
 const NOT_FILTERED = { type: 'none' } as const;
 
+// Widths are the widest realistic cell text + 32px padding; sum 1080 fits a 1360px page (1088px table).
 // Filtering is the toolbar Filter builder (`filterType`); the search box covers order, company, INN
 // and phone. Customer, branch and attention have no server-side filter.
 export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
@@ -12,9 +13,9 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'code',
         header: 'Order #',
         sortField: 'code',
-        width: 150,
+        width: 140,
         priority: 10,
-        minWidth: 150,
+        minWidth: 140,
         required: true,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
@@ -34,15 +35,16 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'customer',
         header: 'Customer',
-        width: 230,
+        width: 200,
         priority: 9,
-        minWidth: 230,
+        minWidth: 170,
         filterConfig: NOT_FILTERED,
     },
     {
         field: 'manager',
         header: 'Manager',
-        width: 135,
+        width: 130,
+        minWidth: 100,
         priority: 6,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
@@ -53,9 +55,9 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'state',
         header: 'Status',
         sortField: 'state',
-        width: 175,
+        width: 180,
         priority: 5,
-        minWidth: 120,
+        minWidth: 180,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
         filterOptions: NON_BLANK_STATES.map(o => ({ value: o.value, label: o.label })),
@@ -65,9 +67,9 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'total',
         header: 'Total',
         sortField: 'totalWithTax',
-        width: 150,
+        width: 180,
         priority: 8,
-        minWidth: 150,
+        minWidth: 180,
         filterConfig: NOT_FILTERED,
         filterType: 'number',
         filterField: 'totalWithTax',
@@ -76,7 +78,8 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'placedBy',
         header: 'Placed by',
-        width: 150,
+        width: 120,
+        minWidth: 100,
         priority: 4,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
