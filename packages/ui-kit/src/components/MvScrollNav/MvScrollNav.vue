@@ -68,7 +68,7 @@ onBeforeUnmount(() => {
             :title="props.upLabel"
             @click="scrollToTop"
         >
-            <IconArrowUp :size="22" :stroke="2.25" aria-hidden="true" />
+            <IconArrowUp :size="22" stroke="2.25" aria-hidden="true" />
         </MvRoundIconButton>
         <MvRoundIconButton
             v-if="props.down && showDown"
@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
             :title="props.downLabel"
             @click="scrollToBottom"
         >
-            <IconArrowDown :size="22" :stroke="2.25" aria-hidden="true" />
+            <IconArrowDown :size="22" stroke="2.25" aria-hidden="true" />
         </MvRoundIconButton>
     </div>
 </template>
