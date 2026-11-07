@@ -163,7 +163,7 @@ export { default as MvPanel } from './components/MvPanel/MvPanel.vue';
 export { default as MvCountBadge } from './components/MvCountBadge/MvCountBadge.vue';
 export { default as MvAppTopbar } from './components/MvAppTopbar/MvAppTopbar.vue';
 export { default as MvAppSidebar } from './components/MvAppSidebar/MvAppSidebar.vue';
-export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue';
+export type { AppSidebarItem } from './components/MvAppSidebar/sidebar-items';
 export { default as MvAppMobileNav } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export { default as MvAccountMenu } from './components/MvAccountMenu/MvAccountMenu.vue';

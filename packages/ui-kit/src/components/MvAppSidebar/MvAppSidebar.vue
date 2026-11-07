@@ -1,25 +1,24 @@
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { useRoute } from 'vue-router';
+import { IconChevronDown } from '@tabler/icons-vue';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
-
-export interface AppSidebarItem {
-    label: string;
-    path: string;
-    badgeCount?: number;
-}
+import { groupBadgeCount, isGroupActive, isPathActive } from './sidebar-items';
+import type { AppSidebarItem } from './sidebar-items';
 
 withDefaults(defineProps<{ items: AppSidebarItem[]; sectionTitle?: string }>(), {
     sectionTitle: '',
 });
 
 const route = useRoute();
+const toggled = reactive<Record<string, boolean>>({});
 
-// Vue Router's own `active-class` marks a link active whenever its route appears anywhere in
-// the current route's `matched` chain — for a nav item pointing at '/' (Dashboard), that chain
-// always includes the DefaultLayout parent route mounted at '/', so Dashboard was highlighted
-// on every page, not just the dashboard itself. Exact path comparison instead.
-function isActive(path: string): boolean {
-    return route.path === path || (path !== '/' && route.path.startsWith(`${path}/`));
+function isExpanded(group: AppSidebarItem): boolean {
+    return toggled[group.label] ?? isGroupActive(route.path, group);
+}
+
+function toggle(group: AppSidebarItem): void {
+    toggled[group.label] = !isExpanded(group);
 }
 </script>
 
@@ -27,11 +26,53 @@ function isActive(path: string): boolean {
     <nav class="mv-app-sidebar">
         <div v-if="sectionTitle" class="mv-app-sidebar__section-title">{{ sectionTitle }}</div>
         <ul class="mv-app-sidebar__list">
-            <li v-for="item in items" :key="item.path">
+            <li v-for="item in items" :key="item.label">
+                <template v-if="item.children">
+                    <button
+                        type="button"
+                        class="mv-app-sidebar__link mv-app-sidebar__group"
+                        :class="{ 'mv-app-sidebar__link--active': isGroupActive(route.path, item) }"
+                        :aria-expanded="isExpanded(item)"
+                        @click="toggle(item)"
+                    >
+                        <span>{{ item.label }}</span>
+                        <span class="mv-app-sidebar__group-tail">
+                            <MvCountBadge
+                                v-if="!isExpanded(item) && groupBadgeCount(item)"
+                                :count="groupBadgeCount(item)"
+                            />
+                            <IconChevronDown
+                                :size="16"
+                                class="mv-app-sidebar__chevron"
+                                :class="{ 'mv-app-sidebar__chevron--open': isExpanded(item) }"
+                            />
+                        </span>
+                    </button>
+                    <ul v-if="isExpanded(item)" class="mv-app-sidebar__list mv-app-sidebar__sublist">
+                        <li v-for="child in item.children" :key="child.path">
+                            <RouterLink
+                                class="mv-app-sidebar__link"
+                                :class="{
+                                    'mv-app-sidebar__link--active': isPathActive(
+                                        route.path,
+                                        child.path ?? '',
+                                    ),
+                                }"
+                                :to="child.path ?? ''"
+                            >
+                                <span>{{ child.label }}</span>
+                                <MvCountBadge v-if="child.badgeCount" :count="child.badgeCount" />
+                            </RouterLink>
+                        </li>
+                    </ul>
+                </template>
                 <RouterLink
+                    v-else
                     class="mv-app-sidebar__link"
-                    :class="{ 'mv-app-sidebar__link--active': isActive(item.path) }"
-                    :to="item.path"
+                    :class="{
+                        'mv-app-sidebar__link--active': isPathActive(route.path, item.path ?? ''),
+                    }"
+                    :to="item.path ?? ''"
                 >
                     <span>{{ item.label }}</span>
                     <MvCountBadge v-if="item.badgeCount" :count="item.badgeCount" />
@@ -80,6 +121,32 @@ function isActive(path: string): boolean {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
+}
+
+.mv-app-sidebar__group {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.mv-app-sidebar__group-tail {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mv-app-sidebar__chevron {
+    transition: transform 0.15s ease;
+}
+
+.mv-app-sidebar__chevron--open {
+    transform: rotate(180deg);
+}
+
+.mv-app-sidebar__sublist {
+    padding-left: 12px;
 }
 
 .mv-app-sidebar__link:hover {

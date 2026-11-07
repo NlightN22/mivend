@@ -1,13 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import MvAppSidebar from './MvAppSidebar.vue';
-import type { AppSidebarItem } from './MvAppSidebar.vue';
+import type { AppSidebarItem } from './sidebar-items';
 
 const ITEMS: AppSidebarItem[] = [
     { label: 'Dashboard', path: '/' },
     { label: 'Customers', path: '/customers' },
-    { label: 'Orders', path: '/orders' },
+    {
+        label: 'Documents',
+        children: [
+            { label: 'Orders', path: '/orders' },
+            { label: 'Proforma invoices', path: '/proforma-invoices' },
+            { label: 'Discount requests', path: '/discounts', badgeCount: 2 },
+        ],
+    },
     { label: 'Approvals', path: '/approvals', badgeCount: 4 },
-    { label: 'Discounts', path: '/discounts' },
 ];
 
 const meta: Meta<typeof MvAppSidebar> = {
