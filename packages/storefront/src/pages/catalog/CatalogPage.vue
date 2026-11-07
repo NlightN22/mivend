@@ -16,6 +16,7 @@ import {
 import { useActiveFilterChips } from '../../composables/useActiveFilterChips';
 import { useCatalogFacetLabels } from '../../composables/useCatalogFacetLabels';
 import ProductListView from '../../components/ProductListView.vue';
+import { resolveScopeLabel } from '../../composables/searchScope';
 import { useCatalogSortUrl } from './useCatalogSortUrl';
 import { useCatalogFilterUrl } from './useCatalogFilterUrl';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
@@ -77,6 +78,7 @@ const {
 const { labels: facetLabels, groups: facetGroupsLabelled } = useCatalogFacetLabels(facetGroups);
 
 const narrow = useIsMobileViewport(960);
+const phone = useIsMobileViewport(600);
 const filtersOpen = ref(false);
 watch(narrow, isNarrow => {
     if (!isNarrow) filtersOpen.value = false;
@@ -109,6 +111,13 @@ const breadcrumbItems = computed(() => {
         { label: path[path.length - 1].name },
     ];
 });
+
+// On phones the header search overlay does not show the category, so the results block does.
+const phoneScopeLabel = computed(() =>
+    phone.value && searchQuery.value
+        ? resolveScopeLabel(catalogStore.collections, selectedCategorySlug.value)
+        : undefined,
+);
 
 const catalogHeading = computed(
     () => categoryPanel.value.current?.name ?? t('catalog.allProducts'),
@@ -202,9 +211,11 @@ onMounted(() => {
                     @update:view-mode="setViewMode($event)"
                     @update:sort-key="sortKey = $event"
                     @load-more="loadMore"
+                    :scope-label="phoneScopeLabel"
                     :show-filter-button="narrow"
                     :filter-count="activeChips.length"
                     @open-filters="filtersOpen = true"
+                    @remove-scope="navigateCategory(undefined)"
                     @retry="load"
                 />
             </div>

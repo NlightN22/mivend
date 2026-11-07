@@ -176,6 +176,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
                     :placeholder="placeholder"
                     :disabled="disabled"
                     autocomplete="off"
+                    enterkeyhint="search"
                     @input="onInput"
                     @focus="isFocused = true"
                     @keydown="onKeydown"
@@ -189,12 +190,14 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
                 >
                     ×
                 </button>
-                <MvSearchSubmitButton
-                    :label="props.buttonLabel"
-                    :loading="loading"
-                    :disabled="disabled"
-                    @click="onSearch"
-                />
+                <slot name="submit">
+                    <MvSearchSubmitButton
+                        :label="props.buttonLabel"
+                        :loading="loading"
+                        :disabled="disabled"
+                        @click="onSearch"
+                    />
+                </slot>
             </div>
 
             <p v-if="error" class="mv-search__error">{{ error }}</p>

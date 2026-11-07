@@ -258,11 +258,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 <MobileSearch
                     v-if="phone"
                     v-model:query="searchQuery"
-                    :scope-label="scopeLabel"
                     :suggestions="suggestions"
                     @search="onSearch"
                     @select="onSelectSuggestion"
-                    @remove-scope="onRemoveScope"
                 />
 
                 <MvNotificationBell
