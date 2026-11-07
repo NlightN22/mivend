@@ -21,7 +21,11 @@ export const useActingStore = defineStore('acting', () => {
         const { exchangeActingTicket: result } = await shopApi(ExchangeActingTicketDocument, {
             ticket,
         });
-        const data = { token: result.token, expiresAt: result.expiresAt };
+        const data = {
+            token: result.token,
+            expiresAt: result.expiresAt,
+            administratorName: result.administratorName,
+        };
         saveActingSession(data);
         session.value = data;
     }

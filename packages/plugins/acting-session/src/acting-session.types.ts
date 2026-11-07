@@ -37,6 +37,7 @@ export interface ActingSessionToken {
     token: string;
     expiresAt: Date;
     administratorId: string;
+    administratorName: string;
     counterpartyId: string;
     tradingPointId: string | null;
 }

@@ -76,7 +76,15 @@ describe('acting token transport', () => {
     it('sends bearer and marker header, without cookie, once exchanged; stores only in sessionStorage', async () => {
         const fetchMock = vi
             .fn()
-            .mockResolvedValueOnce(ok({ exchangeActingTicket: { token: 't1', expiresAt: 'e' } }))
+            .mockResolvedValueOnce(
+                ok({
+                    exchangeActingTicket: {
+                        token: 't1',
+                        expiresAt: 'e',
+                        administratorName: 'Ivan Manager',
+                    },
+                }),
+            )
             .mockResolvedValue(ok({}));
         vi.stubGlobal('fetch', fetchMock);
         await useActingStore().exchange('ticket');
@@ -84,11 +92,12 @@ describe('acting token transport', () => {
         const init = fetchMock.mock.calls[1][1] as RequestInit;
         expect(init.headers).toMatchObject({ Authorization: 'Bearer t1', 'x-acting-session': '1' });
         expect(init.credentials).toBe('omit');
+        expect(readActingSession()?.administratorName).toBe('Ivan Manager');
         expect(localStorage.length).toBe(0);
     });
 
     it('finish clears the token even when the server call fails', async () => {
-        saveActingSession({ token: 't', expiresAt: 'e' });
+        saveActingSession({ token: 't', expiresAt: 'e', administratorName: 'Ivan Manager' });
         setActivePinia(createPinia());
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('x')));
         vi.useFakeTimers();
@@ -106,9 +115,9 @@ describe('acting token transport', () => {
         const tabA = memoryStorage();
         const tabB = memoryStorage();
         vi.stubGlobal('sessionStorage', tabA);
-        saveActingSession({ token: 'customer-a', expiresAt: 'e' });
+        saveActingSession({ token: 'customer-a', expiresAt: 'e', administratorName: '' });
         vi.stubGlobal('sessionStorage', tabB);
-        saveActingSession({ token: 'customer-b', expiresAt: 'e' });
+        saveActingSession({ token: 'customer-b', expiresAt: 'e', administratorName: '' });
         expect(readActingSession()?.token).toBe('customer-b');
         vi.stubGlobal('sessionStorage', tabA);
         expect(readActingSession()?.token).toBe('customer-a');

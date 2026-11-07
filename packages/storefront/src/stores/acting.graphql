@@ -3,6 +3,7 @@ mutation ExchangeActingTicket($ticket: String!) {
         token
         expiresAt
         administratorId
+        administratorName
         counterpartyId
         tradingPointId
     }

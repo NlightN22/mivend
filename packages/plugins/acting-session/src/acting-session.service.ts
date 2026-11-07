@@ -108,6 +108,7 @@ export class ActingSessionService {
         );
         const ended = await this.liveness.endDeadSession(ctx, token, ttl);
         if (ended > 0) throw new ForbiddenError();
+        const administrator = await this.administratorService.findOne(ctx, binding.administratorId);
         Logger.info(
             `Acting session started: administrator=${binding.administratorId} customer=${binding.customerId}`,
             loggerCtx,
@@ -116,6 +117,9 @@ export class ActingSessionService {
             token,
             expiresAt,
             administratorId: binding.administratorId,
+            administratorName: administrator
+                ? `${administrator.firstName} ${administrator.lastName}`.trim()
+                : '',
             counterpartyId: binding.counterpartyId,
             tradingPointId: binding.tradingPointId,
         };

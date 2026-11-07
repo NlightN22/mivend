@@ -2,8 +2,8 @@ import type en from '../en/acting';
 
 const ru: typeof en = {
     acting: {
-        banner: 'Вы действуете от имени {customer}. Заказы оформляются от его лица.',
-        bannerUnknown: 'Вы действуете от имени клиента.',
+        line: 'Менеджер {manager} работает как клиент',
+        lineUnknown: 'Менеджер работает как клиент',
         finish: 'Завершить',
         entryLoading: 'Открываем сессию клиента…',
         entryFailedTitle: 'Ссылка недействительна или устарела',

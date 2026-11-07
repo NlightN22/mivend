@@ -25,6 +25,7 @@ export type Scalars = {
 
 export type ActingSessionToken = {
     administratorId: Scalars['ID']['output'];
+    administratorName: Scalars['String']['output'];
     counterpartyId: Scalars['ID']['output'];
     expiresAt: Scalars['DateTime']['output'];
     token: Scalars['String']['output'];
@@ -5456,6 +5457,7 @@ export type ExchangeActingTicketMutation = {
         token: string;
         expiresAt: any;
         administratorId: string;
+        administratorName: string;
         counterpartyId: string;
         tradingPointId?: string | null;
     };
@@ -6915,6 +6917,7 @@ export const ExchangeActingTicketDocument = new TypedDocumentString(`
     token
     expiresAt
     administratorId
+    administratorName
     counterpartyId
     tradingPointId
   }

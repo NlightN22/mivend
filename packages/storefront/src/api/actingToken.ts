@@ -3,6 +3,7 @@ const KEY = 'mv_acting_session';
 export interface ActingSessionData {
     token: string;
     expiresAt: string;
+    administratorName: string;
 }
 
 export function readActingSession(): ActingSessionData | null {
@@ -11,7 +12,11 @@ export function readActingSession(): ActingSessionData | null {
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<ActingSessionData>;
         return typeof parsed.token === 'string' && typeof parsed.expiresAt === 'string'
-            ? { token: parsed.token, expiresAt: parsed.expiresAt }
+            ? {
+                  token: parsed.token,
+                  expiresAt: parsed.expiresAt,
+                  administratorName: parsed.administratorName ?? '',
+              }
             : null;
     } catch {
         return null;

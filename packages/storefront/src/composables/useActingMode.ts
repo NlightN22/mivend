@@ -1,25 +1,23 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useActingStore } from '../stores/acting';
-import { useAuthStore } from '../stores/auth';
 import { readManagerUrl } from '../utils/managerUrl';
 
-export interface UseActingBanner {
-    visible: ComputedRef<boolean>;
+export interface UseActingMode {
+    isActing: ComputedRef<boolean>;
     label: ComputedRef<string>;
     finishing: Ref<boolean>;
     finish: () => Promise<void>;
 }
 
-export function useActingBanner(): UseActingBanner {
+export function useActingMode(): UseActingMode {
     const { t } = useI18n();
     const acting = useActingStore();
-    const auth = useAuthStore();
     const finishing = ref(false);
 
     const label = computed(() => {
-        const customer = auth.counterparty?.fullName;
-        return customer ? t('acting.banner', { customer }) : t('acting.bannerUnknown');
+        const manager = acting.session?.administratorName;
+        return manager ? t('acting.line', { manager }) : t('acting.lineUnknown');
     });
 
     async function finish(): Promise<void> {
@@ -33,5 +31,5 @@ export function useActingBanner(): UseActingBanner {
         window.location.replace(readManagerUrl() ?? '/login');
     }
 
-    return { visible: computed(() => acting.isActing), label, finishing, finish };
+    return { isActing: computed(() => acting.isActing), label, finishing, finish };
 }

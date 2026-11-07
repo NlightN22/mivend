@@ -1,7 +1,7 @@
 export default {
     acting: {
-        banner: 'You are acting as {customer}. Orders are placed on their behalf.',
-        bannerUnknown: 'You are acting on behalf of a customer.',
+        line: 'Manager {manager} is working as the customer',
+        lineUnknown: 'A manager is working as the customer',
         finish: 'Finish',
         entryLoading: 'Opening the customer session…',
         entryFailedTitle: 'The link is invalid or expired',

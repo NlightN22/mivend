@@ -20,6 +20,7 @@ import {
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import { useThemeSwitcher } from '../composables/useThemeSwitcher';
 import { headerDeliveryLabel } from '../composables/headerDeliveryLabel';
+import { useActingMode } from '../composables/useActingMode';
 import { buildBottomTabs } from '../composables/bottomTabs';
 import { activeBottomTab } from '../composables/bottomTabActive';
 import { useAccountMenu } from '../composables/useAccountMenu';
@@ -43,6 +44,7 @@ const authStore = useAuthStore();
 const deliveryLabel = computed(() =>
     headerDeliveryLabel(authStore.counterparty?.fullName, authStore.tradingPoint),
 );
+const acting = useActingMode();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
@@ -274,6 +276,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
                 <span class="app-header__delivery-line">
+                    <span v-if="acting.isActing.value" class="app-header__acting">
+                        {{ acting.label.value }}:
+                    </span>
                     <template v-if="deliveryLabel.organization || deliveryLabel.place">
                         <template v-if="deliveryLabel.organization">{{
                             deliveryLabel.organization
@@ -289,6 +294,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         }}</span>
                     </template>
                 </span>
+                <MvButton
+                    v-if="acting.isActing.value"
+                    size="sm"
+                    :loading="acting.finishing.value"
+                    @click="acting.finish"
+                    >{{ t('acting.finish') }}</MvButton
+                >
             </div>
 
             <MvCatalogDropdown

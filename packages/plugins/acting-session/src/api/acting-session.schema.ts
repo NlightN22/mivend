@@ -18,6 +18,7 @@ export const actingSessionShopSchema: DocumentNode = gql`
         token: String!
         expiresAt: DateTime!
         administratorId: ID!
+        administratorName: String!
         counterpartyId: ID!
         tradingPointId: ID
     }

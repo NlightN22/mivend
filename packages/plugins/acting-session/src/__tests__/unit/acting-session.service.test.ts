@@ -38,7 +38,10 @@ function setup(over: { admin?: unknown; target?: unknown; ended?: number; url?: 
     const service = new ActingSessionService(
         connection as never,
         { authOptions: { sessionCacheStrategy: { delete: cacheDelete } } } as never,
-        { findOneByUserId: async () => ('admin' in over ? over.admin : { id: 7 }) } as never,
+        {
+            findOneByUserId: async () => ('admin' in over ? over.admin : { id: 7 }),
+            findOne: async () => ({ id: 7, firstName: 'Ivan', lastName: 'Manager' }),
+        } as never,
         eligibility as never,
         tickets as never,
         liveness as never,
@@ -94,6 +97,7 @@ describe('ActingSessionService', () => {
         });
         expect(result).toMatchObject({
             administratorId: '7',
+            administratorName: 'Ivan Manager',
             counterpartyId: 'cp-1',
             tradingPointId: 'tp-1',
         });

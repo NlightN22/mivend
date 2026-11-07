@@ -201,7 +201,14 @@
     margin: 0 auto;
     padding: 0 28px 8px;
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
+    gap: 4px 12px;
+}
+
+.app-header__acting {
+    font-weight: 700;
 }
 
 .app-header__delivery-line {
