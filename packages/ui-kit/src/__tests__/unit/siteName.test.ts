@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readSiteIconUrl, readSiteName } from '../../utils/siteName';
 
 const docWith = (content: string | null): Pick<Document, 'querySelector'> => ({
-    querySelector: () => (content === null ? null : ({ getAttribute: () => content } as Element)),
+    querySelector: () =>
+        content === null ? null : ({ getAttribute: () => content } as unknown as Element),
 });
 
 describe('readSiteName', () => {

@@ -93,6 +93,13 @@ export type {
 } from './composables/notificationTypes';
 
 export { default as MvModal } from './components/MvModal/MvModal.vue';
+export { default as MvLocationPicker } from './components/MvLocationPicker/MvLocationPicker.vue';
+export type {
+    GeoConfig,
+    GeoPoint,
+    GeoSuggestion,
+    LocationPickerLabels,
+} from './components/MvLocationPicker/types';
 
 export { default as MvLogo } from './components/MvLogo/MvLogo.vue';
 export type { LogoSize } from './components/MvLogo/MvLogo.vue';

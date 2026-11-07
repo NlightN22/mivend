@@ -1,0 +1,9 @@
+.mv-location-pin {
+    width: 24px;
+    height: 24px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: var(--el-color-primary);
+    border: 2px solid var(--app-surface);
+    box-shadow: 0 2px 6px var(--app-ink-14);
+}
