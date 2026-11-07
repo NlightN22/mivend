@@ -81,6 +81,18 @@ describe('GeoService', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it('rejects server search and reverse for the browser-only provider without calling out', async () => {
+        process.env.GEO_PROVIDERS = 'open,provider-b';
+        const service = new GeoService();
+        await expect(service.search('Street 1', undefined, 'provider-b')).rejects.toThrow(
+            'runs in the browser',
+        );
+        await expect(service.reverse({ lat: 1, lng: 2 }, 'provider-b')).rejects.toThrow(
+            'runs in the browser',
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it('keeps cache and failure pause separate per provider', async () => {
         process.env.GEO_PROVIDERS = 'open,provider-a';
         process.env.GEO_PROVIDER_A_API_KEY = 'k';
@@ -116,6 +128,7 @@ describe('GeoService', () => {
         process.env.GEO_PROVIDERS = 'open,provider-a,provider-b';
         process.env.GEO_PROVIDER_A_API_KEY = 'server-secret';
         process.env.GEO_PROVIDER_A_BROWSER_KEY = 'browser-key';
+        process.env.GEO_PROVIDER_B_BROWSER_KEY = 'browser-key-b';
         process.env.GEO_DEFAULT_PROVIDER = 'provider-a';
         process.env.GEO_DEFAULT_ZOOM = '9';
         const config = new GeoService().publicConfig();
@@ -124,6 +137,7 @@ describe('GeoService', () => {
             providers: [
                 { key: 'open', publicKey: null },
                 { key: 'provider-a', publicKey: 'browser-key' },
+                { key: 'provider-b', publicKey: 'browser-key-b' },
             ],
             defaultProvider: 'provider-a',
             defaultZoom: 9,

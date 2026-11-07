@@ -1,4 +1,4 @@
-import type { GeoPoint, MapAdapter, MapMountOptions, MapView } from '../types';
+import type { GeoPoint, GeoSuggestion, MapAdapter, MapMountOptions, MapView } from '../types';
 import { loadScript } from './loadScript';
 
 interface LatLng {
@@ -17,11 +17,39 @@ interface GMarker {
     setMap(m: GMap | null): void;
     addListener(name: string, fn: (e: { latLng?: LatLng }) => void): void;
 }
+interface PlaceObj {
+    location?: LatLng;
+    formattedAddress?: string;
+    fetchFields(r: { fields: string[] }): Promise<unknown>;
+}
+interface Prediction {
+    text: { toString(): string };
+    toPlace(): PlaceObj;
+}
+interface PlacesLib {
+    AutocompleteSuggestion: {
+        fetchAutocompleteSuggestions(r: Record<string, unknown>): Promise<{
+            suggestions: Array<{ placePrediction?: Prediction }>;
+        }>;
+    };
+    AutocompleteSessionToken: new () => object;
+}
+interface GeocoderResult {
+    formatted_address?: string;
+}
 interface GoogleMaps {
+    importLibrary?: (name: string) => Promise<unknown>;
+    Geocoder?: new () => {
+        geocode(r: {
+            location: { lat: number; lng: number };
+        }): Promise<{ results: GeocoderResult[] }>;
+    };
     Map: new (el: HTMLElement, o: Record<string, unknown>) => GMap;
     Marker: new (o: Record<string, unknown>) => GMarker;
 }
 
+const BIAS_RADIUS_METERS = 50_000;
+const MAX_SUGGESTIONS = 6;
 const toLiteral = (p: GeoPoint) => ({ lat: p.latitude, lng: p.longitude });
 const fromLatLng = (l: LatLng): GeoPoint => ({ latitude: l.lat(), longitude: l.lng() });
 
@@ -29,6 +57,7 @@ export class ProviderBAdapter implements MapAdapter {
     private map: GMap | null = null;
     private maps: GoogleMaps | null = null;
     private marker: GMarker | null = null;
+    private token: object | null = null;
     private listener: (p: GeoPoint) => void = () => undefined;
 
     async mount(element: HTMLElement, o: MapMountOptions): Promise<void> {
@@ -40,6 +69,8 @@ export class ProviderBAdapter implements MapAdapter {
             );
         }
         const maps = w.google?.maps;
+        await maps?.importLibrary?.('maps');
+        await maps?.importLibrary?.('marker');
         if (!maps?.Map) throw new Error('library missing');
         this.maps = maps;
         this.map = new maps.Map(element, {
@@ -90,7 +121,46 @@ export class ProviderBAdapter implements MapAdapter {
         this.listener = listener;
     }
 
+    async search(query: string, bias: GeoPoint | null): Promise<GeoSuggestion[]> {
+        const maps = this.maps;
+        if (!maps?.importLibrary) throw new Error('library missing');
+        const lib = (await maps.importLibrary('places')) as PlacesLib;
+        this.token ??= new lib.AutocompleteSessionToken();
+        const { suggestions } = await lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            sessionToken: this.token,
+            ...(bias && {
+                locationBias: { center: toLiteral(bias), radius: BIAS_RADIUS_METERS },
+                origin: toLiteral(bias),
+            }),
+        });
+        return suggestions.slice(0, MAX_SUGGESTIONS).flatMap(s => {
+            const prediction = s.placePrediction;
+            if (!prediction) return [];
+            const resolve = async (): Promise<GeoPoint | null> => {
+                const place = prediction.toPlace();
+                await place.fetchFields({ fields: ['location'] });
+                this.token = null;
+                return place.location ? fromLatLng(place.location) : null;
+            };
+            return [{ address: prediction.text.toString(), resolve }];
+        });
+    }
+
+    async reverse(p: GeoPoint): Promise<string | null> {
+        const maps = this.maps;
+        if (!maps?.importLibrary) return null;
+        const { Geocoder } = (await maps.importLibrary('geocoding')) as Pick<
+            GoogleMaps,
+            'Geocoder'
+        >;
+        if (!Geocoder) return null;
+        const { results } = await new Geocoder().geocode({ location: toLiteral(p) });
+        return results[0]?.formatted_address ?? null;
+    }
+
     destroy(): void {
+        this.token = null;
         this.marker?.setMap(null);
         this.marker = null;
         this.map = null;

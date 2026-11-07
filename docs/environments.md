@@ -168,15 +168,15 @@ run the admin `reindex` once on every existing `internal` contour (`make dev-res
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GEO_PROVIDERS` | unset (off) | Comma-separated registry keys to enable: `provider-a`, `provider-b`, `open` (key-to-vendor mapping lives only in the adapter files under `packages/plugins/counterparty/src/geo/`). An unknown key fails on first use; a keyed provider without its server key is left out. |
+| `GEO_PROVIDERS` | unset (off) | Comma-separated registry keys to enable: `provider-a`, `provider-b`, `open` (key-to-vendor mapping lives only in the adapter files under `packages/plugins/counterparty/src/geo/`). An unknown key fails on first use; a server-searched provider without its server key is left out. `provider-b` is browser-only: it needs no server key, and its `searchAddress`/`reverseGeocode` calls are rejected with a user-input error because place search and reverse lookup run inside the map script in the browser. |
 | `GEO_DEFAULT_PROVIDER` | first enabled | Provider used when the query names none; ignored if not enabled. |
-| `GEO_PROVIDER_A_API_KEY`, `GEO_PROVIDER_B_API_KEY` | unset | Per-provider server-side key (never sent to the browser); required to enable that provider, unused by `open`. |
-| `GEO_PROVIDER_A_BROWSER_KEY`, `GEO_PROVIDER_B_BROWSER_KEY` | unset | Per-provider origin-restricted key for the map script; returned by `geoConfig`. |
-| `GEO_OPEN_URL`, `GEO_PROVIDER_A_URL`, `GEO_PROVIDER_B_URL` | adapter default | Override a provider endpoint, e.g. an own instance of the open geocoder. |
+| `GEO_PROVIDER_A_API_KEY` | unset | Server-side key (never sent to the browser); required to enable `provider-a`, unused by `open` and `provider-b`. |
+| `GEO_PROVIDER_A_BROWSER_KEY`, `GEO_PROVIDER_B_BROWSER_KEY` | unset | Per-provider origin-restricted key for the map script; returned by `geoConfig`. The `provider-b` browser key must be restricted by origin and to exactly three APIs: Maps JavaScript API, Places API (New) and Geocoding API (keys themselves never go in the repo). |
+| `GEO_OPEN_URL`, `GEO_PROVIDER_A_URL` | adapter default | Override a provider endpoint, e.g. an own instance of the open geocoder. |
 | `GEO_DEFAULT_CENTER_LAT`, `GEO_DEFAULT_CENTER_LNG`, `GEO_DEFAULT_ZOOM` | unset | Map start view when no coordinates are known; returned by `geoConfig`. |
 | `GEO_PROVIDER_USER_AGENT` | `mivend-geo` | Identifying User-Agent for `open`; the public open instance requires a real one with a contact. |
 
-Suggestions carry coordinates when the provider returns them (all three geocoders do for search; an item without a point has no coordinates). `open` is spaced to at most one call per 1.1 s and, per its public-instance policy, must not be driven by per-keystroke autocomplete: the future UI submits a search on Enter or after a long pause. Provider terms (login-protected portal, storing coordinates, showing results on the provider's map) and paid tiers are still to be confirmed by the owner before a keyed provider ships.
+Suggestions carry coordinates when the provider returns them (`open` and `provider-a` do for search; an item without a point has no coordinates). `provider-b` search runs in the browser (Places `AutocompleteSuggestion` type-ahead, coordinates fetched when a suggestion is picked; marker address via the Geocoder). `open` is spaced to at most one call per 1.1 s and, per its public-instance policy, must not be driven by per-keystroke autocomplete: the future UI submits a search on Enter or after a long pause. Provider terms (login-protected portal, storing coordinates, showing results on the provider's map) and paid tiers are still to be confirmed by the owner before a keyed provider ships.
 
 **Data-drift report sources (issue #303)**: disabled by default; polled only on the central hub. See `docs/consistency-reports.md`.
 

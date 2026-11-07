@@ -5,7 +5,7 @@ import { ProviderBAdapter } from './provider-b.adapter';
 
 const factories: Record<string, (config: GeoProviderConfig) => GeoProvider> = {
     'provider-a': c => new ProviderAAdapter(c),
-    'provider-b': c => new ProviderBAdapter(c),
+    'provider-b': () => new ProviderBAdapter(),
     open: c => new OpenAdapter(c),
 };
 

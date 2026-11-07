@@ -41,6 +41,7 @@ export class GeoService {
         providerKey?: string | null,
     ): Promise<GeoSuggestion[]> {
         const state = this.resolve(providerKey);
+        this.rejectBrowserOnly(state);
         const text = rawText.trim().slice(0, 200);
         if (!state || text.length < MIN_QUERY_LENGTH) return [];
         const biasKey = bias ? `${bias.lat.toFixed(1)},${bias.lng.toFixed(1)}` : '';
@@ -52,6 +53,7 @@ export class GeoService {
 
     async reverse(point: GeoPoint, providerKey?: string | null): Promise<string | null> {
         const state = this.resolve(providerKey);
+        this.rejectBrowserOnly(state);
         if (!state) return null;
         const key = `r:${point.lat.toFixed(5)},${point.lng.toFixed(5)}`;
         const address = (await this.guarded(
@@ -84,6 +86,13 @@ export class GeoService {
         return state;
     }
 
+    private rejectBrowserOnly(state: ProviderState | null): void {
+        if (state?.provider.browserOnly)
+            throw new UserInputError(
+                `Address search for ${state.provider.key} runs in the browser, not on the server`,
+            );
+    }
+
     private defaultKey(): string | null {
         const states = this.load();
         const wanted = process.env.GEO_DEFAULT_PROVIDER;
@@ -107,7 +116,7 @@ export class GeoService {
                 baseUrl: process.env[`${prefix}_URL`] || undefined,
                 userAgent: process.env.GEO_PROVIDER_USER_AGENT || undefined,
             });
-            if (key !== 'open' && !apiKey) continue;
+            if (key !== 'open' && !provider.browserOnly && !apiKey) continue;
             states.set(key, {
                 provider,
                 publicKey: process.env[`${prefix}_BROWSER_KEY`] || null,

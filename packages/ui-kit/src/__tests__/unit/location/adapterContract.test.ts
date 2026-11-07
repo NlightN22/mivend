@@ -47,6 +47,8 @@ function stubA(): { click: (c: [number, number]) => void } {
     return { click: c => onClick({}, { coordinates: c }) };
 }
 
+let lastAutocomplete = vi.fn();
+
 function stubB(): { click: (lat: number, lng: number) => void } {
     const handlers: Record<string, (e: { latLng: { lat(): number; lng(): number } }) => void> = {};
     class Map {
@@ -77,7 +79,35 @@ function stubB(): { click: (lat: number, lng: number) => void } {
         setMap() {}
         addListener() {}
     }
-    vi.stubGlobal('google', { maps: { Map, Marker } });
+    const fetchAutocompleteSuggestions = vi.fn(async () => ({
+        suggestions: [
+            {
+                placePrediction: {
+                    text: { toString: () => 'Place one' },
+                    toPlace: () => ({
+                        location: { lat: () => 7, lng: () => 8 },
+                        fetchFields: async () => undefined,
+                    }),
+                },
+            },
+        ],
+    }));
+    class Geocoder {
+        async geocode() {
+            return { results: [{ formatted_address: 'Some street 1' }] };
+        }
+    }
+    const libs: Record<string, unknown> = {
+        places: {
+            AutocompleteSuggestion: { fetchAutocompleteSuggestions },
+            AutocompleteSessionToken: class {},
+        },
+        geocoding: { Geocoder },
+    };
+    vi.stubGlobal('google', {
+        maps: { Map, Marker, importLibrary: async (n: string) => libs[n] ?? {} },
+    });
+    lastAutocomplete = fetchAutocompleteSuggestions;
     return { click: (lat, lng) => handlers.click({ latLng: { lat: () => lat, lng: () => lng } }) };
 }
 
@@ -123,6 +153,23 @@ describe.each(cases)('adapter contract: %s', (_name, make, stub) => {
         await expect(
             make().mount(document.createElement('div'), { ...options, publicKey: null }),
         ).rejects.toThrow();
+    });
+});
+
+describe('provider-b browser search and reverse', () => {
+    it('type-ahead suggestions resolve to coordinates lazily and the marker reverses to an address', async () => {
+        stubB();
+        const adapter = new ProviderBAdapter();
+        await adapter.mount(document.createElement('div'), options);
+        const found = await adapter.search('pla', { latitude: 1, longitude: 2 });
+        expect(found).toHaveLength(1);
+        expect(found[0].address).toBe('Place one');
+        expect(found[0].latitude).toBeUndefined();
+        expect(await found[0].resolve?.()).toEqual({ latitude: 7, longitude: 8 });
+        expect(lastAutocomplete).toHaveBeenCalledWith(
+            expect.objectContaining({ input: 'pla', origin: { lat: 1, lng: 2 } }),
+        );
+        expect(await adapter.reverse({ latitude: 1, longitude: 2 })).toBe('Some street 1');
     });
 });
 

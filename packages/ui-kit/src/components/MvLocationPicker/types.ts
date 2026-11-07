@@ -20,6 +20,7 @@ export interface GeoSuggestion {
     address: string;
     latitude?: number | null;
     longitude?: number | null;
+    resolve?: () => Promise<GeoPoint | null>;
 }
 
 export interface MapView {
@@ -40,6 +41,8 @@ export interface MapAdapter {
     setMarker(point: GeoPoint | null): void;
     onMarkerChange(listener: (point: GeoPoint) => void): void;
     destroy(): void;
+    search?(query: string, bias: GeoPoint | null): Promise<GeoSuggestion[]>;
+    reverse?(point: GeoPoint): Promise<string | null>;
 }
 
 export type AdapterFactory = (providerKey: string) => Promise<MapAdapter>;

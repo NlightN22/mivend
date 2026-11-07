@@ -45,7 +45,7 @@ export function useLocationPicker(input: LocationPickerInput) {
     const reverse = useLatestRequest(
         async (p: GeoPoint, key: string) => {
             try {
-                return await input.reverse(p, key);
+                return await (adapter?.reverse ? adapter.reverse(p) : input.reverse(p, key));
             } catch {
                 return null;
             }
@@ -53,7 +53,8 @@ export function useLocationPicker(input: LocationPickerInput) {
         result => (address.value = result),
     );
     const search = useLocationSearch({
-        search: input.search,
+        search: (text, bias, key) =>
+            adapter?.search ? adapter.search(text, bias) : input.search(text, bias, key),
         getBias: () => point.value ?? view.value.center,
         getProvider: () => provider.value,
     });
@@ -117,10 +118,14 @@ export function useLocationPicker(input: LocationPickerInput) {
         return load();
     }
 
-    function pickSuggestion(s: GeoSuggestion): void {
+    async function pickSuggestion(s: GeoSuggestion): Promise<void> {
         search.clear();
         search.query.value = s.address;
-        const p = { latitude: s.latitude as number, longitude: s.longitude as number };
+        let p: GeoPoint | null = {
+            latitude: s.latitude as number,
+            longitude: s.longitude as number,
+        };
+        if (!isValidPoint(p) && s.resolve) p = await s.resolve().catch(() => null);
         if (isValidPoint(p)) setPoint(p, true);
     }
 

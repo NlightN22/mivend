@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { GeoFetch, GeoProvider } from '../../geo/geo-provider';
 import { OpenAdapter } from '../../geo/open.adapter';
 import { ProviderAAdapter } from '../../geo/provider-a.adapter';
-import { ProviderBAdapter } from '../../geo/provider-b.adapter';
 
 const json = (body: unknown, ok = true, status = 200) =>
     ({ ok, status, json: async () => body }) as Response;
@@ -53,22 +52,6 @@ const cases: Case[] = [
             },
         },
         emptyBody: { response: { GeoObjectCollection: { featureMember: [] } } },
-    },
-    {
-        name: 'provider-b',
-        make: f => new ProviderBAdapter({ apiKey: 'k', fetch: f as unknown as GeoFetch }),
-        searchBody: {
-            status: 'OK',
-            results: [
-                {
-                    formatted_address: 'Street 1, City',
-                    geometry: { location: { lat: 55.7, lng: 37.5 } },
-                },
-                { formatted_address: 'No point' },
-            ],
-        },
-        reverseBody: { status: 'OK', results: [{ formatted_address: 'Street 1, City' }] },
-        emptyBody: { status: 'ZERO_RESULTS', results: [] },
     },
     {
         name: 'open',
@@ -126,15 +109,6 @@ describe.each(cases)('geo adapter contract: $name', c => {
 });
 
 describe('provider specifics', () => {
-    it('provider-b treats a non-OK status in a 200 answer as failure', async () => {
-        const fetch = vi.fn().mockResolvedValue(json({ status: 'REQUEST_DENIED' }));
-        await expect(
-            new ProviderBAdapter({ apiKey: 'k', fetch: fetch as unknown as GeoFetch }).search(
-                'abc',
-            ),
-        ).rejects.toThrow('REQUEST_DENIED');
-    });
-
     it('open sends the configured User-Agent and declares a 1 req/s interval', async () => {
         const fetch = vi.fn().mockResolvedValue(json([]));
         const adapter = new OpenAdapter({

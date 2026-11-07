@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLocationPicker } from '../../../composables/location/useLocationPicker';
-import type { GeoConfig } from '../../../components/MvLocationPicker/types';
+import type { GeoConfig, ReverseFn, SearchFn } from '../../../components/MvLocationPicker/types';
 import { makeStubAdapter, type StubAdapter } from './stubAdapter';
 
 const config: GeoConfig = {
@@ -43,6 +43,59 @@ function setup(
     });
     return { picker, adapters };
 }
+
+describe('useLocationPicker adapter-own search and reverse', () => {
+    function withOwn(host: { search: SearchFn; reverse: ReverseFn }) {
+        const own = makeStubAdapter();
+        own.search = vi.fn(async () => [
+            { address: 'own', resolve: async () => ({ latitude: 3, longitude: 4 }) },
+        ]);
+        own.reverse = vi.fn(async () => 'own address');
+        const plain = makeStubAdapter();
+        const picker = useLocationPicker({
+            config,
+            current: null,
+            cooperative: false,
+            search: host.search,
+            reverse: host.reverse,
+            createAdapter: async key => (key === 'open' ? plain : own),
+        });
+        return { picker, own, plain };
+    }
+
+    it('uses the adapter search, resolves coordinates on pick and reverses via the adapter', async () => {
+        const host = {
+            search: vi.fn<SearchFn>(async () => []),
+            reverse: vi.fn<ReverseFn>(async () => 'host'),
+        };
+        const { picker, own } = withOwn(host);
+        await picker.attach(el);
+        picker.search.query.value = 'abc';
+        picker.search.submit();
+        await vi.waitFor(() => expect(picker.search.suggestions.value).toHaveLength(1));
+        await picker.pickSuggestion(picker.search.suggestions.value[0]);
+        expect(picker.point.value).toEqual({ latitude: 3, longitude: 4 });
+        await vi.waitFor(() => expect(picker.address.value).toBe('own address'));
+        expect(own.search).toHaveBeenCalled();
+        expect(host.search).not.toHaveBeenCalled();
+        expect(host.reverse).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the host callbacks after switching to an adapter without its own', async () => {
+        const host = {
+            search: vi.fn<SearchFn>(async () => []),
+            reverse: vi.fn<ReverseFn>(async () => 'host'),
+        };
+        const { picker } = withOwn(host);
+        await picker.attach(el);
+        await picker.switchProvider('open');
+        picker.search.query.value = 'abc';
+        picker.search.submit();
+        picker.setPoint({ latitude: 1, longitude: 2 }, false);
+        await vi.waitFor(() => expect(picker.address.value).toBe('host'));
+        expect(host.search).toHaveBeenCalledWith('abc', expect.anything(), 'open');
+    });
+});
 
 describe('useLocationPicker', () => {
     it('starts from the config view and keeps Save disabled until a point is set', async () => {

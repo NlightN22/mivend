@@ -21,6 +21,7 @@ export interface GeoProviderConfig {
 export interface GeoProvider {
     readonly key: string;
     readonly minIntervalMs: number;
+    readonly browserOnly?: boolean;
     search(text: string, bias?: GeoPoint): Promise<GeoSuggestion[]>;
     reverse(point: GeoPoint): Promise<string | null>;
 }
