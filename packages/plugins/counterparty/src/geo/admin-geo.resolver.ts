@@ -1,5 +1,6 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
+import { CustomPermission } from '@mivend/plugin-access-control';
 import { Allow, Ctx, RequestContext } from '@vendure/core';
 
 import { isCoordinate } from './geo.resolver';
@@ -10,7 +11,7 @@ export class AdminGeoResolver {
     constructor(private geo: GeoService) {}
 
     @Query()
-    @Allow(Permission.UpdateCustomer)
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async searchAddress(
         @Ctx() _ctx: RequestContext,
         @Args()
@@ -31,7 +32,7 @@ export class AdminGeoResolver {
     }
 
     @Query()
-    @Allow(Permission.UpdateCustomer)
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async reverseGeocode(
         @Ctx() _ctx: RequestContext,
         @Args() args: { latitude: number; longitude: number; provider?: string | null },
@@ -41,7 +42,7 @@ export class AdminGeoResolver {
     }
 
     @Query()
-    @Allow(Permission.UpdateCustomer)
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     geoConfig(@Ctx() _ctx: RequestContext): Record<string, unknown> {
         const c = this.geo.publicConfig();
         return {

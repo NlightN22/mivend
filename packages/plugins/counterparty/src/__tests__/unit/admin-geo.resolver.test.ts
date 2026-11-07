@@ -1,5 +1,6 @@
 import { Permission } from '@vendure/common/lib/generated-types';
 import { PERMISSIONS_METADATA_KEY } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminGeoResolver } from '../../geo/admin-geo.resolver';
 import { GeoService } from '../../geo/geo.service';
@@ -20,13 +21,16 @@ function build() {
 }
 
 describe('AdminGeoResolver', () => {
-    it('requires the customer-update permission on all three queries', () => {
+    it('uses the read gate of the trading point mutations on all three queries', () => {
         for (const name of ['searchAddress', 'reverseGeocode', 'geoConfig'] as const) {
             const meta = Reflect.getMetadata(
                 PERMISSIONS_METADATA_KEY,
                 AdminGeoResolver.prototype[name],
             );
-            expect(meta).toContain(Permission.UpdateCustomer);
+            expect(meta).toEqual([
+                Permission.ReadCustomer,
+                CustomPermission.ReadCounterparty.Permission,
+            ]);
         }
     });
 
