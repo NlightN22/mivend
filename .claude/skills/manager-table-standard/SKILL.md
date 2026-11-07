@@ -113,6 +113,9 @@ bottom margin shifts the visible content off-center within it.
 4b. **Every list has a Views control, counted status chips, a preset filter where it is embedded; a row opens the entity card**
 (see `docs/ui-standards.md`, "Manager list tables").
 
+- Loading: the list passes `loading` to `MvAdvancedDataTable`, which shows the shared skeleton (rows or phone cards)
+  and sets `aria-busy`; never add a page-level spinner or skeleton. Counted chips set `countLoading` on every
+  chip while their counts load, so the pills show a placeholder instead of a stale or missing number.
 - The Views control is `components/TableViewsMenu.vue` placed in `MvAdvancedDataTable`'s `#toolbar-end`, with a
   unique `viewsKey` and the table's `capture`/`apply` pair (filters, sort, search term, column order, hidden
   columns). It uses `useTableViews` and the `saved-views` storage (`tableViews`, `saveTableView`,

@@ -1,6 +1,8 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
 import { computed } from 'vue';
 import MvPagination from '../MvPagination/MvPagination.vue';
+import MvTableSkeletonCards from './MvTableSkeletonCards.vue';
+import { skeletonRowCount } from './tableSkeleton';
 import type {
     AdvancedDataTableColumn,
     AdvancedDataTableRowClickPayload,
@@ -52,8 +54,14 @@ function rowKey(row: TRow): unknown {
         <div v-if="!loading && !rows.length" class="mv-advanced-mobile-cards__empty">
             <slot name="empty">{{ emptyMessage }}</slot>
         </div>
+        <MvTableSkeletonCards
+            v-if="loading"
+            :rows="skeletonRowCount(pageSize)"
+            :fields="fieldColumns.length"
+            :badge="!!badgeColumn"
+        />
         <article
-            v-for="row in rows"
+            v-for="row in loading ? [] : rows"
             :key="String(rowKey(row))"
             class="mv-advanced-mobile-card"
             @click="emit('row-click', { row, originalEvent: $event })"

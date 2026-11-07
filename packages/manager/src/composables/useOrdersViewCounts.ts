@@ -6,6 +6,7 @@ import { useOrderStatusesStore } from '../stores/orderStatuses';
 
 export interface OrdersViewCountsState {
     counts: Ref<OrdersViewCounts | null>;
+    loading: Ref<boolean>;
     pendingApprovalOrderIds: Ref<Set<string>>;
 }
 
@@ -18,7 +19,7 @@ export function useOrdersViewCounts(
     const counts = ref<OrdersViewCounts | null>(null);
     const pendingApprovalOrderIds = ref<Set<string>>(new Set());
 
-    const { run } = useLatestRequest(
+    const { loading, run } = useLatestRequest(
         async () => {
             await statuses.load();
             return fetchOrdersViewCounts(filters.value, customerId, statuses.rejectedCodes);
@@ -41,5 +42,5 @@ export function useOrdersViewCounts(
     );
     onMounted(refresh);
 
-    return { counts, pendingApprovalOrderIds };
+    return { counts, loading, pendingApprovalOrderIds };
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Quick-filter chip row — reused across manager portal pages (Dashboard, Orders, Discounts,
@@ -28,6 +29,8 @@ export interface FilterChip {
     variant?: StatusBadgeVariant;
     // Server COUNT for the chip; shown as a pill after the label.
     count?: number;
+    // Shows a placeholder of the pill's width instead of the count while it is being fetched.
+    countLoading?: boolean;
     // Inverts the count pill while count > 0, for the chip people look at first.
     emphasis?: boolean;
 }
@@ -57,7 +60,15 @@ const emit = defineEmits<{ select: [key: string] }>();
         >
             {{ chip.label }}
             <span
-                v-if="chip.count !== undefined"
+                v-if="chip.countLoading"
+                class="mv-filter-chip__count-skeleton"
+                role="status"
+                aria-label="Loading"
+                data-testid="chip-count-skeleton"
+                ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
+            /></span>
+            <span
+                v-else-if="chip.count !== undefined"
                 class="mv-filter-chip__count"
                 :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
                 >{{ chip.count }}</span
@@ -97,10 +108,19 @@ const emit = defineEmits<{ select: [key: string] }>();
 .mv-filter-chip__count {
     margin-left: 6px;
     padding: 1px 7px;
+    min-width: 28px;
+    box-sizing: border-box;
+    text-align: center;
     border-radius: 999px;
     background: var(--app-fill-soft);
     color: inherit;
     font-size: 11px;
+}
+
+.mv-filter-chip__count-skeleton {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 .mv-filter-chip__count--emphasis {

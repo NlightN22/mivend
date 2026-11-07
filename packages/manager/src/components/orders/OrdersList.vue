@@ -44,6 +44,7 @@ const chips = computed<FilterChip[]>(() =>
         label: v.label,
         variant: ORDERS_VIEW_VARIANT[v.key],
         count: viewCounts.counts.value?.[v.key],
+        countLoading: viewCounts.loading.value,
         emphasis: v.key === 'awaiting-confirmation',
     })),
 );

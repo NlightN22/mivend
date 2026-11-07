@@ -78,3 +78,13 @@ export const ScrollableScrollsOnPhone: Story = {
     render: () => manyTemplate,
     parameters: { viewport: { defaultViewport: 'mvMobile' } },
 };
+
+export const LoadingCounts: Story = {
+    args: {
+        chips: [
+            { key: 'all', label: 'All', countLoading: true },
+            { key: 'overdue', label: 'Overdue', variant: 'danger', countLoading: true },
+            { key: 'awaiting-approval', label: 'Awaiting approval', countLoading: true },
+        ],
+    },
+};

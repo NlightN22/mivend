@@ -20,6 +20,8 @@ import {
 import MvFilterBuilder from '../MvFilterBuilder/MvFilterBuilder.vue';
 import type { FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
 import MvAdvancedMobileCardList from './MvAdvancedMobileCardList.vue';
+import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
+import { isSkeletonRow, skeletonRowCount, skeletonRows } from './tableSkeleton';
 import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { DataTableState, DataTableSortMeta } from '../../composables/useDataTableState';
 import { usePagedScrollHeight } from '../../composables/usePagedScrollHeight';
@@ -354,6 +356,7 @@ function onPage(event: { page: number; rows: number }): void {
 }
 
 function onRowClick(event: { data: TRow; originalEvent: Event }): void {
+    if (isSkeletonRow(event.data, props.dataKey)) return;
     emit('row-click', { row: event.data, originalEvent: event.originalEvent });
 }
 
@@ -435,10 +438,23 @@ onBeforeUnmount(() => widthObserver?.disconnect());
 // see MvAdvancedMobileCardList.vue's own doc comment for why this is a separate render path
 // rather than a toggle within the existing PrimeVue markup.
 const isMobile = useIsMobileViewport(800);
+
+// Skeleton rows only replace an empty table; a reload keeps the previous rows under PrimeVue's overlay.
+const showSkeleton = computed(() => props.loading && !props.rows.length);
+const gridRows = computed(() =>
+    showSkeleton.value
+        ? skeletonRows(props.dataKey, skeletonRowCount(tableState.value.pageSize))
+        : props.rows,
+);
 </script>
 
 <template>
-    <div class="mv-advanced-data-table">
+    <div
+        class="mv-advanced-data-table"
+        :aria-busy="loading"
+        :style="{ '--mv-skeleton-row-height': `${rowHeightPx}px` }"
+    >
+        <span v-if="loading" class="mv-advanced-data-table__sr-only" role="status">Loading</span>
         <div class="mv-advanced-data-table__toolbar">
             <!-- Selection replaces search/filters/view-chips entirely while anything is selected
                  (Vendure-dashboard-style bulk bar) — real feedback: the count + bulk actions +
@@ -547,8 +563,8 @@ const isMobile = useIsMobileViewport(800);
             />
             <DataTable
                 :key="tableRemountKey"
-                :value="rows"
-                :loading="loading"
+                :value="gridRows"
+                :loading="loading && !showSkeleton"
                 :data-key="dataKey"
                 lazy
                 paginator
@@ -563,6 +579,10 @@ const isMobile = useIsMobileViewport(800);
                 filter-display="menu"
                 v-model:filters="columnFilters"
                 row-hover
+                :row-class="
+                    (row: TRow) =>
+                        isSkeletonRow(row, dataKey) ? 'mv-advanced-data-table__skeleton-row' : ''
+                "
                 class="mv-advanced-data-table__grid"
                 @page="onPage"
                 @column-resize-end="onColumnResizeEnd"
@@ -581,7 +601,14 @@ const isMobile = useIsMobileViewport(800);
                         />
                     </template>
                     <template #body="{ data }">
+                        <MvSkeleton
+                            v-if="showSkeleton"
+                            width="16px"
+                            height="16px"
+                            aria-hidden="true"
+                        />
                         <MvCheckbox
+                            v-else
                             :model-value="isRowSelected(data as TRow)"
                             :disabled="!rowSelectable(data as TRow)"
                             @update:model-value="toggleRowSelected(data as TRow)"
@@ -623,7 +650,13 @@ const isMobile = useIsMobileViewport(800);
                     </template>
 
                     <template #body="{ data }">
-                        <slot :name="`cell-${col.field}`" :data="data">
+                        <MvSkeleton
+                            v-if="showSkeleton"
+                            width="70%"
+                            height="14px"
+                            aria-hidden="true"
+                        />
+                        <slot v-else :name="`cell-${col.field}`" :data="data">
                             <span
                                 class="mv-advanced-data-table__cell-text"
                                 :title="defaultCellText(col.field, data)"
@@ -651,6 +684,20 @@ const isMobile = useIsMobileViewport(800);
 </template>
 
 <style scoped>
+/* A td's height is a floor, so skeleton rows reach the real row height and the page does not jump. */
+:deep(.mv-advanced-data-table__skeleton-row td) {
+    height: var(--mv-skeleton-row-height);
+}
+
+.mv-advanced-data-table__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 .mv-advanced-data-table__toolbar {
     display: flex;
     justify-content: space-between;

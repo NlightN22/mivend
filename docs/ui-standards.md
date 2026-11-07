@@ -84,9 +84,16 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   go to the server as an escaped `regex`), number (equal, greater, greater or equal, less, less or equal,
   between, is empty), date (before, after, between, is empty; whole local days), boolean (true, false),
   select (is, is not, is any of, is none of), id (equal, not equal, is empty, is not empty).
+- **Loading skeletons.** Every list shows the shared skeleton while it loads: `MvAdvancedDataTable` renders
+  placeholder rows matching the visible columns (desktop) or skeleton cards (phone) on the first load, and
+  keeps the previous rows under the overlay on later reloads (phone: skeleton cards each time). It sets
+  `aria-busy` and a visually hidden "Loading" status; skeleton cells are `aria-hidden`. A list never builds
+  its own spinner or skeleton. Animation stops under `prefers-reduced-motion` (`MvSkeleton`).
 - **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
   request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.
+  While counts load (first load and every refetch) set `countLoading` on the chips: the pill shows a
+  fixed-width skeleton, so the row does not jump.
 - **Preset filter** where the list is also shown inside another entity (a fixed customer): narrows the
   list, is never shown as a filter, and does not widen server-side scope.
 - **Row click** opens the entity card (the identifying cell is a real link, so ctrl/middle-click and Enter work). There is no default quick panel; a list gets one only when its entity page type asks for it.
