@@ -44,10 +44,8 @@ export const CATEGORY_TREE_LOCK_OPTIONS = {
     slowHoldWarnMs: CATEGORY_TREE_LOCK_SLOW_HOLD_MS,
 };
 
-// Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
-// hidden state down the tree; writes only what changed. Returns the number of writes.
-// One transaction and lock acquisition per top-level subtree that has something to write, so a
-// failure rolls back one chunk and feed writers get in between chunks (issue #309).
+// Rewrites each category filter to its subtree's FacetValues and propagates hidden state; one
+// lock per top-level subtree with writes (docs/category-hierarchy.md). Returns the writes made.
 export async function recomputeCategoryTree(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
