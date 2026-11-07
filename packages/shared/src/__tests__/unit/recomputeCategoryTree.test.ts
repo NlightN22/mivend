@@ -20,12 +20,14 @@ const collection = (
 
 function build(collections: ReturnType<typeof collection>[]): {
     update: ReturnType<typeof vi.fn>;
+    withTransaction: ReturnType<typeof vi.fn>;
     run: () => Promise<number>;
 } {
     const update = vi.fn();
+    const withTransaction = vi.fn((c: unknown, work: (tx: unknown) => unknown) => work(c));
     const deps = {
         connection: {
-            withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
+            withTransaction,
             getRepository: () => ({
                 find: vi.fn().mockResolvedValue(collections),
                 query: vi.fn().mockResolvedValue([{ previous: '0' }]),
@@ -40,7 +42,11 @@ function build(collections: ReturnType<typeof collection>[]): {
             ]),
         },
     };
-    return { update, run: () => recomputeCategoryTree({} as RequestContext, deps as never) };
+    return {
+        update,
+        withTransaction,
+        run: () => recomputeCategoryTree({} as RequestContext, deps as never),
+    };
 }
 
 describe('recomputeCategoryTree', () => {
@@ -70,6 +76,22 @@ describe('recomputeCategoryTree', () => {
             {},
             expect.objectContaining({ id: 3, isPrivate: true, translations: expect.any(Array) }),
         );
+    });
+
+    it('locks and commits once per top-level subtree and rolls back only the failing chunk', async () => {
+        const { update, withTransaction, run } = build([
+            collection(1, null, '__root_collection__'),
+            collection(2, 1, 'cat-p'),
+            collection(3, 2, 'cat-c'),
+            collection(4, 1, 'cat-gone', { isPrivate: true }),
+            collection(5, 4, 'cat-x'),
+        ]);
+        update.mockImplementation((_c: unknown, input: { id: number }) => {
+            if (input.id === 5) throw new Error('boom');
+        });
+        await expect(run()).rejects.toThrow('boom');
+        expect(withTransaction).toHaveBeenCalledTimes(2);
+        expect(update.mock.calls.some(([, i]) => i.id === 2)).toBe(true);
     });
 
     it('makes no writes for an already-consistent tree', async () => {

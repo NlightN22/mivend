@@ -44,22 +44,40 @@ export const CATEGORY_TREE_LOCK_OPTIONS = {
 
 // Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
 // hidden state down the tree; writes only what changed. Returns the number of writes.
-export function recomputeCategoryTree(
+// One transaction and lock acquisition per top-level subtree, so a failure rolls back one chunk
+// and feed writers get in between chunks (issue #309).
+export async function recomputeCategoryTree(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
 ): Promise<number> {
-    return withAggregateLock(
-        deps.connection,
-        ctx,
-        CATEGORY_TREE_LOCK,
-        txCtx => recomputeLocked(txCtx, deps),
-        CATEGORY_TREE_LOCK_OPTIONS,
-    );
+    const all = await deps.connection
+        .getRepository(ctx, Collection)
+        .find({ relations: ['translations'] });
+    const isCategory = (c: Collection): boolean =>
+        categoryErpIdFromSlug(c.translations[0]?.slug ?? '') !== undefined;
+    const categoryIds = new Set(all.filter(isCategory).map(c => String(c.id)));
+    const chunkRoots = all
+        .filter(c => isCategory(c) && (c.parentId == null || !categoryIds.has(String(c.parentId))))
+        .map(c => String(c.id));
+    if (chunkRoots.length === 0) return 0;
+
+    let writes = 0;
+    for (const rootId of chunkRoots) {
+        writes += await withAggregateLock(
+            deps.connection,
+            ctx,
+            CATEGORY_TREE_LOCK,
+            txCtx => recomputeLocked(txCtx, deps, rootId),
+            CATEGORY_TREE_LOCK_OPTIONS,
+        );
+    }
+    return writes;
 }
 
 async function recomputeLocked(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
+    chunkRootId: string,
 ): Promise<number> {
     const facet = await deps.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
     if (!facet) return 0;
@@ -91,7 +109,10 @@ async function recomputeLocked(
         filterFacetValueIds: parseFacetValueIds(c.filters ?? []),
     }));
 
-    const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode);
+    const chunk = subtreeIds(chunkRootId, nodes);
+    const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode).filter(u =>
+        chunk.has(u.id),
+    );
     for (const update of filterUpdates) {
         await deps.collectionService.update(ctx, {
             id: nativeIdByString.get(update.id)!,
@@ -115,7 +136,7 @@ async function recomputeLocked(
             visibilityOverride: customFields(c).visibilityOverride ?? null,
             isPrivate: c.isPrivate,
         })),
-    );
+    ).filter(u => chunk.has(u.id));
     for (const update of visibilityUpdates) {
         await deps.collectionService.update(ctx, {
             id: nativeIdByString.get(update.id)!,
@@ -124,4 +145,23 @@ async function recomputeLocked(
         });
     }
     return filterUpdates.length + visibilityUpdates.length;
+}
+
+function subtreeIds(rootId: string, nodes: CategoryCollectionNode[]): Set<string> {
+    const childrenByParent = new Map<string, string[]>();
+    for (const n of nodes) {
+        if (n.parentId === null) continue;
+        childrenByParent.set(n.parentId, [...(childrenByParent.get(n.parentId) ?? []), n.id]);
+    }
+    const seen = new Set<string>([rootId]);
+    const stack = [rootId];
+    while (stack.length > 0) {
+        for (const child of childrenByParent.get(stack.pop()!) ?? []) {
+            if (!seen.has(child)) {
+                seen.add(child);
+                stack.push(child);
+            }
+        }
+    }
+    return seen;
 }
