@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { MvSidePanel, MvButton, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { OrderListRow } from './ordersListRows';
-import OrderDecisionActions from './OrderDecisionActions.vue';
 
-const props = defineProps<{ row: OrderListRow }>();
-const emit = defineEmits<{ close: []; open: [code: string]; decided: [] }>();
+defineProps<{ row: OrderListRow }>();
+const emit = defineEmits<{ close: []; open: [code: string] }>();
 
 const FIELDS: { label: string; key: keyof OrderListRow }[] = [
     { label: 'Customer', key: 'customer' },
@@ -15,13 +14,6 @@ const FIELDS: { label: string; key: keyof OrderListRow }[] = [
     { label: 'Reservation', key: 'reservation' },
     { label: 'Attention', key: 'attention' },
 ];
-
-function valueOf(key: keyof OrderListRow): string {
-    const value = props.row[key];
-    return key === 'placedBy' && props.row.placedByMeta
-        ? `${value} (${props.row.placedByMeta})`
-        : String(value || '—');
-}
 </script>
 
 <template>
@@ -39,12 +31,11 @@ function valueOf(key: keyof OrderListRow): string {
         <dl class="order-quick-panel__fields">
             <template v-for="field in FIELDS" :key="field.key">
                 <dt>{{ field.label }}</dt>
-                <dd>{{ valueOf(field.key) }}</dd>
+                <dd>{{ row[field.key] || '—' }}</dd>
             </template>
             <dt>Customer details</dt>
             <dd>{{ row.customerMeta || '—' }}</dd>
         </dl>
-        <OrderDecisionActions :order-id="row.id" @decided="emit('decided')" />
         <template #footer>
             <MvButton variant="ghost" size="sm" @click="emit('close')">Close</MvButton>
             <MvButton size="sm" @click="emit('open', row.code)">Open</MvButton>

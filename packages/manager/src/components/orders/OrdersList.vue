@@ -65,11 +65,6 @@ function applyFilters(next: OrdersListFilters): void {
 }
 defineExpose({ filters: list.filters, applyFilters });
 
-async function onDecided(): Promise<void> {
-    selected.value = null;
-    await Promise.all([list.reload(), viewCounts.refresh()]);
-}
-
 function openOrder(code: string): void {
     void router.push(`/orders/${code}`);
 }
@@ -104,11 +99,5 @@ function openOrder(code: string): void {
             />
         </template>
     </OrdersListTable>
-    <OrderQuickPanel
-        v-if="selected"
-        :row="selected"
-        @close="selected = null"
-        @open="openOrder"
-        @decided="onDecided"
-    />
+    <OrderQuickPanel v-if="selected" :row="selected" @close="selected = null" @open="openOrder" />
 </template>

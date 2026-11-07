@@ -4294,7 +4294,6 @@ export type Mutation = {
     saveTableView: SavedTableView;
     setAdministratorActive: Scalars['Boolean']['output'];
     setBranchSettings: BranchSettings;
-    setTableViewDefault: Maybe<SavedTableView>;
     /** Manual branch pick that the automatic department rule never overwrites; null clears it. */
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
@@ -4396,7 +4395,6 @@ export type Mutation = {
     updateShippingMethod: ShippingMethod;
     updateStockLocation: StockLocation;
     /** Update an existing Tag */
-    updateTableView: Maybe<SavedTableView>;
     updateTag: Tag;
     /** Update an existing TaxCategory */
     updateTaxCategory: TaxCategory;
@@ -5200,25 +5198,12 @@ export type MutationSaveTableViewArgs = {
     filters: Scalars['String']['input'];
     name: Scalars['String']['input'];
     pageKey: Scalars['String']['input'];
-    scope?: InputMaybe<SavedTableViewScope>;
     visibleColumns: Array<Scalars['String']['input']>;
 };
 
 export type MutationSetAdministratorActiveArgs = {
     administratorId: Scalars['ID']['input'];
     isActive: Scalars['Boolean']['input'];
-};
-
-export type MutationSetTableViewDefaultArgs = {
-    id: Scalars['ID']['input'];
-    isDefault: Scalars['Boolean']['input'];
-};
-
-export type MutationUpdateTableViewArgs = {
-    filters?: InputMaybe<Scalars['String']['input']>;
-    id: Scalars['ID']['input'];
-    name?: InputMaybe<Scalars['String']['input']>;
-    visibleColumns?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type MutationSetBranchSettingsArgs = {
@@ -6628,8 +6613,6 @@ export type Permission =
     | 'ManageCheckPolicies'
     /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
     | 'ManageCounterpartyPortalAccess'
-    /** Create, edit, delete team-wide table views and assign the team default view of a list */
-    | 'ManageSharedTableViews'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     | 'ManageCounterpartyTeam'
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
@@ -7675,6 +7658,7 @@ export type Query = {
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
     mySessions: Array<SessionSummary>;
+    myTableViews: Array<SavedTableView>;
     /** The calling administrator's own notifications plus visible broadcast notifications, newest first, server-paginated (issue #87). */
     notifications: NotificationList;
     /** Open entity-completeness discrepancies against Integration Service's reconciliation summary (issue #84), newest first. */
@@ -7776,7 +7760,6 @@ export type Query = {
     systemHealthChecklist: Array<SystemHealthCheckItem>;
     tag: Tag;
     tags: TagList;
-    tableViews: Array<SavedTableView>;
     taxCategories: TaxCategoryList;
     taxCategory: Maybe<TaxCategory>;
     taxRate: Maybe<TaxRate>;
@@ -8073,7 +8056,7 @@ export type QueryMyApprovalsInboxArgs = {
     awaitingOptions?: InputMaybe<ApprovalListOptions>;
 };
 
-export type QueryTableViewsArgs = {
+export type QueryMyTableViewsArgs = {
     pageKey: Scalars['String']['input'];
 };
 
@@ -8755,14 +8738,10 @@ export type SavedTableView = {
     createdAt: Scalars['DateTime']['output'];
     filters: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    isDefault: Scalars['Boolean']['output'];
     name: Scalars['String']['output'];
     pageKey: Scalars['String']['output'];
-    scope: SavedTableViewScope;
     visibleColumns: Array<Scalars['String']['output']>;
 };
-
-export type SavedTableViewScope = 'PERSONAL' | 'SHARED';
 
 export type ScheduledTask = {
     description: Scalars['String']['output'];
@@ -12339,22 +12318,18 @@ export type SavedTableViewFieldsFragment = {
     name: string;
     filters: string;
     visibleColumns: Array<string>;
-    scope: SavedTableViewScope;
-    isDefault: boolean;
 };
 
-export type TableViewsQueryVariables = Exact<{
+export type MyTableViewsQueryVariables = Exact<{
     pageKey: Scalars['String']['input'];
 }>;
 
-export type TableViewsQuery = {
-    tableViews: Array<{
+export type MyTableViewsQuery = {
+    myTableViews: Array<{
         id: string;
         name: string;
         filters: string;
         visibleColumns: Array<string>;
-        scope: SavedTableViewScope;
-        isDefault: boolean;
     }>;
 };
 
@@ -12363,52 +12338,10 @@ export type SaveTableViewMutationVariables = Exact<{
     name: Scalars['String']['input'];
     filters: Scalars['String']['input'];
     visibleColumns: Array<Scalars['String']['input']> | Scalars['String']['input'];
-    scope?: InputMaybe<SavedTableViewScope>;
 }>;
 
 export type SaveTableViewMutation = {
-    saveTableView: {
-        id: string;
-        name: string;
-        filters: string;
-        visibleColumns: Array<string>;
-        scope: SavedTableViewScope;
-        isDefault: boolean;
-    };
-};
-
-export type UpdateTableViewMutationVariables = Exact<{
-    id: Scalars['ID']['input'];
-    name?: InputMaybe<Scalars['String']['input']>;
-    filters?: InputMaybe<Scalars['String']['input']>;
-    visibleColumns?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
-}>;
-
-export type UpdateTableViewMutation = {
-    updateTableView: {
-        id: string;
-        name: string;
-        filters: string;
-        visibleColumns: Array<string>;
-        scope: SavedTableViewScope;
-        isDefault: boolean;
-    } | null;
-};
-
-export type SetTableViewDefaultMutationVariables = Exact<{
-    id: Scalars['ID']['input'];
-    isDefault: Scalars['Boolean']['input'];
-}>;
-
-export type SetTableViewDefaultMutation = {
-    setTableViewDefault: {
-        id: string;
-        name: string;
-        filters: string;
-        visibleColumns: Array<string>;
-        scope: SavedTableViewScope;
-        isDefault: boolean;
-    } | null;
+    saveTableView: { id: string; name: string; filters: string; visibleColumns: Array<string> };
 };
 
 export type DeleteTableViewMutationVariables = Exact<{
@@ -13145,8 +13078,6 @@ export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
   name
   filters
   visibleColumns
-  scope
-  isDefault
 }
     `,
     { fragmentName: 'SavedTableViewFields' },
@@ -15425,9 +15356,9 @@ export const SystemHealthChecklistDocument = new TypedDocumentString(`
     SystemHealthChecklistQuery,
     SystemHealthChecklistQueryVariables
 >;
-export const TableViewsDocument = new TypedDocumentString(`
-    query TableViews($pageKey: String!) {
-  tableViews(pageKey: $pageKey) {
+export const MyTableViewsDocument = new TypedDocumentString(`
+    query MyTableViews($pageKey: String!) {
+  myTableViews(pageKey: $pageKey) {
     ...SavedTableViewFields
   }
 }
@@ -15436,17 +15367,14 @@ export const TableViewsDocument = new TypedDocumentString(`
   name
   filters
   visibleColumns
-  scope
-  isDefault
-}`) as unknown as TypedDocumentString<TableViewsQuery, TableViewsQueryVariables>;
+}`) as unknown as TypedDocumentString<MyTableViewsQuery, MyTableViewsQueryVariables>;
 export const SaveTableViewDocument = new TypedDocumentString(`
-    mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!, $scope: SavedTableViewScope) {
+    mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
   saveTableView(
     pageKey: $pageKey
     name: $name
     filters: $filters
     visibleColumns: $visibleColumns
-    scope: $scope
   ) {
     ...SavedTableViewFields
   }
@@ -15456,45 +15384,7 @@ export const SaveTableViewDocument = new TypedDocumentString(`
   name
   filters
   visibleColumns
-  scope
-  isDefault
 }`) as unknown as TypedDocumentString<SaveTableViewMutation, SaveTableViewMutationVariables>;
-export const UpdateTableViewDocument = new TypedDocumentString(`
-    mutation UpdateTableView($id: ID!, $name: String, $filters: String, $visibleColumns: [String!]) {
-  updateTableView(
-    id: $id
-    name: $name
-    filters: $filters
-    visibleColumns: $visibleColumns
-  ) {
-    ...SavedTableViewFields
-  }
-}
-    fragment SavedTableViewFields on SavedTableView {
-  id
-  name
-  filters
-  visibleColumns
-  scope
-  isDefault
-}`) as unknown as TypedDocumentString<UpdateTableViewMutation, UpdateTableViewMutationVariables>;
-export const SetTableViewDefaultDocument = new TypedDocumentString(`
-    mutation SetTableViewDefault($id: ID!, $isDefault: Boolean!) {
-  setTableViewDefault(id: $id, isDefault: $isDefault) {
-    ...SavedTableViewFields
-  }
-}
-    fragment SavedTableViewFields on SavedTableView {
-  id
-  name
-  filters
-  visibleColumns
-  scope
-  isDefault
-}`) as unknown as TypedDocumentString<
-    SetTableViewDefaultMutation,
-    SetTableViewDefaultMutationVariables
->;
 export const DeleteTableViewDocument = new TypedDocumentString(`
     mutation DeleteTableView($id: ID!) {
   deleteTableView(id: $id)
@@ -15779,37 +15669,3 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     UnsortedAdministratorsQuery,
     UnsortedAdministratorsQueryVariables
 >;
-
-export type OrderDecisionFactsQueryVariables = Exact<{
-    orderId: Scalars['String']['input'];
-}>;
-
-export type OrderDecisionFactsQuery = {
-    visibleOrders: {
-        items: Array<{
-            id: string;
-            state: string;
-            cancellable: boolean;
-            customFields: {
-                reservationState: string | null;
-                reservationDays: number | null;
-            } | null;
-        }>;
-    };
-};
-
-export const OrderDecisionFactsDocument = new TypedDocumentString(`
-    query OrderDecisionFacts($orderId: String!) {
-  visibleOrders(options: {take: 1, filter: {id: {eq: $orderId}}}) {
-    items {
-      id
-      state
-      cancellable
-      customFields {
-        reservationState
-        reservationDays
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<OrderDecisionFactsQuery, OrderDecisionFactsQueryVariables>;
