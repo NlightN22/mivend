@@ -13,6 +13,7 @@ import { ContactPerson } from '../../entities/contact-person.entity';
 import { Counterparty } from '../../entities/counterparty.entity';
 
 const mockTpRepo = {
+    query: vi.fn().mockResolvedValue([]),
     findOne: vi.fn(),
     save: vi.fn(async (record: unknown) => record),
 };

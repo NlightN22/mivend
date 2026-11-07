@@ -107,6 +107,13 @@ export class TradingPointService {
         patch: TradingPointDetailsPatch,
     ): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
+        // Raw lock: FOR UPDATE through find() would join the eager contacts (nullable side of an outer join).
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `SELECT id FROM trading_point WHERE id = $1 FOR UPDATE`,
+            [String(id)],
+        );
         const record = await repo.findOne({ where: { id: String(id) }, relations: ['contacts'] });
         if (!record) throw new UserInputError(`TradingPoint not found: id=${id}`);
         await this.assertStaffCanEdit(ctx, record);
