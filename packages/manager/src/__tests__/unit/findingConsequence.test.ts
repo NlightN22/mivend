@@ -58,11 +58,20 @@ describe('finding consequence join', () => {
         expect(consequencesByFinding([finding()], [d], []).get('f1')?.consequence).toBe('info');
     });
 
-    it('ignores a branch override, joining the global row only', () => {
+    it('lets a branch row override the global row for an order of that branch', () => {
         const rows = [policy({ branchId: 'branch-a', consequence: 'info' }), policy({ id: 'p2' })];
-        expect(consequencesByFinding([finding()], [def({})], rows).get('f1')?.consequence).toBe(
-            'hold',
-        );
+        const of = (branch: string | null): string | undefined =>
+            consequencesByFinding([finding()], [def({})], rows, branch).get('f1')?.consequence;
+        expect(of('branch-a')).toBe('info');
+        expect(of('branch-b')).toBe('hold');
+        expect(of(null)).toBe('hold');
+    });
+
+    it('lets a branch row turn the check off for that branch only', () => {
+        const rows = [policy({ branchId: 'branch-a', enabled: false }), policy({ id: 'p2' })];
+        const of = (branch: string): boolean =>
+            consequencesByFinding([finding()], [def({})], rows, branch).has('f1');
+        expect([of('branch-a'), of('branch-b')]).toEqual([false, true]);
     });
 
     it('leaves a finding without a consequence when its check is disabled or unknown', () => {
@@ -97,5 +106,16 @@ describe('findings summary', () => {
                 request('rejected'),
             ]),
         ).toEqual({ findings: 2, holding: 1, awaitingApproval: 1, handled: 2 });
+    });
+
+    it('counts as holding exactly the hold, block and require-approval consequences', () => {
+        const held = (consequence: string): number => {
+            const rules = [policy({ consequence })];
+            const map = consequencesByFinding([finding()], [def({})], rules);
+            return summarizeFindings([finding()], map, []).holding;
+        };
+        expect(['info', 'warn', 'hold', 'block', 'require-approval'].map(held)).toEqual([
+            0, 0, 1, 1, 1,
+        ]);
     });
 });

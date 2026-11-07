@@ -10,6 +10,7 @@ import { useFindingConsequences } from '../../composables/useFindingConsequences
 import { useOrderChecks } from '../../composables/useOrderChecks';
 import { useOrderDetail } from '../../composables/useOrderDetail';
 import { useReservationActions } from '../../composables/useReservationActions';
+import { contractBlockedSkus } from '../../utils/orderLineChecks';
 import { summarizeFindings } from '../../utils/orderFindingsSummary';
 import CustomerKpiStrip from '../../components/customers/CustomerKpiStrip.vue';
 import OrderApprovalsPanel from '../../components/order-detail/OrderApprovalsPanel.vue';
@@ -38,7 +39,11 @@ const orderId = computed(() => order.value?.id ?? '');
 const checks = useOrderChecks(orderId);
 const canSeeChecks = computed(() => authStore.hasPermission('ReadCheckResults'));
 const findings = computed(() => (canSeeChecks.value ? checks.findings.value : []));
-const { consequences } = useFindingConsequences(findings, () => canSeeChecks.value);
+const { consequences } = useFindingConsequences(
+    findings,
+    () => canSeeChecks.value,
+    () => order.value?.customFields.branchId ?? null,
+);
 const counterpartyId = computed(() => order.value?.customer?.counterparty?.id ?? null);
 const kpiData = useCustomerKpiData(counterpartyId);
 const contractPanel = ref<{ $el: HTMLElement } | null>(null);
@@ -144,6 +149,7 @@ watch([orderId, reservations], () => {
                 <OrderContractPanel
                     :order-id="order.id"
                     :locked="reservations.some(r => r.status === 'active')"
+                    :blocked-skus="contractBlockedSkus(findings, order.lines)"
                     @changed="data.reload"
                 />
             </MvPanel>

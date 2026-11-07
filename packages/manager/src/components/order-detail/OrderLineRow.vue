@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvFlaggedValue, MvInput, MvQtyStepper } from '@mivend/ui-kit';
+import { MvInput, MvQtyStepper } from '@mivend/ui-kit';
 import type { OrderLineAvailability } from '../../api/orderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import { stepperMin } from '../../composables/orderLineStepper';
@@ -75,19 +75,6 @@ const priceChanged = computed(
                     Line will be removed
                 </span>
             </template>
-            <MvFlaggedValue
-                v-else-if="!row.view.contractOk"
-                severity="danger"
-                :tooltip="`Contract does not allow this quantity (allowed ${row.view.allowed} of ${row.view.needed})`"
-            >
-                {{
-                    formatLineQuantity(
-                        line.quantity,
-                        line.productVariant.customFields,
-                        packagesOnly,
-                    )
-                }}
-            </MvFlaggedValue>
             <template v-else>
                 {{
                     formatLineQuantity(

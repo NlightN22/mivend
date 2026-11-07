@@ -29,13 +29,14 @@ function rowFor(rows: PolicyRow[], finding: OrderCheckFinding): PolicyRow | unde
     return ofCheck.find(r => r.stage === finding.stage) ?? ofCheck[0];
 }
 
-// Joins stored findings with the effective policy of their check and stage; null when the check is unknown or off.
+// Joins stored findings with the effective policy (branch override, else global) of their check and stage; none when the check is unknown or off.
 export function consequencesByFinding(
     findings: OrderCheckFinding[],
     definitions: CheckDefinition[],
     policies: CheckPolicy[],
+    branchId: string | null = null,
 ): Map<string, FindingConsequence> {
-    const rows = buildPolicyRows(definitions, policies);
+    const rows = buildPolicyRows(definitions, policies, branchId);
     const result = new Map<string, FindingConsequence>();
     for (const finding of findings) {
         const row = rowFor(rows, finding);

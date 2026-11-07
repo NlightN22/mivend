@@ -3,6 +3,7 @@ import type { OrderCheckFinding, OrgBreakdown } from '../../utils/orderCheckMess
 import type { OrderReservation } from '../../api/reservation';
 import {
     checksSummary,
+    contractBlockedSkus,
     isBelowFloor,
     lineCheckView,
     lineReservedQuantity,
@@ -134,5 +135,21 @@ describe('order line check view', () => {
         expect(s.listed).toEqual([]);
         expect(isBelowFloor([findings[0]])).toBe(true);
         expect(isBelowFloor([findings[2]])).toBe(false);
+    });
+});
+
+describe('contract blocked skus', () => {
+    const lines = [
+        { id: 'l1', productVariant: { sku: 'SKU-1' } },
+        { id: 'l2', productVariant: { sku: 'SKU-2' } },
+    ];
+
+    it('lists the lines carrying a contract finding and ignores other checks', () => {
+        const findings = [
+            f({ id: 'a', checkCode: 'erp.contract-with-storage-organization', lineRef: 'l2' }),
+            f({ id: 'b', lineRef: 'l1' }),
+        ];
+        expect(contractBlockedSkus(findings, lines)).toEqual(['SKU-2']);
+        expect(contractBlockedSkus([], lines)).toEqual([]);
     });
 });

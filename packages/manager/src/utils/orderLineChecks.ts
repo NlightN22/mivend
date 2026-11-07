@@ -31,6 +31,14 @@ export function isBelowFloor(findings: OrderCheckFinding[]): boolean {
     return findings.some(f => f.checkCode === BELOW_FLOOR_CODE);
 }
 
+export function contractBlockedSkus(
+    findings: OrderCheckFinding[],
+    lines: { id: string; productVariant: { sku: string } }[],
+): string[] {
+    const refs = new Set(findings.filter(f => f.checkCode === CONTRACT_CODE).map(f => f.lineRef));
+    return lines.filter(l => refs.has(l.id)).map(l => l.productVariant.sku);
+}
+
 export function listedFindings(findings: OrderCheckFinding[]): OrderCheckFinding[] {
     return findings.filter(f => !(COLUMN_CODES.has(f.checkCode) && f.lineRef));
 }

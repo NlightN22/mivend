@@ -8,7 +8,7 @@ import {
     type OrderContractOption,
 } from '../../api/reservation';
 
-const props = defineProps<{ orderId: string; locked: boolean }>();
+const props = defineProps<{ orderId: string; locked: boolean; blockedSkus: string[] }>();
 const emit = defineEmits<{ changed: [] }>();
 
 const authStore = useAuthStore();
@@ -55,6 +55,9 @@ watch(() => props.orderId, load, { immediate: true });
             No active contract: the order cannot be registered in the ERP.
         </MvNotice>
         <template v-else-if="options.length">
+            <MvNotice v-if="blockedSkus.length" variant="warning">
+                These lines cannot be sent under this contract: {{ blockedSkus.join(', ') }}
+            </MvNotice>
             <MvSelect
                 :model-value="selected?.erpId ?? ''"
                 :options="selectOptions"
