@@ -597,6 +597,32 @@ The three manager-action controls (#242), all stage-scoped policies of the `mana
 | `manager.credit-term-extension` | `extend-credit-term` | requested days or amount exceed the limit of the policy **recipient** role, or that role has no limit row, or the policy has no recipient | `require-approval` (the escalated chain; no finding uses the single-step chain) | `CreditTermLimit` per role; the recipient (seeded `department-head`) is policy data, not code |
 | `manager.price-adjustment-floor` | `adjust-price` | requested price is below the floor price, or the variant has no floor price | `require-approval` | none |
 
+### Discount limits (#320)
+
+A line discount is a promotion adjustment (automatic) or a manual unit price (`manualUnitPrice`); both are measured as the
+percent of the line's **reference price** (the customer's price before any manual price or order-dependent discount) that is
+given away, rounded to 2 decimals (`LineDiscountService`). The ceiling comes from `DiscountLimit` rows: staff role x product
+group (`groupRef` empty = every product, else a manufacturer or category ERP id), edited with `setDiscountLimit` /
+`removeDiscountLimit` under `ManageDiscountLimits` (general director and portal admin). Per role a matching group row beats
+the all-products row; across the actor's roles the most permissive wins (the `ReservationExtensionLimit` precedent: only
+roles with a row count).
+
+**An unset limit is no limit: no finding, nothing blocked (fail-open, owner decision).** This is the opposite of the
+reservation extension limit, which is fail-closed without a row; a limit of `0` is a limit.
+
+| Code | Subject / stage | Finding when | Default |
+| --- | --- | --- | --- |
+| `order.discount-over-limit` | `order`, `pre-reserve` and `on-edit` | a line's discount percent is above the ceiling of the staff member running the stage; no staff actor or no limit = no finding. Facts carry the percent, never the limit | `warn` |
+| `manager.price-adjustment-discount-limit` | `manager`, `adjust-price` | the requested price deepens the line's discount (`direction` = `increases-discount`) past the actor's ceiling. Reducing or keeping a discount is never flagged | `block` (a limit exists only when someone set it), stronger than the floor check's `require-approval` |
+
+Staff can only reduce a placed line's discount: `reduceOrderLineDiscount(orderId, orderLineId, targetUnitPrice)` accepts a
+unit price from the current effective price up to the reference price (equal = no change) and refuses a lower one;
+`revertOrderLineDiscount` clears the manual price and is refused when the automatic discount is deeper than the current one
+unless a limit covers it. Both need `AdjustPriceWithinLimit`, run under the order edit locks and guard
+(`OrderLineEditService.edit`) and re-check the result after recalculation, so a concurrent edit cannot lower the price.
+`orderLineDiscountLimits(orderId)` returns the current admin's ceiling per line for the manager card; the limit itself is
+never part of a finding.
+
 `order.below-floor-price` (#256, `order` subject, stages `pre-reserve` and `on-edit`, default `warn`) is the same floor applied to a placed order's lines (listed price below the floor). It runs for every viewer, its facts carry the SKU and a reason only, never the floor or the price, and a variant without a known floor yields no finding. The per-line mark is accepted as visible to every manager (owner decision): a manager changes the price type, not the price, and cannot probe the floor without the price-adjustment or extra-discount rights. Points: `pre-reserve` runs on the customer's order placement (automatic reserve) and again on the manager's confirmation, always against the current floor; `on-edit` is the manual recompute. Deliberately omitted: re-evaluation when a purchase price or multiplier changes (confirmation re-reads the floor anyway, and a stale mark cannot reach an order with no stored findings), `pre-send-to-erp` (the ERP has its own control) and any hold or approval consequence (a policy change, no approval workflow yet).
 
 An actor with several roles is judged by all of them (`getActorIdentity().roleCodes`); the credit-term check ignores the actor's roles because it is judged against the single policy recipient role.
