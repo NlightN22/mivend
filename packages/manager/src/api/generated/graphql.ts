@@ -11772,6 +11772,8 @@ export type OrderDetailQuery = {
             payments: Array<{ id: string; method: string; state: string }> | null;
             customFields: {
                 reservationDays: number | null;
+                branchId: string | null;
+                isExternal: boolean | null;
                 reservationFailureReason: string | null;
                 reservationFailureDetail: string | null;
                 reservationFailedAt: any | null;
@@ -15013,6 +15015,8 @@ export const OrderDetailDocument = new TypedDocumentString(`
       totalWithTax
       customFields {
         reservationDays
+        branchId
+        isExternal
         reservationFailureReason
         reservationFailureDetail
         reservationFailedAt

@@ -5,6 +5,7 @@ import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { ORDER_STATE_BADGE_VARIANT, ORDER_STATE_LABEL } from '../../api/orders';
 import type { OrderDetail } from '../../api/orderDetail';
 import type { useReservationActions } from '../../composables/useReservationActions';
+import { canConfirmOrder } from '../../utils/canConfirmOrder';
 import OrderHeaderActions from './OrderHeaderActions.vue';
 
 const props = defineProps<{
@@ -15,6 +16,13 @@ const props = defineProps<{
 }>();
 defineEmits<{ recompute: []; cancelled: [] }>();
 
+const confirmable = computed(() =>
+    canConfirmOrder({
+        cancellable: props.order.cancellable,
+        lineCount: props.order.lines.length,
+        customFields: props.order.customFields,
+    }),
+);
 const customerName = computed(() => {
     const customer = props.order.customer;
     if (!customer) return null;
@@ -40,6 +48,7 @@ const customerName = computed(() => {
             <OrderHeaderActions
                 :order-id="order.id"
                 :cancellable="order.cancellable"
+                :confirmable="confirmable"
                 :can-see-checks="canSeeChecks"
                 :reservation="reservation"
                 @recompute="$emit('recompute')"

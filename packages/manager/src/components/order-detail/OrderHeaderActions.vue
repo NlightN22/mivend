@@ -17,6 +17,7 @@ import OrderConfirmForm from './OrderConfirmForm.vue';
 const props = defineProps<{
     orderId: string;
     cancellable: boolean;
+    confirmable: boolean;
     canSeeChecks: boolean;
     reservation: ReturnType<typeof useReservationActions>;
 }>();
@@ -34,6 +35,7 @@ const actions = computed(() =>
     headerActions(
         {
             canConfirm: props.reservation.canConfirm.value,
+            confirmable: props.confirmable,
             reserved: props.reservation.reserved.value,
             canExtend: props.reservation.canExtend.value,
             canSeeChecks: props.canSeeChecks,

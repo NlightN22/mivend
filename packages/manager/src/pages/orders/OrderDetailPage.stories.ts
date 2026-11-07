@@ -21,6 +21,7 @@ function mockOrderDetailData(erpPaidAmount: number | null = null): void {
                     id: '1',
                     code: 'ORD-101',
                     state: 'PaymentAuthorized',
+                    cancellable: true,
                     orderPlacedAt: new Date().toISOString(),
                     createdAt: new Date().toISOString(),
                     currencyCode: 'RUB',

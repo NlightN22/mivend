@@ -20,6 +20,8 @@ query OrderDetail($code: String!) {
             totalWithTax
             customFields {
                 reservationDays
+                branchId
+                isExternal
                 reservationFailureReason
                 reservationFailureDetail
                 reservationFailedAt

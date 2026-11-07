@@ -3,6 +3,7 @@ import { headerActions, type HeaderActionInputs } from '../../utils/orderHeaderA
 
 const base: HeaderActionInputs = {
     canConfirm: true,
+    confirmable: true,
     reserved: false,
     canExtend: true,
     canSeeChecks: true,
@@ -16,6 +17,7 @@ describe('header action gating', () => {
         expect(headerActions(base, false).confirm).toBe(true);
         expect(headerActions({ ...base, canConfirm: false }, false).confirm).toBe(false);
         expect(headerActions({ ...base, reserved: true }, false).confirm).toBe(false);
+        expect(headerActions({ ...base, confirmable: false }, false).confirm).toBe(false);
     });
 
     it('offers release to a confirmer and extend only with an extension limit, after confirming', () => {

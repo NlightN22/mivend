@@ -2,6 +2,7 @@ import type { ActionMenuItem } from '@mivend/ui-kit';
 
 export interface HeaderActionInputs {
     canConfirm: boolean;
+    confirmable: boolean;
     reserved: boolean;
     canExtend: boolean;
     canSeeChecks: boolean;
@@ -16,7 +17,7 @@ export interface HeaderActions {
 
 // Same gates as the former panels: confirm only before a reservation exists; release and extend only after.
 export function headerActions(i: HeaderActionInputs, mobile: boolean): HeaderActions {
-    const confirm = i.canConfirm && !i.reserved;
+    const confirm = i.canConfirm && i.confirmable && !i.reserved;
     const cancel = i.cancelVisible;
     const menu: ActionMenuItem[] = [];
     if (mobile && confirm) menu.push({ key: 'confirm', label: 'Confirm order' });
