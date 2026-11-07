@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const POINT_NAME = 'E2E Picker Point';
-const CENTRE = { latitude: 52.52, longitude: 13.405 };
+const CENTRE = { latitude: 12.5, longitude: 12.5 };
 const ONE_PIXEL_PNG = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
     'base64',
@@ -20,8 +20,8 @@ async function stubGeo(page: Page): Promise<void> {
                 geoConfig: {
                     providers: [{ key: 'open', publicKey: null }],
                     defaultProvider: 'open',
-                    defaultLatitude: 48.0,
-                    defaultLongitude: 11.0,
+                    defaultLatitude: 20.0,
+                    defaultLongitude: 20.0,
                     defaultZoom: 5,
                 },
             });

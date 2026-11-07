@@ -17,6 +17,7 @@ import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages'
 import { prepareMarkupCustomer } from './fixtures/seed-markup';
 import { seedDiscountGrants } from './fixtures/discount-grants';
 import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
+import { SEED_LOCATION } from './fixtures/seed-location';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -157,8 +158,7 @@ export default async function globalSetup(): Promise<void> {
                     id: tp.id,
                     input: {
                         servicingBranchId: centralBranchId,
-                        latitude: 55.75,
-                        longitude: 37.62,
+                        ...SEED_LOCATION,
                     },
                 },
                 adminToken,

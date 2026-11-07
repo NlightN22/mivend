@@ -130,12 +130,12 @@ describe('useLocationPicker', () => {
         expect(picker.canSave.value).toBe(false);
         picker.setManual('0', '0');
         expect(picker.manualError.value).toBe('notSet');
-        picker.setManual('48,5', '2.3');
+        picker.setManual('10,5', '10.3');
         expect(picker.canSave.value).toBe(true);
-        expect(picker.point.value).toEqual({ latitude: 48.5, longitude: 2.3 });
+        expect(picker.point.value).toEqual({ latitude: 10.5, longitude: 10.3 });
         await picker.retry();
         expect(picker.status.value).toBe('ready');
-        expect(adapters[1].marker).toEqual({ latitude: 48.5, longitude: 2.3 });
+        expect(adapters[1].marker).toEqual({ latitude: 10.5, longitude: 10.3 });
     });
 
     it('moves to a picked suggestion and ignores one without coordinates', async () => {

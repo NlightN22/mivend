@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
+import { SEED_LOCATION, SEED_LOCATION_TEXT } from '../../fixtures/seed-location';
 
-const SEED_LOCATION = { latitude: 55.75, longitude: 37.62 };
-const CENTER = { latitude: 55.76, longitude: 37.64 };
+const CENTER = { latitude: 10.01, longitude: 10.02 };
 const ONE_PIXEL_PNG = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
     'base64',
@@ -77,7 +77,7 @@ test('a manager picks a trading point location on the map and it is saved @on:ma
             .getByRole('button', { name: 'Edit' })
             .click();
         const form = page.locator('.tp-edit-form');
-        await expect(form.getByTestId('tp-location')).toContainText('55.750000, 37.620000');
+        await expect(form.getByTestId('tp-location')).toContainText(SEED_LOCATION_TEXT);
 
         await form.getByTestId('tp-pick-on-map').click();
         const picker = page.getByRole('dialog', { name: 'Pick location on map' });
@@ -88,7 +88,7 @@ test('a manager picks a trading point location on the map and it is saved @on:ma
         await picker.getByRole('button', { name: 'Save', exact: true }).click();
         await expect(picker).toBeHidden();
 
-        await expect(form.getByTestId('tp-location')).not.toContainText('55.750000, 37.620000');
+        await expect(form.getByTestId('tp-location')).not.toContainText(SEED_LOCATION_TEXT);
         await form.getByRole('button', { name: 'Save changes' }).click();
         await expect(form).toBeHidden({ timeout: 15000 });
 

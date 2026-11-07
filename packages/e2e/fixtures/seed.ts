@@ -1,5 +1,6 @@
 import { innSeedRecords } from './seed-inn';
 import { markupSeedRecords } from './seed-markup';
+import { SEED_LOCATION } from './seed-location';
 
 export const E2E_CUSTOMER = {
     email: 'e2e@test.example',
@@ -334,8 +335,7 @@ export const seedRecords = [
             counterpartyErpId: E2E_COUNTERPARTY_ID,
             name: 'E2E Trading Point',
             address: 'Test Street 1',
-            latitude: 55.75,
-            longitude: 37.62,
+            ...SEED_LOCATION,
             isActive: true,
         },
     },
@@ -346,8 +346,7 @@ export const seedRecords = [
             counterpartyErpId: E2E_COUNTERPARTY_ID,
             name: 'E2E North Depot',
             address: 'North Ave 42',
-            latitude: 55.75,
-            longitude: 37.62,
+            ...SEED_LOCATION,
             isActive: true,
         },
     },
@@ -358,8 +357,7 @@ export const seedRecords = [
             counterpartyErpId: E2E_COUNTERPARTY_ID,
             name: 'E2E Warehouse',
             address: 'Warehouse Rd 7',
-            latitude: 55.75,
-            longitude: 37.62,
+            ...SEED_LOCATION,
             isActive: true,
         },
     },
@@ -371,8 +369,7 @@ export const seedRecords = [
             counterpartyErpId: E2E_COUNTERPARTY_ID,
             name: 'E2E Inactive Point',
             address: 'Closed Ave 9',
-            latitude: 55.75,
-            longitude: 37.62,
+            ...SEED_LOCATION,
             isActive: false,
         },
     },

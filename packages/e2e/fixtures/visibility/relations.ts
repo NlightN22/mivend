@@ -8,6 +8,7 @@ import {
     TEAM_OBSERVER,
     VIS_PRICE_TYPES,
 } from './plan';
+import { SEED_LOCATION } from '../seed-location';
 
 // Manager, team, grant, servicing branch and branch settings are staff decisions, made through the Admin API.
 export async function seedRelations(superadmin: string, ids: VisIds): Promise<void> {
@@ -53,7 +54,7 @@ export async function seedRelations(superadmin: string, ids: VisIds): Promise<vo
     );
 
     await call(
-        `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b, latitude: 55.75, longitude: 37.62 }) { id } }`,
+        `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b, latitude: ${SEED_LOCATION.latitude}, longitude: ${SEED_LOCATION.longitude} }) { id } }`,
         { id: ids.points[POINT_OVERRIDE.client], b: ids.branches[POINT_OVERRIDE.branch] },
     );
 }

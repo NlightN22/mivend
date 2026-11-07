@@ -383,7 +383,7 @@ async function topUpHistory(token, tradingPointIds) {
         // actually calls VersioningService.recordChange — see TradingPointService.updateDetails.
         await adminGql(
             `mutation($id: ID!, $input: TradingPointDetailsInput!) { updateTradingPointDetails(id: $id, input: $input) { id } }`,
-            { id: tradingPointId, input: { workingHours: `Mon-Fri 09:00-18:00 (rev ${i + 1})`, latitude: 55.75, longitude: 37.62 } },
+            { id: tradingPointId, input: { workingHours: `Mon-Fri 09:00-18:00 (rev ${i + 1})`, latitude: 10, longitude: 10 } },
             token,
         );
     }

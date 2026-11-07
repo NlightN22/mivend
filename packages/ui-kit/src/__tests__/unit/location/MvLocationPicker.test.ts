@@ -62,9 +62,9 @@ describe('MvLocationPicker', () => {
         await flushPromises();
         expect(document.body.textContent).toContain('The map could not be loaded.');
         const inputs = document.body.querySelectorAll<HTMLInputElement>('.mv-loc-manual input');
-        inputs[0].value = '48.1';
+        inputs[0].value = '10.1';
         inputs[0].dispatchEvent(new Event('input'));
-        inputs[1].value = '11.5';
+        inputs[1].value = '10.5';
         inputs[1].dispatchEvent(new Event('input'));
         document.body.querySelector('.mv-loc-manual')!.dispatchEvent(new Event('submit'));
         await flushPromises();

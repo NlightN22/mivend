@@ -1,4 +1,5 @@
 import { adminGql, shopGql, shopLoginCookie } from '../helpers/api';
+import { SEED_LOCATION } from './seed-location';
 
 export const MARKUP_COUNTERPARTY_ID = 'e2e-cnt-markup';
 export const MARKUP_CUSTOMER = { email: 'e2e-markup@test.example', password: 'E2eTest123!' };
@@ -90,8 +91,7 @@ export const markupSeedRecords = [
             counterpartyErpId: MARKUP_COUNTERPARTY_ID,
             name: 'E2E Markup Point',
             address: 'Markup Street 1',
-            latitude: 55.75,
-            longitude: 37.62,
+            ...SEED_LOCATION,
             isActive: true,
         },
     },
@@ -124,7 +124,7 @@ export async function prepareMarkupCustomer(
         }`,
         {
             id: point.id,
-            input: { servicingBranchId: centralBranchId, latitude: 55.75, longitude: 37.62 },
+            input: { servicingBranchId: centralBranchId, ...SEED_LOCATION },
         },
         adminToken,
     );

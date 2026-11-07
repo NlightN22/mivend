@@ -8,8 +8,8 @@ const base = {
     contactPhone: '+7 (913) 123-45-67',
     workingHours: '',
     deliveryComment: '',
-    latitude: 55.75 as number | null,
-    longitude: 37.62 as number | null,
+    latitude: 10 as number | null,
+    longitude: 10 as number | null,
 };
 
 describe('tradingPointErrors', () => {
