@@ -98,6 +98,12 @@ describe('conditions to the Vendure filter', () => {
         expect(filterOf(c('total', 'isNull'))).toEqual({ totalWithTax: { isNull: true } });
     });
 
+    it('clamps a number beyond the 32-bit column range so the query still runs', () => {
+        expect(filterOf(c('total', 'gt', '999999999'))).toEqual({
+            totalWithTax: { gt: 2147483647 },
+        });
+    });
+
     it('maps date operators on whole local days', () => {
         const day = (iso: string, plus = 0): string =>
             new Date(new Date(`${iso}T00:00:00`).getTime() + plus * 86_400_000).toISOString();

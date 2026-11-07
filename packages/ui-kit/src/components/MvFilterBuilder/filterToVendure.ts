@@ -13,8 +13,12 @@ function escapeRegex(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const INT32_MAX = 2147483647;
+
+// Number columns are 32-bit integers in the database; a larger value would fail the whole query.
 function scaled(text: string, column: FilterColumn): number {
-    return Math.round(Number(text) * (column.scale ?? 1) * 1e6) / 1e6;
+    const value = Math.round(Number(text) * (column.scale ?? 1) * 1e6) / 1e6;
+    return Math.max(-INT32_MAX, Math.min(INT32_MAX, value));
 }
 
 function singleValue(condition: FilterCondition): string {
