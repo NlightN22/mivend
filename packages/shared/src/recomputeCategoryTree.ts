@@ -12,6 +12,8 @@ import { withAggregateLock } from './aggregate-lock';
 import {
     CATEGORY_FACET_CODE,
     CategoryCollectionNode,
+    CategoryFilterUpdate,
+    CategoryVisibilityUpdate,
     buildCategoryFacetFilter,
     categoryErpIdFromSlug,
     parseFacetValueIds,
@@ -44,22 +46,21 @@ export const CATEGORY_TREE_LOCK_OPTIONS = {
 
 // Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
 // hidden state down the tree; writes only what changed. Returns the number of writes.
-// One transaction and lock acquisition per top-level subtree, so a failure rolls back one chunk
-// and feed writers get in between chunks (issue #309).
+// One transaction and lock acquisition per top-level subtree that has something to write, so a
+// failure rolls back one chunk and feed writers get in between chunks (issue #309).
 export async function recomputeCategoryTree(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
 ): Promise<number> {
-    const all = await deps.connection
-        .getRepository(ctx, Collection)
-        .find({ relations: ['translations'] });
-    const isCategory = (c: Collection): boolean =>
-        categoryErpIdFromSlug(c.translations[0]?.slug ?? '') !== undefined;
-    const categoryIds = new Set(all.filter(isCategory).map(c => String(c.id)));
-    const chunkRoots = all
-        .filter(c => isCategory(c) && (c.parentId == null || !categoryIds.has(String(c.parentId))))
-        .map(c => String(c.id));
-    if (chunkRoots.length === 0) return 0;
+    const unlocked = await planTree(ctx, deps);
+    if (!unlocked) return 0;
+    const chunkRoots = [
+        ...new Set(
+            [...unlocked.filterUpdates, ...unlocked.visibilityUpdates].map(u =>
+                topLevelRoot(u.id, unlocked.nodes),
+            ),
+        ),
+    ];
 
     let writes = 0;
     for (const rootId of chunkRoots) {
@@ -79,8 +80,47 @@ async function recomputeLocked(
     deps: CategoryTreeRecomputeDeps,
     chunkRootId: string,
 ): Promise<number> {
+    const plan = await planTree(ctx, deps);
+    if (!plan) return 0;
+    const { nodes, nativeIdByString, translationsById } = plan;
+    const chunk = subtreeIds(chunkRootId, nodes);
+    const filterUpdates = plan.filterUpdates.filter(u => chunk.has(u.id));
+    const visibilityUpdates = plan.visibilityUpdates.filter(u => chunk.has(u.id));
+    for (const update of filterUpdates) {
+        await deps.collectionService.update(ctx, {
+            id: nativeIdByString.get(update.id)!,
+            translations: translationsById.get(update.id),
+            filters: buildCategoryFacetFilter(update.facetValueIds),
+        });
+    }
+
+    for (const update of visibilityUpdates) {
+        await deps.collectionService.update(ctx, {
+            id: nativeIdByString.get(update.id)!,
+            translations: translationsById.get(update.id),
+            isPrivate: update.isPrivate,
+        });
+    }
+    return filterUpdates.length + visibilityUpdates.length;
+}
+
+interface TreePlan {
+    nodes: CategoryCollectionNode[];
+    nativeIdByString: Map<string, Collection['id']>;
+    translationsById: Map<
+        string,
+        NonNullable<Parameters<CollectionService['update']>[1]['translations']>
+    >;
+    filterUpdates: CategoryFilterUpdate[];
+    visibilityUpdates: CategoryVisibilityUpdate[];
+}
+
+async function planTree(
+    ctx: RequestContext,
+    deps: CategoryTreeRecomputeDeps,
+): Promise<TreePlan | null> {
     const facet = await deps.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
-    if (!facet) return 0;
+    if (!facet) return null;
     const facetValues = await deps.facetValueService.findByFacetId(ctx, facet.id);
     const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
 
@@ -109,17 +149,7 @@ async function recomputeLocked(
         filterFacetValueIds: parseFacetValueIds(c.filters ?? []),
     }));
 
-    const chunk = subtreeIds(chunkRootId, nodes);
-    const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode).filter(u =>
-        chunk.has(u.id),
-    );
-    for (const update of filterUpdates) {
-        await deps.collectionService.update(ctx, {
-            id: nativeIdByString.get(update.id)!,
-            translations: translationsById.get(update.id),
-            filters: buildCategoryFacetFilter(update.facetValueIds),
-        });
-    }
+    const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode);
 
     // A category with no FacetValue of its own is a placeholder and always hidden.
     const isPlaceholder = (slug: string): boolean => {
@@ -136,15 +166,22 @@ async function recomputeLocked(
             visibilityOverride: customFields(c).visibilityOverride ?? null,
             isPrivate: c.isPrivate,
         })),
-    ).filter(u => chunk.has(u.id));
-    for (const update of visibilityUpdates) {
-        await deps.collectionService.update(ctx, {
-            id: nativeIdByString.get(update.id)!,
-            translations: translationsById.get(update.id),
-            isPrivate: update.isPrivate,
-        });
+    );
+    return { nodes, nativeIdByString, translationsById, filterUpdates, visibilityUpdates };
+}
+
+function topLevelRoot(id: string, nodes: CategoryCollectionNode[]): string {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    let current = id;
+    const seen = new Set<string>([id]);
+    for (;;) {
+        const parent = byId.get(current)?.parentId;
+        if (parent == null || seen.has(parent)) return current;
+        const parentSlug = byId.get(parent)?.slug ?? '';
+        if (categoryErpIdFromSlug(parentSlug) === undefined) return current;
+        seen.add(parent);
+        current = parent;
     }
-    return filterUpdates.length + visibilityUpdates.length;
 }
 
 function subtreeIds(rootId: string, nodes: CategoryCollectionNode[]): Set<string> {

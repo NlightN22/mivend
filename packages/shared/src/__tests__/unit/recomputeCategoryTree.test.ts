@@ -94,9 +94,12 @@ describe('recomputeCategoryTree', () => {
         expect(update.mock.calls.some(([, i]) => i.id === 2)).toBe(true);
     });
 
-    it('makes no writes for an already-consistent tree', async () => {
-        const { update, run } = build([collection(1, null, '__root_collection__')]);
+    it('makes no writes and takes no lock for an already-consistent tree', async () => {
+        const { update, withTransaction, run } = build([
+            collection(1, null, '__root_collection__'),
+        ]);
         expect(await run()).toBe(0);
         expect(update).not.toHaveBeenCalled();
+        expect(withTransaction).not.toHaveBeenCalled();
     });
 });
