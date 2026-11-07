@@ -2,6 +2,8 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
 
+const props = withDefaults(defineProps<{ down?: boolean }>(), { down: true });
+
 const SHOW_UP_THRESHOLD_PX = 400;
 const NEAR_BOTTOM_SLACK_PX = 24;
 
@@ -57,6 +59,7 @@ onBeforeUnmount(() => {
     <div class="mv-scroll-nav">
         <MvRoundIconButton
             v-if="showUp"
+            variant="primary"
             aria-label="Scroll to top"
             title="Scroll to top"
             @click="scrollToTop"
@@ -64,7 +67,8 @@ onBeforeUnmount(() => {
             ↑
         </MvRoundIconButton>
         <MvRoundIconButton
-            v-if="showDown"
+            v-if="props.down && showDown"
+            variant="primary"
             aria-label="Scroll to bottom"
             title="Scroll to bottom"
             @click="scrollToBottom"
@@ -87,7 +91,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 800px) {
     .mv-scroll-nav {
-        bottom: calc(150px + env(safe-area-inset-bottom));
+        bottom: calc(var(--mv-scroll-nav-offset, 150px) + env(safe-area-inset-bottom));
     }
 }
 </style>

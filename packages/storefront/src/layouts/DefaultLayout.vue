@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MvScrollNav } from '@mivend/ui-kit';
 import AppHeader from '../components/AppHeader.vue';
 </script>
 
@@ -6,6 +7,7 @@ import AppHeader from '../components/AppHeader.vue';
     <div class="default-layout">
         <AppHeader />
         <RouterView />
+        <MvScrollNav :down="false" />
     </div>
 </template>
 
@@ -17,6 +19,7 @@ import AppHeader from '../components/AppHeader.vue';
 
 @media (max-width: 1180px) {
     .default-layout {
+        --mv-scroll-nav-offset: calc(var(--mv-bottom-bar-height) + 16px);
         padding-bottom: var(--mv-bottom-bar-height);
     }
 }

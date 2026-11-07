@@ -439,7 +439,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 .mv-product-card__price-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     margin-top: auto;
 }

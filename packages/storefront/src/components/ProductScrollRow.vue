@@ -125,9 +125,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         height: 40px;
         border-radius: 50%;
         border: none;
-        background: var(--app-surface);
+        background: var(--el-color-primary);
         box-shadow: 0 2px 12px var(--app-ink-10);
-        color: var(--app-nav-text-strong);
+        color: var(--app-on-accent);
         cursor: pointer;
         transition:
             background 0.15s,
@@ -136,8 +136,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     }
 
     .psr-arrow:hover {
-        background: var(--el-color-primary);
-        color: var(--app-on-accent);
+        background: var(--app-primary-btn);
         box-shadow: 0 4px 16px var(--app-green-glow);
     }
 
