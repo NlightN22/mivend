@@ -104,8 +104,13 @@ bottom margin shifts the visible content off-center within it.
 
 - The Views control is `components/TableViewsMenu.vue` placed in `MvAdvancedDataTable`'s `#toolbar-end`, with a
   unique `viewsKey` and the table's `capture`/`apply` pair (filters, sort, search term, column order, hidden
-  columns). It uses `useTableViews` and the existing `saveTableView`/`myTableViews` storage; never a separate
-  "saved views" panel on the page, never a per-page copy of the logic.
+  columns). It uses `useTableViews` and the `saved-views` storage (`tableViews`, `saveTableView`,
+  `updateTableView`, `setTableViewDefault`, `deleteTableView`); never a separate "saved views" panel on the
+  page, never a per-page copy of the logic.
+- Views are personal or team-wide. Team views are created, edited, deleted and made the team default
+  only with `ManageSharedTableViews` (the control hides the actions otherwise, the server enforces it);
+  everyone applies them. Opening a list applies: link filters, then the person's remembered choice, then
+  the team default, then the built-in state. A team view stores UI state only, never data.
 - Chips carry `count` from one grouped `take: 0` query whose filters come from the same builder as the list
   (see `api/orders-counts.ts`); the most operational chip is first with `emphasis`. Chips replace KPI tiles
   and attention banners that show the same numbers.

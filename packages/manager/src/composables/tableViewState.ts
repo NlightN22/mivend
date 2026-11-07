@@ -12,6 +12,8 @@ export interface TableViewState {
 export interface StoredTableView {
     id: string;
     name: string;
+    shared: boolean;
+    isDefault: boolean;
     state: TableViewState;
 }
 
@@ -43,7 +45,15 @@ export function parseTableViewState(json: string): TableViewState | null {
 
 export function toStoredView(view: SavedTableView): StoredTableView | null {
     const state = parseTableViewState(view.filters);
-    return state ? { id: view.id, name: view.name, state } : null;
+    return state
+        ? {
+              id: view.id,
+              name: view.name,
+              shared: view.scope === 'SHARED',
+              isDefault: view.isDefault,
+              state,
+          }
+        : null;
 }
 
 // Keys are sorted so the same state always serializes the same way.
@@ -61,4 +71,14 @@ export function sameTableViewState(a: TableViewState, b: TableViewState): boolea
 
 export function visibleColumnsOf(state: TableViewState): string[] {
     return state.columnOrder.filter(c => !state.hiddenColumns.includes(c));
+}
+
+// What a stored choice means: nothing remembered, an explicit "built-in default", or a view id.
+export const BUILT_IN_CHOICE = 'none';
+
+// Link filters are handled by the caller; here: the person's own choice beats the team default.
+export function initialViewId(views: StoredTableView[], remembered: string): string {
+    if (remembered === BUILT_IN_CHOICE) return '';
+    if (views.some(v => v.id === remembered)) return remembered;
+    return views.find(v => v.isDefault)?.id ?? '';
 }

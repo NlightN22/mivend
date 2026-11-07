@@ -62,9 +62,13 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
 `MvAdvancedDataTable` and provides, in this order:
 
 - **Views control** in the table toolbar (`#toolbar-end`, left of the column settings): `TableViewsMenu`
-  with a unique `viewsKey`. A view is personal and stores filters, sort, the search term, column order
-  and visibility. It is never a separate widget on the page. Rename, duplicate and delete live in the
-  control; the last chosen view reopens with the list, unless the page was opened with filters in its link.
+  with a unique `viewsKey`. A view stores filters, sort, the search term, column order and visibility.
+  It is never a separate widget on the page. The menu has two groups: My views (personal) and Team views
+  (shared with everyone who can open the list). Anyone applies a team view or copies it to their own;
+  creating, editing, deleting a team view and choosing the **team default** need the `ManageSharedTableViews`
+  permission (the save form then offers a scope). A list opens with: link filters, else the person's
+  remembered choice (including the plain default view), else the team default, else the built-in state.
+  Rename, duplicate, delete and "Default" live in the control.
 - **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
   request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.

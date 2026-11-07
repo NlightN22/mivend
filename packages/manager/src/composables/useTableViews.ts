@@ -1,6 +1,15 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
-import { deleteTableView, fetchMyTableViews, saveTableView } from '../api/tableViews';
 import {
+    deleteTableView,
+    fetchTableViews,
+    saveTableView,
+    setTableViewDefault,
+    updateTableView,
+    type SavedTableViewScope,
+} from '../api/tableViews';
+import {
+    BUILT_IN_CHOICE,
+    initialViewId,
     sameTableViewState,
     toStoredView,
     visibleColumnsOf,
@@ -16,11 +25,12 @@ export interface TableViews {
     init: () => Promise<void>;
     select: (id: string) => void;
     reset: () => void;
-    create: (name: string) => Promise<void>;
+    create: (name: string, scope?: SavedTableViewScope) => Promise<void>;
     update: () => Promise<void>;
     rename: (id: string, name: string) => Promise<void>;
     duplicate: (id: string) => Promise<void>;
     remove: (id: string) => Promise<void>;
+    setDefault: (id: string, value: boolean) => Promise<void>;
 }
 
 export interface UseTableViewsOptions {
@@ -49,7 +59,8 @@ function writeChoice(key: string, id: string): void {
     }
 }
 
-// Views are personal and stored per viewsKey; the last chosen view reopens with the list.
+// Views are stored per viewsKey, personal or team-wide. On open: link filters, then the person's
+// last choice, then the team default.
 export function useTableViews(options: UseTableViewsOptions): TableViews {
     const choiceKey = `table-view:${options.viewsKey}:${options.ownerKey}`;
     const views = ref<StoredTableView[]>([]);
@@ -66,7 +77,12 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
 
     function choose(id: string): void {
         activeId.value = id;
-        writeChoice(choiceKey, id);
+        writeChoice(choiceKey, id || BUILT_IN_CHOICE);
+    }
+
+    function forget(): void {
+        activeId.value = '';
+        writeChoice(choiceKey, '');
     }
 
     function select(id: string): void {
@@ -82,16 +98,21 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
     }
 
     async function load(): Promise<void> {
-        const saved = await fetchMyTableViews(options.viewsKey);
+        const saved = await fetchTableViews(options.viewsKey);
         views.value = saved.map(toStoredView).filter((v): v is StoredTableView => v !== null);
     }
 
-    async function persist(name: string, state: TableViewState): Promise<string> {
+    async function persist(
+        name: string,
+        state: TableViewState,
+        scope: SavedTableViewScope = 'PERSONAL',
+    ): Promise<string> {
         const saved = await saveTableView(
             options.viewsKey,
             name,
             JSON.stringify(state),
             visibleColumnsOf(state),
+            scope,
         );
         return saved.id;
     }
@@ -106,34 +127,29 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
         }
     }
 
-    async function create(name: string): Promise<void> {
-        await guarded(async () => choose(await persist(name, options.capture())));
+    async function create(name: string, scope: SavedTableViewScope = 'PERSONAL'): Promise<void> {
+        await guarded(async () => choose(await persist(name, options.capture(), scope)));
         tick.value++;
-    }
-
-    // The server has no update call: save the new state first, then drop the old row.
-    async function replace(
-        view: StoredTableView,
-        name: string,
-        state: TableViewState,
-    ): Promise<void> {
-        const id = await persist(name, state);
-        await deleteTableView(view.id);
-        if (activeId.value === view.id) choose(id);
     }
 
     async function update(): Promise<void> {
         const view = active.value;
         if (!view) return;
-        await guarded(() => replace(view, view.name, options.capture()));
+        const state = options.capture();
+        await guarded(async () => {
+            await updateTableView(view.id, {
+                filters: JSON.stringify(state),
+                visibleColumns: visibleColumnsOf(state),
+            });
+        });
         tick.value++;
     }
 
     async function rename(id: string, name: string): Promise<void> {
-        const view = views.value.find(v => v.id === id);
-        if (view) await guarded(() => replace(view, name, view.state));
+        await guarded(async () => void (await updateTableView(id, { name })));
     }
 
+    // A copy is always personal, so anyone can start from a team view.
     async function duplicate(id: string): Promise<void> {
         const view = views.value.find(v => v.id === id);
         if (view)
@@ -143,16 +159,23 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
     async function remove(id: string): Promise<void> {
         await guarded(async () => {
             await deleteTableView(id);
-            if (activeId.value === id) choose('');
+            if (activeId.value === id) forget();
         });
+    }
+
+    async function setDefault(id: string, value: boolean): Promise<void> {
+        await guarded(async () => void (await setTableViewDefault(id, value)));
     }
 
     async function init(): Promise<void> {
         await load();
         const remembered = readChoice(choiceKey);
-        if (!views.value.some(v => v.id === remembered)) return;
-        if (options.skipRestore?.()) activeId.value = remembered;
-        else select(remembered);
+        if (options.skipRestore?.()) {
+            if (views.value.some(v => v.id === remembered)) activeId.value = remembered;
+            return;
+        }
+        const id = initialViewId(views.value, remembered);
+        if (id) select(id);
     }
 
     return {
@@ -168,5 +191,6 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
         rename,
         duplicate,
         remove,
+        setDefault,
     };
 }

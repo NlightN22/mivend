@@ -26,7 +26,7 @@ function mockOrdersData(): void {
         overdue: { totalItems: 3 },
         ordersAttention: { pendingPriceAdjustmentOrderIds: [] },
     }));
-    registerMock('MyTableViews', () => ({ myTableViews: [] }));
+    registerMock('TableViews', () => ({ tableViews: [] }));
 }
 
 export const Default: Story = {
@@ -57,7 +57,7 @@ export const Empty: Story = {
                 overdue: { totalItems: 0 },
                 ordersAttention: { pendingPriceAdjustmentOrderIds: [] },
             }));
-            registerMock('MyTableViews', () => ({ myTableViews: [] }));
+            registerMock('TableViews', () => ({ tableViews: [] }));
             await router.push('/orders');
         },
     ],

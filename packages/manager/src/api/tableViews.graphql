@@ -3,10 +3,12 @@ fragment SavedTableViewFields on SavedTableView {
     name
     filters
     visibleColumns
+    scope
+    isDefault
 }
 
-query MyTableViews($pageKey: String!) {
-    myTableViews(pageKey: $pageKey) {
+query TableViews($pageKey: String!) {
+    tableViews(pageKey: $pageKey) {
         ...SavedTableViewFields
     }
 }
@@ -16,13 +18,27 @@ mutation SaveTableView(
     $name: String!
     $filters: String!
     $visibleColumns: [String!]!
+    $scope: SavedTableViewScope
 ) {
     saveTableView(
         pageKey: $pageKey
         name: $name
         filters: $filters
         visibleColumns: $visibleColumns
+        scope: $scope
     ) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation UpdateTableView($id: ID!, $name: String, $filters: String, $visibleColumns: [String!]) {
+    updateTableView(id: $id, name: $name, filters: $filters, visibleColumns: $visibleColumns) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation SetTableViewDefault($id: ID!, $isDefault: Boolean!) {
+    setTableViewDefault(id: $id, isDefault: $isDefault) {
         ...SavedTableViewFields
     }
 }
