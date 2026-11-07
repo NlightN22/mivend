@@ -4,10 +4,21 @@ import { TradingPointService } from '../../trading-point.service';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { ContactPerson } from '../../entities/contact-person.entity';
 
+const mockFillExecute = vi.fn().mockResolvedValue(undefined);
+const mockFillSet = vi.fn();
+const mockFillWhere = vi.fn();
+const mockFillBuilder = {
+    update: vi.fn().mockReturnThis(),
+    set: mockFillSet.mockReturnThis(),
+    where: mockFillWhere.mockReturnThis(),
+    execute: mockFillExecute,
+};
+
 const mockTpRepo = {
     findOne: vi.fn(),
     create: vi.fn(),
     save: vi.fn(),
+    createQueryBuilder: vi.fn(() => mockFillBuilder),
 };
 
 const mockCpRepo = {};
@@ -175,6 +186,83 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             expect(existing.address).toBe('Old Addr');
             expect(existing.isActive).toBe(true);
             expect(existing.counterpartyId).toBe('cp-new');
+        });
+
+        describe('coordinates from the stream (the stream only fills a missing location)', () => {
+            const existing = (latitude: number | null, longitude: number | null) => ({
+                id: 'tp-1',
+                erpId: 'pos-1',
+                name: 'N',
+                address: 'A',
+                latitude,
+                longitude,
+                isActive: true,
+                counterpartyId: 'cp-1',
+                contacts: [],
+            });
+            const event = (latitude?: number | null, longitude?: number | null) => ({
+                name: 'N',
+                counterpartyId: 'cp-1',
+                servicingBranchId: null,
+                isActive: true,
+                address: 'A',
+                latitude,
+                longitude,
+            });
+
+            it('never writes the entity coordinates from an update, so a stale snapshot cannot clobber an edit', async () => {
+                const row = existing(10.5, 20.5);
+                mockTpRepo.findOne.mockResolvedValue(row);
+                mockTpRepo.save.mockResolvedValue(row);
+
+                await service.upsertFromStream(mockCtx, 'pos-1', event(11, 21));
+
+                expect(row.latitude).toBe(10.5);
+                expect(row.longitude).toBe(20.5);
+            });
+
+            it('fills a missing location with one conditional update that matches only a point still without one', async () => {
+                const row = existing(null, null);
+                mockTpRepo.findOne.mockResolvedValue(row);
+                mockTpRepo.save.mockResolvedValue(row);
+
+                await service.upsertFromStream(mockCtx, 'pos-1', event(11, 21));
+
+                expect(mockFillSet).toHaveBeenCalledWith({ latitude: 11, longitude: 21 });
+                expect(mockFillWhere.mock.calls[0][0]).toContain('latitude IS NULL');
+                expect(mockFillWhere.mock.calls[0][1]).toEqual({ id: 'tp-1' });
+                expect(mockFillExecute).toHaveBeenCalledTimes(1);
+            });
+
+            it.each([
+                ['null coordinates', null, null],
+                ['absent coordinates', undefined, undefined],
+                ['a (0, 0) pair', 0, 0],
+                ['an out-of-range pair', 95, 10],
+            ])('does not touch the location when the stream sends %s', async (_n, lat, lng) => {
+                const row = existing(10.5, 20.5);
+                mockTpRepo.findOne.mockResolvedValue(row);
+                mockTpRepo.save.mockResolvedValue(row);
+
+                await service.upsertFromStream(mockCtx, 'pos-1', event(lat, lng));
+
+                expect(row.latitude).toBe(10.5);
+                expect(row.longitude).toBe(20.5);
+                expect(mockFillExecute).not.toHaveBeenCalled();
+            });
+
+            it('delivering the same coordinates twice leaves one fill and an unchanged entity', async () => {
+                const row = existing(null, null);
+                mockTpRepo.findOne.mockResolvedValue(row);
+                mockTpRepo.save.mockResolvedValue(row);
+
+                await service.upsertFromStream(mockCtx, 'pos-1', event(11, 21));
+                await service.upsertFromStream(mockCtx, 'pos-1', event(11, 21));
+
+                expect(mockFillSet).toHaveBeenCalledTimes(2);
+                expect(mockFillSet).toHaveBeenNthCalledWith(1, { latitude: 11, longitude: 21 });
+                expect(mockFillSet).toHaveBeenNthCalledWith(2, { latitude: 11, longitude: 21 });
+            });
         });
 
         // This stream never carries a contact name — contactPhone must only ever land on an

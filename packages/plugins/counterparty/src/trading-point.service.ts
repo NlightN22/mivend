@@ -16,7 +16,11 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
-import { resolveTradingPointLocation } from './trading-point-location';
+import {
+    fillMissingLocation,
+    isUsableLocation,
+    resolveTradingPointLocation,
+} from './trading-point-location';
 import { ctxQuery, normalizePhone, validateTradingPointContact, type ContactField } from 'shared';
 
 export interface TradingPointDetailsPatch {
@@ -314,6 +318,7 @@ export class TradingPointService {
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         let record = await repo.findOne({ where: { erpId }, relations: ['contacts'] });
+        const usable = isUsableLocation(fields.latitude, fields.longitude);
 
         if (!record) {
             if (!fields.name) {
@@ -338,8 +343,8 @@ export class TradingPointService {
                 servicingBranchId: fields.servicingBranchId,
                 name: fields.name,
                 address: fields.address,
-                latitude: fields.latitude ?? null,
-                longitude: fields.longitude ?? null,
+                latitude: usable ? fields.latitude! : null,
+                longitude: usable ? fields.longitude! : null,
                 workingHours: null,
                 isActive: fields.isActive,
                 contacts: [],
@@ -349,8 +354,6 @@ export class TradingPointService {
             record.isActive = fields.isActive;
             record.counterpartyId = fields.counterpartyId;
             if (fields.address !== undefined) record.address = fields.address;
-            if (fields.latitude !== undefined) record.latitude = fields.latitude;
-            if (fields.longitude !== undefined) record.longitude = fields.longitude;
         }
 
         if (fields.contactPhone !== undefined) {
@@ -367,6 +370,12 @@ export class TradingPointService {
         }
 
         await repo.save(record);
+        if (usable) {
+            await fillMissingLocation(repo, record.id, {
+                latitude: fields.latitude!,
+                longitude: fields.longitude!,
+            });
+        }
         Logger.verbose(`Upserted trading point erpId=${erpId} from Kafka stream`, loggerCtx);
     }
 

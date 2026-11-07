@@ -3,11 +3,9 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
 import { TradingPoint } from './entities/trading-point.entity';
+import { noLocationSql } from './trading-point-location';
 
-const NO_LOCATION = (a: string): string =>
-    `(${a}latitude IS NULL OR ${a}longitude IS NULL OR (${a}latitude = 0 AND ${a}longitude = 0)
-      OR ${a}latitude NOT BETWEEN -90 AND 90 OR ${a}longitude NOT BETWEEN -180 AND 180)`;
-const MISSING = `"isActive" = true AND ${NO_LOCATION('')}`;
+const MISSING = `"isActive" = true AND ${noLocationSql('')}`;
 
 // Unscoped system report for the ERP drift check; the points are ERP-owned or legacy, awaiting backfill.
 @Injectable()
@@ -31,7 +29,7 @@ export class TradingPointLocationReportService {
         const [items, totalItems] = await this.connection
             .getRepository(ctx, TradingPoint)
             .createQueryBuilder('tp')
-            .where(`tp."isActive" = true AND ${NO_LOCATION('tp.')}`)
+            .where(`tp."isActive" = true AND ${noLocationSql('tp.')}`)
             .orderBy('tp.id', 'ASC')
             .take(take)
             .skip(options.skip ?? 0)

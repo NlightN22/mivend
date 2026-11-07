@@ -378,6 +378,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   stored, not rejected. Each run opens one `missing-coordinates` issue (`aggregateType`
   `trading-point-no-coordinates`, `ourCount` = active points with a null latitude or longitude) and auto-resolves
   it when none remain. The admin query `tradingPointsWithoutLocation` (ManageErpIntegration) lists them for backfill.
+  The stream only fills a missing or unusable location (one conditional UPDATE); it never overwrites or clears a
+  location a person set. The full split of ERP-owned and mivend-owned point data is #328.
 - **Location rule (#315)**: `customerAddTradingPoint`, `customerEditTradingPoint`, `upsertTradingPoint` and
   `updateTradingPointDetails` require latitude -90..90 and longitude -180..180, finite, not (0, 0). An edit cannot
   clear them, and any edit of a point stored without coordinates must supply them
