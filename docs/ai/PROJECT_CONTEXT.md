@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-11-07 14:00
+Updated: 2026-11-07 18:00
+
+## Manager portal redesign concept (2026-11-07, concept agreed, no code yet; issue #320 rewritten)
+- Source of truth: `docs/manager-portal-ui-concept.md` (a concept, not a literal spec; owner refines pages one at a time, never implement mockups literally). Older per-page texts: `docs/ai/manager-portal-pages/` (local), `docs/ai/manager-portal-concept.md`.
+- Rules: entity tables first (orders, proforma invoices, payments, discounts, customers, approvals); the same table is reused in the customer card with a preset filter; server checks scope per context; portal only shows ready data; same ui-kit components/tokens as the storefront; colors only from ui-kit roles; light and dark themes in the manager (a change from the earlier "separate decision").
+- Menu: Dashboard, Customers, Documents (Orders, Proforma invoices, Payments, Discount requests), Approvals, Team, Bulk operations, Analytics (placeholder), Settings. No Catalog (viewed via storefront: anonymous / as customer / as self), no order-creation screen, no "All documents".
+- Not implemented yet: analytics (separate analytical store later), manager card, tasks, dashboard charts and redesign (dashboard postponed), quick article entry, change of assignment. Orders already carry `placedByAdministratorId`; no assignment history, not needed now.
+- Next session: implement entity lists in the standard shape (start with orders, reference `CustomerOrdersTab`), customer card on top, then shell/menu, then colors/dark theme/lint, dashboard last.
+- Owner preferences learned: everything goes straight to `main` (no side branches; for docs use a detached worktree and `git push origin HEAD:main`); do not ask permission for editing issues; do not treat concepts as specs.
 
 ## #316/#317/#318 e2e speed-up (2026-11-06..07, DONE: audited, in prod release 0.0.47, issues closed)
 - `make e2e-groups G="a b"` runs several groups on one stack under the shared flock (`infrastructure/scripts/e2e-groups.sh`); `e2e-leak.sh` fails the run if a group leaves more placed orders or active reservations (carts not counted). `make e2e-group` unchanged.
