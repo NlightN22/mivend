@@ -56,7 +56,7 @@ Nothing is configured inside a container by hand.
 - **Kafka TLS**: put the CA file in `KAFKA_TLS_DIR` (mounted at `/run/kafka-tls`) and set `INTEGRATION_KAFKA_CA_PATH=/run/kafka-tls/<file>`.
 - **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, creates the photo bucket and key,
   runs migrations, starts the rest).
-- **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. It runs `migrate` (plain, forward-only) before
+- **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. A frontend-only release pins just `STOREFRONT_IMAGE_TAG`, `MANAGER_IMAGE_TAG` or `DASHBOARD_IMAGE_TAG` (empty = follows `IMAGE_TAG`); server, workers and `migrate` always follow `IMAGE_TAG`. It runs `migrate` (plain, forward-only) before
   the new server starts; if it fails the command stops and the old containers keep running. `server` and the workers also `depends_on` the completed `migrate`, so even a plain `up -d` or a host reboot never boots them against an unmigrated schema.
 - **Heavy migrations**: stop the workers, run the `migrate` service alone (`docker compose run --rm migrate`)
   before `up -d`. The purge migration `1791537000000` deletes retired-stream inbox rows in batches of 50k and can take

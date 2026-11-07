@@ -67,20 +67,18 @@ Rules:
 - Migrations are forward-only; production runs `synchronize: false`. A migration that cannot be undone by
   redeploying the old image needs the database backup as its rollback.
 
-## 4. Current limitation: one shared IMAGE_TAG (follow-up #321)
+## 4. Image tags: shared default, per-frontend pins
 
-`infrastructure/docker/docker-compose.yml` takes a single `IMAGE_TAG` for all five image users
-(`migrate`, `server`, `worker`, `worker-email` via the shared server anchor, plus `storefront`, `manager`,
-`dashboard`). Today `docker compose pull storefront` followed by `up -d storefront` therefore pulls whatever
-`IMAGE_TAG` says; a genuinely partial update (new storefront, old server) is not possible without editing
-`.env.production` between steps, and any later `up -d` would move everything to that tag.
+`IMAGE_TAG` is the default for every image. `server`, `worker`, `worker-email` and `migrate` always use it.
+The frontends take their own optional variable, `STOREFRONT_IMAGE_TAG`, `MANAGER_IMAGE_TAG`,
+`DASHBOARD_IMAGE_TAG`; empty or unset means "follow `IMAGE_TAG`".
 
-Documented follow-up, not done yet: give each image its own variable defaulting to the shared one, for example
-`image: ghcr.io/<owner>/mivend-storefront:${STOREFRONT_IMAGE_TAG:-${IMAGE_TAG:?...}}` and likewise
-`SERVER_IMAGE_TAG` (anchor), `MANAGER_IMAGE_TAG`, `DASHBOARD_IMAGE_TAG`. `.env.production` then pins the per-service
-tags that differ. Until that lands, either deploy the full set at one tag (images unchanged in content are simply
-re-pulled and recreated; frontends are stateless, so a recreate is a few seconds of downtime) or, for an emergency
-single-frontend fix, edit `IMAGE_TAG` only after confirming with the owner which services will move.
+- Frontend-only hotfix: set only that frontend's variable to the new version, then `pull` and `up -d --wait` that
+  service. Nothing else is recreated.
+- Backend release: raise `IMAGE_TAG`. Any frontend with a pin stays on its pinned version, so check the pins first.
+- Alignment rule: a pin is temporary. The next planned release clears every pin so all services return to one
+  version. Before every deploy, list the pins (`grep -E '^(STOREFRONT|MANAGER|DASHBOARD)_IMAGE_TAG=' .env.production`)
+  and tell the owner which services will not follow `IMAGE_TAG`.
 
 Not supported yet: two server instances on one database. Session cache, the scheduled-task runner and the Kafka
 consumer-group behaviour with two servers have not been verified, so there is no rolling or blue-green server
@@ -95,7 +93,7 @@ Common first steps:
 
     cp infrastructure/docker/.env.production infrastructure/docker/.env.production.bak-<old-tag>
     docker compose ... ps                 # everything healthy before starting; record it
-    # edit IMAGE_TAG=v<version> in .env.production (or per-service variables once they exist)
+    # edit IMAGE_TAG=v<version> in .env.production (or a frontend's own pin for a partial release)
 
 ### Frontend only (manager, storefront, dashboard)
 

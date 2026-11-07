@@ -250,7 +250,7 @@ services:
     # Production builds served via nginx (issue #115). Publishing these ports is decided by the
     # publish-service workflow, not here.
     storefront:
-        image: ghcr.io/nlightn22/mivend-storefront:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
+        image: ghcr.io/nlightn22/mivend-storefront:${STOREFRONT_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server:3000
             SITE_NAME: ${SITE_NAME:-Shop}
@@ -269,7 +269,7 @@ services:
         logging: *logging
 
     manager:
-        image: ghcr.io/nlightn22/mivend-manager:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
+        image: ghcr.io/nlightn22/mivend-manager:${MANAGER_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server:3000
             SITE_NAME: ${SITE_NAME:-Shop}
@@ -287,7 +287,7 @@ services:
         logging: *logging
 
     dashboard:
-        image: ghcr.io/nlightn22/mivend-dashboard:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
+        image: ghcr.io/nlightn22/mivend-dashboard:${DASHBOARD_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server:3000
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.png}
