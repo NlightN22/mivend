@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue';
 
+defineOptions({ inheritAttrs: false });
 withDefaults(defineProps<{ title?: string; closeLabel?: string }>(), { closeLabel: 'Close' });
 const emit = defineEmits<{ close: [] }>();
 
@@ -14,7 +15,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 <template>
     <Teleport to="body">
         <div class="mv-side-panel-overlay" @click.self="emit('close')">
-            <aside class="mv-side-panel" role="dialog" aria-modal="true" :aria-label="title">
+            <aside
+                class="mv-side-panel"
+                role="dialog"
+                aria-modal="true"
+                :aria-label="title"
+                v-bind="$attrs"
+            >
                 <header class="mv-side-panel__head">
                     <span class="mv-side-panel__title">{{ title }}</span>
                     <button

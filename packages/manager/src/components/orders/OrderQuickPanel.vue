@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import { MvSidePanel, MvButton, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
+import { computed, onMounted } from 'vue';
+import { usePriceTypeNames } from '../../composables/usePriceTypeNames';
+import { quickPanelRows } from './orderQuickPanelRows';
 import type { OrderListRow } from './ordersListRows';
 
-defineProps<{ row: OrderListRow }>();
+const props = defineProps<{ row: OrderListRow }>();
 const emit = defineEmits<{ close: []; open: [code: string] }>();
 
-const FIELDS: { label: string; key: keyof OrderListRow }[] = [
-    { label: 'Customer', key: 'customer' },
-    { label: 'Manager', key: 'manager' },
-    { label: 'Branch', key: 'branch' },
-    { label: 'Total', key: 'total' },
-    { label: 'Placed by', key: 'placedBy' },
-    { label: 'Reservation', key: 'reservation' },
-    { label: 'Attention', key: 'attention' },
-];
+const priceTypes = usePriceTypeNames();
+onMounted(() => void priceTypes.load());
+const rows = computed(() => quickPanelRows(props.row, priceTypes.names.value));
 </script>
 
 <template>
@@ -29,12 +26,10 @@ const FIELDS: { label: string; key: keyof OrderListRow }[] = [
             }}</MvStatusBadge>
         </div>
         <dl class="order-quick-panel__fields">
-            <template v-for="field in FIELDS" :key="field.key">
-                <dt>{{ field.label }}</dt>
-                <dd>{{ row[field.key] || '—' }}</dd>
+            <template v-for="item in rows" :key="item.label">
+                <dt>{{ item.label }}</dt>
+                <dd>{{ item.value }}</dd>
             </template>
-            <dt>Customer details</dt>
-            <dd>{{ row.customerMeta || '—' }}</dd>
         </dl>
         <template #footer>
             <MvButton variant="ghost" size="sm" @click="emit('close')">Close</MvButton>

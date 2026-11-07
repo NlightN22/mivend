@@ -12,6 +12,7 @@ export type OrderListItem = OrderListItemFieldsFragment;
 // plugin-reservation/src/types.ts), not ERP business data, same carve-out as ORDER_STATE_OPTIONS.
 export const ORDER_RESERVATION_STATE_OPTIONS = [
     { value: '', label: 'Any reservation state' },
+    { value: 'NOT_REQUIRED', label: 'Not required' },
     { value: 'AWAITING_CONFIRMATION', label: 'Awaiting confirmation' },
     { value: 'RESERVED', label: 'Reserved' },
     { value: 'EXPIRED', label: 'Expired' },
