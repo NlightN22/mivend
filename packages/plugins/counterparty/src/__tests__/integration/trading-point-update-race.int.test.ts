@@ -105,7 +105,7 @@ beforeEach(async () => {
     const tp = await dataSource.getRepository(TestTradingPoint).save({
         counterpartyId: String(cp.id),
         name: 'orig',
-        address: 'addr',
+        address: 'Test Street 12',
         latitude: 10,
         longitude: 10,
     });
@@ -145,7 +145,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                     { em } as unknown as RequestContext,
                     pointId,
                     row.counterpartyId,
-                    { name: 'customer', address: 'addr' },
+                    { name: 'customer', address: 'Test Street 12' },
                 );
             });
         const staffMove = (): Promise<unknown> =>
