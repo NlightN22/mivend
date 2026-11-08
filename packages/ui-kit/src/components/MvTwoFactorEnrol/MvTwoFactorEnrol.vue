@@ -72,6 +72,7 @@ const spacedSecret = (secret: string): string => secret.replace(/(.{4})/g, '$1 '
     padding: 0;
     list-style: none;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     font-size: 13px;
 }
@@ -108,6 +109,7 @@ const spacedSecret = (secret: string): string => secret.replace(/(.{4})/g, '$1 '
 .mv-tf-enrol__key {
     justify-self: stretch;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
 }
 .mv-tf-enrol__key-label {

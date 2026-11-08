@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvFormField from '../MvFormField/MvFormField.vue';
-import MvInput from '../MvInput/MvInput.vue';
 import MvNotice from '../MvNotice/MvNotice.vue';
 import MvOtpInput from '../MvOtpInput/MvOtpInput.vue';
 import MvTwoFactorEnrol from '../MvTwoFactorEnrol/MvTwoFactorEnrol.vue';
@@ -14,23 +13,22 @@ import type {
 import type { TwoFactorLabels } from '../../composables/twoFactor/twoFactorLabels';
 import type { SignInStep } from '../../composables/twoFactor/useTwoFactorSignIn';
 
-const props = defineProps<{
+defineProps<{
     step: Exclude<SignInStep, 'password' | 'done'>;
     error: TwoFactorUiError | null;
     loading: boolean;
     enrolment: TwoFactorEnrolment | null;
-    username: string;
+    maskedEmail: string;
     labels: TwoFactorLabels;
 }>();
 const emit = defineEmits<{
     code: [code: string];
     recover: [];
-    sendRecovery: [emailAddress: string];
+    backToCode: [];
     back: [];
 }>();
 
 const code = ref('');
-const email = ref(props.username);
 </script>
 
 <template>
@@ -76,40 +74,15 @@ const email = ref(props.username);
             </div>
         </template>
 
-        <template v-else-if="step === 'recovery'">
-            <h1 class="mv-tf-step__title">{{ labels.recoveryTitle }}</h1>
-            <p class="mv-tf-step__sub">{{ labels.recoverySubtitle }}</p>
-            <MvNotice v-if="error" variant="error">{{ labels.errors[error] }}</MvNotice>
-            <form class="mv-tf-step__form" novalidate @submit.prevent="emit('sendRecovery', email)">
-                <MvFormField :label="labels.emailLabel">
-                    <MvInput
-                        v-model="email"
-                        type="email"
-                        autocomplete="username"
-                        :aria-label="labels.emailLabel"
-                    />
-                </MvFormField>
-                <MvButton
-                    variant="primary"
-                    size="lg"
-                    native-type="submit"
-                    :loading="loading"
-                    :disabled="!email.trim()"
-                    class="mv-tf-step__submit"
-                >
-                    {{ labels.recoverySubmit }}
-                </MvButton>
-            </form>
-            <div class="mv-tf-step__links">
-                <button type="button" @click="emit('back')">{{ labels.back }}</button>
-            </div>
-        </template>
-
         <template v-else>
             <h1 class="mv-tf-step__title">{{ labels.recoverySentTitle }}</h1>
-            <MvNotice variant="success">{{ labels.recoverySentText }}</MvNotice>
+            <MvNotice variant="success">
+                {{ labels.recoverySentText }} <strong>{{ maskedEmail }}</strong
+                >.
+                {{ labels.recoverySentValid }}
+            </MvNotice>
             <div class="mv-tf-step__links">
-                <button type="button" @click="emit('back')">{{ labels.backToSignIn }}</button>
+                <button type="button" @click="emit('backToCode')">{{ labels.backToCode }}</button>
             </div>
         </template>
     </div>

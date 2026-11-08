@@ -30,7 +30,7 @@ const signIn = useTwoFactorSignIn(
         onSession: authStore.completeSignIn,
     }),
 );
-const { step, error, loading, enrolment, username } = signIn;
+const { step, error, loading, enrolment, maskedEmail } = signIn;
 const recovered = route.query.notice === 'two-factor-recovered';
 
 watch(step, async value => {
@@ -65,11 +65,11 @@ function handleSubmit(): Promise<void> {
                     :error="error"
                     :loading="loading"
                     :enrolment="enrolment"
-                    :username="username"
+                    :masked-email="maskedEmail"
                     :labels="labels"
                     @code="signIn.submitCode"
-                    @recover="signIn.openRecovery"
-                    @send-recovery="signIn.submitRecovery"
+                    @recover="signIn.requestRecovery"
+                    @back-to-code="signIn.backToCode"
                     @back="signIn.back"
                 />
                 <template v-else>

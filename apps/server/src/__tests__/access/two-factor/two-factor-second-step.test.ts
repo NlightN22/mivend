@@ -5,6 +5,7 @@ import {
     PASSWORD,
     codeFor,
     createAccounts,
+    mailCount,
     removeAccounts,
     removeFactors,
     startSecondStepStack,
@@ -26,7 +27,8 @@ const ENROL = `mutation($c: String, $p: String, $k: String) { startTwoFactorEnro
 const SECOND = `mutation($c: String!, $k: String!) { authenticate(input: { twoFactor: { challenge: $c, code: $k } }) {
     __typename ... on InvalidCredentialsError { authenticationError } ... on CurrentUser { identifier } } }`;
 const ME = `{ me { identifier } }`;
-const RECOVER = `mutation($e: String!) { requestTwoFactorRecovery(emailAddress: $e) { success } }`;
+const RECOVER = `mutation($c: String!) { requestTwoFactorRecovery(challenge: $c) {
+    __typename ... on TwoFactorRecoveryRequested { success maskedEmailAddress } ... on TwoFactorError { failure } } }`;
 const COMPLETE = `mutation($t: String!, $p: String!) { completeTwoFactorRecovery(token: $t, password: $p) {
     __typename ... on TwoFactorChallenge { stage challenge } ... on TwoFactorError { failure } } }`;
 const RESET_REQUEST = `mutation($e: String!) { requestPasswordReset(emailAddress: $e) { __typename } }`;
@@ -252,18 +254,41 @@ describe.each(['admin', 'customer'] as const)('%s account', kind => {
     );
 
     it('recovers a lost device only with the emailed link and the password', async () => {
-        const unknown = await stack.call<{ requestTwoFactorRecovery: { success: boolean } }>(
-            account().api,
-            RECOVER,
-            {
-                e: 'nobody@access.test',
+        const request = async (challenge: string) =>
+            (
+                await stack.call<{
+                    requestTwoFactorRecovery: {
+                        __typename: string;
+                        maskedEmailAddress?: string;
+                        failure?: string;
+                    };
+                }>(account().api, RECOVER, { c: challenge })
+            ).data!.requestTwoFactorRecovery;
+        const mails = (): Promise<number> =>
+            mailCount(stack.url, account().username, RECOVERY_SUBJECT);
+        const before = await mails();
+        for (const bad of ['not-a-challenge', 'x'.repeat(40)]) {
+            expect(await request(bad)).toMatchObject({ failure: 'CHALLENGE_INVALID' });
+        }
+        await idle(3_000);
+        expect(await mails()).toBe(before);
+
+        const { challenge } = await signInStep(account());
+        const link = await tokenFromNewMail(
+            stack.url,
+            account().username,
+            RECOVERY_SUBJECT,
+            async () => {
+                const sent = await request(challenge!);
+                expect(sent.__typename).toBe('TwoFactorRecoveryRequested');
+                expect(sent.maskedEmailAddress).not.toContain(account().username);
+                expect(sent.maskedEmailAddress).toMatch(/^.\*\*\*@/);
             },
         );
-        expect(unknown.data?.requestTwoFactorRecovery.success).toBe(true);
-
-        const link = await tokenFromNewMail(stack.url, account().username, RECOVERY_SUBJECT, () =>
-            stack.call(account().api, RECOVER, { e: account().username }),
-        );
+        expect(await mails()).toBe(before + 1);
+        expect((await request(challenge!)).__typename).toBe('TwoFactorRecoveryRequested');
+        await idle(3_000);
+        expect(await mails()).toBe(before + 1);
         const complete = (password: string, token = link) =>
             stack.call<{
                 completeTwoFactorRecovery: {

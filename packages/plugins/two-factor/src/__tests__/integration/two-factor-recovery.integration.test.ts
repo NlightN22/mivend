@@ -13,7 +13,6 @@ import {
 
 let fx: Fixture;
 const USER = '21';
-const EMAIL = 'user-21@example.org';
 const past = (): Date => new Date(Date.now() - 60_000);
 
 beforeAll(async () => {
@@ -22,24 +21,99 @@ beforeAll(async () => {
 afterAll(() => fx.close());
 beforeEach(() => fx.reset());
 
+async function verifyChallenge(): Promise<string> {
+    return (await fx.challenges.issue(shopCtx, USER, 'VERIFY')).challenge;
+}
+
 async function requestLink(): Promise<string> {
-    await fx.recovery.request(shopCtx, EMAIL);
+    await fx.dataSource.query(`UPDATE two_factor_token SET "createdAt" = $1`, [past()]);
+    const result = await fx.recovery.request(shopCtx, await verifyChallenge());
+    expect(result).toMatchObject({ __typename: 'TwoFactorRecoveryRequested' });
     const event = fx.events.filter(e => e.name === 'TwoFactorRecoveryRequestedEvent').pop();
     if (!event?.token) throw new Error('no recovery link was issued');
     return event.token;
 }
 
-describe('recovery link', () => {
-    it('is sent only for an account that has a factor, and says nothing otherwise', async () => {
-        await fx.recovery.request(shopCtx, EMAIL);
-        await fx.recovery.request(shopCtx, 'nobody@example.org');
-        expect(fx.events).toEqual([]);
+const mailCount = (): number =>
+    fx.events.filter(e => e.name === 'TwoFactorRecoveryRequestedEvent').length;
+
+describe('recovery request by challenge', () => {
+    it('sends the link and returns only a masked address', async () => {
         await enrol(fx, USER);
-        fx.events.length = 0;
-        await requestLink();
+        const result = await fx.recovery.request(shopCtx, await verifyChallenge());
+        expect(result).toEqual({
+            __typename: 'TwoFactorRecoveryRequested',
+            success: true,
+            maskedEmailAddress: 'u***@example.org',
+        });
+        expect(mailCount()).toBe(1);
         expect(fx.audits).toContain('update:two-factor recovery-requested');
     });
 
+    it('keeps the challenge usable for the sign-in and sends no second mail inside the window', async () => {
+        const secret = await enrol(fx, USER);
+        const challenge = await verifyChallenge();
+        await fx.recovery.request(shopCtx, challenge);
+        expect(await fx.recovery.request(shopCtx, challenge)).toMatchObject({
+            __typename: 'TwoFactorRecoveryRequested',
+            maskedEmailAddress: 'u***@example.org',
+        });
+        expect(await fx.recovery.request(shopCtx, await verifyChallenge())).toMatchObject({
+            success: true,
+        });
+        expect(mailCount()).toBe(1);
+        expect(
+            await fx.challenges.completeSignIn(shopCtx, challenge, codeAt(secret, 1)),
+        ).toMatchObject({
+            id: USER,
+        });
+    });
+
+    it('sends again once the window has passed', async () => {
+        await enrol(fx, USER);
+        await requestLink();
+        await requestLink();
+        expect(mailCount()).toBe(2);
+    });
+
+    it('answers a neutral failure and sends nothing for an unknown, expired, used, wrong-API or non-VERIFY challenge', async () => {
+        await enrol(fx, USER);
+        const expired = await verifyChallenge();
+        await fx.dataSource.query('UPDATE two_factor_token SET "expiresAt" = $1', [past()]);
+        const used = await verifyChallenge();
+        await fx.dataSource.query(
+            `UPDATE two_factor_token SET "usedAt" = now() WHERE "tokenHash" = $1`,
+            [hashToken(used)],
+        );
+        const fresh = await verifyChallenge();
+        const enrolStage = (await fx.challenges.issue(shopCtx, USER, 'ENROL')).challenge;
+        for (const [ctx, challenge] of [
+            [shopCtx, 'unknown-challenge'],
+            [shopCtx, expired],
+            [shopCtx, used],
+            [adminCtx, fresh],
+            [shopCtx, enrolStage],
+        ] as const) {
+            expect(await fx.recovery.request(ctx, challenge)).toMatchObject({
+                failure: 'CHALLENGE_INVALID',
+            });
+        }
+        expect(mailCount()).toBe(0);
+    });
+
+    it('refuses a recovery link as a challenge and an account without a factor', async () => {
+        expect(await fx.recovery.request(shopCtx, await verifyChallenge())).toMatchObject({
+            failure: 'CHALLENGE_INVALID',
+        });
+        await enrol(fx, USER);
+        const link = await requestLink();
+        expect(await fx.recovery.request(shopCtx, link)).toMatchObject({
+            failure: 'CHALLENGE_INVALID',
+        });
+    });
+});
+
+describe('recovery link', () => {
     it('is stored hashed, and a newer link supersedes the older one', async () => {
         await enrol(fx, USER);
         const first = await requestLink();

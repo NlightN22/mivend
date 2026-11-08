@@ -120,10 +120,6 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
             id,
             identifier: `user-${id}@example.org`,
         }),
-        getUserByEmailAddress: async (_c: unknown, email: string) =>
-            /^user-(\d+)@example\.org$/.test(email)
-                ? { id: email.replace(/\D/g, ''), identifier: email }
-                : undefined,
     } as unknown as UserService;
     const sessions = {
         deleteSessionsByUser: async (_c: unknown, user: User) => {

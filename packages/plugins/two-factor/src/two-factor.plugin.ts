@@ -8,6 +8,7 @@ import { TwoFactorResolver } from './api/two-factor.resolver';
 import { twoFactorSchema } from './api/two-factor.schema';
 import {
     CompleteTwoFactorRecoveryResultResolver,
+    RequestTwoFactorRecoveryResultResolver,
     ConfirmTwoFactorEnrolmentResultResolver,
     StartTwoFactorEnrolmentResultResolver,
     StartTwoFactorSignInResultResolver,
@@ -37,6 +38,7 @@ const resolvers = [
     StartTwoFactorEnrolmentResultResolver,
     ConfirmTwoFactorEnrolmentResultResolver,
     CompleteTwoFactorRecoveryResultResolver,
+    RequestTwoFactorRecoveryResultResolver,
 ];
 
 @VendurePlugin({

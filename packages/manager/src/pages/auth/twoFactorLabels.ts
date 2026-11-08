@@ -20,13 +20,10 @@ export const TWO_FACTOR_LABELS: TwoFactorLabels = {
     manualKey: 'Key for manual entry',
     copyKey: 'Copy the key',
     enrolSubmit: 'Confirm and sign in',
-    emailLabel: 'Account email',
-    recoveryTitle: 'Recover access',
-    recoverySubtitle: 'We will email a one-time link to the address of your account.',
-    recoverySubmit: 'Send the link',
     recoverySentTitle: 'Check your email',
-    recoverySentText:
-        'If this account has two-factor authentication, we have sent a link. It is valid for 30 minutes.',
+    recoverySentText: 'We sent a reset link to',
+    recoverySentValid: 'The link is valid for 30 minutes.',
+    backToCode: 'Back to the code entry',
     backToSignIn: 'Back to sign in',
     passwordLabel: 'Password',
     currentCodeLabel: 'Current code from the app',
@@ -40,9 +37,9 @@ export const TWO_FACTOR_LABELS: TwoFactorLabels = {
     settingsContinue: 'Continue',
     cancel: 'Cancel',
     enabledDone: 'The new device is active.',
-    recoveryPageTitle: 'Replace the device',
+    recoveryPageTitle: 'Reset two-factor authentication',
     recoveryPageSub:
-        'Enter your password to remove the old device. You will set up a new one at the next sign-in.',
+        'Enter your password to confirm. The old device will be removed and you will set up a new one at your next sign-in.',
     recoveryComplete: 'Remove the old device',
     recoveryInvalid: 'This link is invalid or expired. Request a new one on the sign-in page.',
     errors: {

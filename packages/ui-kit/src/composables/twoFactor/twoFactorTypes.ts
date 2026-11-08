@@ -28,6 +28,7 @@ export type StartResult =
     | { kind: 'challenge'; stage: 'VERIFY' | 'ENROL'; challenge: string }
     | { kind: 'none' }
     | Failed;
+export type RecoveryRequestResult = { kind: 'sent'; maskedEmailAddress: string } | Failed;
 export type CodeResult = { kind: 'ok' } | Failed;
 export type EnrolmentResult = { kind: 'enrolment'; enrolment: TwoFactorEnrolment } | Failed;
 export type ConfirmResult = { kind: 'status'; status: TwoFactorStatusView } | Failed;
@@ -37,7 +38,7 @@ export interface TwoFactorSignInApi {
     plainLogin(username: string, password: string, rememberMe: boolean): Promise<boolean>;
     authenticate(challenge: string, code: string, rememberMe: boolean): Promise<CodeResult>;
     startEnrolment(challenge: string): Promise<EnrolmentResult>;
-    requestRecovery(emailAddress: string): Promise<void>;
+    requestRecovery(challenge: string): Promise<RecoveryRequestResult>;
 }
 
 export interface TwoFactorSettingsApi {

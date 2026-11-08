@@ -82,6 +82,20 @@ export class TokenStoreService {
         ]);
     }
 
+    async hasRecentRecovery(
+        ctx: RequestContext,
+        userId: string,
+        windowMs: number,
+    ): Promise<boolean> {
+        const rows = await this.query<unknown[]>(
+            ctx,
+            `SELECT 1 FROM two_factor_token
+             WHERE "userId" = $1 AND purpose = 'recovery' AND "createdAt" > now() - ($2 * interval '1 millisecond')`,
+            [userId, windowMs],
+        );
+        return rows.length > 0;
+    }
+
     // The single-use gate: a concurrent second claim matches nothing.
     async claim(ctx: RequestContext, id: number): Promise<boolean> {
         const rows = await this.query<unknown[]>(

@@ -74,8 +74,14 @@ export function createSignInApi(deps: {
             });
             return enrolmentResult(r);
         },
-        async requestRecovery(emailAddress) {
-            await adminApi(RequestTwoFactorRecoveryDocument, { emailAddress });
+        async requestRecovery(challenge) {
+            const { requestTwoFactorRecovery: r } = await adminApi(
+                RequestTwoFactorRecoveryDocument,
+                { challenge },
+            );
+            return r.__typename === 'TwoFactorRecoveryRequested'
+                ? { kind: 'sent', maskedEmailAddress: r.maskedEmailAddress }
+                : failure(r);
         },
     };
 }
