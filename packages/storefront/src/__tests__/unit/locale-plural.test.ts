@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { i18n } from '../../i18n';
 import { formatAmount } from '../../i18n/format';
 import ru from '../../i18n/ru';
@@ -6,6 +6,10 @@ import ru from '../../i18n/ru';
 const nbsp = (s: string): string => s.replace(/[\u00a0\u202f]/g, ' ');
 
 describe('catalogue plurals and amount formatter', () => {
+    beforeEach(() => {
+        i18n.global.locale.value = 'en';
+    });
+
     afterAll(() => {
         i18n.global.locale.value = 'en';
     });
