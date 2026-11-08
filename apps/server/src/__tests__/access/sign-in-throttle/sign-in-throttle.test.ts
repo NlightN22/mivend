@@ -101,18 +101,19 @@ describe('captcha requirement', () => {
 const CHANGE_CUSTOMER = `mutation($c: String!, $n: String!) { updateCustomerPassword(currentPassword: $c, newPassword: $n) { __typename } }`;
 const CHANGE_ADMIN = `mutation($n: String!) { updateActiveAdministrator(input: { password: $n }) { id } }`;
 
+// Other access files soft-delete accounts with the same login, so only the live row counts.
 async function flagFor(identifier: string, value?: boolean): Promise<boolean> {
     const client = new Client({ ...testDbConnection(), database: inject('accessDatabase') });
     await client.connect();
     try {
         if (value !== undefined) {
             await client.query(
-                `UPDATE "user" SET "customFieldsPasswordchangerequired" = $2 WHERE identifier = $1`,
+                `UPDATE "user" SET "customFieldsPasswordchangerequired" = $2 WHERE identifier = $1 AND "deletedAt" IS NULL`,
                 [identifier, value],
             );
         }
         const rows = await client.query(
-            `SELECT "customFieldsPasswordchangerequired" AS flag FROM "user" WHERE identifier = $1`,
+            `SELECT "customFieldsPasswordchangerequired" AS flag FROM "user" WHERE identifier = $1 AND "deletedAt" IS NULL`,
             [identifier],
         );
         return rows.rows[0].flag;
