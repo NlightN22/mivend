@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AuthService, RequestContext } from '@vendure/core';
+import { AuthService, Logger, RequestContext } from '@vendure/core';
 
 import { FactorStoreService } from './factor-store.service';
 import { decryptSecret } from './secret-cipher';
-import { TWO_FACTOR_PLUGIN_OPTIONS } from './two-factor.types';
+import { TWO_FACTOR_PLUGIN_OPTIONS, loggerCtx } from './two-factor.types';
 import type { FactorRow, TwoFactorPluginOptions } from './two-factor.types';
 import { SecondFactorMethodRegistry } from './totp/second-factor-method';
 
@@ -17,12 +17,18 @@ export class TwoFactorVerificationService {
     ) {}
 
     // The accepted step, or null. Does not consume it: callers claim it atomically.
+    // An unreadable secret (wrong key, tampering) is logged and answered as a wrong code, never a 500.
     matchStep(factor: FactorRow, code: string, nowMs = Date.now()): number | null {
-        const secret = decryptSecret(
-            factor.secretEncrypted,
-            this.options.encryptionKey,
-            factor.uuid,
-        );
+        let secret: string;
+        try {
+            secret = decryptSecret(factor.secretEncrypted, this.options.encryptionKey, factor.uuid);
+        } catch {
+            Logger.error(
+                `Cannot decrypt the second-factor secret of factor ${factor.uuid}`,
+                loggerCtx,
+            );
+            return null;
+        }
         return this.methods.get(factor.method).verify(secret, code, nowMs, factor.lastUsedStep);
     }
 
