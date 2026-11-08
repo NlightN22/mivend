@@ -189,6 +189,54 @@ export const adminApiExtensions: DocumentNode = gql`
         reason: String!
     }
 
+    type PaymentCardCustomer {
+        id: ID!
+        shortName: String
+        inn: String
+    }
+
+    type PaymentCardProforma {
+        id: ID!
+        number: String!
+        version: Int!
+        amount: Int!
+        currencyCode: String!
+        status: String!
+        dueDate: DateTime!
+    }
+
+    type PaymentCardOrder {
+        code: String!
+        state: String!
+        orderTotal: Int!
+        currencyCode: String!
+    }
+
+    type PaymentCardRefund {
+        id: ID!
+        number: String!
+        amount: Int!
+        status: String!
+        reason: String!
+        createdAt: DateTime!
+    }
+
+    "Manager payment card: one visible payment with its customer, proforma invoice, order and the 50 newest refunds."
+    type PaymentCard {
+        id: ID!
+        number: String!
+        createdAt: DateTime!
+        channel: String!
+        paymentStatus: String!
+        amount: Int!
+        currencyCode: String!
+        providerPaymentId: String!
+        customer: PaymentCardCustomer
+        proformaInvoice: PaymentCardProforma
+        order: PaymentCardOrder
+        refunds: [PaymentCardRefund!]!
+    }
+
     type Dispute {
         id: ID!
         paymentId: ID!
@@ -251,6 +299,8 @@ export const adminApiExtensions: DocumentNode = gql`
         ): ProformaInvoiceList!
         "Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService."
         visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
+        "One payment card by id, scoped like visiblePayments; a foreign, unknown or malformed id is null."
+        payment(id: ID!): PaymentCard
         "Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency."
         proformaInvoiceOutstandingBalance(counterpartyId: ID!): MoneyAmount
         "Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet."

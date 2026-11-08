@@ -19,6 +19,7 @@ const FILTERED = `query { visiblePayments(options: { take: 200,
     filter: { amount: { gte: 0 }, _or: [{ customer: { contains: "" } }, { channel: { notEq: "x" } }] },
     sort: { amount: ASC } }) { totalItems items { id } } }`;
 const PLAIN = `query { visiblePayments(options: { take: 200 }) { totalItems items { id } } }`;
+const CARD = `query($id: ID!) { payment(id: $id) { id number refunds { id } } }`;
 const REFUND = `mutation($p: ID!, $r: String!) { recordPaymentRefund(paymentId: $p, amount: 1,
     reason: "access denied probe", providerRefundId: $r) { id } }`;
 const REFUND_EXISTS = `query($r: String!) { paymentRefundExists(providerRefundId: $r) }`;
@@ -59,9 +60,16 @@ async function seen(
     };
 }
 
+async function card(token: string, id: string): Promise<{ id: string } | null> {
+    const result = await admin<{ payment: { id: string } | null }>(token, CARD, { id });
+    expect(result.errors, `payment(${id})`).toEqual([]);
+    return result.data!.payment;
+}
+
 it('the superadmin sees every payment, their proformas and refunds', async () => {
     const superadmin = await staffToken('superadmin');
     for (const key of KEYS) {
+        expect((await card(superadmin, sample(key).id))?.id, `card ${key}`).toBe(sample(key).id);
         expect(await seen(superadmin, key), key).toEqual({ proforma: true, payment: true });
         expect(await refundExists(sample(key).refundMarker), 'the seeded refund').toBe(true);
     }
@@ -95,6 +103,15 @@ describe.each(STAFF.map(s => s.key))('payments for %s', (key: ActorKey) => {
             expect(withdraw.errors.join(' '), `withdraw ${number}`).toMatch(DENIED_OR_MISSING);
             expect(await proformaStatus(number)).toBe(status);
         }
+    });
+
+    it('the payment card follows the same scope; unknown and hostile ids are null', async () => {
+        for (const k of KEYS) {
+            const shown = await card(token, sample(k).id);
+            expect(shown?.id ?? null, `card ${k}`).toBe(expected.has(k) ? sample(k).id : null);
+        }
+        for (const id of ['999999999', '0', '-1', '1 OR 1=1', "1'; --", 'abc'])
+            expect(await card(token, id), id).toBeNull();
     });
 
     it('a client filter and sort only narrow the visible set, never widen it', async () => {

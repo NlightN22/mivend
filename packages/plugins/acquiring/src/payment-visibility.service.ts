@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
+import { Brackets, SelectQueryBuilder } from 'typeorm';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { documentNumberSearchTerm } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
@@ -11,8 +11,16 @@ import { PaymentListOptions } from './payment-attempt-query.service';
 import { applyListFilter, applyListSort, likeTerm } from './payment-list-query';
 import { clampSkip, clampTake } from './list-filter-engine';
 
-const ORDER_CODE_SQL =
-    '(SELECT o."code" FROM "order" o WHERE o."id" = COALESCE(payment."orderId", "proformaInvoice"."orderId"))';
+const RESOLVED_ORDER_ID_SQL = 'COALESCE(payment."orderId", "proformaInvoice"."orderId")';
+const ORDER_CODE_SQL = `(SELECT o."code" FROM "order" o WHERE o."id" = ${RESOLVED_ORDER_ID_SQL})`;
+
+export interface VisiblePaymentCard {
+    payment: PaymentAttempt;
+    counterpartyId: string;
+    counterpartyShortName: string | null;
+    counterpartyInn: string | null;
+    orderId: string | null;
+}
 
 // Payment inherits visibility from its ProformaInvoice, so reuse that service's scope and filters,
 // not a separate resolvePaymentScope (derived-resource rule).
@@ -32,21 +40,7 @@ export class PaymentVisibilityService {
         const take = clampTake(options?.take);
         const skip = clampSkip(options?.skip);
 
-        const qb = this.connection
-            .getRepository(ctx, PaymentAttempt)
-            .createQueryBuilder('payment')
-            // Raw ON-clause string: TypeORM's alias.property auto-quoting doesn't apply here, so quote
-            // camelCase columns by hand, or Postgres lowercases them to nonexistent names.
-            .innerJoin(
-                ProformaInvoice,
-                'proformaInvoice',
-                'proformaInvoice.id = payment."proformaInvoiceId"',
-            )
-            .leftJoin(
-                Counterparty,
-                'counterparty',
-                'counterparty.id = "proformaInvoice"."counterpartyId"',
-            );
+        const qb = this.baseQuery(ctx);
 
         if (counterpartyId) {
             qb.andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId });
@@ -102,5 +96,52 @@ export class PaymentVisibilityService {
             }),
         );
         return { items, totalItems };
+    }
+
+    // One payment by id inside the caller's scope; a foreign, unknown or malformed id is null.
+    async findVisibleOne(ctx: RequestContext, id: string): Promise<VisiblePaymentCard | null> {
+        if (!/^\d{1,9}$/.test(id)) return null;
+        const scope = await this.proformaInvoiceVisibilityService.resolveScope(ctx);
+        const qb = this.baseQuery(ctx).andWhere('payment.id = :id', { id: Number(id) });
+        this.proformaInvoiceVisibilityService.applyScope(
+            qb,
+            scope,
+            'proformaInvoice',
+            'counterparty',
+        );
+        const { entities, raw } = await qb
+            .addSelect('proformaInvoice.counterpartyId', 'proformaInvoice_counterpartyId')
+            .addSelect('counterparty.shortName', 'counterpartyShortName')
+            .addSelect('counterparty.inn', 'counterpartyInn')
+            .addSelect(RESOLVED_ORDER_ID_SQL, 'resolvedOrderId')
+            .getRawAndEntities();
+        if (!entities[0]) return null;
+        return {
+            payment: entities[0],
+            counterpartyId: String(raw[0].proformaInvoice_counterpartyId),
+            counterpartyShortName: raw[0].counterpartyShortName ?? null,
+            counterpartyInn: raw[0].counterpartyInn ?? null,
+            orderId: raw[0].resolvedOrderId == null ? null : String(raw[0].resolvedOrderId),
+        };
+    }
+
+    private baseQuery(ctx: RequestContext): SelectQueryBuilder<PaymentAttempt> {
+        return (
+            this.connection
+                .getRepository(ctx, PaymentAttempt)
+                .createQueryBuilder('payment')
+                // Raw ON-clause string: TypeORM's alias.property auto-quoting doesn't apply here, so quote
+                // camelCase columns by hand, or Postgres lowercases them to nonexistent names.
+                .innerJoin(
+                    ProformaInvoice,
+                    'proformaInvoice',
+                    'proformaInvoice.id = payment."proformaInvoiceId"',
+                )
+                .leftJoin(
+                    Counterparty,
+                    'counterparty',
+                    'counterparty.id = "proformaInvoice"."counterpartyId"',
+                )
+        );
     }
 }

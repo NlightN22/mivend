@@ -57,6 +57,8 @@ import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
 import { AdminProformaInvoiceVisibilityResolver } from './admin-proforma-invoice-visibility.resolver';
 import { AdminPaymentVisibilityResolver } from './admin-payment-visibility.resolver';
+import { AdminPaymentCardResolver, PaymentCardFieldResolver } from './payment-card.resolver';
+import { PaymentCardLoader } from './payment-card.loader';
 import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolver';
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
 import { adminApiExtensions } from './api/admin.schema';
@@ -101,6 +103,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         ProformaInvoiceService,
         ProformaInvoiceIssuingService,
         ProformaInvoiceRefLoader,
+        PaymentCardLoader,
         ProformaInvoiceWithdrawService,
         ProformaInvoiceOrderCancelService,
         PaymentAttemptService,
@@ -140,6 +143,8 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
             PaymentAdminResolver,
             AdminProformaInvoiceVisibilityResolver,
             AdminPaymentVisibilityResolver,
+            AdminPaymentCardResolver,
+            PaymentCardFieldResolver,
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,
             VariantOrganizationHealthResolver,
