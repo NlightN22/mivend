@@ -128,6 +128,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-layout` | dev | mobile nav, pagination scroll | `--project=manager-operator --project=manager-portal-admin manager/layout` |
 | `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
+| `manager-settlements` | dev | settlements list: type chips, filter, sort, menu entry, phone card | `--project=manager-portal-admin manager/settlements` |
 | `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
 | `manager-team` | dev | Team directory: search, department filter, status chips, deactivated administrators (#311) | `--project=manager-operator manager/team` |
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
@@ -202,6 +203,7 @@ Decision per spec (R = all four roles; O = operator, M = manager, D = department
 | `settings/settings-roles`, `settings-users`: negative | O, M, D | the other roles must be refused |
 | `settings/settings-security` | O | admin-api session mechanics, role-independent |
 | `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display: the pages render the same component for every role, and their scope visibility is covered by `make test-access` (proforma, payment, discount-grant, dashboard matrices) and `visibility/` (entity lists, servicing team) |
+| `settlements` | P | needs `ReadSettlementDocument`; scope is covered by `make test-access` (settlement-admin-visibility) |
 | `layout/pagination-scroll` | P | UI mechanics |
 
 Run time per group drops because a role-independent scenario costs one run instead of four.

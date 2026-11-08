@@ -1,0 +1,40 @@
+fragment SettlementListItemFields on SettlementListItem {
+    id
+    documentType
+    documentTypeLabel
+    category
+    number
+    date
+    counterpartyId
+    counterpartyShortName
+    organizationName
+    contractName
+    currencyCode
+    amount
+    orderCodes
+    proformaInvoiceNumber
+}
+
+query SettlementTypeCounts(
+    $counterpartyId: ID
+    $search: String
+    $filter: SettlementFilterParameter
+) {
+    counts: visibleSettlementTypeCounts(
+        options: { search: $search, filter: $filter }
+        counterpartyId: $counterpartyId
+    ) {
+        documentType
+        label
+        count
+    }
+}
+
+query SettlementsPage($options: SettlementListOptions, $counterpartyId: ID) {
+    visibleSettlementDocuments(options: $options, counterpartyId: $counterpartyId) {
+        totalItems
+        items {
+            ...SettlementListItemFields
+        }
+    }
+}

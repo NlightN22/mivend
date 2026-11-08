@@ -171,16 +171,17 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 
 ## Menu
 
-| Item              | Content                                                              | Status                    |
-| ----------------- | -------------------------------------------------------------------- | ------------------------- |
-| Dashboard         | KPI and widgets                                                      | exists, redesign deferred |
-| Customers         | list, card with tabs: orders, proforma invoices, payments, discounts | exists                    |
-| Documents (group) | Orders, Proforma invoices, Payments, Discount requests               | exists                    |
-| Approvals         | list and card (awaiting approval is a quick filter or counter)       | exists                    |
-| Team              | users and managers                                                   | exists                    |
-| Bulk operations   | wizard                                                               | exists                    |
-| Analytics         | placeholder                                                          | not implemented yet       |
-| Settings          | roles, branches, policies, and so on                                 | exists                    |
+| Item | Content | Status |
+| --- | --- | --- |
+| Dashboard | KPI and widgets | exists, redesign deferred |
+| Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
+| Documents (group) | Orders, Proforma invoices, Payments, Discount requests | exists |
+| Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
+| Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
+| Team | users and managers | exists |
+| Bulk operations | wizard | exists |
+| Analytics | placeholder | not implemented yet |
+| Settings | roles, branches, policies, and so on | exists |
 
 The Catalog item is removed from the portal (see principles).
 
@@ -251,6 +252,27 @@ proforma invoice and order) are applied on the server: `visiblePayments` takes
 `options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
 scope of the payment's proforma invoice). The default sort is newest first. Money columns are
 end-aligned (`align: 'end'` on the table column).
+
+## Settlements list
+
+One list of every ERP document that affects the settlement with a customer (sales invoices,
+payments, returns, corrections; whatever the document type table holds, no type is hardcoded),
+`components/settlements/`. A row is one document's entry on one contract: document number as the ERP
+sends it, date, type badge, customer, contract, organization, order, proforma invoice and the signed
+amount (plus raises the customer's debt, minus lowers it). The chips are built from the data: All
+and one per document type, counted over the current search and Filter builder conditions
+(`visibleSettlementTypeCounts`). The search box matches the document number, customer name and INN
+and the order codes. The customer links to its card, the order to the order card (only an order of
+the same customer resolves), the proforma invoice to the proforma list searched by its number (the
+proforma whose sales invoice number equals the document number). Views, URL sync, pagination and
+mobile cards are shared with the payments list. `visibleSettlementDocuments` takes
+`options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
+caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
+in the customer card. Gated by its own `ReadSettlementDocument` (granted to every default role; it shows no credit
+limit, balance or overdue figure, unlike `ReadCounterpartyCredit`, though the signed amounts can be added up), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
+`proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
+correlated order-code aggregation used by the search and the type counts is the first thing to
+profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.
 
 ## Not implemented yet
 

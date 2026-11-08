@@ -16,10 +16,15 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         if (authStore.hasPermission('ReadPayment'))
             documents.push({ label: 'Payments', path: '/payments' });
         documents.push({ label: 'Discount requests', path: '/discounts' });
+        // Settlements are gated like their visibleSettlementDocuments query.
+        const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
+            ? [{ label: 'Settlements', path: '/settlements' }]
+            : [];
         const items: AppSidebarItem[] = [
             { label: 'Dashboard', path: '/' },
             { label: 'Customers', path: '/customers' },
             { label: 'Documents', children: documents },
+            ...settlements,
             { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
             { label: 'Team', path: '/team' },
         ];
@@ -68,8 +73,10 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             });
         if (authStore.hasPermission('ReadPayment'))
             items.push({ key: 'payments', label: 'Payments', path: '/payments' });
+        items.push({ key: 'discounts', label: 'Discount requests', path: '/discounts' });
+        if (authStore.hasPermission('ReadSettlementDocument'))
+            items.push({ key: 'settlements', label: 'Settlements', path: '/settlements' });
         items.push(
-            { key: 'discounts', label: 'Discount requests', path: '/discounts' },
             { key: 'team', label: 'Team', path: '/team' },
             { key: 'analytics', label: 'Analytics', path: '/analytics' },
         );

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Brackets } from 'typeorm';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm } from 'shared';
+import { clampSkip, clampTake, documentNumberSearchTerm } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
@@ -9,7 +9,6 @@ import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentListOptions } from './payment-attempt-query.service';
 import { applyListFilter, applyListSort, likeTerm } from './payment-list-query';
-import { clampSkip, clampTake } from './list-filter-engine';
 
 const ORDER_CODE_SQL =
     '(SELECT o."code" FROM "order" o WHERE o."id" = COALESCE(payment."orderId", "proformaInvoice"."orderId"))';
