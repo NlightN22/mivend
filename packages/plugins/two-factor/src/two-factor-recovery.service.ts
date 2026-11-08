@@ -72,11 +72,10 @@ export class TwoFactorRecoveryService {
                 success: true,
                 maskedEmailAddress: maskEmailAddress(user.identifier),
             };
-            // #278: throttle recovery requests here
+            // A newer request never voids an open link, so a password holder cannot keep killing the owner's link. #278: throttle here
             const interval =
                 this.options.recoveryRequestIntervalMs ?? RECOVERY_REQUEST_INTERVAL_DEFAULT_MS;
             if (await this.tokens.hasRecentRecovery(txCtx, userId, interval)) return result;
-            await this.tokens.supersedeOpen(txCtx, userId, 'recovery');
             const { token } = await this.tokens.issue(txCtx, {
                 userId,
                 purpose: 'recovery',
@@ -120,6 +119,7 @@ export class TwoFactorRecoveryService {
             if (!(await this.tokens.claim(txCtx, row.id))) {
                 return twoFactorError('RECOVERY_LINK_INVALID');
             }
+            await this.tokens.consumeOpen(txCtx, userId, 'recovery');
             await this.factors.deleteAll(txCtx, userId);
             await this.sessions.deleteSessionsByUser(txCtx, user);
             await this.audit.recordAndNotify(

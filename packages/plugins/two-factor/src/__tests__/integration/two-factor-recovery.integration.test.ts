@@ -116,7 +116,7 @@ describe('recovery request by challenge', () => {
 });
 
 describe('recovery link', () => {
-    it('is stored hashed, and a newer link supersedes the older one', async () => {
+    it('is stored hashed; a newer link does not invalidate the older one, completing one invalidates the others', async () => {
         await enrol(fx, USER);
         const first = await requestLink();
         const second = await requestLink();
@@ -126,11 +126,11 @@ describe('recovery link', () => {
         expect(rows.map((r: { tokenHash: string }) => r.tokenHash).sort()).toEqual(
             [hashToken(first), hashToken(second)].sort(),
         );
-        expect(await fx.recovery.complete(shopCtx, first, PASSWORD)).toMatchObject({
-            failure: 'RECOVERY_LINK_INVALID',
-        });
         expect(await fx.recovery.complete(shopCtx, second, PASSWORD)).toMatchObject({
             stage: 'ENROL',
+        });
+        expect(await fx.recovery.complete(shopCtx, first, PASSWORD)).toMatchObject({
+            failure: 'RECOVERY_LINK_INVALID',
         });
     });
 

@@ -107,7 +107,7 @@ export class TokenStoreService {
         return rows.length === 1;
     }
 
-    async supersedeOpen(ctx: RequestContext, userId: string, purpose: TokenPurpose): Promise<void> {
+    async consumeOpen(ctx: RequestContext, userId: string, purpose: TokenPurpose): Promise<void> {
         await this.query(
             ctx,
             `UPDATE two_factor_token SET "usedAt" = $3, "updatedAt" = now()
