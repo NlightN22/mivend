@@ -240,12 +240,24 @@ async function topUpOrdersProformaInvoicesAndPayments(
             'online-failed',
         ];
         let created = 0;
+        let outOfStock = 0;
         let i = currentCount;
         while (created < toCreate) {
             const variantId = variantIds[i % variantIds.length];
             const plan = plans[i % plans.length];
-            const result = await checkoutOneOrder(customerToken, [variantId], plan, directorToken);
-            created += result.proformaInvoiceCount;
+            // A variant with no stock left is skipped: the demo data must not depend on stock levels.
+            try {
+                const result = await checkoutOneOrder(
+                    customerToken,
+                    [variantId],
+                    plan,
+                    directorToken,
+                );
+                created += result.proformaInvoiceCount;
+            } catch (error) {
+                if (!String(error.message).includes('InsufficientStockError')) throw error;
+                if ((outOfStock += 1) > variantIds.length * 2) throw error;
+            }
             i++;
         }
     }
