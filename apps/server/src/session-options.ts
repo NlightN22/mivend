@@ -2,6 +2,7 @@ export interface SessionOptions {
     sessionDuration: string;
     maxActiveSessionsCustomer: number;
     maxActiveSessionsStaff: number;
+    knownDeviceRetentionDays: number;
     dailyReset: { enabled: boolean; hour: number; timeZone: string };
 }
 
@@ -35,13 +36,26 @@ function resetTimeZone(env: NodeJS.ProcessEnv): string {
     return timeZone;
 }
 
+function flag(env: NodeJS.ProcessEnv, name: string): boolean {
+    const raw = (env[name] ?? '').trim().toLowerCase();
+    if (['', 'false', '0'].includes(raw)) return false;
+    if (['true', '1'].includes(raw)) return true;
+    throw new Error(`${name} must be true or false, got "${env[name]}"`);
+}
+
 export function sessionOptionsFromEnv(env: NodeJS.ProcessEnv): SessionOptions {
+    if (env.SESSION_MAX_ACTIVE_PER_USER !== undefined) {
+        throw new Error(
+            'SESSION_MAX_ACTIVE_PER_USER was removed: set SESSION_MAX_ACTIVE_CUSTOMER and SESSION_MAX_ACTIVE_STAFF instead',
+        );
+    }
     return {
         sessionDuration: env.SESSION_DURATION || '30d',
         maxActiveSessionsCustomer: positiveInt(env, 'SESSION_MAX_ACTIVE_CUSTOMER', 2),
         maxActiveSessionsStaff: positiveInt(env, 'SESSION_MAX_ACTIVE_STAFF', 3),
+        knownDeviceRetentionDays: positiveInt(env, 'SESSION_KNOWN_DEVICE_RETENTION_DAYS', 400),
         dailyReset: {
-            enabled: env.SESSION_DAILY_RESET_ENABLED === 'true',
+            enabled: flag(env, 'SESSION_DAILY_RESET_ENABLED'),
             hour: resetHour(env),
             timeZone: resetTimeZone(env),
         },

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventBus, RequestContext, TransactionalConnection, User } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
+import { KNOWN_DEVICES_PER_USER_MAX, NEW_DEVICE_MAIL_MIN_INTERVAL } from './session.types';
 import { deviceIdentityFor } from './device-identity';
 import { NewDeviceSignInEvent } from './new-device-sign-in.event';
 
@@ -20,7 +21,7 @@ export class KnownDeviceService {
     ): Promise<boolean> {
         const identity = deviceIdentityFor(signInCtx.req);
         const userId = String(user.id);
-        const isNewToKnownAccount = await this.connection.withTransaction(ctx, async txCtx => {
+        const shouldNotify = await this.connection.withTransaction(ctx, async txCtx => {
             await ctxQuery<unknown>(
                 this.connection,
                 txCtx,
@@ -42,9 +43,27 @@ export class KnownDeviceService {
                  RETURNING (xmax = 0) AS inserted`,
                 [userId, identity.hash, identity.label],
             );
-            return Number(count) > 0 && (inserted[0] as { inserted: boolean }).inserted;
+            const isNew = Number(count) > 0 && (inserted[0] as { inserted: boolean }).inserted;
+            await ctxQuery<unknown>(
+                this.connection,
+                txCtx,
+                `DELETE FROM known_device WHERE "userId" = $1 AND id NOT IN (
+                    SELECT id FROM known_device WHERE "userId" = $1
+                    ORDER BY "lastSeenAt" DESC, id DESC LIMIT $2)`,
+                [userId, KNOWN_DEVICES_PER_USER_MAX],
+            );
+            if (!isNew) return false;
+            const [{ recent }] = await ctxQuery<Array<{ recent: string }>>(
+                this.connection,
+                txCtx,
+                `SELECT count(*) AS recent FROM known_device
+                 WHERE "userId" = $1 AND "deviceHash" <> $2
+                   AND "createdAt" > now() - interval '${NEW_DEVICE_MAIL_MIN_INTERVAL}'`,
+                [userId, identity.hash],
+            );
+            return Number(recent) === 0;
         });
-        if (!isNewToKnownAccount || !(await this.emailEnabled(ctx, userId))) {
+        if (!shouldNotify || !(await this.emailEnabled(ctx, userId))) {
             return false;
         }
         await this.eventBus.publish(

@@ -54,7 +54,14 @@ Layer 1 (who is making the request) is bounded in time and in number, for every 
   the API sets on the first request of a browser; without a request, a hash of browser family and OS). An unseen
   device sends the `new-device-sign-in` e-mail (ru and en) to the account owner; the first device ever seen for an
   account is registered silently. The user can turn it off (`setNewDeviceEmail`; storefront notification settings,
-  manager portal security page). There is no IP-based suspicion or blocking.
+  manager portal security page). There is no IP-based suspicion or blocking. Bounds: at most 50 devices per account
+  (oldest dropped), rows unseen for `SESSION_KNOWN_DEVICE_RETENTION_DAYS` or belonging to deleted users are removed by
+  the `known-device-cleanup` task (no foreign key, a soft link by user id), and a new device is not mailed when
+  another device of the same account was first seen within the last hour.
+- **Time zones.** `session.createdAt` is written by the database default (database session zone), `expires` by Node
+  (Node zone), both as `timestamp` without zone. The reset therefore compares `createdAt` as `$1::timestamptz`, and the
+  cap compares `expires` with a Node-side Date like the writer, so neither depends on Node and the database sharing a
+  zone; the reset integration test runs with Node in `Europe/Berlin` and the database in UTC.
 - **Deactivation.** Customer portal deactivation and administrator deactivation both go through Vendure's
   `softDelete`, which deletes every session of the user (acting ones included); a tripwire test pins that chain.
 

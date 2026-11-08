@@ -28,14 +28,15 @@ export class SessionDailyResetService {
             'SELECT now() AS now',
         );
         const instant = lastResetInstant(now, reset.hour, reset.timeZone);
+        // createdAt is written by the DB default (DB session zone): compare as timestamptz, not a node-local wall time.
         const rows = await ctxQuery<Array<{ token: string }>>(
             this.connection,
             ctx,
             `WITH ended AS (
                 UPDATE session SET invalidated = true
-                WHERE ${OWN_SESSION_SQL} AND "createdAt" < $1 RETURNING token
+                WHERE ${OWN_SESSION_SQL} AND "createdAt" < $1::timestamptz RETURNING token
             ) SELECT token FROM ended`,
-            [instant],
+            [instant.toISOString()],
         );
         for (const { token } of rows) {
             await this.configService.authOptions.sessionCacheStrategy.delete(token);

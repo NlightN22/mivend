@@ -9,6 +9,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { CLEANUP_KNOWN_DEVICES_SQL } from '../../known-device-cleanup.scheduled-task';
 import { KnownDeviceService } from '../../known-device.service';
 
 const { schema, extra } = testSchemaOptions('known_device');
@@ -55,6 +56,10 @@ beforeEach(async () => {
     publish = vi.fn();
 });
 
+async function ageDevices(): Promise<void> {
+    await dataSource.query(`UPDATE known_device SET "createdAt" = now() - interval '2 hours'`);
+}
+
 describe('KnownDeviceService (integration, real Postgres)', () => {
     it('does not notify on the first sign-in ever of an account', async () => {
         expect(await signIn('device-a')).toBe(false);
@@ -63,6 +68,7 @@ describe('KnownDeviceService (integration, real Postgres)', () => {
 
     it('does not notify for a known device, notifies for an unknown one', async () => {
         await signIn('device-a');
+        await ageDevices();
 
         expect(await signIn('device-a')).toBe(false);
         expect(await signIn('device-b')).toBe(true);
@@ -73,6 +79,7 @@ describe('KnownDeviceService (integration, real Postgres)', () => {
     it('keeps devices per account', async () => {
         await signIn('device-a', 1);
         await signIn('device-b', 2);
+        await ageDevices();
 
         expect(await signIn('device-a', 2)).toBe(true);
     });
@@ -90,10 +97,47 @@ describe('KnownDeviceService (integration, real Postgres)', () => {
 
     it('notifies once when the same new device signs in twice in parallel', async () => {
         await signIn('device-a');
+        await ageDevices();
 
         const results = await Promise.all([signIn('device-b'), signIn('device-b')]);
 
         expect(results.filter(Boolean)).toHaveLength(1);
         expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('mails at most one new device per hour per account', async () => {
+        await signIn('device-a');
+        await ageDevices();
+
+        expect(await signIn('device-b')).toBe(true);
+        expect(await signIn('device-c')).toBe(false);
+        expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps only the newest 50 devices of an account', async () => {
+        for (let i = 0; i < 53; i++) await signIn(`device-${i}`);
+
+        const [{ count }] = await dataSource.query(
+            'SELECT count(*)::int AS count FROM known_device WHERE "userId" = \'1\'',
+        );
+        expect(count).toBe(50);
+    });
+});
+
+describe('known device cleanup', () => {
+    it('removes devices unseen past retention and those of deleted users only', async () => {
+        await signIn('device-a');
+        await signIn('device-b', 2);
+        await dataSource.query(
+            `INSERT INTO known_device (uuid, "userId", "deviceHash", label, "lastSeenAt")
+             VALUES (gen_random_uuid(), '1', 'stale', 'x', now() - interval '401 days'),
+                    (gen_random_uuid(), '99', 'orphan', 'x', now())`,
+        );
+
+        const [{ deleted }] = await dataSource.query(CLEANUP_KNOWN_DEVICES_SQL, [400]);
+
+        expect(Number(deleted)).toBe(2);
+        const rows = await dataSource.query('SELECT "deviceHash" FROM known_device ORDER BY id');
+        expect(rows).toHaveLength(2);
     });
 });

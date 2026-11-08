@@ -13,6 +13,7 @@ import { subscribeAndLog } from 'shared';
 
 import { KnownDevice } from './entities/known-device.entity';
 import { deviceCookieMiddleware } from './device-identity';
+import { createKnownDeviceCleanupTask } from './known-device-cleanup.scheduled-task';
 import { KnownDeviceService } from './known-device.service';
 import { SessionDailyResetService } from './session-daily-reset.service';
 import { createSessionDailyResetTask } from './session-daily-reset.scheduled-task';
@@ -78,12 +79,23 @@ import type { SessionManagementPluginOptions } from './session.types';
         ];
         config.apiOptions.middleware = [
             ...(config.apiOptions.middleware ?? []),
-            { route: config.apiOptions.shopApiPath, handler: deviceCookieMiddleware },
-            { route: config.apiOptions.adminApiPath, handler: deviceCookieMiddleware },
+            {
+                route: config.apiOptions.shopApiPath,
+                handler: deviceCookieMiddleware(
+                    SessionManagementPlugin.options.deviceCookieSecure ?? false,
+                ),
+            },
+            {
+                route: config.apiOptions.adminApiPath,
+                handler: deviceCookieMiddleware(
+                    SessionManagementPlugin.options.deviceCookieSecure ?? false,
+                ),
+            },
         ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createSessionCleanupTask(SessionManagementPlugin.options),
+            createKnownDeviceCleanupTask(SessionManagementPlugin.options),
             ...(SessionManagementPlugin.options.dailyReset?.enabled
                 ? [createSessionDailyResetTask()]
                 : []),

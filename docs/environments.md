@@ -495,7 +495,7 @@ use `20` because e2e specs share one login; production uses the defaults. `SESSI
 `false`; `true` in `.env.production.example`), `SESSION_DAILY_RESET_HOUR` (0-23, default `3`) and
 `SESSION_DAILY_RESET_TIME_ZONE` (IANA name, default `UTC`, the release owner sets the business zone per contour) turn
 on the `session-daily-reset` task, which ends every customer and staff session created before the latest reset hour;
-acting and API-key sessions are excluded. A bad hour or zone fails boot. The hourly `session-cleanup` task deletes
+acting and API-key sessions are excluded. A bad flag, hour or zone fails boot. `SESSION_MAX_ACTIVE_PER_USER` was removed in #335 and now fails boot with a pointer to the two new caps: drop it from every env file on upgrade. `SESSION_KNOWN_DEVICE_RETENTION_DAYS` (default `400`, the device cookie lifetime) bounds how long a sign-in device is remembered. The device cookie is `Secure` when `NODE_ENV=production`. The hourly `session-cleanup` task deletes
 expired and ended sessions. Ended sessions are only listed nowhere (`mySessions` shows active ones) and nothing
 references the `session` table, so deleting them loses no history. The session cache is in-process (Vendure's
 default, no Redis): another server process may accept an ended token until its cache entry expires

@@ -13,19 +13,21 @@ function readCookie(header: string | undefined, name: string): string | undefine
 }
 
 // Gives every browser a random id before any resolver runs, so the id is on the sign-in request itself.
-export function deviceCookieMiddleware(req: Request, res: Response, next: NextFunction): void {
-    const existing = readCookie(req.headers.cookie, DEVICE_COOKIE);
-    if (!existing) {
-        const id = randomBytes(16).toString('hex');
-        issued.set(req, id);
-        res.cookie(DEVICE_COOKIE, id, {
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: req.secure,
-            maxAge: COOKIE_MAX_AGE_MS,
-        });
-    }
-    next();
+export function deviceCookieMiddleware(secure: boolean) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        const existing = readCookie(req.headers.cookie, DEVICE_COOKIE);
+        if (!existing) {
+            const id = randomBytes(16).toString('hex');
+            issued.set(req, id);
+            res.cookie(DEVICE_COOKIE, id, {
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: secure || req.secure,
+                maxAge: COOKIE_MAX_AGE_MS,
+            });
+        }
+        next();
+    };
 }
 
 function sha256(value: string): string {

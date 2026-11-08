@@ -23,7 +23,13 @@ export interface SessionManagementPluginOptions {
     maxActiveSessionsCustomer?: number;
     maxActiveSessionsStaff?: number;
     dailyReset?: DailyResetOptions;
+    deviceCookieSecure?: boolean;
+    knownDeviceRetentionDays?: number;
 }
+
+export const KNOWN_DEVICE_RETENTION_DAYS_DEFAULT = 400;
+export const KNOWN_DEVICES_PER_USER_MAX = 50;
+export const NEW_DEVICE_MAIL_MIN_INTERVAL = '1 hour';
 
 // Acting sessions (a manager inside a customer account) and API-key sessions follow their own lifetime rules.
 export const OWN_SESSION_SQL = `type = 'AuthenticatedSession' AND invalidated = false

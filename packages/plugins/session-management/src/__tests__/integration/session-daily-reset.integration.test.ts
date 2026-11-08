@@ -36,13 +36,13 @@ async function insertSession(
 ): Promise<void> {
     await dataSource.query(
         `INSERT INTO session (token, "userId", type, invalidated, expires, "createdAt", "customFieldsActingadministratorid", "authenticationStrategy")
-         VALUES ($1, $2, $3, false, $4, $5, $6, $7)`,
+         VALUES ($1, $2, $3, false, $4, $5::timestamptz, $6, $7)`,
         [
             token,
             overrides.userId ?? 1,
             overrides.type ?? 'AuthenticatedSession',
             new Date(Date.now() + 86_400_000),
-            createdAt,
+            createdAt.toISOString(),
             overrides.acting ? '9' : null,
             overrides.strategy ?? 'native',
         ],
@@ -57,8 +57,14 @@ async function activeTokens(): Promise<string[]> {
 }
 
 beforeAll(async () => {
+    // Node and the database deliberately disagree on the zone: the bug class this guards against.
+    process.env.TZ = 'Europe/Berlin';
     await createTestSchema(schema);
-    dataSource = new DataSource({ type: 'postgres', ...testDataSourceConnectionOptions(), extra });
+    dataSource = new DataSource({
+        type: 'postgres',
+        ...testDataSourceConnectionOptions(),
+        extra: { options: `${extra.options} -c timezone=UTC` },
+    });
     await dataSource.initialize();
     await dataSource.query(`CREATE TABLE session (
         id serial PRIMARY KEY,
