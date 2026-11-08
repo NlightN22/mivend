@@ -16,6 +16,8 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.head.querySelectorAll('script').forEach(s => s.remove());
 });
 
 async function expectTimeout(work: Promise<unknown>): Promise<void> {
@@ -32,7 +34,6 @@ describe('adapter load timeouts', () => {
 
     it('provider-a rejects when the script never loads', async () => {
         await expectTimeout(new ProviderAAdapter().mount(document.createElement('div'), options));
-        document.head.querySelectorAll('script').forEach(s => s.remove());
     });
 
     it('provider-b rejects when importLibrary never resolves', async () => {
