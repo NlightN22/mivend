@@ -1918,7 +1918,6 @@ export type Mutation = {
     endAllSessions: Scalars['Boolean']['output'];
     endOtherSessions: Scalars['Boolean']['output'];
     endSession: Scalars['Boolean']['output'];
-    setNewDeviceEmail: SignInSettings;
     exchangeActingTicket: ActingSessionToken;
     finishActingSession: Scalars['Boolean']['output'];
     /** Payment request under an own active customer contract; a repeated idempotencyKey returns the same document. */
@@ -1991,6 +1990,7 @@ export type Mutation = {
     setCurrencyCodeForOrder: UpdateOrderItemsResult;
     /** Set the Customer for the Order. Required only if the Customer is not currently logged in */
     setCustomerForOrder: SetCustomerForOrderResult;
+    setNewDeviceEmail: SignInSettings;
     /** Sets the billing address for the active Order */
     setOrderBillingAddress: ActiveOrderResult;
     /** Allows any custom fields to be set for the active Order */
@@ -2194,6 +2194,10 @@ export type MutationSetCurrencyCodeForOrderArgs = {
 
 export type MutationSetCustomerForOrderArgs = {
     input: CreateCustomerInput;
+};
+
+export type MutationSetNewDeviceEmailArgs = {
+    enabled: Scalars['Boolean']['input'];
 };
 
 export type MutationSetOrderBillingAddressArgs = {
@@ -3084,6 +3088,8 @@ export enum Permission {
     ManageCounterpartyPortalAccess = 'ManageCounterpartyPortalAccess',
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     ManageCounterpartyTeam = 'ManageCounterpartyTeam',
+    /** Set the maximum order line discount per employee and product scope (layer 5) */
+    ManageDiscountLimits = 'ManageDiscountLimits',
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
     ManageErpIntegration = 'ManageErpIntegration',
     /** Create, edit, delete team-wide table views and assign the team default view of a list */
@@ -4075,10 +4081,6 @@ export type Seller = Node & {
     updatedAt: Scalars['DateTime']['output'];
 };
 
-export type SignInSettings = {
-    newDeviceEmail: Scalars['Boolean']['output'];
-};
-
 export type SessionSummary = {
     createdAt: Scalars['DateTime']['output'];
     current: Scalars['Boolean']['output'];
@@ -4215,6 +4217,10 @@ export type ShopContract = {
     id: Scalars['ID']['output'];
     name?: Maybe<Scalars['String']['output']>;
     paymentDelayDays?: Maybe<Scalars['Int']['output']>;
+};
+
+export type SignInSettings = {
+    newDeviceEmail: Scalars['Boolean']['output'];
 };
 
 /** The price value where the result has a single price */

@@ -4232,7 +4232,6 @@ export type Mutation = {
     endAllSessions: Scalars['Boolean']['output'];
     endOtherSessions: Scalars['Boolean']['output'];
     endSession: Scalars['Boolean']['output'];
-    setNewDeviceEmail: SignInSettings;
     escalateApprovalRequest: ApprovalRequest;
     extendOrderReservation: Array<Reservation>;
     flushBufferedJobs: Success;
@@ -4360,6 +4359,7 @@ export type Mutation = {
     setDraftOrderShippingMethod: SetOrderShippingMethodResult;
     /** Staff pick one of the order client's trading points on a draft order; null means self-pickup. */
     setDraftOrderTradingPoint: Scalars['Boolean']['output'];
+    setNewDeviceEmail: SignInSettings;
     /** Change the contract the order is registered under; only before it is reserved (#205). */
     setOrderContract: Array<OrderContractOption>;
     setOrderCustomFields: Maybe<Order>;
@@ -5371,6 +5371,10 @@ export type MutationSetDraftOrderShippingMethodArgs = {
 export type MutationSetDraftOrderTradingPointArgs = {
     orderId: Scalars['ID']['input'];
     tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type MutationSetNewDeviceEmailArgs = {
+    enabled: Scalars['Boolean']['input'];
 };
 
 export type MutationSetOrderContractArgs = {
@@ -6569,11 +6573,7 @@ export type PaymentCardRefund = {
     status: Scalars['String']['output'];
 };
 
-export type PaymentInboxSweepResult = {
-    failed: Scalars['Int']['output'];
-    processed: Scalars['Int']['output'];
-};
-
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
 export type PaymentFilterParameter = {
     _and?: InputMaybe<Array<PaymentFilterParameter>>;
     _or?: InputMaybe<Array<PaymentFilterParameter>>;
@@ -6588,6 +6588,11 @@ export type PaymentFilterParameter = {
     proformaInvoiceNumber?: InputMaybe<StringOperators>;
     /** Payment status. */
     status?: InputMaybe<StringOperators>;
+};
+
+export type PaymentInboxSweepResult = {
+    failed: Scalars['Int']['output'];
+    processed: Scalars['Int']['output'];
 };
 
 export type PaymentListOptions = {
@@ -7634,9 +7639,9 @@ export type ProformaInvoice = {
     /** Null for contract payment kinds (debt-repayment, advance). */
     orderId: Maybe<Scalars['ID']['output']>;
     organizationId: Scalars['ID']['output'];
-    /** ERP sales invoice (realization) number; set only on a by-shipment version. */
     /** Payment attempts applied to this version, newest first; scoped like the proforma invoice itself. */
     payments: Array<PaymentAttempt>;
+    /** ERP sales invoice (realization) number; set only on a by-shipment version. */
     salesInvoiceNumber: Maybe<Scalars['String']['output']>;
     seller: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
@@ -7685,7 +7690,7 @@ export type ProformaInvoiceList = {
 
 export type ProformaInvoiceListOptions = {
     filter?: InputMaybe<ProformaInvoiceFilterParameter>;
-    /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
+    /** Substring match against the proforma invoice's number, the customer name and INN. */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<ProformaInvoiceSortParameter>;
@@ -8058,9 +8063,9 @@ export type Query = {
     productVariants: ProductVariantList;
     /** List Products */
     products: ProductList;
-    /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
     /** One proforma invoice of the manager portal card; null when unknown or outside the caller's scope (same rule as visibleProformaInvoices). */
     proformaInvoice: Maybe<ProformaInvoice>;
+    /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
     proformaInvoiceOutstandingBalance: Maybe<MoneyAmount>;
     proformaInvoicesForOrder: Array<ProformaInvoice>;
     promotion: Maybe<Promotion>;
@@ -8136,7 +8141,7 @@ export type Query = {
     visiblePayments: PaymentAttemptList;
     /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
     visibleProformaInvoices: ProformaInvoiceList;
-    /** Manager-portal settlement documents of the customers the caller may see; needs ReadCounterpartyCredit. */
+    /** Manager-portal settlement documents of the customers the caller may see; needs ReadSettlementDocument. */
     visibleSettlementDocuments: SettlementListPage;
     /** Document counts per type for the same search and filter (the type itself is ignored), for the type chips. */
     visibleSettlementTypeCounts: Array<SettlementTypeCount>;
@@ -9309,10 +9314,6 @@ export type ServerConfig = {
     permittedAssetTypes: Array<Scalars['String']['output']>;
 };
 
-export type SignInSettings = {
-    newDeviceEmail: Scalars['Boolean']['output'];
-};
-
 export type SessionSummary = {
     createdAt: Scalars['DateTime']['output'];
     current: Scalars['Boolean']['output'];
@@ -9543,6 +9544,10 @@ export type ShippingMethodTranslationInput = {
     id?: InputMaybe<Scalars['ID']['input']>;
     languageCode: LanguageCode;
     name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SignInSettings = {
+    newDeviceEmail: Scalars['Boolean']['output'];
 };
 
 /** The price value where the result has a single price */
@@ -12738,28 +12743,6 @@ export type OrganizationsQuery = {
     }>;
 };
 
-export type ConfirmPaymentReceivedMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-}>;
-
-export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
-
-export type PaymentListItemFieldsFragment = {
-    id: string;
-    number: string;
-    createdAt: any;
-    providerPaymentId: string;
-    channel: string;
-    paymentStatus: string;
-    amount: number;
-    currencyCode: string;
-    proformaInvoiceId: string | null;
-    counterpartyId: string | null;
-    counterpartyShortName: string | null;
-    proformaInvoiceNumber: string | null;
-    orderCode: string | null;
-};
-
 export type PaymentCardQueryVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
@@ -12794,6 +12777,28 @@ export type PaymentCardQuery = {
             createdAt: any;
         }>;
     } | null;
+};
+
+export type ConfirmPaymentReceivedMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
+
+export type PaymentListItemFieldsFragment = {
+    id: string;
+    number: string;
+    createdAt: any;
+    providerPaymentId: string;
+    channel: string;
+    paymentStatus: string;
+    amount: number;
+    currencyCode: string;
+    proformaInvoiceId: string | null;
+    counterpartyId: string | null;
+    counterpartyShortName: string | null;
+    proformaInvoiceNumber: string | null;
+    orderCode: string | null;
 };
 
 export type PaymentViewCountsQueryVariables = Exact<{
@@ -14210,6 +14215,29 @@ export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'ProformaInvoiceListItemFields' },
 ) as unknown as TypedDocumentString<ProformaInvoiceListItemFieldsFragment, unknown>;
+export const ProformaCardVersionFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment ProformaCardVersionFields on ProformaInvoice {
+  id
+  number
+  version
+  kind
+  displayStatus
+  amount
+  issuedAt
+  lines {
+    quantity
+    linePriceWithTax
+    discountAmount
+    productVariant {
+      name
+      sku
+    }
+  }
+}
+    `,
+    { fragmentName: 'ProformaCardVersionFields' },
+) as unknown as TypedDocumentString<ProformaCardVersionFieldsFragment, unknown>;
 export const OrderReservationFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment OrderReservationFields on Reservation {
@@ -16391,16 +16419,6 @@ export const OrganizationsDocument = new TypedDocumentString(`
   createdAt
   hasCompleteRequisites
 }`) as unknown as TypedDocumentString<OrganizationsQuery, OrganizationsQueryVariables>;
-export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
-    mutation ConfirmPaymentReceived($orderId: ID!) {
-  confirmPaymentReceived(orderId: $orderId) {
-    id
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ConfirmPaymentReceivedMutation,
-    ConfirmPaymentReceivedMutationVariables
->;
 export const PaymentCardDocument = new TypedDocumentString(`
     query PaymentCard($id: ID!) {
   payment(id: $id) {
@@ -16443,6 +16461,16 @@ export const PaymentCardDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PaymentCardQuery, PaymentCardQueryVariables>;
+export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
+    mutation ConfirmPaymentReceived($orderId: ID!) {
+  confirmPaymentReceived(orderId: $orderId) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ConfirmPaymentReceivedMutation,
+    ConfirmPaymentReceivedMutationVariables
+>;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
     query PaymentViewCounts($counterpartyId: ID, $search: String, $filter: PaymentFilterParameter) {
   all: visiblePayments(
@@ -16600,29 +16628,6 @@ export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
     ProformaInvoiceViewCountsQuery,
     ProformaInvoiceViewCountsQueryVariables
 >;
-export const ProformaCardVersionFieldsFragmentDoc = new TypedDocumentString(
-    `
-    fragment ProformaCardVersionFields on ProformaInvoice {
-  id
-  number
-  version
-  kind
-  displayStatus
-  amount
-  issuedAt
-  lines {
-    quantity
-    linePriceWithTax
-    discountAmount
-    productVariant {
-      name
-      sku
-    }
-  }
-}
-    `,
-    { fragmentName: 'ProformaCardVersionFields' },
-) as unknown as TypedDocumentString<ProformaCardVersionFieldsFragment, unknown>;
 export const ProformaInvoiceOutstandingBalanceDocument = new TypedDocumentString(`
     query ProformaInvoiceOutstandingBalance($counterpartyId: ID!) {
   proformaInvoiceOutstandingBalance(counterpartyId: $counterpartyId) {
