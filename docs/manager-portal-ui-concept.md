@@ -32,9 +32,9 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 | Dashboard        | KPI row and widgets (deferred, see below)                                                                                                           |
 | List             | Title, search, filters, table, pagination; row opens the entity card; multi-select opens a bulk action bar                                          |
 | Quick side panel | Optional per entity, not part of the list by default and not used for orders (a row opens the card); key data and actions that need no deep context |
-| Card             | Header (name, status, key attributes, primary actions), compact KPI row, tabs; tabs reuse the entity lists with preset filters                      |
-| Wizard           | Bulk operations, step by step                                                                                                                       |
-| Settings         | Sub-menu and forms                                                                                                                                  |
+| Card | Header (name, status, key attributes, primary actions), compact KPI row, tabs; tabs reuse the entity lists with preset filters |
+| Wizard | Bulk operations, step by step: select, parameters, review, run and result (`docs/bulk-operations.md`) |
+| Settings | Sub-menu and forms |
 
 Mobile: menu becomes a drawer or bottom bar, tables become compact lists or cards, the side panel
 becomes a full screen, tabs show the main ones plus "More".
@@ -179,7 +179,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
-| Bulk operations | wizard | exists |
+| Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | exists, to be rebuilt on the framework |
 | Analytics | placeholder | not implemented yet |
 | Settings | roles, branches, policies, and so on | exists |
 
