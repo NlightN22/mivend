@@ -247,7 +247,8 @@ search box matches the payment number, the customer name and INN. Views, URL syn
 `view`, `filters`, `sortField`, `sortDir`, `counterpartyId`, `pageSize`, `page`), top and bottom
 pagination and the mobile card view are shared with orders. The customer links to its card, the
 order to the order card, the proforma invoice to the proforma list searched by its number; there
-is no quick panel and no row actions. The Filter builder and the sortable headers (all but
+is no quick panel and no row actions. A row click (outside its links) and the payment number open
+the payment card (`/payments/:id`). The Filter builder and the sortable headers (all but
 proforma invoice and order) are applied on the server: `visiblePayments` takes
 `options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
 scope of the payment's proforma invoice). The default sort is newest first. Money columns are
@@ -273,6 +274,23 @@ limit, balance or overdue figure, unlike `ReadCounterpartyCredit`, though the si
 `proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
 correlated order-code aggregation used by the search and the type counts is the first thing to
 profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.
+
+## Payment card
+
+Read-only page for one payment (`pages/payments/PaymentDetailPage.vue`, parts under
+`components/payment-detail/`): header with the payment number, status chip, amount, source and
+creation date, then panels for the payment (amount, currency, status, source, provider reference,
+created), the customer (name linking to its card, INN), the proforma invoice (number linking to the
+proforma list searched by it, version, amount, due date, status) and the order (number linking to
+the order card, status, total). A vertical refunds timeline, newest first and capped at the 50
+newest, shows only when there are refunds: number, status, amount, date and reason. The model
+records no status history and no initiator, so neither is shown. There are no actions; the header
+offers copy number, show in list (the list searched by the number) and open order as plain links.
+Mobile is one column. Data comes from the admin query `payment(id)`: same `ReadPayment` permission
+and the same proforma-derived scope as `visiblePayments`, a foreign, unknown or malformed id
+(anything but 1 to 9 digits) is null and shown as "Payment not found". Refunds, proforma and order
+summaries are batched per request (`PaymentCardLoader`); the `PaymentCard` type exists in the Admin
+schema only.
 
 ## Not implemented yet
 

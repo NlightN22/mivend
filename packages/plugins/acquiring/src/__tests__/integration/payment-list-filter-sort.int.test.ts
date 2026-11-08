@@ -262,3 +262,32 @@ describe('payment list filter and sort (real Postgres)', () => {
         await expect(service.findVisible(ctx, { sort: { orderCode: 'ASC' } })).rejects.toThrow();
     });
 });
+
+describe('single payment lookup (real Postgres)', () => {
+    const idOf = async (number: string): Promise<string> =>
+        String(
+            (
+                await dataSource.query('SELECT id FROM payment_attempt WHERE number = $1', [number])
+            )[0].id,
+        );
+
+    it('returns the visible payment with customer and order, null for a hidden one', async () => {
+        const card = await service.findVisibleOne(ctx, await idOf('2002'));
+        expect(card).toMatchObject({
+            counterpartyShortName: 'Beta Co',
+            counterpartyInn: '2222',
+        });
+        expect(card?.payment.number).toBe('2002');
+        expect(card?.orderId).not.toBeNull();
+        expect(await service.findVisibleOne(ctx, await idOf('2004'))).toBeNull();
+    });
+
+    it('a scope of all sees the hidden one; unknown and malformed ids are null', async () => {
+        scope = { kind: 'all' } as AccessScope;
+        expect((await service.findVisibleOne(ctx, await idOf('2004')))?.payment.number).toBe(
+            '2004',
+        );
+        for (const id of ['999999', '0x1', '-1', '1 OR 1=1', "1'; --", '', '1234567890'])
+            expect(await service.findVisibleOne(ctx, id), id).toBeNull();
+    });
+});

@@ -3,6 +3,7 @@ import {
     PAYMENT_CHANNEL_OPTIONS,
     PAYMENT_STATUS_BADGE_VARIANT,
     PAYMENT_STATUS_OPTIONS,
+    formatPaymentAmount,
     type PaymentListItem,
 } from '../../api/payments';
 
@@ -37,9 +38,6 @@ export function toPaymentRows(items: PaymentListItem[]): PaymentRow[] {
         channel: CHANNEL_LABEL.get(item.channel) ?? item.channel,
         status: STATUS_LABEL.get(item.paymentStatus) ?? item.paymentStatus,
         statusVariant: PAYMENT_STATUS_BADGE_VARIANT[item.paymentStatus] ?? 'neutral',
-        amount: new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: item.currencyCode,
-        }).format(item.amount / 100),
+        amount: formatPaymentAmount(item.amount, item.currencyCode),
     }));
 }

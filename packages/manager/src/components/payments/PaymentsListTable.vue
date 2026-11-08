@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
     MvAdvancedDataTable,
     MvDateTimeCell,
+    type AdvancedDataTableRowClickPayload,
     MvErrorState,
     useDataTableState,
     formatDocumentNumber,
@@ -97,6 +98,16 @@ watch(
 
 const openedWithLink = Object.keys(PAYMENTS_URL_DEFAULTS).some(k => k in useRoute().query);
 
+const router = useRouter();
+function onRowClick(event: AdvancedDataTableRowClickPayload<PaymentRow>): void {
+    const target = event.originalEvent.target;
+    if (target instanceof Element && target.closest('a, button')) return;
+    const href = router.resolve(`/payments/${event.row.id}`).href;
+    const mouse = event.originalEvent as MouseEvent;
+    if (mouse.ctrlKey || mouse.metaKey) window.open(href, '_blank', 'noopener');
+    else void router.push(href);
+}
+
 function captureView(): TableViewState {
     return {
         filters: {
@@ -146,6 +157,7 @@ function applyView(state: TableViewState): void {
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
         @clear-filters="emit('clear-filters')"
+        @row-click="onRowClick"
     >
         <template #empty>
             <MvErrorState
@@ -172,9 +184,11 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #cell-number="{ data }">
-            <span class="payments-list-table__number">{{
-                formatDocumentNumber((data as PaymentRow).number)
-            }}</span>
+            <RouterLink
+                class="payments-list-table__link payments-list-table__number"
+                :to="`/payments/${(data as PaymentRow).id}`"
+                >{{ formatDocumentNumber((data as PaymentRow).number) }}</RouterLink
+            >
         </template>
 
         <template #cell-date="{ data }">

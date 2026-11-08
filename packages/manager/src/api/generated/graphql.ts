@@ -6519,6 +6519,55 @@ export type PaymentAttemptList = {
     totalItems: Scalars['Int']['output'];
 };
 
+/** Manager payment card: one visible payment with its customer, proforma invoice, order and the 50 newest refunds. */
+export type PaymentCard = {
+    amount: Scalars['Int']['output'];
+    channel: Scalars['String']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    currencyCode: Scalars['String']['output'];
+    customer: Maybe<PaymentCardCustomer>;
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    order: Maybe<PaymentCardOrder>;
+    paymentStatus: Scalars['String']['output'];
+    proformaInvoice: Maybe<PaymentCardProforma>;
+    providerPaymentId: Scalars['String']['output'];
+    refunds: Array<PaymentCardRefund>;
+};
+
+export type PaymentCardCustomer = {
+    id: Scalars['ID']['output'];
+    inn: Maybe<Scalars['String']['output']>;
+    shortName: Maybe<Scalars['String']['output']>;
+};
+
+export type PaymentCardOrder = {
+    code: Scalars['String']['output'];
+    currencyCode: Scalars['String']['output'];
+    orderTotal: Scalars['Int']['output'];
+    state: Scalars['String']['output'];
+};
+
+export type PaymentCardProforma = {
+    amount: Scalars['Int']['output'];
+    currencyCode: Scalars['String']['output'];
+    /** current | superseded | cancelled; never the stored status. */
+    displayStatus: Scalars['String']['output'];
+    dueDate: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
+};
+
+export type PaymentCardRefund = {
+    amount: Scalars['Int']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    reason: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+};
+
 export type PaymentInboxSweepResult = {
     failed: Scalars['Int']['output'];
     processed: Scalars['Int']['output'];
@@ -7968,6 +8017,8 @@ export type Query = {
     /** Orders needing attention in one request: pending price adjustment (waiting), overdue shipment (overdueRows) and their intersection (both) */
     ordersAttention: OrdersAttention;
     organizationRequisites: Array<OrganizationRequisites>;
+    /** One payment card by id, scoped like visiblePayments; a foreign, unknown or malformed id is null. */
+    payment: Maybe<PaymentCard>;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
     paymentDisputeExists: Scalars['Boolean']['output'];
     paymentMethod: Maybe<PaymentMethod>;
@@ -8430,6 +8481,10 @@ export type QueryOrdersArgs = {
 
 export type QueryOrdersAttentionArgs = {
     overdueBefore: Scalars['DateTime']['input'];
+};
+
+export type QueryPaymentArgs = {
+    id: Scalars['ID']['input'];
 };
 
 export type QueryPaymentDisputeExistsArgs = {
@@ -12668,6 +12723,42 @@ export type PaymentListItemFieldsFragment = {
     orderCode: string | null;
 };
 
+export type PaymentCardQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type PaymentCardQuery = {
+    payment: {
+        id: string;
+        number: string;
+        createdAt: any;
+        channel: string;
+        paymentStatus: string;
+        amount: number;
+        currencyCode: string;
+        providerPaymentId: string;
+        customer: { id: string; shortName: string | null; inn: string | null } | null;
+        proformaInvoice: {
+            id: string;
+            number: string;
+            version: number;
+            amount: number;
+            currencyCode: string;
+            displayStatus: string;
+            dueDate: any;
+        } | null;
+        order: { code: string; state: string; orderTotal: number; currencyCode: string } | null;
+        refunds: Array<{
+            id: string;
+            number: string;
+            amount: number;
+            status: string;
+            reason: string;
+            createdAt: any;
+        }>;
+    } | null;
+};
+
 export type PaymentViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
@@ -16244,6 +16335,48 @@ export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
     ConfirmPaymentReceivedMutation,
     ConfirmPaymentReceivedMutationVariables
 >;
+export const PaymentCardDocument = new TypedDocumentString(`
+    query PaymentCard($id: ID!) {
+  payment(id: $id) {
+    id
+    number
+    createdAt
+    channel
+    paymentStatus
+    amount
+    currencyCode
+    providerPaymentId
+    customer {
+      id
+      shortName
+      inn
+    }
+    proformaInvoice {
+      id
+      number
+      version
+      amount
+      currencyCode
+      displayStatus
+      dueDate
+    }
+    order {
+      code
+      state
+      orderTotal
+      currencyCode
+    }
+    refunds {
+      id
+      number
+      amount
+      status
+      reason
+      createdAt
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<PaymentCardQuery, PaymentCardQueryVariables>;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
     query PaymentViewCounts($counterpartyId: ID, $search: String, $filter: PaymentFilterParameter) {
   all: visiblePayments(

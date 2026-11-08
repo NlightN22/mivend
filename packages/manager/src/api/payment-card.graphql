@@ -1,0 +1,40 @@
+query PaymentCard($id: ID!) {
+    payment(id: $id) {
+        id
+        number
+        createdAt
+        channel
+        paymentStatus
+        amount
+        currencyCode
+        providerPaymentId
+        customer {
+            id
+            shortName
+            inn
+        }
+        proformaInvoice {
+            id
+            number
+            version
+            amount
+            currencyCode
+            displayStatus
+            dueDate
+        }
+        order {
+            code
+            state
+            orderTotal
+            currencyCode
+        }
+        refunds {
+            id
+            number
+            amount
+            status
+            reason
+            createdAt
+        }
+    }
+}

@@ -1,3 +1,4 @@
+import { Kind } from 'graphql';
 import { ProformaInvoiceRefLoader } from './proforma-invoice-ref-loader.service';
 import {
     LanguageCode,
@@ -59,9 +60,12 @@ import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
 import { AdminProformaInvoiceVisibilityResolver } from './admin-proforma-invoice-visibility.resolver';
 import { AdminPaymentVisibilityResolver } from './admin-payment-visibility.resolver';
+import { AdminPaymentCardResolver, PaymentCardFieldResolver } from './payment-card.resolver';
+import { PaymentCardLoader } from './payment-card.loader';
 import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolver';
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
 import { adminApiExtensions } from './api/admin.schema';
+import { paymentCardSchema } from './api/payment-card.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { ContractProformaInvoiceService } from './contract-proforma-invoice.service';
 import { VariantOrganizationHealthResolver } from './variant-organization-health.resolver';
@@ -103,6 +107,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         ProformaInvoiceService,
         ProformaInvoiceIssuingService,
         ProformaInvoiceRefLoader,
+        PaymentCardLoader,
         ProformaInvoiceWithdrawService,
         ProformaInvoiceOrderCancelService,
         PaymentAttemptService,
@@ -136,7 +141,10 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         SettlementEntryService,
     ],
     adminApiExtensions: {
-        schema: adminApiExtensions,
+        schema: {
+            kind: Kind.DOCUMENT,
+            definitions: [...adminApiExtensions.definitions, ...paymentCardSchema.definitions],
+        },
         resolvers: [
             ProformaInvoiceAdminResolver,
             ProformaInvoiceRequestAdminResolver,
@@ -144,6 +152,8 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
             AdminProformaInvoiceVisibilityResolver,
             ProformaInvoiceDetailFieldResolver,
             AdminPaymentVisibilityResolver,
+            AdminPaymentCardResolver,
+            PaymentCardFieldResolver,
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,
             VariantOrganizationHealthResolver,

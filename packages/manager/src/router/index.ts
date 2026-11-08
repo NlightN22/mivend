@@ -68,6 +68,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'payments/:id',
+                    name: 'payment-detail',
+                    component: () => import('../pages/payments/PaymentDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'approvals',
                     name: 'approvals',
                     component: () => import('../pages/approvals/ApprovalsInboxPage.vue'),
