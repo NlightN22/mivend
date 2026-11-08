@@ -12,7 +12,7 @@ export class PasswordBreachService {
         @Inject(SIGN_IN_PROTECTION_OPTIONS) private options: SignInProtectionOptions,
     ) {}
 
-    // Core's reset saves the User it loaded before the new hash, which would write the old flag back; clear it last.
+    // Core saves the stale User after the new hash (reset, then session creation), writing the old flag back; clear it last.
     async clearPasswordChangeRequired(ctx: RequestContext, userId: string): Promise<void> {
         await ctxQuery(
             this.connection,
