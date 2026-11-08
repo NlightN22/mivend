@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Runs the unit, integration and access tests of the packages changed since $BASE and of the packages that depend on them.
+# Integration tests run for the changed packages only; DEPS=1 adds their dependents. Unit tests always follow the import graph (vitest --changed).
 # DRY=1 prints the plan only. A quick loop while working; the full make test / test-int / test-access stay required before audit and release.
 set -euo pipefail
 
@@ -10,7 +11,8 @@ cd "$root"
 
 git rev-parse --verify --quiet "$BASE" >/dev/null || { echo "test-changed: unknown base '$BASE' (set BASE=<ref>)"; exit 1; }
 
-changed_json="$(pnpm ls -r --depth -1 --json --filter "...[$BASE]" 2>/dev/null)"
+if [ "${DEPS:-0}" = 1 ]; then selector="...[$BASE]"; else selector="[$BASE]"; fi
+changed_json="$(pnpm ls -r --depth -1 --json --filter "$selector" 2>/dev/null)"
 mapfile -t names < <(printf '%s' "$changed_json" | node -e '
 const root = process.argv[1];
 const pkgs = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -55,7 +57,7 @@ for n in "${names[@]}"; do
 done
 
 echo "test-changed: base $BASE"
-echo "  changed packages and dependents: ${names[*]:-none}"
+echo "  changed packages$([ "${DEPS:-0}" = 1 ] && echo " and dependents"): ${names[*]:-none}"
 echo "  unit: ${unit_args[*]:-all files}"
 echo "  integration: ${int_pkgs[*]:-none}"
 echo "  access matrix: $run_access"
