@@ -54,7 +54,7 @@ export function visibleColumns(columns: DocColumn[]): DocColumn[] {
     return columns.filter(c => !c.hidden);
 }
 
-// Cells of a selection/actions-aware row: checkbox + product-first columns + actions.
-export function columnCount(columns: DocColumn[], selectable: boolean): number {
-    return visibleColumns(columns).length + (selectable ? 1 : 0) + 1;
+// Cells of a selection/actions-aware row: checkbox + product-first columns + actions (view-only has none).
+export function columnCount(columns: DocColumn[], selectable: boolean, actionable = true): number {
+    return visibleColumns(columns).length + (selectable ? 1 : 0) + (actionable ? 1 : 0);
 }

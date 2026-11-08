@@ -33,6 +33,8 @@ defineEmits<{
 }>();
 
 const selectable = () => !!props.selection;
+// Without canEdit/canRemove the document is view-only: no actions column at all.
+const actionable = () => !!(props.canEdit || props.canRemove);
 </script>
 
 <template>
@@ -66,12 +68,12 @@ const selectable = () => !!props.selection;
                         <th v-for="col in visibleColumns(columns)" :key="col.key">
                             {{ col.label }}
                         </th>
-                        <th class="mv-doc-lines__actions" />
+                        <th v-if="actionable()" class="mv-doc-lines__actions" />
                     </tr>
                 </thead>
                 <tbody v-if="loading">
                     <tr v-for="n in 3" :key="n" class="mv-doc-lines__skeleton">
-                        <td :colspan="visibleColumns(columns).length + 2">
+                        <td :colspan="columnCount(columns, selectable(), actionable())">
                             <MvSkeleton height="36px" />
                         </td>
                     </tr>
@@ -83,6 +85,7 @@ const selectable = () => !!props.selection;
                         :row="row"
                         :columns="columns"
                         :selectable="selectable()"
+                        :actionable="actionable()"
                         :selected="selection?.selected.value.has(row.id) ?? false"
                         :editing="editingId === row.id"
                         :saving="savingId === row.id"
@@ -102,7 +105,7 @@ const selectable = () => !!props.selection;
                         </template>
                     </MvDocumentLineRow>
                     <tr v-if="adding" class="mv-doc-lines__add-row">
-                        <td :colspan="columnCount(columns, selectable())">
+                        <td :colspan="columnCount(columns, selectable(), actionable())">
                             <slot name="add-row" />
                         </td>
                     </tr>
