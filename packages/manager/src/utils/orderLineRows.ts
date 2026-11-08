@@ -83,6 +83,15 @@ export interface LineRowInputs {
     lineDiscount?: (line: OrderDetailLine) => { max: number | null; percent: number | null } | null;
 }
 
+// The Discount column's percent: the server's (from the base price) when known, else from the line's own prices.
+export function linePercent(
+    line: OrderDetailLine,
+    server: { percent: number | null } | null,
+): number | null {
+    if (!server) return discountPercent(line.unitPriceWithTax, line.discountedUnitPriceWithTax);
+    return server.percent && server.percent > 0 ? server.percent : null;
+}
+
 export function buildLineRows(input: LineRowInputs): OrderLineRow[] {
     const byLine = findingsByLine(input.findings);
     const adjustments = adjustmentsByLine(input.lines, input.requests);
@@ -96,12 +105,7 @@ export function buildLineRows(input: LineRowInputs): OrderLineRow[] {
         );
         const reserved = lineReservedQuantity(input.reservations, line.id);
         const server = input.lineDiscount?.(line) ?? null;
-        const local = discountPercent(line.unitPriceWithTax, line.discountedUnitPriceWithTax);
-        const percent = server
-            ? server.percent && server.percent > 0
-                ? server.percent
-                : null
-            : local;
+        const percent = linePercent(line, server);
         const max = server?.max ?? null;
         const part = {
             view,

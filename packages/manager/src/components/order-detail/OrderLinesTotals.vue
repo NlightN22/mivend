@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { MvDocumentTotals } from '@mivend/ui-kit';
+import type { LineDiscountLimit } from '../../api/discountLimits';
 import type { OrderDetail } from '../../api/orderDetail';
 import { orderTotalRows } from '../../utils/orderTotalRows';
 import OrderOverpaymentNotice from './OrderOverpaymentNotice.vue';
 
-const props = defineProps<{ order: OrderDetail; retroTotal: number | null }>();
+const props = defineProps<{
+    order: OrderDetail;
+    retroTotal: number | null;
+    lineDiscounts: Map<string, LineDiscountLimit>;
+}>();
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', {
@@ -14,7 +19,14 @@ function money(amount: number): string {
     }).format(amount / 100);
 }
 
-const rows = computed(() => orderTotalRows(props.order, props.retroTotal, money));
+const rows = computed(() =>
+    orderTotalRows(
+        props.order,
+        props.retroTotal,
+        money,
+        l => props.lineDiscounts.get(l.id) ?? null,
+    ),
+);
 const paid = computed(() => props.order.customFields.erpPaidAmount);
 const overpaid = computed(() =>
     paid.value != null && paid.value > props.order.totalWithTax

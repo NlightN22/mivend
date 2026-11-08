@@ -21,10 +21,10 @@ defineProps<{ rows: DocTotalRow[] }>();
         >
             <dt>{{ row.label }}</dt>
             <dd>
-                <slot :name="`value-${row.key}`" :row="row">
-                    <span v-if="row.note" class="mv-doc-totals__note">{{ row.note }}</span>
-                    {{ row.value }}
-                </slot>
+                <span class="mv-doc-totals__value">
+                    <slot :name="`value-${row.key}`" :row="row">{{ row.value }}</slot>
+                </span>
+                <span v-if="row.note" class="mv-doc-totals__note">{{ row.note }}</span>
             </dd>
         </div>
         <slot />
@@ -46,6 +46,7 @@ defineProps<{ rows: DocTotalRow[] }>();
     justify-content: space-between;
     gap: 16px;
     padding: 4px 0;
+    scroll-margin-bottom: var(--mv-bottom-bar-height);
 }
 
 .mv-doc-totals dt {
@@ -54,10 +55,16 @@ defineProps<{ rows: DocTotalRow[] }>();
 
 .mv-doc-totals dd {
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-variant-numeric: tabular-nums;
+}
+
+.mv-doc-totals__value {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-variant-numeric: tabular-nums;
 }
 
 .mv-doc-totals__note {

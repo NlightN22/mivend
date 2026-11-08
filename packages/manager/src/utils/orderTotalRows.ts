@@ -16,10 +16,11 @@ export function orderTotalRows(
     order: OrderDetail,
     retroTotal: number | null,
     money: (minor: number) => string,
+    serverFor?: (line: OrderDetail['lines'][number]) => { percent: number | null } | null,
 ): DocTotalRow[] {
     const packaging = useOrderPackaging(order.lines);
     const gaps = packagingGaps(order.lines);
-    const discount = totalDiscountMinor(order.lines);
+    const discount = totalDiscountMinor(order.lines, serverFor);
     const paid = order.customFields.erpPaidAmount;
     const rows: DocTotalRow[] = [
         { key: 'positions', label: 'Positions', value: String(order.lines.length) },

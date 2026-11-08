@@ -169,6 +169,7 @@ watch([orderId, reservations], () => {
                     <OrderLinesTotals
                         :order="order"
                         :retro-total="retro.shown.value ? retro.total.value : null"
+                        :line-discounts="edit.lineDiscounts.value"
                     >
                         <template #flag>
                             <MvDocumentCell
