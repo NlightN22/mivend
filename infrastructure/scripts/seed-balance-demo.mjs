@@ -80,6 +80,8 @@ function balanceDemoRecords(now) {
         },
         documentType('balance-demo-sales-invoice', 'Реализация', 'sale', 1),
         documentType('balance-demo-payment', 'Payment', 'payment', 2),
+        documentType('balance-demo-return', 'Return', 'return', 3),
+        documentType('balance-demo-correction', 'Correction', 'correction', 4),
         // FIFO: the payment covers 900001 fully and 900002 partly; 900003 is not due yet.
         document(
             'balance-demo-inv-1',
@@ -115,6 +117,16 @@ function balanceDemoRecords(now) {
             '900004',
             -20,
             -60000,
+            null,
+        ),
+        document('balance-demo-ret-1', 'balance-demo-return', 'Return', '900005', -8, -5000, null),
+        document(
+            'balance-demo-cor-1',
+            'balance-demo-correction',
+            'Correction',
+            '900006',
+            -3,
+            1500,
             null,
         ),
         {
