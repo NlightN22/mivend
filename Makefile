@@ -24,9 +24,9 @@ export
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
 
-# No --build: a rebuilt postgres image makes compose recreate the containers every contour shares.
+# No --build and --no-recreate: compose would recreate the shared containers when run from another worktree (other bind-mount paths), killing every test or contour using them.
 up:
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --no-recreate
 
 # Only after changing infrastructure/docker/postgres — restarts the shared DB for every contour.
 up-rebuild:
