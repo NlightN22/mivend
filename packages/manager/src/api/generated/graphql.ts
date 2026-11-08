@@ -6889,8 +6889,9 @@ export type Permission =
     | 'ReadSeller'
     /** Grants permission to read PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
     | 'ReadSettings'
-    /** Grants permission to read ShippingMethod */
+    /** Read the ERP settlement documents (sales invoices, payments, returns) of the counterparties the caller may see; no credit limits or balances */
     | 'ReadSettlementDocument'
+    /** Grants permission to read ShippingMethod */
     | 'ReadShippingMethod'
     /** Grants permission to read StockLocation */
     | 'ReadStockLocation'

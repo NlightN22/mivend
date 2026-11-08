@@ -3143,6 +3143,8 @@ export enum Permission {
     ReadSeller = 'ReadSeller',
     /** Grants permission to read PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
     ReadSettings = 'ReadSettings',
+    /** Read the ERP settlement documents (sales invoices, payments, returns) of the counterparties the caller may see; no credit limits or balances */
+    ReadSettlementDocument = 'ReadSettlementDocument',
     /** Grants permission to read ShippingMethod */
     ReadShippingMethod = 'ReadShippingMethod',
     /** Grants permission to read StockLocation */
