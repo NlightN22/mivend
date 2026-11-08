@@ -602,47 +602,54 @@ The three manager-action controls (#242), all stage-scoped policies of the `mana
 **Principle (project-wide): the deepest matching percent always wins.** Whenever several rules, rows or limits apply to
 the same product, the largest matching percent decides; a narrower scope never cancels a deeper broader one.
 
+**Discount depth is controlled by limits and approvals only: there is no special role or right for discounts.** A manual
+price deeper than the employee's limit needs an approval, and an approver may approve only what their own limit covers.
+
 A line discount is a promotion adjustment (automatic) or a manual unit price (`manualUnitPrice`); both are measured as the
-percent of the line's **reference price** (the customer's price before any manual price or order-dependent discount) that is
-given away, rounded to 2 decimals (`LineDiscountService`). A price above the reference price is a negative discount (a
-surcharge) and has **no upper limit**.
+percent of the line's **reference price** (the customer's base price, before any manual price or order-dependent discount)
+that is given away, rounded to 2 decimals (`LineDiscountService`). A price above the reference price is a negative discount
+(a surcharge) and has **no upper limit**.
 
 The limit is set **per employee** (Administrator), not per role. A `DiscountLimit` row is administrator + scope + percent
 (`administratorId`, `scopeKind`, `scopeRef`, `maxDiscountPercent`); an employee may have several rows. `scopeKind` `all`
 (empty `scopeRef`) is every product, `manufacturer` and `category` take an ERP id; a new product filter is one more entry in
-`discount-limit-scope.ts`, not a schema change. Rows are edited with `setDiscountLimit` / `removeDiscountLimit` under
-`ManageDiscountLimits` (general director and portal admin), from the manager Users page ("Discount limits"), serialised by the
-lock `discount-limit:<administratorId>`. Across the rows of the acting employee that match the product the deepest percent
-wins; no matching row = no limit.
+`discount-limit-scope.ts` (matching) and `discount-limit-scope-options.service.ts` (picker list), not a schema change. Rows
+are edited with `setDiscountLimit` / `removeDiscountLimit` under `ManageDiscountLimits` (general director and portal admin),
+from the manager Users page ("Discount limits", with a searchable picker fed by `discountLimitScopeOptions`), serialised by
+the lock `discount-limit:<administratorId>`. Across the rows of the acting employee that match the product the deepest
+percent wins.
 
-**An unset limit is no limit: no finding, nothing blocked (fail-open, owner decision).** This is the opposite of the
-reservation extension limit, which is fail-closed without a row; a limit of `0` is a limit. The same holds for an approver
-without a matching row.
+**No matching row = a 0% manual-discount ceiling** (owner decision; a limit of `0` and no row are the same). Reducing a
+discount, keeping it or a surcharge is always free; any manual deepening needs an approval until a row allows it. The
+limit judges **manual** discounts only: a purely automatic (promotion) discount is never flagged, and a manual price that is
+not deeper than the automatic price is free.
 
-**The price floor is a hard boundary for automatic and manual discounts.** The limit never overrides it: a request below the
-floor (or with no known floor) stays `require-approval` (`manager.price-adjustment-floor`), and only an approver holding
-`ApproveBelowFloorPrice` (general director, portal admin) on top of `ApproveDiscountRequest` may approve it.
+**The price floor stays a separate boundary.** A request below the floor (or with no known floor) is `require-approval`
+(`manager.price-adjustment-floor`); the employee limit never overrides it and no extra right exists for it: the same
+approver rule below applies.
 
 | Code | Subject / stage | Finding when | Default |
 | --- | --- | --- | --- |
-| `order.discount-over-limit` | `order`, `pre-reserve` and `on-edit` | a line's discount percent is above the ceiling of the employee running the stage; no administrator or no limit = no finding; a surcharge is never flagged. Facts carry the percent, never the limit | `warn` |
-| `manager.price-adjustment-discount-limit` | `manager`, `adjust-price` | the requested price deepens the line's discount (`direction` = `increases-discount`) past the actor's own ceiling. Reducing, keeping or a surcharge is never flagged | `require-approval` |
-| `manager.price-adjustment-automatic-discount` | `manager`, `adjust-price` | the line has an automatic discount and the request deepens it. Manual and automatic discounts never coexist | `block` |
+| `order.discount-over-limit` | `order`, `pre-reserve` and `on-edit` | a line's manual discount percent is above the ceiling of the employee running the stage (no row = 0%); purely automatic discounts, surcharges and runs without an administrator give no finding. Facts carry the percent, never the limit | `warn` |
+| `manager.price-adjustment-discount-limit` | `manager`, `adjust-price` | the requested price deepens the line's discount (`direction` = `increases-discount`) past the actor's own ceiling, measured from the base price (so deepening an automatic discount is a deepening like any other). Reducing, keeping or a surcharge is never flagged | `require-approval` |
 
-Manual deepening: on a line **without** an automatic discount an employee may set a manual unit price that deepens the
-discount up to their limit and not below the floor. Beyond the limit the request goes to approval. Approver eligibility is
-decided by `ApprovalEligibilityRegistry` (approval-workflow, asked on every approval, never on a rejection) with the rule of
-`priceAdjustmentApproval` (`mayApprovePrice`): the approver's own limit must be at least as deep as the requested discount
-(a deeper-or-equal limit approves a shallower request), and a request below the floor needs `ApproveBelowFloorPrice` as well.
-Both the dedicated and the generic decide mutation go through it.
+Approver eligibility is decided by `ApprovalEligibilityRegistry` (approval-workflow, asked on every approval, never on a
+rejection) with the rule of `priceAdjustmentApproval` (`mayApprovePrice`): on top of the step's existing permission
+(`ApproveDiscountRequest`), the approver's own limit (no row = 0%) must be at least as deep as the requested discount; a
+deeper-or-equal limit approves a shallower request. It applies to floor requests too. Both the dedicated and the generic
+decide mutation go through it.
 
-On a line **with** an automatic discount staff may only reduce it: `reduceOrderLineDiscount(orderId, orderLineId,
-targetUnitPrice)` accepts a unit price from the current effective price up to the reference price (equal = no change) and
-refuses a lower one; `revertOrderLineDiscount` clears the manual price and is refused when the automatic discount is deeper
-than the current one unless the employee's limit covers it. Both need `AdjustPriceWithinLimit`, run under the order edit locks
-and guard (`OrderLineEditService.edit`) and re-check the result after recalculation, so a concurrent edit cannot lower the
-price. `orderLineDiscountLimits(orderId)` returns the current employee's ceiling per line for the manager card (it gates the
-over-limit mark and the ceiling hint); the limit and the floor are never part of a finding and never reach the customer.
+`reduceOrderLineDiscount(orderId, orderLineId, targetUnitPrice)` raises a manual price: it accepts a unit price from the
+current effective price up to the reference price (equal = no change) and refuses a lower one. `revertOrderLineDiscount`
+drops the manual price and returns the line to the automatic discount; it is **always allowed** (the automatic discount is
+the baseline). Both need `AdjustPriceWithinLimit`, run under the order edit locks and guard (`OrderLineEditService.edit`)
+and re-check the result after recalculation, so a concurrent edit cannot lower the price. `orderLineDiscountLimits(orderId)`
+returns the current employee's ceiling per line for the manager card (null for a line the limit does not judge); the limit
+and the floor are never part of a finding and never reach the customer.
+
+Recalculation today: a line with a manual price keeps it (`customer-price-calculation.strategy.ts` returns it and
+`OrderDiscountService` skips manual lines), so an automatic discount that appears later does not replace a manual price
+until `revertOrderLineDiscount` is called. No machinery was added for that.
 
 The customer never sees a surcharge as a discount: customer documents and the storefront show the final unit price and line
 total only (the proforma invoice prints a markup as the final price, `deriveLinePricing` and the cart totals ignore a

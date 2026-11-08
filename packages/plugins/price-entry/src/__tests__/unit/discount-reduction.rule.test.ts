@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { discountPercent, exceedsCeiling } from '../../discount-percent';
-import { reductionRefusal, revertRefusal } from '../../discount-reduction.rule';
+import { reductionRefusal } from '../../discount-reduction.rule';
 
 describe('reductionRefusal', () => {
     const base = { current: 80, reference: 100 };
@@ -26,24 +26,6 @@ describe('reductionRefusal', () => {
         expect(reductionRefusal({ ...markup, target: 120 })).toBeNull();
         expect(reductionRefusal({ ...markup, target: 121 })).toBe('beyond-reference');
         expect(reductionRefusal({ ...markup, target: 110 })).toBe('increases-discount');
-    });
-});
-
-describe('revertRefusal', () => {
-    const base = { current: 80, reference: 100 };
-
-    it('allows a revert that gives no more discount than now, with or without a limit', () => {
-        expect(revertRefusal({ ...base, automatic: 80, ceiling: null })).toBeNull();
-        expect(revertRefusal({ ...base, automatic: 95, ceiling: 5 })).toBeNull();
-    });
-
-    it('refuses a bigger automatic discount when no limit is set', () => {
-        expect(revertRefusal({ ...base, automatic: 70, ceiling: null })).toBe('increases-discount');
-    });
-
-    it('allows a bigger automatic discount only within the limit', () => {
-        expect(revertRefusal({ ...base, automatic: 70, ceiling: 30 })).toBeNull();
-        expect(revertRefusal({ ...base, automatic: 70, ceiling: 29.99 })).toBe('over-limit');
     });
 });
 

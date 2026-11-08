@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { MvButton, MvInput, MvModal, MvNotice, MvSelect } from '@mivend/ui-kit';
 import { useDiscountLimits } from '../../composables/useDiscountLimits';
 
@@ -16,9 +16,31 @@ const kindLabel = (kind: string): string => KINDS.find(k => k.value === kind)?.l
 const limits = useDiscountLimits(props.administratorId);
 const kind = ref('all');
 const scopeRef = ref('');
+const search = ref('');
 const percent = ref('');
 
 const parsedPercent = computed(() => Number(percent.value));
+const rowName = (row: { scopeKind: string; scopeRef: string }): string =>
+    row.scopeRef
+        ? (limits.names.value.get(`${row.scopeKind}:${row.scopeRef}`) ?? row.scopeRef)
+        : '—';
+
+watch(search, text => {
+    const picked = limits.suggestions.value.find(o => o.name === text);
+    if (picked) scopeRef.value = picked.ref;
+    else {
+        if (text !== rowName({ scopeKind: kind.value, scopeRef: scopeRef.value }))
+            scopeRef.value = '';
+        void limits.suggest(kind.value, text);
+    }
+});
+
+function onKind(next: string): void {
+    kind.value = next;
+    search.value = '';
+    scopeRef.value = '';
+}
+
 const valid = computed(
     () =>
         percent.value !== '' &&
@@ -30,7 +52,7 @@ const valid = computed(
 async function add(): Promise<void> {
     await limits.save(kind.value, scopeRef.value.trim(), parsedPercent.value);
     if (!limits.error.value) {
-        scopeRef.value = '';
+        search.value = '';
         percent.value = '';
     }
 }
@@ -42,14 +64,15 @@ onMounted(limits.load);
     <MvModal :title="`Discount limits: ${name}`" @close="$emit('close')">
         <p class="limits__hint">
             The deepest matching percent of the employee applies, measured from the customer's base
-            price. A product with no matching row has no limit.
+            price. A product with no matching row has a 0% limit: any deeper manual price needs
+            approval.
         </p>
         <MvNotice v-if="limits.error.value" variant="error">{{ limits.error.value }}</MvNotice>
         <table v-if="limits.rows.value.length" class="limits__table">
             <tbody>
                 <tr v-for="row in limits.rows.value" :key="row.uuid">
                     <td>{{ kindLabel(row.scopeKind) }}</td>
-                    <td>{{ row.scopeRef || '—' }}</td>
+                    <td>{{ rowName(row) }}</td>
                     <td class="limits__num">{{ row.maxDiscountPercent }}%</td>
                     <td class="limits__actions">
                         <MvButton
@@ -59,6 +82,7 @@ onMounted(limits.load);
                             @click="
                                 kind = row.scopeKind;
                                 scopeRef = row.scopeRef;
+                                search = row.scopeRef ? rowName(row) : '';
                                 percent = String(row.maxDiscountPercent);
                             "
                         >
@@ -78,8 +102,17 @@ onMounted(limits.load);
         </table>
         <p v-else class="limits__hint">No limits set.</p>
         <div class="limits__form">
-            <MvSelect v-model="kind" :options="KINDS" />
-            <MvInput v-model="scopeRef" size="sm" placeholder="ERP id" :disabled="kind === 'all'" />
+            <MvSelect :model-value="kind" :options="KINDS" @update:model-value="onKind" />
+            <MvInput
+                v-model="search"
+                size="sm"
+                list="discount-limit-scope-options"
+                :placeholder="kind === 'all' ? 'Every product' : 'Type to search'"
+                :disabled="kind === 'all'"
+            />
+            <datalist id="discount-limit-scope-options">
+                <option v-for="o in limits.suggestions.value" :key="o.ref" :value="o.name" />
+            </datalist>
             <MvInput v-model="percent" size="sm" type="number" placeholder="Max %" />
             <MvButton :disabled="!valid || limits.busy.value" @click="add">Save</MvButton>
         </div>

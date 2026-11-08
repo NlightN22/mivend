@@ -3,21 +3,18 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Order, OrderService, RequestContext, UserInputError } from '@vendure/core';
 import { OrderLineEditService } from '@mivend/plugin-reservation';
 
-import { DiscountLimitService } from './discount-limit.service';
-import { reductionRefusal, revertRefusal } from './discount-reduction.rule';
+import { reductionRefusal } from './discount-reduction.rule';
 import type { DiscountChangeRefusal } from './discount-reduction.rule';
 import { LINE_DISCOUNT_RELATIONS, LineDiscountService } from './line-discount.service';
 import type { LineDiscount } from './line-discount.service';
-import { discountPercent } from './discount-percent';
 import './types';
 
 const REFUSALS: Record<DiscountChangeRefusal, string> = {
     'increases-discount': 'Staff can only reduce a line discount, not increase it',
     'beyond-reference': 'The price cannot go above the price without any discount',
-    'over-limit': 'The automatic discount is above your discount limit',
 };
 
-// Staff may only reduce a placed order line's discount (or return it to automatic when that fits their own limit).
+// Staff may only reduce a placed order line's discount (or drop the manual price and return to automatic, always allowed).
 // Runs inside OrderLineEditService.edit: same locks, guard, on-edit checks; the order is read under the lock.
 @Injectable()
 export class OrderLineDiscountService {
@@ -25,7 +22,6 @@ export class OrderLineDiscountService {
         private lineEdit: OrderLineEditService,
         private orderService: OrderService,
         private lineDiscounts: LineDiscountService,
-        private limits: DiscountLimitService,
     ) {}
 
     reduce(
@@ -72,23 +68,7 @@ export class OrderLineDiscountService {
                 manualPriceReason: null,
             };
             await this.lineEdit.persist(txCtx, order, [line]);
-            const after = await this.reloadedDiscount(txCtx, orderId, lineId);
-            const ceiling =
-                (
-                    await this.limits.ceilingsForProducts(
-                        txCtx,
-                        await this.limits.actorAdministratorId(txCtx),
-                        [after.productErpId],
-                    )
-                ).get(after.productErpId) ?? null;
-            const refusal = revertRefusal({
-                current: before.effective,
-                reference: after.reference,
-                automatic: after.effective,
-                ceiling,
-            });
-            if (refusal) throw new UserInputError(REFUSALS[refusal]);
-            return `Line ${line.productVariant.sku}: back to automatic discount, unit price ${before.effective} -> ${after.effective} (${discountPercent(after.reference, after.effective)}%)`;
+            return `Line ${line.productVariant.sku}: manual price removed, back to the automatic price`;
         });
     }
 

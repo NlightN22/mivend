@@ -93,7 +93,6 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
             'RequestDiscountGrantApproval',
             'RequestCreditTermApproval',
             'ApproveDiscountRequest',
-            'ApproveBelowFloorPrice',
             'ManageDiscountLimits',
             'ApproveSecurityLimit',
         ],

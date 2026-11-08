@@ -12,8 +12,8 @@ interface OrderDiscountSubject {
     orderId: string;
 }
 
-// Unlike the reservation limits (fail-closed), no limit set means no finding: owner decision, see docs/access-control.md.
-// Measured against the limit of whoever runs the stage (staff session); a run without a staff actor has no limit to judge by.
+// Judges manual discounts only; no row means a 0% ceiling (docs/access-control.md). Measured against whoever runs the stage;
+// a run without an administrator has no limit to judge by.
 // Facts carry the line's discount percent, never the limit.
 @Injectable()
 export class OrderDiscountLimitCheck implements OnModuleInit {
@@ -41,11 +41,16 @@ export class OrderDiscountLimitCheck implements OnModuleInit {
             d => d.percent !== null && d.percent > 0,
         );
         if (discounts.length === 0) return [];
+        const judged = await this.lineDiscounts.limitApplies(ctx, subject.orderId, discounts);
         const ceilings = await this.limits.ceilingsForProducts(ctx, administratorId, [
             ...new Set(discounts.map(d => d.productErpId)),
         ]);
         return discounts
-            .filter(d => exceedsCeiling(d.percent, ceilings.get(d.productErpId) ?? null))
+            .filter(
+                d =>
+                    judged.has(d.lineId) &&
+                    exceedsCeiling(d.percent, ceilings.get(d.productErpId) ?? 0),
+            )
             .map(d => ({
                 severity: 'warning' as const,
                 lineRef: d.lineId,

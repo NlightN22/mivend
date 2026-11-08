@@ -89,16 +89,16 @@ const ceiling = async (admin: string | null, product: string) =>
     (await service.ceilingsForProducts(ctx, admin, [product])).get(product);
 
 describe('DiscountLimitService (integration, real Postgres)', () => {
-    it('has no limit for anyone while the table is empty', async () => {
-        expect(await ceiling('1', 'p-a1')).toBeNull();
+    it('has a 0% ceiling for everyone while the table is empty', async () => {
+        expect(await ceiling('1', 'p-a1')).toBe(0);
     });
 
     it('limits only the manufacturer it names; other products fall back to the all-products row or none', async () => {
         await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 3);
         expect(await ceiling('1', 'p-a1')).toBe(3);
         expect(await ceiling('1', 'p-a2')).toBe(3);
-        expect(await ceiling('1', 'p-b1')).toBeNull();
-        expect(await ceiling('1', 'p-none')).toBeNull();
+        expect(await ceiling('1', 'p-b1')).toBe(0);
+        expect(await ceiling('1', 'p-none')).toBe(0);
         await service.setLimit(ctx, '1', 'all', '', 8);
         expect(await ceiling('1', 'p-b1')).toBe(8);
         expect(await ceiling('1', 'p-a1')).toBe(8);
@@ -115,8 +115,8 @@ describe('DiscountLimitService (integration, real Postgres)', () => {
     it('keeps the limits of different employees apart', async () => {
         await service.setLimit(ctx, '1', 'all', '', 5);
         await service.setLimit(ctx, '2', 'all', '', 12);
-        expect(await ceiling('3', 'p-a1')).toBeNull();
-        expect(await ceiling(null, 'p-a1')).toBeNull();
+        expect(await ceiling('3', 'p-a1')).toBe(0);
+        expect(await ceiling(null, 'p-a1')).toBe(0);
         expect(await ceiling('1', 'p-a1')).toBe(5);
         expect(await ceiling('2', 'p-a1')).toBe(12);
         expect(await service.list(ctx, '2')).toHaveLength(1);
@@ -148,7 +148,7 @@ describe('DiscountLimitService (integration, real Postgres)', () => {
         await service.setLimit(ctx, '1', 'all', '', 5);
         expect(await service.removeLimit(ctx, '1', 'all', '')).toBe(true);
         expect(await service.removeLimit(ctx, '1', 'all', '')).toBe(false);
-        expect(await ceiling('1', 'p-a1')).toBeNull();
+        expect(await ceiling('1', 'p-a1')).toBe(0);
     });
 });
 
@@ -177,7 +177,6 @@ describe('adjust-price limit check against stored limits (integration)', () => {
                         requestedPrice,
                         referencePrice: 100,
                         direction,
-                        hasAutomaticDiscount: false,
                     },
                 },
                 { ctx, stage: MANAGER_STAGES.adjustPrice, recipient: null },

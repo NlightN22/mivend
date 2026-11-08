@@ -56,7 +56,6 @@ describe('PriceAdjustmentService', () => {
                 forOrderId: vi.fn(async () => [
                     { lineId: 'line-1', reference: 100, effective: 80, percent: 20 },
                 ]),
-                hasAutomaticDiscount: vi.fn(async () => true),
             } as never,
         );
         visibleOrders = ['order-1'];
@@ -125,7 +124,6 @@ describe('PriceAdjustmentService', () => {
                         requestedPrice: 1,
                         referencePrice: 100,
                         direction: 'increases-discount',
-                        hasAutomaticDiscount: true,
                     },
                 },
                 'adjust-price',

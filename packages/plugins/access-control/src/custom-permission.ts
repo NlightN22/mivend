@@ -48,11 +48,6 @@ export const CustomPermission = {
         description:
             'Decide a step of a priceAdjustmentApproval or discountGrantApproval chain (layer 5)',
     }),
-    ApproveBelowFloorPrice: new PermissionDefinition({
-        name: 'ApproveBelowFloorPrice',
-        description:
-            'Approve a price adjustment that goes below the floor price, on top of ApproveDiscountRequest (layer 5)',
-    }),
     ApproveSecurityLimit: new PermissionDefinition({
         name: 'ApproveSecurityLimit',
         description: 'Decide a step of a securityLimitApproval chain (layer 5)',

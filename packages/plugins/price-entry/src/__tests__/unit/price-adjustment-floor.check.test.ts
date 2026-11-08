@@ -20,7 +20,6 @@ function run(floor: number | null, requestedPrice: number) {
                 requestedPrice,
                 referencePrice: null,
                 direction: 'unchanged',
-                hasAutomaticDiscount: false,
             },
         },
         { ctx, stage: 'adjust-price', recipient: null },

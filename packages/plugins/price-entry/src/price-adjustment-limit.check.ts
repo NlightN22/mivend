@@ -10,7 +10,8 @@ import type { PriceAdjustmentParams } from './price-adjustment-floor.check';
 
 export const PRICE_ADJUSTMENT_LIMIT_CHECK_CODE = 'manager.price-adjustment-discount-limit';
 
-// Only a request that deepens the line's discount past the actor's own limit is flagged; no limit set means no finding.
+// Only a request that deepens the line's discount past the actor's own limit is flagged; no row means a 0% limit.
+// The depth is measured from the base price, so deepening an automatic discount is a deepening like any other.
 // Facts carry the implied percent, never the limit. Runs next to the floor check, which the limit never overrides.
 @Injectable()
 export class PriceAdjustmentLimitCheck implements OnModuleInit {
@@ -44,7 +45,7 @@ export class PriceAdjustmentLimitCheck implements OnModuleInit {
         const ceiling = (
             await this.limits.ceilingsForProducts(ctx, administratorId, [productErpId])
         ).get(productErpId);
-        if (!exceedsCeiling(implied, ceiling ?? null)) return [];
+        if (!exceedsCeiling(implied, ceiling ?? 0)) return [];
         return [
             {
                 severity: 'warning',

@@ -35,8 +35,10 @@ describe('DiscountLimitResolver.orderLineDiscountLimits', () => {
                 ceilingsForProducts: vi.fn(async () => new Map([['p1', 7]])),
                 actorAdministratorId: async () => '7',
             } as never,
+            {} as never,
             {
                 forOrderId: vi.fn(async () => [{ lineId: '1', productErpId: 'p1', percent: 4 }]),
+                limitApplies: vi.fn(async () => new Set(['1'])),
             } as never,
             {} as never,
             {

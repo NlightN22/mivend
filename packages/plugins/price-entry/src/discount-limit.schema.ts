@@ -21,7 +21,18 @@ export const discountLimitSchema = gql`
         discountPercent: Float
     }
 
+    type DiscountLimitScopeOption {
+        ref: String!
+        name: String!
+    }
+
     extend type Query {
+        "Selectable manufacturers or categories for a limit row; refs looks up names of known ids."
+        discountLimitScopeOptions(
+            scopeKind: String!
+            search: String
+            refs: [String!]
+        ): [DiscountLimitScopeOption!]!
         discountLimits(administratorId: ID): [DiscountLimit!]!
         orderLineDiscountLimits(orderId: ID!): [OrderLineDiscountLimit!]!
     }
@@ -35,7 +46,7 @@ export const discountLimitSchema = gql`
         ): DiscountLimit!
         removeDiscountLimit(administratorId: ID!, scopeKind: String!, scopeRef: String): Boolean!
         """
-        Raise a placed order line's unit price toward its price without a discount. Never deepens a discount.
+        Raise the manual unit price of a placed order line toward its price without a discount. Never deepens a discount.
         """
         reduceOrderLineDiscount(
             orderId: ID!
@@ -43,7 +54,7 @@ export const discountLimitSchema = gql`
             targetUnitPrice: Int!
             justification: String
         ): Boolean!
-        "Return a manually priced line to automatic discounting, if that fits the admin's discount limit."
+        "Drop the manual price and return the line to automatic discounting. Always allowed."
         revertOrderLineDiscount(orderId: ID!, orderLineId: ID!): Boolean!
     }
 `;

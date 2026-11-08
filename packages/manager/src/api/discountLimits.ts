@@ -1,12 +1,15 @@
 import { adminApi } from './client';
 import {
+    DiscountLimitScopeOptionsDocument,
     DiscountLimitsDocument,
     OrderLineDiscountLimitsDocument,
     RemoveDiscountLimitDocument,
     SetDiscountLimitDocument,
+    type DiscountLimitScopeOptionsQuery,
     type DiscountLimitsQuery,
 } from './generated/graphql';
 
+export type ScopeOption = DiscountLimitScopeOptionsQuery['discountLimitScopeOptions'][number];
 export type DiscountLimitRow = DiscountLimitsQuery['discountLimits'][number];
 
 export async function fetchDiscountLimits(administratorId: string): Promise<DiscountLimitRow[]> {
@@ -44,4 +47,13 @@ export async function fetchLineDiscountCeilings(orderId: string): Promise<Map<st
             r.maxDiscountPercent === null ? [] : [[r.orderLineId, r.maxDiscountPercent]],
         ),
     );
+}
+
+export async function fetchScopeOptions(
+    scopeKind: string,
+    search: string | null,
+    refs: string[] | null = null,
+): Promise<ScopeOption[]> {
+    return (await adminApi(DiscountLimitScopeOptionsDocument, { scopeKind, search, refs }))
+        .discountLimitScopeOptions;
 }

@@ -4,13 +4,12 @@ import { CheckRegistry } from '@mivend/plugin-checks';
 
 import { OrderDiscountLimitCheck } from '../../order-discount-limit.check';
 import { PriceAdjustmentLimitCheck } from '../../price-adjustment-limit.check';
-import { PriceAdjustmentAutomaticCheck } from '../../price-adjustment-automatic.check';
 import type { DiscountLimitService } from '../../discount-limit.service';
 import type { LineDiscountService } from '../../line-discount.service';
 
 const ctx = {} as RequestContext;
 
-function orderCheck(administratorId: string | null, ceiling: number | null) {
+function orderCheck(administratorId: string | null, ceiling: number, automaticOnly: string[] = []) {
     return new OrderDiscountLimitCheck(
         new CheckRegistry(),
         {
@@ -18,6 +17,10 @@ function orderCheck(administratorId: string | null, ceiling: number | null) {
             ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])),
         } as unknown as DiscountLimitService,
         {
+            limitApplies: vi.fn(
+                async (_c: unknown, _o: unknown, ds: { lineId: string }[]) =>
+                    new Set(ds.map(d => d.lineId).filter(id => !automaticOnly.includes(id))),
+            ),
             forOrderId: vi.fn(async () => [
                 { lineId: '1', productErpId: 'p1', percent: 12.5 },
                 { lineId: '2', productErpId: 'p1', percent: 4 },
@@ -48,8 +51,13 @@ describe('OrderDiscountLimitCheck', () => {
         expect(findings.map(f => f.lineRef)).toEqual(['1', '2']);
     });
 
-    it('gives no finding when no limit is set (fail-open, owner decision)', async () => {
-        expect(await orderRun(orderCheck('7', null))).toEqual([]);
+    it('treats no row as a 0% ceiling: every manual discount is flagged', async () => {
+        expect((await orderRun(orderCheck('7', 0))).map(f => f.lineRef)).toEqual(['1', '2']);
+    });
+
+    it('never judges a purely automatic discount', async () => {
+        const findings = await orderRun(orderCheck('7', 0, ['1', '2']));
+        expect(findings).toEqual([]);
     });
 
     it('gives no finding without an administrator', async () => {
@@ -67,7 +75,7 @@ describe('OrderDiscountLimitCheck', () => {
 
 function managerRun(
     params: { requestedPrice: number; referencePrice: number | null; direction: string },
-    ceiling: number | null,
+    ceiling: number,
     administratorId: string | null = '7',
 ) {
     const check = new PriceAdjustmentLimitCheck(
@@ -88,7 +96,6 @@ function managerRun(
             branchId: null,
             params: {
                 variantId: 'v1',
-                hasAutomaticDiscount: false,
                 ...params,
                 direction: params.direction as never,
             },
@@ -128,9 +135,13 @@ describe('PriceAdjustmentLimitCheck', () => {
         }
     });
 
-    it('gives no finding when no limit is set, the reference is unknown or the actor is no administrator', async () => {
+    it('flags a deepening against a 0% ceiling (no row)', async () => {
+        const deep = { requestedPrice: 99, referencePrice: 100, direction: 'increases-discount' };
+        expect(await managerRun(deep, 0)).toHaveLength(1);
+    });
+
+    it('gives no finding when the reference is unknown or the actor is no administrator', async () => {
         const deep = { requestedPrice: 1, referencePrice: 100, direction: 'increases-discount' };
-        expect(await managerRun(deep, null)).toEqual([]);
         expect(await managerRun({ ...deep, referencePrice: null }, 10)).toEqual([]);
         expect(await managerRun(deep, 10, null)).toEqual([]);
     });
@@ -150,34 +161,5 @@ describe('PriceAdjustmentLimitCheck', () => {
         expect(
             registry.getCheck('manager.price-adjustment-discount-limit')?.defaultConsequence,
         ).toBe('require-approval');
-    });
-});
-
-describe('PriceAdjustmentAutomaticCheck', () => {
-    const run = (direction: string, hasAutomaticDiscount: boolean) =>
-        new PriceAdjustmentAutomaticCheck(new CheckRegistry()).evaluate({
-            roleCodes: [],
-            branchId: null,
-            params: {
-                variantId: 'v1',
-                requestedPrice: 50,
-                referencePrice: 100,
-                direction: direction as never,
-                hasAutomaticDiscount,
-            },
-        });
-
-    it('flags only a deepening on a line that has an automatic discount', () => {
-        expect(run('increases-discount', true)).toHaveLength(1);
-        expect(run('increases-discount', false)).toEqual([]);
-        expect(run('reduces-discount', true)).toEqual([]);
-    });
-
-    it('defaults to block at adjust-price', () => {
-        const registry = new CheckRegistry();
-        new PriceAdjustmentAutomaticCheck(registry).onModuleInit();
-        const def = registry.getCheck('manager.price-adjustment-automatic-discount');
-        expect(def?.stages).toEqual(['adjust-price']);
-        expect(def?.defaultConsequence).toBe('block');
     });
 });

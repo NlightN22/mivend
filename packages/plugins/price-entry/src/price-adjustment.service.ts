@@ -87,9 +87,6 @@ export class PriceAdjustmentService {
                 requestedPrice,
                 referencePrice: discount?.reference ?? null,
                 direction,
-                hasAutomaticDiscount:
-                    direction === 'increases-discount' &&
-                    (await this.lineDiscounts.hasAutomaticDiscount(ctx, orderId, orderLineId)),
             },
         };
         const { strongestConsequence } = await this.checks.evaluate(

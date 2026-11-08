@@ -18,14 +18,14 @@ describe('DiscountLimitService', () => {
         expect(connection.withTransaction).not.toHaveBeenCalled();
     });
 
-    it('has no limit for anyone when the employee has no row, without loading product attributes', async () => {
+    it('has a 0% ceiling when the employee has no row, without loading product attributes', async () => {
         const find = vi.fn(async () => []);
         const connection = { getRepository: () => ({ find }), query: vi.fn() };
         const ceilings = await new DiscountLimitService(
             connection as never,
             {} as never,
         ).ceilingsForProducts(ctx, '7', ['p1']);
-        expect(ceilings.get('p1')).toBeNull();
+        expect(ceilings.get('p1')).toBe(0);
         expect(connection.query).not.toHaveBeenCalled();
     });
 

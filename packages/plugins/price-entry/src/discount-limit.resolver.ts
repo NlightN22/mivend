@@ -6,6 +6,8 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { DiscountLimit } from './discount-limit.entity';
 import { DiscountLimitService } from './discount-limit.service';
+import { DiscountLimitScopeOptionsService } from './discount-limit-scope-options.service';
+import type { ScopeOption } from './discount-limit-scope-options.service';
 import { LineDiscountService } from './line-discount.service';
 import { OrderLineDiscountService } from './order-line-discount.service';
 
@@ -19,6 +21,7 @@ export interface OrderLineDiscountLimit {
 export class DiscountLimitResolver {
     constructor(
         private limits: DiscountLimitService,
+        private scopeOptions: DiscountLimitScopeOptionsService,
         private lineDiscounts: LineDiscountService,
         private lineDiscountEdits: OrderLineDiscountService,
         private orderVisibility: OrderVisibilityService,
@@ -31,6 +34,15 @@ export class DiscountLimitResolver {
         @Args() args: { administratorId?: ID | null },
     ): Promise<DiscountLimit[]> {
         return this.limits.list(ctx, args.administratorId);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageDiscountLimits.Permission)
+    discountLimitScopeOptions(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { scopeKind: string; search?: string | null; refs?: string[] | null },
+    ): Promise<ScopeOption[]> {
+        return this.scopeOptions.list(ctx, args.scopeKind, args.search, args.refs);
     }
 
     @Query()
@@ -49,9 +61,10 @@ export class DiscountLimitResolver {
         const ceilings = await this.limits.ceilingsForProducts(ctx, administratorId, [
             ...new Set(discounts.map(d => d.productErpId)),
         ]);
+        const judged = await this.lineDiscounts.limitApplies(ctx, args.orderId, discounts);
         return discounts.map(d => ({
             orderLineId: d.lineId,
-            maxDiscountPercent: ceilings.get(d.productErpId) ?? null,
+            maxDiscountPercent: judged.has(d.lineId) ? (ceilings.get(d.productErpId) ?? 0) : null,
             discountPercent: d.percent,
         }));
     }

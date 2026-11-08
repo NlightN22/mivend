@@ -16,10 +16,10 @@ const refs = (manufacturerRef: string | null, categories: string[]) =>
     });
 
 describe('resolveCeiling', () => {
-    it('is null (no limit) when the employee has no row that matches', () => {
-        expect(resolveCeiling([], refs(null, []))).toBeNull();
-        expect(resolveCeiling(rows.slice(1), refs('brand-b', ['cat-b']))).toBeNull();
-        expect(resolveCeiling(rows.slice(1), refsByScopeKind(undefined))).toBeNull();
+    it('is 0% when the employee has no row that matches', () => {
+        expect(resolveCeiling([], refs(null, []))).toBe(0);
+        expect(resolveCeiling(rows.slice(1), refs('brand-b', ['cat-b']))).toBe(0);
+        expect(resolveCeiling(rows.slice(1), refsByScopeKind(undefined))).toBe(0);
     });
 
     it('uses the all-products row when no narrower row matches', () => {
@@ -39,6 +39,6 @@ describe('resolveCeiling', () => {
 
     it('ignores a row of a scope kind it does not know', () => {
         const odd = [{ scopeKind: 'colour', scopeRef: 'red', maxDiscountPercent: 9 }];
-        expect(resolveCeiling(odd, refs(null, []))).toBeNull();
+        expect(resolveCeiling(odd, refs(null, []))).toBe(0);
     });
 });

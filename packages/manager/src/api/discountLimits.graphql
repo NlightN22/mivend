@@ -39,3 +39,10 @@ query OrderLineDiscountLimits($orderId: ID!) {
         discountPercent
     }
 }
+
+query DiscountLimitScopeOptions($scopeKind: String!, $search: String, $refs: [String!]) {
+    discountLimitScopeOptions(scopeKind: $scopeKind, search: $search, refs: $refs) {
+        ref
+        name
+    }
+}

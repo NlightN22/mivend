@@ -2349,6 +2349,11 @@ export type DiscountLimit = {
     uuid: Scalars['String']['output'];
 };
 
+export type DiscountLimitScopeOption = {
+    name: Scalars['String']['output'];
+    ref: Scalars['String']['output'];
+};
+
 export type DiscountRegistryEntry = {
     approvalRequestId: Maybe<Scalars['ID']['output']>;
     counterpartyIds: Maybe<Array<Scalars['String']['output']>>;
@@ -4242,7 +4247,7 @@ export type Mutation = {
     /** Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey. */
     recordPaymentRefund: PaymentRefund;
     recordWitnessedPayment: Scalars['Boolean']['output'];
-    /** Raise a placed order line's unit price toward its price without a discount. Never deepens a discount. */
+    /** Raise the manual unit price of a placed order line toward its price without a discount. Never deepens a discount. */
     reduceOrderLineDiscount: Scalars['Boolean']['output'];
     refundOrder: RefundOrderResult;
     reindex: Job;
@@ -4304,7 +4309,7 @@ export type Mutation = {
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
     resolveNotification: Notification;
-    /** Return a manually priced line to automatic discounting, if that fits the admin's discount limit. */
+    /** Drop the manual price and return the line to automatic discounting. Always allowed. */
     revertOrderLineDiscount: Scalars['Boolean']['output'];
     revokeVisibilityGrant: VisibilityGrant;
     /**
@@ -6611,8 +6616,6 @@ export type PaymentStateTransitionError = ErrorResult & {
 export type Permission =
     /** Adjust an order line price directly, as long as it stays at/above the floor price (layer 5 gate) */
     | 'AdjustPriceWithinLimit'
-    /** Approve a price adjustment that goes below the floor price, on top of ApproveDiscountRequest (layer 5) */
-    | 'ApproveBelowFloorPrice'
     /** Decide a step of a priceAdjustmentApproval or discountGrantApproval chain (layer 5) */
     | 'ApproveDiscountRequest'
     /** Decide a step of a securityLimitApproval chain (layer 5) */
@@ -7725,6 +7728,8 @@ export type Query = {
     departmentBranchOverview: Array<DepartmentBranchNode>;
     departments: Array<Department>;
     discountGrantsForCounterparty: DiscountGrantForCustomerList;
+    /** Selectable manufacturers or categories for a limit row; refs looks up names of known ids. */
+    discountLimitScopeOptions: Array<DiscountLimitScopeOption>;
     discountLimits: Array<DiscountLimit>;
     discountRegistryPage: DiscountRegistryEntryList;
     discountRules: Array<DiscountRule>;
@@ -8063,6 +8068,12 @@ export type QueryDeactivatedAdministratorsArgs = {
 export type QueryDiscountGrantsForCounterpartyArgs = {
     counterpartyId: Scalars['ID']['input'];
     options?: InputMaybe<DiscountGrantForCustomerListOptions>;
+};
+
+export type QueryDiscountLimitScopeOptionsArgs = {
+    refs?: InputMaybe<Array<Scalars['String']['input']>>;
+    scopeKind: Scalars['String']['input'];
+    search?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type QueryDiscountLimitsArgs = {
@@ -11489,6 +11500,16 @@ export type OrderLineDiscountLimitsQuery = {
     }>;
 };
 
+export type DiscountLimitScopeOptionsQueryVariables = Exact<{
+    scopeKind: Scalars['String']['input'];
+    search?: InputMaybe<Scalars['String']['input']>;
+    refs?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+export type DiscountLimitScopeOptionsQuery = {
+    discountLimitScopeOptions: Array<{ ref: string; name: string }>;
+};
+
 export type DiscountRegistryPageQueryVariables = Exact<{
     options?: InputMaybe<DiscountRegistryListOptions>;
 }>;
@@ -14773,6 +14794,17 @@ export const OrderLineDiscountLimitsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     OrderLineDiscountLimitsQuery,
     OrderLineDiscountLimitsQueryVariables
+>;
+export const DiscountLimitScopeOptionsDocument = new TypedDocumentString(`
+    query DiscountLimitScopeOptions($scopeKind: String!, $search: String, $refs: [String!]) {
+  discountLimitScopeOptions(scopeKind: $scopeKind, search: $search, refs: $refs) {
+    ref
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DiscountLimitScopeOptionsQuery,
+    DiscountLimitScopeOptionsQueryVariables
 >;
 export const DiscountRegistryPageDocument = new TypedDocumentString(`
     query DiscountRegistryPage($options: DiscountRegistryListOptions) {

@@ -13,12 +13,6 @@ describe('default roles: check permissions (#237)', () => {
         }
     });
 
-    it('only leadership and the portal admin approve below the floor, on top of the discount approval', () => {
-        const holders = DEFAULT_ROLES.filter(r => r.permissions.includes('ApproveBelowFloorPrice'));
-        expect(holders.map(r => r.code).sort()).toEqual(['general-director', 'portal-admin']);
-        for (const role of holders) expect(role.permissions).toContain('ApproveDiscountRequest');
-    });
-
     it('only leadership and the portal admin manage discount limits', () => {
         const managers = DEFAULT_ROLES.filter(r => r.permissions.includes('ManageDiscountLimits'));
         expect(managers.map(r => r.code).sort()).toEqual(['general-director', 'portal-admin']);

@@ -76,10 +76,6 @@ function buildService(): OrderLineDiscountService {
         lineEdit as never,
         { findOne: async () => ({ lines: [] }) } as never,
         discounts as never,
-        {
-            ceilingsForProducts: async () => new Map([['p1', null]]),
-            actorAdministratorId: async () => '7',
-        } as never,
     );
 }
 

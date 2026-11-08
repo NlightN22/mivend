@@ -19,7 +19,7 @@ function discount(over: Partial<LineDiscount>): LineDiscount {
     };
 }
 
-function build(states: LineDiscount[], ceiling: number | null = null) {
+function build(states: LineDiscount[]) {
     const line = { id: 1, customFields: {}, productVariant: { sku: 'A' } };
     const lineEdit = {
         edit: vi.fn(
@@ -42,10 +42,6 @@ function build(states: LineDiscount[], ceiling: number | null = null) {
         lineEdit as never,
         { findOne: vi.fn(async () => ({ lines: [line] })) } as never,
         lineDiscounts as never,
-        {
-            ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])),
-            actorAdministratorId: vi.fn(async () => '7'),
-        } as never,
     );
     return { service, lineEdit, line };
 }
@@ -97,33 +93,9 @@ describe('OrderLineDiscountService.revert', () => {
         expect(lineEdit.persist).not.toHaveBeenCalled();
     });
 
-    it('clears the manual price when the automatic price gives no more discount', async () => {
-        const { service, line } = build([
-            discount({ effective: 80 }),
-            discount({ effective: 90, manual: false }),
-        ]);
+    it('always clears the manual price, even when the automatic discount is deeper', async () => {
+        const { service, line } = build([discount({ effective: 80 })]);
         await service.revert(ctx, 'o', '1');
         expect(line.customFields).toEqual({ manualUnitPrice: null, manualPriceReason: null });
-    });
-
-    it('refuses a bigger automatic discount when no limit is set', async () => {
-        const { service } = build([
-            discount({ effective: 80 }),
-            discount({ effective: 60, manual: false }),
-        ]);
-        await expect(service.revert(ctx, 'o', '1')).rejects.toBeInstanceOf(UserInputError);
-    });
-
-    it('allows a bigger automatic discount inside the limit and refuses it outside', async () => {
-        const inside = build(
-            [discount({ effective: 80 }), discount({ effective: 70, manual: false })],
-            30,
-        );
-        await expect(inside.service.revert(ctx, 'o', '1')).resolves.toBeUndefined();
-        const outside = build(
-            [discount({ effective: 80 }), discount({ effective: 60, manual: false })],
-            30,
-        );
-        await expect(outside.service.revert(ctx, 'o', '1')).rejects.toBeInstanceOf(UserInputError);
     });
 });

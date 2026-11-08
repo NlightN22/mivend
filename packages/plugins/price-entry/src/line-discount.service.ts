@@ -96,17 +96,28 @@ export class LineDiscountService {
         return customerPrice ?? line.productVariant.listPrice;
     }
 
-    // Whether automatic rules give this line a discount right now, whether or not a manual price replaces it.
-    async hasAutomaticDiscount(ctx: RequestContext, orderId: ID, lineId: ID): Promise<boolean> {
-        const order = await this.orderService.findOne(ctx, orderId, LINE_DISCOUNT_RELATIONS);
-        const line = order?.lines.find(l => String(l.id) === String(lineId));
-        if (!order || !line) return false;
-        if (!isManualPrice(line)) return effectiveUnitPrice(line) < line.listPrice;
-        const reference = (await this.forOrder(ctx, order)).find(
-            d => d.lineId === String(lineId),
-        )?.reference;
-        const automatic = await this.automaticPrice(ctx, order, line);
-        return reference !== undefined && automatic !== null && automatic < reference;
+    // Lines whose discount a manual-discount limit judges: a purely automatic discount is not the employee's to limit,
+    // and neither is a manual price that is not deeper than what the automatic rules give.
+    async limitApplies(
+        ctx: RequestContext,
+        orderId: ID,
+        discounts: LineDiscount[],
+    ): Promise<Set<string>> {
+        const applies = new Set<string>();
+        const manual = discounts.filter(d => d.manual);
+        const order = manual.length
+            ? await this.orderService.findOne(ctx, orderId, LINE_DISCOUNT_RELATIONS)
+            : undefined;
+        for (const d of discounts) {
+            if (!d.manual) {
+                if (!((d.percent ?? 0) > 0)) applies.add(d.lineId);
+                continue;
+            }
+            const line = order?.lines.find(l => String(l.id) === d.lineId);
+            const automatic = order && line ? await this.automaticPrice(ctx, order, line) : null;
+            if (automatic === null || d.effective < automatic) applies.add(d.lineId);
+        }
+        return applies;
     }
 
     // The unit price automatic rules would give the line right now, order-dependent rules included.

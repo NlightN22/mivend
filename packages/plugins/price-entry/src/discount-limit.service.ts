@@ -79,13 +79,13 @@ export class DiscountLimitService {
         });
     }
 
-    // Ceiling per product ERP id for one employee; null (no limit) when no row of theirs covers the product.
+    // Manual-discount ceiling per product ERP id for one employee; 0 when no row of theirs covers the product.
     async ceilingsForProducts(
         ctx: RequestContext,
         administratorId: string | null,
         productErpIds: string[],
-    ): Promise<Map<string, number | null>> {
-        const ceilings = new Map<string, number | null>(productErpIds.map(id => [id, null]));
+    ): Promise<Map<string, number>> {
+        const ceilings = new Map<string, number>(productErpIds.map(id => [id, 0]));
         if (!administratorId || productErpIds.length === 0) return ceilings;
         const rows = await this.connection
             .getRepository(ctx, DiscountLimit)
