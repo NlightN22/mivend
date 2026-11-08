@@ -70,6 +70,7 @@ import { ProductPhotosDashboardPlugin } from './product-photos-dashboard.plugin'
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { ConsistencyReportsDashboardPlugin } from './consistency-reports-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
+import { TwoFactorSignInDashboardPlugin } from './two-factor-sign-in-dashboard.plugin';
 import { consistencySourcesFromEnv } from './consistency-sources';
 import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
 
@@ -601,6 +602,8 @@ export const config: VendureConfig = {
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         ConsistencyReportsDashboardPlugin,
         RoleProvisioningDashboardPlugin,
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
+        TwoFactorSignInDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
         AccessControlPlugin.init({
             branchNames,

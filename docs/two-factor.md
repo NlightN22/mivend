@@ -50,7 +50,8 @@ No session is created until password and code have both been checked:
 
 1. The stock `native` authentication strategy is wrapped (same name). A correct password alone for an account that
    needs a second step returns `InvalidCredentialsError` with `authenticationError: "TWO_FACTOR_REQUIRED"`. This closes
-   the `login` and `authenticate({ native })` mutations of both APIs, and so the Vendure Dashboard form.
+   the `login` and `authenticate({ native })` mutations of both APIs. The password is never split into password and code:
+   the code is taken only by the `twoFactor` strategy.
 2. `startTwoFactorSignIn(username, password)` checks the password and returns a short-lived challenge, never a session.
    The challenge is a random token stored only as a SHA-256 hash, valid 5 minutes (10 for the enrolment stage), bound to
    one account and one API (shop or admin).
@@ -172,13 +173,25 @@ the existing manager set-password call, which never signed anyone in.
 
 ### Dashboard
 
-The Dashboard form has one password field and calls `login`. For administrators, `login` on the admin API also accepts
-`"<password> <code>"` (a single space before the six digits), checks both together and opens a session only when both are
-right; a wrong code gives `TWO_FACTOR_INVALID_CODE`, the Dashboard shows its generic invalid-credentials message. This
-works only for administrators who already have a factor and only on the admin API. An administrator without a factor
-must first enrol through the manager portal (or any client built on this contract). A purpose-built second step in the
-Dashboard login page is possible with a `defineDashboardExtension({ login: { beforeForm } })` component that runs the
-flow above and stores the returned bearer token; it is not built. Until it is, the inline form is the supported path.
+The Dashboard (`@vendure/dashboard`, a separate React app) has the same two-step sign-in as the portals. Its login
+extension points (`beforeForm`, `afterForm`, `logo`) can only add a component inside the stock form; they cannot replace
+the form or intercept its submit, and the stock form calls `login` with one password field. So the extension
+`apps/server/src/dashboard/two-factor-sign-in` renders a full-page sign-in over the login page (through a portal) and
+hides the stock form. It drives the contract above with the Dashboard's own `api` client, which stores the returned
+`vendure-auth-token` in the place the Dashboard reads its session from, and then reloads the page to the `redirect`
+target (same-origin paths only), so the Dashboard boots with a normal session.
+
+- Password, then `startTwoFactorSignIn`. `VERIFY`: the code step. `ENROL`: the forced enrolment screen (QR code, manual
+  key, authenticator app links from `packages/ui-kit/src/data/authenticatorApps.ts`), and the first valid code signs in.
+  `NONE` (obligation off, no factor): the normal `login`.
+- "I lost access to the app" sends the recovery request at once and shows the masked address. The link opens on the
+  manager portal (administrators), where the password is asked and the device replaced; the Dashboard has no reset page.
+- The states are `createSignInFlow` (`two-factor-sign-in-flow.ts`): plain TypeScript with the same steps and error
+  mapping as the ui-kit `useTwoFactorSignIn`, unit-tested; the React files only render it. Strings are Russian when
+  the browser language starts with `ru`, English otherwise.
+- The old `"<password> <code>"` login form was removed: the new flow does not need it, and it was a second password
+  check per attempt and ambiguous for passwords ending in a space and six digits. A script that needs a session uses
+  `startTwoFactorSignIn` and `authenticate({ twoFactor })`.
 
 ## Storage, encryption, audit
 

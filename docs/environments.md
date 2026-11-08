@@ -479,8 +479,9 @@ password keep working. An account that has enrolled a device is always asked for
 `TWO_FACTOR_ENCRYPTION_KEY` (optional, 64 hex characters) is the AES-256-GCM key for stored secrets; unset, it is derived
 from `COOKIE_SECRET`, so rotating `COOKIE_SECRET` without the dedicated key makes every stored secret unreadable. Both
 variables are in the three `apps/server/.env.*.example` files, in `x-server-env` of `infrastructure/docker/docker-compose.yml`
-(defaults `false` and empty) and in `.env.production.example`. Contract, recovery and the operational reset script:
-docs/two-factor.md.
+(defaults `false` and empty) and in `.env.production.example`. The Vendure Dashboard asks for the code the same way (its
+login page is replaced by an extension, so a Dashboard dev server must be restarted to pick it up). Contract, recovery and the
+operational reset script: docs/two-factor.md.
 
 ## Session lifetime and cap
 
