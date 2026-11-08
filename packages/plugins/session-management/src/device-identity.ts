@@ -46,7 +46,10 @@ export function deviceCookieMiddleware(secure: boolean) {
         issued.set(req, id);
         const writeHead = res.writeHead.bind(res) as (...args: unknown[]) => Response;
         res.writeHead = ((...args: unknown[]) => {
-            if (!res.headersSent && sessionCookieWillBeWritten(req.session)) {
+            if (
+                !res.headersSent &&
+                sessionCookieWillBeWritten((req as Request & { session?: unknown }).session)
+            ) {
                 const flags = `Max-Age=${COOKIE_MAX_AGE_MS / 1000}; Path=/; HttpOnly; SameSite=Lax`;
                 const device = `${DEVICE_COOKIE}=${id}; ${flags}${secure || req.secure ? '; Secure' : ''}`;
                 const existing = res.getHeader('Set-Cookie');
