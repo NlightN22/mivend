@@ -1,5 +1,5 @@
 import type { Client } from 'pg';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { withBootstrapLock } from '../../bootstrap-lock';
 
@@ -15,6 +15,10 @@ function fakeClient(...attempts: boolean[]) {
 }
 
 describe('withBootstrapLock', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('runs the work under the lock and closes the connection', async () => {
         const { client, query } = fakeClient(true);
         await expect(
