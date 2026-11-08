@@ -73,34 +73,39 @@ One page, no tabs, top to bottom:
    the days since the oldest overdue lot, in the danger tone). The overdue figure is the same FIFO
    aging the customer portal shows, read through `counterpartyOverdue` (needs the counterparty
    credit right and the counterparty in the caller's scope); without the right it is not shown.
-3. **Lines table.** Product (image, name, SKU), Qty, Available, Reserve (display only), Price,
-   Discount (read only), Total. A problem is shown in the cell where it occurs; a stripe on the
-   row's left edge shows the worst one (red block or hold, orange approval needed, yellow warn,
-   green clean). Tones come from the check's policy consequence, so branch overrides apply.
-   A flagged cell shows its plain value and a small icon button, no status text; clicking the icon
-   or the cell opens a popover with that cell's findings and consequences; Confirm (hidden when the
-   order cannot be confirmed) opens the order confirmation, Reject opens the cancel dialog. The
-   popover also carries what used to be separate panels: the failed automatic reserve (reason, the
-   SKU detail, time, what to do) in the Reserve cell of the line it names, quantity cut for lack of
-   stock in the Available cell of its line, a pending price approval in the Price cell, a discount
-   over the employee's limit in the Discount cell, a contract the buyer lacks in the Available
-   cell and next to the contract select. A mark by the total carries findings about the order
-   itself (credit, and cut or failure notes naming no remaining line). Nothing is repeated in a
-   panel above the table.
-4. **Positions.** "Add position" finds a product by article only (exact SKU on the server) and
-   adds it through the order-edit path (lock, edit guard, on-edit checks). Delete is a row-menu
-   entry or a selection mode with a checkbox column and a bulk bar, always behind a confirm
-   dialog. Edits are offered only while the order is not yet sent to the ERP and not terminal.
-   The selection state lives in `useRowSelection` so a long-press entry on a phone can reuse it.
-5. **Totals footer.** Positions, weight and volume (from the product unit data, hidden when
-   unknown), discount in money (reference price minus effective price over lines; a surcharge
-   line subtracts nothing), ERP paid amount, the expected retro bonus (only when the column below is
-   shown) and the order total.
+3. **Lines table.** Built from the ui-kit document lines kit (`MvDocumentLines`, see `docs/ui-standards.md`,
+   "Document lines kit"). Header row in the style of the orders list; value cells and their column labels are
+   left-aligned, so the flag icon after a value never makes the alignment look broken. Columns: Product (image, name,
+   SKU), Qty, Available, Reserve (display only), Price, Discount (read only), Retro bonus (conditional), Total. A
+   problem is shown in the cell where it occurs; a stripe on the row's left edge shows the worst one (red block or
+   hold, orange approval needed, yellow warn, green clean). Tones come from the check's policy consequence, so branch
+   overrides apply. A flagged cell shows its plain value and a small icon button, no status text. On desktop, hovering
+   or focusing the icon shows a styled tooltip with the same findings and consequence; clicking opens the popover
+   with them plus Confirm (hidden when the order cannot be confirmed) and Reject (opens the cancel dialog). On a
+   phone the tap opens the popover as a bottom sheet. The popover also carries what used to be separate panels: the
+   failed automatic reserve (reason, the SKU detail, time, what to do) in the Reserve cell of the line it names,
+   quantity cut for lack of stock in the Available cell of its line, a pending price approval in the Price cell, a
+   discount over the employee's limit in the Discount cell, a contract the buyer lacks in the Available cell and next
+   to the contract select. A mark by the total carries findings about the order itself (credit, and cut or failure
+   notes naming no remaining line). Nothing is repeated in a panel above the table.
+4. **Toolbar and positions.** The toolbar above the table follows the orders list: the title with the position count
+   on the left; on the right a compact "Add by article" input (typeahead, exact SKU on the server, added through the
+   order-edit path: lock, edit guard, on-edit checks) and a ghost "Select" toggle. In selection mode a bulk bar
+   replaces the toolbar contents: "N selected", "Delete N", "Cancel". Delete is also a row-menu entry, always behind a
+   confirm dialog. Edits are offered only while the order is not yet sent to the ERP and not terminal. The
+   selection state lives in `useLineSelection` (ui-kit) so a long-press entry on a phone can reuse it. The toolbar
+   wraps on a phone.
+5. **Totals block.** Right-aligned stacked rows under the table (label left, value right; full width on a phone):
+   Positions, Weight total and Volume total (always shown; the known lines are summed and a muted "n positions
+   without data" says how many have no unit data), Subtotal, Discount total in money (reference price minus effective
+   price over lines; a surcharge line subtracts nothing), Retro bonus total in money (only when the column below is
+   shown), Delivery, Paid in ERP (a lower bound, only when known) and the emphasised order Total. Financial
+   findings belong to the total and keep their mark on the Total row.
 
    **Retro bonus column.** When the order's counterparty has at least one active retro-bonus rule,
    the lines table gets a "Retro bonus" column after Discount: the percent that covers the line and,
-   for a rule without a threshold, that percent of the line total; the footer adds the expected total.
-   With no active rule the column and the footer figure are absent. Coverage is evaluated from the
+   for a rule without a threshold, that percent of the line total; the totals block adds the expected total.
+   With no active rule the column and the totals figure are absent. Coverage is evaluated from the
    rule's explicit product list or its all-products flag; a rule whose product selection is an
    ERP-evaluated filter (empty member list) cannot be evaluated here and shows nothing for its lines,
    and a rule with a threshold shows the percent without an amount. When several rules cover a line

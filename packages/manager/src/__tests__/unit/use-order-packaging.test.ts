@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { useOrderPackaging } from '../../composables/useOrderPackaging';
+import { packagingGaps, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 describe('useOrderPackaging', () => {
     it('sums weight/volume per piece across lines with a packaging unit', () => {
@@ -38,5 +38,23 @@ describe('useOrderPackaging', () => {
 
     it('returns zero totals for an empty order', () => {
         expect(useOrderPackaging([])).toEqual({ totalWeightKg: 0, totalVolumeM3: 0 });
+    });
+});
+
+describe('packagingGaps', () => {
+    const line = (ratio: number | null, weight: number | null, volume: number | null) => ({
+        quantity: 1,
+        productVariant: {
+            customFields: { unitRatioToBase: ratio, unitWeightKg: weight, unitVolumeM3: volume },
+        },
+    });
+
+    it('counts lines with no data per measure', () => {
+        expect(
+            packagingGaps([line(1, 2, 3), line(null, 2, 3), line(1, null, 3), line(1, 2, null)]),
+        ).toEqual({
+            weight: 2,
+            volume: 2,
+        });
     });
 });

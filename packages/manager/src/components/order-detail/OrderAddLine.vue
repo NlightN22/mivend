@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { IconPlus } from '@tabler/icons-vue';
-import { MvButton, MvInput } from '@mivend/ui-kit';
+import { MvInput } from '@mivend/ui-kit';
 import type { SkuMatch } from '../../api/orderLineEdit';
 
 defineProps<{ matches: SkuMatch[]; busy: boolean }>();
 const emit = defineEmits<{ search: [query: string]; add: [sku: string] }>();
 
-const open = ref(false);
 const value = ref('');
 
 function update(next: string | number): void {
@@ -18,53 +16,39 @@ function update(next: string | number): void {
 function choose(sku: string): void {
     emit('add', sku);
     value.value = '';
-    open.value = false;
 }
 </script>
 
 <template>
-    <div class="add-line">
-        <MvButton v-if="!open" variant="secondary" size="sm" @click="open = true">
-            <IconPlus :size="16" /> Add position
-        </MvButton>
-        <div v-else class="add-line__form">
-            <MvInput
-                size="sm"
-                :model-value="value"
-                placeholder="Article (SKU)"
-                aria-label="Article (SKU)"
-                @update:model-value="update"
-                @keydown.enter="value.trim() && choose(value.trim())"
-            />
-            <MvButton variant="secondary" size="sm" @click="open = false">Close</MvButton>
-            <ul v-if="matches.length" class="add-line__matches" role="listbox">
-                <li v-for="m in matches" :key="m.id">
-                    <button
-                        type="button"
-                        class="add-line__match"
-                        :disabled="busy"
-                        @click="choose(m.sku)"
-                    >
-                        <strong>{{ m.sku }}</strong> {{ m.name }}
-                    </button>
-                </li>
-            </ul>
-        </div>
+    <div class="add-line" data-testid="order-add-line">
+        <MvInput
+            size="sm"
+            :model-value="value"
+            :disabled="busy"
+            placeholder="Add by article"
+            aria-label="Add by article (SKU)"
+            @update:model-value="update"
+            @keydown.enter="value.trim() && choose(value.trim())"
+        />
+        <ul v-if="matches.length" class="add-line__matches" role="listbox">
+            <li v-for="m in matches" :key="m.id">
+                <button
+                    type="button"
+                    class="add-line__match"
+                    :disabled="busy"
+                    @click="choose(m.sku)"
+                >
+                    <strong>{{ m.sku }}</strong> {{ m.name }}
+                </button>
+            </li>
+        </ul>
     </div>
 </template>
 
 <style scoped>
 .add-line {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.add-line__form {
-    position: relative;
-    display: flex;
-    gap: 8px;
+    width: 240px;
 }
 
 .add-line__matches {
@@ -79,6 +63,7 @@ function choose(sku: string): void {
     background: var(--app-surface);
     border: 1px solid var(--app-nav-border-strong);
     border-radius: var(--app-radius-sm, 8px);
+    box-shadow: 0 8px 24px var(--app-ink-14);
 }
 
 .add-line__match {
@@ -94,5 +79,11 @@ function choose(sku: string): void {
 
 .add-line__match:hover {
     background: var(--app-row-hover);
+}
+
+@media (max-width: 800px) {
+    .add-line {
+        width: 100%;
+    }
 }
 </style>

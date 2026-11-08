@@ -19,10 +19,10 @@ test('order detail shows the header fields, the customer summary, the lines tabl
         await expect(fields).toContainText(label);
     }
     await expect(page.getByTestId('order-customer-summary')).toContainText('Credit limit');
-    await expect(page.locator('.order-lines thead')).toContainText('Available');
-    await expect(page.locator('.order-lines thead')).toContainText('Discount');
-    await expect(page.locator('.order-lines thead')).toContainText('Reserve');
-    await expect(page.getByTestId('order-totals-positions')).toContainText('position');
+    await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Available');
+    await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Discount');
+    await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Reserve');
+    await expect(page.getByTestId('doc-total-positions')).toContainText('Positions');
     await expect(page.getByText('E2E Co').first()).toBeVisible();
 
     for (const removed of ['Order context', 'Order controls', 'Approvals for this order']) {
@@ -163,8 +163,7 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         page,
     }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
-        await page.getByLabel('Article (SKU)').fill(SKU);
+        await page.getByLabel('Add by article (SKU)').fill(SKU, { timeout: 15000 });
         await page.getByRole('button', { name: new RegExp(SKU) }).click();
 
         const row = page.getByTestId(`order-line-${SKU}`);
@@ -181,15 +180,14 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
 
     test('selected positions are deleted in bulk with a confirmation', async ({ page }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
-        await page.getByLabel('Article (SKU)').fill(SKU);
+        await page.getByLabel('Add by article (SKU)').fill(SKU, { timeout: 15000 });
         await page.getByRole('button', { name: new RegExp(SKU) }).click();
         const row = page.getByTestId(`order-line-${SKU}`);
         await expect(row).toBeVisible();
 
-        await page.getByRole('button', { name: 'Select positions' }).click();
+        await page.getByRole('button', { name: 'Select', exact: true }).click();
         await row.getByRole('checkbox').check();
-        await page.getByRole('button', { name: /^Delete 1 position/ }).click();
+        await page.getByRole('button', { name: 'Delete 1', exact: true }).click();
         await page
             .getByRole('dialog')
             .getByRole('button', { name: /^Delete 1 position/ })

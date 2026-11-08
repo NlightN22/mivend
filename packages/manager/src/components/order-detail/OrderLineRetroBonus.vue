@@ -18,7 +18,7 @@ defineProps<{ bonus: LineBonus | null; money: (amount: number) => string }>();
 .line-bonus {
     display: inline-flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
 }
 
 .line-bonus__amount {

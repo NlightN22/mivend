@@ -35,14 +35,31 @@ export function useOrderPackaging(lines: PackagingLine[]): OrderPackagingTotals 
     };
 }
 
-function formatVolumeM3(volumeM3: number): string {
-    return volumeM3 < 0.001 ? '< 0.001 m³' : `${volumeM3.toFixed(3)} m³`;
+export interface PackagingGaps {
+    weight: number;
+    volume: number;
 }
 
-// Unknown volume is summed as 0, so it is left out rather than shown as a misleading "0.000".
-export function formatPackaging(totals: OrderPackagingTotals): string | null {
-    const { totalWeightKg, totalVolumeM3 } = totals;
-    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
-    const weight = `${totalWeightKg.toFixed(1)} kg`;
-    return totalVolumeM3 > 0 ? `${weight} · ${formatVolumeM3(totalVolumeM3)}` : weight;
+// Lines that contribute nothing to a total because the product has no unit data for it.
+export function packagingGaps(lines: PackagingLine[]): PackagingGaps {
+    const missing = (value: number | null, ratio: number | null): boolean =>
+        !ratio || value == null;
+    return {
+        weight: lines.filter(l => {
+            const cf = l.productVariant.customFields;
+            return missing(cf.unitWeightKg, cf.unitRatioToBase);
+        }).length,
+        volume: lines.filter(l => {
+            const cf = l.productVariant.customFields;
+            return missing(cf.unitVolumeM3, cf.unitRatioToBase);
+        }).length,
+    };
+}
+
+export function formatWeightKg(weightKg: number): string {
+    return `${weightKg.toFixed(1)} kg`;
+}
+
+export function formatVolumeM3(volumeM3: number): string {
+    return volumeM3 > 0 && volumeM3 < 0.001 ? '< 0.001 m³' : `${volumeM3.toFixed(3)} m³`;
 }

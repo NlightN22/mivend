@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel } from '@mivend/ui-kit';
+import { MvDocumentCell, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { NON_EDITABLE_ORDER_STATES } from '../../api/orderDetail';
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
@@ -14,10 +14,10 @@ import { useOrderRetroBonus } from '../../composables/useOrderRetroBonus';
 import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { useReservationActions } from '../../composables/useReservationActions';
 import { contractBlockedSkus } from '../../utils/orderLineChecks';
+import { toDocFlag } from '../../utils/orderDocFlags';
 import { orderLevelProblem } from '../../utils/orderLineProblems';
 import { orderNotes, type PanelNotes } from '../../utils/orderPanelNotes';
 import OrderApprovalsPanel from '../../components/order-detail/OrderApprovalsPanel.vue';
-import OrderCell from '../../components/order-detail/OrderCell.vue';
 import OrderCustomerSummary from '../../components/order-detail/OrderCustomerSummary.vue';
 import OrderHeader from '../../components/order-detail/OrderHeader.vue';
 import OrderHistory from '../../components/order-detail/OrderHistory.vue';
@@ -95,6 +95,21 @@ const orderProblem = computed(() =>
     ),
 );
 
+const orderFlag = computed(() =>
+    orderProblem.value
+        ? toDocFlag(orderProblem.value, {
+              consequences: consequences.value,
+              canConfirm: commands.canConfirm.value,
+              canReject: commands.canCancel.value,
+          })
+        : null,
+);
+
+function onTotalFlagAction(action: string): void {
+    if (action === 'confirm') commands.confirmOpen.value = true;
+    else commands.cancelOpen.value = true;
+}
+
 watch([orderId, reservations], () => {
     if (orderId.value && canSeeChecks.value) void checks.load();
 });
@@ -129,7 +144,7 @@ watch([orderId, reservations], () => {
             :overdue="kpiData.overdue.value"
         />
 
-        <MvPanel title="Order lines">
+        <MvPanel>
             <OrderLinesTable
                 :order-id="order.id"
                 :edit="edit"
@@ -149,23 +164,22 @@ watch([orderId, reservations], () => {
                 @adjusted="data.reload"
                 @confirm="commands.confirmOpen.value = true"
                 @reject="commands.cancelOpen.value = true"
-            />
-            <OrderLinesTotals
-                :order="order"
-                :retro-total="retro.shown.value ? retro.total.value : null"
             >
-                <template #flag>
-                    <OrderCell
-                        v-if="orderProblem"
-                        :problem="orderProblem"
-                        :consequences="consequences"
-                        :can-confirm="commands.canConfirm.value"
-                        :can-reject="commands.canCancel.value"
-                        @confirm="commands.confirmOpen.value = true"
-                        @reject="commands.cancelOpen.value = true"
-                    />
+                <template #totals>
+                    <OrderLinesTotals
+                        :order="order"
+                        :retro-total="retro.shown.value ? retro.total.value : null"
+                    >
+                        <template #flag>
+                            <MvDocumentCell
+                                v-if="orderFlag"
+                                :flag="orderFlag"
+                                @action="onTotalFlagAction"
+                            />
+                        </template>
+                    </OrderLinesTotals>
                 </template>
-            </OrderLinesTotals>
+            </OrderLinesTable>
         </MvPanel>
 
         <div class="order-detail__below">
