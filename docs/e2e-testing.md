@@ -227,8 +227,8 @@ counterparties carry `departmentId: 'dept-sales'` and get their branch from `Bra
 The database, and with it every session, is dropped after the run, so there is no session teardown.
 Browser specs reuse the `storageState` session; Admin API calls take their token from `adminTokenFor()`
 (`helpers/api-tokens.ts`): one session per account for the whole run. Only specs that test login or ending
-sessions log in themselves. The server caps active sessions per user (`SESSION_MAX_ACTIVE_PER_USER`, default
-20): more than ~20 logins of one account inside a run would end the oldest, i.e. the stored `storageState` one.
+sessions log in themselves. The server caps active sessions per user (`SESSION_MAX_ACTIVE_CUSTOMER`/`SESSION_MAX_ACTIVE_STAFF`, `20`
+in the local examples): more than ~20 logins of one account inside a run would end the oldest, i.e. the stored `storageState` one.
 The `mivend-e2e` user agent mark (`helpers/user-agent.ts`) stays: the session specs and the staging suite's
 teardown use it.
 

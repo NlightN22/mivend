@@ -31,6 +31,33 @@ wrong layer — move it.
 
 ---
 
+## Session policy (#335)
+
+Layer 1 (who is making the request) is bounded in time and in number, for every account type:
+
+- **Daily reset.** With `SESSION_DAILY_RESET_ENABLED=true` the `session-daily-reset` scheduled task ends every
+  customer and staff session created before the latest `SESSION_DAILY_RESET_HOUR`:00 in `SESSION_DAILY_RESET_TIME_ZONE`
+  (default 3 and `UTC`; production sets the business zone). The cut-off instant is derived from the zone on each run
+  (DST-correct), so the task is stateless and idempotent: a missed run is caught up by the next one, and a session
+  created after the instant is never touched. "Remember me" cannot outlive it, because the server-side session is ended.
+- **Concurrent sessions.** At most `SESSION_MAX_ACTIVE_CUSTOMER` (default 2: a PC and a phone) per customer and
+  `SESSION_MAX_ACTIVE_STAFF` (default 3: portal and Dashboard on a workstation plus a second device) per administrator.
+  A sign-in beyond the cap ends the oldest session; the newest, the one being created, is never ended. Enforcement runs
+  under a per-user advisory lock, so parallel sign-ins cannot leave more than the cap.
+- **Excluded from both rules, deliberately:** acting-as-customer sessions (they live and end by the acting rules, see
+  the acting-session plugin) and API-key sessions (`authenticationStrategy = 'api-key'`, their own key lifetime).
+  Anonymous cart sessions are not authenticated sessions and are untouched.
+- **After an end** the token is invalid, so the next request is simply unauthenticated: the same path as an expired
+  session (the portals' route guards send the user to the sign-in page). Another server process may still accept the
+  token until its in-memory session cache entry expires (`sessionCacheTTL`, 300 s).
+- **New-device e-mail.** Each sign-in is matched against `known_device` (per user, a hash of a random id cookie that
+  the API sets on the first request of a browser; without a request, a hash of browser family and OS). An unseen
+  device sends the `new-device-sign-in` e-mail (ru and en) to the account owner; the first device ever seen for an
+  account is registered silently. The user can turn it off (`setNewDeviceEmail`; storefront notification settings,
+  manager portal security page). There is no IP-based suspicion or blocking.
+- **Deactivation.** Customer portal deactivation and administrator deactivation both go through Vendure's
+  `softDelete`, which deletes every session of the user (acting ones included); a tripwire test pins that chain.
+
 ## Layer 2: `Permission` — action only, never scope
 
 **Rule: a `Permission` name encodes _what_ a role can do, never _which records_.**

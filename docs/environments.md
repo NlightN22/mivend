@@ -489,13 +489,19 @@ operational reset script: docs/two-factor.md.
 `SESSION_DURATION` (default `30d`, Vendure's own default is one year) is the server-side session
 lifetime; Vendure extends it on activity. A "remember me" cookie still lives one year (hardcoded
 in Vendure), but the token it carries stops working once the session expires.
-`SESSION_MAX_ACTIVE_PER_USER` (default `20`) caps active sessions per user: each login ends the
-user's oldest ones beyond it. The hourly `session-cleanup` task deletes expired and ended sessions.
-Ended sessions are only listed nowhere (`mySessions` shows active ones) and nothing references the
-`session` table, so deleting them loses no history. The session cache is in-process (Vendure's
-default, no Redis): another server process may accept an ended token until its cache entry
-expires (`sessionCacheTTL`, 300 s). The cap applies to every account; raise it on a contour where
-many tools share one login.
+`SESSION_MAX_ACTIVE_CUSTOMER` (default `2`) and `SESSION_MAX_ACTIVE_STAFF` (default `3`) cap active sessions per
+customer and per administrator: a sign-in beyond the cap ends the user's oldest session. The local `.env` examples
+use `20` because e2e specs share one login; production uses the defaults. `SESSION_DAILY_RESET_ENABLED` (default
+`false`; `true` in `.env.production.example`), `SESSION_DAILY_RESET_HOUR` (0-23, default `3`) and
+`SESSION_DAILY_RESET_TIME_ZONE` (IANA name, default `UTC`, the release owner sets the business zone per contour) turn
+on the `session-daily-reset` task, which ends every customer and staff session created before the latest reset hour;
+acting and API-key sessions are excluded. A bad hour or zone fails boot. The hourly `session-cleanup` task deletes
+expired and ended sessions. Ended sessions are only listed nowhere (`mySessions` shows active ones) and nothing
+references the `session` table, so deleting them loses no history. The session cache is in-process (Vendure's
+default, no Redis): another server process may accept an ended token until its cache entry expires
+(`sessionCacheTTL`, 300 s). The new-device sign-in e-mail needs no variable; policy details: docs/access-control.md
+"Session policy". All five variables are in the three `apps/server/.env.*.example` files, in `x-server-env` of
+`infrastructure/docker/docker-compose.yml` and in `infrastructure/docker/.env.production.example`.
 
 ## CORS and CSRF prevention (#331)
 
