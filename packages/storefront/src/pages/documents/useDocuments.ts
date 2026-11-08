@@ -15,7 +15,7 @@ export interface MyDocumentsOptions {
 }
 
 function downloadUrlOf(doc: DocumentSummary): string | null {
-    return doc.fileUrl ?? doc.pdfUrl ?? null;
+    return doc.fileUrl ?? (doc.pdfUrl ? `${doc.pdfUrl}?download=1` : null);
 }
 
 export const DOCUMENT_TYPES = ['proforma-invoice', 'contract', 'return', 'reconciliation'];

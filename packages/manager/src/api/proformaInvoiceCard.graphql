@@ -1,0 +1,59 @@
+fragment ProformaCardVersionFields on ProformaInvoice {
+    id
+    number
+    version
+    kind
+    displayStatus
+    amount
+    issuedAt
+    lines {
+        quantity
+        linePriceWithTax
+        discountAmount
+        productVariant {
+            name
+            sku
+        }
+    }
+}
+
+query ProformaInvoiceCard($id: ID!) {
+    proformaInvoice(id: $id) {
+        ...ProformaCardVersionFields
+        status
+        orderId
+        counterpartyId
+        counterpartyShortName
+        currencyCode
+        dueDate
+        salesInvoiceNumber
+        contractName
+        order {
+            id
+            code
+        }
+        seller {
+            legalName
+            inn
+            kpp
+        }
+        document {
+            status
+            pdfUrl
+        }
+        lines {
+            unitPriceWithTax
+        }
+        payments {
+            id
+            number
+            createdAt
+            channel
+            paymentStatus
+            amount
+        }
+        versions {
+            ...ProformaCardVersionFields
+        }
+    }
+}

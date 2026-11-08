@@ -173,3 +173,35 @@ describe('proforma branch resolved at read time for department scope (#263, real
         expect(page.items.map(i => i.id)).toEqual([4, 3, 2, 1]);
     });
 });
+
+describe('findOneVisible uses the same read-time scope as the list (real Postgres)', () => {
+    const idOf = async (number: string): Promise<string> => {
+        const [row]: Array<{ id: number }> = await dataSource.query(
+            'SELECT id FROM proforma_invoice WHERE number = $1',
+            [number],
+        );
+        return String(row.id);
+    };
+
+    it('returns a visible proforma with its counterparty short name', async () => {
+        scope = { kind: 'department', branchId: 'branch-b' } as AccessScope;
+        const found = await service.findOneVisible(ctx, await idOf('PI-POINT-B'));
+        expect(found?.number).toBe('PI-POINT-B');
+        expect(found?.counterpartyShortName).toBe('Short a');
+    });
+
+    it('a hidden, unknown and malformed id are all null', async () => {
+        scope = { kind: 'department', branchId: 'branch-b' } as AccessScope;
+        expect(await service.findOneVisible(ctx, await idOf('PI-DEFAULT'))).toBeNull();
+        expect(await service.findOneVisible(ctx, '99999')).toBeNull();
+        expect(await service.findOneVisible(ctx, '1; DROP TABLE x')).toBeNull();
+        expect(await service.findOneVisible(ctx, '99999999999999')).toBeNull();
+    });
+
+    it('all scope sees a contract proforma that has no order', async () => {
+        scope = { kind: 'all' } as AccessScope;
+        expect((await service.findOneVisible(ctx, await idOf('PI-CONTRACT')))?.number).toBe(
+            'PI-CONTRACT',
+        );
+    });
+});

@@ -31,7 +31,13 @@ onMounted(() => void load());
         <p v-if="!proformaInvoices.length" class="pi-empty">No proforma invoices issued yet.</p>
         <div v-for="proformaInvoice in proformaInvoices" :key="proformaInvoice.id" class="pi-row">
             <div class="pi-main">
-                <strong>№ {{ proformaInvoice.number }}</strong>
+                <RouterLink
+                    :to="`/proforma-invoices/${proformaInvoice.id}`"
+                    class="pi-link"
+                    data-testid="proforma-card-link"
+                >
+                    <strong>№ {{ proformaInvoice.number }}</strong>
+                </RouterLink>
                 <MvStatusBadge variant="info">v{{ proformaInvoice.version }}</MvStatusBadge>
                 <MvStatusBadge
                     :variant="
@@ -113,6 +119,10 @@ onMounted(() => void load());
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+}
+.pi-link {
+    color: var(--el-color-primary-dark-2);
+    text-decoration: none;
 }
 .pi-amount {
     margin-left: auto;

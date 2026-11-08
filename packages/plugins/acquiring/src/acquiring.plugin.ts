@@ -38,6 +38,8 @@ import { PaymentEventListener } from './payment-event.listener';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { PaymentRefundService } from './payment-refund.service';
 import { SettlementEntryService } from './settlement-entry.service';
+import { ProformaInvoiceDetailService } from './proforma-invoice-detail.service';
+import { ProformaInvoiceDetailFieldResolver } from './proforma-invoice-detail.resolver';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentVisibilityService } from './payment-visibility.service';
 import { OfflineTermsBootstrapService } from './offline-terms-bootstrap.service';
@@ -112,6 +114,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         PaymentRefundService,
         DisputeService,
         ProformaInvoiceVisibilityService,
+        ProformaInvoiceDetailService,
         PaymentVisibilityService,
         OfflineTermsBootstrapService,
         CashBootstrapService,
@@ -139,6 +142,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
             ProformaInvoiceRequestAdminResolver,
             PaymentAdminResolver,
             AdminProformaInvoiceVisibilityResolver,
+            ProformaInvoiceDetailFieldResolver,
             AdminPaymentVisibilityResolver,
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,

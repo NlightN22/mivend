@@ -13,6 +13,7 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { lineDiscountTotal } from './proforma-invoice-content';
 import { displayStatusOf } from './proforma-invoice-display';
 import { ProformaInvoiceOrderCancelService } from './proforma-invoice-order-cancel.service';
 import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
@@ -183,6 +184,7 @@ interface SnapshotLine {
     quantity: number;
     unitPriceWithTax: number;
     linePriceWithTax: number;
+    discountAmount: number;
 }
 
 @Resolver('ProformaInvoice')
@@ -199,6 +201,7 @@ export class ProformaInvoiceFieldResolver {
             quantity: line.quantity,
             unitPriceWithTax: line.unitPriceWithTax,
             linePriceWithTax: line.linePriceWithTax,
+            discountAmount: lineDiscountTotal(line.discounts ?? []),
         }));
     }
 

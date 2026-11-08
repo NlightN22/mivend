@@ -11,6 +11,8 @@ const LIST = `query($cp: ID!, $search: String) { visibleProformaInvoices(counter
 const FOR_ORDER = `query($id: ID!) { proformaInvoicesForOrder(orderId: $id) { id } }`;
 const BALANCE = `query($cp: ID!) { proformaInvoiceOutstandingBalance(counterpartyId: $cp) { amount } }`;
 const PAYMENTS = `query($cp: ID!) { visiblePayments(counterpartyId: $cp, options: { take: 200 }) { totalItems } }`;
+const DETAIL = `query($id: ID!) { proformaInvoice(id: $id) { id number
+    lines { quantity discountAmount } payments { id number } versions { id version } } }`;
 const WITHDRAW = `mutation($id: ID!) { withdrawProformaInvoice(id: $id) { id status } }`;
 
 type List = { totalItems: number; items: { id: string }[] };
@@ -96,6 +98,13 @@ describe.each(['home', 'moved'] as const)('proformas of a-own, point %s', phase 
             expect(balance.errors).toEqual([]);
             expect(balance.data!.proformaInvoiceOutstandingBalance !== null, 'balance').toBe(shown);
             expect(await paymentTotal(token)).toBe(shown ? payments : 0);
+            const detail = await admin<{ proformaInvoice: { id: string } | null }>(token, DETAIL, {
+                id: samples().issued.id,
+            });
+            expect(detail.errors, 'detail errors').toEqual([]);
+            expect(detail.data!.proformaInvoice?.id ?? null, 'detail').toBe(
+                shown ? samples().issued.id : null,
+            );
             if (shown) return;
             // A cancelled proforma: a withdraw that slipped through would return it unchanged.
             const withdraw = await admin(token, WITHDRAW, { id: samples().cancelled.id });
@@ -103,6 +112,18 @@ describe.each(['home', 'moved'] as const)('proformas of a-own, point %s', phase 
             expect(await proformaStatus(samples().cancelled.number)).toBe('cancelled');
         },
     );
+});
+
+describe('proformaInvoice(id) of an unknown or malformed id', () => {
+    it.each(['999999999', 'abc'])('answers null, not an error, for %s', async id => {
+        const result = await admin<{ proformaInvoice: unknown }>(
+            await staffToken('superadmin'),
+            DETAIL,
+            { id },
+        );
+        expect(result.errors).toEqual([]);
+        expect(result.data!.proformaInvoice).toBeNull();
+    });
 });
 
 async function proformaIds(token: string): Promise<string[]> {

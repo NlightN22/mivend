@@ -97,3 +97,23 @@ export const Loading: Story = {
         template: '<MvDocumentLines title="Lines" :columns="columns" :rows="[]" loading />',
     }),
 };
+
+export const ViewOnly: Story = {
+    render: () => ({
+        components: { MvDocumentLines, MvDocumentTotals },
+        setup: () => ({
+            columns,
+            rows: rows.slice(0, 1),
+            totals: [
+                { key: 'positions', label: 'Positions', value: '1' },
+                { key: 'total', label: 'Total', value: '$20.00', emphasis: true },
+            ],
+        }),
+        template: `<MvDocumentLines title="Lines" :columns="columns" :rows="rows">
+            <template #cell-name="{ row }">{{ row.name }}</template>
+            <template #cell-qty="{ row }">{{ row.qty }}</template>
+            <template #cell-price="{ row }">{{ row.price }}</template>
+            <template #totals><MvDocumentTotals :rows="totals" /></template>
+        </MvDocumentLines>`,
+    }),
+};

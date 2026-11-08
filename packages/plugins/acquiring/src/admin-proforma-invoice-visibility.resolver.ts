@@ -27,6 +27,15 @@ export class AdminProformaInvoiceVisibilityResolver {
 
     @Query()
     @Allow(CustomPermission.ReadProformaInvoice.Permission)
+    proformaInvoice(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<ProformaInvoice | null> {
+        return this.proformaInvoiceVisibilityService.findOneVisible(ctx, args.id);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ReadProformaInvoice.Permission)
     async proformaInvoiceOutstandingBalance(
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: string },

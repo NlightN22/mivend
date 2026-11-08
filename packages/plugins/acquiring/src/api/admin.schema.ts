@@ -19,6 +19,8 @@ export const adminApiExtensions: DocumentNode = gql`
         quantity: Int!
         unitPriceWithTax: Int!
         linePriceWithTax: Int!
+        "Total of the line discounts of the snapshot, positive; linePriceWithTax minus this is the line total."
+        discountAmount: Int!
     }
 
     "Another version of the same proforma invoice (a new version is a new document with its own number)."
@@ -64,6 +66,10 @@ export const adminApiExtensions: DocumentNode = gql`
         order: ProformaInvoiceOrder
         "Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines."
         lines: [ProformaInvoiceLine!]!
+        "Payment attempts applied to this version, newest first; scoped like the proforma invoice itself."
+        payments: [PaymentAttempt!]!
+        "All versions of this document (same order and organization), newest first; the version itself when it has no order."
+        versions: [ProformaInvoice!]!
     }
 
     type ProformaInvoiceList {
@@ -188,6 +194,8 @@ export const adminApiExtensions: DocumentNode = gql`
             options: ProformaInvoiceListOptions
             counterpartyId: ID
         ): ProformaInvoiceList!
+        "One proforma invoice of the manager portal card; null when unknown or outside the caller's scope (same rule as visibleProformaInvoices)."
+        proformaInvoice(id: ID!): ProformaInvoice
         "Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService."
         visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
         "Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency."

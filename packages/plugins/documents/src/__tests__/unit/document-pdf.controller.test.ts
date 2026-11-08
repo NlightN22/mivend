@@ -23,15 +23,15 @@ beforeEach(() => {
 });
 
 describe('DocumentPdfController', () => {
-    it('sends a visible PDF with pdf content type and an attachment name from the number', async () => {
+    it('sends a visible PDF inline by default, with pdf content type and a name from the number', async () => {
         access.findDownloadable.mockResolvedValue(doc);
         storage.read.mockResolvedValue(Buffer.from('%PDF'));
         const res = response();
-        await controller.download(ctx, UUID, res);
+        await controller.download(ctx, UUID, undefined, res);
         expect(res.set).toHaveBeenCalledWith(
             expect.objectContaining({
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename="100-01-1.pdf"',
+                'Content-Disposition': 'inline; filename="100-01-1.pdf"',
                 'Cache-Control': 'private, no-store',
             }),
         );
@@ -39,9 +39,26 @@ describe('DocumentPdfController', () => {
         expect(generator.generateNow).not.toHaveBeenCalled();
     });
 
+    it('forces a file download only for download=1', async () => {
+        access.findDownloadable.mockResolvedValue(doc);
+        storage.read.mockResolvedValue(Buffer.from('%PDF'));
+        const forced = response();
+        await controller.download(ctx, UUID, '1', forced);
+        expect(forced.set).toHaveBeenCalledWith(
+            expect.objectContaining({
+                'Content-Disposition': 'attachment; filename="100-01-1.pdf"',
+            }),
+        );
+        const other = response();
+        await controller.download(ctx, UUID, 'true', other);
+        expect(other.set).toHaveBeenCalledWith(
+            expect.objectContaining({ 'Content-Disposition': 'inline; filename="100-01-1.pdf"' }),
+        );
+    });
+
     it('answers 404 without touching storage when the document is hidden or missing', async () => {
         access.findDownloadable.mockResolvedValue(null);
-        await expect(controller.download(ctx, UUID, response())).rejects.toBeInstanceOf(
+        await expect(controller.download(ctx, UUID, undefined, response())).rejects.toBeInstanceOf(
             NotFoundException,
         );
         expect(storage.read).not.toHaveBeenCalled();
@@ -51,7 +68,7 @@ describe('DocumentPdfController', () => {
         access.findDownloadable.mockResolvedValue(doc);
         storage.read.mockResolvedValueOnce(null).mockResolvedValueOnce(Buffer.from('%PDF'));
         const res = response();
-        await controller.download(ctx, UUID, res);
+        await controller.download(ctx, UUID, undefined, res);
         expect(generator.generateNow).toHaveBeenCalledWith(7);
         expect(res.send).toHaveBeenCalled();
     });
@@ -60,7 +77,7 @@ describe('DocumentPdfController', () => {
         access.findDownloadable.mockResolvedValue(doc);
         storage.read.mockResolvedValue(null);
         generator.generateNow.mockRejectedValue(new Error('browser down'));
-        await expect(controller.download(ctx, UUID, response())).rejects.toBeInstanceOf(
+        await expect(controller.download(ctx, UUID, undefined, response())).rejects.toBeInstanceOf(
             NotFoundException,
         );
     });
@@ -68,7 +85,7 @@ describe('DocumentPdfController', () => {
     it('answers 404 when the render fails to produce a file', async () => {
         access.findDownloadable.mockResolvedValue(doc);
         storage.read.mockResolvedValue(null);
-        await expect(controller.download(ctx, UUID, response())).rejects.toBeInstanceOf(
+        await expect(controller.download(ctx, UUID, undefined, response())).rejects.toBeInstanceOf(
             NotFoundException,
         );
     });

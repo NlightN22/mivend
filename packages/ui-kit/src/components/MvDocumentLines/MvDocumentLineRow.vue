@@ -15,6 +15,7 @@ const props = defineProps<{
     row: R;
     columns: DocColumn[];
     selectable: boolean;
+    actionable: boolean;
     selected: boolean;
     editing: boolean;
     saving: boolean;
@@ -65,7 +66,7 @@ const stripe = computed(() => rowStripe(props.row.flags));
                 <slot :name="`cell-${col.key}`" :row="row" :editing="editing" />
             </MvDocumentCell>
         </td>
-        <td class="doc-row__actions">
+        <td v-if="actionable" class="doc-row__actions">
             <MvDocumentLineActions
                 :editing="editing"
                 :saving="saving"
@@ -80,7 +81,7 @@ const stripe = computed(() => rowStripe(props.row.flags));
         </td>
     </tr>
     <tr v-if="error" class="doc-row__error-row">
-        <td :colspan="columnCount(columns, selectable)" class="doc-row__error">
+        <td :colspan="columnCount(columns, selectable, actionable)" class="doc-row__error">
             {{ error }}
         </td>
     </tr>
