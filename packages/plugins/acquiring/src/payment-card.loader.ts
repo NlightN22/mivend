@@ -52,8 +52,9 @@ export class PaymentCardLoader {
         return this.proformas.load(ctx, proformaInvoiceId);
     }
 
-    order(ctx: RequestContext, orderId: string): Promise<CardOrder | null> {
-        return this.orders.load(ctx, orderId);
+    // Keyed by order and payer: an order of another counterparty resolves to null.
+    order(ctx: RequestContext, orderId: string, counterpartyId: string): Promise<CardOrder | null> {
+        return this.orders.load(ctx, `${orderId}:${counterpartyId}`);
     }
 
     private async loadRefunds(
@@ -108,22 +109,34 @@ export class PaymentCardLoader {
         return keys.map(key => byId.get(key) ?? null);
     }
 
-    // Same channel rule as OrderService.findOne.
+    // Same channel rule as OrderService.findOne; the order's customer must belong to the payer.
     private async loadOrders(
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Array<CardOrder | null>> {
-        const rows = await ctxQuery<Array<CardOrder & { id: number }>>(
+        const parsed = keys.map(key => key.split(':'));
+        const rows = await ctxQuery<Array<CardOrder & { id: number; payerId: string | null }>>(
             this.connection,
             ctx,
             `SELECT o.id, o.code, o.state, o."currencyCode",
-                    o."subTotalWithTax" + o."shippingWithTax" AS "orderTotal"
+                    o."subTotalWithTax" + o."shippingWithTax" AS "orderTotal",
+                    cu."customFieldsCounterpartyid"::text AS "payerId"
              FROM "order" o
              JOIN order_channels_channel oc ON oc."orderId" = o.id AND oc."channelId" = $2
+             LEFT JOIN customer cu ON cu.id = o."customerId"
              WHERE o.id = ANY($1::int[])`,
-            [keys.map(Number), ctx.channelId],
+            [parsed.map(([orderId]) => Number(orderId)), ctx.channelId],
         );
         const byId = new Map(rows.map(row => [String(row.id), row]));
-        return keys.map(key => byId.get(key) ?? null);
+        return parsed.map(([orderId, counterpartyId]) => {
+            const row = byId.get(orderId);
+            if (!row || row.payerId !== counterpartyId) return null;
+            return {
+                code: row.code,
+                state: row.state,
+                orderTotal: row.orderTotal,
+                currencyCode: row.currencyCode,
+            };
+        });
     }
 }

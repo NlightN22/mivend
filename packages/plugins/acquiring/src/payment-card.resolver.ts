@@ -77,7 +77,9 @@ export class PaymentCardFieldResolver {
         @Ctx() ctx: RequestContext,
         @Parent() card: VisiblePaymentCard,
     ): Promise<CardOrder | null> | null {
-        return card.orderId == null ? null : this.loader.order(ctx, card.orderId);
+        return card.orderId == null
+            ? null
+            : this.loader.order(ctx, card.orderId, card.counterpartyId);
     }
 
     @ResolveField()

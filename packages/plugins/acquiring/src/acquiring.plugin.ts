@@ -1,3 +1,4 @@
+import { Kind } from 'graphql';
 import { ProformaInvoiceRefLoader } from './proforma-invoice-ref-loader.service';
 import {
     LanguageCode,
@@ -62,6 +63,7 @@ import { PaymentCardLoader } from './payment-card.loader';
 import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolver';
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
 import { adminApiExtensions } from './api/admin.schema';
+import { paymentCardSchema } from './api/payment-card.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { ContractProformaInvoiceService } from './contract-proforma-invoice.service';
 import { VariantOrganizationHealthResolver } from './variant-organization-health.resolver';
@@ -136,7 +138,10 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         SettlementEntryService,
     ],
     adminApiExtensions: {
-        schema: adminApiExtensions,
+        schema: {
+            kind: Kind.DOCUMENT,
+            definitions: [...adminApiExtensions.definitions, ...paymentCardSchema.definitions],
+        },
         resolvers: [
             ProformaInvoiceAdminResolver,
             ProformaInvoiceRequestAdminResolver,

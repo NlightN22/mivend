@@ -31,7 +31,7 @@ describe('PaymentCardFieldResolver', () => {
         await resolver.order(ctx, card());
         await resolver.refunds(ctx, card());
         expect(loader.proforma).toHaveBeenCalledWith(ctx, '3');
-        expect(loader.order).toHaveBeenCalledWith(ctx, '9');
+        expect(loader.order).toHaveBeenCalledWith(ctx, '9', '5');
         expect(loader.refundsOf).toHaveBeenCalledWith(ctx, '7');
     });
 
