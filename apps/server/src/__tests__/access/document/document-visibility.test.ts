@@ -37,7 +37,10 @@ describe('documents for the superadmin', () => {
             const file = await download(s.pdfUrl, superadmin);
             expect(file.status, `PDF of ${s.number}`).toBe(200);
             expect(file.type).toBe('application/pdf');
-            expect(file.disposition).toBe(`attachment; filename="${s.number}.pdf"`);
+            expect(file.disposition).toBe(`inline; filename="${s.number}.pdf"`);
+            const forced = await download(`${s.pdfUrl}?download=1`, superadmin);
+            expect(forced.status, `forced download of ${s.number}`).toBe(200);
+            expect(forced.disposition).toBe(`attachment; filename="${s.number}.pdf"`);
             expect(file.body.subarray(0, 5).toString()).toBe('%PDF-');
         }
     });
@@ -98,6 +101,10 @@ describe.each(STAFF.map(s => s.key))('documents for %s', (key: ActorKey) => {
             expect((await download(s.pdfUrl, token)).status, `PDF of ${s.counterparty}`).toBe(
                 shown ? 200 : 404,
             );
+            expect(
+                (await download(`${s.pdfUrl}?download=1`, token)).status,
+                `forced download for ${s.counterparty}`,
+            ).toBe(shown ? 200 : 404);
         }
     });
 

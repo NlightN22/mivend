@@ -58,6 +58,20 @@ export class ProformaInvoiceVisibilityService {
         return { items: entities, totalItems: Number(countRow?.total ?? 0) };
     }
 
+    // Same scope as the list; an unknown and a hidden id are both null.
+    async findOneVisible(ctx: RequestContext, id: string): Promise<ProformaInvoice | null> {
+        if (!/^\d+$/.test(id)) return null;
+        const scope = await this.resolveScope(ctx);
+        const { entities, raw } = await this.buildScopedQuery(ctx, scope)
+            .andWhere('proformaInvoice.id = :id', { id: Number(id) })
+            .addSelect('counterparty.shortName', 'counterpartyShortName')
+            .getRawAndEntities<{ counterpartyShortName: string | null }>();
+        const found = entities[0];
+        if (!found) return null;
+        found.counterpartyShortName = raw[0]?.counterpartyShortName ?? null;
+        return found;
+    }
+
     private listColumns(ctx: RequestContext): string[] {
         return this.connection
             .getRepository(ctx, ProformaInvoice)
