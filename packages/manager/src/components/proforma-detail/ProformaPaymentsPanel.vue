@@ -2,51 +2,62 @@
 import { computed } from 'vue';
 import { MvDateTimeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import { PAYMENT_STATUS_LABEL, type ProformaCard } from '../../api/proformaInvoiceCard';
+import { useAuthStore } from '../../stores/auth';
 import { documentMoney } from '../../utils/documentMoney';
 import { paymentSummary } from '../../utils/proformaPayments';
 
 const props = defineProps<{ card: ProformaCard }>();
+const canSeePayments = useAuthStore().hasPermission('ReadPayment');
 const money = computed(() => documentMoney(props.card.currencyCode));
 const summary = computed(() => paymentSummary(props.card.amount, props.card.payments));
 </script>
 
 <template>
     <MvPanel title="Payments" data-testid="proforma-payments">
-        <p v-if="!card.payments.length" class="pf-payments__empty">
-            No payments applied to this proforma invoice.
+        <p v-if="!canSeePayments" class="pf-payments__empty" data-testid="proforma-payments-denied">
+            Payments are not available for your role.
         </p>
-        <ul v-else class="pf-payments__list">
-            <li v-for="payment in card.payments" :key="payment.id" class="pf-payments__item">
-                <div class="pf-payments__main">
-                    <RouterLink
-                        :to="{ path: '/payments', query: { search: payment.number } }"
-                        class="pf-payments__number"
-                    >
-                        № {{ payment.number }}
-                    </RouterLink>
-                    <MvStatusBadge
-                        :variant="payment.paymentStatus === 'captured' ? 'success' : 'neutral'"
-                    >
-                        {{ PAYMENT_STATUS_LABEL[payment.paymentStatus] ?? payment.paymentStatus }}
-                    </MvStatusBadge>
-                    <strong class="pf-payments__amount">{{ money(payment.amount) }}</strong>
+        <template v-else>
+            <p v-if="!card.payments.length" class="pf-payments__empty">
+                No payments applied to this proforma invoice.
+            </p>
+            <ul v-else class="pf-payments__list">
+                <li v-for="payment in card.payments" :key="payment.id" class="pf-payments__item">
+                    <div class="pf-payments__main">
+                        <RouterLink
+                            :to="{ path: '/payments', query: { search: payment.number } }"
+                            class="pf-payments__number"
+                        >
+                            № {{ payment.number }}
+                        </RouterLink>
+                        <MvStatusBadge
+                            :variant="payment.paymentStatus === 'captured' ? 'success' : 'neutral'"
+                        >
+                            {{
+                                PAYMENT_STATUS_LABEL[payment.paymentStatus] ?? payment.paymentStatus
+                            }}
+                        </MvStatusBadge>
+                        <strong class="pf-payments__amount">{{ money(payment.amount) }}</strong>
+                    </div>
+                    <span class="pf-payments__meta"
+                        ><MvDateTimeCell :value="payment.createdAt"
+                    /></span>
+                </li>
+            </ul>
+            <dl class="pf-payments__summary">
+                <div>
+                    <dt>Paid</dt>
+                    <dd data-testid="proforma-paid">{{ money(summary.paid) }}</dd>
                 </div>
-                <span class="pf-payments__meta"><MvDateTimeCell :value="payment.createdAt" /></span>
-            </li>
-        </ul>
-        <dl class="pf-payments__summary">
-            <div>
-                <dt>Paid</dt>
-                <dd data-testid="proforma-paid">{{ money(summary.paid) }}</dd>
-            </div>
-            <div v-if="card.displayStatus === 'current'">
-                <dt>Remaining</dt>
-                <dd data-testid="proforma-remaining">{{ money(summary.remaining) }}</dd>
-            </div>
-        </dl>
-        <p class="pf-payments__note">
-            Informational: the debt is taken from the ERP sales invoice.
-        </p>
+                <div v-if="card.displayStatus === 'current'">
+                    <dt>Remaining</dt>
+                    <dd data-testid="proforma-remaining">{{ money(summary.remaining) }}</dd>
+                </div>
+            </dl>
+            <p class="pf-payments__note">
+                Informational: the debt is taken from the ERP sales invoice.
+            </p>
+        </template>
     </MvPanel>
 </template>
 

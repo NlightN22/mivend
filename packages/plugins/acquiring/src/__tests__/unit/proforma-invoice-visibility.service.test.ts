@@ -83,6 +83,14 @@ describe('ProformaInvoiceVisibilityService', () => {
         );
     });
 
+    it.each(['abc', '1; DROP', '99999999999999', ''])(
+        'findOneVisible answers null for the id %j without querying',
+        async id => {
+            expect(await service.findOneVisible(mockCtx, id)).toBeNull();
+            expect(accessScopeService.resolveProformaInvoiceScope).not.toHaveBeenCalled();
+        },
+    );
+
     it('filters by assignedManagerId OR team membership for "own" scope, with no branch restriction', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({
             kind: 'own',

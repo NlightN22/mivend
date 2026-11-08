@@ -60,7 +60,7 @@ export class ProformaInvoiceVisibilityService {
 
     // Same scope as the list; an unknown and a hidden id are both null.
     async findOneVisible(ctx: RequestContext, id: string): Promise<ProformaInvoice | null> {
-        if (!/^\d+$/.test(id)) return null;
+        if (!/^\d{1,9}$/.test(id)) return null;
         const scope = await this.resolveScope(ctx);
         const { entities, raw } = await this.buildScopedQuery(ctx, scope)
             .andWhere('proformaInvoice.id = :id', { id: Number(id) })

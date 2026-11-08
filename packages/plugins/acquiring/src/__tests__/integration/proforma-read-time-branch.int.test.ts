@@ -195,6 +195,7 @@ describe('findOneVisible uses the same read-time scope as the list (real Postgre
         expect(await service.findOneVisible(ctx, await idOf('PI-DEFAULT'))).toBeNull();
         expect(await service.findOneVisible(ctx, '99999')).toBeNull();
         expect(await service.findOneVisible(ctx, '1; DROP TABLE x')).toBeNull();
+        expect(await service.findOneVisible(ctx, '99999999999999')).toBeNull();
     });
 
     it('all scope sees a contract proforma that has no order', async () => {

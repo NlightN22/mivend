@@ -6,8 +6,6 @@ import { ProformaInvoiceDetailFieldResolver } from '../../proforma-invoice-detai
 import { PAYMENTS_CAP, ProformaInvoiceDetailService } from '../../proforma-invoice-detail.service';
 import { ProformaInvoiceFieldResolver } from '../../proforma-invoice.resolver';
 
-const ctx = {} as RequestContext;
-
 describe('ProformaInvoiceFieldResolver.lines', () => {
     it('exposes the positive discount total of a snapshot line', () => {
         const resolver = new ProformaInvoiceFieldResolver({} as never, {} as never);
@@ -38,49 +36,78 @@ describe('ProformaInvoiceFieldResolver.lines', () => {
     });
 });
 
-describe('ProformaInvoiceDetailService.versions', () => {
-    const find = vi.fn();
-    const service = new ProformaInvoiceDetailService({
-        getRepository: () => ({ find }),
+function serviceWith(query: ReturnType<typeof vi.fn>, find: ReturnType<typeof vi.fn>) {
+    return new ProformaInvoiceDetailService({
+        getRepository: (_ctx: unknown, entity: unknown) =>
+            entity === 'Channel' ? { query } : { find },
     } as never);
+}
 
+describe('ProformaInvoiceDetailService.versions', () => {
     it('a document without an order is its own only version, with no query', async () => {
+        const find = vi.fn();
         const own = { orderId: null } as ProformaInvoice;
-        expect(await service.versions(ctx, own)).toEqual([own]);
+        expect(await serviceWith(vi.fn(), find).versions({} as RequestContext, own)).toEqual([own]);
         expect(find).not.toHaveBeenCalled();
     });
 
-    it('lists the versions of the same order and organization, newest first', async () => {
-        find.mockResolvedValue([]);
-        await service.versions(ctx, { orderId: 5, organizationId: 9 } as ProformaInvoice);
-        expect(find).toHaveBeenCalledWith({
-            where: { orderId: 5, organizationId: 9 },
-            order: { version: 'DESC' },
-        });
+    it('one query serves every parent of a request and each gets its own order and organization', async () => {
+        const rows = [
+            { id: 3, orderId: 5, organizationId: 9, version: 2 },
+            { id: 2, orderId: 5, organizationId: 9, version: 1 },
+            { id: 4, orderId: 5, organizationId: 8, version: 1 },
+            { id: 6, orderId: 6, organizationId: 9, version: 1 },
+        ];
+        const find = vi.fn().mockResolvedValue(rows);
+        const service = serviceWith(vi.fn(), find);
+        const requestCtx = {} as RequestContext;
+        const [a, b] = await Promise.all([
+            service.versions(requestCtx, { orderId: 5, organizationId: 9 } as ProformaInvoice),
+            service.versions(requestCtx, { orderId: 6, organizationId: 9 } as ProformaInvoice),
+        ]);
+        expect(find).toHaveBeenCalledTimes(1);
+        expect(a.map(v => v.id)).toEqual([3, 2]);
+        expect(b.map(v => v.id)).toEqual([6]);
     });
 });
 
 describe('ProformaInvoiceDetailService.payments', () => {
-    it('returns at most the first 50 payments, newest first', async () => {
-        const find = vi.fn().mockResolvedValue([]);
-        const service = new ProformaInvoiceDetailService({
-            getRepository: () => ({ find }),
-        } as never);
-        await service.payments(ctx, 7);
+    it('ranks per document in one query, capped at 50, and groups them per parent', async () => {
+        const query = vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        const find = vi.fn().mockResolvedValue([
+            { id: 2, proformaInvoiceId: 8 },
+            { id: 1, proformaInvoiceId: 7 },
+        ]);
+        const service = serviceWith(query, find);
+        const requestCtx = {} as RequestContext;
+        const [first, second] = await Promise.all([
+            service.payments(requestCtx, 7),
+            service.payments(requestCtx, 8),
+        ]);
         expect(PAYMENTS_CAP).toBe(50);
-        expect(find).toHaveBeenCalledWith({
-            where: { proformaInvoiceId: 7 },
-            order: { createdAt: 'DESC', id: 'DESC' },
-            take: 50,
-        });
+        expect(query).toHaveBeenCalledTimes(1);
+        expect(query.mock.calls[0][1]).toEqual([[7, 8], 50]);
+        expect(first.map(p => p.id)).toEqual([1]);
+        expect(second.map(p => p.id)).toEqual([2]);
     });
 });
 
 describe('ProformaInvoiceDetailFieldResolver.payments', () => {
-    it('loads the payments of the parent by its id', async () => {
+    const parent = { id: '12' } as unknown as ProformaInvoice;
+
+    it('loads the payments of the parent when the actor has ReadPayment', async () => {
         const payments = vi.fn().mockResolvedValue([]);
         const resolver = new ProformaInvoiceDetailFieldResolver({ payments } as never);
-        await resolver.payments(ctx, { id: '12' } as unknown as ProformaInvoice);
-        expect(payments).toHaveBeenCalledWith(ctx, 12);
+        const allowed = { userHasPermissions: () => true } as unknown as RequestContext;
+        await resolver.payments(allowed, parent);
+        expect(payments).toHaveBeenCalledWith(allowed, 12);
+    });
+
+    it('returns no payments, without loading, when the actor lacks ReadPayment', async () => {
+        const payments = vi.fn();
+        const resolver = new ProformaInvoiceDetailFieldResolver({ payments } as never);
+        const denied = { userHasPermissions: () => false } as unknown as RequestContext;
+        expect(await resolver.payments(denied, parent)).toEqual([]);
+        expect(payments).not.toHaveBeenCalled();
     });
 });
