@@ -10,19 +10,18 @@ import { useFindingConsequences } from '../../composables/useFindingConsequences
 import { useOrderChecks } from '../../composables/useOrderChecks';
 import { useOrderDetail } from '../../composables/useOrderDetail';
 import { useOrderHeaderCommands } from '../../composables/useOrderHeaderCommands';
+import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { useReservationActions } from '../../composables/useReservationActions';
 import { contractBlockedSkus } from '../../utils/orderLineChecks';
 import { orderLevelProblem } from '../../utils/orderLineProblems';
+import { orderNotes, type PanelNotes } from '../../utils/orderPanelNotes';
 import OrderApprovalsPanel from '../../components/order-detail/OrderApprovalsPanel.vue';
 import OrderCell from '../../components/order-detail/OrderCell.vue';
 import OrderCustomerSummary from '../../components/order-detail/OrderCustomerSummary.vue';
-import OrderErpStatusPanels from '../../components/order-detail/OrderErpStatusPanels.vue';
 import OrderHeader from '../../components/order-detail/OrderHeader.vue';
 import OrderHistory from '../../components/order-detail/OrderHistory.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import OrderLinesTotals from '../../components/order-detail/OrderLinesTotals.vue';
-import OrderShortfallPanel from '../../components/order-detail/OrderShortfallPanel.vue';
-import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -48,13 +47,6 @@ const reservation = useReservationActions({
     defaultDays: () => order.value?.customFields.reservationDays ?? FALLBACK_RESERVATION_DAYS,
     onChanged: () => void data.reload(),
 });
-const commands = useOrderHeaderCommands({
-    order,
-    reservation,
-    canSeeChecks: () => canSeeChecks.value,
-    onCancelled: () => void data.reload(),
-});
-
 const editable = computed(
     () => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state),
 );
@@ -65,7 +57,41 @@ const canEditLines = computed(
         !!order.value &&
         isNotRegisteredInErp(order.value.customFields),
 );
-const orderProblem = computed(() => orderLevelProblem(findings.value, consequences.value));
+const edit = useOrderLineEdit(orderId, () => void data.reload());
+const anyShort = computed(() =>
+    [...edit.availability.value.values()].some(a => a.fitting < a.needed),
+);
+const commands = useOrderHeaderCommands({
+    order,
+    reservation,
+    canSeeChecks: () => canSeeChecks.value,
+    canCut: () => canEditLines.value && anyShort.value,
+    onCancelled: () => void data.reload(),
+});
+
+const panelNotes = computed<PanelNotes>(() => {
+    const f = order.value?.customFields;
+    return {
+        failure: f?.reservationFailureReason
+            ? {
+                  reason: f.reservationFailureReason,
+                  detail: f.reservationFailureDetail ?? null,
+                  failedAt: f.reservationFailedAt ?? null,
+              }
+            : null,
+        shortfalls: data.shortfalls.value,
+    };
+});
+const orderProblem = computed(() =>
+    orderLevelProblem(
+        findings.value,
+        consequences.value,
+        orderNotes(
+            panelNotes.value,
+            (order.value?.lines ?? []).map(l => l.productVariant.sku),
+        ),
+    ),
+);
 
 watch([orderId, reservations], () => {
     if (orderId.value && canSeeChecks.value) void checks.load();
@@ -89,6 +115,7 @@ watch([orderId, reservations], () => {
             :blocked-skus="contractBlockedSkus(findings, order.lines)"
             :can-edit-delivery="canEditLines"
             @recompute="checks.recompute"
+            @cut="edit.cutToStock"
             @changed="data.reload"
         />
 
@@ -99,19 +126,11 @@ watch([orderId, reservations], () => {
             :outstanding="kpiData.outstanding.value"
         />
 
-        <OrderErpStatusPanels :order="order" />
-        <MvPanel v-if="data.shortfalls.value.length" title="Cut for lack of stock">
-            <OrderShortfallPanel :rows="data.shortfalls.value" />
-        </MvPanel>
-        <PaymentReceivedPanel
-            :order-id="order.id"
-            :payments="order.payments ?? []"
-            @confirmed="data.reload"
-        />
-
         <MvPanel title="Order lines">
             <OrderLinesTable
                 :order-id="order.id"
+                :edit="edit"
+                :panel-notes="panelNotes"
                 :lines="order.lines"
                 :currency-code="order.currencyCode"
                 :editable="editable"

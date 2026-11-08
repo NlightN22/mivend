@@ -11,6 +11,7 @@ export function useOrderHeaderCommands(deps: {
     order: Ref<OrderDetail | null>;
     reservation: ReturnType<typeof useReservationActions>;
     canSeeChecks: () => boolean;
+    canCut: () => boolean;
     onCancelled: () => void;
 }) {
     const mobile = useIsMobileViewport(800);
@@ -50,6 +51,7 @@ export function useOrderHeaderCommands(deps: {
                 canExtend: deps.reservation.canExtend.value,
                 canSeeChecks: deps.canSeeChecks(),
                 cancelVisible: cancelVisible.value,
+                canCut: deps.canCut(),
             },
             mobile.value,
         ),

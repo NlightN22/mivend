@@ -16,7 +16,7 @@ const props = defineProps<{
     commands: OrderHeaderCommands;
     reservation: ReturnType<typeof useReservationActions>;
 }>();
-const emit = defineEmits<{ recompute: [] }>();
+const emit = defineEmits<{ recompute: []; cut: [] }>();
 
 const proformasOpen = ref(false);
 const documentsOpen = ref(false);
@@ -38,6 +38,7 @@ async function submitCancel(): Promise<void> {
 
 function onMenu(key: string): void {
     if (key === 'recompute') emit('recompute');
+    else if (key === 'cut') emit('cut');
     else if (key === 'release') void props.reservation.release();
     else if (key === 'extend') extendOpen.value = true;
     else if (key === 'confirm') confirmOpen.value = true;

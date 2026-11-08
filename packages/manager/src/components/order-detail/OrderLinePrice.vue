@@ -8,15 +8,17 @@ defineProps<{ price: string; adjustment: AdjustmentInfo | null }>();
 <template>
     <div class="line-price">
         <span>{{ price }}</span>
-        <RouterLink
-            v-if="adjustment?.approvalRequestId"
-            :to="`/approvals/${adjustment.approvalRequestId}`"
-        >
-            <MvStatusBadge :variant="adjustment.variant">{{ adjustment.label }}</MvStatusBadge>
-        </RouterLink>
-        <MvStatusBadge v-else-if="adjustment" :variant="adjustment.variant">
-            {{ adjustment.label }}
-        </MvStatusBadge>
+        <template v-if="adjustment && adjustment.label !== 'Pending approval'">
+            <RouterLink
+                v-if="adjustment.approvalRequestId"
+                :to="`/approvals/${adjustment.approvalRequestId}`"
+            >
+                <MvStatusBadge :variant="adjustment.variant">{{ adjustment.label }}</MvStatusBadge>
+            </RouterLink>
+            <MvStatusBadge v-else :variant="adjustment.variant">
+                {{ adjustment.label }}
+            </MvStatusBadge>
+        </template>
     </div>
 </template>
 

@@ -8,6 +8,7 @@ const base: HeaderActionInputs = {
     canExtend: true,
     canSeeChecks: true,
     cancelVisible: true,
+    canCut: false,
 };
 // The order's own proforma invoices and documents are reachable from the menu in every state.
 const LISTS = ['proformas', 'documents'];
@@ -35,6 +36,11 @@ describe('header action gating', () => {
             ...LISTS,
             'extend',
         ]);
+    });
+
+    it('offers the cut to available stock only when it applies', () => {
+        expect(keys({})).not.toContain('cut');
+        expect(keys({ canCut: true })).toEqual(['recompute', 'cut', ...LISTS]);
     });
 
     it('offers recompute only to a caller who can read checks', () => {

@@ -8,6 +8,7 @@ import type { OrderHeaderCommands } from '../../composables/useOrderHeaderComman
 import type { useReservationActions } from '../../composables/useReservationActions';
 import OrderHeaderActions from './OrderHeaderActions.vue';
 import OrderHeaderFields from './OrderHeaderFields.vue';
+import PaymentReceivedPanel from './PaymentReceivedPanel.vue';
 
 const props = defineProps<{
     order: OrderDetail;
@@ -19,7 +20,7 @@ const props = defineProps<{
     blockedSkus: string[];
     canEditDelivery: boolean;
 }>();
-defineEmits<{ recompute: []; changed: [] }>();
+defineEmits<{ recompute: []; cut: []; changed: [] }>();
 
 const customerName = computed(() => {
     const customer = props.order.customer;
@@ -42,6 +43,11 @@ const customerName = computed(() => {
                 <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning">
                     Credit limit exceeded
                 </MvStatusBadge>
+                <PaymentReceivedPanel
+                    :order-id="order.id"
+                    :payments="order.payments ?? []"
+                    @confirmed="$emit('changed')"
+                />
             </h1>
             <OrderHeaderActions
                 :order-id="order.id"
@@ -51,6 +57,7 @@ const customerName = computed(() => {
                 :commands="commands"
                 :reservation="reservation"
                 @recompute="$emit('recompute')"
+                @cut="$emit('cut')"
             />
         </div>
         <div class="order-header__meta">

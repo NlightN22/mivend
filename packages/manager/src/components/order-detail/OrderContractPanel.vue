@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { MvNotice, MvSelect, MvStatusBadge } from '@mivend/ui-kit';
+import { MvFlagChip, MvNotice, MvPopover, MvSelect, MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchOrderContracts,
@@ -55,15 +55,23 @@ watch(() => props.orderId, load, { immediate: true });
             No active contract: the order cannot be registered in the ERP.
         </MvNotice>
         <template v-else-if="options.length">
-            <MvNotice v-if="blockedSkus.length" variant="warning">
-                These lines cannot be sent under this contract: {{ blockedSkus.join(', ') }}
-            </MvNotice>
-            <MvSelect
-                :model-value="selected?.erpId ?? ''"
-                :options="selectOptions"
-                :disabled="!canChange || saving"
-                @update:model-value="change"
-            />
+            <div class="order-contract__select">
+                <MvSelect
+                    :model-value="selected?.erpId ?? ''"
+                    :options="selectOptions"
+                    :disabled="!canChange || saving"
+                    @update:model-value="change"
+                />
+                <MvPopover v-if="blockedSkus.length">
+                    <template #trigger>
+                        <MvFlagChip
+                            tone="danger"
+                            label="Show which lines the contract does not allow"
+                        />
+                    </template>
+                    These lines cannot be sent under this contract: {{ blockedSkus.join(', ') }}
+                </MvPopover>
+            </div>
             <div class="order-contract__meta">
                 <MvStatusBadge v-if="selected?.isMain" variant="info">Main contract</MvStatusBadge>
                 <span v-if="locked" class="order-contract__hint">
@@ -80,6 +88,12 @@ watch(() => props.orderId, load, { immediate: true });
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.order-contract__select {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .order-contract__meta {

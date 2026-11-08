@@ -57,10 +57,14 @@ becomes a full screen, tabs show the main ones plus "More".
 One page, no tabs, top to bottom:
 
 1. **Header.** Breadcrumb, order number, status, customer, manager, created, then the order's own
-   fields in the header (contract select, delivery, price type, ERP registration badge). Actions:
+   fields in the header (contract select, delivery, price type, ERP registration badge whose
+   popover holds the document number, registration status and any ERP rejection reason). A manual
+   payment waiting for confirmation is a header chip whose popover holds the "received" action.
+   Actions:
    the primary buttons (confirm, cancel order) and one "..." menu: recompute, proforma invoices
    (modal with the order's proforma invoices, the request action and an "Open in the list" link
-   to the proforma list filtered by the order number), documents (modal), reservation actions.
+   to the proforma list filtered by the order number), documents (modal), reservation actions and,
+   only when lines exceed the available stock, "Cut lines to available stock".
    The documents list has no manager page yet, so its modal has no list link. There is no
    whole-order "send to approval" action: a price change goes to approval by itself when the
    price-adjustment rules say so; per-line sending does not exist either.
@@ -71,9 +75,16 @@ One page, no tabs, top to bottom:
    Discount (read only), Total. A problem is shown in the cell where it occurs; a stripe on the
    row's left edge shows the worst one (red block or hold, orange approval needed, yellow warn,
    green clean). Tones come from the check's policy consequence, so branch overrides apply.
-   Clicking a flagged cell opens a popover with that cell's findings and consequences; Confirm
-   (hidden when the order cannot be confirmed) opens the order confirmation, Reject opens the
-   cancel dialog. A warning mark by the total carries findings about the order itself.
+   A flagged cell shows its plain value and a small icon button, no status text; clicking the icon
+   or the cell opens a popover with that cell's findings and consequences; Confirm (hidden when the
+   order cannot be confirmed) opens the order confirmation, Reject opens the cancel dialog. The
+   popover also carries what used to be separate panels: the failed automatic reserve (reason, the
+   SKU detail, time, what to do) in the Reserve cell of the line it names, quantity cut for lack of
+   stock in the Available cell of its line, a pending price approval in the Price cell, a discount
+   over the employee's limit in the Discount cell, a contract the buyer lacks in the Available
+   cell and next to the contract select. A mark by the total carries findings about the order
+   itself (credit, and cut or failure notes naming no remaining line). Nothing is repeated in a
+   panel above the table.
 4. **Positions.** "Add position" finds a product by article only (exact SKU on the server) and
    adds it through the order-edit path (lock, edit guard, on-edit checks). Delete is a row-menu
    entry or a selection mode with a checkbox column and a bulk bar, always behind a confirm

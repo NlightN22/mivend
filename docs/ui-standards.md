@@ -105,8 +105,11 @@ list and the chips are one horizontally scrolling row (`scrollable`).
 
 ## Flagged cells and row stripes
 
-A problem is shown in the cell where it occurs, as an `MvFlagChip` (button, opens a popover with the
-cell's findings), never as a separate strip or panel. Tones: `danger` (block or hold), `orange`
-(approval needed), `warning` (warn). A row carries a left-edge stripe in its worst tone, green when
-clean. Tones come from the policy consequence of the finding (branch overrides included), not from
-the check's own severity, except where no policy applies. First used by the manager order card.
+A problem is shown only in the cell where it occurs, as an `MvFlagChip`: the plain value followed by a small
+icon-only button (aria-label and hover title, keyboard focusable) with no status text. Clicking the icon or the cell
+opens an `MvPopover` with the full text and the consequence; the same text never repeats in a panel, banner or badge
+elsewhere on the page. Tones: `danger` (block or hold), `orange` (approval needed), `warning` (warn). A row carries a
+left-edge stripe in its worst tone, green when clean. Tones come from the policy consequence of the finding (branch
+overrides included), not from the check's own severity, except where no policy applies. A state of the whole document
+(for example the ERP registration) is a header badge whose detail text opens in a popover. First used by the manager
+order card.

@@ -38,7 +38,12 @@ const consequence = (value: string): Map<string, FindingConsequence> =>
 
 function problemsOf(
     findings: OrderCheckFinding[],
-    opts: { reservations?: OrderReservation[]; max?: number; l?: OrderDetailLine } = {},
+    opts: {
+        reservations?: OrderReservation[];
+        max?: number;
+        percent?: number;
+        l?: OrderDetailLine;
+    } = {},
     consequences = new Map<string, FindingConsequence>(),
 ) {
     const row = buildLineRows({
@@ -47,7 +52,8 @@ function problemsOf(
         availability: new Map(),
         reservations: opts.reservations ?? [],
         requests: [],
-        maxDiscountPercent: () => opts.max ?? null,
+        lineDiscount: () =>
+            opts.max === undefined ? null : { max: opts.max, percent: opts.percent ?? 20 },
     })[0];
     return lineProblems(row, consequences);
 }
@@ -98,6 +104,9 @@ describe('line problems', () => {
         });
         expect(discount.cells.discount?.tone).toBe('orange');
         expect(discount.stripe).toBe('orange');
+        // The server's percent from the base price wins over the line's own list price (a manual price replaces it).
+        const manual = problemsOf([], { max: 0, percent: 10, l: line() });
+        expect(manual.cells.discount?.tone).toBe('orange');
     });
 
     it('takes the worst tone for the stripe and honours a policy override', () => {

@@ -51,6 +51,7 @@ const TITLES: Record<string, string> = {
     'order.multiplicity.violated': 'The quantity is not a multiple of the pack size',
     'credit.limit.exceeded': "The order exceeds the buyer's available credit",
     'order.below-floor-price.below-floor': 'The unit price is below the floor price',
+    'order.discount-over-limit.over-limit': 'The discount is above your limit',
 };
 
 // The facts that explain a finding in one line, for the list in the header card and under a line.

@@ -7,6 +7,7 @@ export interface HeaderActionInputs {
     canExtend: boolean;
     canSeeChecks: boolean;
     cancelVisible: boolean;
+    canCut: boolean;
 }
 
 export interface HeaderActions {
@@ -22,6 +23,7 @@ export function headerActions(i: HeaderActionInputs, mobile: boolean): HeaderAct
     const menu: ActionMenuItem[] = [];
     if (mobile && confirm) menu.push({ key: 'confirm', label: 'Confirm order' });
     if (i.canSeeChecks) menu.push({ key: 'recompute', label: 'Recompute checks' });
+    if (i.canCut) menu.push({ key: 'cut', label: 'Cut lines to available stock' });
     menu.push({ key: 'proformas', label: 'Proforma invoices' });
     menu.push({ key: 'documents', label: 'Documents' });
     if (i.reserved && i.canConfirm) menu.push({ key: 'release', label: 'Release reservation' });

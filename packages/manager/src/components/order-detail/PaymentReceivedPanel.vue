@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvButton, MvNotice, MvPopover, MvStatusBadge } from '@mivend/ui-kit';
 import { usePaymentReceived } from '../../composables/usePaymentReceived';
 
 const props = defineProps<{
@@ -23,15 +23,26 @@ const label = computed(() =>
 </script>
 
 <template>
-    <div v-if="allowed && pending" class="payment-received">
+    <MvPopover v-if="allowed && pending">
+        <template #trigger>
+            <button type="button" class="payment-received__trigger" aria-label="Payment awaiting">
+                <MvStatusBadge variant="warning">Payment awaiting</MvStatusBadge>
+            </button>
+        </template>
+        <span
+            >The customer pays on delivery or by bank transfer. Confirm once the money
+            arrived.</span
+        >
         <MvButton :loading="confirming" @click="confirm">{{ label }}</MvButton>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
-    </div>
+    </MvPopover>
 </template>
 
 <style scoped>
-.payment-received {
-    display: grid;
-    gap: 8px;
+.payment-received__trigger {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
 }
 </style>

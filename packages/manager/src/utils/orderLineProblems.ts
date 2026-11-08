@@ -1,7 +1,14 @@
 import type { FindingConsequence } from './findingConsequence';
 import type { OrderCheckFinding } from './orderCheckMessages';
-import { BELOW_FLOOR_CODE, CONTRACT_CODE, STOCK_CODE, listedFindings } from './orderLineChecks';
+import {
+    BELOW_FLOOR_CODE,
+    CONTRACT_CODE,
+    DISCOUNT_LIMIT_CODE,
+    STOCK_CODE,
+    listedFindings,
+} from './orderLineChecks';
 import type { OrderLineRow } from './orderLineRows';
+import type { LineNotes, Note } from './orderPanelNotes';
 
 export type ProblemTone = 'danger' | 'orange' | 'warning';
 export type CellKey = 'qty' | 'available' | 'reserve' | 'price' | 'discount';
@@ -54,6 +61,7 @@ function cell(
 export function lineProblems(
     row: OrderLineRow,
     consequences: Map<string, FindingConsequence>,
+    panel: LineNotes = { reserve: [], available: [] },
 ): LineProblems {
     const of = (codes: string[]): OrderCheckFinding[] =>
         row.findings.filter(f => codes.includes(f.checkCode));
@@ -69,21 +77,23 @@ export function lineProblems(
     const cells: LineProblems['cells'] = {};
     const entries: Array<[CellKey, CellProblem | null]> = [
         ['qty', cell(listedFindings(row.findings), consequences, [])],
-        ['available', cell(of([STOCK_CODE, CONTRACT_CODE]), consequences, stockNote)],
+        [
+            'available',
+            cell(of([STOCK_CODE, CONTRACT_CODE]), consequences, [...stockNote, ...panel.available]),
+        ],
         [
             'reserve',
-            cell(
-                [],
-                consequences,
-                row.reserveShort
+            cell([], consequences, [
+                ...(row.reserveShort
                     ? [
                           {
-                              tone: 'warning',
+                              tone: 'warning' as const,
                               text: `Reserved ${row.reserved} of ${row.view.needed}; stock for the rest is not held`,
                           },
                       ]
-                    : [],
-            ),
+                    : []),
+                ...panel.reserve,
+            ]),
         ],
         [
             'price',
@@ -98,9 +108,9 @@ export function lineProblems(
         [
             'discount',
             cell(
-                [],
+                of([DISCOUNT_LIMIT_CODE]),
                 consequences,
-                row.discountOverLimit
+                row.discountOverLimit && !of([DISCOUNT_LIMIT_CODE]).length
                     ? [
                           {
                               tone: 'orange',
@@ -120,10 +130,11 @@ export function lineProblems(
 export function orderLevelProblem(
     findings: OrderCheckFinding[],
     consequences: Map<string, FindingConsequence>,
+    notes: Note[] = [],
 ): CellProblem | null {
     return cell(
         findings.filter(f => !f.lineRef),
         consequences,
-        [],
+        notes,
     );
 }

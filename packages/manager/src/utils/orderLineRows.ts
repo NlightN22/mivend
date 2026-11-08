@@ -79,8 +79,8 @@ export interface LineRowInputs {
     availability: Map<string, OrderLineAvailability>;
     reservations: OrderReservation[];
     requests: PriceAdjustmentRequestSummary[];
-    // The signed-in employee's own discount ceiling for the line; null when none is set.
-    maxDiscountPercent?: (line: OrderDetailLine) => number | null;
+    // The server's view of the line: the signed-in employee's ceiling and the discount percent from the base price.
+    lineDiscount?: (line: OrderDetailLine) => { max: number | null; percent: number | null } | null;
 }
 
 export function buildLineRows(input: LineRowInputs): OrderLineRow[] {
@@ -95,8 +95,14 @@ export function buildLineRows(input: LineRowInputs): OrderLineRow[] {
             findings,
         );
         const reserved = lineReservedQuantity(input.reservations, line.id);
-        const percent = discountPercent(line.unitPriceWithTax, line.discountedUnitPriceWithTax);
-        const max = input.maxDiscountPercent?.(line) ?? null;
+        const server = input.lineDiscount?.(line) ?? null;
+        const local = discountPercent(line.unitPriceWithTax, line.discountedUnitPriceWithTax);
+        const percent = server
+            ? server.percent && server.percent > 0
+                ? server.percent
+                : null
+            : local;
+        const max = server?.max ?? null;
         const part = {
             view,
             belowFloor: isBelowFloor(findings),

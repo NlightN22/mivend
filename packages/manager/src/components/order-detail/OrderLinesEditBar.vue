@@ -1,22 +1,16 @@
 <script setup lang="ts">
-import { MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvNotice } from '@mivend/ui-kit';
 import type { SplitOutcome } from '../../api/orderLineEdit';
 
 defineProps<{
-    anyShort: boolean;
-    busy: boolean;
     error: string;
     split: SplitOutcome[];
     alreadyWithinStock: boolean;
 }>();
-const emit = defineEmits<{ cut: [] }>();
 </script>
 
 <template>
     <div class="edit-bar">
-        <MvButton v-if="anyShort" size="sm" :loading="busy" @click="emit('cut')">
-            Cut lines to available stock
-        </MvButton>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <MvNotice v-else-if="alreadyWithinStock" variant="info">
             Already within available stock; nothing to cut.

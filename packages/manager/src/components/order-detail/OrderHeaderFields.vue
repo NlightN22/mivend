@@ -53,6 +53,10 @@ defineEmits<{ changed: [] }>();
                 <OrderErpRegistration
                     :not-registered="isNotRegisteredInErp(order.customFields)"
                     :erp-status="order.customFields.erpRegistrationStatus ?? null"
+                    :document-number="order.customFields.erpRegistrationDocumentNumber ?? null"
+                    :rejection-code="order.customFields.erpRejectionReasonCode ?? null"
+                    :rejection-text="order.customFields.erpRejectionReasonText ?? null"
+                    :raw-erp-status="order.customFields.erpStatus ?? null"
                 />
             </dd>
         </div>

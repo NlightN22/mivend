@@ -53,16 +53,24 @@ test("the action menu opens this order's proforma invoices and documents @read-o
     await expect(page.getByRole('dialog')).toContainText('Documents');
 });
 
-test('a flagged cell opens a popover with what is wrong there @read-only', async ({ page }) => {
+test('a flagged cell shows only an icon and opens a popover with what is wrong there @read-only', async ({
+    page,
+}) => {
     await page.goto(`/orders/${readE2eOrder().code}`);
     await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
         timeout: 15000,
     });
 
-    const chip = page.getByRole('button', { name: 'Show what is wrong here' }).first();
-    await expect(chip).toBeVisible();
-    await chip.click();
+    const flag = page.getByRole('button', { name: 'Show what is wrong here' }).first();
+    await expect(flag).toBeVisible();
+    await expect(flag).toHaveText('');
+    await flag.click();
     await expect(page.locator('.cell-flag__list')).toBeVisible();
+
+    for (const duplicated of ['Reservation failed', 'Cut for lack of stock', 'ERP document']) {
+        await expect(page.getByRole('heading', { name: duplicated })).toHaveCount(0);
+    }
+    await expect(page.getByRole('button', { name: 'Cut lines to available stock' })).toHaveCount(0);
 });
 
 test.describe('reservation of the shared e2e order', () => {

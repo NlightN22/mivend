@@ -38,14 +38,19 @@ export async function removeDiscountLimit(
     await adminApi(RemoveDiscountLimitDocument, { administratorId, scopeKind, scopeRef });
 }
 
-// The signed-in employee's ceiling per order line; a line without a limit is absent from the map.
-export async function fetchLineDiscountCeilings(orderId: string): Promise<Map<string, number>> {
+export interface LineDiscountLimit {
+    max: number | null;
+    percent: number | null;
+}
+
+// The signed-in employee's ceiling and the server's discount percent (from the base price) per order line.
+export async function fetchLineDiscountLimits(
+    orderId: string,
+): Promise<Map<string, LineDiscountLimit>> {
     const rows = (await adminApi(OrderLineDiscountLimitsDocument, { orderId }))
         .orderLineDiscountLimits;
     return new Map(
-        rows.flatMap(r =>
-            r.maxDiscountPercent === null ? [] : [[r.orderLineId, r.maxDiscountPercent]],
-        ),
+        rows.map(r => [r.orderLineId, { max: r.maxDiscountPercent, percent: r.discountPercent }]),
     );
 }
 

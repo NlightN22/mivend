@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue';
-import { fetchLineDiscountCeilings } from '../api/discountLimits';
+import { fetchLineDiscountLimits, type LineDiscountLimit } from '../api/discountLimits';
 import {
     fetchOrderLineAvailability,
     splitOrderLinesByStock,
@@ -9,7 +9,7 @@ import {
 
 export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
     const availability = ref<Map<string, OrderLineAvailability>>(new Map());
-    const discountCeilings = ref<Map<string, number>>(new Map());
+    const lineDiscounts = ref<Map<string, LineDiscountLimit>>(new Map());
     const busy = ref(false);
     const error = ref('');
     const lastSplit = ref<SplitOutcome[]>([]);
@@ -29,9 +29,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
 
     // Needs the price adjustment right; without it (or on failure) no ceiling is shown, nothing is gated.
     async function loadCeilings(): Promise<void> {
-        discountCeilings.value = await fetchLineDiscountCeilings(orderId.value).catch(
-            () => new Map(),
-        );
+        lineDiscounts.value = await fetchLineDiscountLimits(orderId.value).catch(() => new Map());
     }
 
     async function run(action: () => Promise<void>): Promise<boolean> {
@@ -59,7 +57,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
 
     return {
         availability,
-        discountCeilings,
+        lineDiscounts,
         loadCeilings,
         busy,
         error,
