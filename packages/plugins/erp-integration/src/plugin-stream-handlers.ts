@@ -26,6 +26,11 @@ import { ContractStreamHandler } from './handlers/contract.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
 import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { RegionStreamHandler } from './handlers/region.handler';
+import { CounterpartyContactStreamHandler } from './handlers/counterparty-contact.handler';
+import { CounterpartyGroupStreamHandler } from './handlers/counterparty-group.handler';
+import { PointOfSaleTypeStreamHandler } from './handlers/point-of-sale-type.handler';
+import { ProductGroupStreamHandler } from './handlers/product-group.handler';
+import { SettingStreamHandler } from './handlers/setting.handler';
 import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { BankStreamHandler } from './handlers/bank.handler';
 import { BankAccountStreamHandler } from './handlers/bank-account.handler';
@@ -65,6 +70,11 @@ export const STREAM_HANDLERS = [
     UnitStreamHandler,
     ManufacturerStreamHandler,
     RegionStreamHandler,
+    CounterpartyContactStreamHandler,
+    CounterpartyGroupStreamHandler,
+    PointOfSaleTypeStreamHandler,
+    ProductGroupStreamHandler,
+    SettingStreamHandler,
     LegalFormStreamHandler,
     BankStreamHandler,
     BankAccountStreamHandler,

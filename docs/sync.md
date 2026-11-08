@@ -386,6 +386,10 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   mirror seeds mivend's record (and creates it); afterwards the stream moves only `isActive` and the owning
   counterparty on mivend's record and never touches name, address, coordinates, working hours or contacts.
   `upsertTradingPoint` follows the same rule.
+  The mirror also keeps the point-of-sale fields mivend does not read (region, managers, point types, product
+  groups, sales channels, contact infos; soft ids, lists as JSON text) and `isDeleted` (#254). The ERP dictionary
+  streams `counterparty-contact`, `counterparty-group`, `product-group`, `point-of-sale-type` and `setting` follow the
+  same ownership rule in their own `*_erp` tables; none of it is replicated to branches.
 - **Moderation (#328)**: a customer edit of an ERP-confirmed point (`customerOwned = false`) is stored as a
   `trading_point_change` (one pending change per point, a newer edit supersedes it) and does not touch the record
   until a manager accepts it (`acceptTradingPointChange`, scope-checked like a staff edit; acceptance runs the staff

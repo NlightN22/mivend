@@ -130,6 +130,12 @@ export type InboundStream =
     // Region and legal-form reference directories (company.customers); soft-linked from CounterpartyChanged.
     | 'region'
     | 'legal-form'
+    // #254: ERP-owned mirrors stored as sent (*_erp tables), soft links only, nothing in mivend reads them yet.
+    | 'counterparty-contact'
+    | 'counterparty-group'
+    | 'product-group'
+    | 'point-of-sale-type'
+    | 'setting'
     // Bank directory and bank accounts (owner = counterparty/organization by owner_type); soft links only.
     | 'bank'
     | 'bank-account'
@@ -229,6 +235,11 @@ const ALL_INBOUND_STREAMS_MAP = {
     manufacturer: true,
     region: true,
     'legal-form': true,
+    'counterparty-contact': true,
+    'counterparty-group': true,
+    'product-group': true,
+    'point-of-sale-type': true,
+    setting: true,
     bank: true,
     'bank-account': true,
     'product-photo': true,

@@ -19,6 +19,9 @@ import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
+import { CounterpartyContactErp } from './entities/counterparty-contact-erp.entity';
+import { CounterpartyGroupErp } from './entities/counterparty-group-erp.entity';
+import { PointOfSaleTypeErp } from './entities/point-of-sale-type-erp.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import { Contract } from './entities/contract.entity';
@@ -127,6 +130,9 @@ const adminResolvers = [
         Counterparty,
         TradingPoint,
         TradingPointErp,
+        CounterpartyContactErp,
+        CounterpartyGroupErp,
+        PointOfSaleTypeErp,
         TradingPointChange,
         ContactPerson,
         CounterpartyTeamMember,

@@ -41,6 +41,11 @@ import { UnitStreamHandler } from './handlers/unit.handler';
 import { BankStreamHandler } from './handlers/bank.handler';
 import { BankAccountStreamHandler } from './handlers/bank-account.handler';
 import { RegionStreamHandler } from './handlers/region.handler';
+import { CounterpartyContactStreamHandler } from './handlers/counterparty-contact.handler';
+import { CounterpartyGroupStreamHandler } from './handlers/counterparty-group.handler';
+import { PointOfSaleTypeStreamHandler } from './handlers/point-of-sale-type.handler';
+import { ProductGroupStreamHandler } from './handlers/product-group.handler';
+import { SettingStreamHandler } from './handlers/setting.handler';
 import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
@@ -105,6 +110,11 @@ export class IntegrationInboxProcessorService {
         settlementDocumentTypeHandler: SettlementDocumentTypeStreamHandler,
         orderStatusHandler: OrderStatusStreamHandler,
         stockOrganizationHandler: StockOrganizationStreamHandler,
+        counterpartyContactHandler: CounterpartyContactStreamHandler,
+        counterpartyGroupHandler: CounterpartyGroupStreamHandler,
+        productGroupHandler: ProductGroupStreamHandler,
+        pointOfSaleTypeHandler: PointOfSaleTypeStreamHandler,
+        settingHandler: SettingStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -144,6 +154,11 @@ export class IntegrationInboxProcessorService {
             'settlement-document-type': settlementDocumentTypeHandler,
             'order-status': orderStatusHandler,
             'stock-organization': stockOrganizationHandler,
+            'counterparty-contact': counterpartyContactHandler,
+            'counterparty-group': counterpartyGroupHandler,
+            'product-group': productGroupHandler,
+            'point-of-sale-type': pointOfSaleTypeHandler,
+            setting: settingHandler,
         };
     }
 

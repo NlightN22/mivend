@@ -1,6 +1,11 @@
 import type { fromBinary } from '@bufbuild/protobuf';
 import {
     CategoryChangedSchema,
+    CounterpartyContactChangedSchema,
+    CounterpartyGroupChangedSchema,
+    PointOfSaleTypeChangedSchema,
+    ProductGroupChangedSchema,
+    SettingChangedSchema,
     ContractChangedSchema,
     CounterpartyChangedSchema,
     CounterpartyCreditBalanceChangedSchema,
@@ -75,6 +80,11 @@ export const SCHEMA_BY_STREAM: Record<
     manufacturer: ManufacturerChangedSchema,
     region: RegionChangedSchema,
     'legal-form': LegalFormChangedSchema,
+    'counterparty-contact': CounterpartyContactChangedSchema,
+    'counterparty-group': CounterpartyGroupChangedSchema,
+    'product-group': ProductGroupChangedSchema,
+    'point-of-sale-type': PointOfSaleTypeChangedSchema,
+    setting: SettingChangedSchema,
     bank: BankChangedSchema,
     'bank-account': BankAccountChangedSchema,
     'product-photo': ProductPhotoChangedSchema,

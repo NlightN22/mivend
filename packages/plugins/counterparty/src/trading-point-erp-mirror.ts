@@ -1,6 +1,7 @@
 import type { Repository } from 'typeorm';
 
 import { TradingPointErp } from './entities/trading-point-erp.entity';
+import type { ErpPointExtra } from './trading-point-erp-extra';
 import { isUsableLocation } from './trading-point-location';
 
 export interface MirrorFields {
@@ -12,6 +13,7 @@ export interface MirrorFields {
     longitude?: number | null;
     workingHours?: string | null;
     contactPhone?: string | null;
+    extra?: ErpPointExtra;
 }
 
 // undefined keeps the mirrored value (a tombstone or a partial event); a usable-looking location is stored as sent.
@@ -27,6 +29,7 @@ export async function writeErpMirror(
     if (fields.address !== undefined) row.address = fields.address;
     if (fields.workingHours !== undefined) row.workingHours = fields.workingHours;
     if (fields.contactPhone !== undefined) row.contactPhone = fields.contactPhone;
+    if (fields.extra) Object.assign(row, fields.extra);
     if (fields.latitude !== undefined || fields.longitude !== undefined) {
         const usable = isUsableLocation(fields.latitude, fields.longitude);
         row.latitude = usable ? fields.latitude! : null;

@@ -19,6 +19,7 @@ import { TradingPointErp } from './entities/trading-point-erp.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
 import { savePendingChange, type ProposedPointFields } from './trading-point-change';
 import { writeErpMirror } from './trading-point-erp-mirror';
+import { markMirrorDeleted, type ErpPointExtra } from './trading-point-erp-extra';
 import { loggerCtx } from './types';
 import {
     fillMissingLocation,
@@ -62,6 +63,7 @@ export interface TradingPointStreamFields {
     longitude?: number | null;
     // Never used to create a ContactPerson — see upsertFromStream's own comment.
     contactPhone?: string | null;
+    extra?: ErpPointExtra;
 }
 
 export interface TradingPointUpsertPayload {
@@ -368,6 +370,10 @@ export class TradingPointService {
             });
         }
         Logger.verbose(`Upserted trading point erpId=${erpId} from Kafka stream`, loggerCtx);
+    }
+
+    async markErpDeleted(ctx: RequestContext, erpId: string): Promise<boolean> {
+        return markMirrorDeleted(this.connection.getRepository(ctx, TradingPointErp), erpId);
     }
 
     async deactivate(ctx: RequestContext, erpId: string): Promise<boolean> {

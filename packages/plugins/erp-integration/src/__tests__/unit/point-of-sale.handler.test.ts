@@ -10,15 +10,22 @@ function makeHandler(
         .mockResolvedValue({ id: 'cp-local-1', branchId: 'branch-a' }),
     upsertFromStream = vi.fn().mockResolvedValue(undefined),
     deactivate = vi.fn().mockResolvedValue(undefined),
+    markErpDeleted = vi.fn().mockResolvedValue(false),
 ): {
     handler: PointOfSaleStreamHandler;
     tradingPointService: {
         findCounterpartyRefByErpId: ReturnType<typeof vi.fn>;
         upsertFromStream: ReturnType<typeof vi.fn>;
         deactivate: ReturnType<typeof vi.fn>;
+        markErpDeleted: ReturnType<typeof vi.fn>;
     };
 } {
-    const tradingPointService = { findCounterpartyRefByErpId, upsertFromStream, deactivate };
+    const tradingPointService = {
+        findCounterpartyRefByErpId,
+        upsertFromStream,
+        deactivate,
+        markErpDeleted,
+    };
     const handler = new PointOfSaleStreamHandler(tradingPointService as never);
     return { handler, tradingPointService };
 }
@@ -33,6 +40,7 @@ describe('PointOfSaleStreamHandler', () => {
         await handler.apply(ctx, 'pos-1', { isDeleted: true });
 
         expect(tradingPointService.deactivate).toHaveBeenCalledWith(ctx, 'pos-1');
+        expect(tradingPointService.markErpDeleted).toHaveBeenCalledWith(ctx, 'pos-1');
         expect(tradingPointService.findCounterpartyRefByErpId).not.toHaveBeenCalled();
         expect(tradingPointService.upsertFromStream).not.toHaveBeenCalled();
     });
@@ -56,6 +64,7 @@ describe('PointOfSaleStreamHandler', () => {
             'cp-erp-1',
         );
         expect(tradingPointService.upsertFromStream).toHaveBeenCalledWith(ctx, 'pos-1', {
+            extra: expect.objectContaining({ code: 'K-001', isDeleted: false }),
             name: 'Kiosk A',
             counterpartyId: 'cp-local-1',
             servicingBranchId: 'branch-a',
@@ -67,8 +76,8 @@ describe('PointOfSaleStreamHandler', () => {
         });
     });
 
-    // `code` has no matching TradingPoint field — must never leak into upsertFromStream.
-    it('never forwards code even when present in the payload', async () => {
+    // code goes to the ERP mirror only (inside extra), never onto mivend's own record fields.
+    it('never forwards code as a TradingPoint field', async () => {
         const { handler, tradingPointService } = makeHandler();
 
         await handler.apply(ctx, 'pos-1', {
@@ -80,6 +89,32 @@ describe('PointOfSaleStreamHandler', () => {
 
         const call = tradingPointService.upsertFromStream.mock.calls[0][2];
         expect(call).not.toHaveProperty('code');
+        expect(call.extra.code).toBe('K-001');
+    });
+
+    it('keeps the unread fields as sent: lists as untouched JSON, absent ones cleared, missing region still stored', async () => {
+        const { handler, tradingPointService } = makeHandler();
+        const contactInfos = [{ type: 'phone', kindName: 'Main', presentation: 'a@example.com' }];
+
+        await handler.apply(ctx, 'pos-1', {
+            name: 'Kiosk A',
+            counterpartyId: 'cp-erp-1',
+            regionId: 'region-gone',
+            area: 12.5,
+            hasCompetitors: true,
+            pointTypeIds: ['type-1', 'type-unknown'],
+            contactInfos,
+        });
+
+        expect(tradingPointService.upsertFromStream.mock.calls[0][2].extra).toMatchObject({
+            regionId: 'region-gone',
+            area: 12.5,
+            hasCompetitors: true,
+            mainManagerId: null,
+            pointTypeIds: '["type-1","type-unknown"]',
+            managerIds: '[]',
+            contactInfos: JSON.stringify(contactInfos),
+        });
     });
 
     // proto3 JSON encoding omits a scalar field equal to its zero-value — confirmed for this

@@ -63,6 +63,11 @@ before implementing or before trusting this table's status column.
 | `manufacturer`       | ✅                             | `Manufacturer` (+ `manufacturer` FacetValue)                                                                                                                | mivend#164. Authoritative name source for the catalog Manufacturer facet; ProductChanged still creates a nameless stub so references resolve first. `entity_id` == `ProductChanged.manufacturer_id`; `name` consumed (empty skipped); `is_active`/`is_deleted` consumed into `Manufacturer.isActive` (absent is_active = inactive; a deactivated manufacturer keeps its name); `parent_id` not consumed. Unnamed manufacturers are hidden from the facet response.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `region` | ✅ | `RegionRecord` (reference cache) | event-contracts 0.50.1, `erp.region.events.v1`. `entity_id` = `CounterpartyChanged.region_id`. Consumed: name, code, optional region_code/address_code/parent_id (soft link, no FK), is_active, is_deleted (tombstone keeps the row). Optional fields omitted = null (full snapshot, latest wins via inbox version guard). Missing name/code skipped. |
 | `legal-form` | ✅ | `LegalFormRecord` (reference cache) | event-contracts 0.50.1, `erp.legal-form.events.v1`. `entity_id` = `CounterpartyChanged.legal_form_id`. Consumed: name (abbreviation), code, optional full_name, is_active, is_deleted (tombstone keeps the row). |
+| `counterparty-contact` | ✅ | `CounterpartyContactErp` (`counterparty_contact_erp`, ERP-owned mirror, #254) | `erp.counterparty-contact.events.v1`. Stored as sent: name, position, phone, email, isActive, isDeleted, `contactInfos` as untouched JSON text. Soft link: `counterpartyId` (plain ERP id, no FK; an unknown counterparty never blocks or retries). A named event is full state; a tombstone only sets `isDeleted`/inactive and keeps the values. Nothing reads it yet, no UI. |
+| `counterparty-group` | ✅ | `CounterpartyGroupErp` (`counterparty_group_erp`) | `erp.counterparty-group.events.v1`. name, isActive, isDeleted; soft link `parentId`. Same tombstone and full-state rules. |
+| `product-group` | ✅ | `ProductGroupErp` (`product_group_erp`) | `erp.product-group.events.v1`. name, code, isActive, isDeleted; soft link `parentId`. Referenced by `trading_point_erp.productGroupIds`. |
+| `point-of-sale-type` | ✅ | `PointOfSaleTypeErp` (`point_of_sale_type_erp`) | `erp.point-of-sale-type.events.v1`. name, code, isActive, isDeleted. Referenced by `trading_point_erp.pointTypeIds`. |
+| `setting` | ✅ | `SettingErp` (`setting_erp`) | `erp.setting.events.v1`. code, boolValue (absent = null), isDeleted. Base-wide ERP flags; nothing in mivend reads them yet. |
 | `bank` | ✅ | `BankRecord` (reference cache) | `erp.bank.events.v1` (in the contract since 0.47, consumed from #188). Consumed: name, bik, optional correspondent_account, is_active (absent = false, project convention), is_deleted (tombstone keeps the row). |
 | `bank-account` | ✅ | `BankAccountRecord` (reference cache) | `erp.bank-account.events.v1`. `entity_id` = `CounterpartyChanged.main_bank_account_id`. Consumed: account_number, bank_id (soft link to bank), owner_id + owner_type (soft link to counterparty/organization, indexed), is_active, is_deleted. No FK, no resolution; arrival order undefined. |
 | `counterparty` (new fields) | ✅ | `Counterparty` columns | 0.50.1: main_contract_id, full_name, main_bank_account_id, ogrnip, kpp, okpo, legal_type, region_id, legal_form_id stored as-is. Reference ids are soft links (no FK; target may arrive later or never; main_contract_id may point to a contract absent from the contract stream). Omitted = keep stored value, explicit null clears (same as inn/phone). Price type from the main contract is not resolved yet. |
@@ -117,7 +122,7 @@ envelope `entity_id` = Kafka key (`productId:priceTypeId`, `productId:warehouseI
 | `point-of-sale` | address, latitude, longitude, contactPhone (the existing primary contact's phone) | name, counterparty, active flag |
 | `organization` | phone | legal requisites (inn, kpp, ogrn, address, bank): proforma invoices need them, an empty one never wipes; signatory list (an empty list keeps it) |
 | `product` | manufacturerPartNumber, fullName, `erpCreatedAt` (`source_fields["ДатаСоздания"]` date value only, other kinds ignored; absent clears it; defines "new" as `COALESCE(erpCreatedAt, createdAt)` for the New arrivals widget, #298); barcodes, characteristics, manufacturer codes were already full-replace | manufacturer reference |
-| contact person | no consumer (`counterparty-contact` is ignored) | n/a |
+| contact person | `counterparty_contact_erp` mirror only (#254); mivend's `ContactPerson` is not written from it | n/a |
 
 ## Non-trivial design decisions (so they don't need re-explaining next session)
 
@@ -272,9 +277,9 @@ facts in the UI (#155/#156) until a tombstone arrives, then add an `is_deleted` 
 
 ### Contact information list `contact_infos` (#290, event-contracts 0.82.0)
 
-Added on `counterparty`, `counterparty-contact` (stream ignored) and `point-of-sale`: `ContactInfo {type, kind_name,
+Added on `counterparty`, `counterparty-contact` and `point-of-sale`: `ContactInfo {type, kind_name,
 is_primary, presentation, comment}`, all contact information as a list, data not cleaned (a phone field may hold an
-e-mail). **Deferred** on every stream: the old `phone` / `official_email` / `contact_phone` fields stay and are derived
+e-mail). **Mirrored, not read** (#254): `counterparty-contact` and `point-of-sale` store the list as JSON text in `counterparty_contact_erp` / `trading_point_erp` exactly as sent; `counterparty` does not. The old `phone` / `official_email` / `contact_phone` fields stay and are derived
 from the list by the Integration Service, and no mivend feature reads the full list yet. Consume it when a feature needs
 more than the first phone and e-mail (for example several recipients for notifications).
 
@@ -348,3 +353,15 @@ protobuf formalization) · #126 (discount/promo/bonus classifier value sets) · 
 | Config | keep retry, surface it | product VAT code without a default tax category |
 
 Details and rationale: the `external-integration-rules` skill, section "Cross-entity dependencies".
+
+### ERP-owned mirrors for dictionaries and unread point fields (#254, stage 1)
+
+Same principle as `trading_point_erp` (#328): the handler stores what the ERP sent in an `_erp` table, nothing in
+mivend's own records changes, links to other entities are plain ERP-id varchar columns (no foreign key; a missing
+target never blocks, retries or dead-letters the event), a tombstone sets `isDeleted` and never deletes, and the
+inbox version guard makes it idempotent per ERP id. Lists and `contactInfos` are JSON text, uncleaned. The
+`point-of-sale` stream also fills `trading_point_erp`: code, regionId, storageStock, loyalty, area, classification,
+hasCompetitors, mainManagerId, bankAccountId, internalTransferPointId, accuracyRadius, productGroupIds, managerIds,
+pointTypeIds, salesChannels, contactInfos, isDeleted (all soft ids; a named event is full state, absent clears).
+Not replicated to branches and not replayable (no aggregate type known for the replay API); the reconciliation
+summary does not cover these streams.

@@ -13,6 +13,10 @@ export type { CreditLimitDecision, CreditCheckStatus } from './src/credit-limit-
 export { Counterparty } from './src/entities/counterparty.entity';
 export { TradingPoint } from './src/entities/trading-point.entity';
 export { Contract } from './src/entities/contract.entity';
+export { CounterpartyContactErp } from './src/entities/counterparty-contact-erp.entity';
+export { CounterpartyGroupErp } from './src/entities/counterparty-group-erp.entity';
+export { PointOfSaleTypeErp } from './src/entities/point-of-sale-type-erp.entity';
+export type { ErpPointExtra } from './src/trading-point-erp-extra';
 export { ContactPerson } from './src/entities/contact-person.entity';
 export { CounterpartyTeamMember } from './src/entities/counterparty-team-member.entity';
 export type { CounterpartyTeamMemberRole } from './src/entities/counterparty-team-member.entity';

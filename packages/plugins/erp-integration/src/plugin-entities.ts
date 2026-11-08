@@ -14,6 +14,8 @@ import { ProductManufacturerCode } from './entities/product-manufacturer-code.en
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { UnitRecord } from './entities/unit-record.entity';
 import { RegionRecord } from './entities/region-record.entity';
+import { ProductGroupErp } from './entities/product-group-erp.entity';
+import { SettingErp } from './entities/setting-erp.entity';
 import { LegalFormRecord } from './entities/legal-form-record.entity';
 import { BankRecord } from './entities/bank-record.entity';
 import { BankAccountRecord } from './entities/bank-account-record.entity';
@@ -38,6 +40,8 @@ export const PLUGIN_ENTITIES = [
     ErpReconciliationIssue,
     UnitRecord,
     RegionRecord,
+    ProductGroupErp,
+    SettingErp,
     LegalFormRecord,
     BankRecord,
     BankAccountRecord,
