@@ -361,7 +361,7 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
 function addService(edits: OrderLineEditService, qb: Record<string, unknown>): OrderLineAddService {
     const modifier = {
         getOrCreateOrderLine: async (ctx: never, o: { id: string }) => {
-            const repo = h.connection.getRepository(ctx, TestOrderLine);
+            const repo = h.connection.getRepository(ctx, { name: 'OrderLine' } as never);
             const existing = await repo.findOne({ where: { orderId: o.id } });
             if (existing) return existing;
             return repo.save({

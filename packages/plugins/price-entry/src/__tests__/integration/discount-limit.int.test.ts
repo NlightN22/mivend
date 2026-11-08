@@ -184,8 +184,9 @@ describe('adjust-price limit check against stored limits (integration)', () => {
         };
     }
 
-    it('raises a finding whose default consequence is require-approval once a limit is set, and none while unset', async () => {
-        expect(await run('increases-discount', 50).findings).toEqual([]);
+    it('raises a finding whose default consequence is require-approval past the ceiling, where no row means a 0% ceiling', async () => {
+        expect(await run('increases-discount', 50).findings).toHaveLength(1);
+        expect(await run('increases-discount', 100).findings).toEqual([]);
         await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 10);
         const { registry, findings } = run('increases-discount', 50);
         expect(await findings).toHaveLength(1);
@@ -195,5 +196,7 @@ describe('adjust-price limit check against stored limits (integration)', () => {
         );
         expect(await run('increases-discount', 95).findings).toEqual([]);
         expect(await run('reduces-discount', 50).findings).toEqual([]);
+        await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 60);
+        expect(await run('increases-discount', 50).findings).toEqual([]);
     });
 });
