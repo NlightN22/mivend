@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #320: per-employee, per-product-scope ceiling of a line discount; empty until an admin sets one.
-export class DiscountLimit1791559000000 implements MigrationInterface {
-    name = 'DiscountLimit1791559000000';
+export class DiscountLimit1791561000000 implements MigrationInterface {
+    name = 'DiscountLimit1791561000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
