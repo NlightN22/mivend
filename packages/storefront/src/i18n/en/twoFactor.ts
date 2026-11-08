@@ -36,9 +36,9 @@ export default {
         settingsContinue: 'Continue',
         cancel: 'Cancel',
         enabledDone: 'The new device is active.',
-        recoveryPageTitle: 'Replace the device',
+        recoveryPageTitle: 'Reset two-factor authentication',
         recoveryPageSub:
-            'Enter your password to remove the old device. You will set up a new one at the next sign-in.',
+            'Enter your password to confirm. The old device will be removed and you will set up a new one at your next sign-in.',
         recoveryComplete: 'Remove the old device',
         recoveryInvalid: 'This link is invalid or expired. Request a new one on the sign-in page.',
         recovered: 'The old device was removed. Sign in and set up a new one.',
