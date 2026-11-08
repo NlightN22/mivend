@@ -107,6 +107,22 @@ describe('rights are re-read from the database for each chunk', () => {
         ]);
     });
 
+    it('ends done, not stopped, when the right is lost after the last record was applied', async () => {
+        const connection = connectionFor(dataSource);
+        const stack = buildStack(connection, fakeExecutor(connection));
+        const draft = await stack.batches.preview(actor, FAKE_TYPE, {}, ['1']);
+        await stack.batches.run(actor, draft.uuid);
+        await dataSource.query(
+            `UPDATE bulk_batch_item SET outcome = 'applied' WHERE "batchId" = $1`,
+            [draft.id],
+        );
+        await dataSource.query(`UPDATE role SET permissions = 'ReadX'`);
+        await stack.runner.execute(actor, draft.uuid);
+        const batch = await stack.queries.get(actor, draft.uuid);
+        expect(batch.status).toBe('done');
+        expect(batch.errorMessage).toBeNull();
+    });
+
     it('skips the pending records when the administrator was deactivated', async () => {
         const connection = connectionFor(dataSource);
         const executor = fakeExecutor(connection);

@@ -45,7 +45,8 @@ export class BulkBatchRunner {
                         'actor_not_allowed',
                         'The administrator no longer holds the right to run this operation',
                     );
-                    stopped = `Stopped: the administrator was no longer allowed to run this operation; ${left} records were not processed`;
+                    if (left > 0)
+                        stopped = `Stopped: the administrator was no longer allowed to run this operation; ${left} records were not processed`;
                     break;
                 }
                 const chunk = await pendingItems(this.connection, ctx, batch.id, RUN_CHUNK);
