@@ -12,7 +12,8 @@ export const discountLimitSchema = gql`
     }
 
     """
-    The current admin's ceiling for one order line. A null ceiling means no limit is set for them.
+    The current admin's ceiling for one order line; no row of theirs is a 0% ceiling.
+    A null ceiling means the limit does not judge the line (a purely automatic discount).
     The discount percent is measured from the line's price without any manual or order-dependent discount.
     """
     type OrderLineDiscountLimit {

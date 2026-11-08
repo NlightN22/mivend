@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { UserInputError } from '@vendure/core';
+import { ForbiddenError, UserInputError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
 import { DiscountLimitService } from '../../discount-limit.service';
@@ -27,6 +27,17 @@ describe('DiscountLimitService', () => {
         ).ceilingsForProducts(ctx, '7', ['p1']);
         expect(ceilings.get('p1')).toBe(0);
         expect(connection.query).not.toHaveBeenCalled();
+    });
+
+    it('forbids setting a limit on the acting administrator themselves', async () => {
+        const connection = { getRepository: vi.fn(), withTransaction: vi.fn() };
+        const administrators = { findOneByUserId: vi.fn(async () => ({ id: 7 })) };
+        const service = new DiscountLimitService(connection as never, administrators as never);
+        const own = { activeUserId: 1 } as unknown as RequestContext;
+        await expect(service.setLimit(own, '7', 'all', '', 5)).rejects.toBeInstanceOf(
+            ForbiddenError,
+        );
+        expect(connection.withTransaction).not.toHaveBeenCalled();
     });
 
     it('refuses an unknown scope kind and a scope/reference mismatch', async () => {

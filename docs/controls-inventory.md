@@ -23,7 +23,7 @@ control, reason given).
 | 9 | Freight needs an active trading point | provider `delivery.freight-trading-point` (plugin-freight-shipping); the guard is gone | finding; checkout is not refused | same stages as row 3 | as left | migrated |
 | 10 | Staff confirmation hold | `OrderChecksService.isHeld`, `OrderSendHoldService` | n/a, consumer of policies | part of the framework | n/a | provider (framework) |
 | 11 | ERP rejects a registered order (#204) | inbound ERP result handling | order marked rejected, shown on the order | later: finding `erp.registration-rejected` (display only) | `info` | stays outside for now (an inbound fact, not a pre-check) |
-| 17 | Placed order line discount above the employee's own limit (manual discounts only, no row = 0%; a surcharge is never flagged) | provider `order.discount-over-limit` (plugin-price-entry) | finding on the line | `order.discount-over-limit`: `pre-reserve`, `on-edit` | `warn` | provider (#320) |
+| 17 | Placed order line discount above the employee's own limit (manual discounts only, no row = 0%; a surcharge is never flagged; revert is the way out of a flagged line, a `block` policy is discouraged) | provider `order.discount-over-limit` (plugin-price-entry) | finding on the line | `order.discount-over-limit`: `pre-reserve`, `on-edit` | `warn` | provider (#320) |
 
 ## Manager subject (#242)
 

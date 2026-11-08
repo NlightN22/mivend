@@ -617,12 +617,15 @@ The limit is set **per employee** (Administrator), not per role. A `DiscountLimi
 are edited with `setDiscountLimit` / `removeDiscountLimit` under `ManageDiscountLimits` (general director and portal admin),
 from the manager Users page ("Discount limits", with a searchable picker fed by `discountLimitScopeOptions`), serialised by
 the lock `discount-limit:<administratorId>`. Across the rows of the acting employee that match the product the deepest
-percent wins.
+percent wins. `setDiscountLimit` refuses (`ForbiddenError`) a row on the acting administrator's own id, so nobody raises their own
+ceiling or approves their own deeper discount; removing one's own row is allowed.
 
 **No matching row = a 0% manual-discount ceiling** (owner decision; a limit of `0` and no row are the same). Reducing a
 discount, keeping it or a surcharge is always free; any manual deepening needs an approval until a row allows it. The
 limit judges **manual** discounts only: a purely automatic (promotion) discount is never flagged, and a manual price that is
-not deeper than the automatic price is free.
+not deeper than the automatic price is free. `order.discount-over-limit` cannot know who reduced a line, so a remaining manual
+discount above the ceiling is still flagged after a reduction: `revertOrderLineDiscount` (always allowed) is the way out, and a
+`block` policy on this finding is discouraged.
 
 **The price floor stays a separate boundary.** A request below the floor (or with no known floor) is `require-approval`
 (`manager.price-adjustment-floor`); the employee limit never overrides it and no extra right exists for it: the same

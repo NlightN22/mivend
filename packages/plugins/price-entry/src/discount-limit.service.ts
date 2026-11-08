@@ -5,6 +5,7 @@ import {
     AdministratorService,
     RequestContext,
     TransactionalConnection,
+    ForbiddenError,
     UserInputError,
 } from '@vendure/core';
 import { activeAdministratorId } from '@mivend/plugin-approval-workflow';
@@ -46,6 +47,7 @@ export class DiscountLimitService {
         if (!(maxDiscountPercent >= 0 && maxDiscountPercent <= 100)) {
             throw new UserInputError('The discount limit must be between 0 and 100 percent');
         }
+        if (adminId === (await this.actorAdministratorId(ctx))) throw new ForbiddenError();
         return withAggregateLock(this.connection, ctx, `discount-limit:${adminId}`, async txCtx => {
             const repo = this.connection.getRepository(txCtx, DiscountLimit);
             const row =
