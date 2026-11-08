@@ -28,6 +28,24 @@ export class ReconciliationResolver {
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async tradingPointsDifferingFromErp(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<TradingPoint>> {
+        return this.locationReport.listDifferingFromErp(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async tradingPointsNotConfirmedByErp(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<TradingPoint>> {
+        return this.locationReport.listNotConfirmedByErp(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
     async openErpReconciliationIssues(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: OpenErpReconciliationIssueListOptions },
