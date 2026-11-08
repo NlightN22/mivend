@@ -22,6 +22,15 @@ export interface TradingPoint {
     customerStatus: string;
     customerOwned: boolean;
     contacts: ContactPerson[];
+    pendingChange?: {
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        workingHours: string | null;
+        contactName: string | null;
+        contactPhone: string | null;
+    } | null;
 }
 
 const props = defineProps<{
@@ -193,6 +202,14 @@ watch(
                     <div class="tp-card__info-label">{{ $t('tradingPoints.note') }}</div>
                     <div class="tp-card__info-value">{{ props.point.deliveryComment }}</div>
                 </div>
+            </div>
+
+            <div v-if="props.point.pendingChange" class="tp-card__pending" data-testid="tp-pending">
+                <div class="tp-card__pending-title">{{ $t('tradingPoints.pendingTitle') }}</div>
+                <div class="tp-card__pending-values">
+                    {{ props.point.pendingChange.name }} · {{ props.point.pendingChange.address }}
+                </div>
+                <div class="tp-card__pending-hint">{{ $t('tradingPoints.pendingHint') }}</div>
             </div>
         </template>
 
