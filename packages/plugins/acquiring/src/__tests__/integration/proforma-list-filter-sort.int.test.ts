@@ -38,6 +38,7 @@ const counterpartySchema = new EntitySchema({
         id: { type: Number, primary: true, generated: true },
         erpId: { type: String },
         shortName: { type: String, nullable: true },
+        legalName: { type: String, nullable: true },
         inn: { type: String, nullable: true },
         assignedManagerId: { type: String, nullable: true },
         branchId: { type: String, nullable: true },

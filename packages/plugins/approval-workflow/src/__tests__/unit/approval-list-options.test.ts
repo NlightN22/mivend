@@ -15,7 +15,7 @@ function fakeQb(): {
     const getMany = vi.fn(async () => [{ id: 1 }]);
     const qb = {
         orderBy: (c: string, d: string, n?: string) => (orders.push([c, d, n ?? '']), qb),
-        addOrderBy: (c: string, d: string) => (orders.push([c, d]), qb),
+        addOrderBy: (c: string, d: string, n?: string) => (orders.push([c, d, n ?? '']), qb),
         getCount: async () => 7,
         take: (n: number) => ((paging.take = n), qb),
         skip: (n: number) => ((paging.skip = n), qb),

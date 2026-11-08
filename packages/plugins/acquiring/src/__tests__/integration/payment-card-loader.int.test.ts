@@ -59,13 +59,13 @@ beforeAll(async () => {
     for (let n = 1; n <= 60; n++)
         await dataSource.query(
             `INSERT INTO payment_refund ("paymentId", number, amount, status, reason, "createdAt")
-             VALUES (1, $1, $2, 'succeeded', 'r', '2026-01-01'::timestamp + ($2 || ' hours')::interval)`,
+             VALUES (1, $1, $2, 'succeeded', 'r', '2026-01-01'::timestamp + ($2::int || ' hours')::interval)`,
             [`rf-${n}`, n],
         );
     for (const n of [1, 2])
         await dataSource.query(
             `INSERT INTO payment_refund ("paymentId", number, amount, status, reason, "createdAt")
-             VALUES (2, $1, $2, 'pending', 'x', '2026-02-01'::timestamp + ($2 || ' hours')::interval)`,
+             VALUES (2, $1, $2, 'pending', 'x', '2026-02-01'::timestamp + ($2::int || ' hours')::interval)`,
             [`pr-${n}`, n],
         );
     loader = new PaymentCardLoader(createTestConnection(dataSource));

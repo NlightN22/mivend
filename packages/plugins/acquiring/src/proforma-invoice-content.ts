@@ -25,7 +25,7 @@ export type VersionDecision = 'create' | 'reuse' | 'paid-changed';
 
 // Discounts are stored signed (negative reduces the price); the printed discount and the stored amount both use this.
 export function lineDiscountTotal(discounts: { amount: number }[]): number {
-    return -discounts.reduce((sum, d) => sum + d.amount, 0);
+    return 0 - discounts.reduce((sum, d) => sum + d.amount, 0);
 }
 
 export function lineNetAmount(snapshot: {

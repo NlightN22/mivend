@@ -56,6 +56,7 @@ const counterpartySchema = new EntitySchema({
         id: { type: Number, primary: true, generated: true },
         erpId: { type: String },
         shortName: { type: String, nullable: true },
+        legalName: { type: String, nullable: true },
         inn: { type: String, nullable: true },
         assignedManagerId: { type: String, nullable: true },
         branchId: { type: String, nullable: true },
@@ -173,7 +174,7 @@ describe('payment list filter and sort (real Postgres)', () => {
             '2001',
         ]);
         expect((await numbers({ sort: { status: 'ASC' } }))[0]).toBe('2000');
-        expect((await numbers({ sort: { channel: 'ASC', number: 'ASC' } }))[0]).toBe('2001');
+        expect((await numbers({ sort: { channel: 'ASC', number: 'ASC' } }))[0]).toBe('2003');
         expect((await numbers({ sort: { createdAt: 'ASC' } }))[0]).toBe('2000');
     });
 

@@ -42,7 +42,9 @@ test('the Filter builder and a sortable header narrow and order the list on the 
         .getByRole('columnheader', { name: /Amount/ })
         .getByRole('button')
         .click();
-    await expect(page).toHaveURL(/sortDir=DESC/);
+    // Descending is the default direction, so the URL drops sortDir once the click flips ASC to DESC.
+    await expect(page).not.toHaveURL(/sortDir=ASC/);
+    await expect(page).toHaveURL(/sortField=amount/);
 });
 
 test('a row links to its order and customer @on:manager-operator @read-only', async ({ page }) => {

@@ -151,14 +151,28 @@ async function createRequest(
     });
 }
 
+async function createDecided(
+    overrides: Partial<TestApprovalRequest>,
+): Promise<TestApprovalRequest> {
+    const request = await createRequest({ decidedAt: new Date(), ...overrides });
+    await dataSource.getRepository(TestApprovalStep).save({
+        approvalRequestId: request.id,
+        stepIndex: 0,
+        requiredRole: 'DepartmentHead',
+        approverAdministratorId: 'admin-1',
+        decision: request.status,
+    });
+    return request;
+}
+
 const approver = ctxWithPermissions(['ApproveDiscountRequest', 'ApproveSecurityLimit'], 'admin-1');
 const ids = (r: { items: { id: unknown }[] }): unknown[] => r.items.map(i => i.id);
 
 describe('ApprovalRequestQueryService list filters and sort (integration, real Postgres)', () => {
     it('filters by type list, status, requester and creation window, counts following the filters', async () => {
         const a = await createRequest({ requestedByAdministratorId: 'admin-1' });
-        const b = await createRequest({ requestType: 'discountGrantApproval', status: 'approved' });
-        await createRequest({ createdAt: new Date('2020-01-01T00:00:00Z'), status: 'rejected' });
+        const b = await createDecided({ requestType: 'discountGrantApproval', status: 'approved' });
+        await createDecided({ createdAt: new Date('2020-01-01T00:00:00Z'), status: 'rejected' });
 
         const byType = await queryService.findAllInvolving(approver, {
             requestTypes: ['discountGrantApproval'],
@@ -183,7 +197,7 @@ describe('ApprovalRequestQueryService list filters and sort (integration, real P
     });
 
     it('sorts by a whitelisted column both ways and pages deterministically', async () => {
-        const first = await createRequest({ status: 'approved' });
+        const first = await createDecided({ status: 'approved' });
         const second = await createRequest({ status: 'pending' });
         const third = await createRequest({ status: 'pending' });
         const asc = await queryService.findAllInvolving(approver, {
@@ -206,7 +220,7 @@ describe('ApprovalRequestQueryService list filters and sort (integration, real P
     });
 
     it('puts undecided requests last when sorting by decision time in either direction', async () => {
-        const decided = await createRequest({ status: 'approved', decidedAt: new Date() });
+        const decided = await createDecided({ status: 'approved' });
         const open = await createRequest();
         for (const sortDir of ['ASC', 'DESC']) {
             const r = await queryService.findAllInvolving(approver, {
