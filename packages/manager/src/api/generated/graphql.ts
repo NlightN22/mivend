@@ -6533,11 +6533,11 @@ export type PaymentCardOrder = {
 export type PaymentCardProforma = {
     amount: Scalars['Int']['output'];
     currencyCode: Scalars['String']['output'];
+    /** current | superseded | cancelled; never the stored status. */
+    displayStatus: Scalars['String']['output'];
     dueDate: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
     number: Scalars['String']['output'];
-    /** current | superseded | cancelled; never the stored status. */
-    displayStatus: Scalars['String']['output'];
     version: Scalars['Int']['output'];
 };
 
