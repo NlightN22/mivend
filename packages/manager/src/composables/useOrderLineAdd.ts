@@ -145,7 +145,7 @@ export function useOrderLineAdd(
 
     async function applyChangedPrice(sku: string): Promise<void> {
         const minor = Math.round(Number(price.value) * 100);
-        if (price.value === prefilled()) return;
+        if (minor === quote.value?.customerPrice) return;
         try {
             if (price.value.trim() === '' || Number.isNaN(minor) || minor < 0) {
                 throw new Error('enter a valid price');
