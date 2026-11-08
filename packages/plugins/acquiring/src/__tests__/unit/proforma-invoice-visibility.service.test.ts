@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Brackets } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
@@ -179,13 +180,24 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
-    it('filters by search (number substring) when provided, in addition to scope', async () => {
+    it('filters by search (number or customer) when provided, in addition to scope', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
+        const brackets = qb.andWhere.mock.calls
+            .map(call => call[0])
+            .find((arg): arg is Brackets => arg instanceof Brackets);
+        const inner = {
+            where: vi.fn().mockReturnThis(),
+            orWhere: vi.fn().mockReturnThis(),
+        };
+        brackets?.whereFactory(inner as never);
+        expect(inner.where).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
             search: '%42%',
+        });
+        expect(inner.orWhere).toHaveBeenCalledWith('counterparty.shortName ILIKE :term', {
+            term: '%42%',
         });
     });
 

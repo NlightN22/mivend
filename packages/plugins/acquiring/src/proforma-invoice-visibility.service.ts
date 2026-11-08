@@ -8,7 +8,7 @@ import {
 } from '@mivend/plugin-access-control';
 import { proformaBranchClause } from '@mivend/plugin-erp-order';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { applyStatusFilter } from './proforma-invoice-display';
@@ -185,9 +185,18 @@ export class ProformaInvoiceVisibilityService {
             applyStatusFilter(qb, 'proformaInvoice', options.status);
         }
         if (options?.search) {
-            qb.andWhere('proformaInvoice.number ILIKE :search', {
-                search: documentNumberSearchTerm(options.search),
-            });
+            const search = options.search;
+            const term = `%${search}%`;
+            qb.andWhere(
+                new Brackets(bqb => {
+                    bqb.where('proformaInvoice.number ILIKE :search', {
+                        search: documentNumberSearchTerm(search),
+                    })
+                        .orWhere('counterparty.shortName ILIKE :term', { term })
+                        .orWhere('counterparty.legalName ILIKE :term', { term })
+                        .orWhere('counterparty.inn ILIKE :term', { term });
+                }),
+            );
         }
         this.applyScope(qb, scope);
         return qb;
