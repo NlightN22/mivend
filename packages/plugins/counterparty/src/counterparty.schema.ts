@@ -108,6 +108,17 @@ export const adminApiSchema = gql`
         sort: CounterpartySortParameter
     }
 
+    input CounterpartyFilterParameter {
+        shortName: StringOperators
+        inn: StringOperators
+        phone: StringOperators
+        officialEmail: StringOperators
+        managerErpId: StringOperators
+        branchId: StringOperators
+        isActive: BooleanOperators
+        _and: [CounterpartyFilterParameter!]
+    }
+
     "Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136)"
     input CounterpartyListFilter {
         search: String
