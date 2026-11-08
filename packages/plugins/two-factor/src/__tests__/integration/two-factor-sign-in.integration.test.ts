@@ -5,7 +5,6 @@ import { Fixture, adminCtx, codeAt, enrol, openFixture, shopCtx } from './two-fa
 
 let fx: Fixture;
 const USER = '11';
-const past = (): Date => new Date(Date.now() - 60_000);
 
 beforeAll(async () => {
     fx = await openFixture('two_factor_sign_in');
@@ -67,7 +66,9 @@ describe('sign-in challenge storage and lifecycle', () => {
     it('refuses an expired challenge, an unknown one and one issued for the other API', async () => {
         const secret = await enrol(fx, USER);
         const expired = await fx.challenges.issue(shopCtx, USER, 'VERIFY');
-        await fx.dataSource.query('UPDATE two_factor_token SET "expiresAt" = $1', [past()]);
+        await fx.dataSource.query(
+            `UPDATE two_factor_token SET "expiresAt" = now() - interval '1 minute'`,
+        );
         expect(
             await fx.challenges.completeSignIn(shopCtx, expired.challenge, codeAt(secret, 1)),
         ).toBe('TWO_FACTOR_CHALLENGE_INVALID');
@@ -199,7 +200,9 @@ describe('enrolment through a challenge', () => {
         const { challenge } = await fx.challenges.issue(shopCtx, USER, 'ENROL');
         const started = await fx.enrolment.startForChallenge(shopCtx, challenge);
         if (started.__typename !== 'TwoFactorEnrolment') throw new Error('no enrolment');
-        await fx.dataSource.query('UPDATE two_factor_factor SET "pendingExpiresAt" = $1', [past()]);
+        await fx.dataSource.query(
+            `UPDATE two_factor_factor SET "pendingExpiresAt" = now() - interval '1 minute'`,
+        );
         expect(await fx.challenges.completeSignIn(shopCtx, challenge, codeAt(started.secret))).toBe(
             'TWO_FACTOR_ENROLMENT_EXPIRED',
         );

@@ -5,7 +5,8 @@ import { ctxQuery } from 'shared';
 
 import type { FactorRow } from './two-factor.types';
 
-const COLUMNS = `id, uuid, "userId", method, status, "secretEncrypted", "lastUsedStep"::float8 AS "lastUsedStep", "pendingExpiresAt", "activatedAt"`;
+const COLUMNS = `id, uuid, "userId", method, status, "secretEncrypted", "lastUsedStep"::float8 AS "lastUsedStep", "pendingExpiresAt", "activatedAt",
+    ("pendingExpiresAt" IS NOT NULL AND "pendingExpiresAt" > now()) AS "pendingLive"`;
 
 // Writes with RETURNING are wrapped in a CTE: a bare UPDATE/DELETE returns [rows, count] through TypeORM.
 // All writes go through the caller's per-user lock (TwoFactorLockService), so reads here are made under it.
@@ -45,21 +46,23 @@ export class FactorStoreService {
             userId: string;
             uuid: string;
             secretEncrypted: string;
-            expiresAt: Date;
+            ttlMs: number;
             method: string;
         },
-    ): Promise<void> {
+    ): Promise<Date> {
         await this.query(
             ctx,
             `DELETE FROM two_factor_factor WHERE "userId" = $1 AND status = 'pending'`,
             [input.userId],
         );
-        await this.query(
+        const rows = await this.query<Array<{ pendingExpiresAt: Date }>>(
             ctx,
-            `INSERT INTO two_factor_factor (uuid, "userId", method, status, "secretEncrypted", "pendingExpiresAt")
-             VALUES ($1, $2, $3, 'pending', $4, $5)`,
-            [input.uuid, input.userId, input.method, input.secretEncrypted, input.expiresAt],
+            `WITH r AS (INSERT INTO two_factor_factor (uuid, "userId", method, status, "secretEncrypted", "pendingExpiresAt")
+             VALUES ($1, $2, $3, 'pending', $4, now() + ($5 * interval '1 millisecond')) RETURNING "pendingExpiresAt")
+             SELECT "pendingExpiresAt" FROM r`,
+            [input.uuid, input.userId, input.method, input.secretEncrypted, input.ttlMs],
         );
+        return rows[0].pendingExpiresAt;
     }
 
     newUuid(): string {
@@ -75,10 +78,10 @@ export class FactorStoreService {
         );
         const activated = await this.query<unknown[]>(
             ctx,
-            `WITH r AS (UPDATE two_factor_factor SET status = 'active', "pendingExpiresAt" = NULL, "activatedAt" = $2,
-                "lastUsedStep" = $3, "updatedAt" = now()
+            `WITH r AS (UPDATE two_factor_factor SET status = 'active', "pendingExpiresAt" = NULL, "activatedAt" = now(),
+                "lastUsedStep" = $2, "updatedAt" = now()
              WHERE "userId" = $1 AND status = 'pending' RETURNING id) SELECT id FROM r`,
-            [userId, new Date(), step],
+            [userId, step],
         );
         if (activated.length !== 1) throw new Error('No pending factor to activate');
         return replaced.length > 0;

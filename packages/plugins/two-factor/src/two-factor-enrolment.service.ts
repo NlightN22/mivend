@@ -92,15 +92,12 @@ export class TwoFactorEnrolmentService {
         const method = this.methods.get(METHOD);
         const secret = method.createSecret();
         const uuid = this.factors.newUuid();
-        const expiresAt = new Date(
-            Date.now() + (this.options.pendingTtlMs ?? PENDING_TTL_DEFAULT_MS),
-        );
-        await this.factors.replacePending(ctx, {
+        const expiresAt = await this.factors.replacePending(ctx, {
             userId,
             uuid,
             method: METHOD,
             secretEncrypted: encryptSecret(secret, this.options.encryptionKey, uuid),
-            expiresAt,
+            ttlMs: this.options.pendingTtlMs ?? PENDING_TTL_DEFAULT_MS,
         });
         return {
             __typename: 'TwoFactorEnrolment',
@@ -122,7 +119,7 @@ export class TwoFactorEnrolmentService {
     async activate(ctx: RequestContext, userId: string, code: string): Promise<ActivationOutcome> {
         const pending = await this.factors.find(ctx, userId, 'pending');
         if (!pending) return 'NO_PENDING';
-        if (!pending.pendingExpiresAt || pending.pendingExpiresAt <= new Date()) return 'EXPIRED';
+        if (!pending.pendingLive) return 'EXPIRED';
         const step = this.verification.matchStep(pending, code);
         if (step === null) return 'INVALID_CODE';
         const replaced = await this.factors.activatePending(ctx, userId, step);
@@ -147,7 +144,7 @@ export class TwoFactorEnrolmentService {
             enrolled: !!active,
             method: active?.method ?? null,
             activatedAt: active?.activatedAt ?? null,
-            pendingEnrolment: !!pending?.pendingExpiresAt && pending.pendingExpiresAt > new Date(),
+            pendingEnrolment: !!pending?.pendingLive,
         };
     }
 

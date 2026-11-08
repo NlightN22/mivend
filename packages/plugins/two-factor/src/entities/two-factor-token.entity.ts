@@ -27,10 +27,10 @@ export class TwoFactorToken extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     apiType!: TwoFactorApi | null;
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamptz' })
     expiresAt!: Date;
 
-    @Column({ type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamptz', nullable: true })
     usedAt!: Date | null;
 
     @Column({ type: 'int', default: 0 })

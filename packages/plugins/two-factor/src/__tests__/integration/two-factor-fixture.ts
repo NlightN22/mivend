@@ -35,13 +35,13 @@ const DDL = `
         id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
         uuid uuid NOT NULL UNIQUE, "userId" varchar NOT NULL, method varchar NOT NULL DEFAULT 'totp',
         status varchar NOT NULL, "secretEncrypted" text NOT NULL, "lastUsedStep" bigint,
-        "pendingExpiresAt" timestamp, "activatedAt" timestamp);
+        "pendingExpiresAt" timestamptz, "activatedAt" timestamptz);
     CREATE UNIQUE INDEX two_factor_active_user ON two_factor_factor ("userId") WHERE status = 'active';
     CREATE UNIQUE INDEX two_factor_pending_user ON two_factor_factor ("userId") WHERE status = 'pending';
     CREATE TABLE two_factor_token (
         id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
         uuid uuid NOT NULL UNIQUE, "tokenHash" varchar NOT NULL UNIQUE, purpose varchar NOT NULL, "userId" varchar NOT NULL,
-        stage varchar, "apiType" varchar, "expiresAt" timestamp NOT NULL, "usedAt" timestamp, attempts int NOT NULL DEFAULT 0);
+        stage varchar, "apiType" varchar, "expiresAt" timestamptz NOT NULL, "usedAt" timestamptz, attempts int NOT NULL DEFAULT 0);
 `;
 
 export interface Fixture {

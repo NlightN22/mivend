@@ -13,7 +13,6 @@ import {
 
 let fx: Fixture;
 const USER = '21';
-const past = (): Date => new Date(Date.now() - 60_000);
 
 beforeAll(async () => {
     fx = await openFixture('two_factor_recovery');
@@ -81,7 +80,9 @@ describe('recovery request by challenge', () => {
     it('answers a neutral failure and sends nothing for an unknown, expired, used, wrong-API or non-VERIFY challenge', async () => {
         await enrol(fx, USER);
         const expired = await verifyChallenge();
-        await fx.dataSource.query('UPDATE two_factor_token SET "expiresAt" = $1', [past()]);
+        await fx.dataSource.query(
+            `UPDATE two_factor_token SET "expiresAt" = now() - interval '1 minute'`,
+        );
         const used = await verifyChallenge();
         await fx.dataSource.query(
             `UPDATE two_factor_token SET "usedAt" = now() WHERE "tokenHash" = $1`,
@@ -169,7 +170,9 @@ describe('recovery link', () => {
     it('refuses an expired link', async () => {
         await enrol(fx, USER);
         const link = await requestLink();
-        await fx.dataSource.query('UPDATE two_factor_token SET "expiresAt" = $1', [past()]);
+        await fx.dataSource.query(
+            `UPDATE two_factor_token SET "expiresAt" = now() - interval '1 minute'`,
+        );
         expect(await fx.recovery.complete(shopCtx, link, PASSWORD)).toMatchObject({
             failure: 'RECOVERY_LINK_INVALID',
         });

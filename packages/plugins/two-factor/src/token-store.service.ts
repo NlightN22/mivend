@@ -29,11 +29,11 @@ export class TokenStoreService {
         input: IssueTokenInput,
     ): Promise<{ token: string; expiresAt: Date }> {
         const token = newToken();
-        const expiresAt = new Date(Date.now() + input.ttlMs);
-        await this.query(
+        const rows = await this.query<Array<{ expiresAt: Date }>>(
             ctx,
-            `INSERT INTO two_factor_token (uuid, "tokenHash", purpose, "userId", stage, "apiType", "expiresAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `WITH r AS (INSERT INTO two_factor_token (uuid, "tokenHash", purpose, "userId", stage, "apiType", "expiresAt")
+             VALUES ($1, $2, $3, $4, $5, $6, now() + ($7 * interval '1 millisecond')) RETURNING "expiresAt")
+             SELECT "expiresAt" FROM r`,
             [
                 randomUUID(),
                 hashToken(token),
@@ -41,10 +41,10 @@ export class TokenStoreService {
                 input.userId,
                 input.stage ?? null,
                 input.apiType ?? null,
-                expiresAt,
+                input.ttlMs,
             ],
         );
-        return { token, expiresAt };
+        return { token, expiresAt: rows[0].expiresAt };
     }
 
     // Only the owner of the hash is looked up before the per-user lock; callers re-check state under the lock.
@@ -70,8 +70,8 @@ export class TokenStoreService {
         const rows = await this.query<TokenRow[]>(
             ctx,
             `SELECT ${COLUMNS} FROM two_factor_token
-             WHERE "tokenHash" = $1 AND purpose = $2 AND "usedAt" IS NULL AND "expiresAt" > $3 AND attempts < $4`,
-            [hashToken(token), purpose, new Date(), maxAttempts],
+             WHERE "tokenHash" = $1 AND purpose = $2 AND "usedAt" IS NULL AND "expiresAt" > now() AND attempts < $3`,
+            [hashToken(token), purpose, maxAttempts],
         );
         return rows[0] ?? null;
     }
@@ -100,9 +100,9 @@ export class TokenStoreService {
     async claim(ctx: RequestContext, id: number): Promise<boolean> {
         const rows = await this.query<unknown[]>(
             ctx,
-            `WITH r AS (UPDATE two_factor_token SET "usedAt" = $2, "updatedAt" = now()
-             WHERE id = $1 AND "usedAt" IS NULL AND "expiresAt" > $2 RETURNING id) SELECT id FROM r`,
-            [id, new Date()],
+            `WITH r AS (UPDATE two_factor_token SET "usedAt" = now(), "updatedAt" = now()
+             WHERE id = $1 AND "usedAt" IS NULL AND "expiresAt" > now() RETURNING id) SELECT id FROM r`,
+            [id],
         );
         return rows.length === 1;
     }
@@ -110,18 +110,18 @@ export class TokenStoreService {
     async consumeOpen(ctx: RequestContext, userId: string, purpose: TokenPurpose): Promise<void> {
         await this.query(
             ctx,
-            `UPDATE two_factor_token SET "usedAt" = $3, "updatedAt" = now()
+            `UPDATE two_factor_token SET "usedAt" = now(), "updatedAt" = now()
              WHERE "userId" = $1 AND purpose = $2 AND "usedAt" IS NULL`,
-            [userId, purpose, new Date()],
+            [userId, purpose],
         );
     }
 
     async deleteExpired(ctx: RequestContext): Promise<number> {
         const rows = await this.query<Array<{ n: number }>>(
             ctx,
-            `WITH d AS (DELETE FROM two_factor_token WHERE "expiresAt" < $1 RETURNING 1)
+            `WITH d AS (DELETE FROM two_factor_token WHERE "expiresAt" < now() - interval '1 hour' RETURNING 1)
              SELECT count(*)::int AS n FROM d`,
-            [new Date(Date.now() - 60 * 60_000)],
+            [],
         );
         return rows[0]?.n ?? 0;
     }

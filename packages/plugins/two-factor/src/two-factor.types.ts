@@ -93,6 +93,7 @@ export interface FactorRow {
     lastUsedStep: number | null;
     pendingExpiresAt: Date | null;
     activatedAt: Date | null;
+    pendingLive: boolean;
 }
 
 export interface TokenRow {

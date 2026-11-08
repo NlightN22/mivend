@@ -28,9 +28,9 @@ export class TwoFactorFactor extends UuidEntity {
     @Column({ type: 'bigint', nullable: true })
     lastUsedStep!: string | null;
 
-    @Column({ type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamptz', nullable: true })
     pendingExpiresAt!: Date | null;
 
-    @Column({ type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamptz', nullable: true })
     activatedAt!: Date | null;
 }

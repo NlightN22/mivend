@@ -37,6 +37,7 @@ function factorEncryptedWith(key: Buffer): FactorRow {
         lastUsedStep: null,
         pendingExpiresAt: null,
         activatedAt: null,
+        pendingLive: false,
     };
 }
 
