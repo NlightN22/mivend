@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvPanel, MvStatusBadge } from '@mivend/ui-kit';
+import { MvDateTimeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import { PAYMENT_STATUS_LABEL, type ProformaCard } from '../../api/proformaInvoiceCard';
-import { documentDate, documentMoney } from '../../utils/documentMoney';
+import { documentMoney } from '../../utils/documentMoney';
 import { paymentSummary } from '../../utils/proformaPayments';
 
 const props = defineProps<{ card: ProformaCard }>();
@@ -31,7 +31,7 @@ const summary = computed(() => paymentSummary(props.card.amount, props.card.paym
                     </MvStatusBadge>
                     <strong class="pf-payments__amount">{{ money(payment.amount) }}</strong>
                 </div>
-                <span class="pf-payments__meta">{{ documentDate(payment.createdAt) }}</span>
+                <span class="pf-payments__meta"><MvDateTimeCell :value="payment.createdAt" /></span>
             </li>
         </ul>
         <dl class="pf-payments__summary">

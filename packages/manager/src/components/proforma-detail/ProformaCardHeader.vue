@@ -2,13 +2,18 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { IconCalendar, IconDownload, IconExternalLink, IconShoppingCart } from '@tabler/icons-vue';
-import { MvActionMenu, MvButton, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
+import {
+    MvActionMenu,
+    MvButton,
+    MvDateTimeCell,
+    MvStatusBadge,
+    formatDocumentNumber,
+} from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
     PROFORMA_INVOICE_STATUS_LABEL,
 } from '../../api/proforma-invoices';
 import { proformaPdfHref, type ProformaCard } from '../../api/proformaInvoiceCard';
-import { documentDate } from '../../utils/documentMoney';
 
 const props = defineProps<{ card: ProformaCard }>();
 const router = useRouter();
@@ -79,11 +84,11 @@ function onMenu(key: string): void {
         <div class="pf-header__meta">
             <span class="pf-header__item">
                 <IconCalendar :size="16" /> Issued:
-                <strong>{{ documentDate(card.issuedAt) }}</strong>
+                <strong><MvDateTimeCell :value="card.issuedAt" /></strong>
             </span>
             <span class="pf-header__item">
                 <IconCalendar :size="16" /> Pay by:
-                <strong>{{ documentDate(card.dueDate) }}</strong>
+                <strong><MvDateTimeCell :value="card.dueDate" /></strong>
             </span>
             <span v-if="card.order" class="pf-header__item">
                 <IconShoppingCart :size="16" /> Order:

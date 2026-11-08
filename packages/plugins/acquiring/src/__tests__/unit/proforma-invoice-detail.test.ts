@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { ProformaInvoiceDetailFieldResolver } from '../../proforma-invoice-detail.resolver';
-import { ProformaInvoiceDetailService } from '../../proforma-invoice-detail.service';
+import { PAYMENTS_CAP, ProformaInvoiceDetailService } from '../../proforma-invoice-detail.service';
 import { ProformaInvoiceFieldResolver } from '../../proforma-invoice.resolver';
 
 const ctx = {} as RequestContext;
@@ -56,6 +56,22 @@ describe('ProformaInvoiceDetailService.versions', () => {
         expect(find).toHaveBeenCalledWith({
             where: { orderId: 5, organizationId: 9 },
             order: { version: 'DESC' },
+        });
+    });
+});
+
+describe('ProformaInvoiceDetailService.payments', () => {
+    it('returns at most the first 50 payments, newest first', async () => {
+        const find = vi.fn().mockResolvedValue([]);
+        const service = new ProformaInvoiceDetailService({
+            getRepository: () => ({ find }),
+        } as never);
+        await service.payments(ctx, 7);
+        expect(PAYMENTS_CAP).toBe(50);
+        expect(find).toHaveBeenCalledWith({
+            where: { proformaInvoiceId: 7 },
+            order: { createdAt: 'DESC', id: 'DESC' },
+            take: 50,
         });
     });
 });

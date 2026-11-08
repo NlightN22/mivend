@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvPanel, MvStatusBadge } from '@mivend/ui-kit';
+import { MvDateTimeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
     PROFORMA_INVOICE_STATUS_LABEL,
 } from '../../api/proforma-invoices';
 import { PROFORMA_KIND_LABEL, type ProformaCard } from '../../api/proformaInvoiceCard';
-import { documentDate, documentMoney } from '../../utils/documentMoney';
+import { documentMoney } from '../../utils/documentMoney';
 import { changeSummary, signedMoney } from '../../utils/proformaVersionText';
 import { timelineEntries } from '../../utils/proformaVersionDiff';
 
@@ -51,7 +51,7 @@ const entries = computed(() => timelineEntries(props.card.versions));
                     <strong class="pf-timeline__amount">{{ money(entry.version.amount) }}</strong>
                 </div>
                 <div class="pf-timeline__meta">
-                    {{ documentDate(entry.version.issuedAt) }} ·
+                    <MvDateTimeCell :value="entry.version.issuedAt" /> ·
                     {{ PROFORMA_KIND_LABEL[entry.version.kind] ?? entry.version.kind }}
                 </div>
                 <div v-if="entry.change" class="pf-timeline__change">
@@ -116,6 +116,12 @@ strong.pf-timeline__number {
 
 .pf-timeline__amount {
     margin-left: auto;
+}
+
+.pf-timeline__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .pf-timeline__meta,
