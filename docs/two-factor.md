@@ -15,12 +15,11 @@ Every fresh sign-in needs a one-time code from the user's own authenticator app 
   exists, only the enrolment calls below work. They are forced to enrol before they get a session.
 - No trusted devices: the code is asked at every fresh sign-in. Session lifetime is unchanged (`SESSION_DURATION`).
 - No recovery codes. A lost device is recovered by an emailed link plus the password.
-- Throttling of failed password and code attempts is not part of this issue (#278). The places are marked
-  `// #278: throttle ...` in the code. The only built-in limit is five wrong guesses per challenge or recovery link.
-- Until #278 (brute-force protection) lands, the second step is a device-binding measure, not a brute-force-proof
-  factor. Attempts are counted per challenge or link, and anyone who knows the password can request a new challenge,
-  so there is no per-account limit. Release condition: either #278 ships first, or the owner explicitly accepts
-  device-binding-only. Keep the `// #278` markers until then.
+- Failed password and code attempts are throttled per account by the `sign-in-protection` plugin (#278, docs/deployment.md
+  "Sign-in protection"): the password step, the second step, the password re-check (enrolment, recovery completion) and
+  recovery requests each keep their own counters, so a password holder cannot keep guessing codes through fresh challenges.
+  A locked account is answered like a wrong code or password, without looking at the attempt. Per challenge or recovery
+  link, five wrong guesses still void it.
 
 ## Where the state lives (central / branch)
 
@@ -166,8 +165,8 @@ start a replacement: it works only for an account without a factor.
    (`success`, `maskedEmailAddress` such as `j***@example.org`, the full address is never returned). An unknown, expired,
    used, wrong-API or non-`VERIFY` challenge, or an account without a factor, gives `TwoFactorError` `CHALLENGE_INVALID`
    and sends nothing. The challenge stays valid for the sign-in. A repeat within 60 seconds (per account) answers the
-   same success without a second mail; the extension point for a real throttle is the `#278` comment in
-   `two-factor-recovery.service.ts`. The link is single use, valid 30 minutes, and is stored hashed.
+   same success without a second mail; further requests are counted per account and, past the throttle threshold,
+   answered with the same success and no mail. The link is single use, valid 30 minutes, and is stored hashed.
    A newer request does not void an open link: both stay usable until one is used or they expire, so a caller who only
    knows the password cannot keep killing the link the owner is about to open. Completing recovery consumes every open
    link of the account.

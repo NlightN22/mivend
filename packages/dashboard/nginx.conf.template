@@ -1,3 +1,6 @@
+# The Dashboard cannot mark its sign-in requests, so every admin-api POST shares a generous per-IP cap. docs/deployment.md "Sign-in protection".
+limit_req_zone $binary_remote_addr zone=admin_api:10m rate=20r/s;
+
 server {
     # Defaults to 80 (the real compose deployment's container-internal port, mapped externally
     # via docker-compose.yml's ports:). Overridden to a fixed port (e.g. 18025/18026) only by the
@@ -26,6 +29,8 @@ server {
     }
 
     location /admin-api {
+        limit_req zone=admin_api burst=60 nodelay;
+        limit_req_status 429;
         set $api_upstream ${API_TARGET};
         proxy_pass $api_upstream;
         proxy_set_header Host $host;

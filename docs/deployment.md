@@ -103,6 +103,55 @@ Language rule: the explicit `languageCode` query parameter of the Shop/Admin API
 
 Password-reset links depend on the recipient. Vendure's reset event carries only a `User`, which belongs either to an `Administrator` (staff) or to a `Customer`. `password-reset-handler.ts` looks up an `Administrator` for that user: found means staff, link `MANAGER_PUBLIC_URL/set-password`; not found means customer, link `STOREFRONT_PUBLIC_URL/set-password`. In production with `smtp` both URLs are required, otherwise boot fails. The URLs are set by hand on purpose: taking the domain from request headers would let anyone request a reset with a forged `Host` and make the victim's mail link to another site. The account-activation mail (`email-verification`) links to `STOREFRONT_PUBLIC_URL/verify` through the `verifyEmailAddressUrl` global template variable.
 
+## Sign-in protection (#278)
+
+Five layers, none of them a single point of failure.
+
+1. **Proxy cap (nginx).** The storefront and manager portal send every sign-in, password-reset and second-step request to
+   `/shop-api?auth=1` or `/admin-api?auth=1`; their nginx counts only those per client address (30 requests a minute,
+   burst 10) and answers `429` beyond that. The mark is chosen by the client, so this is a coarse cap against honest
+   tooling, not a boundary: the per-account layer below is the real one. The Dashboard container cannot mark its requests
+   and gets a generous cap on all of `/admin-api` (20 requests a second, burst 60). Behind another proxy, configure
+   `set_real_ip_from`/`real_ip_header` there, otherwise every client shares the proxy address.
+2. **Per-account throttling (server).** Failures are counted per login and per login plus client address in the
+   `sign_in_throttle` table (hashed keys, atomic upserts on the database clock). From the threshold on the account is locked
+   for `BASE_LOCK` seconds, doubling with each further failure up to `MAX_LOCK`; there is no permanent lock, and nothing is
+   counted while locked. A locked, unknown and existing login get the identical `InvalidCredentialsError`, and a locked login
+   is refused even with the right password. A success clears the counters. Covers the password step, the second step, the
+   password re-check and recovery requests, on both APIs and the Dashboard. Stale counters are purged hourly.
+3. **CAPTCHA (adaptive).** After `SIGN_IN_CAPTCHA_AFTER_FAILURES` failures of a login the portals show a Cloudflare Turnstile
+   widget and send its token in the `X-Captcha-Token` header; `signInCaptchaRequirement(login)` tells them when. A missing or
+   rejected token counts as a refused attempt; an unreachable Turnstile never blocks (warning in the log). Off when the keys
+   are empty. The Dashboard cannot show the widget: a Dashboard sign-in for a login past the failure count is refused until
+   the counter expires. Another provider implements `CaptchaProvider` in `packages/plugins/sign-in-protection`.
+4. **fail2ban (host).** Example files in `infrastructure/fail2ban/`: a filter matching `429` on the Shop/Admin API in the
+   access log, and a jail with escalating bans. Complement only; copy and enable them by hand on the host whose log holds the
+   real client address.
+5. **Breached passwords.** With `PASSWORD_BREACH_CHECK_ENABLED=true` a new password (registration, change, reset, administrator
+   create) is checked against the Pwned Passwords range API; only the first 5 characters of its SHA-1 leave the server. A
+   confirmed hit is rejected with `PASSWORD_BREACHED`. At a successful sign-in the password in hand is checked once; a hit sets
+   `User.customFields.passwordChangeRequired` and the portals send the user to the password change (cleared by any new
+   password). The flag is advisory, not an API gate. A failed lookup is skipped with a warning and retried at the next
+   sign-in or change; a sign-in waits for the lookup for at most `PASSWORD_BREACH_TIMEOUT_MS`.
+
+| Variable | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `SIGN_IN_THROTTLE_ENABLED` | no | `false` (set `true` in `.env.production.example`) | Layer 2 on or off. |
+| `SIGN_IN_THROTTLE_LOGIN_IP_THRESHOLD` | no | `5` | Failures of one login from one address before the lock. |
+| `SIGN_IN_THROTTLE_LOGIN_THRESHOLD` | no | `15` | Failures of one login from any address before the lock. |
+| `SIGN_IN_THROTTLE_BASE_LOCK_SECONDS` | no | `30` | First lock; doubles per further failure. |
+| `SIGN_IN_THROTTLE_MAX_LOCK_SECONDS` | no | `900` | Longest lock. |
+| `SIGN_IN_THROTTLE_RESET_AFTER_SECONDS` | no | `3600` | A counter without a failure for this long restarts; must be at least the max lock. |
+| `SIGN_IN_TRUSTED_PROXY_HOPS` | no | `2` | Proxies in front of the server (counted from the right of `X-Forwarded-For`). |
+| `SIGN_IN_CAPTCHA_AFTER_FAILURES` | no | `3` | Failures before the widget is required. |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | empty | Both or neither; both set enables Turnstile. Add each portal hostname to the widget. |
+| `PASSWORD_BREACH_CHECK_ENABLED` | no | `false` (set `true` in `.env.production.example`) | Layer 5 on or off. |
+| `PASSWORD_BREACH_API_URL` | no | `https://api.pwnedpasswords.com` | Range API base URL. |
+| `PASSWORD_BREACH_TIMEOUT_MS` | no | `3000` | Lookup timeout. |
+
+A wrong value fails boot. Local, branch and staging-integration contours keep both switches `false` so tests and e2e can sign
+in repeatedly and never call the network; the throttle itself is covered against a throwaway server by the access suite.
+
 ## First boot and duplicate superadmin (#285)
 
 Vendure creates the superadmin in every process that bootstraps (`server`, `worker`, `worker-email`) with a

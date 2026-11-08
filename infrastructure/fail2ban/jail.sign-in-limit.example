@@ -1,0 +1,14 @@
+# Example jail (merge into /etc/fail2ban/jail.local on the host that terminates TLS). Not applied by any script.
+# logpath is the access log of the proxy that sees the real client address, not a container-internal one.
+[nginx-sign-in-limit]
+enabled  = true
+filter   = nginx-sign-in-limit
+port     = http,https
+logpath  = /var/log/nginx/access.log
+backend  = auto
+maxretry = 10
+findtime = 600
+bantime  = 3600
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 1w

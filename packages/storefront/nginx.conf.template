@@ -1,3 +1,10 @@
+# Per-IP cap on sign-in traffic; only requests the portal marks with ?auth=1 are counted (empty key = not limited). docs/deployment.md "Sign-in protection".
+map $arg_auth $shop_sign_in_key {
+    default "";
+    "1" $binary_remote_addr;
+}
+limit_req_zone $shop_sign_in_key zone=shop_sign_in:10m rate=30r/m;
+
 server {
     # Defaults to 80 (the real compose deployment's container-internal port, mapped externally
     # via docker-compose.yml's ports:). Overridden to a fixed port (e.g. 18024) only by the
@@ -35,6 +42,8 @@ server {
     }
 
     location /shop-api {
+        limit_req zone=shop_sign_in burst=10 nodelay;
+        limit_req_status 429;
         set $api_upstream ${API_TARGET};
         proxy_pass $api_upstream;
         proxy_set_header Host $host;
