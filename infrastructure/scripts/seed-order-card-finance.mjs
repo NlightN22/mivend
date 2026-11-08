@@ -35,9 +35,10 @@ function overdueRecords(now) {
     });
     return [
         {
+            // Shares the balance demo's type; re-running re-points old documents (upserted by erpId), the old type row stays.
             type: 'settlementDocumentType',
             data: {
-                documentType: 'seed-card-sales-invoice',
+                documentType: 'balance-demo-sales-invoice',
                 version,
                 label: 'Sales invoice',
                 category: 'sale',
@@ -50,7 +51,7 @@ function overdueRecords(now) {
             data: {
                 erpId: 'seed-card-invoice-1',
                 version,
-                documentType: 'seed-card-sales-invoice',
+                documentType: 'balance-demo-sales-invoice',
                 documentTypeLabel: 'Sales invoice',
                 number: '910001',
                 date: at(-40),
@@ -62,7 +63,7 @@ function overdueRecords(now) {
             data: {
                 erpId: 'seed-card-invoice-2',
                 version,
-                documentType: 'seed-card-sales-invoice',
+                documentType: 'balance-demo-sales-invoice',
                 documentTypeLabel: 'Sales invoice',
                 number: '910002',
                 date: at(-20),
