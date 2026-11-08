@@ -5,7 +5,7 @@ const meta: Meta<typeof MvFlagChip> = {
     title: 'Atoms/MvFlagChip',
     component: MvFlagChip,
     tags: ['autodocs'],
-    argTypes: { tone: { control: 'select', options: ['danger', 'orange', 'warning'] } },
+    argTypes: { tone: { control: 'select', options: ['danger', 'orange', 'warning', 'info'] } },
     args: { tone: 'danger', label: 'Show what is wrong here' },
 };
 

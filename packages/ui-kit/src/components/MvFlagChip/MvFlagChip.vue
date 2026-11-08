@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { IconAlertTriangleFilled } from '@tabler/icons-vue';
+import { IconAlertTriangleFilled, IconInfoCircleFilled } from '@tabler/icons-vue';
 
-export type FlagChipTone = 'danger' | 'orange' | 'warning';
+export type FlagChipTone = 'danger' | 'orange' | 'warning' | 'info';
 
 defineProps<{ tone: FlagChipTone; label: string }>();
 </script>
@@ -16,7 +16,8 @@ defineProps<{ tone: FlagChipTone; label: string }>();
             :aria-label="label"
             :title="label"
         >
-            <IconAlertTriangleFilled :size="16" aria-hidden="true" />
+            <IconInfoCircleFilled v-if="tone === 'info'" :size="16" aria-hidden="true" />
+            <IconAlertTriangleFilled v-else :size="16" aria-hidden="true" />
         </button>
     </span>
 </template>
@@ -49,6 +50,10 @@ defineProps<{ tone: FlagChipTone; label: string }>();
 
 .mv-flag-chip__icon--orange {
     color: var(--app-stock-low-fg);
+}
+
+.mv-flag-chip__icon--info {
+    color: var(--app-info-fg);
 }
 
 .mv-flag-chip__icon--warning {
