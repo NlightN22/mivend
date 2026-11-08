@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useLatestRequest, MvFilterChips, MvNotice, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import UsersDataTable from '../../components/settings/UsersDataTable.vue';
+import DiscountLimitsDialog from '../../components/settings/DiscountLimitsDialog.vue';
 import PendingErpUsersDataTable from '../../components/settings/PendingErpUsersDataTable.vue';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import { fetchRoles, updateAdministratorRole, type RoleSummary } from '../../api/settings';
@@ -49,6 +50,7 @@ const savingRoleId = ref<string | null>(null);
 const actionError = ref('');
 const actionNotice = ref('');
 const resendingId = ref<string | null>(null);
+const limitsTarget = ref<PortalUser | null>(null);
 
 // Users dataset state
 const pageSize = ref(20);
@@ -285,6 +287,7 @@ onMounted(async () => {
             @toggle-active="onToggleActive"
             @change-role="onChangeRole"
             @resend-password-reset="onResendPasswordReset"
+            @edit-limits="limitsTarget = $event"
         >
             <template #view-chips>
                 <MvFilterChips
@@ -320,6 +323,13 @@ onMounted(async () => {
                 />
             </template>
         </PendingErpUsersDataTable>
+
+        <DiscountLimitsDialog
+            v-if="limitsTarget"
+            :administrator-id="limitsTarget.id"
+            :name="`${limitsTarget.firstName} ${limitsTarget.lastName}`.trim()"
+            @close="limitsTarget = null"
+        />
     </div>
 </template>
 

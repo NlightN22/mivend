@@ -36,6 +36,16 @@ describe('deriveLinePricing', () => {
         expect(p.oldTotal).toBeNull();
     });
 
+    it('shows a surcharge (price above the list price) as the final price only, never a negative discount', () => {
+        const p = deriveLinePricing({
+            quantity: 2,
+            discountedUnitPriceWithTax: 12000,
+            compareAtPrice: 10000,
+            discountedLinePriceWithTax: 24000,
+        });
+        expect(p).toEqual({ unit: 120, total: 240, oldUnit: null, oldTotal: null });
+    });
+
     it('recomputes for a new quantity when line total is scaled optimistically', () => {
         const p = deriveLinePricing({
             quantity: 4,

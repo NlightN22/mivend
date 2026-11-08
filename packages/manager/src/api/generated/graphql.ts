@@ -2339,6 +2339,16 @@ export type DiscountGrantInput = {
     validTo: Scalars['DateTime']['input'];
 };
 
+export type DiscountLimit = {
+    administratorId: Scalars['ID']['output'];
+    maxDiscountPercent: Scalars['Float']['output'];
+    /** all, manufacturer or category. */
+    scopeKind: Scalars['String']['output'];
+    /** Empty for all products, else a manufacturer or category ERP id. */
+    scopeRef: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
+};
+
 export type DiscountRegistryEntry = {
     approvalRequestId: Maybe<Scalars['ID']['output']>;
     counterpartyIds: Maybe<Array<Scalars['String']['output']>>;
@@ -4232,6 +4242,8 @@ export type Mutation = {
     /** Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey. */
     recordPaymentRefund: PaymentRefund;
     recordWitnessedPayment: Scalars['Boolean']['output'];
+    /** Raise a placed order line's unit price toward its price without a discount. Never deepens a discount. */
+    reduceOrderLineDiscount: Scalars['Boolean']['output'];
     refundOrder: RefundOrderResult;
     reindex: Job;
     rejectTradingPointChange: TradingPointChange;
@@ -4243,6 +4255,7 @@ export type Mutation = {
     removeCouponCodeFromDraftOrder: Maybe<Order>;
     /** Remove Customers from a CustomerGroup */
     removeCustomersFromGroup: CustomerGroup;
+    removeDiscountLimit: Scalars['Boolean']['output'];
     /** Remove an OrderLine from the draft Order */
     removeDraftOrderLine: RemoveOrderItemsResult;
     /** Removes Facets from the specified Channel */
@@ -4291,6 +4304,8 @@ export type Mutation = {
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
     resolveNotification: Notification;
+    /** Return a manually priced line to automatic discounting, if that fits the admin's discount limit. */
+    revertOrderLineDiscount: Scalars['Boolean']['output'];
     revokeVisibilityGrant: VisibilityGrant;
     /**
      * Replaces the old with a new API-Key.
@@ -4310,6 +4325,7 @@ export type Mutation = {
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
     setDepartmentBranch: Scalars['Boolean']['output'];
+    setDiscountLimit: DiscountLimit;
     /** Sets the billing address for a draft Order */
     setDraftOrderBillingAddress: Order;
     /** Allows any custom fields to be set for the active order */
@@ -5068,6 +5084,13 @@ export type MutationRecordWitnessedPaymentArgs = {
     rrn?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type MutationReduceOrderLineDiscountArgs = {
+    justification?: InputMaybe<Scalars['String']['input']>;
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+    targetUnitPrice: Scalars['Int']['input'];
+};
+
 export type MutationRefundOrderArgs = {
     input: RefundOrderInput;
 };
@@ -5098,6 +5121,12 @@ export type MutationRemoveCouponCodeFromDraftOrderArgs = {
 export type MutationRemoveCustomersFromGroupArgs = {
     customerGroupId: Scalars['ID']['input'];
     customerIds: Array<Scalars['ID']['input']>;
+};
+
+export type MutationRemoveDiscountLimitArgs = {
+    administratorId: Scalars['ID']['input'];
+    scopeKind: Scalars['String']['input'];
+    scopeRef?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationRemoveDraftOrderLineArgs = {
@@ -5218,6 +5247,11 @@ export type MutationResolveNotificationArgs = {
     resolution: Scalars['String']['input'];
 };
 
+export type MutationRevertOrderLineDiscountArgs = {
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+};
+
 export type MutationRevokeVisibilityGrantArgs = {
     id: Scalars['ID']['input'];
     reason?: InputMaybe<Scalars['String']['input']>;
@@ -5275,6 +5309,13 @@ export type MutationSetCustomerForDraftOrderArgs = {
 export type MutationSetDepartmentBranchArgs = {
     branchId: Scalars['String']['input'];
     departmentErpId: Scalars['String']['input'];
+};
+
+export type MutationSetDiscountLimitArgs = {
+    administratorId: Scalars['ID']['input'];
+    maxDiscountPercent: Scalars['Float']['input'];
+    scopeKind: Scalars['String']['input'];
+    scopeRef?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationSetDraftOrderBillingAddressArgs = {
@@ -6079,6 +6120,16 @@ export type OrderLineCustomFieldsInput = {
     organizationId?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * The current admin's ceiling for one order line. A null ceiling means no limit is set for them.
+ * The discount percent is measured from the line's price without any manual or order-dependent discount.
+ */
+export type OrderLineDiscountLimit = {
+    discountPercent: Maybe<Scalars['Float']['output']>;
+    maxDiscountPercent: Maybe<Scalars['Float']['output']>;
+    orderLineId: Scalars['ID']['output'];
+};
+
 export type OrderLineInput = {
     customFields?: InputMaybe<OrderLineCustomFieldsInput>;
     orderLineId: Scalars['ID']['input'];
@@ -6560,6 +6611,8 @@ export type PaymentStateTransitionError = ErrorResult & {
 export type Permission =
     /** Adjust an order line price directly, as long as it stays at/above the floor price (layer 5 gate) */
     | 'AdjustPriceWithinLimit'
+    /** Approve a price adjustment that goes below the floor price, on top of ApproveDiscountRequest (layer 5) */
+    | 'ApproveBelowFloorPrice'
     /** Decide a step of a priceAdjustmentApproval or discountGrantApproval chain (layer 5) */
     | 'ApproveDiscountRequest'
     /** Decide a step of a securityLimitApproval chain (layer 5) */
@@ -6676,6 +6729,8 @@ export type Permission =
     | 'ManageCounterpartyPortalAccess'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     | 'ManageCounterpartyTeam'
+    /** Set the maximum order line discount per employee and product scope (layer 5) */
+    | 'ManageDiscountLimits'
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
     | 'ManageErpIntegration'
     /** Create, edit, delete team-wide table views and assign the team default view of a list */
@@ -7670,6 +7725,7 @@ export type Query = {
     departmentBranchOverview: Array<DepartmentBranchNode>;
     departments: Array<Department>;
     discountGrantsForCounterparty: DiscountGrantForCustomerList;
+    discountLimits: Array<DiscountLimit>;
     discountRegistryPage: DiscountRegistryEntryList;
     discountRules: Array<DiscountRule>;
     documentTypes: Array<Scalars['String']['output']>;
@@ -7736,6 +7792,7 @@ export type Query = {
     orderContracts: Array<OrderContractOption>;
     /** Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder. */
     orderLineAvailability: Array<OrderLineAvailability>;
+    orderLineDiscountLimits: Array<OrderLineDiscountLimit>;
     /** Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility. */
     orderLineShortfalls: Array<OrderLineShortfall>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
@@ -8008,6 +8065,10 @@ export type QueryDiscountGrantsForCounterpartyArgs = {
     options?: InputMaybe<DiscountGrantForCustomerListOptions>;
 };
 
+export type QueryDiscountLimitsArgs = {
+    administratorId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type QueryDiscountRegistryPageArgs = {
     options?: InputMaybe<DiscountRegistryListOptions>;
 };
@@ -8151,6 +8212,10 @@ export type QueryOrderContractsArgs = {
 };
 
 export type QueryOrderLineAvailabilityArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
+export type QueryOrderLineDiscountLimitsArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -11380,6 +11445,49 @@ export type ClearDepartmentBranchMutationVariables = Exact<{
 }>;
 
 export type ClearDepartmentBranchMutation = { clearDepartmentBranch: boolean };
+
+export type DiscountLimitsQueryVariables = Exact<{
+    administratorId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type DiscountLimitsQuery = {
+    discountLimits: Array<{
+        uuid: string;
+        administratorId: string;
+        scopeKind: string;
+        scopeRef: string;
+        maxDiscountPercent: number;
+    }>;
+};
+
+export type SetDiscountLimitMutationVariables = Exact<{
+    administratorId: Scalars['ID']['input'];
+    scopeKind: Scalars['String']['input'];
+    scopeRef?: InputMaybe<Scalars['String']['input']>;
+    maxDiscountPercent: Scalars['Float']['input'];
+}>;
+
+export type SetDiscountLimitMutation = { setDiscountLimit: { uuid: string } };
+
+export type RemoveDiscountLimitMutationVariables = Exact<{
+    administratorId: Scalars['ID']['input'];
+    scopeKind: Scalars['String']['input'];
+    scopeRef?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type RemoveDiscountLimitMutation = { removeDiscountLimit: boolean };
+
+export type OrderLineDiscountLimitsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderLineDiscountLimitsQuery = {
+    orderLineDiscountLimits: Array<{
+        orderLineId: string;
+        maxDiscountPercent: number | null;
+        discountPercent: number | null;
+    }>;
+};
 
 export type DiscountRegistryPageQueryVariables = Exact<{
     options?: InputMaybe<DiscountRegistryListOptions>;
@@ -14615,6 +14723,56 @@ export const ClearDepartmentBranchDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ClearDepartmentBranchMutation,
     ClearDepartmentBranchMutationVariables
+>;
+export const DiscountLimitsDocument = new TypedDocumentString(`
+    query DiscountLimits($administratorId: ID) {
+  discountLimits(administratorId: $administratorId) {
+    uuid
+    administratorId
+    scopeKind
+    scopeRef
+    maxDiscountPercent
+  }
+}
+    `) as unknown as TypedDocumentString<DiscountLimitsQuery, DiscountLimitsQueryVariables>;
+export const SetDiscountLimitDocument = new TypedDocumentString(`
+    mutation SetDiscountLimit($administratorId: ID!, $scopeKind: String!, $scopeRef: String, $maxDiscountPercent: Float!) {
+  setDiscountLimit(
+    administratorId: $administratorId
+    scopeKind: $scopeKind
+    scopeRef: $scopeRef
+    maxDiscountPercent: $maxDiscountPercent
+  ) {
+    uuid
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetDiscountLimitMutation,
+    SetDiscountLimitMutationVariables
+>;
+export const RemoveDiscountLimitDocument = new TypedDocumentString(`
+    mutation RemoveDiscountLimit($administratorId: ID!, $scopeKind: String!, $scopeRef: String) {
+  removeDiscountLimit(
+    administratorId: $administratorId
+    scopeKind: $scopeKind
+    scopeRef: $scopeRef
+  )
+}
+    `) as unknown as TypedDocumentString<
+    RemoveDiscountLimitMutation,
+    RemoveDiscountLimitMutationVariables
+>;
+export const OrderLineDiscountLimitsDocument = new TypedDocumentString(`
+    query OrderLineDiscountLimits($orderId: ID!) {
+  orderLineDiscountLimits(orderId: $orderId) {
+    orderLineId
+    maxDiscountPercent
+    discountPercent
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderLineDiscountLimitsQuery,
+    OrderLineDiscountLimitsQueryVariables
 >;
 export const DiscountRegistryPageDocument = new TypedDocumentString(`
     query DiscountRegistryPage($options: DiscountRegistryListOptions) {

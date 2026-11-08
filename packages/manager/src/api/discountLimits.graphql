@@ -1,0 +1,41 @@
+query DiscountLimits($administratorId: ID) {
+    discountLimits(administratorId: $administratorId) {
+        uuid
+        administratorId
+        scopeKind
+        scopeRef
+        maxDiscountPercent
+    }
+}
+
+mutation SetDiscountLimit(
+    $administratorId: ID!
+    $scopeKind: String!
+    $scopeRef: String
+    $maxDiscountPercent: Float!
+) {
+    setDiscountLimit(
+        administratorId: $administratorId
+        scopeKind: $scopeKind
+        scopeRef: $scopeRef
+        maxDiscountPercent: $maxDiscountPercent
+    ) {
+        uuid
+    }
+}
+
+mutation RemoveDiscountLimit($administratorId: ID!, $scopeKind: String!, $scopeRef: String) {
+    removeDiscountLimit(
+        administratorId: $administratorId
+        scopeKind: $scopeKind
+        scopeRef: $scopeRef
+    )
+}
+
+query OrderLineDiscountLimits($orderId: ID!) {
+    orderLineDiscountLimits(orderId: $orderId) {
+        orderLineId
+        maxDiscountPercent
+        discountPercent
+    }
+}

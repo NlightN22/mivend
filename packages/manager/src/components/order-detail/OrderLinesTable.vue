@@ -33,11 +33,15 @@ const rows = computed(() =>
         availability: edit.availability.value,
         reservations: props.reservations,
         requests: props.adjustmentRequests,
+        maxDiscountPercent: line => edit.discountCeilings.value.get(line.id) ?? null,
     }),
 );
 
-onMounted(edit.load);
-watch(() => props.lines, edit.load);
+onMounted(() => void Promise.all([edit.load(), edit.loadCeilings()]));
+watch(
+    () => props.lines,
+    () => void Promise.all([edit.load(), edit.loadCeilings()]),
+);
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', {

@@ -93,7 +93,7 @@ export interface LineRowInputs {
     availability: Map<string, OrderLineAvailability>;
     reservations: OrderReservation[];
     requests: PriceAdjustmentRequestSummary[];
-    // Per-line discount ceiling from the future discount-rights system; omitted today.
+    // The signed-in employee's own discount ceiling for the line; null when none is set.
     maxDiscountPercent?: (line: OrderDetailLine) => number | null;
 }
 

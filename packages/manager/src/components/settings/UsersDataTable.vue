@@ -12,6 +12,7 @@ import {
 } from '@mivend/ui-kit';
 import type { PortalUser } from '../../api/users';
 import type { RoleSummary } from '../../api/settings';
+import { useAuthStore } from '../../stores/auth';
 
 // Settings > Users (issue #119 Phase 2) — created manager-portal accounts. Server-side paginated
 // + filtered, same shape as CustomerProformaInvoicesDataTable.vue (manager-table-standard skill). Email
@@ -40,7 +41,10 @@ const emit = defineEmits<{
     'toggle-active': [user: PortalUser, isActive: boolean];
     'change-role': [user: PortalUser, roleId: string];
     'resend-password-reset': [user: PortalUser];
+    'edit-limits': [user: PortalUser];
 }>();
+
+const canManageLimits = useAuthStore().hasPermission('ManageDiscountLimits');
 
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
@@ -74,7 +78,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         mobile: { badge: true },
     },
     { field: 'active', header: 'Active', width: 90, filterConfig: { type: 'none' } },
-    { field: 'actions', header: '', width: 130, filterConfig: { type: 'none' } },
+    { field: 'actions', header: '', width: 260, filterConfig: { type: 'none' } },
 ];
 
 interface UserFilterState {
@@ -221,6 +225,14 @@ function confirmDeactivate(): void {
                 @click="emit('resend-password-reset', (data as UserRow).user)"
             >
                 Resend reset link
+            </MvButton>
+            <MvButton
+                v-if="canManageLimits"
+                variant="secondary"
+                size="sm"
+                @click="emit('edit-limits', (data as UserRow).user)"
+            >
+                Discount limits
             </MvButton>
         </template>
     </MvAdvancedDataTable>
