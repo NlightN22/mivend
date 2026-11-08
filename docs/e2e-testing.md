@@ -203,7 +203,7 @@ Decision per spec (R = all four roles; O = operator, M = manager, D = department
 | `settings/settings-roles`, `settings-users`: negative | O, M, D | the other roles must be refused |
 | `settings/settings-security` | O | admin-api session mechanics, role-independent |
 | `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display: the pages render the same component for every role, and their scope visibility is covered by `make test-access` (proforma, payment, discount-grant, dashboard matrices) and `visibility/` (entity lists, servicing team) |
-| `settlements` | P | needs `ReadCounterpartyCredit`; scope is covered by `make test-access` (settlement-admin-visibility) |
+| `settlements` | P | needs `ReadSettlementDocument`; scope is covered by `make test-access` (settlement-admin-visibility) |
 | `layout/pagination-scroll` | P | UI mechanics |
 
 Run time per group drops because a role-independent scenario costs one run instead of four.

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { admin, seed, staffToken } from '../harness/actors';
-import { DENIED_OR_MISSING } from '../proforma/proforma-queries';
-import { CUSTOMERS, SETTLEMENT_NUMBERS, STAFF, type ActorKey } from '../seed/fixture-plan';
+import {
+    CUSTOMERS,
+    SETTLEMENT_NUMBERS,
+    STAFF,
+    VISIBLE_COUNTERPARTIES,
+    type ActorKey,
+} from '../seed/fixture-plan';
 
 const LIST = `query($o: SettlementListOptions, $cp: ID) { visibleSettlementDocuments(options: $o,
     counterpartyId: $cp) { totalItems items { number counterpartyId } } }`;
@@ -14,7 +19,7 @@ const allNumbers = CUSTOMERS.flatMap(c => Object.values(SETTLEMENT_NUMBERS[c.key
 const numbersOf = (r: Page): string[] => r.visibleSettlementDocuments.items.map(i => i.number);
 
 describe('staff settlement documents', () => {
-    it('the credit holder with scope all sees every customer, a client filter only narrows', async () => {
+    it('the director with scope all sees every customer, a client filter only narrows', async () => {
         const token = await staffToken('director');
         const plain = await admin<Page>(token, LIST, { o: { take: 200 } });
         expect(plain.errors).toEqual([]);
@@ -45,16 +50,35 @@ describe('staff settlement documents', () => {
         expect(total).toBe(plain.data!.visibleSettlementDocuments.totalItems);
     });
 
-    describe.each(STAFF.filter(s => s.key !== 'director').map(s => s.key))(
-        'staff %s without the credit permission',
-        (key: ActorKey) => {
-            it('gets no settlement documents and no type counts', async () => {
-                const token = await staffToken(key);
-                const list = await admin(token, LIST, { o: { take: 200 } });
-                expect(list.errors.join(' ')).toMatch(DENIED_OR_MISSING);
-                const counts = await admin(token, COUNTS, { o: {} });
-                expect(counts.errors.join(' ')).toMatch(DENIED_OR_MISSING);
-            });
-        },
-    );
+    describe.each(STAFF.map(s => s.key))('staff %s', (key: ActorKey) => {
+        it('sees the settlement documents of the visible customers only', async () => {
+            const token = await staffToken(key);
+            const visible = new Set(VISIBLE_COUNTERPARTIES[key]);
+            const expected = CUSTOMERS.filter(c => visible.has(c.counterparty))
+                .flatMap(c => Object.values(SETTLEMENT_NUMBERS[c.key]))
+                .sort();
+            const list = await admin<Page>(token, LIST, { o: { take: 200 } });
+            expect(list.errors).toEqual([]);
+            expect(
+                numbersOf(list.data!)
+                    .filter(n => allNumbers.includes(n))
+                    .sort(),
+            ).toEqual(expected);
+            const counts = await admin<{ visibleSettlementTypeCounts: { count: number }[] }>(
+                token,
+                COUNTS,
+                { o: {} },
+            );
+            expect(counts.errors).toEqual([]);
+            const total = counts.data!.visibleSettlementTypeCounts.reduce((n, c) => n + c.count, 0);
+            expect(total).toBe(list.data!.visibleSettlementDocuments.totalItems);
+            for (const c of CUSTOMERS.filter(c => !visible.has(c.counterparty))) {
+                const foreign = await admin<Page>(token, LIST, {
+                    o: { take: 200 },
+                    cp: seed().counterparties[c.counterparty],
+                });
+                expect(numbersOf(foreign.data!), `${c.key} hidden`).toEqual([]);
+            }
+        });
+    });
 });

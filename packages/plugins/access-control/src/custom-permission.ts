@@ -114,6 +114,11 @@ export const CustomPermission = {
         description:
             'Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope)',
     }),
+    ReadSettlementDocument: new PermissionDefinition({
+        name: 'ReadSettlementDocument',
+        description:
+            'Read the ERP settlement documents (sales invoices, payments, returns) of the counterparties the caller may see; no credit limits or balances',
+    }),
     ManageErpIntegration: new PermissionDefinition({
         name: 'ManageErpIntegration',
         description:

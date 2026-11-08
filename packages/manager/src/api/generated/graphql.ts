@@ -6890,6 +6890,7 @@ export type Permission =
     /** Grants permission to read PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
     | 'ReadSettings'
     /** Grants permission to read ShippingMethod */
+    | 'ReadSettlementDocument'
     | 'ReadShippingMethod'
     /** Grants permission to read StockLocation */
     | 'ReadStockLocation'

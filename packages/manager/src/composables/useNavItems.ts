@@ -16,8 +16,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         if (authStore.hasPermission('ReadPayment'))
             documents.push({ label: 'Payments', path: '/payments' });
         documents.push({ label: 'Discount requests', path: '/discounts' });
-        // Settlements share the credit permission of their visibleSettlementDocuments query.
-        const settlements: AppSidebarItem[] = authStore.hasPermission('ReadCounterpartyCredit')
+        // Settlements are gated like their visibleSettlementDocuments query.
+        const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
             ? [{ label: 'Settlements', path: '/settlements' }]
             : [];
         const items: AppSidebarItem[] = [
@@ -74,7 +74,7 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         if (authStore.hasPermission('ReadPayment'))
             items.push({ key: 'payments', label: 'Payments', path: '/payments' });
         items.push({ key: 'discounts', label: 'Discount requests', path: '/discounts' });
-        if (authStore.hasPermission('ReadCounterpartyCredit'))
+        if (authStore.hasPermission('ReadSettlementDocument'))
             items.push({ key: 'settlements', label: 'Settlements', path: '/settlements' });
         items.push(
             { key: 'team', label: 'Team', path: '/team' },

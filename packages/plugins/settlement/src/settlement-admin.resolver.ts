@@ -12,7 +12,8 @@ import type {
 } from './settlement-admin.types';
 import type { CounterpartyOverdue } from './settlement-shop.types';
 
-// The list queries follow the credit permission, and the counterparty visibility scope on top of it.
+// The list queries have their own permission, not ReadCounterpartyCredit (which also exposes credit
+// limits and balances); the counterparty visibility scope applies on top of it.
 @Resolver()
 export class SettlementAdminResolver {
     constructor(
@@ -33,7 +34,7 @@ export class SettlementAdminResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ReadCounterpartyCredit.Permission)
+    @Allow(CustomPermission.ReadSettlementDocument.Permission)
     visibleSettlementDocuments(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: SettlementListOptions; counterpartyId?: string },
@@ -42,7 +43,7 @@ export class SettlementAdminResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ReadCounterpartyCredit.Permission)
+    @Allow(CustomPermission.ReadSettlementDocument.Permission)
     visibleSettlementTypeCounts(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: SettlementListOptions; counterpartyId?: string },

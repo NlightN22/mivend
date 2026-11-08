@@ -72,6 +72,7 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
         permissionNames: ['ReadOrder', 'CreateOrder', 'UpdateOrder'],
     },
     { key: 'catalog', label: 'Catalog', permissionNames: ['ReadCatalog'] },
+    { key: 'settlements', label: 'Settlements', permissionNames: ['ReadSettlementDocument'] },
     {
         key: 'customers',
         label: 'Customers & Counterparties',

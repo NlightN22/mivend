@@ -148,7 +148,7 @@ action menu keeps everything the buttons show, the summary wraps.
 | Dashboard | KPI and widgets | exists, redesign deferred |
 | Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
 | Documents (group) | Orders, Proforma invoices, Payments, Discount requests | exists |
-| Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadCounterpartyCredit` (desktop sidebar and the mobile More sheet) | exists |
+| Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
 | Bulk operations | wizard | exists |
@@ -209,8 +209,8 @@ proforma whose sales invoice number equals the document number). Views, URL sync
 mobile cards are shared with the payments list. `visibleSettlementDocuments` takes
 `options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
 caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
-in the customer card. Gated by `ReadCounterpartyCredit` (settlement documents are what the credit
-balance is derived from); the proforma number is a raw read of the acquiring plugin's
+in the customer card. Gated by its own `ReadSettlementDocument` (granted to every default role; it exposes no credit
+limit or balance, unlike `ReadCounterpartyCredit`), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
 `proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
 correlated order-code aggregation used by the search and the type counts is the first thing to
 profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.

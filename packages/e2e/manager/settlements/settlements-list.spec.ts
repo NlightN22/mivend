@@ -50,7 +50,7 @@ test('a row links to its customer @on:manager-portal-admin @read-only', async ({
     await expect(first.locator('a[href^="/customers/"]')).toBeVisible({ timeout: 15000 });
 });
 
-test('the menu offers Settlements to a credit reader @on:manager-portal-admin @read-only', async ({
+test('the menu offers Settlements to a settlement reader @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     await page.goto('/');

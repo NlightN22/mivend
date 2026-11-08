@@ -1,4 +1,5 @@
 // Balance page demo: its own customer, customer contract and settlement documents (#260).
+// Re-running repairs an older seeded database: the upserts by code update the labels.
 // No e2e spec reads these ids; dates and versions follow the seed time so overdue stays overdue.
 export const BALANCE_DEMO_CUSTOMER = {
     email: 'balance-demo@test.example',
@@ -78,7 +79,7 @@ function balanceDemoRecords(now) {
                 isActive: true,
             },
         },
-        documentType('balance-demo-sales-invoice', 'Реализация', 'sale', 1),
+        documentType('balance-demo-sales-invoice', 'Sales invoice', 'sale', 1),
         documentType('balance-demo-payment', 'Payment', 'payment', 2),
         documentType('balance-demo-return', 'Return', 'return', 3),
         documentType('balance-demo-correction', 'Correction', 'correction', 4),
@@ -86,7 +87,7 @@ function balanceDemoRecords(now) {
         document(
             'balance-demo-inv-1',
             'balance-demo-sales-invoice',
-            'Реализация',
+            'Sales invoice',
             '900001',
             -60,
             30000,
@@ -95,7 +96,7 @@ function balanceDemoRecords(now) {
         document(
             'balance-demo-inv-2',
             'balance-demo-sales-invoice',
-            'Реализация',
+            'Sales invoice',
             '900002',
             -40,
             50000,
@@ -104,7 +105,7 @@ function balanceDemoRecords(now) {
         document(
             'balance-demo-inv-3',
             'balance-demo-sales-invoice',
-            'Реализация',
+            'Sales invoice',
             '900003',
             -5,
             40000,

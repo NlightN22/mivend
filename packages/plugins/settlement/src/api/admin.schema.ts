@@ -83,7 +83,7 @@ export const adminApiExtensions = gql`
 
     extend type Query {
         counterpartyOverdue(counterpartyId: ID!): CounterpartyOverdue
-        "Manager-portal settlement documents of the customers the caller may see; needs ReadCounterpartyCredit."
+        "Manager-portal settlement documents of the customers the caller may see; needs ReadSettlementDocument."
         visibleSettlementDocuments(
             options: SettlementListOptions
             counterpartyId: ID
