@@ -17,6 +17,10 @@ Every fresh sign-in needs a one-time code from the user's own authenticator app 
 - No recovery codes. A lost device is recovered by an emailed link plus the password.
 - Throttling of failed password and code attempts is not part of this issue (#278). The places are marked
   `// #278: throttle ...` in the code. The only built-in limit is five wrong guesses per challenge or recovery link.
+- Until #278 (brute-force protection) lands, the second step is a device-binding measure, not a brute-force-proof
+  factor. Attempts are counted per challenge or link, and anyone who knows the password can request a new challenge,
+  so there is no per-account limit. Release condition: either #278 ships first, or the owner explicitly accepts
+  device-binding-only. Keep the `// #278` markers until then.
 
 ## Where the state lives (central / branch)
 
@@ -39,7 +43,8 @@ replicated to branches nor part of the sync streams. Consequences:
 
 The key is chosen in one place, `resolveEncryptionKey` (`src/secret-key.ts`). Without the dedicated variable, changing
 `COOKIE_SECRET` makes every stored secret undecryptable: every user would have to be reset. Set the dedicated key before
-the first enrolment on any contour where `COOKIE_SECRET` may ever be rotated.
+the first enrolment on any contour where `COOKIE_SECRET` may ever be rotated. In production with `TWO_FACTOR_REQUIRED=true` and no dedicated key the plugin logs a WARN at start. An unreadable secret (wrong
+key, tampered row) answers as a wrong code and logs an ERROR with the factor `uuid` only.
 
 Recovery links point at `<STOREFRONT_PUBLIC_URL>/two-factor-recovery?token=...` for customers and
 `<MANAGER_PUBLIC_URL>/two-factor-recovery?token=...` for staff (chosen by whether the account is an administrator).
@@ -63,6 +68,13 @@ No session is created until password and code have both been checked:
    replaced by the plugin's resolver for this (docs/vendure-core-divergences.md).
 5. Not affected, by design: acting-as-customer sessions (the ticket is issued by an already verified manager session),
    and Vendure API keys (machine credentials, not a person's sign-in).
+6. Vendure API keys are a deliberate way around the second step: a key opens a session for its owner (the user who
+   created it) without a password and without a code. Who can use that is controlled by core's `CreateApiKey`,
+   `UpdateApiKey` (also rotates a key), `ReadApiKey` and `DeleteApiKey` permissions. The plugin adds no restriction of
+   its own, and the permission system offers none beyond these. In this project no default role in
+   `packages/plugins/access-control/src/default-roles.ts` carries any `ApiKey` permission, so only the superadmin
+   (which holds every permission) can create or rotate a key. Do not grant `CreateApiKey` or `UpdateApiKey` to another
+   role, and treat every key as a credential that bypasses two-factor.
 
 `packages/plugins/two-factor/src/__tests__/unit/core-assumptions.test.ts` fails if a Vendure upgrade adds another place
 that opens a session. The access tests (`apps/server/src/__tests__/access/two-factor`) prove the invariant end to end.
@@ -155,8 +167,10 @@ start a replacement: it works only for an account without a factor.
    used, wrong-API or non-`VERIFY` challenge, or an account without a factor, gives `TwoFactorError` `CHALLENGE_INVALID`
    and sends nothing. The challenge stays valid for the sign-in. A repeat within 60 seconds (per account) answers the
    same success without a second mail; the extension point for a real throttle is the `#278` comment in
-   `two-factor-recovery.service.ts`. The link is single use, valid 30 minutes (a newer link replaces the older), and is
-   stored hashed.
+   `two-factor-recovery.service.ts`. The link is single use, valid 30 minutes, and is stored hashed.
+   A newer request does not void an open link: both stay usable until one is used or they expire, so a caller who only
+   knows the password cannot keep killing the link the owner is about to open. Completing recovery consumes every open
+   link of the account.
 2. The link opens `/two-factor-recovery?token=...` on the portal of that account type, which asks for the password and calls
    `completeTwoFactorRecovery(token, password)`. A wrong password keeps the link alive (five wrong tries). On success:
    the old factor is removed, every session of the account is closed, the owner gets the "recovery completed" email,
@@ -199,6 +213,8 @@ target (same-origin paths only), so the Dashboard boots with a normal session.
   `lastUsedStep`, timestamps). A partial unique index allows one active and one pending row per account.
 - `two_factor_token`: sign-in challenges and recovery links (`uuid`, SHA-256 `tokenHash`, purpose, stage, API, expiry,
   `usedAt`, `attempts`). Expired rows are deleted by the hourly `two-factor-cleanup` task.
+- Expiry and use times are `timestamptz`, written and compared with the database `now()` in SQL, never with a JS `Date`,
+  so no process time zone or DST hour can shift a deadline.
 - Secrets: 160-bit random, base32. Stored AES-256-GCM (`v1.<iv>.<tag>.<ciphertext>`), the factor `uuid` is authenticated
   data so a ciphertext cannot be moved to another row.
 - Codes: window of one step either side; compared in constant time; a step at or below the last accepted one is a replay.
