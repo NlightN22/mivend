@@ -1,0 +1,105 @@
+.doc-row td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--app-row-border);
+    vertical-align: middle;
+    text-align: left;
+}
+
+.doc-row {
+    --doc-stripe: var(--app-brand-fill);
+}
+
+.doc-row--danger {
+    --doc-stripe: var(--app-danger-btn);
+}
+
+.doc-row--orange {
+    --doc-stripe: var(--app-accent-orange);
+}
+
+.doc-row--warning {
+    --doc-stripe: var(--app-warn-fg);
+}
+
+.doc-row > td:first-child {
+    box-shadow: inset 4px 0 0 var(--doc-stripe);
+}
+
+.doc-row__cell--lead {
+    min-width: 180px;
+}
+
+.doc-row__cell:not(.doc-row__cell--lead) {
+    white-space: nowrap;
+}
+
+.doc-row__select {
+    width: 1%;
+}
+
+.doc-row--editing {
+    background: var(--app-stock-in-bg);
+}
+
+.doc-row__actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.doc-row__error {
+    padding: 6px 12px;
+    color: var(--app-danger-fg);
+    font-size: 13px;
+}
+
+@media (max-width: 800px) {
+    .doc-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid var(--el-border-color);
+        border-left: 4px solid var(--doc-stripe);
+        border-radius: var(--app-radius-md, 12px);
+        background: var(--app-surface);
+    }
+
+    .doc-row--editing {
+        background: var(--app-stock-in-bg);
+    }
+
+    .doc-row td,
+    .doc-row > td:first-child {
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        white-space: normal;
+    }
+
+    .doc-row__select,
+    .doc-row__cell--lead,
+    .doc-row__actions {
+        grid-column: 1 / -1;
+    }
+
+    .doc-row__actions {
+        width: auto;
+        text-align: right;
+    }
+
+    .doc-row td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--app-text-grey);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .doc-row td.doc-row__cell--lead::before {
+        display: none;
+    }
+}

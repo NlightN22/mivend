@@ -106,10 +106,40 @@ list and the chips are one horizontally scrolling row (`scrollable`).
 ## Flagged cells and row stripes
 
 A problem is shown only in the cell where it occurs, as an `MvFlagChip`: the plain value followed by a small
-icon-only button (aria-label and hover title, keyboard focusable) with no status text. Clicking the icon or the cell
-opens an `MvPopover` with the full text and the consequence; the same text never repeats in a panel, banner or badge
+icon-only button (aria-label, keyboard focusable) with no status text. On desktop, hovering or focusing the icon shows a
+styled tooltip (`MvTooltip`, never a native `title`) with the same notes and consequence; clicking opens an
+`MvPopover` with them plus the cell's actions, and on a phone the tap opens the popover as a bottom sheet. The popover
+carries the full text and the consequence; the same text never repeats in a panel, banner or badge
 elsewhere on the page. Tones: `danger` (block or hold), `orange` (approval needed), `warning` (warn). A row carries a
 left-edge stripe in its worst tone, green when clean. Tones come from the policy consequence of the finding (branch
 overrides included), not from the check's own severity, except where no policy applies. A state of the whole document
 (for example the ERP registration) is a header badge whose detail text opens in a popover. First used by the manager
 order card.
+
+## Document lines kit
+
+`MvDocumentLines` (`packages/ui-kit/src/components/MvDocumentLines/`) is the lines table of every document card:
+orders today, proforma invoices, payments, sales invoices and discount requests next. Use it whenever a card shows
+positions with per-cell problems; use `MvAdvancedDataTable` for lists of documents.
+
+What the kit owns: the toolbar (title with count, an inline `toolbar` slot for the primary control, a ghost "Select"
+toggle; in selection mode a bulk bar with "N selected", the `bulk` slot and "Cancel"), the header row, left-aligned
+value cells (a flag icon follows the value, no empty icon slot is reserved), per-cell flags, the left stripe in the worst
+tone of the row, optional per-row edit (check and cross) and a row menu, a mobile card per row and a skeleton.
+`MvDocumentTotals` is the right-aligned stacked totals block (label left, value right, a muted note, the document total
+emphasised). Selection state is `useLineSelection`.
+
+How a new document type plugs in (all in its own package, nothing document-specific enters the kit):
+
+1. Declare `DocColumn[]` (key, label, `hidden` for a conditional column).
+2. Map the document's own problems to `DocRow[]`: `id`, `testId`, and `flags` keyed by column key. A `DocFlag` is a
+   `tone` (`danger`, `orange`, `warning`), `notes` (text, optional detail, optional consequence badge) and optional
+   `actions` (key and label); the kit emits `flag-action` with the key when one is pressed. Tones, texts and which
+   actions are allowed come from the document's checks and policies, not from the kit.
+3. Render each cell through the `cell-<columnKey>` slot (it receives `row` and `editing`); the kit wraps the content in
+   the flag. Put the edit inputs in the same slot when `editing` is true; editing state, drafts and mutations stay in the
+   caller (`editing-id`, `saving-id`, `errors`, `start`/`commit`/`cancel`/`remove` events).
+4. Fill the `toolbar`, `bulk`, `notices` and `totals` slots. Totals are `DocTotalRow[]`; a flag that belongs to the whole
+   document goes into the `value-<key>` slot of its totals row with `MvDocumentCell`.
+
+Reference: `OrderLinesTable.vue` and `orderDocFlags.ts` in the manager portal.

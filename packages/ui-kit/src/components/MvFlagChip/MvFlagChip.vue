@@ -1,24 +1,36 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { IconAlertTriangleFilled, IconInfoCircleFilled } from '@tabler/icons-vue';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
+import MvTooltip from '../MvTooltip/MvTooltip.vue';
 
 export type FlagChipTone = 'danger' | 'orange' | 'warning' | 'info';
 
-defineProps<{ tone: FlagChipTone; label: string }>();
+const props = defineProps<{ tone: FlagChipTone; label: string; tipDisabled?: boolean }>();
+const slots = defineSlots<{ default?(): unknown; tip?(): unknown }>();
+const isMobile = useIsMobileViewport(640);
+// A phone has no hover: the tap opens the caller's popover instead.
+const tipOff = computed(() => !slots.tip || !!props.tipDisabled || isMobile.value);
 </script>
 
 <template>
     <span class="mv-flag-chip">
         <slot />
-        <button
-            type="button"
-            class="mv-flag-chip__icon"
-            :class="`mv-flag-chip__icon--${tone}`"
-            :aria-label="label"
-            :title="label"
-        >
-            <IconInfoCircleFilled v-if="tone === 'info'" :size="16" aria-hidden="true" />
-            <IconAlertTriangleFilled v-else :size="16" aria-hidden="true" />
-        </button>
+        <MvTooltip trigger="hover" placement="top" :disabled="tipOff">
+            <template #trigger>
+                <button
+                    type="button"
+                    class="mv-flag-chip__icon"
+                    :class="`mv-flag-chip__icon--${tone}`"
+                    :aria-label="label"
+                    :title="slots.tip ? undefined : label"
+                >
+                    <IconInfoCircleFilled v-if="tone === 'info'" :size="16" aria-hidden="true" />
+                    <IconAlertTriangleFilled v-else :size="16" aria-hidden="true" />
+                </button>
+            </template>
+            <slot name="tip" />
+        </MvTooltip>
     </span>
 </template>
 

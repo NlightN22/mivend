@@ -196,3 +196,11 @@ bottom margin shifts the visible content off-center within it.
 8. If any backend change is needed, run the `test-design` skill for it before writing code.
 9. Implement, then run the `final-check` skill (`make lint` + `make test`, plus
    `pnpm --filter './packages/plugins/**' build` if a plugin changed) before reporting done.
+
+## Document cards: positions table
+
+A document card (order, proforma invoice, payment, sales invoice, discount request) shows its positions with
+`MvDocumentLines` and `MvDocumentTotals` from ui-kit, never a hand-made table or a second copy of it. The document type
+supplies only columns, the mapping of its own problems to `DocFlag`s, the cell slots, edit mutations and totals rows.
+How to plug in: `docs/ui-standards.md`, "Document lines kit"; reference: `OrderLinesTable.vue` (manager).
+

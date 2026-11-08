@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IconCheck, IconPencil, IconX } from '@tabler/icons-vue';
-import { MvActionMenu } from '@mivend/ui-kit';
+import MvActionMenu from '../MvActionMenu/MvActionMenu.vue';
 
 defineProps<{
     editing: boolean;
@@ -16,7 +16,7 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
     <template v-if="editing">
         <button
             type="button"
-            class="line-actions__btn line-actions__btn--ok"
+            class="doc-actions__btn doc-actions__btn--ok"
             aria-label="Apply changes"
             title="Apply changes"
             :disabled="saving || busy"
@@ -26,7 +26,7 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
         </button>
         <button
             type="button"
-            class="line-actions__btn line-actions__btn--cancel"
+            class="doc-actions__btn doc-actions__btn--cancel"
             aria-label="Discard changes"
             title="Discard changes"
             :disabled="saving"
@@ -38,7 +38,7 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
     <button
         v-else-if="canEdit"
         type="button"
-        class="line-actions__btn"
+        class="doc-actions__btn"
         aria-label="Edit line"
         title="Edit line"
         :disabled="busy"
@@ -55,7 +55,7 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
 </template>
 
 <style scoped>
-.line-actions__btn {
+.doc-actions__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -69,26 +69,26 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
     cursor: pointer;
 }
 
-.line-actions__btn:hover:not(:disabled) {
+.doc-actions__btn:hover:not(:disabled) {
     background: var(--app-row-hover);
 }
 
-.line-actions__btn:disabled {
+.doc-actions__btn:disabled {
     cursor: default;
     opacity: 0.5;
 }
 
-.line-actions__btn--ok {
+.doc-actions__btn--ok {
     border-color: var(--app-primary-btn);
     background: var(--app-primary-btn);
     color: var(--app-on-accent);
 }
 
-.line-actions__btn--ok:hover:not(:disabled) {
+.doc-actions__btn--ok:hover:not(:disabled) {
     background: var(--app-primary-btn-active);
 }
 
-.line-actions__btn--cancel {
+.doc-actions__btn--cancel {
     border-color: var(--app-danger-bg);
     background: var(--app-danger-bg);
     color: var(--app-danger-fg);
