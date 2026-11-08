@@ -20,6 +20,11 @@ export const TWO_FACTOR_INVALID_CODE_ERROR = 'TWO_FACTOR_INVALID_CODE';
 
 const INLINE_CODE = /^(.+) (\d{6})$/s;
 
+type PasswordStrategy = Pick<
+    NativeAuthenticationStrategy,
+    'init' | 'defineInputType' | 'authenticate' | 'verifyUserPassword'
+>;
+
 interface Candidate {
     password: string;
     code: string | null;
@@ -29,11 +34,12 @@ interface Candidate {
 // is needed. Admins may append " <code>" to the password (the stock Dashboard form has no code field).
 export class TwoFactorNativeAuthenticationStrategy implements AuthenticationStrategy<NativeAuthenticationData> {
     readonly name = NATIVE_AUTH_STRATEGY_NAME;
-    private readonly native = new NativeAuthenticationStrategy();
     private policy!: TwoFactorPolicyService;
     private verification!: TwoFactorVerificationService;
     private factors!: FactorStoreService;
     private locks!: TwoFactorLockService;
+
+    constructor(private readonly native: PasswordStrategy = new NativeAuthenticationStrategy()) {}
 
     async init(injector: Injector): Promise<void> {
         await this.native.init(injector);

@@ -9,3 +9,5 @@ export {
     TwoFactorRecoveryRequestedEvent,
 } from './src/two-factor.events';
 export type { TwoFactorPluginOptions } from './src/two-factor.types';
+export { hotp, timeStep, TOTP_PERIOD_SECONDS } from './src/totp/totp';
+export { base32Decode } from './src/totp/base32';

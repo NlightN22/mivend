@@ -47,7 +47,7 @@ export function verifyTotp(
     const given = Buffer.from(code);
     const current = timeStep(nowMs);
     let accepted: number | null = null;
-    for (const step of [current - 1, current, current + 1]) {
+    for (const step of [current - 1, current, current + 1].filter(candidate => candidate >= 0)) {
         const expected = Buffer.from(hotp(secret, step));
         const matches = timingSafeEqual(expected, given);
         if (matches && (lastUsedStep === null || step > lastUsedStep)) {
