@@ -79,6 +79,7 @@ export class SettlementDocumentService {
             date: input.date as Date,
             isDeleted: false,
             sourceVersion: input.version,
+            accounting: input.accounting ?? null,
         };
         if (existing) {
             await repo.update(existing.id, fields);

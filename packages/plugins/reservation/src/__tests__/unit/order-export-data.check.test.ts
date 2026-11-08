@@ -18,7 +18,6 @@ const subject = (over: Partial<OrderCheckSubject> = {}): OrderCheckSubject => ({
             productErpId: 'p-1',
             organizationErpId: 'o-1',
             quantity: 1,
-            storageUnitRatioToBase: 1,
         },
     ],
     ...over,

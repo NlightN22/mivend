@@ -149,6 +149,7 @@ export class ExternalOrderService {
                 : { erpRegistrationDocumentNumber: input.documentNumber }),
             ...(input.contractId === null ? {} : { erpContractId: input.contractId }),
             ...(input.paidAmountMinor === null ? {} : { erpPaidAmount: input.paidAmountMinor }),
+            ...input.erpFacts,
             ...(nextStatus === null
                 ? {}
                 : { erpStatus: nextStatus, erpStatusAt: input.erpStatusAt ?? new Date() }),

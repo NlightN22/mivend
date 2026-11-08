@@ -8,6 +8,8 @@ import {
     extractErpCreatedAt,
     extractManufacturerCodes,
     extractManufacturerId,
+    extractSourceFieldsText,
+    extractStorageUnitId,
 } from '../../product-ancillary-fields';
 
 describe('extractManufacturerId', () => {
@@ -92,5 +94,24 @@ describe('extractErpCreatedAt', () => {
         expect(extractErpCreatedAt({})).toBeNull();
         expect(extractErpCreatedAt({ sourceFields: {} })).toBeNull();
         expect(extractErpCreatedAt(field({ dateValue: 'not a date' }))).toBeNull();
+    });
+});
+
+describe('extractStorageUnitId', () => {
+    it('reads the id and treats absent or empty as none', () => {
+        expect(extractStorageUnitId({ storageUnitId: 'unit-1' })).toBe('unit-1');
+        expect(extractStorageUnitId({})).toBeNull();
+        expect(extractStorageUnitId({ storageUnitId: '' })).toBeNull();
+    });
+});
+
+describe('extractSourceFieldsText', () => {
+    it('stores the whole map as received and null for an absent or empty map', () => {
+        const fields = { Артикул: { stringValue: 'A-1' }, Вес: { numberValue: 2 } };
+        expect(JSON.parse(extractSourceFieldsText({ sourceFields: fields }) ?? 'null')).toEqual(
+            fields,
+        );
+        expect(extractSourceFieldsText({})).toBeNull();
+        expect(extractSourceFieldsText({ sourceFields: {} })).toBeNull();
     });
 });

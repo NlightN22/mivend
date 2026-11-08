@@ -11,6 +11,17 @@ export interface OrderCheckData {
     // product ERP id -> organization ERP id -> summed stock (negatives included)
     stockByProduct: Map<string, Map<string, number>>;
     organizationNames: Map<string, string>;
+    // product ERP id -> ratio to base of its storage unit; missing or non-positive reads as 1
+    storageUnitRatios: Map<string, number>;
+    // organization ERP id -> ERP flag; only an explicit false means stock is not controlled
+    organizationControlsStock: Map<string, boolean | null>;
+    // the ERP's global switch to skip the organization stock check for everyone
+    organizationStockIgnoredGlobally: boolean;
+}
+
+export function storageUnitRatio(data: OrderCheckData, productErpId: string | null): number {
+    const ratio = productErpId ? data.storageUnitRatios.get(productErpId) : undefined;
+    return ratio !== undefined && Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
 }
 
 export function organizationRef(id: string, data: OrderCheckData): OrganizationRef {

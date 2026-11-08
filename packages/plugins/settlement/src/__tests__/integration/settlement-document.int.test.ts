@@ -38,6 +38,18 @@ describe('SettlementDocumentService (real Postgres)', () => {
         expect((await entries())[0].amountMinor).toBe(10050);
     });
 
+    it('stores the accounting flags as received and null when the document has none', async () => {
+        await h.documents.apply(
+            ctx,
+            documentInput('d1', { accounting: { reflectedInAccounting: false } }),
+        );
+        await h.documents.apply(ctx, documentInput('d2'));
+
+        const byId = new Map((await docs()).map(d => [d.erpId, d.accounting]));
+        expect(byId.get('d1')).toEqual({ reflectedInAccounting: false });
+        expect(byId.get('d2')).toBeNull();
+    });
+
     it('concurrent delivery of the same document uuid yields one row and one entry set', async () => {
         const results = await Promise.all(
             Array.from({ length: 8 }, () => h.documents.apply(ctx, documentInput('d1'))),

@@ -26,6 +26,7 @@ export interface SettlementDocumentInput {
     documentTypeLabel: string;
     number: string;
     date: Date | null;
+    accounting?: Record<string, boolean> | null;
     entries: SettlementEntryInput[];
 }
 

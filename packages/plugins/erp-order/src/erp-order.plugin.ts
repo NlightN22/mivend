@@ -210,6 +210,20 @@ const adminApiSchema = gql`
                 readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Paid per ERP (minor units)' }],
             },
+            ...(
+                [
+                    ['erpAccounting', 'ERP accounting flags (JSON)'],
+                    ['erpLinkedDocuments', 'ERP linked document flags (JSON)'],
+                    ['erpShippedInSettlements', 'ERP shipped in settlements per line (JSON)'],
+                ] as const
+            ).map(([name, value]) => ({
+                name,
+                type: 'text' as const,
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value }],
+            })),
         ];
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),

@@ -42,6 +42,10 @@ export interface OrderChangedInput {
     derivedStatusAt?: Date | null;
     // Minor units; null or absent never overwrites.
     paidAmountMinor?: number | null;
+    // Accounting flags and shipped-in-settlements as received; an absent one never clears a stored value.
+    erpFacts?: Partial<
+        Record<'erpAccounting' | 'erpLinkedDocuments' | 'erpShippedInSettlements', string>
+    >;
     // Null when not sent, never clears a known value.
     reserveUntil?: Date | null;
 }

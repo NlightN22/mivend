@@ -1,6 +1,24 @@
 import { Logger } from '@nestjs/common';
 import type { ExternalOrderInput, ExternalOrderLineInput } from '@mivend/plugin-erp-order';
 
+import {
+    linkedDocumentsAccounting,
+    parseAccounting,
+    shippedInSettlementsText,
+    toJsonText,
+} from './erp-flags-payload';
+
+export function orderErpFacts(
+    payload: Record<string, unknown>,
+): NonNullable<ExternalOrderInput['erpFacts']> {
+    const facts = {
+        erpAccounting: toJsonText(parseAccounting(payload.accounting)),
+        erpLinkedDocuments: linkedDocumentsAccounting(payload.linkedDocuments),
+        erpShippedInSettlements: shippedInSettlementsText(payload.lines),
+    };
+    return Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null));
+}
+
 export interface ResolvedOrderLine {
     productVariantId: string;
     ratioToBase: number;
@@ -76,6 +94,7 @@ export function buildExternalOrderInput(
         vatTotalMinor: vatTotal === null ? null : toMinor(vatTotal),
         amountIncludesVat: payload.amountIncludesVat !== false,
         paidAmountMinor: paidAmountMinor(payload),
+        erpFacts: orderErpFacts(payload),
         lines: lines.map(externalLine),
         skippedLineCount,
     };

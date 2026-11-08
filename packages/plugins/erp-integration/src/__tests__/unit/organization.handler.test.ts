@@ -105,4 +105,13 @@ describe('OrganizationStreamHandler', () => {
         expect(service.upsertFromEvent.mock.calls[0][2].legalName).toBeNull();
         expect(outcome).toMatchObject({ kind: 'noop' });
     });
+
+    it('passes an explicit false and true controlsStock, and leaves an absent one undefined', async () => {
+        const { service, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme', controlsStock: false });
+        await handler.apply(ctx, 'org-1', { name: 'Acme', controlsStock: true });
+        await handler.apply(ctx, 'org-1', { name: 'Acme' });
+        const flags = service.upsertFromEvent.mock.calls.map(c => c[2].controlsStock);
+        expect(flags).toEqual([false, true, undefined]);
+    });
 });

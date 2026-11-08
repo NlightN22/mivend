@@ -362,6 +362,22 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP creation date' }],
             },
             {
+                name: 'erpStorageUnitId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP storage unit id' }],
+            },
+            {
+                name: 'erpSourceFields',
+                type: 'text',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP source fields (JSON)' }],
+            },
+            {
                 name: 'manufacturerPartNumber',
                 type: 'string',
                 nullable: true,

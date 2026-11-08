@@ -13,7 +13,7 @@ import type {
 } from '@mivend/plugin-reservation';
 
 import { OrderCheckDataService } from './order-check-data.service';
-import { lineOrganization, organizationBreakdown } from './order-check-data';
+import { lineOrganization, organizationBreakdown, storageUnitRatio } from './order-check-data';
 
 // The single stock-availability function for order lines (#233): the local free quantity of the branch
 // warehouses (the reserve's rule) capped by the stock of the line's own organization (the #237 rule).
@@ -80,7 +80,7 @@ export class OrderLineAvailabilityService
             const orgFit =
                 orgStock === null
                     ? Infinity
-                    : Math.max(0, Math.floor(orgStock * line.storageUnitRatioToBase));
+                    : Math.max(0, Math.floor(orgStock * storageUnitRatio(data, line.productErpId)));
             const available = Math.min(warehouseFit, orgFit);
             const fitting = Math.min(line.quantity, available);
             const limitedBy =

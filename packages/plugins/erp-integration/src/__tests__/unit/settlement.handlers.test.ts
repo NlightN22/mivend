@@ -53,6 +53,24 @@ describe('SettlementDocumentStreamHandler', () => {
         });
     });
 
+    it('passes the accounting flags as received and null when the document has none', async () => {
+        const { handler, apply } = documentHandler();
+
+        await handler.apply(ctx, 'doc-1', {
+            ...wirePayload,
+            accounting: { reflectedInAccounting: false, reflectedInManagementAccounting: true },
+        });
+        await handler.apply(ctx, 'doc-2', wirePayload);
+        await handler.apply(ctx, 'doc-3', { ...wirePayload, accounting: {} });
+
+        expect(apply.mock.calls[0][1].accounting).toEqual({
+            reflectedInAccounting: false,
+            reflectedInManagementAccounting: true,
+        });
+        expect(apply.mock.calls[1][1].accounting).toBeNull();
+        expect(apply.mock.calls[2][1].accounting).toBeNull();
+    });
+
     it('treats absent optional fields as absent, never as false/zero facts', async () => {
         const { handler, apply } = documentHandler();
         const entry = { ...wirePayload.entries[0], dueDate: undefined };

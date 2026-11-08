@@ -42,6 +42,10 @@ declare module '@vendure/core' {
         externalLinesIncomplete?: boolean;
         // OrderChanged.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
         erpPaidAmount?: number | null;
+        // OrderChanged accounting flags, linked-document flags and per-line shipped-in-settlements, JSON as received.
+        erpAccounting?: string | null;
+        erpLinkedDocuments?: string | null;
+        erpShippedInSettlements?: string | null;
     }
 }
 

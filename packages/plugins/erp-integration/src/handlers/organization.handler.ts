@@ -33,6 +33,8 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         const stored = await this.organizationEvents.upsertFromEvent(ctx, entityId, {
             legalName,
             isActive,
+            controlsStock:
+                typeof payload.controlsStock === 'boolean' ? payload.controlsStock : undefined,
             fields,
             signatories: toSignatories(payload.signatories),
         });

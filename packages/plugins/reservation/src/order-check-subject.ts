@@ -18,8 +18,6 @@ export interface OrderCheckLine {
     // ERP id of the one organization the line is sold by (its stamped organization); null when unknown.
     organizationErpId: string | null;
     quantity: number;
-    // The ERP does not publish a product's storage unit yet; 1 means the stock is kept in the base unit.
-    storageUnitRatioToBase: number;
 }
 
 export interface OrderCheckSubject {

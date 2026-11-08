@@ -208,6 +208,7 @@ export class ReservationWriteOffSyncService {
         if (input.paidAmountMinor != null) {
             customFields.erpPaidAmount = input.paidAmountMinor;
         }
+        Object.assign(customFields, input.erpFacts);
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
         order.customFields = { ...order.customFields, ...customFields };
 

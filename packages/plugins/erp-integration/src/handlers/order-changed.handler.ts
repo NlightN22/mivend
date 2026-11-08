@@ -7,7 +7,7 @@ import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
-import { buildExternalOrderInput, paidAmountMinor } from './external-order-input';
+import { buildExternalOrderInput, orderErpFacts, paidAmountMinor } from './external-order-input';
 import type { ResolvedOrderLine } from './external-order-input';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -121,6 +121,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             derivedStatusAt:
                 parseTimestamp(payload.updatedAt) ?? parseTimestamp(payload.occurredAt),
             paidAmountMinor: paidAmountMinor(payload),
+            erpFacts: orderErpFacts(payload),
             reserveUntil: parseTimestamp(payload.reserveUntil),
         });
         await this.settlementPending.attachOrder(ctx, entityId);

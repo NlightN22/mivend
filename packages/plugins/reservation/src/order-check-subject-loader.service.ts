@@ -45,7 +45,6 @@ export class OrderCheckSubjectLoader {
                 organizationErpId:
                     organizationErpIds.get(String(line.customFields?.organizationId)) ?? null,
                 quantity: line.quantity,
-                storageUnitRatioToBase: 1,
             })),
         };
     }
