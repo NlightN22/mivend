@@ -63,3 +63,4 @@ export { OrderExportDataRegistrar } from './src/order-export-data.registrar';
 export { ReservationSettings } from './src/reservation-settings';
 export { OrderLineEditService } from './src/order-line-edit.service';
 export type { OrderLineEditKind } from './src/order-line-edit.events';
+export { LINE_PRICE_CHECK, type LinePriceCheck } from './src/line-price-check';

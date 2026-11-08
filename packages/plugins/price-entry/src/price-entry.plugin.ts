@@ -10,7 +10,8 @@ import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
-import { ReservationPlugin } from '@mivend/plugin-reservation';
+import { LINE_PRICE_CHECK, ReservationPlugin } from '@mivend/plugin-reservation';
+import { VariantPriceCheck } from './variant-price-check';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
@@ -110,6 +111,8 @@ import { GrantedDiscountService } from './granted-discount.service';
         ],
     },
     providers: [
+        VariantPriceCheck,
+        { provide: LINE_PRICE_CHECK, useExisting: VariantPriceCheck },
         PriceEntryService,
         FloorPriceService,
         DiscountRuleService,

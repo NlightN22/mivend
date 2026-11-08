@@ -5,16 +5,29 @@ import { OrderLineAddService } from '../../order-line-add.service';
 
 const ctx = {} as unknown as RequestContext;
 
-function build(opts: { variant?: object | null; multiple?: number } = {}) {
+function build(
+    opts: {
+        variant?: object | null;
+        extra?: object[];
+        multiple?: number;
+        priced?: boolean;
+        existing?: number;
+    } = {},
+) {
     const order = {
         id: '5',
         customerId: 'c1',
         customFields: { branchId: 'b1' },
         lines: [] as object[],
     };
-    const line = { id: '9', quantity: 0 };
+    const line = { id: '9', quantity: opts.existing ?? 0 };
     const variant = opts.variant === undefined ? { id: '3', sku: 'SKU-1' } : opts.variant;
-    const qb = { where: () => qb, andWhere: () => qb, getOne: async () => variant };
+    const qb: Record<string, unknown> = {
+        where: () => qb,
+        andWhere: () => qb,
+        getMany: async () => (variant ? [variant, ...(opts.extra ?? [])] : []),
+    };
+    qb.limit = () => qb;
     const connection = { getRepository: () => ({ createQueryBuilder: () => qb }) };
     const edits = {
         edit: vi.fn(
@@ -36,6 +49,9 @@ function build(opts: { variant?: object | null; multiple?: number } = {}) {
         modifier as never,
         packaging as never,
         stockSync as never,
+        {
+            get: () => ({ hasCustomerPrice: async () => opts.priced ?? true }),
+        } as never,
     );
     return { service, edits, modifier, stockSync, line };
 }
@@ -54,6 +70,24 @@ describe('OrderLineAddService', () => {
         const t = build({ variant: null });
         await expect(t.service.addBySku(ctx, '5', 'NOPE', 1)).rejects.toThrow(/No product/);
         expect(t.modifier.getOrCreateOrderLine).not.toHaveBeenCalled();
+    });
+
+    it('refuses an article the customer has no price for', async () => {
+        const t = build({ priced: false });
+        await expect(t.service.addBySku(ctx, '5', 'SKU-1', 1)).rejects.toThrow(/no price/);
+        expect(t.modifier.getOrCreateOrderLine).not.toHaveBeenCalled();
+    });
+
+    it('refuses an article that matches more than one product', async () => {
+        const t = build({ extra: [{ id: '4', sku: 'SKU-1' }] });
+        await expect(t.service.addBySku(ctx, '5', 'SKU-1', 1)).rejects.toThrow(/more than one/);
+        expect(t.modifier.getOrCreateOrderLine).not.toHaveBeenCalled();
+    });
+
+    it('caps the resulting line quantity, not only the added one', async () => {
+        const t = build({ existing: 999_999 });
+        await expect(t.service.addBySku(ctx, '5', 'SKU-1', 2)).rejects.toThrow(/at most/);
+        expect(t.stockSync.addQuantity).not.toHaveBeenCalled();
     });
 
     it('refuses a quantity that breaks the pack multiple', async () => {

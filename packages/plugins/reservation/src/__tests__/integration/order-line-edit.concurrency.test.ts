@@ -358,36 +358,43 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
     });
 });
 
+function addService(edits: OrderLineEditService, qb: Record<string, unknown>): OrderLineAddService {
+    const modifier = {
+        getOrCreateOrderLine: async (ctx: never, o: { id: string }) => {
+            const repo = h.connection.getRepository(ctx, TestOrderLine);
+            const existing = await repo.findOne({ where: { orderId: o.id } });
+            if (existing) return existing;
+            return repo.save({
+                orderId: o.id,
+                productVariantId: 'variant-add',
+                productVariantEntityId: h.productVariant.id,
+                quantity: 0,
+            });
+        },
+    };
+    return new OrderLineAddService(
+        { getRepository: () => ({ createQueryBuilder: () => qb }) } as never,
+        edits,
+        modifier as never,
+        { requiredMultiple: async () => 1 } as never,
+        { addQuantity: async () => undefined } as never,
+        { get: () => ({ hasCustomerPrice: async () => true }) } as never,
+    );
+}
+
 describe('OrderLineAddService (integration, real Postgres, concurrency)', () => {
     it('two concurrent adds of the same article both land, one line carries the summed quantity', async () => {
         const order = await h.dataSource
             .getRepository(TestOrder)
             .save({ customerId: 'customer-1' });
         const edits = editService();
-        const qb = { where: () => qb, andWhere: () => qb, getOne: async () => h.productVariant };
-        const modifier = {
-            getOrCreateOrderLine: async (
-                ctx: never,
-                o: { id: string; lines: Array<{ productVariantEntityId: unknown }> },
-            ) => {
-                const repo = h.connection.getRepository(ctx, TestOrderLine);
-                const existing = await repo.findOne({ where: { orderId: o.id } });
-                if (existing) return existing;
-                return repo.save({
-                    orderId: o.id,
-                    productVariantId: 'variant-add',
-                    productVariantEntityId: h.productVariant.id,
-                    quantity: 0,
-                });
-            },
+        const qb: Record<string, unknown> = {
+            where: () => qb,
+            andWhere: () => qb,
+            limit: () => qb,
+            getMany: async () => [h.productVariant],
         };
-        const add = new OrderLineAddService(
-            { getRepository: () => ({ createQueryBuilder: () => qb }) } as never,
-            edits,
-            modifier as never,
-            { requiredMultiple: async () => 1 } as never,
-            { addQuantity: async () => undefined } as never,
-        );
+        const add = addService(edits, qb);
         const results = await Promise.allSettled([
             add.addBySku(mockCtx, order.id, 'SKU', 2),
             add.addBySku(mockCtx, order.id, 'SKU', 3),
@@ -398,5 +405,46 @@ describe('OrderLineAddService (integration, real Postgres, concurrency)', () => 
             .find({ where: { orderId: order.id } });
         expect(lines).toHaveLength(1);
         expect(lines[0].quantity).toBe(5);
+    });
+
+    it('an add and a concurrent confirm never leave a reservation that differs from the line', async () => {
+        await h.dataSource.getRepository(TestStockLevel).save({
+            productVariantId: 'variant-add',
+            stockLocationId: h.location.id,
+            stockOnHand: 100,
+            stockAllocated: 0,
+        });
+        const order = await h.dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        const line = await h.dataSource.getRepository(TestOrderLine).save({
+            orderId: order.id,
+            productVariantId: 'variant-add',
+            productVariantEntityId: h.productVariant.id,
+            quantity: 3,
+        });
+        const qb: Record<string, unknown> = {
+            where: () => qb,
+            andWhere: () => qb,
+            limit: () => qb,
+            getMany: async () => [h.productVariant],
+        };
+
+        const results = await Promise.allSettled([
+            addService(editService(), qb).addBySku(mockCtx, order.id, 'SKU', 2),
+            h.service.reserveOrder(mockCtx, order.id, 7, 'manual'),
+        ]);
+
+        const finalLine = await h.dataSource
+            .getRepository(TestOrderLine)
+            .findOneByOrFail({ id: line.id });
+        const active = await h.dataSource
+            .getRepository(TestReservation)
+            .find({ where: { orderId: order.id, status: 'active' } });
+        expect(results.map(outcome).filter(o => /deadlock/i.test(o))).toEqual([]);
+        // The add either runs first (reserve sees 5) or releases the reserve it finds.
+        expect(results[0].status).toBe('fulfilled');
+        expect(finalLine.quantity).toBe(5);
+        for (const row of active) expect(row.quantity).toBe(5);
     });
 });
