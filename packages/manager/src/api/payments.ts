@@ -3,6 +3,7 @@ import { adminApi } from './client';
 import {
     PaymentsPageDocument,
     PaymentViewCountsDocument,
+    type PaymentFilterParameter,
     type PaymentListItemFieldsFragment,
 } from './generated/graphql';
 
@@ -71,8 +72,16 @@ export interface PaymentViewCounts {
 
 // Counts use take: 0 (real COUNT, no rows), batched in one round trip via GraphQL aliases.
 // Only 5 chips on purpose; the rest use the column filter. Sync CustomerPaymentsTab.vue VIEWS.
-export async function fetchPaymentViewCounts(counterpartyId: string): Promise<PaymentViewCounts> {
-    const result = await adminApi(PaymentViewCountsDocument, { counterpartyId });
+export async function fetchPaymentViewCounts(
+    counterpartyId: string,
+    search?: string,
+    filter?: PaymentFilterParameter,
+): Promise<PaymentViewCounts> {
+    const result = await adminApi(PaymentViewCountsDocument, {
+        counterpartyId: counterpartyId || undefined,
+        search: search || undefined,
+        filter,
+    });
     return {
         all: result.all.totalItems,
         captured: result.captured.totalItems,

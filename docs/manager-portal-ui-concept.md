@@ -178,6 +178,21 @@ sortable headers (all but order) are applied on the server: `visibleProformaInvo
 and their counts follow the search and the builder conditions; the default sort is newest first.
 Money columns are end-aligned (`align: 'end'` on the table column).
 
+## Payments list
+
+Same list shape as orders (`components/payments/`): the numeric payment number first, then date,
+customer, proforma invoice, order, source, status and amount. Status chips with counts (All,
+Captured, Pending, Failed, Refunded) follow the search and the Filter builder conditions; the
+search box matches the payment number, the customer name and INN. Views, URL sync (`search`,
+`view`, `filters`, `sortField`, `sortDir`, `counterpartyId`, `pageSize`, `page`), top and bottom
+pagination and the mobile card view are shared with orders. The customer links to its card, the
+order to the order card, the proforma invoice to the proforma list searched by its number; there
+is no quick panel and no row actions. The Filter builder and the sortable headers (all but
+proforma invoice and order) are applied on the server: `visiblePayments` takes
+`options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
+scope of the payment's proforma invoice). The default sort is newest first. Money columns are
+end-aligned (`align: 'end'` on the table column).
+
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,

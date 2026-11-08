@@ -9,32 +9,38 @@ fragment PaymentListItemFields on PaymentAttempt {
     currencyCode
     proformaInvoiceId
     counterpartyId
+    counterpartyShortName
+    proformaInvoiceNumber
+    orderCode
 }
 
-query PaymentViewCounts($counterpartyId: ID) {
-    all: visiblePayments(options: { take: 0 }, counterpartyId: $counterpartyId) {
+query PaymentViewCounts($counterpartyId: ID, $search: String, $filter: PaymentFilterParameter) {
+    all: visiblePayments(
+        options: { take: 0, search: $search, filter: $filter }
+        counterpartyId: $counterpartyId
+    ) {
         totalItems
     }
     captured: visiblePayments(
-        options: { take: 0, status: "captured" }
+        options: { take: 0, status: "captured", search: $search, filter: $filter }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
     pending: visiblePayments(
-        options: { take: 0, status: "pending" }
+        options: { take: 0, status: "pending", search: $search, filter: $filter }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
     failed: visiblePayments(
-        options: { take: 0, status: "failed" }
+        options: { take: 0, status: "failed", search: $search, filter: $filter }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
     refunded: visiblePayments(
-        options: { take: 0, status: "refunded" }
+        options: { take: 0, status: "refunded", search: $search, filter: $filter }
         counterpartyId: $counterpartyId
     ) {
         totalItems

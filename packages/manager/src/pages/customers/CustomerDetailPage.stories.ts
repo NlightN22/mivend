@@ -84,6 +84,9 @@ const CUSTOMER_PAYMENTS: PaymentListItem[] = Array.from({ length: 5 }, (_, i) =>
     currencyCode: 'RUB',
     proformaInvoiceId: `INV-${1000 + i}`,
     counterpartyId: '1',
+    counterpartyShortName: null,
+    proformaInvoiceNumber: null,
+    orderCode: null,
 }));
 
 const meta: Meta<typeof CustomerDetailPage> = {
