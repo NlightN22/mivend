@@ -160,6 +160,16 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
+    it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '3' });
+
+        await service.findVisible(mockCtx, { take: -5 });
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
+        await service.findVisible(mockCtx, { take: 100000 });
+        expect(qb.limit).toHaveBeenCalledWith(200);
+    });
+
     it('take 0 returns only the count without loading rows', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
         qb.getRawOne.mockResolvedValue({ total: '3' });

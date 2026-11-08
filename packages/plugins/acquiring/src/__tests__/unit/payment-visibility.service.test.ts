@@ -97,6 +97,17 @@ describe('PaymentVisibilityService', () => {
         expect(qb.andWhere.mock.calls.some(([arg]) => arg instanceof Brackets)).toBe(true);
     });
 
+    it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { take: -5 });
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
+        await service.findVisible(mockCtx, { take: 100000 });
+        expect(qb.limit).toHaveBeenCalledWith(200);
+        await service.findVisible(mockCtx, { take: 0 });
+        expect(qb.limit).toHaveBeenCalledTimes(1);
+    });
+
     it('applies the scope before the client filter and returns only a count for take 0', async () => {
         proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
         qb.getCount.mockResolvedValue(7);

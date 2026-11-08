@@ -14,6 +14,7 @@ import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-inv
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 import { applyListFilter, applyListSort, likeTerm } from './proforma-invoice-list-query';
+import { clampTake } from './list-filter-engine';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
 export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
@@ -32,7 +33,7 @@ export class ProformaInvoiceVisibilityService {
         counterpartyId?: string,
     ): Promise<PaginatedList<ProformaInvoice>> {
         const scope = await this.resolveScope(ctx);
-        const take = options?.take ?? 50;
+        const take = clampTake(options?.take);
         const skip = options?.skip ?? 0;
 
         const qb = this.buildScopedQuery(ctx, scope, options);

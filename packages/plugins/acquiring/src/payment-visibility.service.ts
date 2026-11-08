@@ -9,6 +9,7 @@ import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentListOptions } from './payment-attempt-query.service';
 import { applyListFilter, applyListSort, likeTerm } from './payment-list-query';
+import { clampTake } from './list-filter-engine';
 
 const ORDER_CODE_SQL =
     '(SELECT o."code" FROM "order" o WHERE o."id" = COALESCE(payment."orderId", "proformaInvoice"."orderId"))';
@@ -28,7 +29,7 @@ export class PaymentVisibilityService {
         counterpartyId?: string,
     ): Promise<PaginatedList<PaymentAttempt>> {
         const scope = await this.proformaInvoiceVisibilityService.resolveScope(ctx);
-        const take = options?.take ?? 50;
+        const take = clampTake(options?.take);
         const skip = options?.skip ?? 0;
 
         const qb = this.connection
