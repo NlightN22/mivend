@@ -17,7 +17,7 @@ export
         preview-build preview-up preview-down \
         prod-up prod-init-storage prod-backup prod-restore-check prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
-        seed-customer-detail seed-order-edit-states seed-all \
+        seed-customer-detail seed-order-edit-states seed-order-flags seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
         storefront storefront-dev
@@ -169,6 +169,12 @@ seed-customer-detail:
 seed-order-edit-states:
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-order-edit-states.mjs
+
+# One order showing every flag of the manager order card (#320): stock shortage, failed reserve, price below the
+# floor, discounts, pending approval, missing contract, credit. Needs `make seed-all`; idempotent; not part of seed-all.
+seed-order-flags:
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-order-flags.mjs
 
 # One command for the full local seeding order (ERP data → approval requests — this exact order
 # matters, see seed-approvals' own comment above; manager-portal roles are no longer part of this
