@@ -3732,9 +3732,9 @@ export type Query = {
     searchCapabilities: SearchCapabilities;
     settlementBalances: Array<SettlementBalanceCard>;
     settlementDocuments: SettlementDocumentPage;
+    signInCaptchaRequirement: SignInCaptchaRequirement;
     suggestAddress: Array<Scalars['String']['output']>;
     tradingPoint?: Maybe<TradingPoint>;
-    signInCaptchaRequirement: SignInCaptchaRequirement;
     twoFactorRequired: Scalars['Boolean']['output'];
     twoFactorStatus: TwoFactorStatus;
 };
@@ -3841,6 +3841,10 @@ export type QuerySettlementDocumentsArgs = {
     filter?: InputMaybe<SettlementDocumentFilter>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySignInCaptchaRequirementArgs = {
+    login: Scalars['String']['input'];
 };
 
 export type QuerySuggestAddressArgs = {
@@ -4219,6 +4223,13 @@ export type ShopContract = {
     paymentDelayDays?: Maybe<Scalars['Int']['output']>;
 };
 
+export type SignInCaptchaRequirement = {
+    required: Scalars['Boolean']['output'];
+    scriptUrl?: Maybe<Scalars['String']['output']>;
+    siteKey?: Maybe<Scalars['String']['output']>;
+    widgetGlobal?: Maybe<Scalars['String']['output']>;
+};
+
 export type SignInSettings = {
     newDeviceEmail: Scalars['Boolean']['output'];
 };
@@ -4588,21 +4599,6 @@ export type UpdateOrderItemsResult =
     | OrderLimitError
     | OrderModificationError;
 
-export type SignInCaptchaRequirement = {
-    required: Scalars['Boolean']['output'];
-    scriptUrl: Maybe<Scalars['String']['output']>;
-    siteKey: Maybe<Scalars['String']['output']>;
-    widgetGlobal: Maybe<Scalars['String']['output']>;
-};
-
-export type UserCustomFields = {
-    passwordChangeRequired: Maybe<Scalars['Boolean']['output']>;
-};
-
-export type QuerySignInCaptchaRequirementArgs = {
-    login: Scalars['String']['input'];
-};
-
 export type User = Node & {
     authenticationMethods: Array<AuthenticationMethod>;
     createdAt: Scalars['DateTime']['output'];
@@ -4613,6 +4609,10 @@ export type User = Node & {
     roles: Array<Role>;
     updatedAt: Scalars['DateTime']['output'];
     verified: Scalars['Boolean']['output'];
+};
+
+export type UserCustomFields = {
+    passwordChangeRequired?: Maybe<Scalars['Boolean']['output']>;
 };
 
 /**
@@ -4779,6 +4779,19 @@ export type SetNewDeviceEmailMutationVariables = Exact<{
 }>;
 
 export type SetNewDeviceEmailMutation = { setNewDeviceEmail: { newDeviceEmail: boolean } };
+
+export type SignInCaptchaRequirementQueryVariables = Exact<{
+    login: Scalars['String']['input'];
+}>;
+
+export type SignInCaptchaRequirementQuery = {
+    signInCaptchaRequirement: {
+        required: boolean;
+        siteKey?: string | null;
+        scriptUrl?: string | null;
+        widgetGlobal?: string | null;
+    };
+};
 
 export type TwoFactorStatusQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -5781,19 +5794,6 @@ export type ActiveCustomerForAuthQuery = {
     } | null;
 };
 
-export type SignInCaptchaRequirementQueryVariables = Exact<{
-    login: Scalars['String']['input'];
-}>;
-
-export type SignInCaptchaRequirementQuery = {
-    signInCaptchaRequirement: {
-        required: boolean;
-        siteKey: string | null;
-        scriptUrl: string | null;
-        widgetGlobal: string | null;
-    };
-};
-
 export type LoginMutationVariables = Exact<{
     username: Scalars['String']['input'];
     password: Scalars['String']['input'];
@@ -6379,6 +6379,19 @@ export const SetNewDeviceEmailDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SetNewDeviceEmailMutation,
     SetNewDeviceEmailMutationVariables
+>;
+export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
+    query SignInCaptchaRequirement($login: String!) {
+  signInCaptchaRequirement(login: $login) {
+    required
+    siteKey
+    scriptUrl
+    widgetGlobal
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SignInCaptchaRequirementQuery,
+    SignInCaptchaRequirementQueryVariables
 >;
 export const TwoFactorStatusDocument = new TypedDocumentString(`
     query TwoFactorStatus {
@@ -7433,19 +7446,6 @@ export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ActiveCustomerForAuthQuery,
     ActiveCustomerForAuthQueryVariables
->;
-export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
-    query SignInCaptchaRequirement($login: String!) {
-  signInCaptchaRequirement(login: $login) {
-    required
-    siteKey
-    scriptUrl
-    widgetGlobal
-  }
-}
-    `) as unknown as TypedDocumentString<
-    SignInCaptchaRequirementQuery,
-    SignInCaptchaRequirementQueryVariables
 >;
 export const LoginDocument = new TypedDocumentString(`
     mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
