@@ -76,7 +76,7 @@ One page, no tabs, top to bottom:
 3. **Lines table.** Built from the ui-kit document lines kit (`MvDocumentLines`, see `docs/ui-standards.md`,
    "Document lines kit"). Header row in the style of the orders list; value cells and their column labels are
    left-aligned, so the flag icon after a value never makes the alignment look broken. Columns: Product (image, name,
-   SKU), Qty, Available, Reserve (display only), Price, Discount (read only), Retro bonus (conditional), Total. A
+   SKU), Qty, Available, Reserve (display only), Price, Discount, Retro bonus (conditional), Total. A
    problem is shown in the cell where it occurs; a stripe on the row's left edge shows the worst one (red block or
    hold, orange approval needed, yellow warn, green clean). Tones come from the check's policy consequence, so branch
    overrides apply. A flagged cell shows its plain value and a small icon button, no status text. On desktop, hovering
@@ -88,13 +88,31 @@ One page, no tabs, top to bottom:
    discount over the employee's limit in the Discount cell, a contract the buyer lacks in the Available cell and next
    to the contract select. A mark by the total carries findings about the order itself (credit, and cut or failure
    notes naming no remaining line). Nothing is repeated in a panel above the table.
-4. **Toolbar and positions.** The toolbar above the table follows the orders list: the title with the position count
-   on the left; on the right a compact "Add by article" input (typeahead, exact SKU on the server, added through the
-   order-edit path: lock, edit guard, on-edit checks) and a ghost "Select" toggle. In selection mode a bulk bar
-   replaces the toolbar contents: "N selected", "Delete N", "Cancel". Delete is also a row-menu entry, always behind a
-   confirm dialog. Edits are offered only while the order is not yet sent to the ERP and not terminal. The
-   selection state lives in `useLineSelection` (ui-kit) so a long-press entry on a phone can reuse it. The toolbar
-   wraps on a phone.
+4. **Selecting, editing and adding positions.** The toolbar is the title with a muted count ("7 positions"); there is
+   no "Add by article" input and no "Select" toggle. On desktop a checkbox column is always visible (header checkbox
+   selects all); with one row selected a bar appears above the table ("Selected: N", a "Delete" button) and the
+   selected rows are tinted. Every row has a pencil and a trash button; the trash deletes that one position behind the
+   confirm dialog. Edits are offered only while the order is not yet sent to the ERP and not terminal. A phone has no
+   checkboxes (a long-press entry is a later task; `useLineSelection` stays reusable).
+
+   **Edit mode** is inline: the row is tinted green with a green left accent, Qty becomes a stepper, Price an input
+   with the currency suffix and Discount an input with "%", and the actions become a green check and a red cross.
+   Available and Reserve keep their flags, so the shortfall stays visible while the quantity is reduced; the Total
+   updates live. Price and discount are two views of one value, measured from the customer's reference price
+   (`orderLineDiscountLimits.discountPercent`, see `docs/access-control.md`): editing the percent recomputes the
+   price and the other way round, a negative percent is a surcharge. Under the Discount input a hint shows the
+   employee's limit; a deepening past it shows "will be sent for approval" and a compact reason input appears under
+   the price. Saving goes through `requestPriceAdjustment` (free when reducing, approval path otherwise) and the
+   quantity mutations. The rules are the server's; the hint only mirrors them.
+
+   **Adding** a position: a dashed full-width "Add position" button under the table swaps for an inline add row
+   (green outline): product search (SKU or name, `productVariants`), quantity stepper, dashes for Available and
+   Reserve (the values appear once the line exists), optional Price and Discount (empty means the customer price),
+   a check and a cross. Confirming calls `addOrderLineBySku`; refusals (no customer price, ambiguous article,
+   quantity or multiple) stay inline in the add row. An entered price or percent is then applied to the new line
+   through the same price path in the same action (two server calls); if that second call fails the line stays added
+   and a notice says the price was not applied, or that it was sent for approval. The form is the same on a phone,
+   as a card.
 5. **Totals block.** Right-aligned stacked rows under the table (label left, value right; full width on a phone):
    Positions, Weight total and Volume total (always shown; the known lines are summed and a muted "n positions
    without data" says how many have no unit data), Subtotal, Discount total in money (reference price minus effective

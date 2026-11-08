@@ -12128,11 +12128,28 @@ export type AddOrderLineBySkuMutationVariables = Exact<{
 export type AddOrderLineBySkuMutation = { addOrderLineBySku: boolean };
 
 export type ProductVariantsBySkuQueryVariables = Exact<{
-    sku: Scalars['String']['input'];
+    term: Scalars['String']['input'];
 }>;
 
 export type ProductVariantsBySkuQuery = {
     productVariants: { items: Array<{ id: string; sku: string; name: string }> };
+};
+
+export type OrderLineIdsBySkuQueryVariables = Exact<{
+    orderId: Scalars['String']['input'];
+}>;
+
+export type OrderLineIdsBySkuQuery = {
+    visibleOrders: {
+        items: Array<{
+            lines: Array<{
+                id: string;
+                unitPriceWithTax: any;
+                discountedUnitPriceWithTax: any;
+                productVariant: { sku: string };
+            }>;
+        }>;
+    };
 };
 
 export type SplitOrderLinesByStockMutationVariables = Exact<{
@@ -15475,8 +15492,10 @@ export const AddOrderLineBySkuDocument = new TypedDocumentString(`
     AddOrderLineBySkuMutationVariables
 >;
 export const ProductVariantsBySkuDocument = new TypedDocumentString(`
-    query ProductVariantsBySku($sku: String!) {
-  productVariants(options: {take: 8, filter: {sku: {contains: $sku}}}) {
+    query ProductVariantsBySku($term: String!) {
+  productVariants(
+    options: {take: 8, filter: {_or: [{sku: {contains: $term}}, {name: {contains: $term}}]}}
+  ) {
     items {
       id
       sku
@@ -15488,6 +15507,22 @@ export const ProductVariantsBySkuDocument = new TypedDocumentString(`
     ProductVariantsBySkuQuery,
     ProductVariantsBySkuQueryVariables
 >;
+export const OrderLineIdsBySkuDocument = new TypedDocumentString(`
+    query OrderLineIdsBySku($orderId: String!) {
+  visibleOrders(options: {take: 1, filter: {id: {eq: $orderId}}}) {
+    items {
+      lines {
+        id
+        unitPriceWithTax
+        discountedUnitPriceWithTax
+        productVariant {
+          sku
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<OrderLineIdsBySkuQuery, OrderLineIdsBySkuQueryVariables>;
 export const SplitOrderLinesByStockDocument = new TypedDocumentString(`
     mutation SplitOrderLinesByStock($orderId: ID!) {
   splitOrderLinesByStock(orderId: $orderId) {

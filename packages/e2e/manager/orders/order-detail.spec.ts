@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { readE2eOrder } from '../../helpers/e2e-order';
 import { adminGql } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
@@ -159,18 +159,23 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         await removeAddedLine();
     });
 
-    test('a position is added by its article and deleted through the row menu', async ({
+    async function addBySearch(page: Page, term: string): Promise<void> {
+        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
+        await page.getByLabel('Article or product name').fill(term);
+        await page.getByRole('button', { name: new RegExp(SKU) }).click();
+        await page.getByRole('button', { name: 'Add position', exact: true }).click();
+    }
+
+    test('a position is added by its article and deleted with the row trash button', async ({
         page,
     }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        await page.getByLabel('Add by article (SKU)').fill(SKU, { timeout: 15000 });
-        await page.getByRole('button', { name: new RegExp(SKU) }).click();
+        await addBySearch(page, SKU);
 
         const row = page.getByTestId(`order-line-${SKU}`);
         await expect(row).toBeVisible();
 
-        await row.getByRole('button', { name: 'Position actions' }).click();
-        await page.getByRole('menuitem', { name: 'Delete position' }).click();
+        await row.getByRole('button', { name: 'Delete position' }).click();
         await page
             .getByRole('dialog')
             .getByRole('button', { name: /^Delete 1 position/ })
@@ -180,14 +185,13 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
 
     test('selected positions are deleted in bulk with a confirmation', async ({ page }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        await page.getByLabel('Add by article (SKU)').fill(SKU, { timeout: 15000 });
-        await page.getByRole('button', { name: new RegExp(SKU) }).click();
+        await addBySearch(page, SKU);
         const row = page.getByTestId(`order-line-${SKU}`);
         await expect(row).toBeVisible();
 
-        await page.getByRole('button', { name: 'Select', exact: true }).click();
         await row.getByRole('checkbox').check();
-        await page.getByRole('button', { name: 'Delete 1', exact: true }).click();
+        await expect(page.getByTestId('doc-selected-count')).toHaveText('Selected: 1');
+        await page.getByTestId('doc-selection-bar').getByRole('button', { name: 'Delete' }).click();
         await page
             .getByRole('dialog')
             .getByRole('button', { name: /^Delete 1 position/ })

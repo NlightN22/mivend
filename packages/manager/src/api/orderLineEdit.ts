@@ -3,6 +3,7 @@ import {
     AddOrderLineBySkuDocument,
     ChangeOrderLineQuantityDocument,
     OrderLineAvailabilityDocument,
+    OrderLineIdsBySkuDocument,
     OrderLineShortfallsDocument,
     ProductVariantsBySkuDocument,
     RemoveOrderLineDocument,
@@ -56,6 +57,28 @@ export async function addOrderLineBySku(
     await adminApi(AddOrderLineBySkuDocument, { orderId, sku, quantity });
 }
 
-export async function searchVariantsBySku(sku: string): Promise<SkuMatch[]> {
-    return (await adminApi(ProductVariantsBySkuDocument, { sku })).productVariants.items;
+export async function searchVariants(term: string): Promise<SkuMatch[]> {
+    return (await adminApi(ProductVariantsBySkuDocument, { term })).productVariants.items;
+}
+
+export interface AddedLine {
+    id: string;
+    listPriceMinor: number;
+    effectivePriceMinor: number;
+}
+
+export async function findOrderLineBySku(orderId: string, sku: string): Promise<AddedLine | null> {
+    const lines = (await adminApi(OrderLineIdsBySkuDocument, { orderId })).visibleOrders.items[0]
+        ?.lines;
+    // Lines of one article can coexist; the one just added has the highest id.
+    const line = lines
+        ?.filter(l => l.productVariant.sku === sku)
+        .sort((a, b) => Number(b.id) - Number(a.id))[0];
+    return line
+        ? {
+              id: line.id,
+              listPriceMinor: line.unitPriceWithTax,
+              effectivePriceMinor: line.discountedUnitPriceWithTax,
+          }
+        : null;
 }

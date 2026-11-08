@@ -37,12 +37,32 @@ mutation AddOrderLineBySku($orderId: ID!, $sku: String!, $quantity: Int!) {
     addOrderLineBySku(orderId: $orderId, sku: $sku, quantity: $quantity)
 }
 
-query ProductVariantsBySku($sku: String!) {
-    productVariants(options: { take: 8, filter: { sku: { contains: $sku } } }) {
+query ProductVariantsBySku($term: String!) {
+    productVariants(
+        options: {
+            take: 8
+            filter: { _or: [{ sku: { contains: $term } }, { name: { contains: $term } }] }
+        }
+    ) {
         items {
             id
             sku
             name
+        }
+    }
+}
+
+query OrderLineIdsBySku($orderId: String!) {
+    visibleOrders(options: { take: 1, filter: { id: { eq: $orderId } } }) {
+        items {
+            lines {
+                id
+                unitPriceWithTax
+                discountedUnitPriceWithTax
+                productVariant {
+                    sku
+                }
+            }
         }
     }
 }
