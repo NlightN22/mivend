@@ -1,0 +1,81 @@
+fragment BulkBatchFields on BulkBatch {
+    uuid
+    number
+    operationType
+    parameters
+    status
+    createdById
+    createdByName
+    undoOfUuid
+    totalCount
+    appliedCount
+    skippedCount
+    failedCount
+    startedAt
+    finishedAt
+    createdAt
+    errorMessage
+    undoable
+}
+
+fragment BulkBatchItemFields on BulkBatchItem {
+    targetId
+    label
+    previewOutcome
+    previewReasonCode
+    outcome
+    reasonCode
+    message
+}
+
+query BulkOperationCatalog {
+    bulkOperationCatalog {
+        type
+        title
+        description
+        area
+        undoable
+    }
+}
+
+query BulkBatches($options: BulkBatchListOptions) {
+    bulkBatches(options: $options) {
+        totalItems
+        items {
+            ...BulkBatchFields
+        }
+    }
+}
+
+query BulkBatch($uuid: String!) {
+    bulkBatch(uuid: $uuid) {
+        ...BulkBatchFields
+    }
+}
+
+query BulkBatchItems($uuid: String!, $options: BulkBatchItemListOptions) {
+    bulkBatchItems(uuid: $uuid, options: $options) {
+        totalItems
+        items {
+            ...BulkBatchItemFields
+        }
+    }
+}
+
+mutation PreviewBulkBatch($type: String!, $parameters: JSON, $selection: BulkSelectionInput!) {
+    previewBulkBatch(type: $type, parameters: $parameters, selection: $selection) {
+        ...BulkBatchFields
+    }
+}
+
+mutation RunBulkBatch($uuid: String!) {
+    runBulkBatch(uuid: $uuid) {
+        ...BulkBatchFields
+    }
+}
+
+mutation UndoBulkBatch($uuid: String!) {
+    undoBulkBatch(uuid: $uuid) {
+        ...BulkBatchFields
+    }
+}

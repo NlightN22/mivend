@@ -561,6 +561,85 @@ export type BranchSettings = {
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
 };
 
+export type BulkBatch = {
+    appliedCount: Scalars['Int']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    createdById: Scalars['String']['output'];
+    createdByName: Maybe<Scalars['String']['output']>;
+    errorMessage: Maybe<Scalars['String']['output']>;
+    failedCount: Scalars['Int']['output'];
+    finishedAt: Maybe<Scalars['DateTime']['output']>;
+    number: Scalars['String']['output'];
+    operationType: Scalars['String']['output'];
+    parameters: Scalars['JSON']['output'];
+    skippedCount: Scalars['Int']['output'];
+    startedAt: Maybe<Scalars['DateTime']['output']>;
+    status: Scalars['String']['output'];
+    totalCount: Scalars['Int']['output'];
+    undoOfUuid: Maybe<Scalars['String']['output']>;
+    undoable: Scalars['Boolean']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type BulkBatchFilter = {
+    createdById?: InputMaybe<Scalars['String']['input']>;
+    createdFrom?: InputMaybe<Scalars['DateTime']['input']>;
+    createdTo?: InputMaybe<Scalars['DateTime']['input']>;
+    numberPrefix?: InputMaybe<Scalars['String']['input']>;
+    operationType?: InputMaybe<Scalars['String']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type BulkBatchItem = {
+    label: Maybe<Scalars['String']['output']>;
+    message: Maybe<Scalars['String']['output']>;
+    outcome: Maybe<Scalars['String']['output']>;
+    previewOutcome: Scalars['String']['output'];
+    previewReasonCode: Maybe<Scalars['String']['output']>;
+    reasonCode: Maybe<Scalars['String']['output']>;
+    targetId: Scalars['String']['output'];
+};
+
+export type BulkBatchItemList = {
+    items: Array<BulkBatchItem>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type BulkBatchItemListOptions = {
+    outcome?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type BulkBatchList = {
+    items: Array<BulkBatch>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type BulkBatchListOptions = {
+    filter?: InputMaybe<BulkBatchFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<BulkBatchSort>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type BulkBatchSort = {
+    direction: Scalars['String']['input'];
+    field: Scalars['String']['input'];
+};
+
+export type BulkOperation = {
+    area: Scalars['String']['output'];
+    description: Scalars['String']['output'];
+    title: Scalars['String']['output'];
+    type: Scalars['String']['output'];
+    undoable: Scalars['Boolean']['output'];
+};
+
+export type BulkSelectionInput = {
+    ids: Array<Scalars['String']['input']>;
+};
+
 /** Returned if an attempting to cancel lines from an Order which is still active */
 export type CancelActiveOrderError = ErrorResult & {
     errorCode: ErrorCode;
@@ -4254,6 +4333,7 @@ export type Mutation = {
     modifyOrder: ModifyOrderResult;
     /** Move a Collection to a different parent or index */
     moveCollection: Collection;
+    previewBulkBatch: BulkBatch;
     reassignCounterpartyManager: Counterparty;
     reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
     /** Rebuilds the event of a skipped outbox row from its source data (issue #200). */
@@ -4336,6 +4416,7 @@ export type Mutation = {
      * deleting the underlying roles and permissions.
      */
     rotateApiKey: RotateApiKeyResult;
+    runBulkBatch: BulkBatch;
     /** Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id. */
     runErpReconciliation: ErpReconciliationRunResult;
     runPendingSearchIndexUpdates: Success;
@@ -4389,6 +4470,7 @@ export type Mutation = {
     transitionPaymentToState: TransitionPaymentToStateResult;
     /** Manually runs one payment inbox sweep immediately, instead of waiting for the periodic worker. Ops/test visibility only — does not change the async processing contract (the external-integration-rules skill): this still goes through the same InboxService.claimBatch/PaymentInboxProcessorService path the timer uses, it just runs it on demand. */
     triggerPaymentInboxSweep: PaymentInboxSweepResult;
+    undoBulkBatch: BulkBatch;
     /** Unsets the billing address for a draft Order */
     unsetDraftOrderBillingAddress: Order;
     /** Unsets the shipping address for a draft Order */
@@ -5070,6 +5152,12 @@ export type MutationMoveCollectionArgs = {
     input: MoveCollectionInput;
 };
 
+export type MutationPreviewBulkBatchArgs = {
+    parameters?: InputMaybe<Scalars['JSON']['input']>;
+    selection: BulkSelectionInput;
+    type: Scalars['String']['input'];
+};
+
 export type MutationReassignCounterpartyManagerArgs = {
     administratorId: Scalars['ID']['input'];
     counterpartyId: Scalars['ID']['input'];
@@ -5291,6 +5379,10 @@ export type MutationRotateApiKeyArgs = {
     id: Scalars['ID']['input'];
 };
 
+export type MutationRunBulkBatchArgs = {
+    uuid: Scalars['String']['input'];
+};
+
 export type MutationRunScheduledTaskArgs = {
     id: Scalars['String']['input'];
 };
@@ -5474,6 +5566,10 @@ export type MutationTransitionOrderToStateArgs = {
 export type MutationTransitionPaymentToStateArgs = {
     id: Scalars['ID']['input'];
     state: Scalars['String']['input'];
+};
+
+export type MutationUndoBulkBatchArgs = {
+    uuid: Scalars['String']['input'];
 };
 
 export type MutationUnsetDraftOrderBillingAddressArgs = {
@@ -7905,6 +8001,10 @@ export type Query = {
     availableStock: Scalars['Int']['output'];
     branchSettings: Maybe<BranchSettings>;
     branches: Array<Branch>;
+    bulkBatch: BulkBatch;
+    bulkBatchItems: BulkBatchItemList;
+    bulkBatches: BulkBatchList;
+    bulkOperationCatalog: Array<BulkOperation>;
     /** Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs). */
     capturedOnlinePayments: Array<PaymentAttempt>;
     channel: Maybe<Channel>;
@@ -8200,6 +8300,19 @@ export type QueryAvailableStockArgs = {
 
 export type QueryBranchSettingsArgs = {
     branchId: Scalars['String']['input'];
+};
+
+export type QueryBulkBatchArgs = {
+    uuid: Scalars['String']['input'];
+};
+
+export type QueryBulkBatchItemsArgs = {
+    options?: InputMaybe<BulkBatchItemListOptions>;
+    uuid: Scalars['String']['input'];
+};
+
+export type QueryBulkBatchesArgs = {
+    options?: InputMaybe<BulkBatchListOptions>;
 };
 
 export type QueryCapturedOnlinePaymentsArgs = {
@@ -11155,6 +11268,203 @@ export type SetBranchSettingsMutation = {
     };
 };
 
+export type BulkBatchFieldsFragment = {
+    uuid: string;
+    number: string;
+    operationType: string;
+    parameters: any;
+    status: string;
+    createdById: string;
+    createdByName: string | null;
+    undoOfUuid: string | null;
+    totalCount: number;
+    appliedCount: number;
+    skippedCount: number;
+    failedCount: number;
+    startedAt: any | null;
+    finishedAt: any | null;
+    createdAt: any;
+    errorMessage: string | null;
+    undoable: boolean;
+};
+
+export type BulkBatchItemFieldsFragment = {
+    targetId: string;
+    label: string | null;
+    previewOutcome: string;
+    previewReasonCode: string | null;
+    outcome: string | null;
+    reasonCode: string | null;
+    message: string | null;
+};
+
+export type BulkOperationCatalogQueryVariables = Exact<{ [key: string]: never }>;
+
+export type BulkOperationCatalogQuery = {
+    bulkOperationCatalog: Array<{
+        type: string;
+        title: string;
+        description: string;
+        area: string;
+        undoable: boolean;
+    }>;
+};
+
+export type BulkBatchesQueryVariables = Exact<{
+    options?: InputMaybe<BulkBatchListOptions>;
+}>;
+
+export type BulkBatchesQuery = {
+    bulkBatches: {
+        totalItems: number;
+        items: Array<{
+            uuid: string;
+            number: string;
+            operationType: string;
+            parameters: any;
+            status: string;
+            createdById: string;
+            createdByName: string | null;
+            undoOfUuid: string | null;
+            totalCount: number;
+            appliedCount: number;
+            skippedCount: number;
+            failedCount: number;
+            startedAt: any | null;
+            finishedAt: any | null;
+            createdAt: any;
+            errorMessage: string | null;
+            undoable: boolean;
+        }>;
+    };
+};
+
+export type BulkBatchQueryVariables = Exact<{
+    uuid: Scalars['String']['input'];
+}>;
+
+export type BulkBatchQuery = {
+    bulkBatch: {
+        uuid: string;
+        number: string;
+        operationType: string;
+        parameters: any;
+        status: string;
+        createdById: string;
+        createdByName: string | null;
+        undoOfUuid: string | null;
+        totalCount: number;
+        appliedCount: number;
+        skippedCount: number;
+        failedCount: number;
+        startedAt: any | null;
+        finishedAt: any | null;
+        createdAt: any;
+        errorMessage: string | null;
+        undoable: boolean;
+    };
+};
+
+export type BulkBatchItemsQueryVariables = Exact<{
+    uuid: Scalars['String']['input'];
+    options?: InputMaybe<BulkBatchItemListOptions>;
+}>;
+
+export type BulkBatchItemsQuery = {
+    bulkBatchItems: {
+        totalItems: number;
+        items: Array<{
+            targetId: string;
+            label: string | null;
+            previewOutcome: string;
+            previewReasonCode: string | null;
+            outcome: string | null;
+            reasonCode: string | null;
+            message: string | null;
+        }>;
+    };
+};
+
+export type PreviewBulkBatchMutationVariables = Exact<{
+    type: Scalars['String']['input'];
+    parameters?: InputMaybe<Scalars['JSON']['input']>;
+    selection: BulkSelectionInput;
+}>;
+
+export type PreviewBulkBatchMutation = {
+    previewBulkBatch: {
+        uuid: string;
+        number: string;
+        operationType: string;
+        parameters: any;
+        status: string;
+        createdById: string;
+        createdByName: string | null;
+        undoOfUuid: string | null;
+        totalCount: number;
+        appliedCount: number;
+        skippedCount: number;
+        failedCount: number;
+        startedAt: any | null;
+        finishedAt: any | null;
+        createdAt: any;
+        errorMessage: string | null;
+        undoable: boolean;
+    };
+};
+
+export type RunBulkBatchMutationVariables = Exact<{
+    uuid: Scalars['String']['input'];
+}>;
+
+export type RunBulkBatchMutation = {
+    runBulkBatch: {
+        uuid: string;
+        number: string;
+        operationType: string;
+        parameters: any;
+        status: string;
+        createdById: string;
+        createdByName: string | null;
+        undoOfUuid: string | null;
+        totalCount: number;
+        appliedCount: number;
+        skippedCount: number;
+        failedCount: number;
+        startedAt: any | null;
+        finishedAt: any | null;
+        createdAt: any;
+        errorMessage: string | null;
+        undoable: boolean;
+    };
+};
+
+export type UndoBulkBatchMutationVariables = Exact<{
+    uuid: Scalars['String']['input'];
+}>;
+
+export type UndoBulkBatchMutation = {
+    undoBulkBatch: {
+        uuid: string;
+        number: string;
+        operationType: string;
+        parameters: any;
+        status: string;
+        createdById: string;
+        createdByName: string | null;
+        undoOfUuid: string | null;
+        totalCount: number;
+        appliedCount: number;
+        skippedCount: number;
+        failedCount: number;
+        startedAt: any | null;
+        finishedAt: any | null;
+        createdAt: any;
+        errorMessage: string | null;
+        undoable: boolean;
+    };
+};
+
 export type CategoryCollectionFieldsFragment = {
     id: string;
     name: string;
@@ -13922,6 +14232,46 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'BranchSettingsFields' },
 ) as unknown as TypedDocumentString<BranchSettingsFieldsFragment, unknown>;
+export const BulkBatchFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}
+    `,
+    { fragmentName: 'BulkBatchFields' },
+) as unknown as TypedDocumentString<BulkBatchFieldsFragment, unknown>;
+
+export const BulkBatchItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment BulkBatchItemFields on BulkBatchItem {
+  targetId
+  label
+  previewOutcome
+  previewReasonCode
+  outcome
+  reasonCode
+  message
+}
+    `,
+    { fragmentName: 'BulkBatchItemFields' },
+) as unknown as TypedDocumentString<BulkBatchItemFieldsFragment, unknown>;
+
 export const CategoryCollectionFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment CategoryCollectionFields on Collection {
@@ -14698,6 +15048,173 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables
 >;
+export const BulkOperationCatalogDocument = new TypedDocumentString(`
+    query BulkOperationCatalog {
+  bulkOperationCatalog {
+    type
+    title
+    description
+    area
+    undoable
+  }
+}
+    `) as unknown as TypedDocumentString<
+    BulkOperationCatalogQuery,
+    BulkOperationCatalogQueryVariables
+>;
+
+export const BulkBatchesDocument = new TypedDocumentString(`
+    query BulkBatches($options: BulkBatchListOptions) {
+  bulkBatches(options: $options) {
+    totalItems
+    items {
+      ...BulkBatchFields
+    }
+  }
+}
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}`) as unknown as TypedDocumentString<BulkBatchesQuery, BulkBatchesQueryVariables>;
+
+export const BulkBatchDocument = new TypedDocumentString(`
+    query BulkBatch($uuid: String!) {
+  bulkBatch(uuid: $uuid) {
+    ...BulkBatchFields
+  }
+}
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}`) as unknown as TypedDocumentString<BulkBatchQuery, BulkBatchQueryVariables>;
+
+export const BulkBatchItemsDocument = new TypedDocumentString(`
+    query BulkBatchItems($uuid: String!, $options: BulkBatchItemListOptions) {
+  bulkBatchItems(uuid: $uuid, options: $options) {
+    totalItems
+    items {
+      ...BulkBatchItemFields
+    }
+  }
+}
+    fragment BulkBatchItemFields on BulkBatchItem {
+  targetId
+  label
+  previewOutcome
+  previewReasonCode
+  outcome
+  reasonCode
+  message
+}`) as unknown as TypedDocumentString<BulkBatchItemsQuery, BulkBatchItemsQueryVariables>;
+
+export const PreviewBulkBatchDocument = new TypedDocumentString(`
+    mutation PreviewBulkBatch($type: String!, $parameters: JSON, $selection: BulkSelectionInput!) {
+  previewBulkBatch(type: $type, parameters: $parameters, selection: $selection) {
+    ...BulkBatchFields
+  }
+}
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}`) as unknown as TypedDocumentString<PreviewBulkBatchMutation, PreviewBulkBatchMutationVariables>;
+
+export const RunBulkBatchDocument = new TypedDocumentString(`
+    mutation RunBulkBatch($uuid: String!) {
+  runBulkBatch(uuid: $uuid) {
+    ...BulkBatchFields
+  }
+}
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}`) as unknown as TypedDocumentString<RunBulkBatchMutation, RunBulkBatchMutationVariables>;
+
+export const UndoBulkBatchDocument = new TypedDocumentString(`
+    mutation UndoBulkBatch($uuid: String!) {
+  undoBulkBatch(uuid: $uuid) {
+    ...BulkBatchFields
+  }
+}
+    fragment BulkBatchFields on BulkBatch {
+  uuid
+  number
+  operationType
+  parameters
+  status
+  createdById
+  createdByName
+  undoOfUuid
+  totalCount
+  appliedCount
+  skippedCount
+  failedCount
+  startedAt
+  finishedAt
+  createdAt
+  errorMessage
+  undoable
+}`) as unknown as TypedDocumentString<UndoBulkBatchMutation, UndoBulkBatchMutationVariables>;
+
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
     query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
   collections(
