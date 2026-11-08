@@ -12,6 +12,7 @@
         { "path": "./price-entry" },
         { "path": "./retro-bonus" },
         { "path": "./settlement" },
+        { "path": "./bulk-operations" },
         { "path": "./counterparty" },
         { "path": "./documents" },
         { "path": "./deferred-payment" },
