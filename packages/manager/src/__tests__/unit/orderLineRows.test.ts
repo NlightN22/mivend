@@ -51,34 +51,19 @@ function rowOf(
     })[0];
 }
 
-describe('line severity', () => {
-    it('is none for a clean line', () => {
-        expect(rowOf([]).severity).toBe('none');
-    });
-
-    it.each([
-        ['price below the floor', 'order.below-floor-price'],
-        ['stock short', 'erp.organization-stock'],
-        ['contract not allowed', 'erp.contract-with-storage-organization'],
-    ])('is danger for %s', (_name, code) => {
-        expect(rowOf([finding(code)]).severity).toBe('danger');
-    });
-
+describe('line reserve', () => {
     it('does not flag the reserve before the order is confirmed', () => {
         const row = rowOf([]);
         expect(row.reserved).toBe(0);
         expect(row.reserveShort).toBe(false);
-        expect(row.severity).toBe('none');
     });
 
-    it('warns when a confirmed order holds less than needed', () => {
-        const row = rowOf([], [active(1)]);
-        expect(row.reserveShort).toBe(true);
-        expect(row.severity).toBe('warning');
+    it('flags a shortfall when a confirmed order holds less than needed', () => {
+        expect(rowOf([], [active(1)]).reserveShort).toBe(true);
     });
 
-    it('keeps danger over a reserve warning', () => {
-        expect(rowOf([finding('order.below-floor-price')], [active(1)]).severity).toBe('danger');
+    it('flags a price below the floor from its finding', () => {
+        expect(rowOf([finding('order.below-floor-price')]).belowFloor).toBe(true);
     });
 });
 
@@ -94,15 +79,11 @@ describe('line discount', () => {
         expect(row.discountPercent).toBe(50);
         expect(row.maxDiscountPercent).toBeNull();
         expect(row.discountOverLimit).toBe(false);
-        expect(row.severity).toBe('none');
     });
 
     it('warns once a limit is provided and exceeded, not when within it', () => {
         const discounted = line({ discountedUnitPriceWithTax: 8300 });
-        expect(rowOf([], [], discounted, () => 10)).toMatchObject({
-            discountOverLimit: true,
-            severity: 'warning',
-        });
+        expect(rowOf([], [], discounted, () => 10).discountOverLimit).toBe(true);
         expect(rowOf([], [], discounted, () => 20).discountOverLimit).toBe(false);
     });
 });

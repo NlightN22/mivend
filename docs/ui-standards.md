@@ -102,3 +102,11 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
 Layout: the table takes the full page width; at a 1360px viewport the identifying columns fit without
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
 list and the chips are one horizontally scrolling row (`scrollable`).
+
+## Flagged cells and row stripes
+
+A problem is shown in the cell where it occurs, as an `MvFlagChip` (button, opens a popover with the
+cell's findings), never as a separate strip or panel. Tones: `danger` (block or hold), `orange`
+(approval needed), `warning` (warn). A row carries a left-edge stripe in its worst tone, green when
+clean. Tones come from the policy consequence of the finding (branch overrides included), not from
+the check's own severity, except where no policy applies. First used by the manager order card.

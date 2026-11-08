@@ -5,7 +5,7 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { releaseOrderReservation } from '../../helpers/manager-order';
 import { MANAGER_ACCOUNTS } from '../../fixtures/accounts';
 
-test('order detail shows the header, order lines, findings, approvals and context @read-only', async ({
+test('order detail shows the header fields, the customer summary, the lines table and the history below @read-only', async ({
     page,
 }) => {
     const order = readE2eOrder();
@@ -14,15 +14,55 @@ test('order detail shows the header, order lines, findings, approvals and contex
     await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
         timeout: 15000,
     });
-    await expect(page.getByRole('heading', { name: 'Order context' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Reservation', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
-
-    await expect(page.getByRole('heading', { name: 'Approvals for this order' })).toBeVisible();
+    const fields = page.locator('.order-fields');
+    for (const label of ['Contract', 'Delivery', 'Price type', 'ERP registration']) {
+        await expect(fields).toContainText(label);
+    }
+    await expect(page.getByTestId('order-customer-summary')).toContainText('Credit limit');
     await expect(page.locator('.order-lines thead')).toContainText('Available');
     await expect(page.locator('.order-lines thead')).toContainText('Discount');
     await expect(page.locator('.order-lines thead')).toContainText('Reserve');
-    await expect(page.locator('.order-detail__panels')).toContainText('E2E Co');
+    await expect(page.getByTestId('order-totals-positions')).toContainText('position');
+    await expect(page.getByText('E2E Co').first()).toBeVisible();
+
+    for (const removed of ['Order context', 'Order controls', 'Approvals for this order']) {
+        await expect(page.getByRole('heading', { name: removed })).toHaveCount(0);
+    }
+});
+
+test("the action menu opens this order's proforma invoices and documents @read-only", async ({
+    page,
+}) => {
+    await page.goto(`/orders/${readE2eOrder().code}`);
+    await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
+        timeout: 15000,
+    });
+
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'Proforma invoices' }).click();
+    const modal = page.getByRole('dialog');
+    await expect(modal).toContainText('Proforma invoices');
+    await expect(modal.getByRole('link', { name: 'Open in the list' })).toHaveAttribute(
+        'href',
+        /\/proforma-invoices\?search=/,
+    );
+    await modal.getByRole('button', { name: 'Close' }).click();
+
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'Documents' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Documents');
+});
+
+test('a flagged cell opens a popover with what is wrong there @read-only', async ({ page }) => {
+    await page.goto(`/orders/${readE2eOrder().code}`);
+    await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
+        timeout: 15000,
+    });
+
+    const chip = page.getByRole('button', { name: 'Show what is wrong here' }).first();
+    await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(page.locator('.cell-flag__list')).toBeVisible();
 });
 
 test.describe('reservation of the shared e2e order', () => {
@@ -61,15 +101,91 @@ test.describe('reservation of the shared e2e order', () => {
         await releaseOrderReservation(token, readE2eOrder().id);
     });
 
-    test('confirming an order creates a reservation and shows the expiry', async ({ page }) => {
+    test('confirming an order creates a reservation shown in the Reserve column', async ({
+        page,
+    }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        const panel = page.locator('.order-detail__panels');
-        await expect(panel).toContainText('Not confirmed yet', { timeout: 15000 });
+        const reserve = page.locator('.line-row td[data-label="Reserve"]').first();
+        await expect(reserve).toContainText(/^\s*0 \/ \d+/, { timeout: 15000 });
         await page.getByRole('button', { name: 'Confirm order' }).click();
         await page.getByRole('button', { name: 'Confirm', exact: true }).click();
 
-        await expect(panel).toContainText('Reserved');
+        await expect(reserve).toHaveText(/^\s*(\d+) \/ \1\s*$/);
         await page.getByRole('button', { name: 'More actions' }).click();
         await expect(page.getByRole('menuitem', { name: 'Release reservation' })).toBeVisible();
+    });
+});
+
+test.describe('adding and deleting positions of the shared e2e order', () => {
+    const SKU = 'E2E-OF-002';
+    let token: string;
+
+    async function removeAddedLine(): Promise<void> {
+        const order = readE2eOrder();
+        const found = await adminGql<{
+            order: { lines: { id: string; productVariant: { sku: string } }[] };
+        }>(
+            `query($id: ID!) { order(id: $id) { lines { id productVariant { sku } } } }`,
+            { id: order.id },
+            token,
+        );
+        const extra = found.data.order.lines.find(l => l.productVariant.sku === SKU);
+        if (!extra) return;
+        await adminGql(
+            `mutation($o: ID!, $l: ID!) { removeOrderLine(orderId: $o, orderLineId: $l) }`,
+            { o: order.id, l: extra.id },
+            token,
+        );
+    }
+
+    test.beforeEach(async () => {
+        token = await adminTokenFor(
+            MANAGER_ACCOUNTS.operator.username,
+            MANAGER_ACCOUNTS.operator.password,
+        );
+        await releaseOrderReservation(token, readE2eOrder().id);
+        await removeAddedLine();
+    });
+
+    test.afterEach(async () => {
+        await removeAddedLine();
+    });
+
+    test('a position is added by its article and deleted through the row menu', async ({
+        page,
+    }) => {
+        await page.goto(`/orders/${readE2eOrder().code}`);
+        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
+        await page.getByLabel('Article (SKU)').fill(SKU);
+        await page.getByRole('button', { name: new RegExp(SKU) }).click();
+
+        const row = page.getByTestId(`order-line-${SKU}`);
+        await expect(row).toBeVisible();
+
+        await row.getByRole('button', { name: 'Position actions' }).click();
+        await page.getByRole('menuitem', { name: 'Delete position' }).click();
+        await page
+            .getByRole('dialog')
+            .getByRole('button', { name: /^Delete 1 position/ })
+            .click();
+        await expect(row).toHaveCount(0);
+    });
+
+    test('selected positions are deleted in bulk with a confirmation', async ({ page }) => {
+        await page.goto(`/orders/${readE2eOrder().code}`);
+        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
+        await page.getByLabel('Article (SKU)').fill(SKU);
+        await page.getByRole('button', { name: new RegExp(SKU) }).click();
+        const row = page.getByTestId(`order-line-${SKU}`);
+        await expect(row).toBeVisible();
+
+        await page.getByRole('button', { name: 'Select positions' }).click();
+        await row.getByRole('checkbox').check();
+        await page.getByRole('button', { name: /^Delete 1 position/ }).click();
+        await page
+            .getByRole('dialog')
+            .getByRole('button', { name: /^Delete 1 position/ })
+            .click();
+        await expect(row).toHaveCount(0);
     });
 });

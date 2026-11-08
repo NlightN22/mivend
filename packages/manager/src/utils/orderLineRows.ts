@@ -9,8 +9,6 @@ import {
     type LineCheckView,
 } from './orderLineChecks';
 
-export type LineSeverity = 'none' | 'warning' | 'danger';
-
 export interface AdjustmentInfo {
     label: string;
     variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info';
@@ -28,24 +26,12 @@ export interface OrderLineRow {
     // Seam for the discount-rights system: unset today, so a discount is never flagged.
     maxDiscountPercent?: number | null;
     discountOverLimit: boolean;
-    severity: LineSeverity;
     adjustment: AdjustmentInfo | null;
 }
 
 export function discountPercent(listPrice: number, discountedPrice: number): number | null {
     if (listPrice <= 0 || discountedPrice >= listPrice) return null;
     return Math.round(((listPrice - discountedPrice) / listPrice) * 1000) / 10;
-}
-
-export function lineSeverity(row: {
-    view: LineCheckView;
-    belowFloor: boolean;
-    reserveShort: boolean;
-    discountOverLimit: boolean;
-}): LineSeverity {
-    if (row.belowFloor || row.view.stockShort || !row.view.contractOk) return 'danger';
-    if (row.reserveShort || row.discountOverLimit) return 'warning';
-    return 'none';
 }
 
 function adjustmentsByLine(
@@ -125,7 +111,6 @@ export function buildLineRows(input: LineRowInputs): OrderLineRow[] {
             discountPercent: percent,
             maxDiscountPercent: max,
             ...part,
-            severity: lineSeverity(part),
         };
     });
 }
