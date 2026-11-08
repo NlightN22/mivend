@@ -3,6 +3,7 @@ import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 const NOT_FILTERED = { type: 'none' } as const;
 
 // Widths: widest realistic cell text + 32px; sum 1070 fits a 1360px page.
+// String columns omit starts/ends-with: the server has no regex operator.
 // Filtering is the toolbar Filter builder (`filterType`); the search box covers number, customer and INN.
 export const PROFORMA_INVOICES_COLUMNS: AdvancedDataTableColumn[] = [
     {
@@ -15,6 +16,7 @@ export const PROFORMA_INVOICES_COLUMNS: AdvancedDataTableColumn[] = [
         required: true,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterOperators: ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'],
         mobile: { primary: true },
     },
     {
@@ -37,6 +39,7 @@ export const PROFORMA_INVOICES_COLUMNS: AdvancedDataTableColumn[] = [
         minWidth: 170,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterOperators: ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'],
     },
     {
         field: 'order',
@@ -46,6 +49,7 @@ export const PROFORMA_INVOICES_COLUMNS: AdvancedDataTableColumn[] = [
         minWidth: 130,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterOperators: ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'],
         filterField: 'orderCode',
     },
     {

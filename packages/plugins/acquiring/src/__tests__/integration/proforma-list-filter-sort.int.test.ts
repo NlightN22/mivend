@@ -180,6 +180,19 @@ describe('proforma list filter and sort (real Postgres)', () => {
         ).toEqual(['1000-01-1', '1001-01-1', '1003-01-1']);
     });
 
+    it('keeps rows with a NULL value for notEq and notIn', async () => {
+        await dataSource.query(`UPDATE counterparty SET inn = NULL WHERE "erpId" = 'cp-a'`);
+        expect(
+            await numbers({ filter: { customerInn: { notEq: '2222' } }, sort: { number: 'ASC' } }),
+        ).toEqual(['1000-01-1', '1001-01-1']);
+        expect(
+            await numbers({
+                filter: { customerInn: { notIn: ['2222'] } },
+                sort: { number: 'ASC' },
+            }),
+        ).toEqual(['1000-01-1', '1001-01-1']);
+    });
+
     it('combines with search and the status option; counts follow the same filters', async () => {
         const filter = { customer: { contains: 'Beta' } };
         expect(await numbers({ filter, status: 'cancelled' })).toEqual(['1003-01-1']);

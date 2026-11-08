@@ -13,7 +13,7 @@ import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
-import { applyListFilter, applyListSort } from './proforma-invoice-list-query';
+import { applyListFilter, applyListSort, likeTerm } from './proforma-invoice-list-query';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
 export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
@@ -186,7 +186,7 @@ export class ProformaInvoiceVisibilityService {
         }
         if (options?.search) {
             const search = options.search;
-            const term = `%${search}%`;
+            const term = likeTerm(search);
             qb.andWhere(
                 new Brackets(bqb => {
                     bqb.where('proformaInvoice.number ILIKE :search', {

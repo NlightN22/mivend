@@ -55,7 +55,7 @@ class ClauseBuilder {
     }
 }
 
-function likeTerm(text: string): string {
+export function likeTerm(text: string): string {
     return `%${text.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
@@ -81,7 +81,7 @@ function clauseFor(spec: FieldSpec, op: string, value: unknown, b: ClauseBuilder
                 case 'eq':
                     return `${sql} = ${b.param(text(value))}`;
                 case 'notEq':
-                    return `${sql} <> ${b.param(text(value))}`;
+                    return `(${sql} IS NULL OR ${sql} <> ${b.param(text(value))})`;
                 case 'contains':
                     return `${sql} ILIKE ${b.param(likeTerm(text(value)))}`;
                 case 'notContains':
@@ -89,9 +89,7 @@ function clauseFor(spec: FieldSpec, op: string, value: unknown, b: ClauseBuilder
                 case 'in':
                     return `${sql} = ANY(${b.param((value as unknown[]).map(text))})`;
                 case 'notIn':
-                    return `NOT (${sql} = ANY(${b.param((value as unknown[]).map(text))}))`;
-                case 'regex':
-                    return `${sql} ~* ${b.param(String(value))}`;
+                    return `(${sql} IS NULL OR NOT (${sql} = ANY(${b.param((value as unknown[]).map(text))})))`;
             }
             break;
         case 'id':
@@ -116,7 +114,7 @@ function clauseFor(spec: FieldSpec, op: string, value: unknown, b: ClauseBuilder
                 lt: '<',
                 lte: '<=',
                 before: '<',
-                after: '>=',
+                after: '>',
             };
             if (op === 'between') {
                 const range = value as { start: unknown; end: unknown };

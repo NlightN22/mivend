@@ -59,6 +59,30 @@ describe('applyListFilter', () => {
     });
 });
 
+describe('applyListFilter operator semantics', () => {
+    it('rejects regex like any unsupported operator', () => {
+        expect(() => applyListFilter(recorder().qb, { customer: { regex: '.*' } })).toThrow(
+            /Unsupported/,
+        );
+    });
+
+    it('treats after as strictly later and before as strictly earlier', () => {
+        const { qb, where } = recorder();
+        applyListFilter(qb, { createdAt: { after: '2026-01-02T00:00:00.000Z' } });
+        applyListFilter(qb, { dueDate: { before: '2026-01-02T00:00:00.000Z' } });
+        expect(where[0][0]).toMatch(/"createdAt" > :/);
+        expect(where[1][0]).toMatch(/"dueDate" < :/);
+    });
+
+    it('keeps NULL rows for notEq and notIn on text fields', () => {
+        const { qb, where } = recorder();
+        applyListFilter(qb, { customerInn: { notEq: '1' } });
+        applyListFilter(qb, { customerInn: { notIn: ['1', '2'] } });
+        expect(where[0][0]).toMatch(/IS NULL OR .*<>/);
+        expect(where[1][0]).toMatch(/IS NULL OR NOT/);
+    });
+});
+
 describe('applyListSort', () => {
     it('defaults to newest first with an id tiebreaker', () => {
         const { qb, order } = recorder();

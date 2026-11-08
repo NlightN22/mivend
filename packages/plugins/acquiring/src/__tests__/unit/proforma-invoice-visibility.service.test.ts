@@ -201,6 +201,21 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
+    it('escapes LIKE wildcards in the customer part of the search', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { search: '5%_' });
+
+        const brackets = qb.andWhere.mock.calls
+            .map(call => call[0])
+            .find((arg): arg is Brackets => arg instanceof Brackets);
+        const inner = { where: vi.fn().mockReturnThis(), orWhere: vi.fn().mockReturnThis() };
+        brackets?.whereFactory(inner as never);
+        expect(inner.orWhere).toHaveBeenCalledWith('counterparty.inn ILIKE :term', {
+            term: '%5\\%\\_%',
+        });
+    });
+
     it('filters by counterpartyId when provided, in addition to scope', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
