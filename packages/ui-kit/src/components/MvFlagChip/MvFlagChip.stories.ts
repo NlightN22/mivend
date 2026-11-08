@@ -6,7 +6,7 @@ const meta: Meta<typeof MvFlagChip> = {
     component: MvFlagChip,
     tags: ['autodocs'],
     argTypes: { tone: { control: 'select', options: ['danger', 'orange', 'warning'] } },
-    args: { tone: 'danger', label: 'Show findings' },
+    args: { tone: 'danger', label: 'Show what is wrong here' },
 };
 
 export default meta;
@@ -23,3 +23,11 @@ export const Danger: Story = {
 export const Orange: Story = { args: { tone: 'orange' }, render: Danger.render };
 
 export const Warning: Story = { args: { tone: 'warning' }, render: Danger.render };
+
+export const IconOnly: Story = {
+    render: args => ({
+        components: { MvFlagChip },
+        setup: () => ({ args }),
+        template: '<MvFlagChip v-bind="args" />',
+    }),
+};
