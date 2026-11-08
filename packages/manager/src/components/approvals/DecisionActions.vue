@@ -6,7 +6,8 @@ import type { ManagerOption } from '../../api/orders';
 const props = defineProps<{
     escalatesTo: string[];
     managers: ManagerOption[];
-    canDecide: boolean;
+    canApprove: boolean;
+    canReject: boolean;
     // Only the requester may escalate; the server enforces it.
     canEscalate: boolean;
     disabledReason: string;
@@ -55,19 +56,19 @@ function handleEscalate(): void {
             class="decision-actions__comment"
             rows="3"
             placeholder="Optional for approve, required for reject"
-            :disabled="!canDecide || busy"
+            :disabled="(!canApprove && !canReject) || busy"
         />
-        <MvNotice v-if="!canDecide" variant="warning">{{ disabledReason }}</MvNotice>
+        <MvNotice v-if="disabledReason" variant="warning">{{ disabledReason }}</MvNotice>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="decision-actions__buttons">
             <MvButton
                 variant="primary"
-                :disabled="!canDecide || busy"
+                :disabled="!canApprove || busy"
                 @click="emit('approve', comment)"
                 >Approve</MvButton
             >
-            <MvButton variant="danger" :disabled="!canDecide || busy" @click="handleReject"
+            <MvButton variant="danger" :disabled="!canReject || busy" @click="handleReject"
                 >Reject</MvButton
             >
             <button

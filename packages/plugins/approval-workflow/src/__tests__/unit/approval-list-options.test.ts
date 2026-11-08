@@ -6,15 +6,15 @@ import type { ApprovalRequest } from '../../entities/approval-request.entity';
 
 function fakeQb(): {
     qb: SelectQueryBuilder<ApprovalRequest>;
-    orders: [string, string][];
+    orders: string[][];
     paging: { take?: number; skip?: number };
     getMany: ReturnType<typeof vi.fn>;
 } {
-    const orders: [string, string][] = [];
+    const orders: string[][] = [];
     const paging: { take?: number; skip?: number } = {};
     const getMany = vi.fn(async () => [{ id: 1 }]);
     const qb = {
-        orderBy: (c: string, d: string) => (orders.push([c, d]), qb),
+        orderBy: (c: string, d: string, n?: string) => (orders.push([c, d, n ?? '']), qb),
         addOrderBy: (c: string, d: string) => (orders.push([c, d]), qb),
         getCount: async () => 7,
         take: (n: number) => ((paging.take = n), qb),
@@ -29,15 +29,15 @@ describe('applyListSort', () => {
         const { qb, orders } = fakeQb();
         applyListSort(qb, { sortField: 'status', sortDir: 'ASC' });
         expect(orders).toEqual([
-            ['request.status', 'ASC'],
-            ['request.id', 'ASC'],
+            ['request.status', 'ASC', 'NULLS LAST'],
+            ['request.id', 'ASC', ''],
         ]);
     });
 
     it('falls back to newest first for unknown fields, never interpolating the input', () => {
         const { qb, orders } = fakeQb();
         applyListSort(qb, { sortField: 'id; DROP TABLE x', sortDir: 'sideways' });
-        expect(orders[0]).toEqual(['request.createdAt', 'DESC']);
+        expect(orders[0]).toEqual(['request.createdAt', 'DESC', 'NULLS LAST']);
     });
 });
 

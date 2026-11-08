@@ -65,7 +65,8 @@ query ApprovalDetail($id: ID!) {
     approvalRequest(id: $id) {
         ...ApprovalRequestSummaryFields
         escalatesTo
-        viewerCanDecide
+        viewerCanApprove
+        viewerCanReject
     }
 }
 

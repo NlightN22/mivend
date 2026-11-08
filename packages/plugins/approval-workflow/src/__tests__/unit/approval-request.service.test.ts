@@ -115,7 +115,7 @@ describe('ApprovalRequestService', () => {
         );
     });
 
-    describe('viewerCanDecide', () => {
+    describe('mayDecide', () => {
         const pending = { id: 'req-1', status: 'pending', currentStepIndex: 0, requestType: 'x' };
         beforeEach(() => {
             administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
@@ -123,8 +123,10 @@ describe('ApprovalRequestService', () => {
         });
 
         it('is true with the current step permission and false without it', async () => {
-            expect(await service.viewerCanDecide(mockCtx(true), pending as never)).toBe(true);
-            expect(await service.viewerCanDecide(mockCtx(false), pending as never)).toBe(false);
+            expect(await service.mayDecide(mockCtx(true), pending as never, 'approved')).toBe(true);
+            expect(await service.mayDecide(mockCtx(false), pending as never, 'rejected')).toBe(
+                false,
+            );
         });
 
         it('is true for the administrator the step was escalated to', async () => {
@@ -132,12 +134,27 @@ describe('ApprovalRequestService', () => {
                 wasEscalated: true,
                 escalatedToAdministratorId: 'admin-1',
             });
-            expect(await service.viewerCanDecide(mockCtx(false), pending as never)).toBe(true);
+            expect(await service.mayDecide(mockCtx(false), pending as never, 'rejected')).toBe(
+                true,
+            );
+        });
+
+        it('is false when the request is outside the caller scope', async () => {
+            const hidden = { ...OPEN_SCOPE, isVisible: async () => false };
+            const scoped = new ApprovalRequestService(
+                connection as never,
+                workflowDefinitionService as never,
+                administratorService as never,
+                hidden as never,
+            );
+            expect(await scoped.mayDecide(mockCtx(true), pending as never, 'approved')).toBe(false);
         });
 
         it('is false once the request is decided', async () => {
             const decided = { ...pending, status: 'approved' };
-            expect(await service.viewerCanDecide(mockCtx(true), decided as never)).toBe(false);
+            expect(await service.mayDecide(mockCtx(true), decided as never, 'approved')).toBe(
+                false,
+            );
         });
     });
 

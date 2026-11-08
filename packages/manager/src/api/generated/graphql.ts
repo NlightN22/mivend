@@ -323,7 +323,9 @@ export type ApprovalRequest = {
     stepRoles: Array<Scalars['String']['output']>;
     steps: Array<ApprovalStep>;
     totalSteps: Scalars['Int']['output'];
-    viewerCanDecide: Scalars['Boolean']['output'];
+    /** Single-request fields (a few lookups each): do not select them in list queries. */
+    viewerCanApprove: Scalars['Boolean']['output'];
+    viewerCanReject: Scalars['Boolean']['output'];
 };
 
 export type ApprovalRequestList = {
@@ -10653,7 +10655,8 @@ export type ApprovalDetailQueryVariables = Exact<{
 export type ApprovalDetailQuery = {
     approvalRequest: {
         escalatesTo: Array<string>;
-        viewerCanDecide: boolean;
+        viewerCanApprove: boolean;
+        viewerCanReject: boolean;
         id: string;
         requestType: string;
         status: string;
@@ -13922,7 +13925,8 @@ export const ApprovalDetailDocument = new TypedDocumentString(`
   approvalRequest(id: $id) {
     ...ApprovalRequestSummaryFields
     escalatesTo
-    viewerCanDecide
+    viewerCanApprove
+    viewerCanReject
   }
 }
     fragment ApprovalStepFields on ApprovalStep {

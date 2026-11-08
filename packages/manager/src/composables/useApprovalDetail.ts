@@ -103,7 +103,9 @@ export function useApprovalDetail(): ApprovalDetailState {
 
     const disabledReason = computed(() => {
         const r = request.value;
-        if (!r || r.viewerCanDecide) return '';
+        if (!r || r.status !== 'pending' || (r.viewerCanApprove && r.viewerCanReject)) return '';
+        if (r.viewerCanReject) return 'You can reject this request but not approve it.';
+        if (r.viewerCanApprove) return 'You can approve this request but not reject it.';
         return `Only ${r.currentStepRole ?? 'the current approver'} (or the person this step was escalated to) can decide step ${r.currentStepIndex + 1}.`;
     });
 

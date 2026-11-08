@@ -42,7 +42,11 @@ const adminApiSchema = gql`
         stepRoles: [String!]!
         totalSteps: Int!
         escalatesTo: [String!]!
-        viewerCanDecide: Boolean!
+        """
+        Single-request fields (a few lookups each): do not select them in list queries.
+        """
+        viewerCanApprove: Boolean!
+        viewerCanReject: Boolean!
     }
 
     type ApprovalRequestsSummary {

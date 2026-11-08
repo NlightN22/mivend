@@ -46,7 +46,8 @@ const timeline = computed(() =>
                     <DecisionActions
                         :escalates-to="d.request.value.escalatesTo"
                         :managers="d.managers.value"
-                        :can-decide="d.request.value.viewerCanDecide"
+                        :can-approve="d.request.value.viewerCanApprove"
+                        :can-reject="d.request.value.viewerCanReject"
                         :can-escalate="d.isRequester.value"
                         :disabled-reason="d.disabledReason.value"
                         :busy="d.submitting.value"

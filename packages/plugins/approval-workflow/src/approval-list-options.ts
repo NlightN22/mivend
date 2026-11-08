@@ -30,7 +30,7 @@ export function applyListSort(
 ): void {
     const column = SORT_COLUMNS[options.sortField ?? ''] ?? SORT_COLUMNS.createdAt;
     const dir = options.sortDir === 'ASC' ? 'ASC' : 'DESC';
-    qb.orderBy(column, dir);
+    qb.orderBy(column, dir, 'NULLS LAST');
     if (column !== SORT_COLUMNS.id) qb.addOrderBy(SORT_COLUMNS.id, dir);
 }
 

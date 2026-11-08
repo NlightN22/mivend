@@ -18,7 +18,8 @@ export type ApprovalStepAudit = ApprovalStepFieldsFragment;
 export type ApprovalRequestSummary = ApprovalRequestSummaryFieldsFragment;
 export type ApprovalRequestDetail = ApprovalRequestSummary & {
     escalatesTo: string[];
-    viewerCanDecide: boolean;
+    viewerCanApprove: boolean;
+    viewerCanReject: boolean;
 };
 export type ApprovalRequestPage = ApprovalRequestPageFieldsFragment;
 

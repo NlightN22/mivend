@@ -205,6 +205,18 @@ describe('ApprovalRequestQueryService list filters and sort (integration, real P
         expect([...ids(page1), ...ids(page2)]).toEqual([first.id, second.id, third.id]);
     });
 
+    it('puts undecided requests last when sorting by decision time in either direction', async () => {
+        const decided = await createRequest({ status: 'approved', decidedAt: new Date() });
+        const open = await createRequest();
+        for (const sortDir of ['ASC', 'DESC']) {
+            const r = await queryService.findAllInvolving(approver, {
+                sortField: 'decidedAt',
+                sortDir,
+            });
+            expect(ids(r)).toEqual([decided.id, open.id]);
+        }
+    });
+
     it('treats hostile search and sort input as plain data', async () => {
         await createRequest();
         const hostile = "x'; DROP TABLE approval_request; --";

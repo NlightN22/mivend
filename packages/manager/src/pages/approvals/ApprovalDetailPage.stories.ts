@@ -32,7 +32,8 @@ function mockDetailData(overrides: Record<string, unknown> = {}): void {
             payload: JSON.stringify({ orderId: '1', orderLineId: '1', requestedPrice: 200000 }),
             steps: [],
             escalatesTo: [],
-            viewerCanDecide: true,
+            viewerCanApprove: true,
+            viewerCanReject: true,
             ...overrides,
         },
     }));
@@ -87,7 +88,7 @@ export const NotFound: Story = {
 export const CannotDecide: Story = {
     loaders: [
         async () => {
-            mockDetailData({ viewerCanDecide: false });
+            mockDetailData({ viewerCanApprove: false, viewerCanReject: false });
             await router.push('/approvals/1');
         },
     ],
@@ -101,7 +102,8 @@ export const Decided: Story = {
                 status: 'approved',
                 currentStepRole: null,
                 decidedAt: new Date().toISOString(),
-                viewerCanDecide: false,
+                viewerCanApprove: false,
+                viewerCanReject: false,
                 steps: [
                     {
                         id: '1',

@@ -3,7 +3,7 @@
 Agreed direction for the redesign of `packages/manager` (issue #320). This is a **concept, not a
 specification**: it fixes the shape of the portal and the reuse rules. Page-by-page details
 (columns, filters, dashboard widgets) are refined one page at a time in later sessions and added
-to this folder. Anything marked *not implemented yet* stays in the menu as a placeholder or out of
+to this folder. Anything marked _not implemented yet_ stays in the menu as a placeholder or out of
 the first stage. Colors and button states follow `docs/ui-standards.md`; table shape follows the
 `manager-table-standard` skill.
 
@@ -27,14 +27,14 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 
 ## Page types
 
-| Type | Shape |
-| --- | --- |
-| Dashboard | KPI row and widgets (deferred, see below) |
-| List | Title, search, filters, table, pagination; row opens the entity card; multi-select opens a bulk action bar |
+| Type             | Shape                                                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard        | KPI row and widgets (deferred, see below)                                                                                                           |
+| List             | Title, search, filters, table, pagination; row opens the entity card; multi-select opens a bulk action bar                                          |
 | Quick side panel | Optional per entity, not part of the list by default and not used for orders (a row opens the card); key data and actions that need no deep context |
-| Card | Header (name, status, key attributes, primary actions), compact KPI row, tabs; tabs reuse the entity lists with preset filters |
-| Wizard | Bulk operations, step by step |
-| Settings | Sub-menu and forms |
+| Card             | Header (name, status, key attributes, primary actions), compact KPI row, tabs; tabs reuse the entity lists with preset filters                      |
+| Wizard           | Bulk operations, step by step                                                                                                                       |
+| Settings         | Sub-menu and forms                                                                                                                                  |
 
 Mobile: menu becomes a drawer or bottom bar, tables become compact lists or cards, the side panel
 becomes a full screen, tabs show the main ones plus "More".
@@ -143,16 +143,16 @@ action menu keeps everything the buttons show, the summary wraps.
 
 ## Menu
 
-| Item | Content | Status |
-| --- | --- | --- |
-| Dashboard | KPI and widgets | exists, redesign deferred |
-| Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
-| Documents (group) | Orders, Proforma invoices, Payments, Discount requests | exists |
-| Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
-| Team | users and managers | exists |
-| Bulk operations | wizard | exists |
-| Analytics | placeholder | not implemented yet |
-| Settings | roles, branches, policies, and so on | exists |
+| Item              | Content                                                              | Status                    |
+| ----------------- | -------------------------------------------------------------------- | ------------------------- |
+| Dashboard         | KPI and widgets                                                      | exists, redesign deferred |
+| Customers         | list, card with tabs: orders, proforma invoices, payments, discounts | exists                    |
+| Documents (group) | Orders, Proforma invoices, Payments, Discount requests               | exists                    |
+| Approvals         | list and card (awaiting approval is a quick filter or counter)       | exists                    |
+| Team              | users and managers                                                   | exists                    |
+| Bulk operations   | wizard                                                               | exists                    |
+| Analytics         | placeholder                                                          | not implemented yet       |
+| Settings          | roles, branches, policies, and so on                                 | exists                    |
 
 The Catalog item is removed from the portal (see principles).
 
@@ -172,13 +172,18 @@ an approval of that kind, with its own type, subject, requester, requested value
   time, link to the order or customer), request details (old and requested value, the percent change
   for a price request, the current step and its role), a vertical steps timeline (newest first, with
   decision comments), and the decision panel. Approve and Reject are disabled with a reason when the
-  server reports the viewer may not decide the current step (`viewerCanDecide`, the same rule
-  `decide` enforces); a reject needs a comment. Escalation is offered only to the requester, as the
+  server reports the viewer may not decide the current step (`viewerCanApprove` and `viewerCanReject`, both
+  from `ApprovalRequestService.mayDecide`, the one predicate `decide` also uses); a reject needs a comment. Escalation is offered only to the requester, as the
   server enforces.
 - Server list arguments (`ApprovalListOptions`): `requestTypes`, `statuses`, `requestedByAdministratorId`,
   `createdFrom` (inclusive), `createdTo` (exclusive), `search` (request number), `sortField`
   (`id`, `requestType`, `status`, `createdAt`, `decidedAt`) and `sortDir`; `take` is clamped to 0..200
   and `take: 0` returns the count only.
+- `viewerCanApprove` and `viewerCanReject` are single-request fields (a few lookups each): do not
+  select them in list queries; the inbox does not.
+- MERGE TASK: after the order-card branch (with `ApprovalEligibilityRegistry`) is on main, call
+  `eligibility.mayApprove` inside the approve branch of `mayDecide` (and drop the duplicate call
+  from `decide()`), so the flag and `decide()` keep sharing one predicate.
 - Not shown yet: the policy that required the approval (requests do not store a link to the check
   policy that created them) and an approval request number separate from the row id.
 

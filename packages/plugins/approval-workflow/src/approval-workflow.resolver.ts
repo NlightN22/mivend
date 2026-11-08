@@ -208,12 +208,21 @@ export class ApprovalRequestResolver {
         return stepDef?.escalatesTo ?? [];
     }
 
+    // Single-request fields: each runs a few lookups, so do not select them in list queries.
     @ResolveField()
-    async viewerCanDecide(
+    async viewerCanApprove(
         @Ctx() ctx: RequestContext,
         @Parent() request: ApprovalRequest,
     ): Promise<boolean> {
-        return this.approvalRequestService.viewerCanDecide(ctx, request);
+        return this.approvalRequestService.mayDecide(ctx, request, 'approved');
+    }
+
+    @ResolveField()
+    async viewerCanReject(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: ApprovalRequest,
+    ): Promise<boolean> {
+        return this.approvalRequestService.mayDecide(ctx, request, 'rejected');
     }
 
     @Transaction()

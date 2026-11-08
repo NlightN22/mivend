@@ -19,7 +19,8 @@ function request(patch: Partial<ApprovalRequestDetail>): ApprovalRequestDetail {
         payload: '{}',
         steps: [],
         escalatesTo: [],
-        viewerCanDecide: true,
+        viewerCanApprove: true,
+        viewerCanReject: true,
         ...patch,
     };
 }

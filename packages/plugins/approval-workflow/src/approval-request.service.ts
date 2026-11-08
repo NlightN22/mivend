@@ -75,33 +75,15 @@ export class ApprovalRequestService {
     ): Promise<ApprovalRequest> {
         const repo = this.connection.getRepository(ctx, ApprovalRequest);
         const request = await repo.findOneOrFail({ where: { id: requestId } });
-        if (request.status !== 'pending') {
-            throw new UserInputError(`ApprovalRequest ${requestId} is already "${request.status}"`);
-        }
+        const check = await this.checkDecision(ctx, request, decision);
+        if (!check.ok) throw check.error;
+        const { stepDef, adminId } = check;
         const definition = await this.workflowDefinitionService.getDefinition(
             ctx,
             request.requestType,
         );
-        const stepDef = definition.steps[request.currentStepIndex];
-        if (!stepDef) {
-            throw new UserInputError(`Invalid currentStepIndex on ApprovalRequest ${requestId}`);
-        }
-
+        let stepRow = check.stepRow;
         const stepRepo = this.connection.getRepository(ctx, ApprovalStep);
-        let stepRow = await stepRepo.findOne({
-            where: { approvalRequestId: String(request.id), stepIndex: request.currentStepIndex },
-        });
-
-        const adminId = await activeAdministratorId(this.administratorService, ctx);
-        if (
-            !this.canDecideStep(ctx, stepDef, stepRow, adminId) ||
-            !(await this.scope.isVisible(ctx, request.id))
-        ) {
-            throw new ForbiddenError();
-        }
-        if (decision === 'approved' && !(await this.eligibility.mayApprove(ctx, request))) {
-            throw new ForbiddenError();
-        }
 
         const actor = createActor(buildApprovalMachine(definition.steps), {
             snapshot: request.xstateSnapshot ? JSON.parse(request.xstateSnapshot) : undefined,
@@ -228,11 +210,45 @@ export class ApprovalRequestService {
         return request;
     }
 
-    // Same rule decide() enforces, for the decision page to show or disable the actions.
-    async viewerCanDecide(ctx: RequestContext, request: ApprovalRequest): Promise<boolean> {
-        if (request.status !== 'pending') return false;
+    // decide() and the resolver flags must share this predicate, so they cannot drift apart.
+    async mayDecide(
+        ctx: RequestContext,
+        request: ApprovalRequest,
+        decision: ApprovalStepDecision,
+    ): Promise<boolean> {
+        return (await this.checkDecision(ctx, request, decision)).ok;
+    }
+
+    private async checkDecision(
+        ctx: RequestContext,
+        request: ApprovalRequest,
+        _decision: ApprovalStepDecision,
+    ): Promise<
+        | {
+              ok: true;
+              stepDef: WorkflowStepDefinition;
+              stepRow: ApprovalStep | null;
+              adminId: string | null;
+          }
+        | { ok: false; error: Error }
+    > {
+        if (request.status !== 'pending') {
+            return {
+                ok: false,
+                error: new UserInputError(
+                    `ApprovalRequest ${request.id} is already "${request.status}"`,
+                ),
+            };
+        }
         const { stepDef } = await this.getCurrentStepDefinition(ctx, request);
-        if (!stepDef) return false;
+        if (!stepDef) {
+            return {
+                ok: false,
+                error: new UserInputError(
+                    `Invalid currentStepIndex on ApprovalRequest ${request.id}`,
+                ),
+            };
+        }
         const stepRow = await this.connection.getRepository(ctx, ApprovalStep).findOne({
             where: {
                 approvalRequestId: String(request.id),
@@ -240,7 +256,13 @@ export class ApprovalRequestService {
             },
         });
         const adminId = await activeAdministratorId(this.administratorService, ctx);
-        return this.canDecideStep(ctx, stepDef, stepRow, adminId);
+        if (
+            !this.canDecideStep(ctx, stepDef, stepRow, adminId) ||
+            !(await this.scope.isVisible(ctx, request.id))
+        ) {
+            return { ok: false, error: new ForbiddenError() };
+        }
+        return { ok: true, stepDef, stepRow, adminId };
     }
 
     private canDecideStep(
