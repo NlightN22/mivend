@@ -203,7 +203,10 @@ describe('ProductStreamHandler', () => {
 
         expect(productService.create).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ enabled: false, customFields: { externalId: 'p-1' } }),
+            expect.objectContaining({
+                enabled: false,
+                customFields: { externalId: 'p-1', erpStorageUnitId: null, erpSourceFields: null },
+            }),
         );
         expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
             expect.objectContaining({
@@ -223,7 +226,10 @@ describe('ProductStreamHandler', () => {
 
         expect(productService.create).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ enabled: false, customFields: { externalId: 'p-1' } }),
+            expect.objectContaining({
+                enabled: false,
+                customFields: { externalId: 'p-1', erpStorageUnitId: null, erpSourceFields: null },
+            }),
         );
     });
 
@@ -290,6 +296,8 @@ describe('ProductStreamHandler', () => {
                         externalId: 'p-1',
                         manufacturerPartNumber: 'KT 100511',
                         fullName: 'Widget, new model',
+                        erpStorageUnitId: null,
+                        erpSourceFields: null,
                     },
                 }),
             );
@@ -311,6 +319,8 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         manufacturerPartNumber: 'KT 100511',
                         fullName: null,
+                        erpStorageUnitId: null,
+                        erpSourceFields: null,
                     },
                 }),
             );
@@ -328,6 +338,8 @@ describe('ProductStreamHandler', () => {
                 expect(call[1].customFields).toEqual({
                     manufacturerPartNumber: null,
                     fullName: null,
+                    erpStorageUnitId: null,
+                    erpSourceFields: null,
                 });
             }
         });
@@ -646,7 +658,13 @@ describe('ProductStreamHandler', () => {
             expect(manufacturerService.ensureReference).not.toHaveBeenCalled();
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
-                expect.objectContaining({ customFields: { externalId: 'p-1' } }),
+                expect.objectContaining({
+                    customFields: {
+                        externalId: 'p-1',
+                        erpStorageUnitId: null,
+                        erpSourceFields: null,
+                    },
+                }),
             );
         });
 
