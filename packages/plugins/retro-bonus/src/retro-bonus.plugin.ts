@@ -21,7 +21,10 @@ import {
     RetroBonusRuleResolver,
 } from './retro-bonus-rule.resolver';
 import { RetroBonusRuleReclassifyService } from './retro-bonus-rule-reclassify.service';
+import { RetroBonusOrderResolver } from './retro-bonus-order.resolver';
+import { RetroBonusOrderService } from './retro-bonus-order.service';
 import { RetroBonusRuleService } from './retro-bonus-rule.service';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 const adminApiSchema = gql`
     type RetroBonusRule {
@@ -80,7 +83,22 @@ const adminApiSchema = gql`
         skip: Int
     }
 
+    "The retro bonus the customer's active rules promise on one order line; display only, never part of the price."
+    type OrderRetroBonus {
+        "True when the customer has at least one active rule, even if none covers a line of this order."
+        hasRules: Boolean!
+        lines: [OrderLineRetroBonus!]!
+    }
+
+    type OrderLineRetroBonus {
+        orderLineId: ID!
+        percent: Float!
+        "Null when the rule has a threshold."
+        amount: Money
+    }
+
     extend type Query {
+        orderRetroBonus(orderId: ID!): OrderRetroBonus!
         grantedRetroBonuses(
             counterpartyId: ID!
             options: GrantedRetroBonusListOptions
@@ -90,9 +108,9 @@ const adminApiSchema = gql`
 `;
 
 // Issue #102/#290: read-only retro-bonus terms (ERP's RetroBonusSetupChanged) — manager-portal
-// display only, never applied to order pricing. See RetroBonusRule's own doc comment.
+// display only, never applied to order pricing (orderRetroBonus shows what the rules promise per order line).
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, ErpOrderPlugin],
     entities: [
         RetroBonusRule,
         RetroBonusRuleCounterparty,
@@ -104,13 +122,19 @@ const adminApiSchema = gql`
         schema: adminApiSchema,
         resolvers: [
             RetroBonusRuleResolver,
+            RetroBonusOrderResolver,
             RetroBonusRuleAccrualKindResolver,
             RetroBonusRulePriceTypeResolver,
             GrantedRetroBonusResolver,
             GrantedRetroBonusFieldResolver,
         ],
     },
-    providers: [RetroBonusRuleService, RetroBonusRuleReclassifyService, GrantedRetroBonusService],
+    providers: [
+        RetroBonusOrderService,
+        RetroBonusRuleService,
+        RetroBonusRuleReclassifyService,
+        GrantedRetroBonusService,
+    ],
     exports: [RetroBonusRuleService, GrantedRetroBonusService],
     compatibility: '>0.0.0',
 })

@@ -79,6 +79,18 @@ export interface PriceTypeRecord {
     ceilingMultiplier?: number;
 }
 
+export interface RetroBonusSetupRecord {
+    erpId: string;
+    version: string;
+    documentNumber?: string;
+    percent: number;
+    counterpartyErpId: string;
+    productErpIds?: string[];
+    allProducts?: boolean;
+    validFrom?: string;
+    validTo?: string | null;
+}
+
 export interface StockOrganizationRecord {
     entityId: string;
     productErpId: string;
@@ -223,6 +235,7 @@ export type ImportRecord =
     | { type: 'contract'; data: ContractRecord }
     | { type: 'orderStatus'; data: OrderStatusRecord }
     | { type: 'stockOrganization'; data: StockOrganizationRecord }
+    | { type: 'retroBonusSetup'; data: RetroBonusSetupRecord }
     | { type: 'storageLocation'; data: StorageLocationRecord }
     | { type: 'manufacturer'; data: ManufacturerRecord }
     | { type: 'settlementDocument'; data: SettlementDocumentRecord }

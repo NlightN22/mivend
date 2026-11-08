@@ -930,6 +930,9 @@ importers:
       '@mivend/plugin-price-entry':
         specifier: workspace:*
         version: link:../price-entry
+      '@mivend/plugin-retro-bonus':
+        specifier: workspace:*
+        version: link:../retro-bonus
       '@mivend/plugin-settlement':
         specifier: workspace:*
         version: link:../settlement
@@ -1476,6 +1479,9 @@ importers:
       '@mivend/plugin-counterparty':
         specifier: workspace:*
         version: link:../counterparty
+      '@mivend/plugin-erp-order':
+        specifier: workspace:*
+        version: link:../erp-order
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.7(graphql@16.14.2)
@@ -1639,6 +1645,9 @@ importers:
 
   packages/plugins/settlement:
     dependencies:
+      '@mivend/plugin-access-control':
+        specifier: workspace:*
+        version: link:../access-control
       '@mivend/plugin-counterparty':
         specifier: workspace:*
         version: link:../counterparty

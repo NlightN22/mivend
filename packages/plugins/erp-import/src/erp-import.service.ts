@@ -21,6 +21,7 @@ import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
 import { StockOrganizationHandler } from './handlers/stock-organization.handler';
+import { RetroBonusSetupHandler } from './handlers/retro-bonus-setup.handler';
 import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
 import { ManufacturerHandler } from './handlers/manufacturer.handler';
@@ -60,6 +61,7 @@ export class ErpImportService {
         private readonly manufacturerHandler: ManufacturerHandler,
         private readonly settlementHandler: SettlementHandler,
         private readonly priceTypeHandler: PriceTypeHandler,
+        private readonly retroBonusSetupHandler: RetroBonusSetupHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -173,6 +175,9 @@ export class ErpImportService {
                 break;
             case 'orderStatus':
                 await this.orderStatusHandler.upsert(ctx, record.data);
+                break;
+            case 'retroBonusSetup':
+                await this.retroBonusSetupHandler.upsert(ctx, record.data);
                 break;
             case 'stockOrganization':
                 await this.stockOrganizationHandler.upsert(ctx, record.data);

@@ -15,6 +15,7 @@
         { "path": "../erp-order" },
         { "path": "../erp-integration" },
         { "path": "../settlement" },
+        { "path": "../retro-bonus" },
         { "path": "../customer-pricing" }
     ]
 }

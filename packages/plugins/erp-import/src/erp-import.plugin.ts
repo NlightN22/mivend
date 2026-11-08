@@ -6,6 +6,8 @@ import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { ErpIntegrationPlugin } from '@mivend/plugin-erp-integration';
+import { RetroBonusPlugin } from '@mivend/plugin-retro-bonus';
+import { RetroBonusSetupHandler } from './handlers/retro-bonus-setup.handler';
 import { ErpImportController } from './erp-import.controller';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
@@ -52,6 +54,7 @@ import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
         ErpIntegrationPlugin,
         SettlementPlugin,
         CustomerPricingPlugin,
+        RetroBonusPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
@@ -80,6 +83,7 @@ import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
         ContractHandler,
         OrderStatusHandler,
         StockOrganizationHandler,
+        RetroBonusSetupHandler,
         StorageLocationHandler,
         ManufacturerHandler,
         SettlementHandler,
