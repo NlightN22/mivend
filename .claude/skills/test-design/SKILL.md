@@ -46,6 +46,7 @@ the procedure.
     don't apply without checking against `docs/testing-patterns.md`.
 14. Ask: does this change a read-compute-write on shared rows? Then a concurrent-writer test on
     real Postgres is mandatory (`docs/testing-patterns.md` "Concurrency", `docs/concurrency.md`).
+14a. Test files share one module cache per worker unless they mock modules or write global or environment state (`vitest-isolation.ts` detects this by scanning the source, `docs/testing-strategy.md` "Test run speed"). Write each test so it passes in any order and restores every spy, stub, timer and env value it changes; never rely on state left by another test or file.
 15. Implement the tests.
 16. Run targeted tests for the changed package first.
 17. Run the required Makefile commands (`make test`, and `make test-int` if integration/component

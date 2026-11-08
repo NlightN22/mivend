@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ForbiddenError, RequestContext } from '@vendure/core';
 
 import { CounterpartyCreditResolver, CounterpartyResolver } from '../../counterparty.resolver';
@@ -41,6 +41,10 @@ describe('CounterpartyResolver credit-derived aggregate gating', () => {
         findHighUsage: vi.fn(async () => [counterparty]),
     } as unknown as CounterpartyService;
     const resolver = new CounterpartyResolver(mockService, {} as never, {} as never);
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
     it('counterpartySummary nulls out totalCreditBalance/highUsageCount without ReadCounterpartyCredit, keeps totalCount/activeCount', async () => {
         const result = await resolver.counterpartySummary(mockCtx(false));
