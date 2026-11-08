@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { isSorted, readAmounts } from '../../helpers/amount-column';
 
 const ROW_LINKS = '.mv-advanced-data-table__grid tbody tr a';
 
@@ -57,6 +58,8 @@ test('the Filter builder and a sortable header narrow and order the list on the 
     await page.getByRole('button', { name: 'Apply filter' }).click();
     await expect(page).toHaveURL(/filters=amount/);
     await expect(page.locator(ROW_LINKS).first()).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => isSorted(await readAmounts(page), 'ASC')).toBe(true);
+    const ascAmounts = await readAmounts(page);
     await page
         .getByRole('columnheader', { name: /Amount/ })
         .getByRole('button')
@@ -64,6 +67,9 @@ test('the Filter builder and a sortable header narrow and order the list on the 
     // Descending is the default direction, so the URL drops sortDir once the click flips ASC to DESC.
     await expect(page).not.toHaveURL(/sortDir=ASC/);
     await expect(page).toHaveURL(/sortField=amount/);
+    await expect.poll(async () => isSorted(await readAmounts(page), 'DESC')).toBe(true);
+    const descAmounts = await readAmounts(page);
+    if (new Set(ascAmounts).size > 1) expect(descAmounts[0]).toBeGreaterThan(ascAmounts[0]);
 });
 
 test('a row opens the order card @on:manager-operator @read-only', async ({ page }) => {
