@@ -30,24 +30,27 @@ query ProformaInvoicesPage($options: ProformaInvoiceListOptions, $counterpartyId
     }
 }
 
-query ProformaInvoiceViewCounts($counterpartyId: ID) {
-    all: visibleProformaInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) {
+query ProformaInvoiceViewCounts($counterpartyId: ID, $search: String) {
+    all: visibleProformaInvoices(
+        options: { take: 0, search: $search }
+        counterpartyId: $counterpartyId
+    ) {
         totalItems
     }
     current: visibleProformaInvoices(
-        options: { take: 0, status: "current" }
+        options: { take: 0, status: "current", search: $search }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
     superseded: visibleProformaInvoices(
-        options: { take: 0, status: "superseded" }
+        options: { take: 0, status: "superseded", search: $search }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
     cancelled: visibleProformaInvoices(
-        options: { take: 0, status: "cancelled" }
+        options: { take: 0, status: "cancelled", search: $search }
         counterpartyId: $counterpartyId
     ) {
         totalItems

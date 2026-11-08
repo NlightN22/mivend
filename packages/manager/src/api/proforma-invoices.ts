@@ -74,8 +74,12 @@ export interface ProformaInvoiceViewCounts {
 // not one page. Do not derive them from loaded rows.
 export async function fetchProformaInvoiceViewCounts(
     counterpartyId: string,
+    search?: string,
 ): Promise<ProformaInvoiceViewCounts> {
-    const result = await adminApi(ProformaInvoiceViewCountsDocument, { counterpartyId });
+    const result = await adminApi(ProformaInvoiceViewCountsDocument, {
+        counterpartyId: counterpartyId || undefined,
+        search: search || undefined,
+    });
     return {
         all: result.all.totalItems,
         current: result.current.totalItems,

@@ -12561,6 +12561,7 @@ export type ProformaInvoicesPageQuery = {
 
 export type ProformaInvoiceViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 export type ProformaInvoiceViewCountsQuery = {
@@ -15975,27 +15976,27 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
     ProformaInvoicesPageQueryVariables
 >;
 export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
-    query ProformaInvoiceViewCounts($counterpartyId: ID) {
+    query ProformaInvoiceViewCounts($counterpartyId: ID, $search: String) {
   all: visibleProformaInvoices(
-    options: {take: 0}
+    options: {take: 0, search: $search}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   current: visibleProformaInvoices(
-    options: {take: 0, status: "current"}
+    options: {take: 0, status: "current", search: $search}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   superseded: visibleProformaInvoices(
-    options: {take: 0, status: "superseded"}
+    options: {take: 0, status: "superseded", search: $search}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   cancelled: visibleProformaInvoices(
-    options: {take: 0, status: "cancelled"}
+    options: {take: 0, status: "cancelled", search: $search}
     counterpartyId: $counterpartyId
   ) {
     totalItems

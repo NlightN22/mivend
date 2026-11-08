@@ -13,71 +13,32 @@ const meta: Meta<typeof ProformaInvoicesPage> = {
 export default meta;
 type Story = StoryObj<typeof ProformaInvoicesPage>;
 
-const PROFORMA_INVOICES = [
-    {
-        id: '1',
-        orderId: '1',
-        counterpartyId: '1',
-        counterpartyShortName: 'Customer One',
-        amount: 450000,
+const CUSTOMERS = ['Customer One', 'Customer Two', 'Customer Three'];
+const STATUSES = ['current', 'current', 'superseded', 'current', 'cancelled'];
+
+const PROFORMA_INVOICES = Array.from({ length: 24 }, (_, i) => {
+    const createdAt = new Date(Date.now() - i * 86400000).toISOString();
+    return {
+        id: String(i + 1),
+        number: `${1000 + i}-01`,
+        version: i % 5 === 2 ? 2 : 1,
+        supersededBy: null,
+        createdAt,
+        orderId: String(i + 1),
+        counterpartyId: String((i % 3) + 1),
+        counterpartyShortName: CUSTOMERS[i % 3],
+        amount: 45000 + i * 12345,
         currencyCode: 'RUB',
-        displayStatus: 'current',
+        displayStatus: STATUSES[i % 5],
+        issuedAt: createdAt,
+        dueDate: new Date(Date.now() + (5 - i) * 86400000).toISOString(),
         branchId: 'branch-a',
-    },
-    {
-        id: '2',
-        orderId: '2',
-        counterpartyId: '2',
-        counterpartyShortName: 'Customer Two',
-        amount: 129000,
-        currencyCode: 'RUB',
-        displayStatus: 'current',
-        branchId: 'branch-a',
-    },
-    {
-        id: '3',
-        orderId: '3',
-        counterpartyId: '1',
-        counterpartyShortName: 'Customer One',
-        amount: 78000,
-        currencyCode: 'RUB',
-        displayStatus: 'superseded',
-        branchId: 'branch-b',
-    },
-    {
-        id: '4',
-        orderId: '4',
-        counterpartyId: '3',
-        counterpartyShortName: 'Customer Three',
-        amount: 315000,
-        currencyCode: 'RUB',
-        displayStatus: 'current',
-        branchId: 'branch-b',
-    },
-    {
-        id: '5',
-        orderId: '5',
-        counterpartyId: '2',
-        counterpartyShortName: 'Customer Two',
-        amount: 54000,
-        currencyCode: 'RUB',
-        displayStatus: 'current',
-        branchId: 'branch-a',
-    },
-    {
-        id: '6',
-        orderId: '6',
-        counterpartyId: '3',
-        counterpartyShortName: 'Customer Three',
-        amount: 96000,
-        currencyCode: 'RUB',
-        displayStatus: 'cancelled',
-        branchId: 'branch-b',
-    },
-];
+        order: { code: String(1000 + i) },
+    };
+});
 
 interface ProformaInvoicesPageVariables {
-    options?: { skip?: number; take?: number; status?: string };
+    options?: { skip?: number; take?: number; status?: string; search?: string };
     counterpartyId?: string;
 }
 
@@ -87,11 +48,25 @@ function mockProformaInvoicesData(): void {
         if (variables.options?.status) {
             filtered = filtered.filter(i => i.displayStatus === variables.options!.status);
         }
+        const term = variables.options?.search?.toLowerCase();
+        if (term) {
+            filtered = filtered.filter(
+                i =>
+                    i.number.includes(term) || i.counterpartyShortName.toLowerCase().includes(term),
+            );
+        }
         if (variables.counterpartyId) {
             filtered = filtered.filter(i => i.counterpartyId === variables.counterpartyId);
         }
         return { visibleProformaInvoices: paginate(filtered, variables.options) };
     });
+    registerMock('ProformaInvoiceViewCounts', () => ({
+        all: { totalItems: 24 },
+        current: { totalItems: 14 },
+        superseded: { totalItems: 5 },
+        cancelled: { totalItems: 5 },
+    }));
+    registerMock('TableViews', () => ({ tableViews: [] }));
 }
 
 export const Default: Story = {
@@ -110,6 +85,7 @@ export const Default: Story = {
 export const Empty: Story = {
     loaders: [
         async () => {
+            mockProformaInvoicesData();
             registerMock('ProformaInvoicesPage', () => ({
                 visibleProformaInvoices: { items: [], totalItems: 0 },
             }));

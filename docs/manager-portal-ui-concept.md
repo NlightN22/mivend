@@ -164,6 +164,17 @@ The Catalog item is removed from the portal (see principles).
   analytics later needs "by responsible at the time of sale" and "by current responsible", it is
   decided inside the analytics work.
 
+## Proforma invoices list
+
+Same list shape as orders (`components/proforma-invoices/`): the numeric proforma invoice number
+first, then date, customer, order, status, amount and due date. Status chips with counts (All,
+Current, Superseded, Cancelled) follow the search; the search box matches the number (an order
+number finds its `<order number>-NN` documents), the customer name and INN. Views, URL sync
+(`search`, `view`, `counterpartyId`, `pageSize`, `page`), top and bottom pagination and the mobile
+card view are shared with orders. A row opens the order card; there is no quick panel and no
+actions. The server orders newest first and filters only by status and search, so there is no
+Filter builder and no column sorting until the server offers a filter and sort argument.
+
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,
