@@ -40,9 +40,21 @@ query OrderDetail($code: String!) {
                     code
                 }
             }
+            statusHistory {
+                uuid
+                status
+                occurredAt
+                reference {
+                    name
+                    description
+                }
+            }
             lines {
                 id
                 quantity
+                featuredAsset {
+                    preview
+                }
                 unitPriceWithTax
                 discountedUnitPriceWithTax
                 discountedLinePriceWithTax

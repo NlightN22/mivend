@@ -1,8 +1,10 @@
 import { adminApi } from './client';
 import {
+    AddOrderLineBySkuDocument,
     ChangeOrderLineQuantityDocument,
     OrderLineAvailabilityDocument,
     OrderLineShortfallsDocument,
+    ProductVariantsBySkuDocument,
     RemoveOrderLineDocument,
     SplitOrderLinesByStockDocument,
     type OrderLineAvailabilityFieldsFragment,
@@ -38,4 +40,22 @@ export async function splitOrderLinesByStock(orderId: string): Promise<SplitOutc
 
 export async function fetchOrderLineShortfalls(orderId: string): Promise<OrderLineShortfallRow[]> {
     return (await adminApi(OrderLineShortfallsDocument, { orderId })).orderLineShortfalls;
+}
+
+export interface SkuMatch {
+    id: string;
+    sku: string;
+    name: string;
+}
+
+export async function addOrderLineBySku(
+    orderId: string,
+    sku: string,
+    quantity: number,
+): Promise<void> {
+    await adminApi(AddOrderLineBySkuDocument, { orderId, sku, quantity });
+}
+
+export async function searchVariantsBySku(sku: string): Promise<SkuMatch[]> {
+    return (await adminApi(ProductVariantsBySkuDocument, { sku })).productVariants.items;
 }

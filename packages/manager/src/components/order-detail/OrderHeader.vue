@@ -3,26 +3,24 @@ import { computed } from 'vue';
 import { IconCalendar, IconUser, IconUserCircle } from '@tabler/icons-vue';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { ORDER_STATE_BADGE_VARIANT, ORDER_STATE_LABEL } from '../../api/orders';
-import type { OrderDetail } from '../../api/orderDetail';
+import type { OrderDetail, RelatedDocument } from '../../api/orderDetail';
+import type { OrderHeaderCommands } from '../../composables/useOrderHeaderCommands';
 import type { useReservationActions } from '../../composables/useReservationActions';
-import { canConfirmOrder } from '../../utils/canConfirmOrder';
 import OrderHeaderActions from './OrderHeaderActions.vue';
+import OrderHeaderFields from './OrderHeaderFields.vue';
 
 const props = defineProps<{
     order: OrderDetail;
     managerName: string | null;
-    canSeeChecks: boolean;
+    documents: RelatedDocument[];
+    commands: OrderHeaderCommands;
     reservation: ReturnType<typeof useReservationActions>;
+    contractLocked: boolean;
+    blockedSkus: string[];
+    canEditDelivery: boolean;
 }>();
-defineEmits<{ recompute: []; cancelled: [] }>();
+defineEmits<{ recompute: []; changed: [] }>();
 
-const confirmable = computed(() =>
-    canConfirmOrder({
-        cancellable: props.order.cancellable,
-        lineCount: props.order.lines.length,
-        customFields: props.order.customFields,
-    }),
-);
 const customerName = computed(() => {
     const customer = props.order.customer;
     if (!customer) return null;
@@ -47,12 +45,12 @@ const customerName = computed(() => {
             </h1>
             <OrderHeaderActions
                 :order-id="order.id"
-                :cancellable="order.cancellable"
-                :confirmable="confirmable"
-                :can-see-checks="canSeeChecks"
+                :order-code="order.code"
+                :cancelled="order.state === 'Cancelled'"
+                :documents="documents"
+                :commands="commands"
                 :reservation="reservation"
                 @recompute="$emit('recompute')"
-                @cancelled="$emit('cancelled')"
             />
         </div>
         <div class="order-header__meta">
@@ -78,6 +76,13 @@ const customerName = computed(() => {
                 <strong>{{ new Date(order.createdAt).toLocaleDateString('en-US') }}</strong>
             </span>
         </div>
+        <OrderHeaderFields
+            :order="order"
+            :contract-locked="contractLocked"
+            :blocked-skus="blockedSkus"
+            :can-edit-delivery="canEditDelivery"
+            @changed="$emit('changed')"
+        />
     </header>
 </template>
 

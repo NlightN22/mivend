@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckDefinition, CheckPolicy } from '../../api/checkPolicies';
-import type { PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 import { consequencesByFinding } from '../../utils/findingConsequence';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { summarizeFindings } from '../../utils/orderFindingsSummary';
 
 const def = (over: Partial<CheckDefinition>): CheckDefinition => ({
     code: 'erp.organization-stock',
@@ -87,35 +85,18 @@ describe('finding consequence join', () => {
     });
 });
 
-describe('findings summary', () => {
-    const request = (status: string): PriceAdjustmentRequestSummary => ({
-        id: status,
-        payload: '{}',
-        status,
-        currentStepRole: null,
-        createdAt: '2026-10-16T00:00:00Z',
-        decidedAt: null,
-    });
-
-    it('counts findings, holds, pending approvals and decided approvals', () => {
-        const consequences = consequencesByFinding([finding()], [def({})], [policy({})]);
-        expect(
-            summarizeFindings([finding(), finding({ id: 'f2', checkCode: 'x' })], consequences, [
-                request('pending'),
-                request('approved'),
-                request('rejected'),
-            ]),
-        ).toEqual({ findings: 2, holding: 1, awaitingApproval: 1, handled: 2 });
-    });
-
-    it('counts as holding exactly the hold, block and require-approval consequences', () => {
-        const held = (consequence: string): number => {
-            const rules = [policy({ consequence })];
-            const map = consequencesByFinding([finding()], [def({})], rules);
-            return summarizeFindings([finding()], map, []).holding;
+describe('holding consequences', () => {
+    it('holds confirmation for exactly the hold, block and require-approval consequences', () => {
+        const held = (consequence: string): boolean => {
+            const map = consequencesByFinding([finding()], [def({})], [policy({ consequence })]);
+            return map.get('f1')?.holdsConfirmation ?? false;
         };
         expect(['info', 'warn', 'hold', 'block', 'require-approval'].map(held)).toEqual([
-            0, 0, 1, 1, 1,
+            false,
+            false,
+            true,
+            true,
+            true,
         ]);
     });
 });

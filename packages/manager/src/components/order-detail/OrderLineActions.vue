@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { IconCheck, IconPencil, IconX } from '@tabler/icons-vue';
+import { MvActionMenu } from '@mivend/ui-kit';
 
-defineProps<{ editing: boolean; saving: boolean; busy: boolean; canEdit: boolean }>();
-defineEmits<{ start: []; commit: []; cancel: [] }>();
+defineProps<{
+    editing: boolean;
+    saving: boolean;
+    busy: boolean;
+    canEdit: boolean;
+    canRemove: boolean;
+}>();
+defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
 </script>
 
 <template>
@@ -39,6 +46,12 @@ defineEmits<{ start: []; commit: []; cancel: [] }>();
     >
         <IconPencil :size="16" />
     </button>
+    <MvActionMenu
+        v-if="!editing && canRemove"
+        :items="[{ key: 'remove', label: 'Delete position', danger: true }]"
+        label="Position actions"
+        @select="$emit('remove')"
+    />
 </template>
 
 <style scoped>

@@ -311,5 +311,7 @@ export type { TwoFactorLabels } from './composables/twoFactor/twoFactorLabels';
 export { default as MvActionMenu } from './components/MvActionMenu/MvActionMenu.vue';
 export type { ActionMenuItem } from './components/MvActionMenu/MvActionMenu.vue';
 export { default as MvPopover } from './components/MvPopover/MvPopover.vue';
+export { default as MvFlagChip } from './components/MvFlagChip/MvFlagChip.vue';
+export type { FlagChipTone } from './components/MvFlagChip/MvFlagChip.vue';
 export { default as MvFlaggedValue } from './components/MvFlaggedValue/MvFlaggedValue.vue';
 export type { FlagSeverity } from './components/MvFlaggedValue/MvFlaggedValue.vue';

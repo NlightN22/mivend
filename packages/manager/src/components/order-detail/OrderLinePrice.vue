@@ -1,20 +1,13 @@
 <script setup lang="ts">
-import { MvFlaggedValue, MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge } from '@mivend/ui-kit';
 import type { AdjustmentInfo } from '../../utils/orderLineRows';
 
-defineProps<{ price: string; belowFloor: boolean; adjustment: AdjustmentInfo | null }>();
+defineProps<{ price: string; adjustment: AdjustmentInfo | null }>();
 </script>
 
 <template>
     <div class="line-price">
-        <MvFlaggedValue
-            v-if="belowFloor"
-            severity="danger"
-            tooltip="Price is below the allowed minimum"
-        >
-            {{ price }}
-        </MvFlaggedValue>
-        <span v-else>{{ price }}</span>
+        <span>{{ price }}</span>
         <RouterLink
             v-if="adjustment?.approvalRequestId"
             :to="`/approvals/${adjustment.approvalRequestId}`"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MvFlaggedValue, MvTooltip } from '@mivend/ui-kit';
+import { MvTooltip } from '@mivend/ui-kit';
 import type { LineCheckView } from '../../utils/orderLineChecks';
 import type { OrderLineAvailability } from '../../api/orderLineEdit';
 import OrderLineOrgList from './OrderLineOrgList.vue';
@@ -9,14 +9,7 @@ defineProps<{ view: LineCheckView; sources: OrderLineAvailability | null }>();
 </script>
 
 <template>
-    <MvFlaggedValue
-        v-if="view.stockShort"
-        severity="danger"
-        :tooltip="`Not enough stock: ${view.available ?? 0} available, ${view.needed} needed`"
-    >
-        {{ view.available ?? '—' }}
-    </MvFlaggedValue>
-    <MvTooltip v-else trigger="hover" placement="bottom">
+    <MvTooltip trigger="hover" placement="bottom">
         <template #trigger>
             <span class="stock-info" tabindex="0">{{ view.available ?? '—' }}</span>
         </template>

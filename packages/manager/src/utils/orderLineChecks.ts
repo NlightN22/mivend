@@ -20,11 +20,11 @@ export interface LineCheckView {
     orgRows: OrgRow[];
 }
 
-const CONTRACT_CODE = 'erp.contract-with-storage-organization';
-const STOCK_CODE = 'erp.organization-stock';
+export const CONTRACT_CODE = 'erp.contract-with-storage-organization';
+export const STOCK_CODE = 'erp.organization-stock';
 const CONTRACT_UNRESOLVED_CODE = 'order.contract-unresolved';
 // Line findings of these checks are drawn in the Stock, Contract and Unit price columns; every other finding is listed as text.
-const BELOW_FLOOR_CODE = 'order.below-floor-price';
+export const BELOW_FLOOR_CODE = 'order.below-floor-price';
 const COLUMN_CODES = new Set([CONTRACT_CODE, STOCK_CODE, BELOW_FLOOR_CODE]);
 
 export function isBelowFloor(findings: OrderCheckFinding[]): boolean {

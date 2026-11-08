@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvInput, MvQtyStepper } from '@mivend/ui-kit';
+import { MvCheckbox, MvInput, MvQtyStepper } from '@mivend/ui-kit';
 import type { OrderLineAvailability } from '../../api/orderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import { stepperMin } from '../../composables/orderLineStepper';
 import { useLineRowEdit } from '../../composables/useLineRowEdit';
+import type { FindingConsequence } from '../../utils/findingConsequence';
+import type { LineProblems } from '../../utils/orderLineProblems';
 import type { OrderLineRow } from '../../utils/orderLineRows';
+import OrderCell from './OrderCell.vue';
 import OrderLineActions from './OrderLineActions.vue';
 import OrderLineDiscount from './OrderLineDiscount.vue';
 import OrderLinePrice from './OrderLinePrice.vue';
@@ -15,18 +18,30 @@ import OrderLineStockInfo from './OrderLineStockInfo.vue';
 
 const props = defineProps<{
     row: OrderLineRow;
+    problems: LineProblems;
+    consequences: Map<string, FindingConsequence>;
     orderId: string;
     packagesOnly: boolean;
     canEditPrice: boolean;
     canEditQuantity: boolean;
     canRemove: boolean;
+    canConfirm: boolean;
+    canReject: boolean;
+    selectable: boolean;
+    selected: boolean;
     sources: OrderLineAvailability | null;
     busy: boolean;
     money: (amount: number) => string;
     apply: (action: () => Promise<void>) => Promise<boolean>;
 }>();
+defineEmits<{ toggle: []; remove: []; confirm: []; reject: [] }>();
 
 const line = computed(() => props.row.line);
+const cellProps = computed(() => ({
+    consequences: props.consequences,
+    canConfirm: props.canConfirm,
+    canReject: props.canReject,
+}));
 const step = computed(() => props.sources?.step ?? 1);
 const edit = useLineRowEdit({
     orderId: () => props.orderId,
@@ -53,13 +68,21 @@ const priceChanged = computed(
 <template>
     <tr
         class="line-row"
-        :class="[`line-row--${row.severity}`, { 'line-row--editing': edit.editing.value }]"
+        :class="[`line-row--${problems.stripe}`, { 'line-row--editing': edit.editing.value }]"
+        :data-testid="`order-line-${line.productVariant.sku}`"
     >
+        <td v-if="selectable" class="line-row__select">
+            <MvCheckbox
+                :model-value="selected"
+                :label="`Select ${line.productVariant.sku}`"
+                @update:model-value="$emit('toggle')"
+            />
+        </td>
         <td class="line-row__product" data-label="Product">
             <OrderLineProduct
                 :name="line.productVariant.name"
                 :sku="line.productVariant.sku"
-                :findings="row.findings"
+                :image="line.featuredAsset?.preview ?? null"
             />
         </td>
         <td class="line-row__num" data-label="Qty">
@@ -75,7 +98,13 @@ const priceChanged = computed(
                     Line will be removed
                 </span>
             </template>
-            <template v-else>
+            <OrderCell
+                v-else
+                v-bind="cellProps"
+                :problem="problems.cells.qty"
+                @confirm="$emit('confirm')"
+                @reject="$emit('reject')"
+            >
                 {{
                     formatLineQuantity(
                         line.quantity,
@@ -83,17 +112,27 @@ const priceChanged = computed(
                         packagesOnly,
                     )
                 }}
-            </template>
+            </OrderCell>
         </td>
         <td class="line-row__num" data-label="Available">
-            <OrderLineStockInfo :view="row.view" :sources="sources" />
+            <OrderCell
+                v-bind="cellProps"
+                :problem="problems.cells.available"
+                @confirm="$emit('confirm')"
+                @reject="$emit('reject')"
+            >
+                <OrderLineStockInfo :view="row.view" :sources="sources" />
+            </OrderCell>
         </td>
         <td class="line-row__num" data-label="Reserve">
-            <OrderLineReserve
-                :reserved="row.reserved"
-                :needed="row.view.needed"
-                :short="row.reserveShort"
-            />
+            <OrderCell
+                v-bind="cellProps"
+                :problem="problems.cells.reserve"
+                @confirm="$emit('confirm')"
+                @reject="$emit('reject')"
+            >
+                <OrderLineReserve :reserved="row.reserved" :needed="row.view.needed" />
+            </OrderCell>
         </td>
         <td class="line-row__num" data-label="Price">
             <div v-if="edit.editing.value && canEditPrice" class="line-row__price-edit">
@@ -111,22 +150,31 @@ const priceChanged = computed(
                     :disabled="edit.state.value === 'saving'"
                 />
             </div>
-            <OrderLinePrice
+            <OrderCell
                 v-else
-                :price="money(line.discountedUnitPriceWithTax)"
-                :below-floor="row.belowFloor"
-                :adjustment="row.adjustment"
-            />
+                v-bind="cellProps"
+                :problem="problems.cells.price"
+                @confirm="$emit('confirm')"
+                @reject="$emit('reject')"
+            >
+                <OrderLinePrice
+                    :price="money(line.discountedUnitPriceWithTax)"
+                    :adjustment="row.adjustment"
+                />
+            </OrderCell>
             <span v-if="edit.sentForApproval.value && !edit.editing.value" class="line-row__hint">
                 Sent for approval
             </span>
         </td>
         <td class="line-row__num" data-label="Discount">
-            <OrderLineDiscount
-                :percent="row.discountPercent"
-                :max-percent="row.maxDiscountPercent"
-                :over-limit="row.discountOverLimit"
-            />
+            <OrderCell
+                v-bind="cellProps"
+                :problem="problems.cells.discount"
+                @confirm="$emit('confirm')"
+                @reject="$emit('reject')"
+            >
+                <OrderLineDiscount :percent="row.discountPercent" />
+            </OrderCell>
         </td>
         <td class="line-row__num line-row__total" data-label="Total">
             {{ money(line.discountedLinePriceWithTax) }}
@@ -137,137 +185,17 @@ const priceChanged = computed(
                 :saving="edit.state.value === 'saving'"
                 :busy="busy"
                 :can-edit="canEdit"
+                :can-remove="canRemove && canEditQuantity"
                 @start="edit.start"
                 @commit="edit.commit"
                 @cancel="edit.cancel"
+                @remove="$emit('remove')"
             />
         </td>
     </tr>
     <tr v-if="edit.error.value" class="line-row__error-row">
-        <td colspan="8" class="line-row__error">{{ edit.error.value }}</td>
+        <td :colspan="selectable ? 9 : 8" class="line-row__error">{{ edit.error.value }}</td>
     </tr>
 </template>
 
-<style scoped>
-.line-row td {
-    padding: 10px;
-    border-bottom: 1px solid var(--app-row-border);
-    vertical-align: middle;
-}
-
-.line-row__product {
-    min-width: 180px;
-    box-shadow: inset 3px 0 0 transparent;
-}
-
-.line-row--danger .line-row__product {
-    box-shadow: inset 3px 0 0 var(--app-danger-btn);
-}
-
-.line-row--warning .line-row__product {
-    box-shadow: inset 3px 0 0 var(--app-accent-orange);
-}
-
-.line-row--editing {
-    background: var(--app-stock-in-bg);
-}
-
-.line-row--editing .line-row__product {
-    box-shadow: inset 3px 0 0 var(--app-brand-fill);
-}
-
-.line-row__num {
-    text-align: right;
-    white-space: nowrap;
-}
-
-.line-row__total {
-    font-weight: 700;
-}
-
-.line-row__price-edit {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 120px;
-}
-
-.line-row__hint {
-    display: block;
-    margin-top: 4px;
-    color: var(--app-text-grey);
-    font-size: 12px;
-}
-
-.line-row__actions {
-    width: 1%;
-    white-space: nowrap;
-    text-align: right;
-}
-
-.line-row__error {
-    padding: 6px 10px;
-    color: var(--app-danger-fg);
-    font-size: 13px;
-}
-
-@media (max-width: 800px) {
-    .line-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px 12px;
-        padding: 12px;
-        margin-bottom: 10px;
-        border: 1px solid var(--el-border-color);
-        border-left: 4px solid transparent;
-        border-radius: var(--app-radius-md, 12px);
-        background: var(--app-surface);
-    }
-
-    .line-row--danger {
-        border-left-color: var(--app-danger-btn);
-    }
-
-    .line-row--warning {
-        border-left-color: var(--app-accent-orange);
-    }
-
-    .line-row--editing {
-        background: var(--app-stock-in-bg);
-        border-left-color: var(--app-brand-fill);
-    }
-
-    .line-row td,
-    .line-row__product {
-        padding: 0;
-        border: 0;
-        box-shadow: none;
-        text-align: left;
-        white-space: normal;
-    }
-
-    .line-row__product,
-    .line-row__actions {
-        grid-column: 1 / -1;
-    }
-
-    .line-row__actions {
-        width: auto;
-        text-align: right;
-    }
-
-    .line-row td[data-label]::before {
-        content: attr(data-label);
-        display: block;
-        color: var(--app-text-grey);
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }
-
-    .line-row__num :deep(.line-price) {
-        align-items: flex-start;
-    }
-}
-</style>
+<style scoped src="./OrderLineRow.css"></style>

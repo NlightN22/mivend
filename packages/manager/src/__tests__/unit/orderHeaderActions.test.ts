@@ -9,6 +9,8 @@ const base: HeaderActionInputs = {
     canSeeChecks: true,
     cancelVisible: true,
 };
+// The order's own proforma invoices and documents are reachable from the menu in every state.
+const LISTS = ['proformas', 'documents'];
 const keys = (i: Partial<HeaderActionInputs>, mobile = false): string[] =>
     headerActions({ ...base, ...i }, mobile).menu.map(m => m.key);
 
@@ -21,14 +23,22 @@ describe('header action gating', () => {
     });
 
     it('offers release to a confirmer and extend only with an extension limit, after confirming', () => {
-        expect(keys({})).toEqual(['recompute']);
-        expect(keys({ reserved: true })).toEqual(['recompute', 'release', 'extend']);
-        expect(keys({ reserved: true, canExtend: false })).toEqual(['recompute', 'release']);
-        expect(keys({ reserved: true, canConfirm: false })).toEqual(['recompute', 'extend']);
+        expect(keys({})).toEqual(['recompute', ...LISTS]);
+        expect(keys({ reserved: true })).toEqual(['recompute', ...LISTS, 'release', 'extend']);
+        expect(keys({ reserved: true, canExtend: false })).toEqual([
+            'recompute',
+            ...LISTS,
+            'release',
+        ]);
+        expect(keys({ reserved: true, canConfirm: false })).toEqual([
+            'recompute',
+            ...LISTS,
+            'extend',
+        ]);
     });
 
     it('offers recompute only to a caller who can read checks', () => {
-        expect(keys({ canSeeChecks: false })).toEqual([]);
+        expect(keys({ canSeeChecks: false })).toEqual(LISTS);
     });
 
     it('shows cancel only when the caller may and the order is cancellable', () => {
@@ -39,7 +49,10 @@ describe('header action gating', () => {
     it('moves confirm and cancel into the menu on mobile, with the same gates', () => {
         const m = headerActions(base, true);
         expect([m.confirm, m.cancel]).toEqual([false, false]);
-        expect(m.menu.map(i => i.key)).toEqual(['confirm', 'recompute', 'cancel']);
-        expect(keys({ cancelVisible: false, canConfirm: false }, true)).toEqual(['recompute']);
+        expect(m.menu.map(i => i.key)).toEqual(['confirm', 'recompute', ...LISTS, 'cancel']);
+        expect(keys({ cancelVisible: false, canConfirm: false }, true)).toEqual([
+            'recompute',
+            ...LISTS,
+        ]);
     });
 });

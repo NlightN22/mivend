@@ -1,49 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {
-    MvActionMenu,
-    MvButton,
-    MvInput,
-    MvModal,
-    MvNotice,
-    MvPopover,
-    useIsMobileViewport,
-} from '@mivend/ui-kit';
-import { useCancelOrderAsStaff } from '../../composables/useCancelOrderAsStaff';
+import { MvActionMenu, MvButton, MvInput, MvModal, MvNotice, MvPopover } from '@mivend/ui-kit';
+import type { RelatedDocument } from '../../api/orderDetail';
+import type { OrderHeaderCommands } from '../../composables/useOrderHeaderCommands';
 import type { useReservationActions } from '../../composables/useReservationActions';
-import { headerActions } from '../../utils/orderHeaderActions';
 import OrderConfirmForm from './OrderConfirmForm.vue';
+import OrderDocumentsModal from './OrderDocumentsModal.vue';
+import OrderProformaModal from './OrderProformaModal.vue';
 
 const props = defineProps<{
     orderId: string;
-    cancellable: boolean;
-    confirmable: boolean;
-    canSeeChecks: boolean;
+    orderCode: string;
+    cancelled: boolean;
+    documents: RelatedDocument[];
+    commands: OrderHeaderCommands;
     reservation: ReturnType<typeof useReservationActions>;
 }>();
-const emit = defineEmits<{ recompute: []; cancelled: [] }>();
+const emit = defineEmits<{ recompute: [] }>();
 
-const mobile = useIsMobileViewport(800);
-const confirmOpen = ref(false);
-const extendOpen = ref(false);
-const cancelOpen = ref(false);
-const cancelFlow = useCancelOrderAsStaff(
-    () => props.orderId,
-    () => emit('cancelled'),
-);
-const actions = computed(() =>
-    headerActions(
-        {
-            canConfirm: props.reservation.canConfirm.value,
-            confirmable: props.confirmable,
-            reserved: props.reservation.reserved.value,
-            canExtend: props.reservation.canExtend.value,
-            canSeeChecks: props.canSeeChecks,
-            cancelVisible: cancelFlow.allowed.value && props.cancellable,
-        },
-        mobile.value,
-    ),
-);
+const proformasOpen = ref(false);
+const documentsOpen = ref(false);
+const { mobile, confirmOpen, extendOpen, cancelOpen, cancelFlow, actions } = props.commands;
 const error = computed(() => props.reservation.error.value || cancelFlow.error.value);
 
 async function submitConfirm(): Promise<void> {
@@ -65,6 +42,8 @@ function onMenu(key: string): void {
     else if (key === 'extend') extendOpen.value = true;
     else if (key === 'confirm') confirmOpen.value = true;
     else if (key === 'cancel') cancelOpen.value = true;
+    else if (key === 'proformas') proformasOpen.value = true;
+    else if (key === 'documents') documentsOpen.value = true;
 }
 </script>
 
@@ -88,10 +67,22 @@ function onMenu(key: string): void {
         >
             Cancel
         </MvButton>
-        <MvActionMenu v-if="actions.menu.length" :items="actions.menu" @select="onMenu" />
+        <MvActionMenu :items="actions.menu" @select="onMenu" />
     </div>
     <MvNotice v-if="error" variant="error" class="header-actions__error">{{ error }}</MvNotice>
 
+    <OrderProformaModal
+        v-if="proformasOpen"
+        :order-id="orderId"
+        :order-code="orderCode"
+        :cancelled="cancelled"
+        @close="proformasOpen = false"
+    />
+    <OrderDocumentsModal
+        v-if="documentsOpen"
+        :documents="documents"
+        @close="documentsOpen = false"
+    />
     <MvModal v-if="mobile && confirmOpen" title="Confirm order" @close="confirmOpen = false">
         <OrderConfirmForm
             v-model:days="reservation.form.days"

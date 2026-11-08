@@ -3999,6 +3999,8 @@ export type Mutation = {
     addNoteToOrder: Order;
     /** Add an OptionGroup to a Product */
     addOptionGroupToProduct: Product;
+    /** Adds a position by its exact article (SKU); an existing line of the same product grows. */
+    addOrderLineBySku: Scalars['Boolean']['output'];
     /** Adjusts a draft OrderLine. If custom fields are defined on the OrderLine entity, a third argument 'customFields' of type `OrderLineCustomFieldsInput` will be available. */
     adjustDraftOrderLine: UpdateOrderItemsResult;
     applyCounterpartyPortalAccessChanges: Array<CounterpartyPortalAccessChangeResult>;
@@ -4501,6 +4503,12 @@ export type MutationAddNoteToOrderArgs = {
 export type MutationAddOptionGroupToProductArgs = {
     optionGroupId: Scalars['ID']['input'];
     productId: Scalars['ID']['input'];
+};
+
+export type MutationAddOrderLineBySkuArgs = {
+    orderId: Scalars['ID']['input'];
+    quantity: Scalars['Int']['input'];
+    sku: Scalars['String']['input'];
 };
 
 export type MutationAdjustDraftOrderLineArgs = {
@@ -5823,6 +5831,7 @@ export type Order = Node & {
     shippingLines: Array<ShippingLine>;
     shippingWithTax: Scalars['Money']['output'];
     state: Scalars['String']['output'];
+    statusHistory: Array<OrderStatusHistoryEntry>;
     /**
      * The subTotal is the total of all OrderLines in the Order. This figure also includes any Order-level
      * discounts which have been prorated (proportionally distributed) amongst the items of each OrderLine.
@@ -6326,6 +6335,14 @@ export type OrderStateTransitionError = ErrorResult & {
     transitionError: Scalars['String']['output'];
 };
 
+export type OrderStatusHistoryEntry = {
+    occurredAt: Scalars['DateTime']['output'];
+    previousStatus: Maybe<Scalars['String']['output']>;
+    reference: Maybe<OrderStatusReferenceInfo>;
+    status: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
+};
+
 export type OrderStatusInfo = {
     cancelled: Scalars['Boolean']['output'];
     code: Scalars['String']['output'];
@@ -6339,6 +6356,13 @@ export type OrderStatusInfo = {
     shipped: Scalars['Boolean']['output'];
     terminal: Scalars['Boolean']['output'];
     warehouseStarted: Scalars['Boolean']['output'];
+};
+
+export type OrderStatusReferenceInfo = {
+    code: Scalars['String']['output'];
+    customerVisible: Scalars['Boolean']['output'];
+    description: Scalars['String']['output'];
+    name: Scalars['String']['output'];
 };
 
 /**
@@ -11918,12 +11942,19 @@ export type OrderDetailQuery = {
                 deliveryAddress: string | null;
             } | null;
             shippingLines: Array<{ shippingMethod: { code: string } }>;
+            statusHistory: Array<{
+                uuid: string;
+                status: string;
+                occurredAt: any;
+                reference: { name: string; description: string } | null;
+            }>;
             lines: Array<{
                 id: string;
                 quantity: number;
                 unitPriceWithTax: any;
                 discountedUnitPriceWithTax: any;
                 discountedLinePriceWithTax: any;
+                featuredAsset: { preview: string } | null;
                 productVariant: {
                     id: string;
                     name: string;
@@ -12048,6 +12079,22 @@ export type RemoveOrderLineMutationVariables = Exact<{
 }>;
 
 export type RemoveOrderLineMutation = { removeOrderLine: boolean };
+
+export type AddOrderLineBySkuMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    sku: Scalars['String']['input'];
+    quantity: Scalars['Int']['input'];
+}>;
+
+export type AddOrderLineBySkuMutation = { addOrderLineBySku: boolean };
+
+export type ProductVariantsBySkuQueryVariables = Exact<{
+    sku: Scalars['String']['input'];
+}>;
+
+export type ProductVariantsBySkuQuery = {
+    productVariants: { items: Array<{ id: string; sku: string; name: string }> };
+};
 
 export type SplitOrderLinesByStockMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
@@ -15226,9 +15273,21 @@ export const OrderDetailDocument = new TypedDocumentString(`
           code
         }
       }
+      statusHistory {
+        uuid
+        status
+        occurredAt
+        reference {
+          name
+          description
+        }
+      }
       lines {
         id
         quantity
+        featuredAsset {
+          preview
+        }
         unitPriceWithTax
         discountedUnitPriceWithTax
         discountedLinePriceWithTax
@@ -15345,6 +15404,28 @@ export const RemoveOrderLineDocument = new TypedDocumentString(`
   removeOrderLine(orderId: $orderId, orderLineId: $orderLineId)
 }
     `) as unknown as TypedDocumentString<RemoveOrderLineMutation, RemoveOrderLineMutationVariables>;
+export const AddOrderLineBySkuDocument = new TypedDocumentString(`
+    mutation AddOrderLineBySku($orderId: ID!, $sku: String!, $quantity: Int!) {
+  addOrderLineBySku(orderId: $orderId, sku: $sku, quantity: $quantity)
+}
+    `) as unknown as TypedDocumentString<
+    AddOrderLineBySkuMutation,
+    AddOrderLineBySkuMutationVariables
+>;
+export const ProductVariantsBySkuDocument = new TypedDocumentString(`
+    query ProductVariantsBySku($sku: String!) {
+  productVariants(options: {take: 8, filter: {sku: {contains: $sku}}}) {
+    items {
+      id
+      sku
+      name
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ProductVariantsBySkuQuery,
+    ProductVariantsBySkuQueryVariables
+>;
 export const SplitOrderLinesByStockDocument = new TypedDocumentString(`
     mutation SplitOrderLinesByStock($orderId: ID!) {
   splitOrderLinesByStock(orderId: $orderId) {

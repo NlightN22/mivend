@@ -1,0 +1,124 @@
+.line-row td {
+    padding: 10px;
+    border-bottom: 1px solid var(--app-row-border);
+    vertical-align: middle;
+}
+
+.line-row {
+    --line-stripe: var(--app-brand-fill);
+}
+
+.line-row--danger {
+    --line-stripe: var(--app-danger-btn);
+}
+
+.line-row--orange {
+    --line-stripe: var(--app-accent-orange);
+}
+
+.line-row--warning {
+    --line-stripe: var(--app-warn-fg);
+}
+
+.line-row > td:first-child {
+    box-shadow: inset 4px 0 0 var(--line-stripe);
+}
+
+.line-row__product {
+    min-width: 180px;
+}
+
+.line-row__select {
+    width: 1%;
+}
+
+.line-row--editing {
+    background: var(--app-stock-in-bg);
+}
+
+.line-row__num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.line-row__total {
+    font-weight: 700;
+}
+
+.line-row__price-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 120px;
+}
+
+.line-row__hint {
+    display: block;
+    margin-top: 4px;
+    color: var(--app-text-grey);
+    font-size: 12px;
+}
+
+.line-row__actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.line-row__error {
+    padding: 6px 10px;
+    color: var(--app-danger-fg);
+    font-size: 13px;
+}
+
+@media (max-width: 800px) {
+    .line-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid var(--el-border-color);
+        border-left: 4px solid var(--line-stripe);
+        border-radius: var(--app-radius-md, 12px);
+        background: var(--app-surface);
+    }
+
+    .line-row--editing {
+        background: var(--app-stock-in-bg);
+    }
+
+    .line-row td,
+    .line-row > td:first-child {
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .line-row__select,
+    .line-row__product,
+    .line-row__actions {
+        grid-column: 1 / -1;
+    }
+
+    .line-row__actions {
+        width: auto;
+        text-align: right;
+    }
+
+    .line-row td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--app-text-grey);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .line-row__num :deep(.line-price) {
+        align-items: flex-start;
+    }
+}

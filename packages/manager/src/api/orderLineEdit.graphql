@@ -33,6 +33,20 @@ mutation RemoveOrderLine($orderId: ID!, $orderLineId: ID!) {
     removeOrderLine(orderId: $orderId, orderLineId: $orderLineId)
 }
 
+mutation AddOrderLineBySku($orderId: ID!, $sku: String!, $quantity: Int!) {
+    addOrderLineBySku(orderId: $orderId, sku: $sku, quantity: $quantity)
+}
+
+query ProductVariantsBySku($sku: String!) {
+    productVariants(options: { take: 8, filter: { sku: { contains: $sku } } }) {
+        items {
+            id
+            sku
+            name
+        }
+    }
+}
+
 mutation SplitOrderLinesByStock($orderId: ID!) {
     splitOrderLinesByStock(orderId: $orderId) {
         orderLineId
