@@ -1,13 +1,14 @@
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
-import type { BulkBatchRow, BulkItemRow } from './types';
+import { STALE_RUN_MINUTES, type BulkBatchRow, type BulkItemRow } from './types';
 
 type Db = Pick<TransactionalConnection, 'getRepository'>;
 
 export const BATCH_COLUMNS = `b.id, b.uuid, b.number::text AS number, b."operationType", b.parameters, b.status, b."createdById",
     b."undoOfBatchId", b."totalCount", b."appliedCount", b."skippedCount", b."failedCount",
-    b."startedAt", b."finishedAt", b."errorMessage", b."createdAt"`;
+    b."startedAt", b."finishedAt", b."errorMessage", b."createdAt",
+    (b.status = 'running' AND b."updatedAt" < now() - make_interval(mins => ${STALE_RUN_MINUTES})) AS stale`;
 
 export async function findBatch(
     db: Db,
@@ -46,7 +47,7 @@ export async function findUndoOf(
     const rows = await ctxQuery<BulkBatchRow[]>(
         db,
         ctx,
-        `SELECT ${BATCH_COLUMNS} FROM bulk_batch b WHERE b."undoOfBatchId" = $1`,
+        `SELECT ${BATCH_COLUMNS} FROM bulk_batch b WHERE b."undoOfBatchId" = $1 AND b.status <> 'draft'`,
         [batchId],
     );
     return rows[0] ?? null;
@@ -181,5 +182,42 @@ export async function refreshCounters(db: Db, ctx: RequestContext, batchId: numb
             "updatedAt" = now()
          WHERE id = $1`,
         [batchId],
+    );
+}
+
+// Reads the live rights, not the session snapshot that was serialized when the job was queued.
+export async function actorHoldsPermission(
+    db: Db,
+    ctx: RequestContext,
+    administratorId: string,
+    permission: string,
+): Promise<boolean> {
+    const rows = await ctxQuery<Array<{ ok: number }>>(
+        db,
+        ctx,
+        `SELECT 1 AS ok FROM administrator a
+         JOIN "user" u ON u.id = a."userId"
+         JOIN user_roles_role ur ON ur."userId" = u.id
+         JOIN role r ON r.id = ur."roleId"
+         WHERE a.id::text = $1 AND a."deletedAt" IS NULL AND u."deletedAt" IS NULL
+           AND $2 = ANY(string_to_array(r.permissions, ',')) LIMIT 1`,
+        [administratorId, permission],
+    );
+    return rows.length > 0;
+}
+
+export async function skipPending(
+    db: Db,
+    ctx: RequestContext,
+    batchId: number,
+    reasonCode: string,
+    message: string,
+): Promise<void> {
+    await ctxQuery(
+        db,
+        ctx,
+        `UPDATE bulk_batch_item SET outcome = 'skipped', "reasonCode" = $2, message = $3, "updatedAt" = now()
+         WHERE "batchId" = $1 AND outcome IS NULL`,
+        [batchId, reasonCode, message],
     );
 }

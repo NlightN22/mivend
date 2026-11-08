@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #337: bulk operation batches and their per-record result rows; the human number is the table's own serial.
-export class BulkBatches1791562000000 implements MigrationInterface {
-    name = 'BulkBatches1791562000000';
+export class BulkBatches1791564000000 implements MigrationInterface {
+    name = 'BulkBatches1791564000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
@@ -21,7 +21,7 @@ export class BulkBatches1791562000000 implements MigrationInterface {
             `CREATE UNIQUE INDEX "IDX_979a96e734deef8acbb7fcefc2" ON "bulk_batch" ("createdById", "selectionHash") WHERE "status" = 'draft'`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_2fcea948315a0282a8bd6bf578" ON "bulk_batch" ("undoOfBatchId") WHERE "undoOfBatchId" IS NOT NULL`,
+            `CREATE UNIQUE INDEX "IDX_67482b72a4b89a2a3738b312cb" ON "bulk_batch" ("undoOfBatchId") WHERE "undoOfBatchId" IS NOT NULL AND "status" <> 'draft'`,
         );
         await queryRunner.query(
             `CREATE TABLE "bulk_batch_item" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "batchId" integer NOT NULL, "targetId" character varying NOT NULL, "label" character varying, "previewOutcome" character varying NOT NULL, "previewReasonCode" character varying, "outcome" character varying, "reasonCode" character varying, "message" text, CONSTRAINT "PK_a9c6a2900ce15d53c42ac3f033c" PRIMARY KEY ("id"))`,

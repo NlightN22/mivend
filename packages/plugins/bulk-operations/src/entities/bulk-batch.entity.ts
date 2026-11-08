@@ -2,10 +2,15 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Generated, Index } from 'typeorm';
 
+// Accessed only through raw SQL (bulk-batch.sql.ts): the SERIAL number is read back and items are upserted via unnest.
+// Do not add a repository path beside it.
 // The numeric human number is the table's own sequence, never MAX+1 (docs/identifiers.md).
 @Entity()
 @Index(['createdById', 'selectionHash'], { unique: true, where: `"status" = 'draft'` })
-@Index(['undoOfBatchId'], { unique: true, where: '"undoOfBatchId" IS NOT NULL' })
+@Index(['undoOfBatchId'], {
+    unique: true,
+    where: `"undoOfBatchId" IS NOT NULL AND "status" <> 'draft'`,
+})
 export class BulkBatch extends UuidEntity {
     constructor(input?: DeepPartial<BulkBatch>) {
         super(input);

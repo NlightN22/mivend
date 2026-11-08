@@ -88,8 +88,9 @@ export class BulkBatchService {
                     );
                     return { batch: { ...found, status: 'queued' as const }, enqueue: true };
                 }
-                // A queued batch may have lost its job; the runner's queued->running step makes a duplicate harmless.
-                return { batch: found, enqueue: found.status === 'queued' };
+                // A queued batch may have lost its job, a running one its worker (stale); the runner's
+                // claim lets exactly one job proceed, so a duplicate enqueue is harmless.
+                return { batch: found, enqueue: found.status === 'queued' || found.stale };
             },
         );
         if (enqueue) await this.runQueue.enqueue(ctx, uuid);
@@ -121,7 +122,15 @@ export class BulkBatchService {
                 return this.preview(txCtx, plan.type, plan.parameters, applied, original.id);
             },
         );
-        return undoBatch.createdById === actor ? this.run(ctx, undoBatch.uuid) : undoBatch;
+        if (undoBatch.createdById !== actor) return undoBatch;
+        try {
+            return await this.run(ctx, undoBatch.uuid);
+        } catch (e) {
+            // Another actor queued an undo of the same original first: one non-draft undo per original.
+            const existing = await findUndoOf(this.connection, ctx, original.id);
+            if (existing && (e as { code?: string }).code === '23505') return existing;
+            throw e;
+        }
     }
 
     private async visibleAppliedTargets(

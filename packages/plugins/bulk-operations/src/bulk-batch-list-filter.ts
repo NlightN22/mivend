@@ -17,7 +17,6 @@ export const SORT_COLUMNS: Record<string, string> = {
     number: 'b.number',
     operationType: 'b."operationType"',
     status: 'b.status',
-    totalCount: 'b."totalCount"',
 };
 
 // Operation types come first: a batch of a type the viewer may not run is never reachable.

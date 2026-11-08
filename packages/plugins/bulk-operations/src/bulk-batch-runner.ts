@@ -4,7 +4,14 @@ import { ctxQuery, withAggregateLock } from 'shared';
 
 import type { BulkExecutor, BulkRecordVerdict } from './bulk-executor';
 import { BulkExecutorRegistry } from './bulk-executor-registry';
-import { findBatch, pendingItems, recordOutcome, refreshCounters } from './bulk-batch.sql';
+import {
+    actorHoldsPermission,
+    findBatch,
+    pendingItems,
+    recordOutcome,
+    refreshCounters,
+    skipPending,
+} from './bulk-batch.sql';
 import { RUN_CHUNK, loggerCtx, type BulkBatchRow, type BulkItemRow } from './types';
 
 @Injectable()
@@ -14,13 +21,31 @@ export class BulkBatchRunner {
         private registry: BulkExecutorRegistry,
     ) {}
 
-    // Safe to call repeatedly: only the call that moves queued -> running does any work.
+    // Safe to call repeatedly: only the call that claims a queued (or orphaned running) batch does any work.
     async execute(ctx: RequestContext, uuid: string): Promise<void> {
         const batch = await this.claim(ctx, uuid);
         if (!batch) return;
         try {
             const executor = this.registry.get(batch.operationType);
             for (;;) {
+                // A batch runs with the rights its creator holds when each chunk starts.
+                if (
+                    !(await actorHoldsPermission(
+                        this.connection,
+                        ctx,
+                        batch.createdById,
+                        executor.permission,
+                    ))
+                ) {
+                    await skipPending(
+                        this.connection,
+                        ctx,
+                        batch.id,
+                        'actor_not_allowed',
+                        'The administrator no longer holds the right to run this operation',
+                    );
+                    break;
+                }
                 const chunk = await pendingItems(this.connection, ctx, batch.id, RUN_CHUNK);
                 if (chunk.length === 0) break;
                 for (const item of chunk) {
@@ -40,11 +65,11 @@ export class BulkBatchRunner {
     private async claim(ctx: RequestContext, uuid: string): Promise<BulkBatchRow | null> {
         return withAggregateLock(this.connection, ctx, `bulk-batch:${uuid}`, async txCtx => {
             const batch = await findBatch(this.connection, txCtx, uuid, true);
-            if (!batch || batch.status !== 'queued') return null;
+            if (!batch || (batch.status !== 'queued' && !batch.stale)) return null;
             await ctxQuery(
                 this.connection,
                 txCtx,
-                `UPDATE bulk_batch SET status = 'running', "startedAt" = now(), "updatedAt" = now() WHERE id = $1`,
+                `UPDATE bulk_batch SET status = 'running', "startedAt" = COALESCE("startedAt", now()), "updatedAt" = now() WHERE id = $1`,
                 [batch.id],
             );
             return batch;

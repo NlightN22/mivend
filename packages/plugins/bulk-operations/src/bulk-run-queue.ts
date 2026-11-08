@@ -10,6 +10,16 @@ interface RunJobData {
     ctx: SerializedRequestContext;
 }
 
+// ctx.serialize() carries the session token and the request headers; the job table keeps them in clear text.
+function serializeForJob(ctx: RequestContext): SerializedRequestContext {
+    const serialized = ctx.serialize();
+    return {
+        ...serialized,
+        _req: undefined,
+        _session: serialized._session && { ...serialized._session, token: '' },
+    };
+}
+
 // Vendure's DB-backed job queue: the existing worker process picks it up (listed in worker.ts).
 @Injectable()
 export class BulkRunQueue implements OnModuleInit {
@@ -29,6 +39,6 @@ export class BulkRunQueue implements OnModuleInit {
     }
 
     async enqueue(ctx: RequestContext, uuid: string): Promise<void> {
-        await this.queue.add({ uuid, ctx: ctx.serialize() }, { retries: 0 });
+        await this.queue.add({ uuid, ctx: serializeForJob(ctx) }, { retries: 0 });
     }
 }

@@ -3,6 +3,8 @@ export const BULK_RUN_QUEUE = 'bulk-batch-run';
 export const MAX_SELECTION = 1000;
 export const RUN_CHUNK = 25;
 export const MAX_TAKE = 100;
+// A running batch untouched for this long is treated as orphaned and may be claimed again.
+export const STALE_RUN_MINUTES = 10;
 
 export type BulkBatchStatus = 'draft' | 'queued' | 'running' | 'done' | 'partial' | 'failed';
 export type BulkItemOutcome = 'applied' | 'skipped' | 'failed';
@@ -24,6 +26,7 @@ export interface BulkBatchRow {
     finishedAt: Date | null;
     errorMessage: string | null;
     createdAt: Date;
+    stale: boolean;
 }
 
 export interface BulkItemRow {

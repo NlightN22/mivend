@@ -2,6 +2,7 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
+// Accessed only through raw SQL (bulk-batch.sql.ts); do not add a repository path beside it.
 // One result row per record; outcome stays null until the runner reaches it.
 @Entity()
 @Index(['batchId', 'targetId'], { unique: true })
