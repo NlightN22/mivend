@@ -14,6 +14,7 @@ import {
     setSessionToken,
 } from '@vendure/core';
 
+import { SignInGuardService } from '@mivend/plugin-sign-in-protection';
 import { TwoFactorPolicyService } from '../two-factor-policy.service';
 
 type SetTokenOptions = Parameters<typeof setSessionToken>[0];
@@ -56,6 +57,7 @@ export class ShopAccountSetupResolver {
         private authService: AuthService,
         private configService: ConfigService,
         private policy: TwoFactorPolicyService,
+        private signInGuard: SignInGuardService,
     ) {}
 
     @Transaction()
@@ -87,6 +89,7 @@ export class ShopAccountSetupResolver {
     ): Promise<unknown> {
         const user = await this.customers.resetPassword(ctx, args.token, args.password);
         if (isGraphQlErrorResult(user)) return user;
+        await this.signInGuard.clearPasswordChangeRequired(ctx, String(user.id));
         return this.finish(ctx, user, false, req, res);
     }
 

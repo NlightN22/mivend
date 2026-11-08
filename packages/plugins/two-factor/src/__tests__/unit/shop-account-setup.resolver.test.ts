@@ -7,6 +7,7 @@ import type {
     User,
 } from '@vendure/core';
 
+import type { SignInGuardService } from '@mivend/plugin-sign-in-protection';
 import { ShopAccountSetupResolver } from '../../api/shop-account-setup.resolver';
 import type { TwoFactorPolicyService } from '../../two-factor-policy.service';
 
@@ -23,7 +24,9 @@ const res = { set: setHeader } as never;
 function build(enforced: boolean): {
     resolver: ShopAccountSetupResolver;
     createSession: ReturnType<typeof vi.fn>;
+    clearFlag: ReturnType<typeof vi.fn>;
 } {
+    const clearFlag = vi.fn(async () => undefined);
     const createSession = vi.fn(async () => ({ token: 'session-token', user }));
     const customers = {
         verifyCustomerEmailAddress: vi.fn(async () => ({ user })),
@@ -40,8 +43,9 @@ function build(enforced: boolean): {
             authOptions: { tokenMethod: ['bearer'], authTokenHeaderKey: 'vendure-auth-token' },
         } as unknown as ConfigService,
         { isEnforced: async () => enforced } as unknown as TwoFactorPolicyService,
+        { clearPasswordChangeRequired: clearFlag } as unknown as SignInGuardService,
     );
-    return { resolver, createSession };
+    return { resolver, createSession, clearFlag };
 }
 
 beforeEach(() => setHeader.mockReset());
@@ -93,5 +97,14 @@ describe('account setup flows that core ends with a sign-in', () => {
         const result = await resolver.resetPassword(ctx, { token: 'bad', password: 'p' }, req, res);
         expect(result).toMatchObject({ __typename: 'PasswordResetTokenInvalidError' });
         expect(createSession).not.toHaveBeenCalled();
+    });
+
+    it('clears the forced password change flag after a reset, but not after a failed one or an account verification', async () => {
+        const { resolver, clearFlag } = build(false);
+        await resolver.resetPassword(ctx, { token: 'bad', password: 'p' }, req, res);
+        await resolver.verifyCustomerAccount(ctx, { token: 't', password: 'p' }, req, res);
+        expect(clearFlag).not.toHaveBeenCalled();
+        await resolver.resetPassword(ctx, { token: 't', password: 'p' }, req, res);
+        expect(clearFlag).toHaveBeenCalledWith(ctx, '5');
     });
 });

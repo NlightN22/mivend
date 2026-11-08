@@ -12,6 +12,16 @@ export class PasswordBreachService {
         @Inject(SIGN_IN_PROTECTION_OPTIONS) private options: SignInProtectionOptions,
     ) {}
 
+    // Core's reset saves the User it loaded before the new hash, which would write the old flag back; clear it last.
+    async clearPasswordChangeRequired(ctx: RequestContext, userId: string): Promise<void> {
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `UPDATE "user" SET "customFieldsPasswordchangerequired" = false WHERE id = $1`,
+            [userId],
+        );
+    }
+
     // The only moment the plaintext exists for an old password; a hit requires a change, it does not block sign-in.
     async flagIfBreached(ctx: RequestContext, userId: string, password: string): Promise<void> {
         const checker = this.options.breach.checker;

@@ -14,6 +14,10 @@ export class SignInGuardService {
         private breach: PasswordBreachService,
     ) {}
 
+    clearPasswordChangeRequired(ctx: RequestContext, userId: string): Promise<void> {
+        return this.breach.clearPasswordChangeRequired(ctx, userId);
+    }
+
     async admit(ctx: RequestContext, login: string): Promise<boolean> {
         await this.throttle.lock(ctx, 'password', login);
         if (await this.throttle.isLocked(ctx, 'password', login)) return false;
