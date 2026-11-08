@@ -86,8 +86,8 @@ export class TokenStoreService {
     async claim(ctx: RequestContext, id: number): Promise<boolean> {
         const rows = await this.query<unknown[]>(
             ctx,
-            `UPDATE two_factor_token SET "usedAt" = $2, "updatedAt" = now()
-             WHERE id = $1 AND "usedAt" IS NULL AND "expiresAt" > $2 RETURNING id`,
+            `WITH r AS (UPDATE two_factor_token SET "usedAt" = $2, "updatedAt" = now()
+             WHERE id = $1 AND "usedAt" IS NULL AND "expiresAt" > $2 RETURNING id) SELECT id FROM r`,
             [id, new Date()],
         );
         return rows.length === 1;

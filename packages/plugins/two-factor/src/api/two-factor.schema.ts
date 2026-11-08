@@ -20,10 +20,6 @@ export const twoFactorSchema: DocumentNode = gql`
         RECOVERY_LINK_INVALID
     }
 
-    extend enum ErrorCode {
-        TWO_FACTOR_ERROR
-    }
-
     type TwoFactorError implements ErrorResult {
         errorCode: ErrorCode!
         message: String!

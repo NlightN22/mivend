@@ -7,6 +7,7 @@ import type { FactorRow } from './two-factor.types';
 
 const COLUMNS = `id, uuid, "userId", method, status, "secretEncrypted", "lastUsedStep"::float8 AS "lastUsedStep", "pendingExpiresAt", "activatedAt"`;
 
+// Writes with RETURNING are wrapped in a CTE: a bare UPDATE/DELETE returns [rows, count] through TypeORM.
 // All writes go through the caller's per-user lock (TwoFactorLockService), so reads here are made under it.
 @Injectable()
 export class FactorStoreService {
@@ -69,14 +70,14 @@ export class FactorStoreService {
     async activatePending(ctx: RequestContext, userId: string, step: number): Promise<boolean> {
         const replaced = await this.query<unknown[]>(
             ctx,
-            `DELETE FROM two_factor_factor WHERE "userId" = $1 AND status = 'active' RETURNING id`,
+            `WITH r AS (DELETE FROM two_factor_factor WHERE "userId" = $1 AND status = 'active' RETURNING id) SELECT id FROM r`,
             [userId],
         );
         const activated = await this.query<unknown[]>(
             ctx,
-            `UPDATE two_factor_factor SET status = 'active', "pendingExpiresAt" = NULL, "activatedAt" = $2,
+            `WITH r AS (UPDATE two_factor_factor SET status = 'active', "pendingExpiresAt" = NULL, "activatedAt" = $2,
                 "lastUsedStep" = $3, "updatedAt" = now()
-             WHERE "userId" = $1 AND status = 'pending' RETURNING id`,
+             WHERE "userId" = $1 AND status = 'pending' RETURNING id) SELECT id FROM r`,
             [userId, new Date(), step],
         );
         if (activated.length !== 1) throw new Error('No pending factor to activate');
@@ -87,8 +88,8 @@ export class FactorStoreService {
     async claimStep(ctx: RequestContext, factorId: number, step: number): Promise<boolean> {
         const rows = await this.query<unknown[]>(
             ctx,
-            `UPDATE two_factor_factor SET "lastUsedStep" = $2, "updatedAt" = now()
-             WHERE id = $1 AND ("lastUsedStep" IS NULL OR "lastUsedStep" < $2) RETURNING id`,
+            `WITH r AS (UPDATE two_factor_factor SET "lastUsedStep" = $2, "updatedAt" = now()
+             WHERE id = $1 AND ("lastUsedStep" IS NULL OR "lastUsedStep" < $2) RETURNING id) SELECT id FROM r`,
             [factorId, step],
         );
         return rows.length === 1;
@@ -97,7 +98,7 @@ export class FactorStoreService {
     async deleteAll(ctx: RequestContext, userId: string): Promise<number> {
         const rows = await this.query<unknown[]>(
             ctx,
-            `DELETE FROM two_factor_factor WHERE "userId" = $1 RETURNING id`,
+            `WITH r AS (DELETE FROM two_factor_factor WHERE "userId" = $1 RETURNING id) SELECT id FROM r`,
             [userId],
         );
         return rows.length;
