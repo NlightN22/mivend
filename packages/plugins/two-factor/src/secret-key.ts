@@ -24,3 +24,8 @@ export function resolveEncryptionKey(env: Env, cookieSecret: string): Buffer {
         ),
     );
 }
+
+export function derivedKeyWarning(env: Env, required: boolean): string | null {
+    if (env.NODE_ENV !== 'production' || !required || env.TWO_FACTOR_ENCRYPTION_KEY) return null;
+    return 'TWO_FACTOR_ENCRYPTION_KEY is not set: the factor key is derived from COOKIE_SECRET, and rotating COOKIE_SECRET makes every enrolled factor undecryptable. Set a dedicated key before rotating.';
+}

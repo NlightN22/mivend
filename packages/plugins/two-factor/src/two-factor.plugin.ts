@@ -1,5 +1,6 @@
-import { PluginCommonModule, VendurePlugin } from '@vendure/core';
+import { Logger, PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { RuntimeVendureConfig, Type } from '@vendure/core';
+import type { OnApplicationBootstrap } from '@nestjs/common';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 
@@ -27,7 +28,8 @@ import { TwoFactorNativeAuthenticationStrategy } from './two-factor-native.strat
 import { TwoFactorPolicyService } from './two-factor-policy.service';
 import { TwoFactorRecoveryService } from './two-factor-recovery.service';
 import { TwoFactorVerificationService } from './two-factor-verification.service';
-import { TWO_FACTOR_PLUGIN_OPTIONS } from './two-factor.types';
+import { derivedKeyWarning } from './secret-key';
+import { TWO_FACTOR_PLUGIN_OPTIONS, loggerCtx } from './two-factor.types';
 import type { TwoFactorPluginOptions } from './two-factor.types';
 import { SecondFactorMethodRegistry } from './totp/second-factor-method';
 import { totpMethod } from './totp/totp-method';
@@ -96,9 +98,14 @@ const resolvers = [
     },
     compatibility: '>0.0.0',
 })
-export class TwoFactorPlugin {
+export class TwoFactorPlugin implements OnApplicationBootstrap {
     static options: TwoFactorPluginOptions;
     static readonly nativeStrategy = new TwoFactorNativeAuthenticationStrategy();
+
+    onApplicationBootstrap(): void {
+        const warning = derivedKeyWarning(process.env, TwoFactorPlugin.options.required);
+        if (warning) Logger.warn(warning, loggerCtx);
+    }
 
     static init(options: TwoFactorPluginOptions): Type<TwoFactorPlugin> {
         this.options = options;
