@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserInputError } from '@vendure/core';
 
 import { TradingPointAdminResolver } from '../../trading-point.resolver';
@@ -13,6 +13,10 @@ describe('upsertTradingPoint location', () => {
         address: 'Addr',
         isActive: true,
     };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
     it('refuses a point without a location', async () => {
         await expect(resolver.upsertTradingPoint({} as never, args)).rejects.toThrow(
