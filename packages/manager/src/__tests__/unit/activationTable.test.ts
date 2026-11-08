@@ -50,12 +50,6 @@ describe('activation table columns', () => {
             'activated',
         ]);
     });
-
-    it('has an action column that is neither sortable nor filterable', () => {
-        const col = buildActivationColumns([]).find(c => c.field === 'actions');
-        expect(col?.sortField).toBeUndefined();
-        expect(col?.filterConfig.type).toBe('none');
-    });
 });
 
 describe('readinessText', () => {

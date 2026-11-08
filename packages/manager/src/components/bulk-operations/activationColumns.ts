@@ -75,11 +75,5 @@ export function buildActivationColumns(branches: BranchOption[]): AdvancedDataTa
             },
             mobile: { badge: true },
         },
-        {
-            field: 'actions',
-            header: 'Action',
-            width: 120,
-            filterConfig: { type: 'none' },
-        },
     ];
 }

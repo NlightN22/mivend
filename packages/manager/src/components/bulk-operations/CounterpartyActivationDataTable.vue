@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import {
-    MvButton,
     MvFilterChips,
     MvSelect,
     MvStatusBadge,
@@ -31,7 +30,7 @@ export interface ActivationFilters {
     readiness: string;
 }
 
-// Selection only spans the loaded page (cross-page selection is tracked in issue #136).
+// Rows of any readiness can be selected; the review step explains what will be skipped.
 const props = defineProps<{
     items: ActivationCandidate[];
     loading: boolean;
@@ -43,8 +42,6 @@ const props = defineProps<{
     branchOptions: BranchOption[];
     readinessCounts: ReadinessCounts;
     selectedIds: Set<string>;
-    pendingActions: Map<string, 'activate' | 'deactivate'>;
-    activatingIds: Set<string>;
     managerName: (managerErpId: string | null) => string;
     branchName: (branchId: string | null) => string;
 }>();
@@ -56,7 +53,6 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
     'update:sort': [sort: CounterpartySortParameter];
     'update:selectedIds': [ids: Set<string>];
-    activate: [counterpartyId: string];
 }>();
 
 const columns = computed(() => buildActivationColumns(props.branchOptions));
@@ -162,10 +158,6 @@ const rows = computed<Row[]>(() =>
         };
     }),
 );
-
-function canSelect(row: Row): boolean {
-    return row.readiness === 'ready' || row.readiness === 'activated';
-}
 </script>
 
 <template>
@@ -184,7 +176,6 @@ function canSelect(row: Row): boolean {
         empty-message="No counterparties match these filters"
         selectable
         :selected-ids="selectedIds"
-        :row-selectable="canSelect"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
         @update:selected-ids="emit('update:selectedIds', $event)"
@@ -208,33 +199,10 @@ function canSelect(row: Row): boolean {
             <slot name="toolbar-end" />
         </template>
 
-        <template #selection-actions="slotProps">
-            <slot name="selection-actions" v-bind="slotProps" />
-        </template>
-
         <template #cell-readiness="{ data }">
-            <MvStatusBadge v-if="pendingActions.has((data as Row).id)" variant="warning">
-                {{
-                    pendingActions.get((data as Row).id) === 'activate'
-                        ? 'Activate on Save'
-                        : 'Deactivate on Save'
-                }}
-            </MvStatusBadge>
-            <MvStatusBadge v-else :variant="READINESS_BADGE_VARIANT[(data as Row).readiness]">
+            <MvStatusBadge :variant="READINESS_BADGE_VARIANT[(data as Row).readiness]">
                 {{ (data as Row).readinessText }}
             </MvStatusBadge>
-        </template>
-
-        <template #cell-actions="{ data }">
-            <MvButton
-                v-if="(data as Row).readiness === 'ready'"
-                size="sm"
-                :loading="activatingIds.has((data as Row).id)"
-                :disabled="pendingActions.has((data as Row).id)"
-                @click.stop="emit('activate', (data as Row).id)"
-            >
-                Activate
-            </MvButton>
         </template>
     </MvAdvancedDataTable>
 </template>

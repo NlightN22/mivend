@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
-import { availableBulkOperations } from '../pages/bulk-operations/operations';
+import { canOpenBulkOperations } from '../components/bulk-operations/operationUi';
 
 // Navigation entries of the default layout, gated by the same permissions as the pages they open.
 export function useNavItems(approvalsBadgeCount: Ref<number>) {
@@ -28,7 +28,7 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
             { label: 'Team', path: '/team' },
         ];
-        if (availableBulkOperations(authStore.hasPermission).length) {
+        if (canOpenBulkOperations(authStore.hasPermission)) {
             items.push({ label: 'Bulk operations', path: '/bulk-operations' });
         }
         items.push({ label: 'Analytics', path: '/analytics' });

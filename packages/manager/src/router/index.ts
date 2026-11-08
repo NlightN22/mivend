@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { BULK_PERMISSIONS } from '../components/bulk-operations/operationPermissions';
 
 export const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -219,21 +220,38 @@ export const router = createRouter({
                     path: 'bulk-operations',
                     name: 'bulk-operations',
                     component: () => import('../pages/bulk-operations/BulkOperationsPage.vue'),
-                    meta: { requiresAuth: true, title: 'Bulk operations' },
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Bulk operations',
+                        requiresAnyPermission: BULK_PERMISSIONS,
+                    },
+                },
+                {
+                    path: 'bulk-operations/history',
+                    name: 'bulk-operations-history',
+                    component: () => import('../pages/bulk-operations/BulkHistoryPage.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Bulk operations history',
+                        requiresAnyPermission: BULK_PERMISSIONS,
+                    },
                 },
                 {
                     path: 'bulk-operations/counterparty-activation',
-                    redirect: '/bulk-operations/activate-customers',
+                    redirect: '/bulk-operations/counterparty-portal-access',
                 },
                 {
                     path: 'bulk-operations/activate-customers',
-                    name: 'bulk-operations-activate-customers',
-                    component: () =>
-                        import('../pages/bulk-operations/CounterpartyActivationPage.vue'),
+                    redirect: '/bulk-operations/counterparty-portal-access',
+                },
+                {
+                    path: 'bulk-operations/:operation',
+                    name: 'bulk-operation',
+                    component: () => import('../pages/bulk-operations/BulkOperationWizardPage.vue'),
                     meta: {
                         requiresAuth: true,
-                        title: 'Activate customers',
-                        requiresAnyPermission: ['ManageCounterpartyPortalAccess'],
+                        title: 'Bulk operation',
+                        requiresAnyPermission: BULK_PERMISSIONS,
                     },
                 },
                 ...[
