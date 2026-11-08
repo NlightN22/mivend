@@ -13,6 +13,7 @@ import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
+import { applyListFilter, applyListSort } from './proforma-invoice-list-query';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
 export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
@@ -44,11 +45,10 @@ export class ProformaInvoiceVisibilityService {
             .getRawOne<{ total: string }>();
         if (take === 0) return { items: [], totalItems: Number(countRow?.total ?? 0) };
         // Joins are to-one, so offset/limit is exact. `lines` is never read by the list, so it is not selected.
+        applyListSort(qb, options?.sort);
         const { entities, raw } = await qb
             .select(this.listColumns(ctx))
             .addSelect('counterparty.shortName', 'counterpartyShortName')
-            .orderBy('proformaInvoice.createdAt', 'DESC')
-            .addOrderBy('proformaInvoice.id', 'DESC')
             .offset(skip)
             .limit(take)
             .getRawAndEntities<{ counterpartyShortName: string | null }>();
@@ -199,6 +199,7 @@ export class ProformaInvoiceVisibilityService {
             );
         }
         this.applyScope(qb, scope);
+        applyListFilter(qb, options?.filter);
         return qb;
     }
 }

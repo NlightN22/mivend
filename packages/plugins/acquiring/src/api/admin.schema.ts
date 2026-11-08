@@ -80,8 +80,35 @@ export const adminApiExtensions: DocumentNode = gql`
         take: Int
         skip: Int
         status: String
-        "Substring match against the proforma invoice's own number (ProformaInvoice.number)."
+        "Substring match against the proforma invoice's number, the customer name and INN."
         search: String
+        filter: ProformaInvoiceFilterParameter
+        sort: ProformaInvoiceSortParameter
+    }
+
+    "Filtered on the server inside the caller's visible set; field names are a fixed whitelist."
+    input ProformaInvoiceFilterParameter {
+        number: StringOperators
+        createdAt: DateOperators
+        dueDate: DateOperators
+        amount: NumberOperators
+        "Display status: current | superseded | cancelled."
+        status: StringOperators
+        customer: StringOperators
+        customerInn: StringOperators
+        counterpartyId: IDOperators
+        orderCode: StringOperators
+        _and: [ProformaInvoiceFilterParameter!]
+        _or: [ProformaInvoiceFilterParameter!]
+    }
+
+    input ProformaInvoiceSortParameter {
+        number: SortOrder
+        createdAt: SortOrder
+        dueDate: SortOrder
+        amount: SortOrder
+        status: SortOrder
+        customer: SortOrder
     }
 
     type PaymentInboxSweepResult {
