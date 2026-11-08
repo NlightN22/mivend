@@ -92,7 +92,7 @@ export class BulkBatchQueryService {
         const outcome = options.outcome ?? null;
         const params = [batch.id, visible, outcome];
         const filter = `"batchId" = $1 AND "targetId" = ANY($2::text[])
-            AND ($3::text IS NULL OR COALESCE(outcome, 'pending') = $3)`;
+            AND ($3::text IS NULL OR COALESCE(outcome, 'pending') = $3 OR "previewOutcome" = $3)`;
         const [{ count }] = await ctxQuery<Array<{ count: string }>>(
             this.connection,
             ctx,
