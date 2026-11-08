@@ -129,7 +129,10 @@ End customers see at most a soft generic note, never these.
 **Known gaps (ERP side).** The ERP's own skip rules are mirrored from the published flags only: an organization the
 ERP never flagged is treated as controlled, so mivend can still be stricter than the ERP, hence a warning and not a
 block. The storage-unit conversion is one place, the order check data service (`storageUnitRatios`). Changing a flag,
-the setting or a unit does not mark stored results stale; they refresh at the next recompute point.
+the setting or a unit does not mark stored results stale; they refresh at the next recompute point. The manager's
+line availability (`OrderLineAvailabilityService`) applies the same skip rules (`organizationStockControlled`), so a
+manager is never refused a quantity the check no longer flags. Order accounting flags are stored as last non-empty
+value: an event without them does not clear a stored one.
 
 ## Order data controls (#241)
 

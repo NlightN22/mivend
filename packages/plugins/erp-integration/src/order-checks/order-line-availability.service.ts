@@ -13,7 +13,12 @@ import type {
 } from '@mivend/plugin-reservation';
 
 import { OrderCheckDataService } from './order-check-data.service';
-import { lineOrganization, organizationBreakdown, storageUnitRatio } from './order-check-data';
+import {
+    lineOrganization,
+    organizationBreakdown,
+    organizationStockControlled,
+    storageUnitRatio,
+} from './order-check-data';
 
 // The single stock-availability function for order lines (#233): the local free quantity of the branch
 // warehouses (the reserve's rule) capped by the stock of the line's own organization (the #237 rule).
@@ -76,7 +81,9 @@ export class OrderLineAvailabilityService
                       selling: o.id === own.organizationId,
                   }))
                 : [];
-            const orgStock = organizations.find(o => o.selling)?.stock ?? null;
+            const selling = organizations.find(o => o.selling);
+            const orgStock =
+                selling && organizationStockControlled(data, selling.id) ? selling.stock : null;
             const orgFit =
                 orgStock === null
                     ? Infinity

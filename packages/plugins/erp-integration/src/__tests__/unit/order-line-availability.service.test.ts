@@ -12,6 +12,8 @@ function build(options: {
     otherStock?: number;
     quantity?: number;
     ratio?: number;
+    notControlled?: boolean;
+    ignoredGlobally?: boolean;
 }) {
     const data: OrderCheckData = {
         storageOrganizations: new Map([['p1', ['org-own', 'org-other']]]),
@@ -30,8 +32,8 @@ function build(options: {
             ['org-other', 'Other'],
         ]),
         storageUnitRatios: new Map(options.ratio ? [['p1', options.ratio]] : []),
-        organizationControlsStock: new Map(),
-        organizationStockIgnoredGlobally: false,
+        organizationControlsStock: new Map(options.notControlled ? [['org-own', false]] : []),
+        organizationStockIgnoredGlobally: options.ignoredGlobally ?? false,
     };
     const subject = {
         orderId: '1',
@@ -99,5 +101,15 @@ describe('OrderLineAvailabilityService', () => {
     it('converts the own organization stock from the storage unit with the product ratio', async () => {
         const [line] = await build({ warehouseFree: 20, ownStock: 3, ratio: 2 });
         expect(line).toMatchObject({ available: 6, limitedBy: 'organization' });
+    });
+
+    it('does not cap by the own organization when the ERP does not control its stock', async () => {
+        const [line] = await build({ warehouseFree: 20, ownStock: 3, notControlled: true });
+        expect(line).toMatchObject({ fitting: 10, limitedBy: null });
+    });
+
+    it('does not cap by the own organization under the global ignore switch', async () => {
+        const [line] = await build({ warehouseFree: 20, ownStock: 3, ignoredGlobally: true });
+        expect(line).toMatchObject({ fitting: 10, limitedBy: null });
     });
 });

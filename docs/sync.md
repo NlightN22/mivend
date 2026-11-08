@@ -395,7 +395,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `organization_requisites.controlsStock`, `settlement_document.accounting`, `Product` custom fields
   `erpStorageUnitId`/`erpSourceFields`, `Order` custom fields `erpAccounting`/`erpLinkedDocuments`/
   `erpShippedInSettlements`. Absent in an event stays null (or keeps the stored value where the contract says absence
-  is "no information"); nothing is replicated to branches by this change.
+  is "no information"); nothing is replicated to branches by this change. Products stored before this change have no
+  storage unit until their next product event (re-export or replay), so their ratio reads as 1 until then.
 - **ERP documents stored as received (#254)**: customer claims, sales corrections, order corrections, order change
   results and powers of attorney are written by their streams into `_erp` tables (`customer_claim_erp`, ... ,
   `contract_power_of_attorney_erp`) and nothing in mivend's own records changes. Links are plain ERP ids (no foreign

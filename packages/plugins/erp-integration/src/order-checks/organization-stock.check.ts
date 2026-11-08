@@ -6,6 +6,7 @@ import {
     organizationBreakdown,
     organizationRef,
     stockOf,
+    organizationStockControlled,
     storageUnitRatio,
 } from './order-check-data';
 import type { OrderCheckData } from './order-check-data';
@@ -20,12 +21,11 @@ export function evaluateOrganizationStock(
 ): Finding[] {
     const { buyerCounterpartyId, warehouseErpId } = subject;
     if (!buyerCounterpartyId || !warehouseErpId) return [];
-    if (data.organizationStockIgnoredGlobally) return [];
     const findings: Finding[] = [];
     for (const line of subject.lines) {
         const own = lineOrganization(line, data);
         if (!own) continue;
-        if (data.organizationControlsStock.get(own.organizationId) === false) continue;
+        if (!organizationStockControlled(data, own.organizationId)) continue;
         const needed = line.quantity / storageUnitRatio(data, own.productErpId);
         const available = stockOf(data, own.productErpId, own.organizationId);
         if (needed <= available) continue;

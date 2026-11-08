@@ -24,6 +24,14 @@ export function storageUnitRatio(data: OrderCheckData, productErpId: string | nu
     return ratio !== undefined && Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
 }
 
+// The ERP skips the organization stock check for an organization flagged as not controlled and under the global switch.
+export function organizationStockControlled(data: OrderCheckData, organizationId: string): boolean {
+    return (
+        !data.organizationStockIgnoredGlobally &&
+        data.organizationControlsStock.get(organizationId) !== false
+    );
+}
+
 export function organizationRef(id: string, data: OrderCheckData): OrganizationRef {
     return { id, name: data.organizationNames.get(id) ?? null };
 }
