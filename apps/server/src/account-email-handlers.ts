@@ -28,6 +28,10 @@ export const EMAIL_SUBJECTS = {
         en: 'Access to your authenticator was recovered',
         ru: 'Доступ к аутентификатору восстановлен',
     },
+    newDeviceSignIn: {
+        en: 'New sign-in to your account',
+        ru: 'Новый вход в вашу учётную запись',
+    },
 } satisfies Record<string, Record<EmailLanguage, string>>;
 
 export function createEmailVerificationHandler(fallback: EmailLanguage) {

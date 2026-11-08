@@ -58,7 +58,8 @@ type MailType =
     | 'two-factor-enabled'
     | 'two-factor-changed'
     | 'two-factor-recovery'
-    | 'two-factor-recovery-completed';
+    | 'two-factor-recovery-completed'
+    | 'new-device-sign-in';
 const MAIL_TYPES: MailType[] = [
     'password-reset',
     'email-verification',
@@ -67,6 +68,7 @@ const MAIL_TYPES: MailType[] = [
     'two-factor-changed',
     'two-factor-recovery',
     'two-factor-recovery-completed',
+    'new-device-sign-in',
 ];
 
 async function render(
@@ -104,7 +106,17 @@ async function render(
             ...env,
         }),
     };
-    const details = await handler.handle({ ctx, user, token: 'tok1' }, globals, injector);
+    const details = await handler.handle(
+        {
+            ctx,
+            user,
+            token: 'tok1',
+            deviceLabel: 'Windows · Chrome',
+            signedInAt: new Date('2026-11-08T10:15:00Z'),
+        },
+        globals,
+        injector,
+    );
     if (!details) throw new Error('no mail');
     const generator = new HandlebarsMjmlGenerator();
     await generator.onInit({ templateLoader: loader } as unknown as InitializedEmailPluginOptions);
@@ -130,6 +142,7 @@ const LINKS: Record<MailType, string> = {
     'two-factor-changed': 'Site A',
     'two-factor-recovery': 'https://shop.example.org/two-factor-recovery?token=tok1',
     'two-factor-recovery-completed': 'Site A',
+    'new-device-sign-in': 'Windows · Chrome',
 };
 const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'password-reset': { en: 'Forgotten password reset', ru: 'Восстановление пароля' },
@@ -156,6 +169,10 @@ const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'two-factor-recovery-completed': {
         en: 'Access to your authenticator was recovered',
         ru: 'Доступ к аутентификатору восстановлен',
+    },
+    'new-device-sign-in': {
+        en: 'New sign-in to your account',
+        ru: 'Новый вход в вашу учётную запись',
     },
 };
 const DEFAULT_FOOTER: Record<EmailLanguage, string> = {

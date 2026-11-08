@@ -1,0 +1,21 @@
+{{> header title="New sign-in to your account" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Your account was just signed in to from a device we have not seen before.
+        </mj-text>
+
+        <mj-text color="#525252">
+            Device: {{ deviceLabel }}<br />
+            Time: {{ signedInAt }}
+        </mj-text>
+
+        <mj-text color="#525252">
+            If this was you, no action is needed. If it was not, change your password right away and sign out of all other sessions in your account settings. You can turn these notices off in the same place.
+        </mj-text>
+
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="This is an automated message, please do not reply." }}

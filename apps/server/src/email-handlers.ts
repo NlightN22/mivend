@@ -3,6 +3,7 @@ import {
     createEmailVerificationHandler,
 } from './account-email-handlers';
 import { EmailLanguage } from './email-language';
+import { createNewDeviceSignInHandler } from './new-device-email-handler';
 import { PasswordResetUrls, createPasswordResetHandler } from './password-reset-handler';
 import { createTwoFactorEmailHandlers } from './two-factor-email-handlers';
 
@@ -17,5 +18,6 @@ export function createEmailHandlers(
         createPasswordResetHandler(urls, fallback),
         createEmailAddressChangeHandler(fallback),
         ...createTwoFactorEmailHandlers(recoveryUrls, fallback),
+        createNewDeviceSignInHandler(fallback),
     ];
 }
