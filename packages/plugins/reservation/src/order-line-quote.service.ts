@@ -51,12 +51,16 @@ export class OrderLineQuoteService {
         if (!(await this.orderVisibility.visibleIds(ctx, [orderId])).has(String(orderId))) {
             throw new EntityNotFoundError('Order', orderId);
         }
-        const order = await this.orderService.findOne(ctx, orderId);
+        const order = await this.orderService.findOne(ctx, orderId, ['lines']);
         if (!order) throw new EntityNotFoundError('Order', orderId);
         const variant = await findVariantBySku(this.connection, ctx, sku);
+        // Adding merges into an existing line of the article, so the tier is that of existing + quantity.
+        const existing = order.lines
+            .filter(l => String(l.productVariantId) === String(variant.id))
+            .reduce((sum, l) => sum + l.quantity, 0);
         const priced = await this.moduleRef
             .get<LinePriceCheck>(LINE_PRICE_CHECK, { strict: false })
-            .quote(ctx, order, variant.id, quantity);
+            .quote(ctx, order, variant.id, existing + quantity);
         if (!priced) throw new UserInputError(noPriceMessage(sku));
         const branchId = order.customFields?.branchId;
         const locations = branchId

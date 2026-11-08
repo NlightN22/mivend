@@ -21,7 +21,14 @@ function build(opts: {
     };
     const connection = { getRepository: () => ({ createQueryBuilder: () => qb }) };
     const orderService = {
-        findOne: async () => ({ id: '5', customFields: { branchId: 'branch-a' } }),
+        findOne: async () => ({
+            id: '5',
+            customFields: { branchId: 'branch-a' },
+            lines: [
+                { productVariantId: '7', quantity: 4 },
+                { productVariantId: '8', quantity: 9 },
+            ],
+        }),
     };
     const visibility = {
         visibleIds: async () => new Set(opts.visible === false ? [] : ['5']),
@@ -73,11 +80,11 @@ describe('OrderLineQuoteService', () => {
         expect(availability.findBranchStockLocationIds).toHaveBeenCalledWith(ctx, 'branch-a');
     });
 
-    it('quotes for the given quantity, one by default', async () => {
+    it('quotes for the quantity the merged line would have, existing plus the given one', async () => {
         const t = build({});
         await t.service.quote(ctx, '5', 'AB-1');
         await t.service.quote(ctx, '5', 'AB-1', 100);
-        expect(t.quoteFn.mock.calls.map(c => c[3])).toEqual([1, 100]);
+        expect(t.quoteFn.mock.calls.map(c => c[3])).toEqual([5, 104]);
     });
 
     it.each([0, -1, 1.5, 2_000_000])('refuses the quantity %s', async quantity => {

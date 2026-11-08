@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { IconCheck, IconX } from '@tabler/icons-vue';
-import { parseQuantity } from './qtyStepperModel';
+import { decreaseDisabled, parseQuantity } from './qtyStepperModel';
 
 export interface QtyStepperLabels {
     cancel: string;
@@ -9,14 +9,22 @@ export interface QtyStepperLabels {
     quantity: string;
     confirm: string;
     increase: string;
+    wholeNumber?: string;
+    atLeast?: string;
+    atMost?: string;
+    multipleOf?: string;
 }
 
-const DEFAULT_LABELS: QtyStepperLabels = {
+const DEFAULT_LABELS: Required<QtyStepperLabels> = {
     cancel: 'Cancel',
     decrease: 'Decrease',
     quantity: 'Quantity',
     confirm: 'Confirm',
     increase: 'Increase',
+    wholeNumber: 'Enter a whole number',
+    atLeast: 'At least {n}',
+    atMost: 'At most {n}',
+    multipleOf: 'A multiple of {n}',
 };
 
 interface Props {
@@ -44,7 +52,7 @@ const props = withDefaults(defineProps<Props>(), {
     labels: () => ({}),
 });
 
-const text = computed<QtyStepperLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
+const text = computed<Required<QtyStepperLabels>>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
 
@@ -56,10 +64,22 @@ const dirty = computed(() => draft.value !== String(props.modelValue));
 const live = computed(() => props.commit === 'live');
 const typed = computed(() => props.editable || live.value);
 const editing = computed(() => props.editable && !live.value && dirty.value);
-const problem = computed(() =>
-    live.value && dirty.value
-        ? parseQuantity(draft.value, { min: props.min, max: props.max, step: props.step }).error
-        : null,
+const problem = computed(() => {
+    if (!live.value || !dirty.value) return null;
+    const { error } = parseQuantity(draft.value, {
+        min: props.min,
+        max: props.max,
+        step: props.step,
+    });
+    if (error === null) return null;
+    const t = text.value;
+    if (error === 'whole') return t.wholeNumber;
+    if (error === 'min') return t.atLeast.replace('{n}', String(props.min));
+    if (error === 'max') return t.atMost.replace('{n}', String(props.max));
+    return t.multipleOf.replace('{n}', String(props.step));
+});
+const decDisabled = computed(() =>
+    decreaseDisabled(props.modelValue, { min: props.min, step: props.step }, live.value),
 );
 const canConfirm = computed(
     () =>
@@ -137,7 +157,7 @@ function inc() {
             class="mv-qty-stepper__btn"
             type="button"
             :aria-label="text.decrease"
-            :disabled="disabled || modelValue - step < min"
+            :disabled="disabled || decDisabled"
             @click="dec"
         >
             −
