@@ -18,6 +18,8 @@ import { TradingPointConsumer } from './consumers/trading-point.consumer';
 import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
+import { ContractPowerOfAttorneyErp } from './entities/contract-power-of-attorney-erp.entity';
+import { PowerOfAttorneyErpService } from './power-of-attorney-erp.service';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
@@ -131,6 +133,7 @@ const adminResolvers = [
         ContactPerson,
         CounterpartyTeamMember,
         Contract,
+        ContractPowerOfAttorneyErp,
     ],
     shopApiExtensions: {
         schema: gql`
@@ -170,6 +173,7 @@ const adminResolvers = [
         CreditTermScopeRegistrar,
         CounterpartyPortalAccessService,
         ContractService,
+        PowerOfAttorneyErpService,
         CreditLimitCheckService,
         CreditLimitRecomputeService,
     ],
@@ -180,6 +184,7 @@ const adminResolvers = [
         TradingPointChangeService,
         TradingPointLocationReportService,
         ContractService,
+        PowerOfAttorneyErpService,
         CreditLimitCheckService,
         CreditLimitRecomputeService,
     ],

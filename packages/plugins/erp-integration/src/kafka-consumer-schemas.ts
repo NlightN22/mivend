@@ -29,6 +29,9 @@ import {
     LegalFormChangedSchema,
     BankChangedSchema,
     BankAccountChangedSchema,
+    CustomerClaimChangedSchema,
+    OrderCorrectionChangedSchema,
+    SalesCorrectionChangedSchema,
     ProductPhotoChangedSchema,
     UnitChangedSchema,
     UserChangedSchema,
@@ -38,7 +41,11 @@ import {
 
 import type { InboundStream } from './types';
 
-type OrderEventStream = 'order-registration-result' | 'order-changed' | 'order-cancel-result';
+type OrderEventStream =
+    | 'order-registration-result'
+    | 'order-changed'
+    | 'order-cancel-result'
+    | 'order-change-result';
 
 export const SCHEMA_BY_STREAM: Record<
     Exclude<InboundStream, OrderEventStream>,
@@ -78,4 +85,7 @@ export const SCHEMA_BY_STREAM: Record<
     bank: BankChangedSchema,
     'bank-account': BankAccountChangedSchema,
     'product-photo': ProductPhotoChangedSchema,
+    'customer-claim': CustomerClaimChangedSchema,
+    'sales-correction': SalesCorrectionChangedSchema,
+    'order-correction': OrderCorrectionChangedSchema,
 };

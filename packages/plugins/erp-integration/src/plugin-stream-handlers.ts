@@ -34,6 +34,10 @@ import { SettlementDocumentStreamHandler } from './handlers/settlement-document.
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
+import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
+import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
+import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 
 // One provider per inbound stream; IntegrationInboxProcessorService maps stream -> handler.
 export const STREAM_HANDLERS = [
@@ -73,4 +77,8 @@ export const STREAM_HANDLERS = [
     SettlementBalanceStreamHandler,
     SettlementDocumentTypeStreamHandler,
     OrderStatusStreamHandler,
+    CustomerClaimStreamHandler,
+    SalesCorrectionStreamHandler,
+    OrderCorrectionStreamHandler,
+    OrderChangeResultStreamHandler,
 ];

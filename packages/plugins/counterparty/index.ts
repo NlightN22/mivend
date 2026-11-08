@@ -5,6 +5,12 @@ export { TradingPointLocationReportService } from './src/trading-point-location-
 export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { ErpIdLookupService } from './src/erp-id-lookup.service';
 export { ContractService } from './src/contract.service';
+export { PowerOfAttorneyErpService } from './src/power-of-attorney-erp.service';
+export type {
+    PowerOfAttorneyErpItem,
+    PowerOfAttorneyErpReplace,
+} from './src/power-of-attorney-erp.service';
+export { ContractPowerOfAttorneyErp } from './src/entities/contract-power-of-attorney-erp.entity';
 export type { ContractStreamFields } from './src/contract.service';
 export { chooseOrderContract, isSelectableContract } from './src/order-contract-rule';
 export { CreditLimitRecomputeService } from './src/credit-limit-recompute.service';

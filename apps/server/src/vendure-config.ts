@@ -721,6 +721,7 @@ export const config: VendureConfig = {
                     'order-registration-result': orderEventsTopic,
                     'order-changed': orderEventsTopic,
                     'order-cancel-result': orderEventsTopic,
+                    'order-change-result': orderEventsTopic,
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
                         'erp.department.events.v1',
@@ -799,6 +800,16 @@ export const config: VendureConfig = {
                     'order-status':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATUS ??
                         'erp.order-status.events.v1',
+                    // #254: stored as received, see CustomerClaimStreamHandler and its siblings.
+                    'customer-claim':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_CLAIM ??
+                        'erp.customer-claim.events.v1',
+                    'sales-correction':
+                        process.env.INTEGRATION_KAFKA_TOPIC_SALES_CORRECTION ??
+                        'erp.sales-correction.events.v1',
+                    'order-correction':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CORRECTION ??
+                        'erp.order-correction.events.v1',
                 },
             },
             schemaRegistry: {

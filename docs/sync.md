@@ -386,6 +386,11 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   mirror seeds mivend's record (and creates it); afterwards the stream moves only `isActive` and the owning
   counterparty on mivend's record and never touches name, address, coordinates, working hours or contacts.
   `upsertTradingPoint` follows the same rule.
+- **ERP documents stored as received (#254)**: customer claims, sales corrections, order corrections, order change
+  results and powers of attorney are written by their streams into `_erp` tables (`customer_claim_erp`, ... ,
+  `contract_power_of_attorney_erp`) and nothing in mivend's own records changes. Links are plain ERP ids (no foreign
+  keys), a missing target never blocks the event, a tombstone sets `isDeleted` and keeps the data, a newer version
+  replaces the header and all lines. The tables are not replicated to branches: no branch feature reads them yet.
 - **Moderation (#328)**: a customer edit of an ERP-confirmed point (`customerOwned = false`) is stored as a
   `trading_point_change` (one pending change per point, a newer edit supersedes it) and does not touch the record
   until a manager accepts it (`acceptTradingPointChange`, scope-checked like a staff edit; acceptance runs the staff

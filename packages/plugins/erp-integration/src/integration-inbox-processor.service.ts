@@ -25,6 +25,10 @@ import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.h
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
+import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
+import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
+import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { RetroBonusSetupStreamHandler } from './handlers/retro-bonus-setup.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
@@ -105,6 +109,10 @@ export class IntegrationInboxProcessorService {
         settlementDocumentTypeHandler: SettlementDocumentTypeStreamHandler,
         orderStatusHandler: OrderStatusStreamHandler,
         stockOrganizationHandler: StockOrganizationStreamHandler,
+        customerClaimHandler: CustomerClaimStreamHandler,
+        salesCorrectionHandler: SalesCorrectionStreamHandler,
+        orderCorrectionHandler: OrderCorrectionStreamHandler,
+        orderChangeResultHandler: OrderChangeResultStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -144,6 +152,10 @@ export class IntegrationInboxProcessorService {
             'settlement-document-type': settlementDocumentTypeHandler,
             'order-status': orderStatusHandler,
             'stock-organization': stockOrganizationHandler,
+            'customer-claim': customerClaimHandler,
+            'sales-correction': salesCorrectionHandler,
+            'order-correction': orderCorrectionHandler,
+            'order-change-result': orderChangeResultHandler,
         };
     }
 
