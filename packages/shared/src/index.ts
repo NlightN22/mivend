@@ -115,6 +115,7 @@ export {
     type ApiKeyOptions,
 } from './api-key';
 export { isNewerVersion, shouldApplyDocument } from './ordering-version';
+export { bigintNumber, toMinorUnits } from './money';
 
 export { classifySelectionFilter } from './selection-filter';
 export type { FilterClassification, FilterField, FilterSide, FilterTerm } from './selection-filter';

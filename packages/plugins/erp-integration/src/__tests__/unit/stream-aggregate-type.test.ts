@@ -24,15 +24,21 @@ describe('streamToAggregateType', () => {
 
     it('every consumed stream is either replayable or deliberately excluded', () => {
         const unmapped = ALL_INBOUND_STREAMS.filter(s => streamToAggregateType(s) === null);
-        expect(unmapped).toEqual([
-            'order-cancel-result',
-            'vat-rate',
-            'counterparty-contact',
-            'counterparty-group',
-            'product-group',
-            'point-of-sale-type',
-            'setting',
-        ]);
+        expect([...unmapped].sort()).toEqual(
+            [
+                'counterparty-contact',
+                'counterparty-group',
+                'customer-claim',
+                'order-cancel-result',
+                'order-change-result',
+                'order-correction',
+                'point-of-sale-type',
+                'product-group',
+                'sales-correction',
+                'setting',
+                'vat-rate',
+            ].sort(),
+        );
         for (const stream of ALL_INBOUND_STREAMS) {
             const type = streamToAggregateType(stream);
             if (type) expect(REPLAYABLE_AGGREGATE_TYPES).toContain(type);

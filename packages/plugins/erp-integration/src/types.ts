@@ -157,7 +157,12 @@ export type InboundStream =
     // Issue #227: the ERP-owned document type reference (category, customer visibility).
     | 'settlement-document-type'
     // sp#200: the ERP-owned order status reference (rank, visibility, description).
-    | 'order-status';
+    | 'order-status'
+    // #254: ERP-owned documents stored as received, see ErpDocumentWriter.
+    | 'customer-claim'
+    | 'sales-correction'
+    | 'order-correction'
+    | 'order-change-result';
 
 // proto3 omits false-valued bool fields from the JSON, so an absent isActive means inactive:
 // read payload.isActive === true, never !== false. isDeleted is unaffected.
@@ -251,6 +256,10 @@ const ALL_INBOUND_STREAMS_MAP = {
     'settlement-balance': true,
     'settlement-document-type': true,
     'order-status': true,
+    'customer-claim': true,
+    'sales-correction': true,
+    'order-correction': true,
+    'order-change-result': true,
 } satisfies Record<InboundStream, true>;
 export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

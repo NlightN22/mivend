@@ -1,6 +1,7 @@
 import { fromBinary, toJson } from '@bufbuild/protobuf';
 import {
     OrderCancelResultSchema,
+    OrderChangeResultSchema,
     OrderChangedSchema,
     ErpOrderEventSchema,
     OrderRegistrationResultSchema,
@@ -19,9 +20,8 @@ import type { InboundStream } from './types';
 
 export type ClassifiedOrderEvent = ClassifiedKafkaMessage | { kind: 'skipped'; type: string };
 
-type OneofCase = 'registrationResult' | 'cancelResult' | 'changed';
+type OneofCase = 'registrationResult' | 'cancelResult' | 'changed' | 'changeResult';
 
-// change-result has no consumer yet (mivend sends no change commands), so it is skipped like an unknown type.
 const ROUTES: Partial<Record<ErpOrderEventType, { stream: InboundStream; oneofCase: OneofCase }>> =
     {
         'registration-result': {
@@ -30,6 +30,7 @@ const ROUTES: Partial<Record<ErpOrderEventType, { stream: InboundStream; oneofCa
         },
         'cancel-result': { stream: 'order-cancel-result', oneofCase: 'cancelResult' },
         changed: { stream: 'order-changed', oneofCase: 'changed' },
+        'change-result': { stream: 'order-change-result', oneofCase: 'changeResult' },
     };
 
 export const ORDER_EVENT_STREAMS: readonly InboundStream[] = Object.values(ROUTES).map(
@@ -77,7 +78,9 @@ export function classifyOrderEventMessage(
             ? OrderRegistrationResultSchema
             : oneofCase === 'cancelResult'
               ? OrderCancelResultSchema
-              : OrderChangedSchema;
+              : oneofCase === 'changeResult'
+                ? OrderChangeResultSchema
+                : OrderChangedSchema;
     const record = toJson(schema, event.event.value as never) as Record<string, unknown>;
     return classifyDecodedRecord(route.stream, record, message, partition);
 }

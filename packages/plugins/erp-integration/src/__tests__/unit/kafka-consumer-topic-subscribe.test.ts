@@ -91,6 +91,10 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 'settlement-balance': 'sbal',
                 'settlement-document-type': 'sdtype',
                 'order-status': 'ostat',
+                'customer-claim': 'x-customer-claim',
+                'sales-correction': 'x-sales-correction',
+                'order-correction': 'x-order-correction',
+                'order-change-result': 'erp.order.events.v1',
             },
         },
         schemaRegistry: { url: 'http://x' },
@@ -111,7 +115,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(38);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -126,7 +130,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(38);
         expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
             expect.objectContaining({ topic: 'orphan-topic' }),
         );
@@ -153,7 +157,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(38);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
