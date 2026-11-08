@@ -79,16 +79,35 @@ Refinements of the model above; the sections above stay the contract.
   The job moves `queued` to `running` once, so a second call or a second job has no second effect, and applies the
   records one at a time, each in its own short lock-and-transaction, recording the outcome row by row. A record that
   throws becomes `failed` and the run continues; permission is re-checked per record.
-- **Undo.** `undoBulkBatch(uuid)` creates (once per original, enforced by a unique index) a new linked batch for the
+- **Rights during a run.** A batch runs with the rights its creator holds when each chunk starts: before every chunk
+  the runner re-reads from the database that the administrator is not deleted and still holds the operation's
+  permission; if not, the records still pending are marked `skipped` with reason `actor_not_allowed` (the narrower
+  choice: nothing already applied is touched and the batch still ends `done`/`partial`). Scope is derived from the
+  database per record as well. The job carries a serialized request context without the session token and without
+  the request headers, because the job table keeps its payload in clear text.
+- **Recovery.** A `running` batch whose `updatedAt` is older than 10 minutes (`STALE_RUN_MINUTES`) is treated as
+  orphaned: `runBulkBatch` enqueues it again and the runner claims it under the same lock. The runner touches
+  `updatedAt` after every chunk, so a live run is never reclaimed. Finished records are never re-applied; the pending
+  ones are, and each `apply` re-validates under the row lock.
+- **Review equals run.** The review applies the same checks in the same order as the run, including the INN guards
+  (`no_inn`, `inn_duplicate`), so a record the review shows as "will apply" is not skipped for a known precondition at
+  run time. Precondition failures are reported as skips with a friendly reason; `failed` is reserved for errors.
+- **Undo.** `undoBulkBatch(uuid)` creates (one non-draft undo per original, enforced by a partial unique index; every actor may keep their own undo draft) a new linked batch for the
   applied records the viewer can see and runs it. Only an operation that declares `undoPlan` offers it. Activation
   grants are undoable; a revoke is not (the customer login is soft-deleted and a re-grant would create a new one).
 - **History scope.** The list shows finished batches of the types the viewer holds; the header (number, operation,
   who, when) is visible to every holder of the permission, while counters and the per-record table cover only the
   records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date
-  range), sorts a whitelist of columns, `take` is clamped to 100.
+  range), sorts a whitelist of columns (never the stored unscoped record count), `take` is clamped to 100.
 - **Select step.** Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
   rows of the current page. Selection across pages is kept while the wizard is open; select-all-matching-the-filter is
   still out of scope.
 - **Routes.** `/bulk-operations` (catalog), `/bulk-operations/history`, `/bulk-operations/:operation` (the wizard;
   `?batch=<uuid>` reopens a draft at the review or a finished batch at the result). The old
   `/bulk-operations/activate-customers` and `/counterparty-activation` links redirect.
+
+### Known scale limit of the history list
+
+`scoped()` loads the item rows of the page's batches and calls `visibleTargets` once per operation type over all their
+ids. It is fine for batches of up to 1000 records and pages of 100. When it grows, compute the visible counts in SQL
+over the visible id set and cache `visibleTargets` per request.
