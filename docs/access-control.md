@@ -651,7 +651,7 @@ returns the current employee's ceiling per line for the manager card (null for a
 and the floor are never part of a finding and never reach the customer.
 
 `orderLineQuote(orderId, sku)` (the add-position row of the order card) needs `ConfirmOrder` like `addOrderLineBySku`, is refused
-for an order outside the caller's scope (`OrderVisibilityService`), and refuses an unknown, ambiguous or unpriced article with
+for an order outside the caller's scope (`OrderVisibilityService`), and refuses an unknown, ambiguous, unpriced or seller-organization-less article with
 the same messages as the add. It takes an optional quantity (default 1, a whole number up to the line limit) and returns the customer's unit price for a line
 of that quantity (the cart's resolution with the order's tier and promotion rules), the reference price (equal to it) and the
 free stock of the branch warehouses; it writes nothing.
