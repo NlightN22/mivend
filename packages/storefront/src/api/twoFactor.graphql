@@ -21,7 +21,10 @@ mutation StartTwoFactorSignIn($username: String!, $password: String!) {
 }
 
 mutation AuthenticateTwoFactor($challenge: String!, $code: String!, $rememberMe: Boolean) {
-    authenticate(input: { twoFactor: { challenge: $challenge, code: $code } }, rememberMe: $rememberMe) {
+    authenticate(
+        input: { twoFactor: { challenge: $challenge, code: $code } }
+        rememberMe: $rememberMe
+    ) {
         __typename
         ... on InvalidCredentialsError {
             authenticationError

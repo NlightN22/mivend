@@ -12,7 +12,12 @@ query GeoConfig {
     }
 }
 
-query SearchAddress($query: String!, $biasLatitude: Float, $biasLongitude: Float, $provider: String) {
+query SearchAddress(
+    $query: String!
+    $biasLatitude: Float
+    $biasLongitude: Float
+    $provider: String
+) {
     searchAddress(
         query: $query
         biasLatitude: $biasLatitude

@@ -48,7 +48,10 @@ function toggle(group: AppSidebarItem): void {
                             />
                         </span>
                     </button>
-                    <ul v-if="isExpanded(item)" class="mv-app-sidebar__list mv-app-sidebar__sublist">
+                    <ul
+                        v-if="isExpanded(item)"
+                        class="mv-app-sidebar__list mv-app-sidebar__sublist"
+                    >
                         <li v-for="child in item.children" :key="child.path">
                             <RouterLink
                                 class="mv-app-sidebar__link"

@@ -13,7 +13,9 @@ async function openSearch(page: Page): Promise<void> {
 }
 
 test.describe('phone search overlay', () => {
-    test('the keyboard search key runs the search and the overlay stays closed', async ({ page }) => {
+    test('the keyboard search key runs the search and the overlay stays closed', async ({
+        page,
+    }) => {
         await openSearch(page);
         await overlay(page).locator('input').fill('oil');
         await overlay(page).locator('input').press('Enter');
@@ -24,9 +26,13 @@ test.describe('phone search overlay', () => {
         await expect(overlay(page)).toHaveCount(0);
     });
 
-    test('the close button closes the overlay and returns focus to the magnifier', async ({ page }) => {
+    test('the close button closes the overlay and returns focus to the magnifier', async ({
+        page,
+    }) => {
         await openSearch(page);
-        await overlay(page).getByRole('button', { name: /close search|закрыть поиск/i }).click();
+        await overlay(page)
+            .getByRole('button', { name: /close search|закрыть поиск/i })
+            .click();
 
         await expect(overlay(page)).toHaveCount(0);
         await expect(trigger(page)).toBeFocused();

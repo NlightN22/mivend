@@ -153,7 +153,9 @@ async function submit(): Promise<void> {
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="tp-edit-form__actions">
-            <MvButton :loading="submitting" :disabled="!form.location" @click="submit">Save changes</MvButton>
+            <MvButton :loading="submitting" :disabled="!form.location" @click="submit"
+                >Save changes</MvButton
+            >
             <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
                 Cancel
             </button>

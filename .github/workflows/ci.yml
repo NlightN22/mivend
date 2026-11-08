@@ -67,6 +67,9 @@ jobs:
             - run: pnpm config set "//npm.pkg.github.com/:_authToken" "${{ secrets.PACKAGES_READ_TOKEN }}"
             - run: pnpm install --frozen-lockfile
 
+            - name: Build plugins
+              run: pnpm build:plugins
+
             - name: Run unit tests
               run: pnpm test
 

@@ -23,5 +23,6 @@ pnpm --filter server exec tsc --noEmit
 pnpm --filter @mivend/storefront exec vue-tsc --noEmit
 pnpm --filter @mivend/manager exec vue-tsc --noEmit
 pnpm --filter @mivend/dashboard exec tsc --noEmit
+pnpm build:plugins
 pnpm test
 pnpm exec vitest run packages/plugins/sync/src/__tests__/contracts

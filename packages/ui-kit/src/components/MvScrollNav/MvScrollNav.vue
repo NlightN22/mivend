@@ -5,7 +5,7 @@ import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
 
 const props = withDefaults(
     defineProps<{ down?: boolean; upLabel?: string; downLabel?: string }>(),
-    { down: true, upLabel: 'Scroll to top', downLabel: 'Scroll to bottom' }
+    { down: true, upLabel: 'Scroll to top', downLabel: 'Scroll to bottom' },
 );
 
 const SHOW_UP_THRESHOLD_PX = 400;

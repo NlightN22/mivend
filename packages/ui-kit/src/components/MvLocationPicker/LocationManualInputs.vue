@@ -23,8 +23,20 @@ const messages: Record<CoordinateError, keyof LocationPickerLabels> = {
 
 <template>
     <form class="mv-loc-manual" @submit.prevent="emit('apply', latitude, longitude)">
-        <MvInput v-model="latitude" inputmode="numeric" :placeholder="labels.latitude" :aria-label="labels.latitude" :error="error === 'latitude' || error === 'notSet'" />
-        <MvInput v-model="longitude" inputmode="numeric" :placeholder="labels.longitude" :aria-label="labels.longitude" :error="error === 'longitude' || error === 'notSet'" />
+        <MvInput
+            v-model="latitude"
+            inputmode="numeric"
+            :placeholder="labels.latitude"
+            :aria-label="labels.latitude"
+            :error="error === 'latitude' || error === 'notSet'"
+        />
+        <MvInput
+            v-model="longitude"
+            inputmode="numeric"
+            :placeholder="labels.longitude"
+            :aria-label="labels.longitude"
+            :error="error === 'longitude' || error === 'notSet'"
+        />
         <MvButton variant="secondary" native-type="submit">{{ labels.manualHint }}</MvButton>
         <p v-if="error" class="mv-loc-manual__error" role="alert">{{ labels[messages[error]] }}</p>
     </form>
