@@ -3,6 +3,8 @@ import {
     EndAllSessionsDocument,
     EndSessionDocument,
     MySessionsDocument,
+    MySignInSettingsDocument,
+    SetNewDeviceEmailDocument,
     type MySessionsQuery,
 } from './generated/graphql';
 
@@ -21,4 +23,14 @@ export async function endSession(id: string): Promise<boolean> {
 export async function endAllSessions(): Promise<boolean> {
     const result = await shopApi(EndAllSessionsDocument);
     return result.endAllSessions;
+}
+
+export async function fetchNewDeviceEmail(): Promise<boolean> {
+    const result = await shopApi(MySignInSettingsDocument);
+    return result.mySignInSettings.newDeviceEmail;
+}
+
+export async function setNewDeviceEmail(enabled: boolean): Promise<boolean> {
+    const result = await shopApi(SetNewDeviceEmailDocument, { enabled });
+    return result.setNewDeviceEmail.newDeviceEmail;
 }

@@ -1918,6 +1918,7 @@ export type Mutation = {
     endAllSessions: Scalars['Boolean']['output'];
     endOtherSessions: Scalars['Boolean']['output'];
     endSession: Scalars['Boolean']['output'];
+    setNewDeviceEmail: SignInSettings;
     exchangeActingTicket: ActingSessionToken;
     finishActingSession: Scalars['Boolean']['output'];
     /** Payment request under an own active customer contract; a repeated idempotencyKey returns the same document. */
@@ -3689,6 +3690,7 @@ export type Query = {
     myPayments: PaymentAttemptList;
     myProformaInvoices: ProformaInvoiceList;
     mySessions: Array<SessionSummary>;
+    mySignInSettings: SignInSettings;
     myTradingPoints: Array<TradingPoint>;
     newArrivalProductIds: Array<Scalars['ID']['output']>;
     /** Returns the possible next states that the activeOrder can transition to */
@@ -4071,6 +4073,10 @@ export type Seller = Node & {
     id: Scalars['ID']['output'];
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type SignInSettings = {
+    newDeviceEmail: Scalars['Boolean']['output'];
 };
 
 export type SessionSummary = {
@@ -4757,6 +4763,16 @@ export type EndSessionMutation = { endSession: boolean };
 export type EndAllSessionsMutationVariables = Exact<{ [key: string]: never }>;
 
 export type EndAllSessionsMutation = { endAllSessions: boolean };
+
+export type MySignInSettingsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type MySignInSettingsQuery = { mySignInSettings: { newDeviceEmail: boolean } };
+
+export type SetNewDeviceEmailMutationVariables = Exact<{
+    enabled: Scalars['Boolean']['input'];
+}>;
+
+export type SetNewDeviceEmailMutation = { setNewDeviceEmail: { newDeviceEmail: boolean } };
 
 export type TwoFactorStatusQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -6341,6 +6357,23 @@ export const EndAllSessionsDocument = new TypedDocumentString(`
   endAllSessions
 }
     `) as unknown as TypedDocumentString<EndAllSessionsMutation, EndAllSessionsMutationVariables>;
+export const MySignInSettingsDocument = new TypedDocumentString(`
+    query MySignInSettings {
+  mySignInSettings {
+    newDeviceEmail
+  }
+}
+    `) as unknown as TypedDocumentString<MySignInSettingsQuery, MySignInSettingsQueryVariables>;
+export const SetNewDeviceEmailDocument = new TypedDocumentString(`
+    mutation SetNewDeviceEmail($enabled: Boolean!) {
+  setNewDeviceEmail(enabled: $enabled) {
+    newDeviceEmail
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetNewDeviceEmailMutation,
+    SetNewDeviceEmailMutationVariables
+>;
 export const TwoFactorStatusDocument = new TypedDocumentString(`
     query TwoFactorStatus {
   twoFactorStatus {

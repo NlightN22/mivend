@@ -152,6 +152,10 @@ export default {
             paymentsNote: 'Upcoming payments, debt, changes to available credit limit.',
             marketing: 'Marketing',
             marketingNote: 'Promotions, curated selections and special prices.',
+            newDevice: 'New-device sign-in',
+            newDeviceNote:
+                'E-mail me when my account is signed in to from a browser or device not seen before.',
+            newDeviceFailed: 'Could not save the setting, try again.',
         },
         interface: {
             title: 'Interface',

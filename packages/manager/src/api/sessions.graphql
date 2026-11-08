@@ -16,3 +16,15 @@ mutation EndSession($id: ID!) {
 mutation EndAllSessions {
     endAllSessions
 }
+
+query MySignInSettings {
+    mySignInSettings {
+        newDeviceEmail
+    }
+}
+
+mutation SetNewDeviceEmail($enabled: Boolean!) {
+    setNewDeviceEmail(enabled: $enabled) {
+        newDeviceEmail
+    }
+}

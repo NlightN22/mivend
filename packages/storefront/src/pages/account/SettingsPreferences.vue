@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { MvNotImplemented } from '@mivend/ui-kit';
 import { useDemoMode } from '../../composables/useDemoMode';
 import { useViewMode } from '../../composables/useViewMode';
+import SettingsNewDeviceEmail from './SettingsNewDeviceEmail.vue';
 
 const { demoAllowed } = useDemoMode();
 const { viewMode, setViewMode } = useViewMode();
@@ -49,6 +50,9 @@ const notifications = ref<Record<(typeof NOTIFICATION_KEYS)[number], boolean>>({
                     @click="notifications[key] = !notifications[key]"
                 />
             </div>
+        </div>
+        <div class="set-toggles">
+            <SettingsNewDeviceEmail />
         </div>
     </div>
 

@@ -4232,6 +4232,7 @@ export type Mutation = {
     endAllSessions: Scalars['Boolean']['output'];
     endOtherSessions: Scalars['Boolean']['output'];
     endSession: Scalars['Boolean']['output'];
+    setNewDeviceEmail: SignInSettings;
     escalateApprovalRequest: ApprovalRequest;
     extendOrderReservation: Array<Reservation>;
     flushBufferedJobs: Success;
@@ -7986,6 +7987,7 @@ export type Query = {
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
     mySessions: Array<SessionSummary>;
+    mySignInSettings: SignInSettings;
     /** The calling administrator's own notifications plus visible broadcast notifications, newest first, server-paginated (issue #87). */
     notifications: NotificationList;
     /** Open entity-completeness discrepancies against Integration Service's reconciliation summary (issue #84), newest first. */
@@ -9305,6 +9307,10 @@ export type ServerConfig = {
     orderProcess: Array<OrderProcessState>;
     permissions: Array<PermissionDefinition>;
     permittedAssetTypes: Array<Scalars['String']['output']>;
+};
+
+export type SignInSettings = {
+    newDeviceEmail: Scalars['Boolean']['output'];
 };
 
 export type SessionSummary = {
@@ -13168,6 +13174,16 @@ export type EndAllSessionsMutationVariables = Exact<{ [key: string]: never }>;
 
 export type EndAllSessionsMutation = { endAllSessions: boolean };
 
+export type MySignInSettingsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type MySignInSettingsQuery = { mySignInSettings: { newDeviceEmail: boolean } };
+
+export type SetNewDeviceEmailMutationVariables = Exact<{
+    enabled: Scalars['Boolean']['input'];
+}>;
+
+export type SetNewDeviceEmailMutation = { setNewDeviceEmail: { newDeviceEmail: boolean } };
+
 export type RolesQueryVariables = Exact<{
     codes: Array<Scalars['String']['input']> | Scalars['String']['input'];
 }>;
@@ -16820,6 +16836,23 @@ export const EndAllSessionsDocument = new TypedDocumentString(`
   endAllSessions
 }
     `) as unknown as TypedDocumentString<EndAllSessionsMutation, EndAllSessionsMutationVariables>;
+export const MySignInSettingsDocument = new TypedDocumentString(`
+    query MySignInSettings {
+  mySignInSettings {
+    newDeviceEmail
+  }
+}
+    `) as unknown as TypedDocumentString<MySignInSettingsQuery, MySignInSettingsQueryVariables>;
+export const SetNewDeviceEmailDocument = new TypedDocumentString(`
+    mutation SetNewDeviceEmail($enabled: Boolean!) {
+  setNewDeviceEmail(enabled: $enabled) {
+    newDeviceEmail
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetNewDeviceEmailMutation,
+    SetNewDeviceEmailMutationVariables
+>;
 export const RolesDocument = new TypedDocumentString(`
     query Roles($codes: [String!]!) {
   roles(options: {filter: {code: {in: $codes}}}) {
