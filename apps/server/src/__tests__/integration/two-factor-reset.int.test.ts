@@ -12,15 +12,19 @@ import { resetTwoFactor, type SqlClient } from '../../two-factor-reset';
 const { schema, extra } = testSchemaOptions('two_factor_reset');
 let dataSource: DataSource;
 
+// TypeORM answers DELETE ... RETURNING with [rows, count], a pg Client with the rows only.
+function rowsOf(result: unknown): Array<Record<string, unknown>> {
+    const pair = Array.isArray(result) && result.length === 2 && typeof result[1] === 'number';
+    return (pair ? (result as unknown[])[0] : result) as Array<Record<string, unknown>>;
+}
+
 // The reset script drives BEGIN/COMMIT itself, so it gets one pinned connection like a pg Client.
 async function withClient<T>(run: (client: SqlClient) => Promise<T>): Promise<T> {
     const runner = dataSource.createQueryRunner();
     await runner.connect();
     try {
         return await run({
-            query: async (sql, params) => ({
-                rows: (await runner.query(sql, params)) as Array<Record<string, unknown>>,
-            }),
+            query: async (sql, params) => ({ rows: rowsOf(await runner.query(sql, params)) }),
         });
     } finally {
         await runner.release();
