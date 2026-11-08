@@ -20,6 +20,9 @@ import {
 import { ContactPerson } from '../../entities/contact-person.entity';
 import { Counterparty } from '../../entities/counterparty.entity';
 import { TradingPoint } from '../../entities/trading-point.entity';
+import { TradingPointChange } from '../../entities/trading-point-change.entity';
+import { savePendingChange } from '../../trading-point-change';
+import { TradingPointChangeService } from '../../trading-point-change.service';
 import { TradingPointService } from '../../trading-point.service';
 
 @Entity('counterparty')
@@ -31,6 +34,8 @@ class TestCounterparty {
 class TestTradingPoint {
     @PrimaryGeneratedColumn('increment') id!: number;
     @Column({ type: 'varchar' }) counterpartyId!: string;
+    @Column({ type: 'varchar', nullable: true }) uuid!: string | null;
+    @Column({ type: 'boolean', default: true }) customerOwned!: boolean;
     @Column({ type: 'varchar' }) name!: string;
     @Column({ type: 'varchar' }) address!: string;
     @Column({ type: 'float', nullable: true }) latitude!: number | null;
@@ -57,6 +62,7 @@ const mirrors = new Map<unknown, unknown>([
 const recordChange = vi.fn();
 let dataSource: DataSource;
 let service: TradingPointService;
+let changeService: TradingPointChangeService;
 let pointId: number;
 
 function connection(): TransactionalConnection {
@@ -75,7 +81,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestCounterparty, TestTradingPoint, TestContact],
+        entities: [TestCounterparty, TestTradingPoint, TestContact, TradingPointChange],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -89,6 +95,12 @@ beforeAll(async () => {
         { recordChange } as never,
         {} as never,
     );
+    changeService = new TradingPointChangeService(
+        connection(),
+        service,
+        { findOneVisible: async () => ({}) } as never,
+        { publish: vi.fn() } as never,
+    );
 });
 
 afterAll(async () => {
@@ -99,7 +111,7 @@ afterAll(async () => {
 beforeEach(async () => {
     recordChange.mockReset();
     await dataSource.query(
-        `TRUNCATE "${schema}".contact_person, "${schema}".trading_point, "${schema}".counterparty RESTART IDENTITY CASCADE`,
+        `TRUNCATE "${schema}".trading_point_change, "${schema}".contact_person, "${schema}".trading_point, "${schema}".counterparty RESTART IDENTITY CASCADE`,
     );
     const cp = await dataSource.getRepository(TestCounterparty).save({});
     const tp = await dataSource.getRepository(TestTradingPoint).save({
@@ -170,6 +182,80 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                 .getRepository(TestTradingPoint)
                 .findOneByOrFail({ id: pointId });
             expect([row.latitude, row.longitude, row.name]).toEqual([55, 37, 'customer']);
+        });
+    });
+
+    describe('manager decision vs a new customer proposal on one ERP point', () => {
+        const pause = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
+        const proposal = {
+            name: 'Proposed',
+            address: 'Test Street 12',
+            latitude: 10,
+            longitude: 10,
+            workingHours: null,
+        };
+        let changeId: string;
+
+        beforeEach(async () => {
+            await dataSource
+                .getRepository(TestTradingPoint)
+                .update({ id: pointId }, { customerOwned: false });
+            const row = await dataSource
+                .getRepository(TestTradingPoint)
+                .findOneByOrFail({ id: pointId });
+            const change = await savePendingChange(
+                dataSource.getRepository(TradingPointChange),
+                { id: String(pointId), counterpartyId: row.counterpartyId },
+                proposal,
+                null,
+            );
+            changeId = change.id as unknown as string;
+        });
+
+        const newProposal = (): Promise<unknown> =>
+            dataSource.transaction(async em => {
+                const row = await em
+                    .getRepository(TestTradingPoint)
+                    .findOneByOrFail({ id: pointId });
+                return service.customerEdit(
+                    { em } as unknown as RequestContext,
+                    pointId,
+                    row.counterpartyId,
+                    { name: 'Newer', address: 'Test Street 12' },
+                );
+            });
+        const decide = (kind: 'accept' | 'reject'): Promise<unknown> =>
+            dataSource.transaction(em =>
+                changeService[kind]({ em } as unknown as RequestContext, changeId),
+            );
+
+        it.each(['accept', 'reject'] as const)(
+            '%s racing a newer proposal never deadlocks and leaves one consistent outcome',
+            async kind => {
+                const results = await Promise.allSettled([
+                    decide(kind),
+                    pause(30).then(newProposal),
+                ]);
+
+                for (const r of results) {
+                    if (r.status === 'rejected') {
+                        expect((r.reason as { code?: string }).code).not.toBe('40P01');
+                        expect((r.reason as Error).message).toMatch(/already decided|not found/);
+                    }
+                }
+                const pending = await dataSource
+                    .getRepository(TradingPointChange)
+                    .count({ where: { status: 'pending' } });
+                expect(pending).toBeLessThanOrEqual(1);
+            },
+        );
+
+        it('accept racing reject decides the change exactly once', async () => {
+            const results = await Promise.allSettled([decide('accept'), decide('reject')]);
+
+            expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+            const rows = await dataSource.getRepository(TradingPointChange).find();
+            expect(rows.filter(r => r.status === 'pending')).toHaveLength(0);
         });
     });
 });

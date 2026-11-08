@@ -10,6 +10,8 @@ import { TradingPointChangeAcceptedEvent } from './trading-point-change.events';
 import { parsePayload } from './trading-point-change';
 import { TradingPointService } from './trading-point.service';
 
+const MAX_COMMENT_LENGTH = 500;
+
 // A manager decides a customer's proposed edit of an ERP-confirmed point; acceptance goes through the staff edit path.
 @Injectable()
 export class TradingPointChangeService {
@@ -27,15 +29,18 @@ export class TradingPointChangeService {
     }
 
     async listPending(ctx: RequestContext): Promise<TradingPointChange[]> {
-        const rows = await this.connection
+        const qb = this.connection
             .getRepository(ctx, TradingPointChange)
-            .find({ where: { status: 'pending' }, order: { id: 'ASC' }, take: 200 });
-        const visible: TradingPointChange[] = [];
-        for (const row of rows) {
-            if (await this.counterparties.findOneVisible(ctx, row.counterpartyId))
-                visible.push(row);
+            .createQueryBuilder('c')
+            .where('c.status = :status', { status: 'pending' });
+        const visible = await this.counterparties.visibleErpIdsSql(ctx);
+        if (visible) {
+            qb.andWhere(
+                `c."counterpartyId" IN (SELECT cp.id::varchar FROM counterparty cp WHERE cp."erpId" IN (${visible.sql}))`,
+                visible.params,
+            );
         }
-        return visible;
+        return qb.orderBy('c.id', 'ASC').take(200).getMany();
     }
 
     async accept(ctx: RequestContext, id: ID): Promise<TradingPointChange> {
@@ -78,22 +83,33 @@ export class TradingPointChangeService {
         id: ID,
         comment?: string | null,
     ): Promise<TradingPointChange> {
+        if (comment && comment.length > MAX_COMMENT_LENGTH) {
+            throw new UserInputError(`The comment is longer than ${MAX_COMMENT_LENGTH} characters`);
+        }
         const change = await this.lockPending(ctx, id);
         change.status = 'rejected';
         change.comment = comment ?? null;
         return this.markDecided(ctx, change);
     }
 
+    // Same order as the customer edit path: the point row first, then the change row.
     private async lockPending(ctx: RequestContext, id: ID): Promise<TradingPointChange> {
+        const repo = this.connection.getRepository(ctx, TradingPointChange);
+        const unlocked = await repo.findOne({ where: { id: String(id) } });
+        if (!unlocked) throw new UserInputError(`Trading point change not found: id=${id}`);
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `SELECT id FROM trading_point WHERE id = $1 FOR UPDATE`,
+            [unlocked.tradingPointId],
+        );
         await ctxQuery(
             this.connection,
             ctx,
             `SELECT id FROM trading_point_change WHERE id = $1 FOR UPDATE`,
             [String(id)],
         );
-        const change = await this.connection
-            .getRepository(ctx, TradingPointChange)
-            .findOne({ where: { id: String(id) } });
+        const change = await repo.findOne({ where: { id: String(id) } });
         if (!change) throw new UserInputError(`Trading point change not found: id=${id}`);
         if (change.status !== 'pending') {
             throw new UserInputError('The change is already decided');

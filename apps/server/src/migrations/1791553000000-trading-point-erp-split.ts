@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #328: mivend's trading point gets a uuid; the ERP stream writes a separate mirror; customer edits wait as changes.
-export class TradingPointErpSplit1791552000000 implements MigrationInterface {
-    name = 'TradingPointErpSplit1791552000000';
+export class TradingPointErpSplit1791553000000 implements MigrationInterface {
+    name = 'TradingPointErpSplit1791553000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

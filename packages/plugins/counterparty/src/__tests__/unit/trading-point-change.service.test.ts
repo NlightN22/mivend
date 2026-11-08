@@ -16,7 +16,11 @@ const payload = {
     contactPhone: '+79991234566',
 };
 
-const changeRepo = { findOne: vi.fn(), save: vi.fn(async (c: unknown) => c), find: vi.fn() };
+const changeRepo = {
+    findOne: vi.fn(),
+    save: vi.fn(async (c: unknown) => c),
+    createQueryBuilder: vi.fn(),
+};
 const pointRepo = { findOne: vi.fn() };
 const rawQuery = vi.fn();
 const connection = {
@@ -28,6 +32,7 @@ const connection = {
 };
 const updateDetails = vi.fn();
 const findOneVisible = vi.fn();
+const visibleErpIdsSql = vi.fn();
 const publish = vi.fn();
 const ctx = { activeUserId: 'u9' } as unknown as RequestContext;
 
@@ -52,7 +57,7 @@ describe('TradingPointChangeService', () => {
         service = new TradingPointChangeService(
             connection as unknown as TransactionalConnection,
             { updateDetails } as never,
-            { findOneVisible } as never,
+            { findOneVisible, visibleErpIdsSql } as never,
             { publish } as never,
         );
     });
@@ -116,17 +121,42 @@ describe('TradingPointChangeService', () => {
         expect(updateDetails).not.toHaveBeenCalled();
     });
 
-    it('lists only the pending changes of visible counterparties', async () => {
-        changeRepo.find.mockResolvedValue([
-            { id: '1', counterpartyId: 'cp1' },
-            { id: '2', counterpartyId: 'cp2' },
-        ]);
-        findOneVisible.mockImplementation(async (_c: unknown, id: string) =>
-            id === 'cp1' ? { id } : null,
-        );
+    it('lists pending changes filtered by the caller scope inside the query', async () => {
+        const qb = {
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            take: vi.fn().mockReturnThis(),
+            getMany: vi.fn().mockResolvedValue([{ id: '1' }]),
+        };
+        changeRepo.createQueryBuilder.mockReturnValue(qb);
+        visibleErpIdsSql.mockResolvedValue({ sql: 'SELECT 1', params: { p: 1 } });
 
         const rows = await service.listPending(ctx);
 
-        expect(rows.map(r => r.id)).toEqual(['1']);
+        expect(rows).toEqual([{ id: '1' }]);
+        expect(qb.andWhere.mock.calls[0][0]).toContain('SELECT 1');
+        expect(qb.andWhere.mock.calls[0][1]).toEqual({ p: 1 });
+    });
+
+    it('lists every pending change for an unrestricted scope', async () => {
+        const qb = {
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            take: vi.fn().mockReturnThis(),
+            getMany: vi.fn().mockResolvedValue([]),
+        };
+        changeRepo.createQueryBuilder.mockReturnValue(qb);
+        visibleErpIdsSql.mockResolvedValue(null);
+
+        await service.listPending(ctx);
+
+        expect(qb.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('refuses an over-long rejection comment', async () => {
+        await expect(service.reject(ctx, '5', 'x'.repeat(501))).rejects.toThrow(UserInputError);
+        expect(changeRepo.save).not.toHaveBeenCalled();
     });
 });
