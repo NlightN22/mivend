@@ -42,8 +42,10 @@ function build(states: LineDiscount[], ceiling: number | null = null) {
         lineEdit as never,
         { findOne: vi.fn(async () => ({ lines: [line] })) } as never,
         lineDiscounts as never,
-        { ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])) } as never,
-        { getActorIdentity: async () => ({ roleCodes: ['manager'], branchId: null }) } as never,
+        {
+            ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])),
+            actorAdministratorId: vi.fn(async () => '7'),
+        } as never,
     );
     return { service, lineEdit, line };
 }

@@ -23,7 +23,7 @@ control, reason given).
 | 9 | Freight needs an active trading point | provider `delivery.freight-trading-point` (plugin-freight-shipping); the guard is gone | finding; checkout is not refused | same stages as row 3 | as left | migrated |
 | 10 | Staff confirmation hold | `OrderChecksService.isHeld`, `OrderSendHoldService` | n/a, consumer of policies | part of the framework | n/a | provider (framework) |
 | 11 | ERP rejects a registered order (#204) | inbound ERP result handling | order marked rejected, shown on the order | later: finding `erp.registration-rejected` (display only) | `info` | stays outside for now (an inbound fact, not a pre-check) |
-| 17 | Placed order line discount above the staff limit (fail-open without a limit) | provider `order.discount-over-limit` (plugin-price-entry) | finding on the line | `order.discount-over-limit`: `pre-reserve`, `on-edit` | `warn` | provider (#320) |
+| 17 | Placed order line discount above the employee's own limit (fail-open without a limit; a surcharge is never flagged) | provider `order.discount-over-limit` (plugin-price-entry) | finding on the line | `order.discount-over-limit`: `pre-reserve`, `on-edit` | `warn` | provider (#320) |
 
 ## Manager subject (#242)
 
@@ -33,7 +33,8 @@ control, reason given).
 | 13 | Credit-term limit (days, amount), gate hard-codes the `department-head` role | provider `manager.credit-term-extension` (plugin-counterparty); `CreditTermService` evaluates it; the gate service is gone | policy `require-approval` (default): escalated chain | `manager.credit-term-extension`, stage `extend-credit-term` | done (#242); the limit role is the policy recipient, no role code in code |
 | 14 | Price adjustment below the floor price (no floor = approval) | provider `manager.price-adjustment-floor` (plugin-price-entry); `PriceAdjustmentService` evaluates it; the gate service is gone | policy `require-approval` (default): approval request | `manager.price-adjustment-floor`, stage `adjust-price` | done (#242) |
 | 15 | Discount grant needs justification and approval | `DiscountGrantService`, approval-workflow | justification missing = validation error; approval chain | approval chain stays in `approval-workflow`; the consequence is `require-approval` | stays outside (input validation) + executor |
-| 16 | Line discount above the staff limit on a price adjustment (fail-open without a limit) | provider `manager.price-adjustment-discount-limit` (plugin-price-entry); `PriceAdjustmentService` passes the reference price and direction | policy `block` (default): adjustment refused | `manager.price-adjustment-discount-limit`, stage `adjust-price` | done (#320) |
+| 16 | Line discount above the employee's own limit on a price adjustment (fail-open without a limit); the floor stays a separate `require-approval` boundary | provider `manager.price-adjustment-discount-limit` (plugin-price-entry); `PriceAdjustmentService` passes the reference price and direction; approver eligibility by `ApprovalEligibilityRegistry` | policy `require-approval` (default): approval request, approver limit at least as deep | `manager.price-adjustment-discount-limit`, stage `adjust-price` | done (#320) |
+| 18 | Manual price deepens the automatic discount of the line (manual and automatic never coexist) | provider `manager.price-adjustment-automatic-discount` (plugin-price-entry); `PriceAdjustmentService` passes `hasAutomaticDiscount` | policy `block` (default): adjustment refused | `manager.price-adjustment-automatic-discount`, stage `adjust-price` | done (#320) |
 
 ## Guards that intentionally stay outside
 

@@ -1,5 +1,4 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CheckRegistry } from '@mivend/plugin-checks';
 import type { CheckContext, Finding } from '@mivend/plugin-checks';
 
@@ -20,7 +19,6 @@ interface OrderDiscountSubject {
 export class OrderDiscountLimitCheck implements OnModuleInit {
     constructor(
         private registry: CheckRegistry,
-        private accessScope: AccessScopeService,
         private limits: DiscountLimitService,
         private lineDiscounts: LineDiscountService,
     ) {}
@@ -30,20 +28,20 @@ export class OrderDiscountLimitCheck implements OnModuleInit {
             code: ORDER_DISCOUNT_LIMIT_CHECK_CODE,
             subjectType: 'order',
             stages: ['pre-reserve', 'on-edit'],
-            description: 'An order line carries a discount above the limit of the staff member',
+            description: 'An order line carries a discount above the limit of the employee',
             defaultConsequence: 'warn',
             evaluate: (subject, context) => this.evaluate(subject, context),
         });
     }
 
     async evaluate(subject: OrderDiscountSubject, { ctx }: CheckContext): Promise<Finding[]> {
-        const { roleCodes } = await this.accessScope.getActorIdentity(ctx);
-        if (roleCodes.length === 0) return [];
+        const administratorId = await this.limits.actorAdministratorId(ctx);
+        if (!administratorId) return [];
         const discounts = (await this.lineDiscounts.forOrderId(ctx, subject.orderId)).filter(
             d => d.percent !== null && d.percent > 0,
         );
         if (discounts.length === 0) return [];
-        const ceilings = await this.limits.ceilingsForProducts(ctx, roleCodes, [
+        const ceilings = await this.limits.ceilingsForProducts(ctx, administratorId, [
             ...new Set(discounts.map(d => d.productErpId)),
         ]);
         return discounts

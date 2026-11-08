@@ -4,16 +4,17 @@ import { CheckRegistry } from '@mivend/plugin-checks';
 
 import { OrderDiscountLimitCheck } from '../../order-discount-limit.check';
 import { PriceAdjustmentLimitCheck } from '../../price-adjustment-limit.check';
+import { PriceAdjustmentAutomaticCheck } from '../../price-adjustment-automatic.check';
 import type { DiscountLimitService } from '../../discount-limit.service';
 import type { LineDiscountService } from '../../line-discount.service';
 
 const ctx = {} as RequestContext;
 
-function orderCheck(roleCodes: string[], ceiling: number | null) {
+function orderCheck(administratorId: string | null, ceiling: number | null) {
     return new OrderDiscountLimitCheck(
         new CheckRegistry(),
-        { getActorIdentity: async () => ({ roleCodes, branchId: null }) } as never,
         {
+            actorAdministratorId: async () => administratorId,
             ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])),
         } as unknown as DiscountLimitService,
         {
@@ -32,7 +33,7 @@ const orderRun = (check: OrderDiscountLimitCheck) =>
 
 describe('OrderDiscountLimitCheck', () => {
     it('flags only the lines above the limit, with the percent but never the limit', async () => {
-        const findings = await orderRun(orderCheck(['manager'], 10));
+        const findings = await orderRun(orderCheck('7', 10));
         expect(findings).toHaveLength(1);
         expect(findings[0]).toMatchObject({
             lineRef: '1',
@@ -42,17 +43,22 @@ describe('OrderDiscountLimitCheck', () => {
         expect(Object.keys(findings[0].facts)).not.toContain('limit');
     });
 
-    it('gives no finding when no limit is set (fail-open, owner decision)', async () => {
-        expect(await orderRun(orderCheck(['manager'], null))).toEqual([]);
+    it('never flags a surcharge (negative discount), which has no limit', async () => {
+        const findings = await orderRun(orderCheck('7', 0));
+        expect(findings.map(f => f.lineRef)).toEqual(['1', '2']);
     });
 
-    it('gives no finding without a staff actor', async () => {
-        expect(await orderRun(orderCheck([], 1))).toEqual([]);
+    it('gives no finding when no limit is set (fail-open, owner decision)', async () => {
+        expect(await orderRun(orderCheck('7', null))).toEqual([]);
+    });
+
+    it('gives no finding without an administrator', async () => {
+        expect(await orderRun(orderCheck(null, 1))).toEqual([]);
     });
 
     it('is registered for pre-reserve and on-edit, default warn', () => {
         const registry = new CheckRegistry();
-        new OrderDiscountLimitCheck(registry, {} as never, {} as never, {} as never).onModuleInit();
+        new OrderDiscountLimitCheck(registry, {} as never, {} as never).onModuleInit();
         const def = registry.getCheck('order.discount-over-limit');
         expect(def?.stages).toEqual(['pre-reserve', 'on-edit']);
         expect(def?.defaultConsequence).toBe('warn');
@@ -62,7 +68,7 @@ describe('OrderDiscountLimitCheck', () => {
 function managerRun(
     params: { requestedPrice: number; referencePrice: number | null; direction: string },
     ceiling: number | null,
-    roleCodes = ['manager'],
+    administratorId: string | null = '7',
 ) {
     const check = new PriceAdjustmentLimitCheck(
         new CheckRegistry(),
@@ -72,14 +78,20 @@ function managerRun(
             }),
         } as unknown as TransactionalConnection,
         {
+            actorAdministratorId: async () => administratorId,
             ceilingsForProducts: vi.fn(async () => new Map([['p1', ceiling]])),
         } as unknown as DiscountLimitService,
     );
     return check.evaluate(
         {
-            roleCodes,
+            roleCodes: [],
             branchId: null,
-            params: { variantId: 'v1', ...params, direction: params.direction as never },
+            params: {
+                variantId: 'v1',
+                hasAutomaticDiscount: false,
+                ...params,
+                direction: params.direction as never,
+            },
         },
         { ctx, stage: 'adjust-price', recipient: null },
     );
@@ -116,18 +128,56 @@ describe('PriceAdjustmentLimitCheck', () => {
         }
     });
 
-    it('gives no finding when no limit is set, the reference is unknown or the actor has no role', async () => {
+    it('gives no finding when no limit is set, the reference is unknown or the actor is no administrator', async () => {
         const deep = { requestedPrice: 1, referencePrice: 100, direction: 'increases-discount' };
         expect(await managerRun(deep, null)).toEqual([]);
         expect(await managerRun({ ...deep, referencePrice: null }, 10)).toEqual([]);
-        expect(await managerRun(deep, 10, [])).toEqual([]);
+        expect(await managerRun(deep, 10, null)).toEqual([]);
     });
 
-    it('defaults to block at adjust-price', () => {
+    it('never flags a surcharge, whatever the limit', async () => {
+        expect(
+            await managerRun(
+                { requestedPrice: 150, referencePrice: 100, direction: 'increases-discount' },
+                0,
+            ),
+        ).toEqual([]);
+    });
+
+    it('defaults to require-approval at adjust-price', () => {
         const registry = new CheckRegistry();
         new PriceAdjustmentLimitCheck(registry, {} as never, {} as never).onModuleInit();
         expect(
             registry.getCheck('manager.price-adjustment-discount-limit')?.defaultConsequence,
-        ).toBe('block');
+        ).toBe('require-approval');
+    });
+});
+
+describe('PriceAdjustmentAutomaticCheck', () => {
+    const run = (direction: string, hasAutomaticDiscount: boolean) =>
+        new PriceAdjustmentAutomaticCheck(new CheckRegistry()).evaluate({
+            roleCodes: [],
+            branchId: null,
+            params: {
+                variantId: 'v1',
+                requestedPrice: 50,
+                referencePrice: 100,
+                direction: direction as never,
+                hasAutomaticDiscount,
+            },
+        });
+
+    it('flags only a deepening on a line that has an automatic discount', () => {
+        expect(run('increases-discount', true)).toHaveLength(1);
+        expect(run('increases-discount', false)).toEqual([]);
+        expect(run('reduces-discount', true)).toEqual([]);
+    });
+
+    it('defaults to block at adjust-price', () => {
+        const registry = new CheckRegistry();
+        new PriceAdjustmentAutomaticCheck(registry).onModuleInit();
+        const def = registry.getCheck('manager.price-adjustment-automatic-discount');
+        expect(def?.stages).toEqual(['adjust-price']);
+        expect(def?.defaultConsequence).toBe('block');
     });
 });

@@ -96,6 +96,19 @@ export class LineDiscountService {
         return customerPrice ?? line.productVariant.listPrice;
     }
 
+    // Whether automatic rules give this line a discount right now, whether or not a manual price replaces it.
+    async hasAutomaticDiscount(ctx: RequestContext, orderId: ID, lineId: ID): Promise<boolean> {
+        const order = await this.orderService.findOne(ctx, orderId, LINE_DISCOUNT_RELATIONS);
+        const line = order?.lines.find(l => String(l.id) === String(lineId));
+        if (!order || !line) return false;
+        if (!isManualPrice(line)) return effectiveUnitPrice(line) < line.listPrice;
+        const reference = (await this.forOrder(ctx, order)).find(
+            d => d.lineId === String(lineId),
+        )?.reference;
+        const automatic = await this.automaticPrice(ctx, order, line);
+        return reference !== undefined && automatic !== null && automatic < reference;
+    }
+
     // The unit price automatic rules would give the line right now, order-dependent rules included.
     async automaticPrice(
         ctx: RequestContext,

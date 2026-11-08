@@ -31,12 +31,14 @@ describe('DiscountLimitResolver.orderLineDiscountLimits', () => {
     const ctx = {} as RequestContext;
     const build = (visible: string[]) =>
         new DiscountLimitResolver(
-            { ceilingsForProducts: vi.fn(async () => new Map([['p1', 7]])) } as never,
+            {
+                ceilingsForProducts: vi.fn(async () => new Map([['p1', 7]])),
+                actorAdministratorId: async () => '7',
+            } as never,
             {
                 forOrderId: vi.fn(async () => [{ lineId: '1', productErpId: 'p1', percent: 4 }]),
             } as never,
             {} as never,
-            { getActorIdentity: async () => ({ roleCodes: ['manager'], branchId: null }) } as never,
             {
                 visibleIds: async (_c: unknown, ids: string[]) =>
                     new Set(ids.filter(i => visible.includes(i))),

@@ -3,9 +3,11 @@ import gql from 'graphql-tag';
 export const discountLimitSchema = gql`
     type DiscountLimit {
         uuid: String!
-        roleCode: String!
-        "Empty for every product, else a manufacturer or category ERP id."
-        groupRef: String!
+        administratorId: ID!
+        "all, manufacturer or category."
+        scopeKind: String!
+        "Empty for all products, else a manufacturer or category ERP id."
+        scopeRef: String!
         maxDiscountPercent: Float!
     }
 
@@ -20,17 +22,18 @@ export const discountLimitSchema = gql`
     }
 
     extend type Query {
-        discountLimits: [DiscountLimit!]!
+        discountLimits(administratorId: ID): [DiscountLimit!]!
         orderLineDiscountLimits(orderId: ID!): [OrderLineDiscountLimit!]!
     }
 
     extend type Mutation {
         setDiscountLimit(
-            roleCode: String!
-            groupRef: String
+            administratorId: ID!
+            scopeKind: String!
+            scopeRef: String
             maxDiscountPercent: Float!
         ): DiscountLimit!
-        removeDiscountLimit(roleCode: String!, groupRef: String): Boolean!
+        removeDiscountLimit(administratorId: ID!, scopeKind: String!, scopeRef: String): Boolean!
         """
         Raise a placed order line's unit price toward its price without a discount. Never deepens a discount.
         """

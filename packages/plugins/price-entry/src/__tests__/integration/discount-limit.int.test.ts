@@ -18,12 +18,13 @@ import type { PriceDirection } from '../../price-adjustment-floor.check';
 
 // VendureEntity's primary column needs a bootstrapped EntityIdStrategy; a bare DataSource has none.
 @Entity('discount_limit')
-@Index(['roleCode', 'groupRef'], { unique: true })
+@Index(['administratorId', 'scopeKind', 'scopeRef'], { unique: true })
 class TestDiscountLimit {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'uuid', default: () => 'gen_random_uuid()' }) uuid!: string;
-    @Column({ type: 'varchar' }) roleCode!: string;
-    @Column({ type: 'varchar', default: '' }) groupRef!: string;
+    @Column({ type: 'varchar' }) administratorId!: string;
+    @Column({ type: 'varchar', default: 'all' }) scopeKind!: string;
+    @Column({ type: 'varchar', default: '' }) scopeRef!: string;
     @Column({ type: 'double precision' }) maxDiscountPercent!: number;
 }
 
@@ -72,7 +73,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     await dataSource.query(PRODUCT_TABLES);
-    service = new DiscountLimitService(mapEntity(createTestConnection(dataSource)));
+    service = new DiscountLimitService(mapEntity(createTestConnection(dataSource)), {} as never);
 });
 
 beforeEach(async () => {
@@ -84,47 +85,70 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const ceiling = async (roles: string[], product: string) =>
-    (await service.ceilingsForProducts(ctx, roles, [product])).get(product);
+const ceiling = async (admin: string | null, product: string) =>
+    (await service.ceilingsForProducts(ctx, admin, [product])).get(product);
 
 describe('DiscountLimitService (integration, real Postgres)', () => {
     it('has no limit for anyone while the table is empty', async () => {
-        expect(await ceiling(['manager'], 'p-a1')).toBeNull();
+        expect(await ceiling('1', 'p-a1')).toBeNull();
     });
 
-    it('limits only the product group it names; other products fall back to the all-products row or none', async () => {
-        await service.setLimit(ctx, 'manager', 'brand-a', 3);
-        expect(await ceiling(['manager'], 'p-a1')).toBe(3);
-        expect(await ceiling(['manager'], 'p-a2')).toBe(3);
-        expect(await ceiling(['manager'], 'p-b1')).toBeNull();
-        expect(await ceiling(['manager'], 'p-none')).toBeNull();
-        await service.setLimit(ctx, 'manager', '', 8);
-        expect(await ceiling(['manager'], 'p-b1')).toBe(8);
-        expect(await ceiling(['manager'], 'p-a1')).toBe(3);
+    it('limits only the manufacturer it names; other products fall back to the all-products row or none', async () => {
+        await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 3);
+        expect(await ceiling('1', 'p-a1')).toBe(3);
+        expect(await ceiling('1', 'p-a2')).toBe(3);
+        expect(await ceiling('1', 'p-b1')).toBeNull();
+        expect(await ceiling('1', 'p-none')).toBeNull();
+        await service.setLimit(ctx, '1', 'all', '', 8);
+        expect(await ceiling('1', 'p-b1')).toBe(8);
+        expect(await ceiling('1', 'p-a1')).toBe(8);
     });
 
-    it('scopes a limit to its role and takes the most permissive across the actor roles', async () => {
-        await service.setLimit(ctx, 'manager', '', 5);
-        await service.setLimit(ctx, 'department-head', '', 12);
-        expect(await ceiling(['operator'], 'p-a1')).toBeNull();
-        expect(await ceiling(['manager'], 'p-a1')).toBe(5);
-        expect(await ceiling(['manager', 'department-head'], 'p-a1')).toBe(12);
+    it('takes the deepest matching percent among the rows of one employee', async () => {
+        await service.setLimit(ctx, '1', 'all', '', 5);
+        await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 2);
+        await service.setLimit(ctx, '1', 'manufacturer', 'brand-b', 20);
+        expect(await ceiling('1', 'p-a1')).toBe(5);
+        expect(await ceiling('1', 'p-b1')).toBe(20);
     });
 
-    it('keeps one row per role and group when the same limit is set concurrently', async () => {
+    it('keeps the limits of different employees apart', async () => {
+        await service.setLimit(ctx, '1', 'all', '', 5);
+        await service.setLimit(ctx, '2', 'all', '', 12);
+        expect(await ceiling('3', 'p-a1')).toBeNull();
+        expect(await ceiling(null, 'p-a1')).toBeNull();
+        expect(await ceiling('1', 'p-a1')).toBe(5);
+        expect(await ceiling('2', 'p-a1')).toBe(12);
+        expect(await service.list(ctx, '2')).toHaveLength(1);
+    });
+
+    it('keeps one row per employee and scope when the same limit is set concurrently', async () => {
         await Promise.all(
-            [1, 2, 3, 4, 5, 6].map(percent => service.setLimit(ctx, 'manager', 'brand-a', percent)),
+            [1, 2, 3, 4, 5, 6].map(percent =>
+                service.setLimit(ctx, '1', 'manufacturer', 'brand-a', percent),
+            ),
         );
         const rows = await dataSource.getRepository(TestDiscountLimit).find();
         expect(rows).toHaveLength(1);
         expect(rows[0].maxDiscountPercent).toBeGreaterThanOrEqual(1);
     });
 
+    it('ends consistent when a limit is set and removed concurrently', async () => {
+        await service.setLimit(ctx, '1', 'all', '', 5);
+        await Promise.all([
+            service.setLimit(ctx, '1', 'all', '', 9),
+            service.removeLimit(ctx, '1', 'all', ''),
+            service.setLimit(ctx, '1', 'all', '', 7),
+        ]);
+        const rows = await dataSource.getRepository(TestDiscountLimit).find();
+        expect(rows.length).toBeLessThanOrEqual(1);
+    });
+
     it('removes a limit, after which the product has none', async () => {
-        await service.setLimit(ctx, 'manager', '', 5);
-        expect(await service.removeLimit(ctx, 'manager', '')).toBe(true);
-        expect(await service.removeLimit(ctx, 'manager', '')).toBe(false);
-        expect(await ceiling(['manager'], 'p-a1')).toBeNull();
+        await service.setLimit(ctx, '1', 'all', '', 5);
+        expect(await service.removeLimit(ctx, '1', 'all', '')).toBe(true);
+        expect(await service.removeLimit(ctx, '1', 'all', '')).toBe(false);
+        expect(await ceiling('1', 'p-a1')).toBeNull();
     });
 });
 
@@ -137,7 +161,10 @@ describe('adjust-price limit check against stored limits (integration)', () => {
 
     function run(direction: PriceDirection, requestedPrice: number) {
         const registry = new CheckRegistry();
-        const check = new PriceAdjustmentLimitCheck(registry, connection, service);
+        const check = new PriceAdjustmentLimitCheck(registry, connection, {
+            actorAdministratorId: async () => '1',
+            ceilingsForProducts: service.ceilingsForProducts.bind(service),
+        } as never);
         check.onModuleInit();
         return {
             registry,
@@ -145,20 +172,28 @@ describe('adjust-price limit check against stored limits (integration)', () => {
                 {
                     roleCodes: ['manager'],
                     branchId: null,
-                    params: { variantId: 'v1', requestedPrice, referencePrice: 100, direction },
+                    params: {
+                        variantId: 'v1',
+                        requestedPrice,
+                        referencePrice: 100,
+                        direction,
+                        hasAutomaticDiscount: false,
+                    },
                 },
                 { ctx, stage: MANAGER_STAGES.adjustPrice, recipient: null },
             ),
         };
     }
 
-    it('raises a finding whose default consequence is block once a limit is set, and none while unset', async () => {
+    it('raises a finding whose default consequence is require-approval once a limit is set, and none while unset', async () => {
         expect(await run('increases-discount', 50).findings).toEqual([]);
-        await service.setLimit(ctx, 'manager', 'brand-a', 10);
+        await service.setLimit(ctx, '1', 'manufacturer', 'brand-a', 10);
         const { registry, findings } = run('increases-discount', 50);
         expect(await findings).toHaveLength(1);
         const provider = registry.getCheck('manager.price-adjustment-discount-limit');
-        expect(registry.defaultConsequence(provider!, MANAGER_STAGES.adjustPrice)).toBe('block');
+        expect(registry.defaultConsequence(provider!, MANAGER_STAGES.adjustPrice)).toBe(
+            'require-approval',
+        );
         expect(await run('increases-discount', 95).findings).toEqual([]);
         expect(await run('reduces-discount', 50).findings).toEqual([]);
     });

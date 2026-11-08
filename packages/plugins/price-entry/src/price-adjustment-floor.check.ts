@@ -14,6 +14,8 @@ export interface PriceAdjustmentParams {
     // The line's price without any discount (null when unknown) and which way the request moves the discount.
     referencePrice: number | null;
     direction: PriceDirection;
+    // Automatic rules give the line a discount right now; staff may only reduce it, never deepen it.
+    hasAutomaticDiscount: boolean;
 }
 
 // Runs regardless of the viewer's rights; the only consumer besides the floorPrice query.

@@ -599,33 +599,58 @@ The three manager-action controls (#242), all stage-scoped policies of the `mana
 
 ### Discount limits (#320)
 
+**Principle (project-wide): the deepest matching percent always wins.** Whenever several rules, rows or limits apply to
+the same product, the largest matching percent decides; a narrower scope never cancels a deeper broader one.
+
 A line discount is a promotion adjustment (automatic) or a manual unit price (`manualUnitPrice`); both are measured as the
 percent of the line's **reference price** (the customer's price before any manual price or order-dependent discount) that is
-given away, rounded to 2 decimals (`LineDiscountService`). The ceiling comes from `DiscountLimit` rows: staff role x product
-group (`groupRef` empty = every product, else a manufacturer or category ERP id), edited with `setDiscountLimit` /
-`removeDiscountLimit` under `ManageDiscountLimits` (general director and portal admin). Per role a matching group row beats
-the all-products row; across the actor's roles the most permissive wins (the `ReservationExtensionLimit` precedent: only
-roles with a row count).
+given away, rounded to 2 decimals (`LineDiscountService`). A price above the reference price is a negative discount (a
+surcharge) and has **no upper limit**.
+
+The limit is set **per employee** (Administrator), not per role. A `DiscountLimit` row is administrator + scope + percent
+(`administratorId`, `scopeKind`, `scopeRef`, `maxDiscountPercent`); an employee may have several rows. `scopeKind` `all`
+(empty `scopeRef`) is every product, `manufacturer` and `category` take an ERP id; a new product filter is one more entry in
+`discount-limit-scope.ts`, not a schema change. Rows are edited with `setDiscountLimit` / `removeDiscountLimit` under
+`ManageDiscountLimits` (general director and portal admin), from the manager Users page ("Discount limits"), serialised by the
+lock `discount-limit:<administratorId>`. Across the rows of the acting employee that match the product the deepest percent
+wins; no matching row = no limit.
 
 **An unset limit is no limit: no finding, nothing blocked (fail-open, owner decision).** This is the opposite of the
-reservation extension limit, which is fail-closed without a row; a limit of `0` is a limit.
+reservation extension limit, which is fail-closed without a row; a limit of `0` is a limit. The same holds for an approver
+without a matching row.
+
+**The price floor is a hard boundary for automatic and manual discounts.** The limit never overrides it: a request below the
+floor (or with no known floor) stays `require-approval` (`manager.price-adjustment-floor`), and only an approver holding
+`ApproveBelowFloorPrice` (general director, portal admin) on top of `ApproveDiscountRequest` may approve it.
 
 | Code | Subject / stage | Finding when | Default |
 | --- | --- | --- | --- |
-| `order.discount-over-limit` | `order`, `pre-reserve` and `on-edit` | a line's discount percent is above the ceiling of the staff member running the stage; no staff actor or no limit = no finding. Facts carry the percent, never the limit | `warn` |
-| `manager.price-adjustment-discount-limit` | `manager`, `adjust-price` | the requested price deepens the line's discount (`direction` = `increases-discount`) past the actor's ceiling. Reducing or keeping a discount is never flagged | `block` (a limit exists only when someone set it), stronger than the floor check's `require-approval` |
+| `order.discount-over-limit` | `order`, `pre-reserve` and `on-edit` | a line's discount percent is above the ceiling of the employee running the stage; no administrator or no limit = no finding; a surcharge is never flagged. Facts carry the percent, never the limit | `warn` |
+| `manager.price-adjustment-discount-limit` | `manager`, `adjust-price` | the requested price deepens the line's discount (`direction` = `increases-discount`) past the actor's own ceiling. Reducing, keeping or a surcharge is never flagged | `require-approval` |
+| `manager.price-adjustment-automatic-discount` | `manager`, `adjust-price` | the line has an automatic discount and the request deepens it. Manual and automatic discounts never coexist | `block` |
 
-Staff can only reduce a placed line's discount: `reduceOrderLineDiscount(orderId, orderLineId, targetUnitPrice)` accepts a
-unit price from the current effective price up to the reference price (equal = no change) and refuses a lower one;
-`revertOrderLineDiscount` clears the manual price and is refused when the automatic discount is deeper than the current one
-unless a limit covers it. Both need `AdjustPriceWithinLimit`, run under the order edit locks and guard
-(`OrderLineEditService.edit`) and re-check the result after recalculation, so a concurrent edit cannot lower the price.
-`orderLineDiscountLimits(orderId)` returns the current admin's ceiling per line for the manager card; the limit itself is
-never part of a finding.
+Manual deepening: on a line **without** an automatic discount an employee may set a manual unit price that deepens the
+discount up to their limit and not below the floor. Beyond the limit the request goes to approval. Approver eligibility is
+decided by `ApprovalEligibilityRegistry` (approval-workflow, asked on every approval, never on a rejection) with the rule of
+`priceAdjustmentApproval` (`mayApprovePrice`): the approver's own limit must be at least as deep as the requested discount
+(a deeper-or-equal limit approves a shallower request), and a request below the floor needs `ApproveBelowFloorPrice` as well.
+Both the dedicated and the generic decide mutation go through it.
+
+On a line **with** an automatic discount staff may only reduce it: `reduceOrderLineDiscount(orderId, orderLineId,
+targetUnitPrice)` accepts a unit price from the current effective price up to the reference price (equal = no change) and
+refuses a lower one; `revertOrderLineDiscount` clears the manual price and is refused when the automatic discount is deeper
+than the current one unless the employee's limit covers it. Both need `AdjustPriceWithinLimit`, run under the order edit locks
+and guard (`OrderLineEditService.edit`) and re-check the result after recalculation, so a concurrent edit cannot lower the
+price. `orderLineDiscountLimits(orderId)` returns the current employee's ceiling per line for the manager card (it gates the
+over-limit mark and the ceiling hint); the limit and the floor are never part of a finding and never reach the customer.
+
+The customer never sees a surcharge as a discount: customer documents and the storefront show the final unit price and line
+total only (the proforma invoice prints a markup as the final price, `deriveLinePricing` and the cart totals ignore a
+`compareAtPrice` at or below the price).
 
 `order.below-floor-price` (#256, `order` subject, stages `pre-reserve` and `on-edit`, default `warn`) is the same floor applied to a placed order's lines (listed price below the floor). It runs for every viewer, its facts carry the SKU and a reason only, never the floor or the price, and a variant without a known floor yields no finding. The per-line mark is accepted as visible to every manager (owner decision): a manager changes the price type, not the price, and cannot probe the floor without the price-adjustment or extra-discount rights. Points: `pre-reserve` runs on the customer's order placement (automatic reserve) and again on the manager's confirmation, always against the current floor; `on-edit` is the manual recompute. Deliberately omitted: re-evaluation when a purchase price or multiplier changes (confirmation re-reads the floor anyway, and a stale mark cannot reach an order with no stored findings), `pre-send-to-erp` (the ERP has its own control) and any hold or approval consequence (a policy change, no approval workflow yet).
 
-An actor with several roles is judged by all of them (`getActorIdentity().roleCodes`); the credit-term check ignores the actor's roles because it is judged against the single policy recipient role.
+An actor with several roles is judged by all of them (`getActorIdentity().roleCodes`) for the reservation extension limit; the discount limits are per employee, not per role; the credit-term check ignores the actor's roles because it is judged against the single policy recipient role.
 
 `require-approval` creates the approval request of the flow's own request type; the chain stays
 `approval-workflow`'s job. `warn`/`info` let the action proceed on the ordinary path (a price is

@@ -41,6 +41,8 @@ import { LineDiscountService } from './line-discount.service';
 import { OrderLineDiscountService } from './order-line-discount.service';
 import { OrderDiscountLimitCheck } from './order-discount-limit.check';
 import { PriceAdjustmentLimitCheck } from './price-adjustment-limit.check';
+import { PriceAdjustmentAutomaticCheck } from './price-adjustment-automatic.check';
+import { PriceAdjustmentEligibilityRegistrar } from './price-adjustment-eligibility.registrar';
 import { PriceAdjustmentResolver } from './price-adjustment.resolver';
 import { DiscountGrantResolver } from './discount-grant.resolver';
 import { DiscountRegistryResolver } from './discount-registry.resolver';
@@ -126,6 +128,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         OrderFloorPriceCheck,
         PriceAdjustmentService,
         PriceAdjustmentScopeRegistrar,
+        PriceAdjustmentEligibilityRegistrar,
         DiscountGrantService,
         DiscountRegistryService,
         GrantedDiscountService,
@@ -134,6 +137,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         OrderLineDiscountService,
         OrderDiscountLimitCheck,
         PriceAdjustmentLimitCheck,
+        PriceAdjustmentAutomaticCheck,
     ],
     exports: [
         PriceEntryService,

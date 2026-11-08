@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Order, OrderService, RequestContext, UserInputError } from '@vendure/core';
-import { AccessScopeService } from '@mivend/plugin-access-control';
 import { OrderLineEditService } from '@mivend/plugin-reservation';
 
 import { DiscountLimitService } from './discount-limit.service';
@@ -18,7 +17,7 @@ const REFUSALS: Record<DiscountChangeRefusal, string> = {
     'over-limit': 'The automatic discount is above your discount limit',
 };
 
-// Staff may only reduce a placed order line's discount (or return it to automatic when that fits their limit).
+// Staff may only reduce a placed order line's discount (or return it to automatic when that fits their own limit).
 // Runs inside OrderLineEditService.edit: same locks, guard, on-edit checks; the order is read under the lock.
 @Injectable()
 export class OrderLineDiscountService {
@@ -27,7 +26,6 @@ export class OrderLineDiscountService {
         private orderService: OrderService,
         private lineDiscounts: LineDiscountService,
         private limits: DiscountLimitService,
-        private accessScope: AccessScopeService,
     ) {}
 
     reduce(
@@ -75,11 +73,14 @@ export class OrderLineDiscountService {
             };
             await this.lineEdit.persist(txCtx, order, [line]);
             const after = await this.reloadedDiscount(txCtx, orderId, lineId);
-            const { roleCodes } = await this.accessScope.getActorIdentity(txCtx);
             const ceiling =
-                (await this.limits.ceilingsForProducts(txCtx, roleCodes, [after.productErpId])).get(
-                    after.productErpId,
-                ) ?? null;
+                (
+                    await this.limits.ceilingsForProducts(
+                        txCtx,
+                        await this.limits.actorAdministratorId(txCtx),
+                        [after.productErpId],
+                    )
+                ).get(after.productErpId) ?? null;
             const refusal = revertRefusal({
                 current: before.effective,
                 reference: after.reference,

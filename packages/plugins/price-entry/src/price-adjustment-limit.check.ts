@@ -10,8 +10,8 @@ import type { PriceAdjustmentParams } from './price-adjustment-floor.check';
 
 export const PRICE_ADJUSTMENT_LIMIT_CHECK_CODE = 'manager.price-adjustment-discount-limit';
 
-// Only a request that deepens the line's discount past the actor's limit is flagged; no limit set means no finding.
-// Facts carry the implied percent, never the limit. Runs next to the floor check, which stays untouched.
+// Only a request that deepens the line's discount past the actor's own limit is flagged; no limit set means no finding.
+// Facts carry the implied percent, never the limit. Runs next to the floor check, which the limit never overrides.
 @Injectable()
 export class PriceAdjustmentLimitCheck implements OnModuleInit {
     constructor(
@@ -25,8 +25,8 @@ export class PriceAdjustmentLimitCheck implements OnModuleInit {
             code: PRICE_ADJUSTMENT_LIMIT_CHECK_CODE,
             subjectType: MANAGER_SUBJECT_TYPE,
             stages: [MANAGER_STAGES.adjustPrice],
-            description: 'Manual price gives a bigger discount than the limit of the staff role',
-            defaultConsequence: 'block',
+            description: 'Manual price gives a bigger discount than the limit of the employee',
+            defaultConsequence: 'require-approval',
             evaluate: (subject, context) => this.evaluate(subject, context),
         });
     }
@@ -38,15 +38,16 @@ export class PriceAdjustmentLimitCheck implements OnModuleInit {
         const { variantId, requestedPrice, referencePrice, direction } = subject.params;
         if (direction !== 'increases-discount' || referencePrice === null) return [];
         const implied = discountPercent(referencePrice, requestedPrice);
-        if (implied === null || subject.roleCodes.length === 0) return [];
+        const administratorId = await this.limits.actorAdministratorId(ctx);
+        if (implied === null || !administratorId) return [];
         const productErpId = await getProductErpId(this.connection, ctx, variantId);
         const ceiling = (
-            await this.limits.ceilingsForProducts(ctx, subject.roleCodes, [productErpId])
+            await this.limits.ceilingsForProducts(ctx, administratorId, [productErpId])
         ).get(productErpId);
         if (!exceedsCeiling(implied, ceiling ?? null)) return [];
         return [
             {
-                severity: 'error',
+                severity: 'warning',
                 facts: { variantId, reason: 'over-limit', impliedDiscountPercent: implied },
                 messageKey: 'manager.price-adjustment-discount-limit.over-limit',
             },

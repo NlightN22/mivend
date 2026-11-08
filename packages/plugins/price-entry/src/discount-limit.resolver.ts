@@ -1,7 +1,7 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
 import { EntityNotFoundError, Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
-import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission } from '@mivend/plugin-access-control';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { DiscountLimit } from './discount-limit.entity';
@@ -21,14 +21,16 @@ export class DiscountLimitResolver {
         private limits: DiscountLimitService,
         private lineDiscounts: LineDiscountService,
         private lineDiscountEdits: OrderLineDiscountService,
-        private accessScope: AccessScopeService,
         private orderVisibility: OrderVisibilityService,
     ) {}
 
     @Query()
     @Allow(CustomPermission.ManageDiscountLimits.Permission)
-    discountLimits(@Ctx() ctx: RequestContext): Promise<DiscountLimit[]> {
-        return this.limits.list(ctx);
+    discountLimits(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { administratorId?: ID | null },
+    ): Promise<DiscountLimit[]> {
+        return this.limits.list(ctx, args.administratorId);
     }
 
     @Query()
@@ -42,9 +44,9 @@ export class DiscountLimitResolver {
         ) {
             throw new EntityNotFoundError('Order', args.orderId);
         }
-        const { roleCodes } = await this.accessScope.getActorIdentity(ctx);
+        const administratorId = await this.limits.actorAdministratorId(ctx);
         const discounts = await this.lineDiscounts.forOrderId(ctx, args.orderId);
-        const ceilings = await this.limits.ceilingsForProducts(ctx, roleCodes, [
+        const ceilings = await this.limits.ceilingsForProducts(ctx, administratorId, [
             ...new Set(discounts.map(d => d.productErpId)),
         ]);
         return discounts.map(d => ({
@@ -57,14 +59,22 @@ export class DiscountLimitResolver {
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ManageDiscountLimits.Permission)
-    setDiscountLimit(
+    async setDiscountLimit(
         @Ctx() ctx: RequestContext,
-        @Args() args: { roleCode: string; groupRef?: string | null; maxDiscountPercent: number },
+        @Args()
+        args: {
+            administratorId: ID;
+            scopeKind: string;
+            scopeRef?: string | null;
+            maxDiscountPercent: number;
+        },
     ): Promise<DiscountLimit> {
+        await this.limits.assertAdministratorExists(ctx, args.administratorId);
         return this.limits.setLimit(
             ctx,
-            args.roleCode,
-            args.groupRef ?? '',
+            args.administratorId,
+            args.scopeKind,
+            args.scopeRef ?? '',
             args.maxDiscountPercent,
         );
     }
@@ -74,9 +84,14 @@ export class DiscountLimitResolver {
     @Allow(CustomPermission.ManageDiscountLimits.Permission)
     removeDiscountLimit(
         @Ctx() ctx: RequestContext,
-        @Args() args: { roleCode: string; groupRef?: string | null },
+        @Args() args: { administratorId: ID; scopeKind: string; scopeRef?: string | null },
     ): Promise<boolean> {
-        return this.limits.removeLimit(ctx, args.roleCode, args.groupRef ?? '');
+        return this.limits.removeLimit(
+            ctx,
+            args.administratorId,
+            args.scopeKind,
+            args.scopeRef ?? '',
+        );
     }
 
     @Transaction()
