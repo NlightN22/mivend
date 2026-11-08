@@ -12,7 +12,7 @@ import {
 import { subscribeAndLog } from 'shared';
 
 import { KnownDevice } from './entities/known-device.entity';
-import { deviceCookieMiddleware } from './device-identity';
+import { ACTING_HEADER, deviceCookieMiddleware } from './device-identity';
 import { createKnownDeviceCleanupTask } from './known-device-cleanup.scheduled-task';
 import { KnownDeviceService } from './known-device.service';
 import { SessionDailyResetService } from './session-daily-reset.service';
@@ -140,6 +140,7 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
             this.eventBus,
             LoginEvent,
             async event => {
+                if (event.ctx.req?.headers[ACTING_HEADER] !== undefined) return;
                 const ctx = await this.requestContextService.create({ apiType: 'admin' });
                 await this.knownDeviceService.recordSignIn(ctx, event.user, event.ctx);
             },

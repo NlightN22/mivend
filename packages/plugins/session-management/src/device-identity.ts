@@ -12,20 +12,35 @@ function readCookie(header: string | undefined, name: string): string | undefine
     return match?.trim().slice(name.length + 1) || undefined;
 }
 
-// Gives every browser a random id before any resolver runs, so the id is on the sign-in request itself.
+export const ACTING_HEADER = 'x-acting-session';
+
+function startsSession(setCookie: unknown): boolean {
+    const values = Array.isArray(setCookie) ? setCookie : setCookie ? [String(setCookie)] : [];
+    return values.some(value => String(value).startsWith('session='));
+}
+
+// The id is generated up front (so the sign-in request itself can use it) but the cookie is only sent when the
+// core's session middleware writes a session cookie (cookie-session runs before this middleware, so we wrap setHeader); acting and API-key traffic never does, so it never receives or reads one.
 export function deviceCookieMiddleware(secure: boolean) {
     return (req: Request, res: Response, next: NextFunction): void => {
-        const existing = readCookie(req.headers.cookie, DEVICE_COOKIE);
-        if (!existing) {
-            const id = randomBytes(16).toString('hex');
-            issued.set(req, id);
-            res.cookie(DEVICE_COOKIE, id, {
-                httpOnly: true,
-                sameSite: 'lax',
-                secure: secure || req.secure,
-                maxAge: COOKIE_MAX_AGE_MS,
-            });
+        if (
+            req.headers[ACTING_HEADER] !== undefined ||
+            readCookie(req.headers.cookie, DEVICE_COOKIE)
+        ) {
+            return next();
         }
+        const id = randomBytes(16).toString('hex');
+        issued.set(req, id);
+        const setHeader = res.setHeader.bind(res) as (name: string, value: unknown) => Response;
+        res.setHeader = ((name: string, value: unknown) => {
+            if (name.toLowerCase() === 'set-cookie' && startsSession(value)) {
+                const flags = `Max-Age=${COOKIE_MAX_AGE_MS / 1000}; Path=/; HttpOnly; SameSite=Lax`;
+                const device = `${DEVICE_COOKIE}=${id}; ${flags}${secure || req.secure ? '; Secure' : ''}`;
+                const values = Array.isArray(value) ? value : [String(value)];
+                return setHeader(name, [...values, device]);
+            }
+            return setHeader(name, value);
+        }) as typeof res.setHeader;
         next();
     };
 }
