@@ -6,6 +6,7 @@ import {
     PASSWORD,
     createAccounts,
     removeAccounts,
+    tokenFromNewMail,
     startSecondStepStack,
     type Account,
     type Stack,
@@ -146,4 +147,61 @@ describe.each([['customer'], ['admin']] as const)('%s forced password change fla
         expect(change.errors).toEqual([]);
         expect(await flagFor(account.username)).toBe(false);
     });
+});
+
+async function maxFailures(): Promise<number> {
+    const client = new Client({ ...testDbConnection(), database: inject('accessDatabase') });
+    await client.connect();
+    try {
+        const rows = await client.query(
+            'SELECT coalesce(max(failures), 0) AS n FROM sign_in_throttle',
+        );
+        return Number(rows.rows[0].n);
+    } finally {
+        await client.end();
+    }
+}
+
+// Proves the login mutations run in a transaction: without the advisory lock all 12 would be verified and counted.
+describe.each([['customer'], ['admin']] as const)('%s parallel wrong logins', kind => {
+    it('verifies at most the threshold of them', async () => {
+        await clearCounters();
+        const account = accounts[kind];
+        await Promise.all(
+            Array.from({ length: 12 }, () => attempt(account, account.username, 'wrong-password')),
+        );
+        expect(await maxFailures()).toBeLessThanOrEqual(3);
+        expect(await attempt(account, account.username, PASSWORD)).toMatchObject({
+            __typename: 'InvalidCredentialsError',
+        });
+        await clearCounters();
+    });
+});
+
+describe('shop resetPassword clears the forced password change flag', () => {
+    it('after a reset by e-mail token', async () => {
+        await clearCounters();
+        const { customer } = accounts;
+        await flagFor(customer.username, true);
+        const token = await tokenFromNewMail(
+            stack.url,
+            customer.username,
+            'Forgotten password reset',
+            () =>
+                stack.call(
+                    'shop-api',
+                    `mutation($e: String!) { requestPasswordReset(emailAddress: $e) { __typename } }`,
+                    {
+                        e: customer.username,
+                    },
+                ),
+        );
+        const reset = await stack.call(
+            'shop-api',
+            `mutation($t: String!, $p: String!) { resetPassword(token: $t, password: $p) { __typename } }`,
+            { t: token, p: 'Reset-password-123456' },
+        );
+        expect(reset.errors).toEqual([]);
+        expect(await flagFor(customer.username)).toBe(false);
+    }, 150_000);
 });
