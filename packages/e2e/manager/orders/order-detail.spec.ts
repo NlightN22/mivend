@@ -114,7 +114,10 @@ test.describe('a flagged cell of the shared e2e order @on:manager-portal-admin',
         const flag = page.getByRole('button', { name: 'Show what is wrong here' }).first();
         await expect(flag).toBeVisible();
         await flag.click();
-        await expect(page.locator('.flag-notes')).toContainText('Requires approval');
+        // The hover tooltip stays in the DOM hidden next to the opened popover, so scope to the visible popover.
+        await expect(page.locator('.mv-popover__popper:visible .flag-notes')).toContainText(
+            'Requires approval',
+        );
 
         for (const duplicated of ['Reservation failed', 'Cut for lack of stock', 'ERP document']) {
             await expect(page.getByRole('heading', { name: duplicated })).toHaveCount(0);
