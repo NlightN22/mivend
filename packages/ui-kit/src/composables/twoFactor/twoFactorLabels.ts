@@ -1,0 +1,46 @@
+import type { TwoFactorUiError } from './twoFactorTypes';
+
+export interface TwoFactorLabels {
+    codeLabel: string;
+    codeTitle: string;
+    codeSubtitle: string;
+    codeSubmit: string;
+    back: string;
+    lostAccess: string;
+    enrolTitle: string;
+    enrolSubtitle: string;
+    stepInstall: string;
+    stepScan: string;
+    stepCode: string;
+    appsTitle: string;
+    playStore: string;
+    appStore: string;
+    qrAlt: string;
+    manualKey: string;
+    copyKey: string;
+    enrolSubmit: string;
+    emailLabel: string;
+    recoveryTitle: string;
+    recoverySubtitle: string;
+    recoverySubmit: string;
+    recoverySentTitle: string;
+    recoverySentText: string;
+    backToSignIn: string;
+    passwordLabel: string;
+    currentCodeLabel: string;
+    settingsTitle: string;
+    settingsSub: string;
+    statusOn: string;
+    statusOff: string;
+    statusRequired: string;
+    changeDevice: string;
+    enableDevice: string;
+    settingsContinue: string;
+    cancel: string;
+    enabledDone: string;
+    recoveryPageTitle: string;
+    recoveryPageSub: string;
+    recoveryComplete: string;
+    recoveryInvalid: string;
+    errors: Record<TwoFactorUiError, string>;
+}

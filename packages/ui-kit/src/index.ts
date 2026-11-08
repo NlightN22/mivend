@@ -283,3 +283,28 @@ export type { FontSizeToken } from './tokens/typography';
 
 export { formatDocumentNumber } from './utils/documentNumber';
 export { COMPACT_NAV_BREAKPOINT } from './styles/breakpoints';
+
+export { default as MvOtpInput } from './components/MvOtpInput/MvOtpInput.vue';
+export { default as MvAuthShell } from './components/MvAuthShell/MvAuthShell.vue';
+export { default as MvTwoFactorEnrol } from './components/MvTwoFactorEnrol/MvTwoFactorEnrol.vue';
+export { default as MvTwoFactorSignInStep } from './components/MvTwoFactorSignInStep/MvTwoFactorSignInStep.vue';
+export { default as MvTwoFactorSettings } from './components/MvTwoFactorSettings/MvTwoFactorSettings.vue';
+export { default as MvTwoFactorRecoveryForm } from './components/MvTwoFactorRecoveryForm/MvTwoFactorRecoveryForm.vue';
+export { useTwoFactorSignIn } from './composables/twoFactor/useTwoFactorSignIn';
+export type { SignInStep } from './composables/twoFactor/useTwoFactorSignIn';
+export { useTwoFactorSettings } from './composables/twoFactor/useTwoFactorSettings';
+export { useTwoFactorRecovery } from './composables/twoFactor/useTwoFactorRecovery';
+export { authenticationErrorToFailure } from './composables/twoFactor/twoFactorTypes';
+export type {
+    TwoFactorFailure,
+    TwoFactorUiError,
+    TwoFactorSignInApi,
+    TwoFactorSettingsApi,
+    TwoFactorRecoveryApi,
+    TwoFactorStatusView,
+    StartResult,
+    CodeResult,
+    EnrolmentResult,
+    ConfirmResult,
+} from './composables/twoFactor/twoFactorTypes';
+export type { TwoFactorLabels } from './composables/twoFactor/twoFactorLabels';
