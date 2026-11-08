@@ -5,6 +5,7 @@ export * from './testing/query-counting-logger';
 // vendure-events.ts is backend-only (imports @vendure/core) — same "never touched by Vite"
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';
+export * from './list-filter-engine';
 export {
     FREIGHT_SHIPPING_METHOD_CODE,
     PICKUP_SHIPPING_METHOD_CODE,

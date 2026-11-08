@@ -1,5 +1,4 @@
 import type { SelectQueryBuilder } from 'typeorm';
-import { normalizeDocumentNumber } from 'shared';
 
 import type { ProformaInvoice } from './entities/proforma-invoice.entity';
 import {
@@ -9,9 +8,10 @@ import {
     type ListFilter,
     type ListQueryConfig,
     type ListSort,
-} from './list-filter-engine';
+    normalizeDocumentNumber,
+} from 'shared';
 
-export { likeTerm } from './list-filter-engine';
+export { likeTerm } from 'shared';
 
 export type ProformaInvoiceFilter = ListFilter;
 export type ProformaInvoiceSort = ListSort;

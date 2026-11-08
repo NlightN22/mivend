@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm } from 'shared';
+import { clampSkip, clampTake, documentNumberSearchTerm } from 'shared';
 import {
     AccessScopeService,
     AccessScope,
@@ -14,7 +14,6 @@ import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-inv
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 import { applyListFilter, applyListSort, likeTerm } from './proforma-invoice-list-query';
-import { clampSkip, clampTake } from './list-filter-engine';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
 export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
