@@ -14,13 +14,26 @@ function readCookie(header: string | undefined, name: string): string | undefine
 
 export const ACTING_HEADER = 'x-acting-session';
 
-function startsSession(setCookie: unknown): boolean {
-    const values = Array.isArray(setCookie) ? setCookie : setCookie ? [String(setCookie)] : [];
-    return values.some(value => String(value).startsWith('session='));
+interface SessionState {
+    isNew?: boolean;
+    isPopulated?: boolean;
+    isChanged?: boolean;
 }
 
-// The id is generated up front (so the sign-in request itself can use it) but the cookie is only sent when the
-// core's session middleware writes a session cookie (cookie-session runs before this middleware, so we wrap setHeader); acting and API-key traffic never does, so it never receives or reads one.
+// Same predicate cookie-session uses (on-headers, at write time) to decide that it emits the session cookie.
+function sessionCookieWillBeWritten(session: unknown): boolean {
+    const state = session as SessionState | null | undefined;
+    return (
+        !!state &&
+        typeof state === 'object' &&
+        (!state.isNew || !!state.isPopulated) &&
+        !!state.isChanged
+    );
+}
+
+// cookie-session emits its cookie inside the response head write and keeps no handle we could wrap, so we decide
+// with its own predicate just before that write (our wrapper runs first) and add the cookie then; it appends to
+// the header we set. The id is generated up front so the sign-in request itself can use it. Acting traffic is skipped.
 export function deviceCookieMiddleware(secure: boolean) {
     return (req: Request, res: Response, next: NextFunction): void => {
         if (
@@ -31,16 +44,21 @@ export function deviceCookieMiddleware(secure: boolean) {
         }
         const id = randomBytes(16).toString('hex');
         issued.set(req, id);
-        const setHeader = res.setHeader.bind(res) as (name: string, value: unknown) => Response;
-        res.setHeader = ((name: string, value: unknown) => {
-            if (name.toLowerCase() === 'set-cookie' && startsSession(value)) {
+        const writeHead = res.writeHead.bind(res) as (...args: unknown[]) => Response;
+        res.writeHead = ((...args: unknown[]) => {
+            if (!res.headersSent && sessionCookieWillBeWritten(req.session)) {
                 const flags = `Max-Age=${COOKIE_MAX_AGE_MS / 1000}; Path=/; HttpOnly; SameSite=Lax`;
                 const device = `${DEVICE_COOKIE}=${id}; ${flags}${secure || req.secure ? '; Secure' : ''}`;
-                const values = Array.isArray(value) ? value : [String(value)];
-                return setHeader(name, [...values, device]);
+                const existing = res.getHeader('Set-Cookie');
+                const values = Array.isArray(existing)
+                    ? existing
+                    : existing
+                      ? [String(existing)]
+                      : [];
+                res.setHeader('Set-Cookie', [...values, device]);
             }
-            return setHeader(name, value);
-        }) as typeof res.setHeader;
+            return writeHead(...args);
+        }) as typeof res.writeHead;
         next();
     };
 }

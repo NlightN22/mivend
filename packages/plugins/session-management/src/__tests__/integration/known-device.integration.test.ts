@@ -18,9 +18,13 @@ let publish: ReturnType<typeof vi.fn>;
 
 const CHROME = 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0 Safari/537.36';
 
-function signIn(cookie: string | undefined, userId = 1): Promise<boolean> {
+function signIn(cookie: string | undefined, userId = 1, extraHeaders = {}): Promise<boolean> {
     const req = {
-        headers: { cookie: cookie ? `mv_device=${cookie}` : undefined, 'user-agent': CHROME },
+        headers: {
+            cookie: cookie ? `mv_device=${cookie}` : undefined,
+            'user-agent': CHROME,
+            ...extraHeaders,
+        },
     };
     const ctx = { req } as unknown as RequestContext;
     const service = new KnownDeviceService(createTestConnection(dataSource), {
@@ -103,6 +107,13 @@ describe('KnownDeviceService (integration, real Postgres)', () => {
 
         expect(results.filter(Boolean)).toHaveLength(1);
         expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('still notifies when an ordinary sign-in carries the acting header', async () => {
+        await signIn('device-a');
+        await ageDevices();
+
+        expect(await signIn('device-b', 1, { 'x-acting-session': '1' })).toBe(true);
     });
 
     it('mails at most one new device per hour per account', async () => {
