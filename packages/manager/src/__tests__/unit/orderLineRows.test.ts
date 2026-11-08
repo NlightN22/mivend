@@ -39,7 +39,7 @@ function rowOf(
     findings: OrderCheckFinding[],
     reservations: OrderReservation[] = [],
     l = line(),
-    maxDiscountPercent?: () => number | null,
+    ceiling?: () => number | null,
 ) {
     return buildLineRows({
         lines: [l],
@@ -47,7 +47,7 @@ function rowOf(
         availability: new Map(),
         reservations,
         requests: [],
-        maxDiscountPercent,
+        lineDiscount: ceiling ? () => ({ max: ceiling(), percent: 17 }) : undefined,
     })[0];
 }
 
@@ -81,7 +81,7 @@ describe('line discount', () => {
         expect(row.discountOverLimit).toBe(false);
     });
 
-    it('warns once a limit is provided and exceeded, not when within it', () => {
+    it('judges the server percent against the employee ceiling, not when within it', () => {
         const discounted = line({ discountedUnitPriceWithTax: 8300 });
         expect(rowOf([], [], discounted, () => 10).discountOverLimit).toBe(true);
         expect(rowOf([], [], discounted, () => 20).discountOverLimit).toBe(false);

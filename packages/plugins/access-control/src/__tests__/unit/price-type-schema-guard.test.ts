@@ -51,6 +51,10 @@ const INVENTORY: Record<string, string> = {
     'price-entry/src/price-entry.schema.ts::upsertPriceEntry': 'assertCodeAllowed',
     'retro-bonus/src/retro-bonus.plugin.ts::priceTypeErpId':
         'RetroBonusRulePriceTypeResolver (null without access)',
+    'reservation/src/order-line-edit.schema.ts::customerPrice':
+        'orderLineQuote: the order own customer type, ConfirmOrder and order visibility, no floor',
+    'reservation/src/order-line-edit.schema.ts::referencePrice':
+        'orderLineQuote: equals the order own customer price, same gate',
     'search/src/external-search.schema.ts::priceRangeWithTax':
         'storefront search by the viewer own type; staff via SearchPriceTypeService',
     'search/src/search.plugin.ts::compareAtPrice': 'storefront: own price type',

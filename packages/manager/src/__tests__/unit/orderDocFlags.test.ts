@@ -4,7 +4,12 @@ import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { toDocFlag } from '../../utils/orderDocFlags';
 import type { CellProblem } from '../../utils/orderLineProblems';
 
-const finding = { id: 'f1', messageKey: 'x.y', checkCode: 'c' } as unknown as OrderCheckFinding;
+const finding = {
+    id: 'f1',
+    messageKey: 'x.y',
+    checkCode: 'c',
+    facts: {},
+} as unknown as OrderCheckFinding;
 const problem = (tone: CellProblem['tone'], findings: OrderCheckFinding[] = []): CellProblem => ({
     tone,
     findings,
