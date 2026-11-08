@@ -1,0 +1,74 @@
+query TwoFactorStatus {
+    twoFactorStatus {
+        required
+        enrolled
+        activatedAt
+        pendingEnrolment
+    }
+}
+
+mutation StartTwoFactorSignIn($username: String!, $password: String!) {
+    startTwoFactorSignIn(username: $username, password: $password) {
+        __typename
+        ... on TwoFactorChallenge {
+            stage
+            challenge
+        }
+        ... on TwoFactorError {
+            failure
+        }
+    }
+}
+
+mutation AuthenticateTwoFactor($challenge: String!, $code: String!, $rememberMe: Boolean) {
+    authenticate(input: { twoFactor: { challenge: $challenge, code: $code } }, rememberMe: $rememberMe) {
+        __typename
+        ... on InvalidCredentialsError {
+            authenticationError
+        }
+    }
+}
+
+mutation StartTwoFactorEnrolment($challenge: String, $password: String, $currentCode: String) {
+    startTwoFactorEnrolment(challenge: $challenge, password: $password, currentCode: $currentCode) {
+        __typename
+        ... on TwoFactorEnrolment {
+            otpauthUri
+            secret
+            expiresAt
+        }
+        ... on TwoFactorError {
+            failure
+        }
+    }
+}
+
+mutation ConfirmTwoFactorEnrolment($code: String!) {
+    confirmTwoFactorEnrolment(code: $code) {
+        __typename
+        ... on TwoFactorStatus {
+            required
+            enrolled
+            activatedAt
+            pendingEnrolment
+        }
+        ... on TwoFactorError {
+            failure
+        }
+    }
+}
+
+mutation RequestTwoFactorRecovery($emailAddress: String!) {
+    requestTwoFactorRecovery(emailAddress: $emailAddress) {
+        success
+    }
+}
+
+mutation CompleteTwoFactorRecovery($token: String!, $password: String!) {
+    completeTwoFactorRecovery(token: $token, password: $password) {
+        __typename
+        ... on TwoFactorError {
+            failure
+        }
+    }
+}

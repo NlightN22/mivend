@@ -110,14 +110,18 @@ export const useAuthStore = defineStore('auth', () => {
         const result = await adminApi(LoginDocument, { username, password, rememberMe });
 
         if (result.login.__typename === 'CurrentUser') {
-            sessionStorage.removeItem(LOGGED_OUT_KEY);
-            initPromise = null;
-            generation++;
-            stopBackgroundRetry();
-            await fetchActiveAdministrator();
+            await completeSignIn();
             return true;
         }
         return false;
+    }
+
+    async function completeSignIn(): Promise<void> {
+        sessionStorage.removeItem(LOGGED_OUT_KEY);
+        initPromise = null;
+        generation++;
+        stopBackgroundRetry();
+        await fetchActiveAdministrator();
     }
 
     async function logout(): Promise<void> {
@@ -240,6 +244,7 @@ export const useAuthStore = defineStore('auth', () => {
         isDefaultSuperadminAccount,
         init,
         login,
+        completeSignIn,
         logout,
         fetchActiveAdministrator,
     };

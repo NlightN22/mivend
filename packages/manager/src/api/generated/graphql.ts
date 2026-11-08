@@ -487,6 +487,7 @@ export type AssignStockLocationsToChannelInput = {
 
 export type AuthenticationInput = {
     native?: InputMaybe<NativeAuthInput>;
+    twoFactor?: InputMaybe<TwoFactorAuthInput>;
 };
 
 export type AuthenticationMethod = Node & {
@@ -823,6 +824,8 @@ export type CollectionTranslation = {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type CompleteTwoFactorRecoveryResult = TwoFactorChallenge | TwoFactorError;
+
 export type ConfigArg = {
     name: Scalars['String']['output'];
     value: Scalars['String']['output'];
@@ -860,6 +863,8 @@ export type ConfigurableOperationInput = {
     arguments: Array<ConfigArgInput>;
     code: Scalars['String']['input'];
 };
+
+export type ConfirmTwoFactorEnrolmentResult = TwoFactorError | TwoFactorStatus;
 
 export type ConsistencyIgnoredEntityType = {
     entityType: Scalars['String']['output'];
@@ -2644,6 +2649,7 @@ export type ErrorCode =
     | 'REFUND_PAYMENT_ID_MISSING_ERROR'
     | 'REFUND_STATE_TRANSITION_ERROR'
     | 'SETTLE_PAYMENT_ERROR'
+    | 'TWO_FACTOR_ERROR'
     | 'UNKNOWN_ERROR';
 
 export type ErrorResult = {
@@ -4019,9 +4025,11 @@ export type Mutation = {
     /** Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment. */
     changeOrderLineQuantity: Scalars['Boolean']['output'];
     clearDepartmentBranch: Scalars['Boolean']['output'];
+    completeTwoFactorRecovery: CompleteTwoFactorRecoveryResult;
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
     confirmPaymentReceived: Order;
+    confirmTwoFactorEnrolment: ConfirmTwoFactorEnrolmentResult;
     /** Create a new Administrator */
     createAdministrator: Administrator;
     createAdministratorFromErpUser: Administrator;
@@ -4274,6 +4282,7 @@ export type Mutation = {
     requestPriceAdjustment: PriceAdjustmentResult;
     /** Issues (or returns the unchanged) current proforma invoice snapshots of a placed, not cancelled order; changed content makes a new version. Idempotent per order content. */
     requestProformaInvoicesForOrder: Array<ProformaInvoice>;
+    requestTwoFactorRecovery: Success;
     /** Returns outbox rows that gave up publishing (status failed) to pending so the next sweep retries them. Returns how many moved (issue #200). */
     requeueFailedIntegrationOutbox: Scalars['Int']['output'];
     resendAdministratorPasswordReset: Scalars['Boolean']['output'];
@@ -4333,6 +4342,8 @@ export type Mutation = {
     /** Cuts the short lines to what stock covers and records the rest as shortfall. */
     splitOrderLinesByStock: Array<OrderLineSplitOutcome>;
     startActingSession: ActingTicketStart;
+    startTwoFactorEnrolment: StartTwoFactorEnrolmentResult;
+    startTwoFactorSignIn: StartTwoFactorSignInResult;
     transitionFulfillmentToState: TransitionFulfillmentToStateResult;
     transitionOrderToState: Maybe<TransitionOrderToStateResult>;
     transitionPaymentToState: TransitionPaymentToStateResult;
@@ -4575,6 +4586,11 @@ export type MutationClearDepartmentBranchArgs = {
     departmentErpId: Scalars['String']['input'];
 };
 
+export type MutationCompleteTwoFactorRecoveryArgs = {
+    password: Scalars['String']['input'];
+    token: Scalars['String']['input'];
+};
+
 export type MutationConfirmOrderArgs = {
     orderId: Scalars['ID']['input'];
     reservationDays: Scalars['Int']['input'];
@@ -4583,6 +4599,10 @@ export type MutationConfirmOrderArgs = {
 export type MutationConfirmPaymentReceivedArgs = {
     orderId: Scalars['ID']['input'];
     paymentId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type MutationConfirmTwoFactorEnrolmentArgs = {
+    code: Scalars['String']['input'];
 };
 
 export type MutationCreateAdministratorArgs = {
@@ -5165,6 +5185,10 @@ export type MutationRequestProformaInvoicesForOrderArgs = {
     orderId: Scalars['ID']['input'];
 };
 
+export type MutationRequestTwoFactorRecoveryArgs = {
+    emailAddress: Scalars['String']['input'];
+};
+
 export type MutationRequeueFailedIntegrationOutboxArgs = {
     ids: Array<Scalars['ID']['input']>;
 };
@@ -5349,6 +5373,17 @@ export type MutationSplitOrderLinesByStockArgs = {
 export type MutationStartActingSessionArgs = {
     counterpartyId: Scalars['ID']['input'];
     tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type MutationStartTwoFactorEnrolmentArgs = {
+    challenge?: InputMaybe<Scalars['String']['input']>;
+    currentCode?: InputMaybe<Scalars['String']['input']>;
+    password?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MutationStartTwoFactorSignInArgs = {
+    password: Scalars['String']['input'];
+    username: Scalars['String']['input'];
 };
 
 export type MutationTransitionFulfillmentToStateArgs = {
@@ -7804,6 +7839,8 @@ export type Query = {
     tradingPointsNotConfirmedByErp: TradingPointList;
     /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
     tradingPointsWithoutLocation: TradingPointList;
+    twoFactorRequired: Scalars['Boolean']['output'];
+    twoFactorStatus: TwoFactorStatus;
     unassignedCounterpartyCount: Scalars['Int']['output'];
     unsortedAdministrators: UnsortedAdministratorPage;
     unsortedCounterparties: UnsortedCounterpartyPage;
@@ -9117,6 +9154,10 @@ export type SlugForEntityInput = {
 
 export type SortOrder = 'ASC' | 'DESC';
 
+export type StartTwoFactorEnrolmentResult = TwoFactorEnrolment | TwoFactorError;
+
+export type StartTwoFactorSignInResult = TwoFactorChallenge | TwoFactorError;
+
 export type StockAdjustment = Node &
     StockMovement & {
         createdAt: Scalars['DateTime']['output'];
@@ -9652,6 +9693,49 @@ export type TransitionFulfillmentToStateResult = Fulfillment | FulfillmentStateT
 export type TransitionOrderToStateResult = Order | OrderStateTransitionError;
 
 export type TransitionPaymentToStateResult = Payment | PaymentStateTransitionError;
+
+export type TwoFactorAuthInput = {
+    challenge: Scalars['String']['input'];
+    code: Scalars['String']['input'];
+};
+
+export type TwoFactorChallenge = {
+    challenge: Maybe<Scalars['String']['output']>;
+    expiresAt: Maybe<Scalars['DateTime']['output']>;
+    stage: TwoFactorStage;
+};
+
+export type TwoFactorEnrolment = {
+    expiresAt: Scalars['DateTime']['output'];
+    otpauthUri: Scalars['String']['output'];
+    secret: Scalars['String']['output'];
+};
+
+export type TwoFactorError = ErrorResult & {
+    errorCode: ErrorCode;
+    failure: TwoFactorFailure;
+    message: Scalars['String']['output'];
+};
+
+export type TwoFactorFailure =
+    | 'CHALLENGE_INVALID'
+    | 'CODE_REQUIRED'
+    | 'ENROLMENT_EXPIRED'
+    | 'INVALID_CODE'
+    | 'INVALID_CREDENTIALS'
+    | 'NOT_ENROLLED'
+    | 'PASSWORD_INVALID'
+    | 'RECOVERY_LINK_INVALID';
+
+export type TwoFactorStage = 'ENROL' | 'NONE' | 'VERIFY';
+
+export type TwoFactorStatus = {
+    activatedAt: Maybe<Scalars['DateTime']['output']>;
+    enrolled: Scalars['Boolean']['output'];
+    method: Maybe<Scalars['String']['output']>;
+    pendingEnrolment: Scalars['Boolean']['output'];
+    required: Scalars['Boolean']['output'];
+};
 
 export type UnsortedAdministrator = {
     departmentId: Maybe<Scalars['String']['output']>;
@@ -12551,6 +12635,85 @@ export type TeamDirectoryCountsQuery = {
     active: { totalItems: number };
     inactive: { totalItems: number };
     unassigned: { totalItems: number };
+};
+
+export type TwoFactorStatusQueryVariables = Exact<{ [key: string]: never }>;
+
+export type TwoFactorStatusQuery = {
+    twoFactorStatus: {
+        required: boolean;
+        enrolled: boolean;
+        activatedAt: any | null;
+        pendingEnrolment: boolean;
+    };
+};
+
+export type StartTwoFactorSignInMutationVariables = Exact<{
+    username: Scalars['String']['input'];
+    password: Scalars['String']['input'];
+}>;
+
+export type StartTwoFactorSignInMutation = {
+    startTwoFactorSignIn:
+        | { __typename: 'TwoFactorChallenge'; stage: TwoFactorStage; challenge: string | null }
+        | { __typename: 'TwoFactorError'; failure: TwoFactorFailure };
+};
+
+export type AuthenticateTwoFactorMutationVariables = Exact<{
+    challenge: Scalars['String']['input'];
+    code: Scalars['String']['input'];
+    rememberMe?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+export type AuthenticateTwoFactorMutation = {
+    authenticate:
+        | { __typename: 'CurrentUser' }
+        | { __typename: 'InvalidCredentialsError'; authenticationError: string };
+};
+
+export type StartTwoFactorEnrolmentMutationVariables = Exact<{
+    challenge?: InputMaybe<Scalars['String']['input']>;
+    password?: InputMaybe<Scalars['String']['input']>;
+    currentCode?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type StartTwoFactorEnrolmentMutation = {
+    startTwoFactorEnrolment:
+        | { __typename: 'TwoFactorEnrolment'; otpauthUri: string; secret: string; expiresAt: any }
+        | { __typename: 'TwoFactorError'; failure: TwoFactorFailure };
+};
+
+export type ConfirmTwoFactorEnrolmentMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type ConfirmTwoFactorEnrolmentMutation = {
+    confirmTwoFactorEnrolment:
+        | { __typename: 'TwoFactorError'; failure: TwoFactorFailure }
+        | {
+              __typename: 'TwoFactorStatus';
+              required: boolean;
+              enrolled: boolean;
+              activatedAt: any | null;
+              pendingEnrolment: boolean;
+          };
+};
+
+export type RequestTwoFactorRecoveryMutationVariables = Exact<{
+    emailAddress: Scalars['String']['input'];
+}>;
+
+export type RequestTwoFactorRecoveryMutation = { requestTwoFactorRecovery: { success: boolean } };
+
+export type CompleteTwoFactorRecoveryMutationVariables = Exact<{
+    token: Scalars['String']['input'];
+    password: Scalars['String']['input'];
+}>;
+
+export type CompleteTwoFactorRecoveryMutation = {
+    completeTwoFactorRecovery:
+        | { __typename: 'TwoFactorChallenge' }
+        | { __typename: 'TwoFactorError'; failure: TwoFactorFailure };
 };
 
 export type PortalUsersQueryVariables = Exact<{
@@ -15737,6 +15900,113 @@ export const TeamDirectoryCountsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     TeamDirectoryCountsQuery,
     TeamDirectoryCountsQueryVariables
+>;
+export const TwoFactorStatusDocument = new TypedDocumentString(`
+    query TwoFactorStatus {
+  twoFactorStatus {
+    required
+    enrolled
+    activatedAt
+    pendingEnrolment
+  }
+}
+    `) as unknown as TypedDocumentString<TwoFactorStatusQuery, TwoFactorStatusQueryVariables>;
+export const StartTwoFactorSignInDocument = new TypedDocumentString(`
+    mutation StartTwoFactorSignIn($username: String!, $password: String!) {
+  startTwoFactorSignIn(username: $username, password: $password) {
+    __typename
+    ... on TwoFactorChallenge {
+      stage
+      challenge
+    }
+    ... on TwoFactorError {
+      failure
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    StartTwoFactorSignInMutation,
+    StartTwoFactorSignInMutationVariables
+>;
+export const AuthenticateTwoFactorDocument = new TypedDocumentString(`
+    mutation AuthenticateTwoFactor($challenge: String!, $code: String!, $rememberMe: Boolean) {
+  authenticate(
+    input: {twoFactor: {challenge: $challenge, code: $code}}
+    rememberMe: $rememberMe
+  ) {
+    __typename
+    ... on InvalidCredentialsError {
+      authenticationError
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AuthenticateTwoFactorMutation,
+    AuthenticateTwoFactorMutationVariables
+>;
+export const StartTwoFactorEnrolmentDocument = new TypedDocumentString(`
+    mutation StartTwoFactorEnrolment($challenge: String, $password: String, $currentCode: String) {
+  startTwoFactorEnrolment(
+    challenge: $challenge
+    password: $password
+    currentCode: $currentCode
+  ) {
+    __typename
+    ... on TwoFactorEnrolment {
+      otpauthUri
+      secret
+      expiresAt
+    }
+    ... on TwoFactorError {
+      failure
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    StartTwoFactorEnrolmentMutation,
+    StartTwoFactorEnrolmentMutationVariables
+>;
+export const ConfirmTwoFactorEnrolmentDocument = new TypedDocumentString(`
+    mutation ConfirmTwoFactorEnrolment($code: String!) {
+  confirmTwoFactorEnrolment(code: $code) {
+    __typename
+    ... on TwoFactorStatus {
+      required
+      enrolled
+      activatedAt
+      pendingEnrolment
+    }
+    ... on TwoFactorError {
+      failure
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ConfirmTwoFactorEnrolmentMutation,
+    ConfirmTwoFactorEnrolmentMutationVariables
+>;
+export const RequestTwoFactorRecoveryDocument = new TypedDocumentString(`
+    mutation RequestTwoFactorRecovery($emailAddress: String!) {
+  requestTwoFactorRecovery(emailAddress: $emailAddress) {
+    success
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RequestTwoFactorRecoveryMutation,
+    RequestTwoFactorRecoveryMutationVariables
+>;
+export const CompleteTwoFactorRecoveryDocument = new TypedDocumentString(`
+    mutation CompleteTwoFactorRecovery($token: String!, $password: String!) {
+  completeTwoFactorRecovery(token: $token, password: $password) {
+    __typename
+    ... on TwoFactorError {
+      failure
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CompleteTwoFactorRecoveryMutation,
+    CompleteTwoFactorRecoveryMutationVariables
 >;
 export const PortalUsersDocument = new TypedDocumentString(`
     query PortalUsers($options: AdministratorListOptions, $status: PortalUserStatus) {

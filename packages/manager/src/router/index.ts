@@ -10,6 +10,11 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            path: '/two-factor-recovery',
+            component: () => import('../pages/auth/TwoFactorRecoveryPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             // Reached from the emailed reset link with no session yet, so this route must sit outside DefaultLayout, like /login
             path: '/set-password',
             component: () => import('../pages/auth/SetPasswordPage.vue'),

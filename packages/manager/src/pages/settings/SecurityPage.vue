@@ -9,6 +9,7 @@ import {
     type SessionSummary,
 } from '../../api/sessions';
 import { changeOwnPassword } from '../../api/account';
+import SecurityTwoFactor from './SecurityTwoFactor.vue';
 
 const authStore = useAuthStore();
 
@@ -90,6 +91,8 @@ async function handleSignOutEverywhere(): Promise<void> {
         <h1 class="security-page__title">Security</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
+
+        <SecurityTwoFactor />
 
         <MvPanel v-if="!loading" title="Active sessions">
             <ul v-if="sessions.length" class="security-page__items">

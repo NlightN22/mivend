@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
     readSiteIconUrl,
@@ -10,8 +10,12 @@ import {
     MvPasswordInput,
     MvButton,
     MvNotice,
+    MvTwoFactorSignInStep,
+    useTwoFactorSignIn,
 } from '@mivend/ui-kit';
+import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
+import { RECOVERED_NOTICE, TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
 
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
@@ -21,24 +25,21 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const form = reactive({ username: '', password: '', remember: false });
-const loading = ref(false);
-const error = ref('');
+const signIn = useTwoFactorSignIn(
+    createSignInApi({
+        plainLogin: (u, p, r) => authStore.login(u, p, r),
+        onSession: authStore.completeSignIn,
+    }),
+);
+const { step, error, loading, enrolment, username } = signIn;
+const recovered = route.query.notice === 'two-factor-recovered';
 
-async function handleSubmit(): Promise<void> {
-    loading.value = true;
-    error.value = '';
-    try {
-        const ok = await authStore.login(form.username, form.password, form.remember);
-        if (ok) {
-            await router.push((route.query.redirect as string) ?? '/');
-        } else {
-            error.value = 'Invalid username or password';
-        }
-    } catch {
-        error.value = 'Invalid username or password';
-    } finally {
-        loading.value = false;
-    }
+watch(step, async value => {
+    if (value === 'done') await router.push((route.query.redirect as string) ?? '/');
+});
+
+function handleSubmit(): Promise<void> {
+    return signIn.submitPassword(form.username, form.password, form.remember);
 }
 </script>
 
@@ -48,45 +49,63 @@ async function handleSubmit(): Promise<void> {
             <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
 
             <div class="login-card">
-                <h1 class="login-card__title">Manager portal sign in</h1>
+                <MvTwoFactorSignInStep
+                    v-if="step !== 'password' && step !== 'done'"
+                    :step="step"
+                    :error="error"
+                    :loading="loading"
+                    :enrolment="enrolment"
+                    :username="username"
+                    :labels="labels"
+                    @code="signIn.submitCode"
+                    @recover="signIn.openRecovery"
+                    @send-recovery="signIn.submitRecovery"
+                    @back="signIn.back"
+                />
+                <template v-else>
+                    <h1 class="login-card__title">Manager portal sign in</h1>
 
-                <MvNotice v-if="error" variant="error" class="login-card__error">
-                    {{ error }}
-                </MvNotice>
+                    <MvNotice v-if="recovered && !error" variant="info" class="login-card__error">
+                        {{ RECOVERED_NOTICE }}
+                    </MvNotice>
+                    <MvNotice v-if="error" variant="error" class="login-card__error">
+                        {{ labels.errors[error === 'UNKNOWN' ? 'INVALID_CREDENTIALS' : error] }}
+                    </MvNotice>
 
-                <form class="login-form" novalidate @submit.prevent="handleSubmit">
-                    <MvFormField label="Username">
-                        <MvInput
-                            v-model="form.username"
-                            type="text"
-                            autocomplete="username"
-                            :error="!!error"
-                        />
-                    </MvFormField>
+                    <form class="login-form" novalidate @submit.prevent="handleSubmit">
+                        <MvFormField label="Username">
+                            <MvInput
+                                v-model="form.username"
+                                type="text"
+                                autocomplete="username"
+                                :error="!!error"
+                            />
+                        </MvFormField>
 
-                    <MvFormField label="Password">
-                        <MvPasswordInput
-                            v-model="form.password"
-                            autocomplete="current-password"
-                            :error="!!error"
-                        />
-                    </MvFormField>
+                        <MvFormField label="Password">
+                            <MvPasswordInput
+                                v-model="form.password"
+                                autocomplete="current-password"
+                                :error="!!error"
+                            />
+                        </MvFormField>
 
-                    <label class="login-form__remember">
-                        <input v-model="form.remember" type="checkbox" />
-                        <span>Remember me</span>
-                    </label>
+                        <label class="login-form__remember">
+                            <input v-model="form.remember" type="checkbox" />
+                            <span>Remember me</span>
+                        </label>
 
-                    <MvButton
-                        variant="primary"
-                        size="lg"
-                        native-type="submit"
-                        :loading="loading"
-                        class="login-form__submit"
-                    >
-                        Sign in
-                    </MvButton>
-                </form>
+                        <MvButton
+                            variant="primary"
+                            size="lg"
+                            native-type="submit"
+                            :loading="loading"
+                            class="login-form__submit"
+                        >
+                            Sign in
+                        </MvButton>
+                    </form>
+                </template>
             </div>
         </div>
     </main>
