@@ -9,7 +9,13 @@ import {
 } from '@vendure/core';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import { findVariantBySku, MAX_LINE_QUANTITY, noPriceMessage } from './order-line-sku';
+import {
+    findVariantBySku,
+    MAX_LINE_QUANTITY,
+    noOrganizationMessage,
+    noPriceMessage,
+    sellerOrganizationOf,
+} from './order-line-sku';
 import { LINE_PRICE_CHECK, type LinePriceCheck } from './line-price-check';
 import { OrderLineEditService } from './order-line-edit.service';
 import { OrderLineStockSyncService } from './order-line-stock-sync.service';
@@ -40,6 +46,8 @@ export class OrderLineAddService {
                 .get<LinePriceCheck>(LINE_PRICE_CHECK, { strict: false })
                 .hasCustomerPrice(txCtx, order, variant.id);
             if (!priced) throw new UserInputError(noPriceMessage(wanted));
+            const organizationId = sellerOrganizationOf(variant);
+            if (organizationId === null) throw new UserInputError(noOrganizationMessage(wanted));
             const multiple = await this.packaging.requiredMultiple(
                 txCtx,
                 variant,
@@ -55,6 +63,10 @@ export class OrderLineAddService {
             }
             await this.stockSync.addQuantity(txCtx, order, line, quantity);
             line.quantity += quantity;
+            line.customFields = {
+                ...line.customFields,
+                organizationId,
+            } as typeof line.customFields;
             await this.edits.persist(txCtx, order, [line]);
             return `Line ${variant.sku} added (${quantity})`;
         });

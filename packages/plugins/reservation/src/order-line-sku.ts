@@ -33,3 +33,14 @@ export async function findVariantBySku(
 export function noPriceMessage(sku: string): string {
     return `${sku.trim()} has no price for this customer and cannot be added`;
 }
+
+type WithOrganization = { customFields?: { organizationId?: number | string | null } | null };
+
+// The seller organization a placed line carries; organizationOrderGuard stamps the same value at checkout.
+export function sellerOrganizationOf(variant: ProductVariant): number | string | null {
+    return (variant as WithOrganization).customFields?.organizationId ?? null;
+}
+
+export function noOrganizationMessage(sku: string): string {
+    return `${sku.trim()} has no seller organization and cannot be added`;
+}

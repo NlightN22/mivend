@@ -20,8 +20,14 @@ function build(
         customFields: { branchId: 'b1' },
         lines: [] as object[],
     };
-    const line = { id: '9', quantity: opts.existing ?? 0 };
-    const variant = opts.variant === undefined ? { id: '3', sku: 'SKU-1' } : opts.variant;
+    const line: { id: string; quantity: number; customFields?: object } = {
+        id: '9',
+        quantity: opts.existing ?? 0,
+    };
+    const variant =
+        opts.variant === undefined
+            ? { id: '3', sku: 'SKU-1', customFields: { organizationId: 77 } }
+            : opts.variant;
     const qb: Record<string, unknown> = {
         where: () => qb,
         andWhere: () => qb,
@@ -64,6 +70,21 @@ describe('OrderLineAddService', () => {
         expect(t.stockSync.addQuantity).toHaveBeenCalledWith(ctx, expect.anything(), t.line, 3);
         expect(t.line.quantity).toBe(3);
         expect(t.edits.persist).toHaveBeenCalled();
+    });
+
+    it('stamps the line with the seller organization of the article, as the checkout guard does', async () => {
+        const t = build();
+        await t.service.addBySku(ctx, '5', 'SKU-1', 1);
+        expect(t.line.customFields).toEqual({ organizationId: 77 });
+    });
+
+    it('refuses an article without a seller organization before touching the order', async () => {
+        const t = build({ variant: { id: '3', sku: 'SKU-1', customFields: {} } });
+        await expect(t.service.addBySku(ctx, '5', 'SKU-1', 1)).rejects.toThrow(
+            'SKU-1 has no seller organization and cannot be added',
+        );
+        expect(t.modifier.getOrCreateOrderLine).not.toHaveBeenCalled();
+        expect(t.edits.persist).not.toHaveBeenCalled();
     });
 
     it('refuses an unknown article without touching the order', async () => {

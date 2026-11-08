@@ -11,6 +11,7 @@ function build(opts: {
     quote?: unknown;
     quoteFn?: ReturnType<typeof vi.fn>;
     multiple?: number;
+    organization?: number | null;
     unit?: string | null;
     free?: Map<string, Map<string, number>>;
 }) {
@@ -18,7 +19,10 @@ function build(opts: {
         {
             id: '7',
             sku: 'AB-1',
-            customFields: { unitName: opts.unit === undefined ? 'pack' : opts.unit },
+            customFields: {
+                unitName: opts.unit === undefined ? 'pack' : opts.unit,
+                organizationId: opts.organization === undefined ? 77 : opts.organization,
+            },
         },
     ];
     const qb = {
@@ -101,6 +105,12 @@ describe('OrderLineQuoteService', () => {
     it.each([0, -1, 1.5, 2_000_000])('refuses the quantity %s', async quantity => {
         await expect(build({}).service.quote(ctx, '5', 'AB-1', quantity)).rejects.toThrow(
             /whole number from 1/,
+        );
+    });
+
+    it('refuses an article without a seller organization like the add does', async () => {
+        await expect(build({ organization: null }).service.quote(ctx, '5', 'AB-1')).rejects.toThrow(
+            'AB-1 has no seller organization and cannot be added',
         );
     });
 

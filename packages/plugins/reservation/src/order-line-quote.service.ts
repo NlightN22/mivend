@@ -12,9 +12,14 @@ import {
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import { MAX_LINE_QUANTITY } from './order-line-sku';
 import { LINE_PRICE_CHECK, type LinePriceCheck } from './line-price-check';
-import { findVariantBySku, noPriceMessage } from './order-line-sku';
+import {
+    findVariantBySku,
+    MAX_LINE_QUANTITY,
+    noOrganizationMessage,
+    noPriceMessage,
+    sellerOrganizationOf,
+} from './order-line-sku';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 
 export interface OrderLineQuote {
@@ -68,6 +73,9 @@ export class OrderLineQuoteService {
             .get<LinePriceCheck>(LINE_PRICE_CHECK, { strict: false })
             .quote(ctx, order, variant.id, existing + quantity);
         if (!priced) throw new UserInputError(noPriceMessage(sku));
+        if (sellerOrganizationOf(variant) === null) {
+            throw new UserInputError(noOrganizationMessage(sku));
+        }
         const branchId = order.customFields?.branchId;
         const locations = branchId
             ? await this.availability.findBranchStockLocationIds(ctx, branchId)
