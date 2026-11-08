@@ -395,6 +395,12 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `contract_power_of_attorney_erp`) and nothing in mivend's own records changes. Links are plain ERP ids (no foreign
   keys), a missing target never blocks the event, a tombstone sets `isDeleted` and keeps the data, a newer version
   replaces the header and all lines. The tables are not replicated to branches: no branch feature reads them yet.
+  Ordering: an older event redelivered after a newer one is skipped by the inbox processor for every stream (a
+  stale contract event therefore cannot restore an older powers-of-attorney list), the dictionary mirrors need no
+  version column of their own. A tombstone for an unknown dictionary entity stores a flagged empty row (the
+  ERP did delete it); a tombstone for an unknown document stores nothing. An event without `version` is a logged
+  no-op. The Kafka topics `erp.<stream>.events.v1` for all eight new streams exist on the integration broker (checked
+  read-only, listing only).
 - **Moderation (#328)**: a customer edit of an ERP-confirmed point (`customerOwned = false`) is stored as a
   `trading_point_change` (one pending change per point, a newer edit supersedes it) and does not touch the record
   until a manager accepts it (`acceptTradingPointChange`, scope-checked like a staff edit; acceptance runs the staff
