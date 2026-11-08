@@ -3954,6 +3954,7 @@ export type MultipleOrderError = ErrorResult & {
 };
 
 export type Mutation = {
+    acceptTradingPointChange: TradingPointChange;
     activateCounterpartyPortalAccess: Customer;
     addCounterpartyTeamMember: CounterpartyTeamMember;
     /** Add Customers to a CustomerGroup */
@@ -5316,6 +5317,15 @@ export type MutationSetSettingsStoreValuesArgs = {
 export type MutationSetTableViewDefaultArgs = {
     id: Scalars['ID']['input'];
     isDefault: Scalars['Boolean']['input'];
+};
+
+export type MutationAcceptTradingPointChangeArgs = {
+    id: Scalars['ID']['input'];
+};
+
+export type MutationRejectTradingPointChangeArgs = {
+    comment?: InputMaybe<Scalars['String']['input']>;
+    id: Scalars['ID']['input'];
 };
 
 export type MutationSetTradingPointActiveArgs = {
@@ -7708,6 +7718,7 @@ export type Query = {
     paymentMethodEligibilityCheckers: Array<ConfigurableOperationDefinition>;
     paymentMethodHandlers: Array<ConfigurableOperationDefinition>;
     paymentMethods: PaymentMethodList;
+    pendingTradingPointChanges: Array<TradingPointChange>;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
     paymentRefundExists: Scalars['Boolean']['output'];
     pendingErpUsers: ErpUserList;
@@ -9588,7 +9599,22 @@ export type TradingPoint = {
     latitude: Maybe<Scalars['Float']['output']>;
     longitude: Maybe<Scalars['Float']['output']>;
     name: Scalars['String']['output'];
+    pendingChange: Maybe<TradingPointChange>;
     servicingBranchId: Maybe<Scalars['String']['output']>;
+    workingHours: Maybe<Scalars['String']['output']>;
+};
+
+export type TradingPointChange = {
+    address: Scalars['String']['output'];
+    contactName: Maybe<Scalars['String']['output']>;
+    contactPhone: Maybe<Scalars['String']['output']>;
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    latitude: Scalars['Float']['output'];
+    longitude: Scalars['Float']['output'];
+    name: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+    tradingPointId: Scalars['ID']['output'];
     workingHours: Maybe<Scalars['String']['output']>;
 };
 
@@ -10905,6 +10931,47 @@ export type SetTradingPointActiveMutationVariables = Exact<{
 }>;
 
 export type SetTradingPointActiveMutation = { setTradingPointActive: { id: string } };
+
+export type PendingTradingPointChangeFieldsFragment = {
+    id: string;
+    tradingPointId: string;
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    workingHours: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+};
+
+export type PendingTradingPointChangesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PendingTradingPointChangesQuery = {
+    pendingTradingPointChanges: Array<{
+        id: string;
+        tradingPointId: string;
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        workingHours: string | null;
+        contactName: string | null;
+        contactPhone: string | null;
+    }>;
+};
+
+export type AcceptTradingPointChangeMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type AcceptTradingPointChangeMutation = { acceptTradingPointChange: { id: string } };
+
+export type RejectTradingPointChangeMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    comment?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type RejectTradingPointChangeMutation = { rejectTradingPointChange: { id: string } };
 
 export type CustomerIdForCounterpartyQueryVariables = Exact<{
     counterpartyId: Scalars['String']['input'];
@@ -13888,6 +13955,62 @@ export const UpdateTradingPointDetailsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UpdateTradingPointDetailsMutation,
     UpdateTradingPointDetailsMutationVariables
+>;
+export const PendingTradingPointChangeFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment PendingTradingPointChangeFields on TradingPointChange {
+  id
+  tradingPointId
+  name
+  address
+  latitude
+  longitude
+  workingHours
+  contactName
+  contactPhone
+}
+    `,
+    { fragmentName: 'PendingTradingPointChangeFields' },
+) as unknown as TypedDocumentString<PendingTradingPointChangeFieldsFragment, unknown>;
+export const PendingTradingPointChangesDocument = new TypedDocumentString(`
+    query PendingTradingPointChanges {
+  pendingTradingPointChanges {
+    ...PendingTradingPointChangeFields
+  }
+}
+    fragment PendingTradingPointChangeFields on TradingPointChange {
+  id
+  tradingPointId
+  name
+  address
+  latitude
+  longitude
+  workingHours
+  contactName
+  contactPhone
+}`) as unknown as TypedDocumentString<
+    PendingTradingPointChangesQuery,
+    PendingTradingPointChangesQueryVariables
+>;
+export const AcceptTradingPointChangeDocument = new TypedDocumentString(`
+    mutation AcceptTradingPointChange($id: ID!) {
+  acceptTradingPointChange(id: $id) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AcceptTradingPointChangeMutation,
+    AcceptTradingPointChangeMutationVariables
+>;
+export const RejectTradingPointChangeDocument = new TypedDocumentString(`
+    mutation RejectTradingPointChange($id: ID!, $comment: String) {
+  rejectTradingPointChange(id: $id, comment: $comment) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RejectTradingPointChangeMutation,
+    RejectTradingPointChangeMutationVariables
 >;
 export const SetTradingPointActiveDocument = new TypedDocumentString(`
     mutation SetTradingPointActive($id: ID!, $isActive: Boolean!) {
