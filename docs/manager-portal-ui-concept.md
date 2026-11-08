@@ -210,7 +210,10 @@ mobile cards are shared with the payments list. `visibleSettlementDocuments` tak
 `options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
 caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
 in the customer card. Gated by `ReadCounterpartyCredit` (settlement documents are what the credit
-balance is derived from); no running balance is shown because the model keeps none per document.
+balance is derived from); the proforma number is a raw read of the acquiring plugin's
+`proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
+correlated order-code aggregation used by the search and the type counts is the first thing to
+profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.
 
 ## Not implemented yet
 

@@ -25,6 +25,8 @@ import type {
 
 type Raw = Record<string, unknown>;
 
+// A counterparty id is a plain integer; anything else matches nothing, like a missing id.
+export const isCounterpartyId = (value: string): boolean => /^\d{1,9}$/.test(value);
 const escapeLike = (term: string): string => term.replace(/[\\%_]/g, '\\$&');
 const ORDER_CODES_SQL = `COALESCE((SELECT json_agg(o."code" ORDER BY l."id")
     FROM "settlement_order_link" l
@@ -44,6 +46,8 @@ export class SettlementAdminListService {
         options?: SettlementListOptions | null,
         counterpartyId?: string | null,
     ): Promise<SettlementListPage> {
+        if (counterpartyId && !isCounterpartyId(counterpartyId))
+            return { items: [], totalItems: 0 };
         const take = clampTake(options?.take ?? undefined);
         const skip = clampSkip(options?.skip ?? undefined);
         const qb = await this.baseQuery(ctx, options, counterpartyId);
@@ -84,6 +88,7 @@ export class SettlementAdminListService {
         options?: SettlementListOptions | null,
         counterpartyId?: string | null,
     ): Promise<SettlementTypeCount[]> {
+        if (counterpartyId && !isCounterpartyId(counterpartyId)) return [];
         const qb = await this.baseQuery(ctx, options, counterpartyId);
         const rows = await qb
             .select('"d"."documentType"', 'documentType')

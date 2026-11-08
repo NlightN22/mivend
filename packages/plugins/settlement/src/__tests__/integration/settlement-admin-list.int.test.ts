@@ -161,6 +161,8 @@ describe('visible settlement documents (real Postgres)', () => {
             }),
         ).toEqual(['101']);
         expect((await service.findVisible(ctx, {}, '2')).totalItems).toBe(0);
+        expect(await service.findVisible(ctx, {}, 'abc')).toEqual({ items: [], totalItems: 0 });
+        expect(await service.typeCounts(ctx, {}, '1; DROP')).toEqual([]);
         expect((await service.typeCounts(ctx, {})).map(c => c.count)).toEqual([1, 1]);
     });
 

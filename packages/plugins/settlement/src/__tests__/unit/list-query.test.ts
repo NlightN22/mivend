@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SelectQueryBuilder } from 'typeorm';
 
 import type { SettlementDocumentEntry } from '../../entities/settlement-document-entry.entity';
+import { isCounterpartyId } from '../../settlement-admin-list.service';
 import { applyListFilter, applyListSort } from '../../settlement-list-query';
 
 function fakeQb(): {
@@ -39,5 +40,13 @@ describe('settlement list query', () => {
         const { qb, order } = fakeQb();
         applyListSort(qb, undefined);
         expect(order).toEqual(['"d"."date" DESC', '"e"."id" DESC']);
+    });
+});
+
+describe('isCounterpartyId', () => {
+    it('accepts a plain integer id and rejects everything else', () => {
+        expect(isCounterpartyId('42')).toBe(true);
+        for (const bad of ['abc', '99999999999', '1; DROP', '', '-1', '1.5'])
+            expect(isCounterpartyId(bad), bad).toBe(false);
     });
 });

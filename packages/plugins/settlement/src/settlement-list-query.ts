@@ -20,6 +20,7 @@ export const CATEGORY_LIST_SQL = `COALESCE("t"."category", 'other')`;
 export const FIRST_ORDER_CODE_SQL = `(SELECT o."code" FROM "settlement_order_link" l
     JOIN "order" o ON o."id" = l."orderId" AND o."customFieldsCounterpartyid" = ${E}."counterpartyId"
     WHERE l."entryId" = ${E}."id" ORDER BY l."id" LIMIT 1)`;
+// Raw read of the acquiring plugin's table (no plugin dependency); the server always loads both.
 export const PROFORMA_NUMBER_SQL = `(SELECT p."number" FROM "proforma_invoice" p
     WHERE p."salesInvoiceNumber" = ${D}."number" AND p."counterpartyId"::text = ${E}."counterpartyId"
     ORDER BY p."id" DESC LIMIT 1)`;
