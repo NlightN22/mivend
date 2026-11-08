@@ -91,11 +91,12 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
                 ? applied(label)
                 : skip('no_portal_access', 'No portal access to revoke', label);
         }
-        if (linked) return skip('already_active', 'Portal access already granted', label);
+        // Same order as the service's checks, so the review and the run give the same reason.
         if (!counterparty.isActive) return skip('inactive', 'Inactive in the ERP', label);
         if (!counterparty.phone || !counterparty.officialEmail) {
             return skip('no_contact', 'Phone or e-mail is missing', label);
         }
+        if (linked) return skip('already_active', 'Portal access already granted', label);
         return applied(label);
     }
 
