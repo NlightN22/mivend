@@ -26,12 +26,16 @@ defineProps<{
                 />
             </div>
             <MvQtyStepper v-model="add.quantity.value" size="sm" :disabled="busy" />
-            <span class="add-row__dash" title="Shown once the position is added">&mdash;</span>
-            <span class="add-row__dash">&mdash;</span>
+            <span class="add-row__dash" data-testid="add-row-available">
+                {{ add.quote.value ? add.quote.value.available : '—' }}
+            </span>
+            <span class="add-row__dash" data-testid="add-row-reserve">
+                {{ add.quote.value ? `0 / ${add.quantity.value}` : '—' }}
+            </span>
             <MvDocumentSuffixInput
                 :model-value="add.price.value"
                 :suffix="currencySymbol"
-                placeholder="Price"
+                placeholder="Price, ₽"
                 label="Price"
                 :disabled="busy"
                 @update:model-value="add.setPrice"
@@ -50,7 +54,7 @@ defineProps<{
                     class="add-row__btn add-row__btn--ok"
                     aria-label="Add position"
                     data-testid="add-row-confirm"
-                    :disabled="busy || !add.picked.value"
+                    :disabled="busy || !add.quote.value"
                     @click="add.submit()"
                 >
                     <IconCheck :size="16" />
@@ -76,9 +80,7 @@ defineProps<{
         <p v-if="add.error.value" class="add-row__error" role="alert" data-testid="add-row-error">
             {{ add.error.value }}
         </p>
-        <p v-else class="add-row__hint">
-            Leave price and discount empty to use the customer price.
-        </p>
+        <p v-else class="add-row__hint">Price and discount start at the customer price.</p>
     </div>
 </template>
 

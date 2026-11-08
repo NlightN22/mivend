@@ -6166,6 +6166,20 @@ export type OrderLineOrganizationStock = {
     stock: Scalars['Float']['output'];
 };
 
+export type OrderLineQuote = {
+    /** What the branch warehouses can cover now (the line's own organization cap applies once it is added). */
+    available: Scalars['Int']['output'];
+    /** The order's customer price for one unit, in the order's price terms. */
+    customerPrice: Scalars['Int']['output'];
+    /** Share of the reference price the customer price gives away; negative is a markup. */
+    discountPercent: Maybe<Scalars['Float']['output']>;
+    name: Scalars['String']['output'];
+    /** The customer's price before any discount. */
+    referencePrice: Scalars['Int']['output'];
+    sku: Scalars['String']['output'];
+    variantId: Scalars['ID']['output'];
+};
+
 export type OrderLineRetroBonus = {
     /** Null when the rule has a threshold. */
     amount: Maybe<Scalars['Money']['output']>;
@@ -7845,6 +7859,8 @@ export type Query = {
     /** Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder. */
     orderLineAvailability: Array<OrderLineAvailability>;
     orderLineDiscountLimits: Array<OrderLineDiscountLimit>;
+    /** Price and stock of an article for this order's customer, refused like addOrderLineBySku. Needs ConfirmOrder and order visibility. */
+    orderLineQuote: OrderLineQuote;
     /** Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility. */
     orderLineShortfalls: Array<OrderLineShortfall>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
@@ -8280,6 +8296,11 @@ export type QueryOrderLineAvailabilityArgs = {
 
 export type QueryOrderLineDiscountLimitsArgs = {
     orderId: Scalars['ID']['input'];
+};
+
+export type QueryOrderLineQuoteArgs = {
+    orderId: Scalars['ID']['input'];
+    sku: Scalars['String']['input'];
 };
 
 export type QueryOrderLineShortfallsArgs = {
@@ -12183,6 +12204,23 @@ export type OrderLineShortfallsQuery = {
     }>;
 };
 
+export type OrderLineQuoteQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    sku: Scalars['String']['input'];
+}>;
+
+export type OrderLineQuoteQuery = {
+    orderLineQuote: {
+        variantId: string;
+        sku: string;
+        name: string;
+        customerPrice: number;
+        referencePrice: number;
+        discountPercent: number | null;
+        available: number;
+    };
+};
+
 export type OrderProformaInvoicesQueryVariables = Exact<{
     orderId: Scalars['ID']['input'];
 }>;
@@ -15554,6 +15592,19 @@ export const OrderLineShortfallsDocument = new TypedDocumentString(`
     OrderLineShortfallsQuery,
     OrderLineShortfallsQueryVariables
 >;
+export const OrderLineQuoteDocument = new TypedDocumentString(`
+    query OrderLineQuote($orderId: ID!, $sku: String!) {
+  orderLineQuote(orderId: $orderId, sku: $sku) {
+    variantId
+    sku
+    name
+    customerPrice
+    referencePrice
+    discountPercent
+    available
+  }
+}
+    `) as unknown as TypedDocumentString<OrderLineQuoteQuery, OrderLineQuoteQueryVariables>;
 export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     query OrderProformaInvoices($orderId: ID!) {
   proformaInvoicesForOrder(orderId: $orderId) {

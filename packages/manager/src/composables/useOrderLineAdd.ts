@@ -1,19 +1,18 @@
 import { ref } from 'vue';
-import { fetchLineDiscountLimits } from '../api/discountLimits';
 import {
     addOrderLineBySku,
+    fetchOrderLineQuote,
     findOrderLineBySku,
     searchVariants,
+    type OrderLineQuote,
     type SkuMatch,
 } from '../api/orderLineEdit';
 import { requestPriceAdjustment } from '../api/priceAdjustment';
-import { priceFromPercent, referencePrice } from '../utils/lineValueModel';
+import { percentFromPrice, priceFromPercent } from '../utils/lineValueModel';
 
 const MIN_QUERY = 2;
 
-export type AddPriceMode = 'customer' | 'price' | 'percent';
-
-// Inline add row: pick a product, set quantity and an optional price or discount, then add in one user action.
+// Inline add row: pick a product (its quote prefills price and discount), then add in one user action.
 export function useOrderLineAdd(
     orderId: () => string,
     run: (action: () => Promise<void>) => Promise<boolean>,
@@ -22,17 +21,23 @@ export function useOrderLineAdd(
     const query = ref('');
     const matches = ref<SkuMatch[]>([]);
     const picked = ref<SkuMatch | null>(null);
+    const quote = ref<OrderLineQuote | null>(null);
     const quantity = ref(1);
     const price = ref('');
     const discount = ref('');
     const error = ref('');
     const notice = ref('');
     let seq = 0;
+    let quoteSeq = 0;
+
+    const prefilled = (): string =>
+        quote.value ? (quote.value.customerPrice / 100).toFixed(2) : '';
 
     function reset(): void {
         query.value = '';
         matches.value = [];
         picked.value = null;
+        quote.value = null;
         quantity.value = 1;
         price.value = '';
         discount.value = '';
@@ -52,7 +57,11 @@ export function useOrderLineAdd(
 
     async function search(value: string): Promise<void> {
         query.value = value;
-        if (picked.value && value !== picked.value.sku) picked.value = null;
+        if (picked.value && value !== picked.value.sku) {
+            picked.value = null;
+            quote.value = null;
+            quoteSeq += 1;
+        }
         const mine = (seq += 1);
         if (value.trim().length < MIN_QUERY) {
             matches.value = [];
@@ -62,42 +71,46 @@ export function useOrderLineAdd(
         if (mine === seq) matches.value = found;
     }
 
-    function pick(match: SkuMatch): void {
+    async function pick(match: SkuMatch): Promise<void> {
         picked.value = match;
         query.value = match.sku;
         matches.value = [];
         error.value = '';
+        quote.value = null;
+        price.value = '';
+        discount.value = '';
+        const mine = (quoteSeq += 1);
+        try {
+            const result = await fetchOrderLineQuote(orderId(), match.sku);
+            if (mine !== quoteSeq) return;
+            quote.value = result;
+            price.value = prefilled();
+            discount.value = String(result.discountPercent ?? 0);
+        } catch (e) {
+            if (mine === quoteSeq) error.value = e instanceof Error ? e.message : 'No price found';
+        }
     }
 
     function setPrice(value: string): void {
         price.value = value;
-        discount.value = '';
+        if (quote.value) discount.value = percentFromPrice(quote.value.referencePrice, value) ?? '';
     }
 
     function setDiscount(value: string): void {
         discount.value = value;
-        price.value = '';
+        const next = quote.value ? priceFromPercent(quote.value.referencePrice, value) : null;
+        if (next !== null) price.value = next;
     }
 
-    async function applyPrice(sku: string): Promise<void> {
-        const wantsPrice = price.value.trim() !== '';
-        const wantsPercent = discount.value.trim() !== '';
-        if (!wantsPrice && !wantsPercent) return;
+    async function applyChangedPrice(sku: string): Promise<void> {
+        const minor = Math.round(Number(price.value) * 100);
+        if (price.value === prefilled()) return;
         try {
+            if (price.value.trim() === '' || Number.isNaN(minor) || minor < 0) {
+                throw new Error('enter a valid price');
+            }
             const line = await findOrderLineBySku(orderId(), sku);
             if (!line) throw new Error('the new line was not found');
-            let target = price.value;
-            if (!wantsPrice) {
-                const limits = await fetchLineDiscountLimits(orderId());
-                const reference = referencePrice(
-                    line.effectivePriceMinor,
-                    limits.get(line.id)?.percent ?? null,
-                    line.listPriceMinor,
-                );
-                target = priceFromPercent(reference, discount.value) ?? '';
-            }
-            const minor = Math.round(Number(target) * 100);
-            if (!target || Number.isNaN(minor) || minor < 0) throw new Error('enter a valid price');
             const outcome = await requestPriceAdjustment(orderId(), line.id, minor);
             if (outcome.decision === 'requires-approval') {
                 notice.value = `${sku} added; the price was sent for approval.`;
@@ -108,11 +121,11 @@ export function useOrderLineAdd(
         }
     }
 
-    // A refusal stays in the add row; the line is added first, then the price goes through the price-entry path.
+    // A refusal stays in the add row; the line is added first, a changed price then goes through the price path.
     async function submit(): Promise<boolean> {
         const chosen = picked.value;
-        if (!chosen) {
-            error.value = 'Choose a product first';
+        if (!chosen || !quote.value) {
+            error.value = error.value || 'Choose a product first';
             return false;
         }
         let failed = false;
@@ -126,7 +139,7 @@ export function useOrderLineAdd(
                 error.value = e instanceof Error ? e.message : 'The position was not added';
                 return;
             }
-            await applyPrice(chosen.sku);
+            await applyChangedPrice(chosen.sku);
         });
         if (!failed) cancel();
         return !failed;
@@ -137,6 +150,7 @@ export function useOrderLineAdd(
         query,
         matches,
         picked,
+        quote,
         quantity,
         price,
         discount,

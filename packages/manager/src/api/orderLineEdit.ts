@@ -4,17 +4,20 @@ import {
     ChangeOrderLineQuantityDocument,
     OrderLineAvailabilityDocument,
     OrderLineIdsBySkuDocument,
+    OrderLineQuoteDocument,
     OrderLineShortfallsDocument,
     ProductVariantsBySkuDocument,
     RemoveOrderLineDocument,
     SplitOrderLinesByStockDocument,
     type OrderLineAvailabilityFieldsFragment,
+    type OrderLineQuoteQuery,
     type OrderLineShortfallsQuery,
     type SplitOrderLinesByStockMutation,
 } from './generated/graphql';
 
 export type OrderLineAvailability = OrderLineAvailabilityFieldsFragment;
 export type OrderLineShortfallRow = OrderLineShortfallsQuery['orderLineShortfalls'][number];
+export type OrderLineQuote = OrderLineQuoteQuery['orderLineQuote'];
 export type SplitOutcome = SplitOrderLinesByStockMutation['splitOrderLinesByStock'][number];
 
 export async function fetchOrderLineAvailability(
@@ -81,4 +84,8 @@ export async function findOrderLineBySku(orderId: string, sku: string): Promise<
               effectivePriceMinor: line.discountedUnitPriceWithTax,
           }
         : null;
+}
+
+export async function fetchOrderLineQuote(orderId: string, sku: string): Promise<OrderLineQuote> {
+    return (await adminApi(OrderLineQuoteDocument, { orderId, sku })).orderLineQuote;
 }

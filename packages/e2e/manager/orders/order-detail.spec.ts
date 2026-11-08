@@ -163,6 +163,9 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
         await page.getByLabel('Article or product name').fill(term);
         await page.getByRole('button', { name: new RegExp(SKU) }).click();
+        await expect(page.getByLabel('Unit price', { exact: true })).toHaveCount(0);
+        await expect(page.getByTestId('add-row-available')).not.toHaveText('—');
+        await expect(page.getByLabel('Price', { exact: true })).not.toHaveValue('');
         await page.getByRole('button', { name: 'Add position', exact: true }).click();
     }
 

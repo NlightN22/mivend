@@ -89,3 +89,15 @@ query OrderLineShortfalls($orderId: ID!) {
         createdAt
     }
 }
+
+query OrderLineQuote($orderId: ID!, $sku: String!) {
+    orderLineQuote(orderId: $orderId, sku: $sku) {
+        variantId
+        sku
+        name
+        customerPrice
+        referencePrice
+        discountPercent
+        available
+    }
+}
