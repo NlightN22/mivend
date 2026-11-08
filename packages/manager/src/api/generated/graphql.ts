@@ -7526,16 +7526,22 @@ export type ProformaInvoice = {
     orderId: Maybe<Scalars['ID']['output']>;
     organizationId: Scalars['ID']['output'];
     /** ERP sales invoice (realization) number; set only on a by-shipment version. */
+    /** Payment attempts applied to this version, newest first; scoped like the proforma invoice itself. */
+    payments: Array<PaymentAttempt>;
     salesInvoiceNumber: Maybe<Scalars['String']['output']>;
     seller: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
     supersededBy: Maybe<ProformaInvoiceVersionRef>;
     supersedes: Maybe<ProformaInvoiceVersionRef>;
     version: Scalars['Int']['output'];
+    /** All versions of this document (same order and organization), newest first; the version itself when it has no order. */
+    versions: Array<ProformaInvoice>;
 };
 
 /** A line of the immutable snapshot taken when the proforma invoice was issued. */
 export type ProformaInvoiceLine = {
+    /** Total of the line discounts of the snapshot, positive; linePriceWithTax minus this is the line total. */
+    discountAmount: Scalars['Int']['output'];
     linePriceWithTax: Scalars['Int']['output'];
     productVariant: ProformaInvoiceLineProductVariant;
     quantity: Scalars['Int']['output'];
@@ -7914,6 +7920,8 @@ export type Query = {
     /** List Products */
     products: ProductList;
     /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
+    /** One proforma invoice of the manager portal card; null when unknown or outside the caller's scope (same rule as visibleProformaInvoices). */
+    proformaInvoice: Maybe<ProformaInvoice>;
     proformaInvoiceOutstandingBalance: Maybe<MoneyAmount>;
     proformaInvoicesForOrder: Array<ProformaInvoice>;
     promotion: Maybe<Promotion>;
@@ -8421,6 +8429,10 @@ export type QueryProductVariantsArgs = {
 
 export type QueryProductsArgs = {
     options?: InputMaybe<ProductListOptions>;
+};
+
+export type QueryProformaInvoiceArgs = {
+    id: Scalars['ID']['input'];
 };
 
 export type QueryProformaInvoiceOutstandingBalanceArgs = {
@@ -12578,6 +12590,79 @@ export type ProformaInvoiceOutstandingBalanceQuery = {
     proformaInvoiceOutstandingBalance: { amount: number; currencyCode: string } | null;
 };
 
+export type ProformaCardVersionFieldsFragment = {
+    id: string;
+    number: string;
+    version: number;
+    kind: string;
+    displayStatus: string;
+    amount: number;
+    issuedAt: any;
+    lines: Array<{
+        quantity: number;
+        linePriceWithTax: number;
+        discountAmount: number;
+        productVariant: { name: string; sku: string };
+    }>;
+};
+
+export type ProformaInvoiceCardQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type ProformaInvoiceCardQuery = {
+    proformaInvoice: {
+        status: string;
+        orderId: string | null;
+        counterpartyId: string;
+        counterpartyShortName: string | null;
+        currencyCode: string;
+        dueDate: any;
+        salesInvoiceNumber: string | null;
+        contractName: string | null;
+        id: string;
+        number: string;
+        version: number;
+        kind: string;
+        displayStatus: string;
+        amount: number;
+        issuedAt: any;
+        order: { id: string; code: string } | null;
+        seller: { legalName: string; inn: string | null; kpp: string | null } | null;
+        document: { status: string; pdfUrl: string | null } | null;
+        lines: Array<{
+            unitPriceWithTax: number;
+            quantity: number;
+            linePriceWithTax: number;
+            discountAmount: number;
+            productVariant: { name: string; sku: string };
+        }>;
+        payments: Array<{
+            id: string;
+            number: string;
+            createdAt: any;
+            channel: string;
+            paymentStatus: string;
+            amount: number;
+        }>;
+        versions: Array<{
+            id: string;
+            number: string;
+            version: number;
+            kind: string;
+            displayStatus: string;
+            amount: number;
+            issuedAt: any;
+            lines: Array<{
+                quantity: number;
+                linePriceWithTax: number;
+                discountAmount: number;
+                productVariant: { name: string; sku: string };
+            }>;
+        }>;
+    } | null;
+};
+
 export type OrderReservationFieldsFragment = {
     id: string;
     orderLineId: string;
@@ -16005,6 +16090,29 @@ export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
     ProformaInvoiceViewCountsQuery,
     ProformaInvoiceViewCountsQueryVariables
 >;
+export const ProformaCardVersionFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment ProformaCardVersionFields on ProformaInvoice {
+  id
+  number
+  version
+  kind
+  displayStatus
+  amount
+  issuedAt
+  lines {
+    quantity
+    linePriceWithTax
+    discountAmount
+    productVariant {
+      name
+      sku
+    }
+  }
+}
+    `,
+    { fragmentName: 'ProformaCardVersionFields' },
+) as unknown as TypedDocumentString<ProformaCardVersionFieldsFragment, unknown>;
 export const ProformaInvoiceOutstandingBalanceDocument = new TypedDocumentString(`
     query ProformaInvoiceOutstandingBalance($counterpartyId: ID!) {
   proformaInvoiceOutstandingBalance(counterpartyId: $counterpartyId) {
@@ -16016,6 +16124,65 @@ export const ProformaInvoiceOutstandingBalanceDocument = new TypedDocumentString
     ProformaInvoiceOutstandingBalanceQuery,
     ProformaInvoiceOutstandingBalanceQueryVariables
 >;
+export const ProformaInvoiceCardDocument = new TypedDocumentString(`
+    query ProformaInvoiceCard($id: ID!) {
+  proformaInvoice(id: $id) {
+    ...ProformaCardVersionFields
+    status
+    orderId
+    counterpartyId
+    counterpartyShortName
+    currencyCode
+    dueDate
+    salesInvoiceNumber
+    contractName
+    order {
+      id
+      code
+    }
+    seller {
+      legalName
+      inn
+      kpp
+    }
+    document {
+      status
+      pdfUrl
+    }
+    lines {
+      unitPriceWithTax
+    }
+    payments {
+      id
+      number
+      createdAt
+      channel
+      paymentStatus
+      amount
+    }
+    versions {
+      ...ProformaCardVersionFields
+    }
+  }
+}
+    fragment ProformaCardVersionFields on ProformaInvoice {
+  id
+  number
+  version
+  kind
+  displayStatus
+  amount
+  issuedAt
+  lines {
+    quantity
+    linePriceWithTax
+    discountAmount
+    productVariant {
+      name
+      sku
+    }
+  }
+}`) as unknown as TypedDocumentString<ProformaInvoiceCardQuery, ProformaInvoiceCardQueryVariables>;
 export const OrderReservationsDocument = new TypedDocumentString(`
     query OrderReservations($orderId: ID!) {
   orderReservations(orderId: $orderId) {

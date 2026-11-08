@@ -141,6 +141,34 @@ One page, no tabs, top to bottom:
 Phone width: the table turns into one card per row with the same stripe and flagged cells, the
 action menu keeps everything the buttons show, the summary wraps.
 
+## Proforma invoice card
+
+A view-only page at `/proforma-invoices/:id` (reached from the order card's proforma modal). Reissuing happens through an order edit, so the card has no withdraw, reissue or send
+action. Blocks, top to bottom:
+
+1. **Header.** Number with a version badge, the display status (current, superseded, cancelled; a proforma
+   invoice is never shown as paid), issue and pay-by dates, the order link. Two buttons for the print
+   form: **Open** (inline, a new tab) and **Download** (`?download=1`, an attachment, for forwarding the
+   file); until the PDF is ready both give way to a disabled "PDF is being prepared". The "..." menu
+   holds copy number, show in the list and open the order.
+2. **Parties.** Customer (link to the customer card) and the seller organization with its tax ids,
+   plus the order card's compact customer summary (reused, not copied).
+3. **Lines.** The ui-kit document lines kit in view-only mode (no selection, no actions column) and the
+   totals block: positions, subtotal, discount, total. The snapshot has no delivery, unit or product
+   image, so none is shown; there are no flags because the snapshot has no problem to report.
+4. **Below.** Payments applied to this version (link to the payments list by number, paid and remaining;
+   informational, the debt comes from the ERP sales invoice), the version history, related documents.
+
+The version history is a vertical timeline (newest first, only when there is more than one version).
+Each version keeps its own immutable line snapshot, so every entry shows its date, amount, the cause the
+model records (`kind`: order placed, order changed, by shipment), the amount delta and the number of
+lines added, removed and changed against the previous version, and links to open that version.
+
+Server: the admin query `proformaInvoice(id)` (ReadProformaInvoice, the same scope as
+`visibleProformaInvoices`; a hidden or unknown id is null) with `payments` and `versions` fields that
+inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `inline` by default and
+`attachment` for `?download=1`, with the same session and scope check.
+
 ## Menu
 
 | Item | Content | Status |
