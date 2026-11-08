@@ -73,6 +73,7 @@ function build(setup: Setup = {}) {
         },
         remove: async (row: unknown) => {
             removed.push(row);
+            (row as { id?: unknown }).id = undefined;
         },
     });
     const connection = {
@@ -316,6 +317,23 @@ describe('OrderLineEditService', () => {
         });
         await t.service.removeLine(ctx, '5', '1');
         expect(t.removed).toHaveLength(1);
+    });
+
+    it('recomputes prices without the removed line, whose id the ORM has cleared', async () => {
+        const t = build({
+            lines: [
+                { id: '1', quantity: 2 },
+                { id: '2', quantity: 3 },
+            ],
+        });
+        await t.service.removeLine(ctx, '5', '1');
+        const [, , passed] = t.orderService.applyPriceAdjustments.mock.calls[0] as unknown as [
+            unknown,
+            unknown,
+            Array<{ id: unknown }>,
+        ];
+        expect(passed.map(l => l.id)).toEqual(['2']);
+        expect(t.order.lines.map(l => l.id)).toEqual(['2']);
     });
 
     it('splits short lines, records shortfall, drops a line nothing fits for', async () => {

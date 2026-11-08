@@ -106,7 +106,7 @@ export class OrderLineEditService {
             const line = this.lineOf(order, lineId);
             this.assertNotLast(order, 1);
             const removedQuantity = line.quantity;
-            // Filter before removal: the ORM clears the removed line's id, so an id filter would keep it.
+            // Filter first: the ORM clears the id, so an id filter kept the line and re-inserted it (NaN id in the identity subscriber).
             order.lines = order.lines.filter(l => l !== line);
             await this.stockSync.removeLine(txCtx, order, line);
             await this.persist(txCtx, order, order.lines);
