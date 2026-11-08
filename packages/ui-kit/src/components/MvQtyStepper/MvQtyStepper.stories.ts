@@ -12,6 +12,7 @@ const meta: Meta<typeof MvQtyStepper> = {
         disabled: { control: 'boolean' },
         size: { control: 'select', options: ['md', 'sm'] },
         editable: { control: 'boolean' },
+        commit: { control: 'select', options: ['confirm', 'live'] },
     },
     args: {
         modelValue: 1,
@@ -70,5 +71,18 @@ export const Disabled: Story = {
         components: { MvQtyStepper },
         setup: () => ({ args }),
         template: '<MvQtyStepper v-bind="args" />',
+    }),
+};
+
+export const TypeableLive: Story = {
+    args: { size: 'sm', commit: 'live', step: 4, min: 4, modelValue: 8, max: 1000 },
+    render: args => ({
+        components: { MvQtyStepper },
+        setup: () => {
+            const qty = ref(args.modelValue);
+            return { args, qty };
+        },
+        template:
+            '<MvQtyStepper v-bind="args" :model-value="qty" @update:model-value="qty = $event" />',
     }),
 };

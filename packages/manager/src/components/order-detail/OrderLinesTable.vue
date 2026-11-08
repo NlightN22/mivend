@@ -37,6 +37,8 @@ import OrderLineStockInfo from './OrderLineStockInfo.vue';
 import OrderLinesDeleteDialog from './OrderLinesDeleteDialog.vue';
 import OrderLinesEditBar from './OrderLinesEditBar.vue';
 
+const MAX_LINE_QUANTITY = 1_000_000;
+
 const props = defineProps<{
     orderId: string;
     edit: ReturnType<typeof useOrderLineEdit>;
@@ -208,6 +210,8 @@ async function confirmDelete(): Promise<void> {
                 <MvQtyStepper
                     v-model="draft.quantity"
                     size="sm"
+                    commit="live"
+                    :max="MAX_LINE_QUANTITY"
                     :min="stepperMin(caps.canRemove, stepOf(row.id))"
                     :step="stepOf(row.id)"
                     :disabled="!!editing.savingId.value"

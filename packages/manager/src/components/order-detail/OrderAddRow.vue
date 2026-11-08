@@ -25,7 +25,13 @@ defineProps<{
                     @input="add.search(($event.target as HTMLInputElement).value)"
                 />
             </div>
-            <MvQtyStepper v-model="add.quantity.value" size="sm" :disabled="busy" />
+            <MvQtyStepper
+                v-model="add.quantity.value"
+                size="sm"
+                commit="live"
+                :max="1000000"
+                :disabled="busy"
+            />
             <span class="add-row__dash" data-testid="add-row-available">
                 {{ add.quote.value ? add.quote.value.available : '—' }}
             </span>

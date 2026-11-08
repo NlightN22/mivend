@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { IconCheck, IconX } from '@tabler/icons-vue';
+import { parseQuantity } from './qtyStepperModel';
 
 export interface QtyStepperLabels {
     cancel: string;
@@ -25,6 +26,9 @@ interface Props {
     disabled?: boolean;
     size?: 'md' | 'sm';
     editable?: boolean;
+    // 'live': a typed valid value is emitted at once and there are no inner confirm/cancel buttons.
+    commit?: 'confirm' | 'live';
+    max?: number;
     block?: boolean;
     labels?: Partial<QtyStepperLabels>;
 }
@@ -35,6 +39,7 @@ const props = withDefaults(defineProps<Props>(), {
     disabled: false,
     size: 'md',
     editable: false,
+    commit: 'confirm',
     block: false,
     labels: () => ({}),
 });
@@ -48,7 +53,14 @@ const focused = ref(false);
 const staleWhileFocused = ref(false);
 const parsedDraft = computed(() => (/^\d+$/.test(draft.value) ? Number(draft.value) : null));
 const dirty = computed(() => draft.value !== String(props.modelValue));
-const editing = computed(() => props.editable && dirty.value);
+const live = computed(() => props.commit === 'live');
+const typed = computed(() => props.editable || live.value);
+const editing = computed(() => props.editable && !live.value && dirty.value);
+const problem = computed(() =>
+    live.value && dirty.value
+        ? parseQuantity(draft.value, { min: props.min, max: props.max, step: props.step }).error
+        : null,
+);
 const canConfirm = computed(
     () =>
         parsedDraft.value !== null &&
@@ -60,10 +72,21 @@ const canConfirm = computed(
 watch(
     () => props.modelValue,
     v => {
-        if (focused.value) staleWhileFocused.value = true;
+        if (live.value && String(v) !== draft.value && parsedDraft.value === v) return;
+        if (focused.value && !live.value) staleWhileFocused.value = true;
         else draft.value = String(v);
     },
 );
+
+function onInput() {
+    if (!live.value) return;
+    const { value } = parseQuantity(draft.value, {
+        min: props.min,
+        max: props.max,
+        step: props.step,
+    });
+    if (value !== null && value !== props.modelValue) emit('update:modelValue', value);
+}
 
 function confirm() {
     if (canConfirm.value) emit('update:modelValue', parsedDraft.value as number);
@@ -71,6 +94,7 @@ function confirm() {
 
 function onBlur() {
     focused.value = false;
+    if (live.value && problem.value) draft.value = String(props.modelValue);
     if (!staleWhileFocused.value) return;
     staleWhileFocused.value = false;
     draft.value = String(props.modelValue);
@@ -113,19 +137,26 @@ function inc() {
             class="mv-qty-stepper__btn"
             type="button"
             :aria-label="text.decrease"
-            :disabled="disabled || modelValue <= min"
+            :disabled="disabled || modelValue - step < min"
             @click="dec"
         >
             −
         </button>
         <input
-            v-if="editable"
+            v-if="typed"
             v-model="draft"
             class="mv-qty-stepper__val mv-qty-stepper__input"
+            :class="{ 'mv-qty-stepper__input--invalid': problem }"
             inputmode="numeric"
+            :title="problem ?? undefined"
+            :aria-invalid="problem ? 'true' : undefined"
             :aria-label="text.quantity"
             :disabled="disabled"
-            @focus="focused = true"
+            @focus="
+                focused = true;
+                ($event.target as HTMLInputElement).select();
+            "
+            @input="onInput"
             @blur="onBlur"
             @keydown.enter.prevent="confirm"
             @keydown.esc.prevent="revert"
@@ -238,6 +269,9 @@ function inc() {
 }
 .mv-qty-stepper__input:hover {
     background: var(--app-nav-border);
+}
+.mv-qty-stepper__input--invalid {
+    outline: 1.5px solid var(--app-danger-btn);
 }
 .mv-qty-stepper__input:focus {
     background: var(--app-nav-active-bg);

@@ -186,6 +186,21 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         await expect(row).toHaveCount(0);
     });
 
+    test('the add row quantity is typeable and reverts an invalid entry on blur', async ({
+        page,
+    }) => {
+        await page.goto(`/orders/${readE2eOrder().code}`);
+        await page.getByRole('button', { name: 'Add position' }).click({ timeout: 15000 });
+        const quantity = page.getByTestId('order-add-row').getByLabel('Quantity');
+        await quantity.fill('abc');
+        await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+        await quantity.blur();
+        await expect(quantity).toHaveValue('1');
+        await quantity.fill('3');
+        await expect(quantity).toHaveValue('3');
+        await page.getByRole('button', { name: 'Cancel adding' }).click();
+    });
+
     test('selected positions are deleted in bulk with a confirmation', async ({ page }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
         await addBySearch(page, SKU);
