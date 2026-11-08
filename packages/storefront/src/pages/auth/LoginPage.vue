@@ -2,7 +2,12 @@
 import { reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { readSiteIconUrl, readSiteName, useTwoFactorSignIn } from '@mivend/ui-kit';
+import {
+    MvTwoFactorSignInStep,
+    readSiteIconUrl,
+    readSiteName,
+    useTwoFactorSignIn,
+} from '@mivend/ui-kit';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
