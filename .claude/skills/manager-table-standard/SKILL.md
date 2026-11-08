@@ -5,6 +5,26 @@ description: Mandatory before adding a new manager-portal list/table, adding or 
 
 # Manager portal table standard
 
+## Start here
+
+Every table in the manager portal is the standard list, no exceptions: the shared filter engine on the
+server (whitelisted fields, bound parameters, no regex), the toolbar Filter builder, saved views
+(`TableViewsMenu`), URL sync, counted chips, mobile cards, and a search box on the identifying column. A table
+inside a wizard, picker or tab is the same table with a preset or an extra column (selection column, readiness
+chips, a fixed customer), never a bespoke filter UI with its own funnels, selects or state.
+
+Copy, do not reinvent: `components/orders/OrdersListTable.vue` + `composables/useOrdersList.ts` +
+`api/orders-filter.ts` (full list), `components/bulk-operations/BulkHistoryTable.vue` +
+`composables/useBulkHistory.ts` (small list), `components/bulk-operations/CounterpartyActivationDataTable.vue` +
+`composables/useActivationCandidates.ts` (selection wizard step), and `counterparty-filter-engine.ts` for a custom
+server query.
+
+Before declaring done, check each line: filter builder (`filterType` columns, no `filterConfig` funnels) / Views
+control with its own `viewsKey` / URL holds search, chip, filters, sort and page size / chips with counts from one
+`take: 0` request / mobile hints on every column / the server applies the filter on top of the visibility scope
+with a real-Postgres test incl. hostile input / a screenshot of desktop and phone next to the reference list.
+
+
 This is the single canonical checklist for what a "done" manager-portal list/table looks like in
 this project. Reference implementations: `CustomerOrdersTab.vue` +
 `CustomerOrdersDataTable.vue` (packages/manager/src/components/customers/) — the fullest-featured

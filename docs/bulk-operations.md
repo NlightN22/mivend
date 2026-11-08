@@ -100,7 +100,7 @@ Refinements of the model above; the sections above stay the contract.
   who, when) is visible to every holder of the permission, while counters and the per-record table cover only the
   records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date
   range), sorts a whitelist of columns (never the stored unscoped record count), `take` is clamped to 100.
-- **Select step.** Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
+- **Select step.** It is the standard manager list (`.claude/skills/manager-table-standard/SKILL.md`): filter builder, saved views under its own key, URL sync, mobile cards; the selection column, the readiness chips and "Select all" are the only additions. The counterparties query takes the builder conditions as `filter` (fixed field whitelist, no regex, on top of the visibility scope). Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
   rows of the current page. Selection across pages is kept while the wizard is open; select-all-matching-the-filter is
   still out of scope.
 - **Routes.** `/bulk-operations` (catalog), `/bulk-operations/history`, `/bulk-operations/:operation` (the wizard;
