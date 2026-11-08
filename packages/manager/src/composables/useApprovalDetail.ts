@@ -11,6 +11,7 @@ import {
     type OrderReference,
 } from '../api/approvals';
 import { fetchManagerOptions, type ManagerOption } from '../api/orders';
+import { decisionDisabledReason } from '../components/approvals/approvalDecision';
 import { parsePayload } from '../components/approvals/approvalsListRows';
 import type { SubjectLink } from '../components/approvals/ApprovalHeader.vue';
 import { useAuthStore } from '../stores/auth';
@@ -101,13 +102,9 @@ export function useApprovalDetail(): ApprovalDetailState {
         return null;
     });
 
-    const disabledReason = computed(() => {
-        const r = request.value;
-        if (!r || r.status !== 'pending' || (r.viewerCanApprove && r.viewerCanReject)) return '';
-        if (r.viewerCanReject) return 'You can reject this request but not approve it.';
-        if (r.viewerCanApprove) return 'You can approve this request but not reject it.';
-        return `Only ${r.currentStepRole ?? 'the current approver'} (or the person this step was escalated to) can decide step ${r.currentStepIndex + 1}.`;
-    });
+    const disabledReason = computed(() =>
+        request.value ? decisionDisabledReason(request.value) : '',
+    );
 
     watch(
         () => route.params.id,

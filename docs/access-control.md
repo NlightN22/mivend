@@ -640,7 +640,7 @@ Approver eligibility is decided by `ApprovalEligibilityRegistry` (approval-workf
 rejection) with the rule of `priceAdjustmentApproval` (`mayApprovePrice`): on top of the step's existing permission
 (`ApproveDiscountRequest`), the approver's own limit (no row = 0%) must be at least as deep as the requested discount; a
 deeper-or-equal limit approves a shallower request. It applies to floor requests too. Both the dedicated and the generic
-decide mutation go through it.
+decide mutation go through it. `ApprovalRequest.viewerCanApprove` and `viewerCanReject` (single-request fields, not for lists) come from the same `mayDecide` predicate `decide()` uses, so the manager UI never offers what the server refuses.
 
 `reduceOrderLineDiscount(orderId, orderLineId, targetUnitPrice)` raises a manual price: it accepts a unit price from the
 current effective price up to the reference price (equal = no change) and refuses a lower one. `revertOrderLineDiscount`

@@ -181,9 +181,9 @@ an approval of that kind, with its own type, subject, requester, requested value
   and `take: 0` returns the count only.
 - `viewerCanApprove` and `viewerCanReject` are single-request fields (a few lookups each): do not
   select them in list queries; the inbox does not.
-- MERGE TASK: after the order-card branch (with `ApprovalEligibilityRegistry`) is on main, call
-  `eligibility.mayApprove` inside the approve branch of `mayDecide` (and drop the duplicate call
-  from `decide()`), so the flag and `decide()` keep sharing one predicate.
+- `viewerCanApprove` includes the approver-eligibility rule (the approver's own discount limit for
+  price requests); rejecting needs only the step permission, so a refused approve with an allowed
+  reject is shown as "your discount limit does not cover this request".
 - Not shown yet: the policy that required the approval (requests do not store a link to the check
   policy that created them) and an approval request number separate from the row id.
 

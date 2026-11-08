@@ -129,3 +129,13 @@ export const Mobile: Story = {
     ...Default,
     parameters: { viewport: { defaultViewport: 'mvMobile' } },
 };
+
+export const ApproveLimitTooLow: Story = {
+    loaders: [
+        async () => {
+            mockDetailData({ viewerCanApprove: false, viewerCanReject: true });
+            await router.push('/approvals/1');
+        },
+    ],
+    render: Default.render,
+};
