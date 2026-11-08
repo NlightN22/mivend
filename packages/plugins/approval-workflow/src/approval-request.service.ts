@@ -222,7 +222,7 @@ export class ApprovalRequestService {
     private async checkDecision(
         ctx: RequestContext,
         request: ApprovalRequest,
-        _decision: ApprovalStepDecision,
+        decision: ApprovalStepDecision,
     ): Promise<
         | {
               ok: true;
@@ -260,6 +260,9 @@ export class ApprovalRequestService {
             !this.canDecideStep(ctx, stepDef, stepRow, adminId) ||
             !(await this.scope.isVisible(ctx, request.id))
         ) {
+            return { ok: false, error: new ForbiddenError() };
+        }
+        if (decision === 'approved' && !(await this.eligibility.mayApprove(ctx, request))) {
             return { ok: false, error: new ForbiddenError() };
         }
         return { ok: true, stepDef, stepRow, adminId };

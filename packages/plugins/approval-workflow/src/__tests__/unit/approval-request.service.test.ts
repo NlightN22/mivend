@@ -146,8 +146,17 @@ describe('ApprovalRequestService', () => {
                 workflowDefinitionService as never,
                 administratorService as never,
                 hidden as never,
+                eligibility,
             );
             expect(await scoped.mayDecide(mockCtx(true), pending as never, 'approved')).toBe(false);
+        });
+
+        it('refuses approving when the eligibility rule denies it, but still allows rejecting', async () => {
+            eligibility.register('x', async () => false);
+            expect(await service.mayDecide(mockCtx(true), pending as never, 'approved')).toBe(
+                false,
+            );
+            expect(await service.mayDecide(mockCtx(true), pending as never, 'rejected')).toBe(true);
         });
 
         it('is false once the request is decided', async () => {
@@ -192,6 +201,8 @@ describe('ApprovalRequestService', () => {
             ForbiddenError,
         );
         expect(requestRepo.save).not.toHaveBeenCalled();
+        expect(stepRepo.save).not.toHaveBeenCalled();
+        expect(requestRepo.createQueryBuilder).not.toHaveBeenCalled();
         const rejected = await service.decide(mockCtx(true), 'req-1', 'rejected');
         expect(rejected.status).toBe('rejected');
     });
