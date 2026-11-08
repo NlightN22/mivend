@@ -43,6 +43,19 @@ const priceDeltaPercent = computed<number | null>(() => {
     );
 });
 
+const stepRows = computed<DetailRow[]>(() => {
+    const r = props.request;
+    if (r.status !== 'pending') return [];
+    const step = r.steps.find(s => s.stepIndex === r.currentStepIndex);
+    return [
+        {
+            label: 'Current step',
+            value: `${r.currentStepIndex + 1} of ${r.totalSteps} · ${r.currentStepRole ?? '—'}`,
+        },
+        ...(step?.wasEscalated ? [{ label: 'Escalated', value: 'to a named approver' }] : []),
+    ];
+});
+
 const rows = computed<DetailRow[]>(() => {
     const p = payload.value;
     if (props.request.requestType === 'priceAdjustmentApproval') {
@@ -120,7 +133,7 @@ const rows = computed<DetailRow[]>(() => {
     </div>
 
     <dl class="request-details">
-        <div v-for="row in rows" :key="row.label" class="request-details__row">
+        <div v-for="row in [...rows, ...stepRows]" :key="row.label" class="request-details__row">
             <dt>{{ row.label }}</dt>
             <dd>{{ row.value }}</dd>
         </div>
@@ -135,17 +148,17 @@ const rows = computed<DetailRow[]>(() => {
     gap: 16px;
     padding: 12px 0;
     margin-bottom: 12px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--app-row-border);
 }
 
 .request-details__line-name {
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 
 .request-details__line-sku {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     margin-top: 2px;
 }
 
@@ -158,21 +171,21 @@ const rows = computed<DetailRow[]>(() => {
 }
 
 .request-details__line-original {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     text-decoration: line-through;
 }
 
 .request-details__line-delta {
     padding: 2px 8px;
     border-radius: 999px;
-    background: #d1fae5;
-    color: #047857;
+    background: var(--app-ok-bg);
+    color: var(--app-ok-fg);
     font-size: 12px;
 }
 
 .request-details__line-delta--negative {
-    background: #fee2e2;
-    color: #dc2626;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-fg);
 }
 
 .request-details {
@@ -182,18 +195,29 @@ const rows = computed<DetailRow[]>(() => {
     margin: 0;
 }
 
+@media (max-width: 600px) {
+    .request-details {
+        grid-template-columns: 1fr;
+    }
+
+    .request-details__line {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .request-details__row dt {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     margin-bottom: 2px;
 }
 
 .request-details__row dd {
     margin: 0;
     font-size: 14px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 </style>

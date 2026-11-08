@@ -16,7 +16,10 @@ import {
 
 export type ApprovalStepAudit = ApprovalStepFieldsFragment;
 export type ApprovalRequestSummary = ApprovalRequestSummaryFieldsFragment;
-export type ApprovalRequestDetail = ApprovalRequestSummary & { escalatesTo: string[] };
+export type ApprovalRequestDetail = ApprovalRequestSummary & {
+    escalatesTo: string[];
+    viewerCanDecide: boolean;
+};
 export type ApprovalRequestPage = ApprovalRequestPageFieldsFragment;
 
 export interface ApprovalsInbox {
@@ -122,6 +125,7 @@ export async function fetchOrderReferences(
 }
 
 export interface CounterpartyReference {
+    id: string;
     erpId: string;
     shortName: string;
 }

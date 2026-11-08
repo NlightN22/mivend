@@ -13,7 +13,7 @@ const meta: Meta<typeof ApprovalDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof ApprovalDetailPage>;
 
-function mockDetailData(): void {
+function mockDetailData(overrides: Record<string, unknown> = {}): void {
     registerMock('TeamMembers', () => ({
         teamMembers: [{ id: '1', firstName: 'Alex', lastName: 'Manager', roleCodes: ['manager'] }],
     }));
@@ -32,6 +32,8 @@ function mockDetailData(): void {
             payload: JSON.stringify({ orderId: '1', orderLineId: '1', requestedPrice: 200000 }),
             steps: [],
             escalatesTo: [],
+            viewerCanDecide: true,
+            ...overrides,
         },
     }));
     registerMock('ApprovalOrderReferences', () => ({
@@ -80,4 +82,48 @@ export const NotFound: Story = {
         components: { ApprovalDetailPage },
         template: '<ApprovalDetailPage />',
     }),
+};
+
+export const CannotDecide: Story = {
+    loaders: [
+        async () => {
+            mockDetailData({ viewerCanDecide: false });
+            await router.push('/approvals/1');
+        },
+    ],
+    render: Default.render,
+};
+
+export const Decided: Story = {
+    loaders: [
+        async () => {
+            mockDetailData({
+                status: 'approved',
+                currentStepRole: null,
+                decidedAt: new Date().toISOString(),
+                viewerCanDecide: false,
+                steps: [
+                    {
+                        id: '1',
+                        stepIndex: 0,
+                        requiredRole: 'general-director',
+                        approverAdministratorId: '1',
+                        wasEscalated: false,
+                        escalatedByAdministratorId: null,
+                        escalatedToAdministratorId: null,
+                        decision: 'approved',
+                        comment: 'Within the agreed margin',
+                        decidedAt: new Date().toISOString(),
+                    },
+                ],
+            });
+            await router.push('/approvals/1');
+        },
+    ],
+    render: Default.render,
+};
+
+export const Mobile: Story = {
+    ...Default,
+    parameters: { viewport: { defaultViewport: 'mvMobile' } },
 };

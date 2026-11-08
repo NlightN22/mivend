@@ -10729,7 +10729,7 @@ export type ApprovalCounterpartiesQueryVariables = Exact<{
 }>;
 
 export type ApprovalCounterpartiesQuery = {
-    counterparties: { items: Array<{ erpId: string; shortName: string }> };
+    counterparties: { items: Array<{ id: string; erpId: string; shortName: string }> };
 };
 
 export type EscalateApprovalRequestMutationVariables = Exact<{
@@ -14025,6 +14025,7 @@ export const ApprovalCounterpartiesDocument = new TypedDocumentString(`
     query ApprovalCounterparties($erpIds: [String!]!) {
   counterparties(options: {erpIds: $erpIds, take: 200}) {
     items {
+      id
       erpId
       shortName
     }

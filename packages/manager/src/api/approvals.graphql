@@ -114,6 +114,7 @@ query ApprovalCounterparties($erpIds: [String!]!) {
     counterparties(options: { erpIds: $erpIds, take: 200 }) {
         # bounded: by-id lookup for one inbox page
         items {
+            id
             erpId
             shortName
         }
