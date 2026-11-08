@@ -1,4 +1,4 @@
-import { signInHeaders, signInUrl } from '@mivend/ui-kit';
+import { signInHeaders, signInUrl } from '@mivend/ui-kit/src/composables/signIn/signInRequest';
 import { actingCredentials, actingHeaders, readActingSession } from './actingToken';
 
 const SHOP_API_URL = '/shop-api';

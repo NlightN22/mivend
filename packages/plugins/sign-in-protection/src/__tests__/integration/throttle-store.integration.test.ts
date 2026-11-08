@@ -9,6 +9,9 @@ import {
 } from 'shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { CaptchaService } from '../../captcha/captcha.service';
+import type { PasswordBreachService } from '../../breach/password-breach.service';
+import { SignInGuardService } from '../../sign-in-guard.service';
 import { SignInThrottleService } from '../../sign-in-throttle.service';
 import { ThrottleStoreService } from '../../throttle-store.service';
 import type { SignInProtectionOptions } from '../../types';
@@ -38,6 +41,8 @@ let dataSource: DataSource;
 let schema: string;
 let store: ThrottleStoreService;
 let throttle: SignInThrottleService;
+let guard: SignInGuardService;
+let connection: TransactionalConnection;
 
 beforeAll(async () => {
     const opts = testSchemaOptions('sign_in_throttle');
@@ -52,8 +57,12 @@ beforeAll(async () => {
     await dataSource.query(`CREATE TABLE sign_in_throttle (
         id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
         uuid uuid NOT NULL UNIQUE, "key" varchar NOT NULL UNIQUE, failures int NOT NULL DEFAULT 0, "lastFailureAt" timestamptz NOT NULL)`);
-    store = new ThrottleStoreService(createTestConnection(dataSource) as TransactionalConnection);
+    connection = createTestConnection(dataSource);
+    store = new ThrottleStoreService(connection);
     throttle = new SignInThrottleService(store, options);
+    guard = new SignInGuardService(throttle, new CaptchaService(throttle, options), {
+        flagIfBreached: async () => undefined,
+    } as unknown as PasswordBreachService);
 });
 afterAll(async () => {
     await dataSource.destroy();
@@ -150,5 +159,46 @@ describe('throttle service', () => {
             ),
         ).toHaveLength(2);
         expect(await off.isLocked(ctx, 'password', 'a')).toBe(false);
+    });
+});
+
+// One login attempt as the password step runs it: admit, verify (slow), then record, all in one transaction.
+async function attempt(correct: boolean, verified: { count: number }): Promise<boolean> {
+    return connection.withTransaction(ctx, async tx => {
+        const txCtx = Object.assign(tx, { req: ctx.req }) as unknown as RequestContext;
+        if (!(await guard.admit(txCtx, 'victim'))) return false;
+        verified.count++;
+        await new Promise(done => setTimeout(done, 25));
+        if (correct) {
+            await guard.recordSuccess(txCtx, 'victim', { id: 1 } as never, 'pw');
+            return true;
+        }
+        await guard.recordFailure(txCtx, 'victim');
+        return false;
+    });
+}
+
+describe('concurrent password attempts (check-then-act)', () => {
+    it('verifies at most the threshold of parallel wrong guesses', async () => {
+        const verified = { count: 0 };
+        await Promise.all(Array.from({ length: 12 }, () => attempt(false, verified)));
+        expect(verified.count).toBe(limits.threshold);
+        expect(await throttle.isLocked(ctx, 'password', 'victim')).toBe(true);
+    });
+
+    it('a parallel correct and wrong mix never leaves the login locked for good', async () => {
+        const verified = { count: 0 };
+        const results = await Promise.all([
+            ...Array.from({ length: 6 }, () => attempt(false, verified)),
+            attempt(true, verified),
+        ]);
+        expect(verified.count).toBeLessThanOrEqual(limits.threshold + 4);
+        expect(results.filter(Boolean).length).toBeLessThanOrEqual(1);
+        await dataSource.query(
+            `UPDATE sign_in_throttle SET "lastFailureAt" = now() - interval '2 hours'`,
+        );
+        const after = { count: 0 };
+        expect(await attempt(true, after)).toBe(true);
+        expect(await throttle.isLocked(ctx, 'password', 'victim')).toBe(false);
     });
 });

@@ -96,3 +96,54 @@ describe('captcha requirement', () => {
         expect(unknown.data).toEqual(known.data);
     });
 });
+
+const CHANGE_CUSTOMER = `mutation($c: String!, $n: String!) { updateCustomerPassword(currentPassword: $c, newPassword: $n) { __typename } }`;
+const CHANGE_ADMIN = `mutation($n: String!) { updateActiveAdministrator(input: { password: $n }) { id } }`;
+
+async function flagFor(identifier: string, value?: boolean): Promise<boolean> {
+    const client = new Client({ ...testDbConnection(), database: inject('accessDatabase') });
+    await client.connect();
+    try {
+        if (value !== undefined) {
+            await client.query(
+                `UPDATE "user" SET "customFieldsPasswordchangerequired" = $2 WHERE identifier = $1`,
+                [identifier, value],
+            );
+        }
+        const rows = await client.query(
+            `SELECT "customFieldsPasswordchangerequired" AS flag FROM "user" WHERE identifier = $1`,
+            [identifier],
+        );
+        return rows.rows[0].flag;
+    } finally {
+        await client.end();
+    }
+}
+
+// Covers PasswordChangeFlagSubscriber on the real save path used by core's password changes.
+describe.each([['customer'], ['admin']] as const)('%s forced password change flag', kind => {
+    it('is cleared when the password is changed', async () => {
+        await clearCounters();
+        const account = accounts[kind];
+        await flagFor(account.username, true);
+        const login = await stack.call(account.api, LOGIN, { u: account.username, p: PASSWORD });
+        expect(login.token).toBeTruthy();
+        const next = 'Another-password-123456';
+        const change =
+            kind === 'customer'
+                ? await stack.call(
+                      'shop-api',
+                      CHANGE_CUSTOMER,
+                      { c: PASSWORD, n: next },
+                      login.token ?? undefined,
+                  )
+                : await stack.call(
+                      'admin-api',
+                      CHANGE_ADMIN,
+                      { n: next },
+                      login.token ?? undefined,
+                  );
+        expect(change.errors).toEqual([]);
+        expect(await flagFor(account.username)).toBe(false);
+    });
+});

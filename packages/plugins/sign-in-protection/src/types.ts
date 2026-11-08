@@ -4,7 +4,6 @@ import type { BreachedPasswordChecker } from './breach/breached-password-checker
 export const loggerCtx = 'SignInProtection';
 export const SIGN_IN_PROTECTION_OPTIONS = Symbol('SIGN_IN_PROTECTION_OPTIONS');
 export const CAPTCHA_TOKEN_HEADER = 'x-captcha-token';
-export const PASSWORD_CHANGE_REQUIRED_FIELD = 'passwordChangeRequired';
 
 export type ThrottleScope = 'password' | 'second-step' | 'password-recheck' | 'recovery-request';
 

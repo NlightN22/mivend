@@ -42,7 +42,7 @@ export function signInProtectionOptionsFromEnv(env: Env): SignInProtectionOption
         throttle: {
             enabled: flag(env, 'SIGN_IN_THROTTLE_ENABLED'),
             perLogin: {
-                threshold: positiveInt(env, 'SIGN_IN_THROTTLE_LOGIN_THRESHOLD', 15),
+                threshold: positiveInt(env, 'SIGN_IN_THROTTLE_LOGIN_THRESHOLD', 50),
                 baseLockMs,
                 maxLockMs,
             },

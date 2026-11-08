@@ -4,6 +4,8 @@ map $arg_auth $shop_sign_in_key {
     "1" $binary_remote_addr;
 }
 limit_req_zone $shop_sign_in_key zone=shop_sign_in:10m rate=30r/m;
+# Blanket cap that does not depend on the client's mark: far above normal portal use, below a guessing script.
+limit_req_zone $binary_remote_addr zone=shop_api:10m rate=30r/s;
 
 server {
     # Defaults to 80 (the real compose deployment's container-internal port, mapped externally
@@ -43,6 +45,7 @@ server {
 
     location /shop-api {
         limit_req zone=shop_sign_in burst=10 nodelay;
+        limit_req zone=shop_api burst=100 nodelay;
         limit_req_status 429;
         set $api_upstream ${API_TARGET};
         proxy_pass $api_upstream;

@@ -107,18 +107,31 @@ Password-reset links depend on the recipient. Vendure's reset event carries only
 
 Five layers, none of them a single point of failure.
 
-1. **Proxy cap (nginx).** The storefront and manager portal send every sign-in, password-reset and second-step request to
-   `/shop-api?auth=1` or `/admin-api?auth=1`; their nginx counts only those per client address (30 requests a minute,
-   burst 10) and answers `429` beyond that. The mark is chosen by the client, so this is a coarse cap against honest
-   tooling, not a boundary: the per-account layer below is the real one. The Dashboard container cannot mark its requests
-   and gets a generous cap on all of `/admin-api` (20 requests a second, burst 60). Behind another proxy, configure
-   `set_real_ip_from`/`real_ip_header` there, otherwise every client shares the proxy address.
+1. **Proxy caps (nginx).** A coarse limiter for well-behaved clients; the application throttle (layer 2) is the control.
+   Two caps per client address: (a) the portals send every sign-in, password-reset and second-step request to
+   `/shop-api?auth=1` or `/admin-api?auth=1`, and only marked requests count towards 30 requests a minute (burst 10); the
+   mark is chosen by the client, so a script can simply omit it; (b) a blanket cap on all of `/shop-api` and `/admin-api`
+   that does not depend on the mark: 30 requests a second, burst 100 (the Dashboard container uses the same numbers on
+   `/admin-api`, since it cannot mark requests). Both answer `429`. The numbers are an estimate, not a measurement: a portal
+   page load issues a handful to a few dozen API calls, spread over seconds, so normal use stays well below the
+   blanket cap; an office sharing one address is the case to watch, so check the `429` count in the access log after a
+   rollout. Behind another proxy, configure `set_real_ip_from`/`real_ip_header` there, otherwise every client shares the
+   proxy address.
 2. **Per-account throttling (server).** Failures are counted per login and per login plus client address in the
    `sign_in_throttle` table (hashed keys, atomic upserts on the database clock). From the threshold on the account is locked
    for `BASE_LOCK` seconds, doubling with each further failure up to `MAX_LOCK`; there is no permanent lock, and nothing is
    counted while locked. A locked, unknown and existing login get the identical `InvalidCredentialsError`, and a locked login
    is refused even with the right password. A success clears the counters. Covers the password step, the second step, the
    password re-check and recovery requests, on both APIs and the Dashboard. Stale counters are purged hourly.
+   The password step takes a per-login advisory lock inside the request transaction before it checks the counters and holds it
+   through the password check and the failure record, so parallel guesses queue and at most the threshold are verified (the
+   second step, recovery and the password re-check already run under the per-user lock). Trade-off against lockout abuse:
+   the hard lock on login plus address is low (5), while the per-login counter over all addresses is only a high ceiling
+   (50, same max lock) because anyone can drive it for a victim; below the ceiling it works through the CAPTCHA, which is
+   demanded once any counter of that login reaches `SIGN_IN_CAPTCHA_AFTER_FAILURES`. Without CAPTCHA keys the ceiling is the
+   only cross-address protection, and a determined attacker can lock a known login for at most the max lock at a time. The
+   second-step lock (per account, from the login+address threshold of wrong codes) does not block the e-mail recovery link:
+   recovery completion uses its own password re-check counter.
 3. **CAPTCHA (adaptive).** After `SIGN_IN_CAPTCHA_AFTER_FAILURES` failures of a login the portals show a Cloudflare Turnstile
    widget and send its token in the `X-Captcha-Token` header; `signInCaptchaRequirement(login)` tells them when. A missing or
    rejected token counts as a refused attempt; an unreachable Turnstile never blocks (warning in the log). Off when the keys
@@ -131,14 +144,16 @@ Five layers, none of them a single point of failure.
    create) is checked against the Pwned Passwords range API; only the first 5 characters of its SHA-1 leave the server. A
    confirmed hit is rejected with `PASSWORD_BREACHED`. At a successful sign-in the password in hand is checked once; a hit sets
    `User.customFields.passwordChangeRequired` and the portals send the user to the password change (cleared by any new
-   password). The flag is advisory, not an API gate. A failed lookup is skipped with a warning and retried at the next
+   password). The forced change is a UI redirect and a notice only, not an API gate: the session works until the user changes
+   the password. The sign-in lookup is one call per successful password step with no cache, so it adds up to
+   `PASSWORD_BREACH_TIMEOUT_MS` to a sign-in when the service is slow. A failed lookup is skipped with a warning and retried at the next
    sign-in or change; a sign-in waits for the lookup for at most `PASSWORD_BREACH_TIMEOUT_MS`.
 
 | Variable | Required | Default | Meaning |
 | --- | --- | --- | --- |
 | `SIGN_IN_THROTTLE_ENABLED` | no | `false` (set `true` in `.env.production.example`) | Layer 2 on or off. |
 | `SIGN_IN_THROTTLE_LOGIN_IP_THRESHOLD` | no | `5` | Failures of one login from one address before the lock. |
-| `SIGN_IN_THROTTLE_LOGIN_THRESHOLD` | no | `15` | Failures of one login from any address before the lock. |
+| `SIGN_IN_THROTTLE_LOGIN_THRESHOLD` | no | `50` | Ceiling of failures of one login from any address before the lock. |
 | `SIGN_IN_THROTTLE_BASE_LOCK_SECONDS` | no | `30` | First lock; doubles per further failure. |
 | `SIGN_IN_THROTTLE_MAX_LOCK_SECONDS` | no | `900` | Longest lock. |
 | `SIGN_IN_THROTTLE_RESET_AFTER_SECONDS` | no | `3600` | A counter without a failure for this long restarts; must be at least the max lock. |

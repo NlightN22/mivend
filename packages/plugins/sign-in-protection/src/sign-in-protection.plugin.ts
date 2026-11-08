@@ -12,7 +12,7 @@ import { SignInGuardService } from './sign-in-guard.service';
 import { SignInThrottleService } from './sign-in-throttle.service';
 import { ThrottleStoreService } from './throttle-store.service';
 import { createThrottleCleanupTask } from './throttle-cleanup.scheduled-task';
-import { PASSWORD_CHANGE_REQUIRED_FIELD, SIGN_IN_PROTECTION_OPTIONS } from './types';
+import { SIGN_IN_PROTECTION_OPTIONS } from './types';
 import type { SignInProtectionOptions } from './types';
 
 @VendurePlugin({
@@ -37,7 +37,7 @@ import type { SignInProtectionOptions } from './types';
         config.customFields.User = [
             ...(config.customFields.User ?? []),
             {
-                name: PASSWORD_CHANGE_REQUIRED_FIELD,
+                name: 'passwordChangeRequired',
                 type: 'boolean',
                 defaultValue: false,
                 nullable: false,

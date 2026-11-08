@@ -32,6 +32,12 @@ export class SignInThrottleService {
         return { login, loginIp: `${login}:${sha256(ip)}` };
     }
 
+    // Take before isLocked and hold through the password check and recordFailure: concurrent guesses queue here.
+    async lock(ctx: RequestContext, scope: ThrottleScope, subject: string): Promise<void> {
+        if (!this.enabled) return;
+        await this.store.lock(ctx, `sign-in:${this.keys(ctx, scope, subject).login}`);
+    }
+
     async isLocked(ctx: RequestContext, scope: ThrottleScope, subject: string): Promise<boolean> {
         if (!this.enabled) return false;
         const { throttle } = this.options;

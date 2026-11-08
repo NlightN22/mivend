@@ -1,4 +1,4 @@
-import { signInHeaders, signInUrl } from '@mivend/ui-kit';
+import { signInHeaders, signInUrl } from '@mivend/ui-kit/src/composables/signIn/signInRequest';
 
 const ADMIN_API_URL = '/admin-api';
 
