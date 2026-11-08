@@ -107,6 +107,7 @@ describe('OrderChangedStreamHandler', () => {
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
             orderUuid: null,
+            erpFacts: {},
             orderEntityId: 'erp-order-1',
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
@@ -310,6 +311,7 @@ describe('OrderChangedStreamHandler', () => {
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
             orderUuid: null,
+            erpFacts: {},
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
@@ -345,6 +347,7 @@ describe('OrderChangedStreamHandler', () => {
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
             orderUuid: null,
+            erpFacts: {},
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [],

@@ -7,6 +7,7 @@ import {
     LanguageCode,
     VendureConfig,
 } from '@vendure/core';
+import { apiSecurityOptionsFromEnv } from './api-security-options';
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
 import { emailGlobalTemplateVars, resolveEmailConfig } from './email-config';
@@ -164,6 +165,7 @@ export const config: VendureConfig = {
         adminApiPath: 'admin-api',
         shopApiPath: 'shop-api',
         introspection: process.env.NODE_ENV !== 'production',
+        ...apiSecurityOptionsFromEnv(process.env),
     },
     importExportOptions: {
         importAssetsDir: path.join(__dirname, '../../../infrastructure/fixtures/category-icons'),
@@ -367,6 +369,22 @@ export const config: VendureConfig = {
                 nullable: true,
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP creation date' }],
+            },
+            {
+                name: 'erpStorageUnitId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP storage unit id' }],
+            },
+            {
+                name: 'erpSourceFields',
+                type: 'text',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP source fields (JSON)' }],
             },
             {
                 name: 'manufacturerPartNumber',

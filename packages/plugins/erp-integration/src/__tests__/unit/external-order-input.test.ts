@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildExternalOrderInput, externalLine } from '../../handlers/external-order-input';
+import {
+    buildExternalOrderInput,
+    externalLine,
+    orderErpFacts,
+} from '../../handlers/external-order-input';
 import { decideOrderChangedRoute } from '../../handlers/order-changed-route';
 
 describe('decideOrderChangedRoute', () => {
@@ -96,5 +100,45 @@ describe('buildExternalOrderInput', () => {
             quantity: 8,
             unitPriceMinor: 2500,
         });
+    });
+});
+
+describe('orderErpFacts', () => {
+    it('is empty when the event carries none of the flags', () => {
+        expect(orderErpFacts({ lines: [{ productId: 'p-1', quantity: 1 }] })).toEqual({});
+    });
+
+    it('keeps explicit false flags, linked document flags and per-line shipped quantities', () => {
+        const facts = orderErpFacts({
+            accounting: { reflectedInAccounting: false },
+            linkedDocuments: [
+                { kind: 'realization', id: 'd-1', accounting: { reflectedInAccounting: true } },
+                { kind: 'payment', id: 'd-2' },
+            ],
+            lines: [
+                { productId: 'p-1', shippedQuantityInSettlements: 0 },
+                { productId: 'p-2' },
+                { productId: 'p-3', shippedQuantityInSettlements: 2.5 },
+            ],
+        });
+
+        expect(JSON.parse(facts.erpAccounting ?? '')).toEqual({ reflectedInAccounting: false });
+        expect(JSON.parse(facts.erpLinkedDocuments ?? '')).toEqual([
+            { kind: 'realization', id: 'd-1', accounting: { reflectedInAccounting: true } },
+        ]);
+        expect(JSON.parse(facts.erpShippedInSettlements ?? '')).toEqual([
+            { productId: 'p-1', quantity: 0 },
+            { productId: 'p-3', quantity: 2.5 },
+        ]);
+    });
+
+    it('rides on the external order input', () => {
+        const input = buildExternalOrderInput(
+            'e1',
+            { accounting: { reflectedInAccounting: true } },
+            null,
+            [],
+        );
+        expect(input.erpFacts).toEqual({ erpAccounting: '{"reflectedInAccounting":true}' });
     });
 });

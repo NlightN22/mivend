@@ -27,6 +27,7 @@ export type RequisiteFields = Partial<Record<RequisiteField, string | null>>;
 export interface OrganizationEventInput {
     legalName: string | null;
     isActive?: boolean;
+    controlsStock?: boolean;
     fields: RequisiteFields;
     signatories?: OrganizationSignatory[];
 }
@@ -75,10 +76,12 @@ export class OrganizationEventService {
                 erpId,
                 legalName: input.legalName,
                 isActive: input.isActive ?? false,
+                controlsStock: null,
             });
         } else {
             return null;
         }
+        if (input.controlsStock !== undefined) entity.controlsStock = input.controlsStock;
         for (const field of REQUISITE_FIELDS) {
             const value = input.fields[field];
             if (value) entity[field] = value;

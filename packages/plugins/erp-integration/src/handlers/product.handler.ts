@@ -23,6 +23,8 @@ import { resolveCategoryFacetValueId } from '../category-resolver';
 import {
     extractBarcodes,
     extractErpCreatedAt,
+    extractSourceFieldsText,
+    extractStorageUnitId,
     extractManufacturerCodes,
     extractOptionalString,
     extractManufacturerId,
@@ -149,6 +151,10 @@ export class ProductStreamHandler implements InboundStreamHandler {
             ...(manufacturerPartNumber ? { manufacturerPartNumber } : {}),
             ...(fullName ? { fullName } : {}),
         };
+        const erpFields = {
+            erpStorageUnitId: extractStorageUnitId(payload),
+            erpSourceFields: extractSourceFieldsText(payload),
+        };
         const barcodes = extractBarcodes(payload);
 
         const [existing] = await ctxQuery<Array<{ id: string }>>(
@@ -173,6 +179,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     ...optionalCustomFields,
                     manufacturerPartNumber: manufacturerPartNumber ?? null,
                     fullName: fullName ?? null,
+                    ...erpFields,
                 },
             });
             const variants = await this.productVariantService.getVariantsByProductId(
@@ -220,7 +227,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             const created = await this.productService.create(ctx, {
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                customFields: { externalId: entityId, ...optionalCustomFields },
+                customFields: { externalId: entityId, ...optionalCustomFields, ...erpFields },
             });
             productId = String(created.id);
             variantId = await this.createDefaultVariant(

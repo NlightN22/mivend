@@ -20,7 +20,6 @@ const subject = (over: Partial<OrderCheckSubject> = {}): OrderCheckSubject => ({
             productErpId: 'p-1',
             organizationErpId: 'org-1',
             quantity: 10,
-            storageUnitRatioToBase: 1,
         },
     ],
     ...over,
@@ -31,6 +30,9 @@ const data = (over: Partial<OrderCheckData> = {}): OrderCheckData => ({
     contractOrganizations: new Set(['org-1']),
     stockByProduct: new Map([['p-1', new Map([['org-1', 10]])]]),
     organizationNames: new Map([['org-1', 'Organization One']]),
+    storageUnitRatios: new Map(),
+    organizationControlsStock: new Map(),
+    organizationStockIgnoredGlobally: false,
     ...over,
 });
 
@@ -136,11 +138,49 @@ describe('erp.organization-stock', () => {
     });
 
     it('converts the line quantity into the storage unit', () => {
-        const lines = [{ ...subject().lines[0], quantity: 40, storageUnitRatioToBase: 4 }];
-        expect(evaluateOrganizationStock(subject({ lines }), data())).toEqual([]);
-        const tooMany = [{ ...subject().lines[0], quantity: 44, storageUnitRatioToBase: 4 }];
-        const [finding] = evaluateOrganizationStock(subject({ lines: tooMany }), data());
+        const ratios = new Map([['p-1', 4]]);
+        const lines = [{ ...subject().lines[0], quantity: 40 }];
+        const d = data({ storageUnitRatios: ratios });
+        expect(evaluateOrganizationStock(subject({ lines }), d)).toEqual([]);
+        const tooMany = [{ ...subject().lines[0], quantity: 44 }];
+        const [finding] = evaluateOrganizationStock(subject({ lines: tooMany }), d);
         expect(finding.facts).toMatchObject({ needed: 11, available: 10 });
+    });
+
+    it.each([0, -2, Number.NaN])('keeps the base unit when the storage ratio is %s', ratio => {
+        const [finding] = evaluateOrganizationStock(
+            subject(),
+            data({
+                storageUnitRatios: new Map([['p-1', ratio]]),
+                stockByProduct: orgs({ 'org-1': 5 }),
+            }),
+        );
+        expect(finding.facts).toMatchObject({ needed: 10, available: 5 });
+    });
+
+    it('skips an organization the ERP explicitly does not control stock for', () => {
+        const short = orgs({ 'org-1': 1 });
+        const skipped = data({
+            stockByProduct: short,
+            organizationControlsStock: new Map([['org-1', false]]),
+        });
+        expect(evaluateOrganizationStock(subject(), skipped)).toEqual([]);
+    });
+
+    it.each([true, null])('still checks an organization with controlsStock %s', flag => {
+        const d = data({
+            stockByProduct: orgs({ 'org-1': 1 }),
+            organizationControlsStock: new Map([['org-1', flag]]),
+        });
+        expect(evaluateOrganizationStock(subject(), d)).toHaveLength(1);
+    });
+
+    it('skips every line while the ERP global ignore switch is on', () => {
+        const d = data({
+            stockByProduct: orgs({ 'org-1': 1 }),
+            organizationStockIgnoredGlobally: true,
+        });
+        expect(evaluateOrganizationStock(subject(), d)).toEqual([]);
     });
 
     it('treats a product without stock rows as zero available, never as unknown', () => {

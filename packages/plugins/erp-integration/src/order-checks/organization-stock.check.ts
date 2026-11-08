@@ -6,13 +6,15 @@ import {
     organizationBreakdown,
     organizationRef,
     stockOf,
+    organizationStockControlled,
+    storageUnitRatio,
 } from './order-check-data';
 import type { OrderCheckData } from './order-check-data';
 
 export const ORGANIZATION_STOCK = 'erp.organization-stock';
 
-// ERP-mandated: the organization that sells the line must hold the needed quantity itself
-// (stock as is, negatives included; other organizations' stock never covers it).
+// ERP-mandated: the selling organization itself must hold the needed quantity (negatives included).
+// The ERP skips it for organizations without stock control and under its global ignore switch.
 export function evaluateOrganizationStock(
     subject: OrderCheckSubject,
     data: OrderCheckData,
@@ -23,7 +25,8 @@ export function evaluateOrganizationStock(
     for (const line of subject.lines) {
         const own = lineOrganization(line, data);
         if (!own) continue;
-        const needed = line.quantity / line.storageUnitRatioToBase;
+        if (!organizationStockControlled(data, own.organizationId)) continue;
+        const needed = line.quantity / storageUnitRatio(data, own.productErpId);
         const available = stockOf(data, own.productErpId, own.organizationId);
         if (needed <= available) continue;
         findings.push({

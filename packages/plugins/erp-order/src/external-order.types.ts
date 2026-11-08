@@ -1,3 +1,7 @@
+export type OrderErpFacts = Partial<
+    Record<'erpAccounting' | 'erpLinkedDocuments' | 'erpShippedInSettlements', string>
+>;
+
 export interface ExternalOrderLineInput {
     productVariantId: string;
     quantity: number;
@@ -17,6 +21,8 @@ export interface ExternalOrderInput {
     vatTotalMinor: number | null;
     amountIncludesVat: boolean;
     paidAmountMinor: number | null;
+    // Only the facts the event carried; an absent one never clears a stored value.
+    erpFacts?: OrderErpFacts;
     lines: ExternalOrderLineInput[];
     skippedLineCount: number;
 }

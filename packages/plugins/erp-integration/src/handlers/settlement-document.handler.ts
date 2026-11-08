@@ -4,6 +4,7 @@ import { SettlementDocumentService } from '@mivend/plugin-settlement';
 import type { SettlementEntryInput } from '@mivend/plugin-settlement';
 
 import { NonRetryableInboundError } from '../non-retryable-inbound-error';
+import { parseAccounting } from './erp-flags-payload';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { optionalString, parseTimestamp } from './settlement-payload';
@@ -46,6 +47,7 @@ export class SettlementDocumentStreamHandler implements InboundStreamHandler {
             documentTypeLabel: String(payload.documentTypeLabel ?? ''),
             number: String(payload.number ?? ''),
             date,
+            accounting: parseAccounting(payload.accounting),
             entries: isDeleted ? [] : parsed.entries,
         });
         if (result === 'stale') {

@@ -24,6 +24,8 @@ If integration/component tests were added or changed (per AGENTS.md's testing re
 
     make test-int
 
+While iterating, `make test-changed` runs only the tests of the packages changed since `origin/main` (`DRY=1` shows the plan). It is a quick loop, not a replacement: the full `make test`, `make test-int` and `make test-access` above remain the checks before reporting completion, audit and release.
+
 **Never invoke `vitest`/`pnpm --filter <plugin> test:integration` directly, bypassing `make test`/`make test-int`.** This machine's `docker-postgres-central-1` (the test DB) is mapped to host port 5434, not Postgres's default 5432 — port 5432 here is already occupied by an unrelated project's own Postgres container. The `TEST_DB_PORT=5434` override needed to reach the right database lives in the gitignored, machine-specific `.env.local` and is only exported because the Makefile does `-include .env.local` + `export` before running its `test`/`test-int` targets — running vitest directly in a subshell silently skips that export. The resulting `password authentication failed for user "postgres"` looks exactly like a corrupted/recreated Postgres volume, but is actually just tests connecting to the wrong container. If you ever need to run a single test file directly for faster iteration, prefix it with `TEST_DB_PORT=5434` explicitly instead of assuming the default port is correct.
 
 ## Heavy checks run after the audit

@@ -63,6 +63,10 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
+    // ERP flag "controls stock per organization"; null = the ERP never said (not the same as false).
+    @Column({ type: 'boolean', nullable: true })
+    controlsStock!: boolean | null;
+
     // Set only via the Admin API, never by ERP push: the logo is branding, not ERP data.
     // Kept out of the ERP-pushed shape so a routine requisites upsert cannot overwrite it.
     @Column({ type: 'varchar', nullable: true })

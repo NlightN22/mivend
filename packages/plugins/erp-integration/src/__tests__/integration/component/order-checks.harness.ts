@@ -142,6 +142,19 @@ class StockOrgM extends Base {
 class RequisitesM extends Base {
     @Column({ type: 'varchar' }) erpId!: string;
     @Column({ type: 'varchar' }) legalName!: string;
+    @Column({ type: 'boolean', nullable: true }) controlsStock!: boolean | null;
+}
+@Entity('unit_record')
+class UnitM extends Base {
+    @Column({ type: 'varchar' }) entityId!: string;
+    @Column({ type: 'float' }) ratioToBase!: number;
+}
+@Entity('setting_erp')
+class SettingM extends Base {
+    @Column({ type: 'varchar' }) erpId!: string;
+    @Column({ type: 'varchar', nullable: true }) code!: string | null;
+    @Column({ type: 'boolean', nullable: true }) boolValue!: boolean | null;
+    @Column({ type: 'boolean', default: false }) isDeleted!: boolean;
 }
 @Entity('check_policy')
 @Index('IDX_check_policy_global', ['checkCode', 'stage'], {
@@ -210,6 +223,8 @@ const mirrors: Record<string, unknown> = {
     StorageLocationAssignment: AssignmentM,
     StockOrganization: StockOrgM,
     OrganizationRequisites: RequisitesM,
+    UnitRecord: UnitM,
+    SettingErp: SettingM,
     CheckPolicy: PolicyM,
     CheckPolicyHistory: PolicyHistoryM,
     CheckResult: ResultM,
@@ -265,7 +280,7 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
     });
     await dataSource.initialize();
     await dataSource.query(
-        `CREATE TABLE product (id SERIAL PRIMARY KEY, "customFieldsExternalid" varchar)`,
+        `CREATE TABLE product (id SERIAL PRIMARY KEY, "customFieldsExternalid" varchar, "customFieldsErpstorageunitid" varchar)`,
     );
     await dataSource.query(
         `CREATE TABLE customer (id SERIAL PRIMARY KEY, "customFieldsCounterpartyid" varchar)`,
@@ -443,7 +458,7 @@ export async function resetWorld(world: OrderChecksWorld): Promise<void> {
     await world.dataSource.query(
         `TRUNCATE check_result, check_stale_request, order_check_failure, check_policy_history, check_policy, "order", order_line, shipping_line, product,
          product_variant, contract, storage_location_assignment, stock_organization,
-         organization_requisites, reservation, stock_level RESTART IDENTITY CASCADE`,
+         organization_requisites, unit_record, setting_erp, reservation, stock_level RESTART IDENTITY CASCADE`,
     );
     world.visibleBranch.value = null;
 }

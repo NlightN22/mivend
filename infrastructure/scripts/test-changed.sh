@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Runs the unit, integration and access tests of the packages changed since $BASE and of the packages that depend on them.
+# The access matrix is slow and runs only with ACCESS=1. Integration tests run for the changed packages only; DEPS=1 adds their dependents. Unit tests always follow the import graph (vitest --changed).
+# DRY=1 prints the plan only. Files under infrastructure/scripts are outside this loop (their script tests run in make test). A quick loop while working; the full make test / test-int / test-access stay required before audit and release.
+set -euo pipefail
+
+BASE="${BASE:-origin/main}"
+LOCK=/tmp/mivend-test.lock
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+git rev-parse --verify --quiet "$BASE" >/dev/null || { echo "test-changed: unknown base '$BASE' (set BASE=<ref>)"; exit 1; }
+
+if [ "${DEPS:-0}" = 1 ]; then selector="...[$BASE]"; else selector="[$BASE]"; fi
+changed_json="$(pnpm ls -r --depth -1 --json --filter "$selector" 2>/dev/null)"
+mapfile -t names < <(printf '%s' "$changed_json" | node -e '
+const root = process.argv[1];
+const pkgs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+for (const p of pkgs) if (p.path !== root) console.log(p.name);
+' "$root")
+root_changed="$(printf '%s' "$changed_json" | node -e '
+const root = process.argv[1];
+const pkgs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(pkgs.some(p => p.path === root) ? "yes" : "no");
+' "$root")"
+
+if [ "$root_changed" = "yes" ]; then
+    echo "test-changed: a root file changed (configs, Makefile, root package.json or the like): unit tests run in full, integration in every package."
+    names=()
+    while IFS= read -r n; do names+=("$n"); done < <(pnpm ls -r --depth -1 --json | node -e '
+const root = process.argv[1];
+for (const p of JSON.parse(require("fs").readFileSync(0, "utf8"))) if (p.path !== root) console.log(p.name);
+' "$root")
+    unit_args=()
+else
+    unit_args=(--changed "$BASE")
+fi
+
+if [ "${#names[@]}" -eq 0 ] && [ "$root_changed" = "no" ]; then
+    echo "test-changed: nothing changed since $BASE, nothing to run."
+    exit 0
+fi
+
+mapfile -t int_pkgs < <(pnpm ls -r --depth -1 --json | node -e '
+const fs = require("fs");
+const wanted = new Set(process.argv.slice(1));
+for (const p of JSON.parse(fs.readFileSync(0, "utf8"))) {
+  if (!wanted.has(p.name)) continue;
+  const scripts = JSON.parse(fs.readFileSync(p.path + "/package.json", "utf8")).scripts ?? {};
+  if (scripts["test:integration"]) console.log(p.name);
+}
+' "${names[@]}")
+
+run_access=no
+if [ "${ACCESS:-0}" = 1 ]; then run_access=yes; fi
+
+echo "test-changed: base $BASE"
+echo "  changed packages$([ "${DEPS:-0}" = 1 ] && echo " and dependents"): ${names[*]:-none}"
+echo "  unit: ${unit_args[*]:-all files}"
+echo "  integration: ${int_pkgs[*]:-none}"
+echo "  access matrix: $run_access$([ "$run_access" = no ] && echo " (slow, 3-5 min; ACCESS=1 adds it, the full make test-access stays required)")"
+[ "${DRY:-}" = 1 ] && exit 0
+
+flock "$LOCK" pnpm exec vitest run "${unit_args[@]}" --passWithNoTests
+if [ "${#int_pkgs[@]}" -gt 0 ]; then
+    pnpm build:plugins
+    filters=()
+    for n in "${int_pkgs[@]}"; do filters+=(--filter "$n"); done
+    flock "$LOCK" pnpm "${filters[@]}" --no-bail test:integration
+fi
+if [ "$run_access" = yes ]; then
+    pnpm build:plugins
+    flock "$LOCK" pnpm --filter server test:access
+fi

@@ -45,6 +45,10 @@ export class SettlementDocument {
     @Column({ type: 'varchar' })
     sourceVersion!: string;
 
+    // The ERP's "reflected in ..." flags as received; null when the document type has none.
+    @Column({ type: 'jsonb', nullable: true })
+    accounting!: Record<string, boolean> | null;
+
     // Only rows marked ERP-owned are ever removed by the retention cleaner.
     @Column({ type: 'boolean', default: true })
     isErpOwned!: boolean;

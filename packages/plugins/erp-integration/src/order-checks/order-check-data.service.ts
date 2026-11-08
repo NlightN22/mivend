@@ -2,12 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Contract } from '@mivend/plugin-counterparty';
 import { OrganizationRequisites } from '@mivend/plugin-documents';
+import { ctxQuery } from 'shared';
 import type { OrderCheckSubject } from '@mivend/plugin-reservation';
 import { In } from 'typeorm';
 
+import { SettingErp } from '../entities/setting-erp.entity';
 import { StorageLocationAssignment } from '../entities/storage-location-assignment.entity';
+import { UnitRecord } from '../entities/unit-record.entity';
 import { StockOrganizationReadService } from '../stock-organization-read.service';
 import type { OrderCheckData } from './order-check-data';
+
+// ERP setting code (SettingChanged.code example); true = the ERP skips the organization stock check for all.
+export const ORGANIZATION_STOCK_IGNORE_SETTING = 'ignoreOrganizationStockCheckForAll';
 
 @Injectable()
 export class OrderCheckDataService {
@@ -41,11 +47,15 @@ export class OrderCheckDataService {
             if (line.organizationErpId) organizationIds.add(line.organizationErpId);
         }
         for (const ids of storageOrganizations.values()) ids.forEach(id => organizationIds.add(id));
+        const organizations = await this.organizations(ctx, [...organizationIds]);
         return {
             storageOrganizations,
             contractOrganizations,
             stockByProduct,
-            organizationNames: await this.organizationNames(ctx, [...organizationIds]),
+            organizationNames: new Map(organizations.map(r => [r.erpId, r.legalName])),
+            organizationControlsStock: new Map(organizations.map(r => [r.erpId, r.controlsStock])),
+            storageUnitRatios: await this.storageUnitRatios(ctx, productErpIds),
+            organizationStockIgnoredGlobally: await this.ignoredGlobally(ctx),
         };
     }
 
@@ -80,14 +90,48 @@ export class OrderCheckDataService {
         return new Set(contracts.map(c => c.organizationId).filter(id => id.length > 0));
     }
 
-    private async organizationNames(
+    private async organizations(
         ctx: RequestContext,
         erpIds: string[],
-    ): Promise<Map<string, string>> {
-        if (erpIds.length === 0) return new Map();
-        const rows = await this.connection
+    ): Promise<OrganizationRequisites[]> {
+        if (erpIds.length === 0) return [];
+        return this.connection
             .getRepository(ctx, OrganizationRequisites)
             .find({ where: { erpId: In(erpIds) } });
-        return new Map(rows.map(r => [r.erpId, r.legalName]));
+    }
+
+    private async storageUnitRatios(
+        ctx: RequestContext,
+        productErpIds: string[],
+    ): Promise<Map<string, number>> {
+        if (productErpIds.length === 0) return new Map();
+        const rows = await ctxQuery<Array<{ productErpId: string; storageUnitId: string }>>(
+            this.connection,
+            ctx,
+            `SELECT p."customFieldsExternalid" AS "productErpId",
+                    p."customFieldsErpstorageunitid" AS "storageUnitId"
+               FROM product p
+              WHERE p."customFieldsExternalid" = ANY($1)
+                AND p."customFieldsErpstorageunitid" IS NOT NULL`,
+            [productErpIds],
+        );
+        if (rows.length === 0) return new Map();
+        const units = await this.connection.getRepository(ctx, UnitRecord).find({
+            where: { entityId: In([...new Set(rows.map(r => r.storageUnitId))]) },
+        });
+        const ratioByUnit = new Map(units.map(u => [u.entityId, u.ratioToBase]));
+        return new Map(
+            rows.flatMap(r => {
+                const ratio = ratioByUnit.get(r.storageUnitId);
+                return ratio === undefined ? [] : [[r.productErpId, ratio] as const];
+            }),
+        );
+    }
+
+    private async ignoredGlobally(ctx: RequestContext): Promise<boolean> {
+        const setting = await this.connection.getRepository(ctx, SettingErp).findOne({
+            where: { code: ORGANIZATION_STOCK_IGNORE_SETTING, isDeleted: false },
+        });
+        return setting?.boolValue === true;
     }
 }

@@ -66,3 +66,18 @@ export function extractErpCreatedAt(payload: Record<string, unknown>): Date | nu
     if (typeof field !== 'object' || field === null) return null;
     return parseTimestamp((field as Record<string, unknown>).dateValue);
 }
+
+// Unit of the stock balances (ProductChanged.storage_unit_id); absent or empty means none set.
+export function extractStorageUnitId(payload: Record<string, unknown>): string | null {
+    const id = payload.storageUnitId;
+    return typeof id === 'string' && id !== '' ? id : null;
+}
+
+// The whole source_fields map as received, ERP-owned; an empty map is stored as null.
+export function extractSourceFieldsText(payload: Record<string, unknown>): string | null {
+    const fields = payload.sourceFields;
+    if (typeof fields !== 'object' || fields === null || Object.keys(fields).length === 0) {
+        return null;
+    }
+    return JSON.stringify(fields);
+}

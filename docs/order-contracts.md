@@ -94,6 +94,9 @@ may differ, which is why the consequence stays a warning by default.
 
 **Check 2 `erp.organization-stock`:** `needed = line quantity / storage-unit ratio to base`; `available` = stock of
 O for P. The line fails when `needed > available`. A product without a stock row of O has `available = 0`.
+The check is skipped for the line when O has `controlsStock = false` (null or true keeps it controlled) and for the
+whole order while the ERP setting `ignoreOrganizationStockCheckForAll` is true. The ratio is `UnitRecord.ratioToBase`
+of the product's `storageUnitId`; a missing unit, or a zero or negative ratio, reads as 1.
 
 **Facts** (structured, no prose): `reason`, `productErpId`, `sku`, `warehouseErpId`, `organization` `{id, name}`
 (O), and `storageOrganizations[{id, name, stock, hasContract}]` (every storage organization at W, for the
@@ -123,10 +126,13 @@ create a contract with that organization (ERP requirement)") and `erp.organizati
 ("<organization> holds M, needed N (ERP requirement)").
 End customers see at most a soft generic note, never these.
 
-**Known gaps (ERP side).** The ERP skips check 2 for organizations flagged "do not control stock" and under a
-global switch; neither is published, so mivend can be stricter than the ERP, hence a warning and not a block. The
-product storage unit is not published either: stock is taken as kept in the base unit
-(`storageUnitRatioToBase = 1`); the conversion is one place in the order subject loader.
+**Known gaps (ERP side).** The ERP's own skip rules are mirrored from the published flags only: an organization the
+ERP never flagged is treated as controlled, so mivend can still be stricter than the ERP, hence a warning and not a
+block. The storage-unit conversion is one place, the order check data service (`storageUnitRatios`). Changing a flag,
+the setting or a unit does not mark stored results stale; they refresh at the next recompute point. The manager's
+line availability (`OrderLineAvailabilityService`) applies the same skip rules (`organizationStockControlled`), so a
+manager is never refused a quantity the check no longer flags. Confirmed from the 1C posting code: the organization stock register is kept in the product's storage unit, the coefficient is base units per unit, so `needed = base-unit quantity / storage coefficient` (the balance may be fractional). Order accounting flags are stored as last non-empty
+value: an event without them does not clear a stored one.
 
 ## Order data controls (#241)
 

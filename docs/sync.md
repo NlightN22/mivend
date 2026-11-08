@@ -390,6 +390,13 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   groups, sales channels, contact infos; soft ids, lists as JSON text) and `isDeleted` (#254). The ERP dictionary
   streams `counterparty-contact`, `counterparty-group`, `product-group`, `point-of-sale-type` and `setting` follow the
   same ownership rule in their own `*_erp` tables; none of it is replicated to branches.
+- **Unread ERP fields on mivend's own records (#254)**: a few published fields have no `_erp` table of their own and
+  sit as ERP-owned, readonly columns on the record they describe, written only by their stream and never by a person:
+  `organization_requisites.controlsStock`, `settlement_document.accounting`, `Product` custom fields
+  `erpStorageUnitId`/`erpSourceFields`, `Order` custom fields `erpAccounting`/`erpLinkedDocuments`/
+  `erpShippedInSettlements`. Absent in an event stays null (or keeps the stored value where the contract says absence
+  is "no information"); nothing is replicated to branches by this change. Products stored before this change have no
+  storage unit until their next product event (re-export or replay), so their ratio reads as 1 until then.
 - **ERP documents stored as received (#254)**: customer claims, sales corrections, order corrections, order change
   results and powers of attorney are written by their streams into `_erp` tables (`customer_claim_erp`, ... ,
   `contract_power_of_attorney_erp`) and nothing in mivend's own records changes. Links are plain ERP ids (no foreign
