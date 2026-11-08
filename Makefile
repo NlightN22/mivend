@@ -9,7 +9,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 -include .env.local
 export
 
-.PHONY: e2e-group e2e-groups e2e-integration-group up up-rebuild down logs ps restart \
+.PHONY: test-changed e2e-group e2e-groups e2e-integration-group up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-access test-e2e bench-pricing mutation-pilot \
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
@@ -258,6 +258,10 @@ test:
 	$(TEST_LOCK) pnpm test
 	$(TEST_LOCK) bash infrastructure/scripts/tests/dev-kill-lib.test.sh
 	$(TEST_LOCK) bash infrastructure/scripts/tests/site-identity-envsh.test.sh
+
+# Quick loop: tests of the packages changed since BASE (default origin/main) and their dependents. Full runs stay required before audit and release.
+test-changed: up
+	bash infrastructure/scripts/test-changed.sh
 
 test-int: up
 	$(TEST_LOCK) pnpm --filter "{packages/**}" --filter server --no-bail test:integration
