@@ -32,8 +32,7 @@ beforeAll(async () => {
     await dataSource.query(`
         CREATE TABLE "order" (id serial PRIMARY KEY, code varchar NOT NULL, state varchar NOT NULL,
             "currencyCode" varchar NOT NULL, "subTotalWithTax" int NOT NULL, "shippingWithTax" int NOT NULL,
-            "customerId" int);
-        CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" int);
+            "customFieldsCounterpartyid" varchar(255));
         CREATE TABLE order_channels_channel ("orderId" int NOT NULL, "channelId" int NOT NULL);
         CREATE TABLE proforma_invoice (id serial PRIMARY KEY, number varchar NOT NULL, version int NOT NULL,
             amount int NOT NULL, "currencyCode" varchar NOT NULL, status varchar NOT NULL, "dueDate" timestamp NOT NULL);
@@ -42,13 +41,10 @@ beforeAll(async () => {
     `);
     for (let i = 1; i <= 12; i++) {
         await dataSource.query(
-            `INSERT INTO "order" (code, state, "currencyCode", "subTotalWithTax", "shippingWithTax", "customerId")
+            `INSERT INTO "order" (code, state, "currencyCode", "subTotalWithTax", "shippingWithTax", "customFieldsCounterpartyid")
              VALUES ($1, 'PaymentSettled', 'USD', 1000, 50, $2)`,
-            [`code-${i}`, i],
+            [`code-${i}`, i === 5 ? '200' : '100'],
         );
-        await dataSource.query('INSERT INTO customer ("customFieldsCounterpartyid") VALUES ($1)', [
-            i === 5 ? 200 : 100,
-        ]);
         await dataSource.query('INSERT INTO order_channels_channel VALUES ($1, $2)', [
             i,
             i === 12 ? 2 : 1,
@@ -116,7 +112,7 @@ describe('PaymentCardLoader', () => {
         expect(orders[2]).toBeNull();
     });
 
-    it('returns null for an order whose customer belongs to another counterparty', async () => {
+    it('returns null for an order that belongs to another counterparty, whatever its customer', async () => {
         const ctx = requestCtx();
         const [other, own] = await Promise.all([
             loader.order(ctx, '5', '100'),

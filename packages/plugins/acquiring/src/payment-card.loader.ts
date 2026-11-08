@@ -109,7 +109,7 @@ export class PaymentCardLoader {
         return keys.map(key => byId.get(key) ?? null);
     }
 
-    // Same channel rule as OrderService.findOne; the order's customer must belong to the payer.
+    // Same channel rule as OrderService.findOne; the order's own counterparty must be the payer.
     private async loadOrders(
         ctx: RequestContext,
         keys: readonly string[],
@@ -120,10 +120,9 @@ export class PaymentCardLoader {
             ctx,
             `SELECT o.id, o.code, o.state, o."currencyCode",
                     o."subTotalWithTax" + o."shippingWithTax" AS "orderTotal",
-                    cu."customFieldsCounterpartyid"::text AS "payerId"
+                    o."customFieldsCounterpartyid" AS "payerId"
              FROM "order" o
              JOIN order_channels_channel oc ON oc."orderId" = o.id AND oc."channelId" = $2
-             LEFT JOIN customer cu ON cu.id = o."customerId"
              WHERE o.id = ANY($1::int[])`,
             [parsed.map(([orderId]) => Number(orderId)), ctx.channelId],
         );
