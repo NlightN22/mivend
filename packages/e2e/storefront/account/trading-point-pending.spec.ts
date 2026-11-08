@@ -8,9 +8,10 @@ test.describe('Editing an ERP trading point', () => {
         const card = page.locator('.tp-card', { hasText: POINT_NAME }).first();
         await card.getByRole('button', { name: 'Edit' }).click();
 
-        const nameInput = card.getByPlaceholder('e.g. North AutoService');
+        // The edit form replaces the card, so it is found on the page, not inside the card.
+        const nameInput = page.getByPlaceholder('e.g. North AutoService');
         await nameInput.fill(`${POINT_NAME} renamed`);
-        await card.getByRole('button', { name: 'Save changes' }).click();
+        await page.getByRole('button', { name: 'Save changes' }).click();
 
         const updated = page.locator('.tp-card', { hasText: POINT_NAME }).first();
         await expect(updated.getByTestId('tp-pending')).toContainText(
