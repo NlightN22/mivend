@@ -55,6 +55,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settlements',
+                    name: 'settlements',
+                    component: () => import('../pages/settlements/SettlementsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'approvals',
                     name: 'approvals',
                     component: () => import('../pages/approvals/ApprovalsInboxPage.vue'),

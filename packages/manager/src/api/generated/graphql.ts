@@ -8048,6 +8048,10 @@ export type Query = {
     visiblePayments: PaymentAttemptList;
     /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
     visibleProformaInvoices: ProformaInvoiceList;
+    /** Manager-portal settlement documents of the customers the caller may see; needs ReadCounterpartyCredit. */
+    visibleSettlementDocuments: SettlementListPage;
+    /** Document counts per type for the same search and filter (the type itself is ignored), for the type chips. */
+    visibleSettlementTypeCounts: Array<SettlementTypeCount>;
     warehouses: Array<Warehouse>;
     zone: Maybe<Zone>;
     zones: ZoneList;
@@ -8677,6 +8681,16 @@ export type QueryVisibleProformaInvoicesArgs = {
     options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
+export type QueryVisibleSettlementDocumentsArgs = {
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    options?: InputMaybe<SettlementListOptions>;
+};
+
+export type QueryVisibleSettlementTypeCountsArgs = {
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    options?: InputMaybe<SettlementListOptions>;
+};
+
 export type QueryZoneArgs = {
     id: Scalars['ID']['input'];
 };
@@ -9261,6 +9275,79 @@ export type SettleRefundInput = {
 };
 
 export type SettleRefundResult = Refund | RefundStateTransitionError;
+
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
+export type SettlementFilterParameter = {
+    _and?: InputMaybe<Array<SettlementFilterParameter>>;
+    _or?: InputMaybe<Array<SettlementFilterParameter>>;
+    amount?: InputMaybe<NumberOperators>;
+    contract?: InputMaybe<StringOperators>;
+    contractId?: InputMaybe<StringOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    customer?: InputMaybe<StringOperators>;
+    customerInn?: InputMaybe<StringOperators>;
+    date?: InputMaybe<DateOperators>;
+    documentType?: InputMaybe<StringOperators>;
+    number?: InputMaybe<StringOperators>;
+    orderCode?: InputMaybe<StringOperators>;
+    organization?: InputMaybe<StringOperators>;
+    organizationId?: InputMaybe<StringOperators>;
+    proformaInvoiceNumber?: InputMaybe<StringOperators>;
+    /** Document type label. */
+    typeLabel?: InputMaybe<StringOperators>;
+};
+
+/** One signed effect of an ERP document on a customer's settlement (positive increases the customer's debt). */
+export type SettlementListItem = {
+    amount: Scalars['Money']['output'];
+    category: Scalars['String']['output'];
+    contractId: Maybe<Scalars['String']['output']>;
+    contractName: Maybe<Scalars['String']['output']>;
+    counterpartyId: Maybe<Scalars['ID']['output']>;
+    counterpartyShortName: Maybe<Scalars['String']['output']>;
+    currencyCode: Scalars['String']['output'];
+    date: Scalars['DateTime']['output'];
+    documentType: Scalars['String']['output'];
+    documentTypeLabel: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    /** Local orders the document refers to, when the soft link resolves. */
+    orderCodes: Array<Scalars['String']['output']>;
+    organizationId: Scalars['String']['output'];
+    organizationName: Maybe<Scalars['String']['output']>;
+    /** The proforma invoice that was issued for this sales invoice, if any. */
+    proformaInvoiceNumber: Maybe<Scalars['String']['output']>;
+};
+
+export type SettlementListOptions = {
+    /** Exact document type code (the chips); the filter below narrows further. */
+    documentType?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<SettlementFilterParameter>;
+    /** Substring match against the document number, the customer name and INN, and the order codes. */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<SettlementSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SettlementListPage = {
+    items: Array<SettlementListItem>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type SettlementSortParameter = {
+    amount?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    date?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    typeLabel?: InputMaybe<SortOrder>;
+};
+
+export type SettlementTypeCount = {
+    count: Scalars['Int']['output'];
+    documentType: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+};
 
 export type ShippingLine = {
     customFields: Maybe<Scalars['JSON']['output']>;
@@ -12901,6 +12988,60 @@ export type PermissionCatalogQuery = {
     globalSettings: { serverConfig: { permissions: Array<{ name: string; description: string }> } };
 };
 
+export type SettlementListItemFieldsFragment = {
+    id: string;
+    documentType: string;
+    documentTypeLabel: string;
+    category: string;
+    number: string;
+    date: any;
+    counterpartyId: string | null;
+    counterpartyShortName: string | null;
+    organizationName: string | null;
+    contractName: string | null;
+    currencyCode: string;
+    amount: any;
+    orderCodes: Array<string>;
+    proformaInvoiceNumber: string | null;
+};
+
+export type SettlementTypeCountsQueryVariables = Exact<{
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<SettlementFilterParameter>;
+}>;
+
+export type SettlementTypeCountsQuery = {
+    counts: Array<{ documentType: string; label: string; count: number }>;
+};
+
+export type SettlementsPageQueryVariables = Exact<{
+    options?: InputMaybe<SettlementListOptions>;
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type SettlementsPageQuery = {
+    visibleSettlementDocuments: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            documentType: string;
+            documentTypeLabel: string;
+            category: string;
+            number: string;
+            date: any;
+            counterpartyId: string | null;
+            counterpartyShortName: string | null;
+            organizationName: string | null;
+            contractName: string | null;
+            currencyCode: string;
+            amount: any;
+            orderCodes: Array<string>;
+            proformaInvoiceNumber: string | null;
+        }>;
+    };
+};
+
 export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SystemHealthChecklistQuery = {
@@ -13813,6 +13954,27 @@ export const OrderContractOptionFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderContractOptionFields' },
 ) as unknown as TypedDocumentString<OrderContractOptionFieldsFragment, unknown>;
+export const SettlementListItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment SettlementListItemFields on SettlementListItem {
+  id
+  documentType
+  documentTypeLabel
+  category
+  number
+  date
+  counterpartyId
+  counterpartyShortName
+  organizationName
+  contractName
+  currencyCode
+  amount
+  orderCodes
+  proformaInvoiceNumber
+}
+    `,
+    { fragmentName: 'SettlementListItemFields' },
+) as unknown as TypedDocumentString<SettlementListItemFieldsFragment, unknown>;
 export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment SavedTableViewFields on SavedTableView {
@@ -16352,6 +16514,46 @@ export const PermissionCatalogDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PermissionCatalogQuery, PermissionCatalogQueryVariables>;
+export const SettlementTypeCountsDocument = new TypedDocumentString(`
+    query SettlementTypeCounts($counterpartyId: ID, $search: String, $filter: SettlementFilterParameter) {
+  counts: visibleSettlementTypeCounts(
+    options: {search: $search, filter: $filter}
+    counterpartyId: $counterpartyId
+  ) {
+    documentType
+    label
+    count
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SettlementTypeCountsQuery,
+    SettlementTypeCountsQueryVariables
+>;
+export const SettlementsPageDocument = new TypedDocumentString(`
+    query SettlementsPage($options: SettlementListOptions, $counterpartyId: ID) {
+  visibleSettlementDocuments(options: $options, counterpartyId: $counterpartyId) {
+    totalItems
+    items {
+      ...SettlementListItemFields
+    }
+  }
+}
+    fragment SettlementListItemFields on SettlementListItem {
+  id
+  documentType
+  documentTypeLabel
+  category
+  number
+  date
+  counterpartyId
+  counterpartyShortName
+  organizationName
+  contractName
+  currencyCode
+  amount
+  orderCodes
+  proformaInvoiceNumber
+}`) as unknown as TypedDocumentString<SettlementsPageQuery, SettlementsPageQueryVariables>;
 export const SystemHealthChecklistDocument = new TypedDocumentString(`
     query SystemHealthChecklist {
   systemHealthChecklist {

@@ -148,6 +148,7 @@ action menu keeps everything the buttons show, the summary wraps.
 | Dashboard | KPI and widgets | exists, redesign deferred |
 | Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
 | Documents (group) | Orders, Proforma invoices, Payments, Discount requests | exists |
+| Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadCounterpartyCredit` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
 | Bulk operations | wizard | exists |
@@ -192,6 +193,24 @@ proforma invoice and order) are applied on the server: `visiblePayments` takes
 `options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
 scope of the payment's proforma invoice). The default sort is newest first. Money columns are
 end-aligned (`align: 'end'` on the table column).
+
+## Settlements list
+
+One list of every ERP document that affects the settlement with a customer (sales invoices,
+payments, returns, corrections; whatever the document type table holds, no type is hardcoded),
+`components/settlements/`. A row is one document's entry on one contract: document number as the ERP
+sends it, date, type badge, customer, contract, organization, order, proforma invoice and the signed
+amount (plus raises the customer's debt, minus lowers it). The chips are built from the data: All
+and one per document type, counted over the current search and Filter builder conditions
+(`visibleSettlementTypeCounts`). The search box matches the document number, customer name and INN
+and the order codes. The customer links to its card, the order to the order card (only an order of
+the same customer resolves), the proforma invoice to the proforma list searched by its number (the
+proforma whose sales invoice number equals the document number). Views, URL sync, pagination and
+mobile cards are shared with the payments list. `visibleSettlementDocuments` takes
+`options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
+caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
+in the customer card. Gated by `ReadCounterpartyCredit` (settlement documents are what the credit
+balance is derived from); no running balance is shown because the model keeps none per document.
 
 ## Not implemented yet
 
