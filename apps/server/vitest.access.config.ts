@@ -6,6 +6,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
+        isolate: false,
         include: ['src/__tests__/access/**/*.test.ts'],
         globalSetup: ['src/__tests__/access/harness/global-setup.ts'],
         // One shared server and seed; write specs restore what they change, so files run one at a time.
