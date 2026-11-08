@@ -55,6 +55,9 @@ files) — the failure was going around it.
 3. **`make up`** (Docker infra only: postgres, rabbitmq, elasticsearch — no Redis since
    issue #128 moved the job queue off BullMQ) is safe to call repeatedly — it does not
    restart already-running containers.
+   `make up` runs `--no-recreate`: a container that already exists keeps its old config even if
+   the compose file or env changed (and it never recreates the shared containers from another
+   worktree); apply such a change with `make up-rebuild` or recreate the container by hand.
    `make up` deliberately has no `--build`: with it, a rebuilt postgres image made compose
    **recreate** the shared postgres containers during a `make test-int` run, killing every
    contour's DB connections (the staging worker crashed and stayed down). Rebuild explicitly with

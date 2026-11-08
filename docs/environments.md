@@ -128,6 +128,7 @@ company-name sort order), with no error until someone notices broken UI ordering
 - All three contours' Postgres containers build from `infrastructure/docker/postgres/`, whose
   `entrypoint.sh` **requires** `DB_ICU_LOCALE` (e.g. `ru-RU`) to be set and refuses to start
   without it — see that file's own comment.
+- `make up` uses `--no-recreate`: existing dev containers keep their old compose config and env, so a changed `docker-compose.dev.yml` needs `make up-rebuild` (or a manual recreate) to take effect.
 - `docker-compose.dev.yml` sets `DB_ICU_LOCALE=ru-RU` for `postgres-central`/`postgres-branch`
   (covers local and staging-integration, which share the same dev stack per this doc's own model).
 - `docker-compose.yml` (production) requires `DB_ICU_LOCALE` with no default — `make prod-up`
