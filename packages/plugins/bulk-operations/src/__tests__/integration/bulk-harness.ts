@@ -13,7 +13,10 @@ import type { BulkRunQueue } from '../../bulk-run-queue';
 // Plain TypeORM twins of the production tables (VendureEntity needs a bootstrapped id strategy).
 @Entity('bulk_batch')
 @Index(['createdById', 'selectionHash'], { unique: true, where: `"status" = 'draft'` })
-@Index(['undoOfBatchId'], { unique: true, where: '"undoOfBatchId" IS NOT NULL' })
+@Index(['undoOfBatchId'], {
+    unique: true,
+    where: `"undoOfBatchId" IS NOT NULL AND "status" <> 'draft'`,
+})
 export class TestBatch {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
@@ -182,4 +185,26 @@ export function buildStack(connection: TransactionalConnection, executor: BulkEx
         runner: new BulkBatchRunner(connection, registry),
         enqueued,
     };
+}
+
+// Minimal twins of Vendure's rights tables, enough for the runner's per-chunk "still allowed" read.
+export async function seedAuth(
+    dataSource: DataSource,
+    permissions = 'ReadX,ManageFake',
+): Promise<void> {
+    await dataSource.query(
+        `CREATE TABLE IF NOT EXISTS administrator (id int, "userId" int, "deletedAt" timestamp)`,
+    );
+    await dataSource.query(`CREATE TABLE IF NOT EXISTS "user" (id int, "deletedAt" timestamp)`);
+    await dataSource.query(
+        `CREATE TABLE IF NOT EXISTS user_roles_role ("userId" int, "roleId" int)`,
+    );
+    await dataSource.query(`CREATE TABLE IF NOT EXISTS role (id int, permissions text)`);
+    await dataSource.query('TRUNCATE administrator, "user", user_roles_role, role');
+    for (const id of [7, 8]) {
+        await dataSource.query('INSERT INTO administrator VALUES ($1, $1, NULL)', [id]);
+        await dataSource.query('INSERT INTO "user" VALUES ($1, NULL)', [id]);
+        await dataSource.query('INSERT INTO user_roles_role VALUES ($1, 1)', [id]);
+    }
+    await dataSource.query('INSERT INTO role VALUES (1, $1)', [permissions]);
 }

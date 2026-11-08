@@ -9,6 +9,7 @@ import {
 
 import {
     FAKE_TYPE,
+    seedAuth,
     FakeTarget,
     TestBatch,
     TestItem,
@@ -56,6 +57,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
     await dataSource.query('TRUNCATE bulk_batch, bulk_batch_item, fake_target RESTART IDENTITY');
+    await seedAuth(dataSource);
     await dataSource.getRepository(FakeTarget).insert([{}, {}, {}, {}, { active: true }]);
 });
 
