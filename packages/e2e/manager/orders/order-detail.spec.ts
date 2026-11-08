@@ -93,10 +93,14 @@ test.describe('a flagged cell of the shared e2e order @on:manager-portal-admin',
 
     test.afterEach(async () => {
         if (!requestId) return;
+        const approver = await adminTokenFor(
+            MANAGER_ACCOUNTS.departmentHead.username,
+            MANAGER_ACCOUNTS.departmentHead.password,
+        );
         await adminGql(
             `mutation($r: ID!) { decidePriceAdjustmentRequest(requestId: $r, decision: "rejected", comment: "e2e cleanup") { id } }`,
             { r: requestId },
-            token,
+            approver,
         );
         requestId = null;
     });

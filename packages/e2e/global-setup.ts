@@ -253,25 +253,40 @@ export default async function globalSetup(): Promise<void> {
 
     // DiscountGrant is materialized only on approval and has no erp-import record type, so seed
     // through requestDiscountGrant -> decideDiscountGrantRequest. Second grant must not leak onto e2e.
+    // Approval types the specs request: a fresh database has no WorkflowDefinition until one is seeded.
     if (adminToken) {
-        await adminGql(
-            `mutation($requestType: String!, $displayName: String!, $steps: [WorkflowStepInput!]!) {
-                upsertWorkflowDefinition(requestType: $requestType, displayName: $displayName, steps: $steps) { requestType }
-            }`,
+        const definitions = [
             {
                 requestType: 'discountGrantApproval',
                 displayName: 'Discount grant approval',
-                steps: [
-                    {
-                        order: 0,
-                        role: 'department-head',
-                        requiredPermission: 'ApproveDiscountRequest',
-                        escalatesTo: [],
-                    },
-                ],
+                escalatesTo: [] as string[],
             },
-            adminToken,
-        );
+            {
+                requestType: 'priceAdjustmentApproval',
+                displayName: 'Price adjustment approval',
+                escalatesTo: ['general-director'],
+            },
+        ];
+        for (const { requestType, displayName, escalatesTo } of definitions) {
+            await adminGql(
+                `mutation($requestType: String!, $displayName: String!, $steps: [WorkflowStepInput!]!) {
+                    upsertWorkflowDefinition(requestType: $requestType, displayName: $displayName, steps: $steps) { requestType }
+                }`,
+                {
+                    requestType,
+                    displayName,
+                    steps: [
+                        {
+                            order: 0,
+                            role: 'department-head',
+                            requiredPermission: 'ApproveDiscountRequest',
+                            escalatesTo,
+                        },
+                    ],
+                },
+                adminToken,
+            );
+        }
     }
 
     const deptHeadToken = await adminTokenFor(
