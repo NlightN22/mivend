@@ -104,7 +104,9 @@ One page, no tabs, top to bottom:
    rule's explicit product list or its all-products flag; a rule whose product selection is an
    ERP-evaluated filter (empty member list) cannot be evaluated here and shows nothing for its lines,
    and a rule with a threshold shows the percent without an amount. When several rules cover a line
-   the deepest percent wins. It is display only: it never changes an order price, a discount or a total.
+   the deepest percent wins. The page cannot tell "the customer has no rules" from "this employee may not
+   read them" (an order or counterparty outside the caller's scope answers like no rules): both hide the
+   column, on purpose, so the column never reveals what the caller may not see. It is display only: it never changes an order price, a discount or a total.
 6. **Below the table only.** Status history as a vertical timeline (newest first, all statuses,
    hidden when empty) and a compact list of the order's approval requests.
 
