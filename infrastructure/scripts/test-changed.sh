@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the unit, integration and access tests of the packages changed since $BASE and of the packages that depend on them.
-# Integration tests run for the changed packages only; DEPS=1 adds their dependents. Unit tests always follow the import graph (vitest --changed).
+# The access matrix is slow and runs only with ACCESS=1. Integration tests run for the changed packages only; DEPS=1 adds their dependents. Unit tests always follow the import graph (vitest --changed).
 # DRY=1 prints the plan only. Files under infrastructure/scripts are outside this loop (their script tests run in make test). A quick loop while working; the full make test / test-int / test-access stay required before audit and release.
 set -euo pipefail
 
@@ -52,15 +52,13 @@ for (const p of JSON.parse(fs.readFileSync(0, "utf8"))) {
 ' "${names[@]}")
 
 run_access=no
-for n in "${names[@]}"; do
-    case "$n" in server|@mivend/plugin-*|@mivend/shared) run_access=yes ;; esac
-done
+if [ "${ACCESS:-0}" = 1 ]; then run_access=yes; fi
 
 echo "test-changed: base $BASE"
 echo "  changed packages$([ "${DEPS:-0}" = 1 ] && echo " and dependents"): ${names[*]:-none}"
 echo "  unit: ${unit_args[*]:-all files}"
 echo "  integration: ${int_pkgs[*]:-none}"
-echo "  access matrix: $run_access"
+echo "  access matrix: $run_access$([ "$run_access" = no ] && echo " (slow, 3-5 min; ACCESS=1 adds it, the full make test-access stays required)")"
 [ "${DRY:-}" = 1 ] && exit 0
 
 flock "$LOCK" pnpm exec vitest run "${unit_args[@]}" --passWithNoTests
