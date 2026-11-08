@@ -17,6 +17,10 @@ export function clampTake(take: number | undefined): number {
     return Math.min(Math.max(take ?? 50, 0), MAX_TAKE);
 }
 
+export function clampSkip(skip: number | undefined): number {
+    return Math.max(Math.trunc(skip ?? 0), 0);
+}
+
 export interface FieldSpec {
     kind: FieldKind;
     // Fixed SQL, never built from client input.

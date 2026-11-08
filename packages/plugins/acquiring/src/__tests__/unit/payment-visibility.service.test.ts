@@ -97,6 +97,13 @@ describe('PaymentVisibilityService', () => {
         expect(qb.andWhere.mock.calls.some(([arg]) => arg instanceof Brackets)).toBe(true);
     });
 
+    it('clamps a negative skip to 0', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { skip: -5 });
+        expect(qb.offset).toHaveBeenCalledWith(0);
+    });
+
     it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
         proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 

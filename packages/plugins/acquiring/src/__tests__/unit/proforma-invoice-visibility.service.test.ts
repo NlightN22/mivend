@@ -160,6 +160,14 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
+    it('clamps a negative skip to 0', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '3' });
+
+        await service.findVisible(mockCtx, { skip: -5 });
+        expect(qb.offset).toHaveBeenCalledWith(0);
+    });
+
     it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
         qb.getRawOne.mockResolvedValue({ total: '3' });
