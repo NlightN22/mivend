@@ -541,3 +541,7 @@ WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `A
   owning-service import boundaries), which are all enforced. Not added speculatively — no real
   violation exists yet to calibrate a rule against. Tracked:
   `tasks/eslint-forbid-scheduler-in-component-tests.md`.
+
+## Test run speed
+
+Unit and integration files share one module cache per worker (`isolate: false`), because importing the Nest/Vendure stack per file was most of the CPU time. A file that mocks a module or writes global or environment state keeps its own cache: the root unit config finds such files by scanning the source (`vi.mock`, `vi.stubGlobal`, `vi.useFakeTimers`, `vi.spyOn`, env or global writes), `erp-integration` splits its integration files by `vi.mock`. A new test needs no registration. If a test passes alone but fails in the full run, look for module state it leaks or depends on. Measure speed by CPU time (`/usr/bin/time`), not wall time, because other sessions share the host.
