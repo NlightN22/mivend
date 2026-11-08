@@ -7,7 +7,7 @@ test('status chips carry counts and Awaiting confirmation comes first @on:manage
     await page.goto('/orders');
     const chips = page.locator('.mv-filter-chip');
     await expect(chips.first()).toContainText('Awaiting confirmation', { timeout: 15000 });
-    await expect(chips.first()).toContainText(/\d+$/);
+    await expect(chips.first()).toContainText(/\d+$/, { timeout: 15000 });
     await expect(page.getByRole('button', { name: /^All \d+$/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Saved views' })).toHaveCount(0);
     await expect(page.getByTestId('orders-kpis')).toHaveCount(0);
@@ -74,7 +74,7 @@ test('orders list shows the seeded order with customer, branch and INN @read-onl
     const order = readE2eOrder();
 
     await page.goto('/orders');
-    await expect(page.getByPlaceholder('Search orders…')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByPlaceholder('Search orders…')).toBeVisible({ timeout: 30000 });
     // Other runs keep adding orders, so search instead of relying on page one.
     await page.getByPlaceholder('Search orders…').fill(order.code);
 

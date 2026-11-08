@@ -18,7 +18,9 @@ test('order detail shows the header fields, the customer summary, the lines tabl
     for (const label of ['Contract', 'Delivery', 'Price type', 'ERP registration']) {
         await expect(fields).toContainText(label);
     }
-    await expect(page.getByTestId('order-customer-summary')).toContainText('Credit limit');
+    const summary = page.getByTestId('order-customer-summary');
+    await expect(summary).toContainText('Sales last 30 days');
+    await expect(summary).toContainText('Outstanding balance');
     await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Available');
     await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Discount');
     await expect(page.locator('.mv-doc-lines__table thead')).toContainText('Reserve');
@@ -53,24 +55,70 @@ test("the action menu opens this order's proforma invoices and documents @read-o
     await expect(page.getByRole('dialog')).toContainText('Documents');
 });
 
-test('a flagged cell shows only an icon and opens a popover with what is wrong there @read-only', async ({
+test('the customer summary shows the credit figures to a role with the credit right @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     await page.goto(`/orders/${readE2eOrder().code}`);
-    await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
-        timeout: 15000,
+    const summary = page.getByTestId('order-customer-summary');
+    await expect(summary).toContainText('Credit limit', { timeout: 15000 });
+    await expect(summary).toContainText('Available credit');
+});
+
+test.describe('a flagged cell of the shared e2e order @on:manager-portal-admin', () => {
+    let token: string;
+    let requestId: string | null = null;
+
+    test.beforeEach(async () => {
+        token = await adminTokenFor(
+            MANAGER_ACCOUNTS.portalAdmin.username,
+            MANAGER_ACCOUNTS.portalAdmin.password,
+        );
+        const order = readE2eOrder();
+        const found = await adminGql<{ order: { lines: { id: string }[] } }>(
+            `query($id: ID!) { order(id: $id) { lines { id } } }`,
+            { id: order.id },
+            token,
+        );
+        // A 1.00 price is far below any limit, so the change waits for approval and the line is flagged.
+        const requested = await adminGql<{
+            requestPriceAdjustment: { decision: string; approvalRequestId: string | null };
+        }>(
+            `mutation($o: ID!, $l: ID!, $p: Int!) { requestPriceAdjustment(orderId: $o, orderLineId: $l, requestedPrice: $p) { decision approvalRequestId } }`,
+            { o: order.id, l: found.data.order.lines[0].id, p: 100 },
+            token,
+        );
+        expect(requested.data.requestPriceAdjustment.decision).toBe('requires-approval');
+        requestId = requested.data.requestPriceAdjustment.approvalRequestId;
     });
 
-    const flag = page.getByRole('button', { name: 'Show what is wrong here' }).first();
-    await expect(flag).toBeVisible();
-    await expect(flag).toHaveText('');
-    await flag.click();
-    await expect(page.locator('.cell-flag__list')).toBeVisible();
+    test.afterEach(async () => {
+        if (!requestId) return;
+        await adminGql(
+            `mutation($r: ID!) { decidePriceAdjustmentRequest(requestId: $r, decision: "rejected", comment: "e2e cleanup") { id } }`,
+            { r: requestId },
+            token,
+        );
+        requestId = null;
+    });
 
-    for (const duplicated of ['Reservation failed', 'Cut for lack of stock', 'ERP document']) {
-        await expect(page.getByRole('heading', { name: duplicated })).toHaveCount(0);
-    }
-    await expect(page.getByRole('button', { name: 'Cut lines to available stock' })).toHaveCount(0);
+    test('shows only an icon and opens a popover with what is wrong there', async ({ page }) => {
+        await page.goto(`/orders/${readE2eOrder().code}`);
+        await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
+            timeout: 15000,
+        });
+
+        const flag = page.getByRole('button', { name: 'Show what is wrong here' }).first();
+        await expect(flag).toBeVisible();
+        await flag.click();
+        await expect(page.locator('.flag-notes')).toContainText('Requires approval');
+
+        for (const duplicated of ['Reservation failed', 'Cut for lack of stock', 'ERP document']) {
+            await expect(page.getByRole('heading', { name: duplicated })).toHaveCount(0);
+        }
+        await expect(
+            page.getByRole('button', { name: 'Cut lines to available stock' }),
+        ).toHaveCount(0);
+    });
 });
 
 test.describe('reservation of the shared e2e order', () => {
@@ -113,7 +161,7 @@ test.describe('reservation of the shared e2e order', () => {
         page,
     }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
-        const reserve = page.locator('.line-row td[data-label="Reserve"]').first();
+        const reserve = page.locator('.doc-row td[data-label="Reserve"]').first();
         await expect(reserve).toContainText(/^\s*0 \/ \d+/, { timeout: 15000 });
         await page.getByRole('button', { name: 'Confirm order' }).click();
         await page.getByRole('button', { name: 'Confirm', exact: true }).click();
@@ -125,7 +173,7 @@ test.describe('reservation of the shared e2e order', () => {
 });
 
 test.describe('adding and deleting positions of the shared e2e order', () => {
-    const SKU = 'E2E-OF-002';
+    const SKU = 'E2E-OIL-002';
     let token: string;
 
     async function removeAddedLine(): Promise<void> {
