@@ -652,8 +652,9 @@ and the floor are never part of a finding and never reach the customer.
 
 `orderLineQuote(orderId, sku)` (the add-position row of the order card) needs `ConfirmOrder` like `addOrderLineBySku`, is refused
 for an order outside the caller's scope (`OrderVisibilityService`), and refuses an unknown, ambiguous or unpriced article with
-the same messages as the add. It returns the customer's unit price (the cart's resolution, `orderRules: false`), the reference
-price, the discount percent from it and the free stock of the branch warehouses; it writes nothing.
+the same messages as the add. It takes an optional quantity (default 1, a whole number up to the line limit) and returns the customer's unit price for a line
+of that quantity (the cart's resolution with the order's tier and promotion rules), the reference price (equal to it) and the
+free stock of the branch warehouses; it writes nothing.
 
 Recalculation today: a line with a manual price keeps it (`customer-price-calculation.strategy.ts` returns it and
 `OrderDiscountService` skips manual lines), so an automatic discount that appears later does not replace a manual price

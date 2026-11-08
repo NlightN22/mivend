@@ -9,12 +9,10 @@ import {
 } from '@vendure/core';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import { findVariantBySku, noPriceMessage } from './order-line-sku';
+import { findVariantBySku, MAX_LINE_QUANTITY, noPriceMessage } from './order-line-sku';
 import { LINE_PRICE_CHECK, type LinePriceCheck } from './line-price-check';
 import { OrderLineEditService } from './order-line-edit.service';
 import { OrderLineStockSyncService } from './order-line-stock-sync.service';
-
-const MAX_LINE_QUANTITY = 1_000_000;
 
 // Staff adds a position to an unsent order by its article (#320); same lock, guard and on-edit checks as the other edits.
 @Injectable()

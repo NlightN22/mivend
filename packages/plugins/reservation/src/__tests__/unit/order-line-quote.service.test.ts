@@ -9,6 +9,7 @@ function build(opts: {
     visible?: boolean;
     variants?: Array<{ id: string; sku: string }>;
     quote?: unknown;
+    quoteFn?: ReturnType<typeof vi.fn>;
     free?: Map<string, Map<string, number>>;
 }) {
     const variants = opts.variants ?? [{ id: '7', sku: 'AB-1' }];
@@ -41,12 +42,12 @@ function build(opts: {
                 ]),
         ),
     };
-    const priceCheck = {
-        quote: async () =>
-            opts.quote === undefined
-                ? { customerPrice: 1000, referencePrice: 1000, discountPercent: 0 }
-                : opts.quote,
-    };
+    const quoteFn =
+        opts.quoteFn ??
+        vi.fn(async () =>
+            opts.quote === undefined ? { customerPrice: 1000, referencePrice: 1000 } : opts.quote,
+        );
+    const priceCheck = { quote: quoteFn };
     const service = new OrderLineQuoteService(
         connection as never,
         orderService as never,
@@ -55,7 +56,7 @@ function build(opts: {
         availability as never,
         { get: () => priceCheck } as never,
     );
-    return { service, availability };
+    return { service, availability, quoteFn };
 }
 
 describe('OrderLineQuoteService', () => {
@@ -67,10 +68,22 @@ describe('OrderLineQuoteService', () => {
             name: 'One',
             customerPrice: 1000,
             referencePrice: 1000,
-            discountPercent: 0,
             available: 9,
         });
         expect(availability.findBranchStockLocationIds).toHaveBeenCalledWith(ctx, 'branch-a');
+    });
+
+    it('quotes for the given quantity, one by default', async () => {
+        const t = build({});
+        await t.service.quote(ctx, '5', 'AB-1');
+        await t.service.quote(ctx, '5', 'AB-1', 100);
+        expect(t.quoteFn.mock.calls.map(c => c[3])).toEqual([1, 100]);
+    });
+
+    it.each([0, -1, 1.5, 2_000_000])('refuses the quantity %s', async quantity => {
+        await expect(build({}).service.quote(ctx, '5', 'AB-1', quantity)).rejects.toThrow(
+            /whole number from 1/,
+        );
     });
 
     it('reports no stock when the warehouses hold none of it', async () => {

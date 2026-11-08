@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
+import { MAX_LINE_QUANTITY } from './order-line-sku';
 import { LINE_PRICE_CHECK, type LinePriceCheck } from './line-price-check';
 import { findVariantBySku, noPriceMessage } from './order-line-sku';
 import { ReservationAvailabilityService } from './reservation-availability.service';
@@ -21,7 +22,6 @@ export interface OrderLineQuote {
     name: string;
     customerPrice: number;
     referencePrice: number;
-    discountPercent: number | null;
     available: number;
 }
 
@@ -37,7 +37,17 @@ export class OrderLineQuoteService {
         private moduleRef: ModuleRef,
     ) {}
 
-    async quote(ctx: RequestContext, orderId: ID, sku: string): Promise<OrderLineQuote> {
+    async quote(
+        ctx: RequestContext,
+        orderId: ID,
+        sku: string,
+        quantity = 1,
+    ): Promise<OrderLineQuote> {
+        if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_LINE_QUANTITY) {
+            throw new UserInputError(
+                `Quantity must be a whole number from 1 to ${MAX_LINE_QUANTITY}`,
+            );
+        }
         if (!(await this.orderVisibility.visibleIds(ctx, [orderId])).has(String(orderId))) {
             throw new EntityNotFoundError('Order', orderId);
         }
@@ -46,7 +56,7 @@ export class OrderLineQuoteService {
         const variant = await findVariantBySku(this.connection, ctx, sku);
         const priced = await this.moduleRef
             .get<LinePriceCheck>(LINE_PRICE_CHECK, { strict: false })
-            .quote(ctx, order, variant.id);
+            .quote(ctx, order, variant.id, quantity);
         if (!priced) throw new UserInputError(noPriceMessage(sku));
         const branchId = order.customFields?.branchId;
         const locations = branchId

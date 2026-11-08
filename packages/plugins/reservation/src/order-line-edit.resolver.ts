@@ -26,8 +26,11 @@ export class OrderLineEditResolver {
 
     @Query()
     @Allow(CustomPermission.ConfirmOrder.Permission)
-    orderLineQuote(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID; sku: string }) {
-        return this.quotes.quote(ctx, args.orderId, args.sku);
+    orderLineQuote(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID; sku: string; quantity?: number | null },
+    ) {
+        return this.quotes.quote(ctx, args.orderId, args.sku, args.quantity ?? 1);
     }
 
     @Query()

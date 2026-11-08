@@ -57,17 +57,15 @@ export const adminOrderLineEditSchema = gql`
         name: String!
         "The order's customer price for one unit, in the order's price terms."
         customerPrice: Int!
-        "The customer's price before any discount."
+        "What the line discount is measured from; the customer price itself (a placed line list price already carries it)."
         referencePrice: Int!
-        "Share of the reference price the customer price gives away; negative is a markup."
-        discountPercent: Float
         "What the branch warehouses can cover now (the line's own organization cap applies once it is added)."
         available: Int!
     }
 
     extend type Query {
-        "Price and stock of an article for this order's customer, refused like addOrderLineBySku. Needs ConfirmOrder and order visibility."
-        orderLineQuote(orderId: ID!, sku: String!): OrderLineQuote!
+        "Price (for the given quantity, default 1) and stock of an article for this order's customer, refused like addOrderLineBySku. Needs ConfirmOrder and order visibility."
+        orderLineQuote(orderId: ID!, sku: String!, quantity: Int): OrderLineQuote!
         "Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility."
         orderLineShortfalls(orderId: ID!): [OrderLineShortfall!]!
         "Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder."

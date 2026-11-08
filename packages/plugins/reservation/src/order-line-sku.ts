@@ -5,6 +5,8 @@ import {
     UserInputError,
 } from '@vendure/core';
 
+export const MAX_LINE_QUANTITY = 1_000_000;
+
 // Vendure does not keep a SKU unique, so an ambiguous article is refused rather than guessed.
 export async function findVariantBySku(
     connection: TransactionalConnection,
