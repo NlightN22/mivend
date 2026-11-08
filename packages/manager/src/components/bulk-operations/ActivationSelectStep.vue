@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvButton } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
 import { useActivationCandidates } from '../../composables/useActivationCandidates';
 import CounterpartyActivationDataTable from './CounterpartyActivationDataTable.vue';
 
@@ -9,6 +10,7 @@ const props = defineProps<{ selectedIds: Set<string> }>();
 const emit = defineEmits<{ 'update:selectedIds': [ids: Set<string>] }>();
 
 const list = useActivationCandidates();
+const administratorId = useAuthStore().administrator?.id ?? 'anonymous';
 
 const pageIds = computed(() => list.items.value.map(c => c.id));
 const pageFullySelected = computed(
@@ -25,25 +27,10 @@ function clearSelection(): void {
 
 <template>
     <div class="activation-select-step">
-        <MvNotice v-if="list.error.value" variant="error">{{ list.error.value }}</MvNotice>
         <CounterpartyActivationDataTable
-            :items="list.items.value"
-            :loading="list.loading.value"
-            :total-items="list.totalItems.value"
-            :page="list.page.value"
-            :page-size="list.pageSize.value"
-            :filters="list.filters.value"
-            :status-filter="list.statusFilter.value"
-            :branch-options="list.branches.value"
-            :readiness-counts="list.readinessCounts.value"
+            :list="list"
             :selected-ids="selectedIds"
-            :manager-name="list.managerName"
-            :branch-name="list.branchName"
-            @update:filters="list.filters.value = $event"
-            @update:status-filter="list.statusFilter.value = $event"
-            @update:page="list.page.value = $event"
-            @update:page-size="list.pageSize.value = $event"
-            @update:sort="list.sort.value = $event"
+            :administrator-id="administratorId"
             @update:selected-ids="emit('update:selectedIds', $event)"
         >
             <template #toolbar-end>

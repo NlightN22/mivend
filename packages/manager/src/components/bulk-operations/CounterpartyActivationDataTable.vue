@@ -1,163 +1,149 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import {
-    MvFilterChips,
-    MvSelect,
-    MvStatusBadge,
     MvAdvancedDataTable,
+    MvErrorState,
+    MvFilterChips,
+    MvStatusBadge,
     useDataTableState,
     type FilterChip,
 } from '@mivend/ui-kit';
-import { activationReadiness, type ActivationCandidate } from '../../api/counterpartyPortalAccess';
-import type { ReadinessCounts } from '../../api/counterpartyActivationCounts';
-import type { CounterpartySortParameter } from '../../api/counterpartyPortalAccess';
-import type { BranchOption } from '../../api/orders';
-import { buildActivationColumns } from './activationColumns';
+import { activationReadiness } from '../../api/counterpartyPortalAccess';
+import { ACTIVATION_VIEWS, BLANK_ACTIVATION_FILTERS } from '../../api/activationFilter';
+import type { ActivationCandidatesState } from '../../composables/useActivationCandidates';
+import type { TableViewState } from '../../composables/tableViewState';
+import TableViewsMenu from '../TableViewsMenu.vue';
+import { buildActivationColumns, DEFAULT_HIDDEN_COLUMNS } from './activationColumns';
 import {
     READINESS_BADGE_VARIANT,
-    READINESS_LABEL,
-    READINESS_VALUES,
     readinessText,
     type Readiness,
 } from './activationReadiness';
-import { mapSortToApi } from './counterpartySort';
-
-export interface ActivationFilters {
-    [key: string]: string;
-    shortName: string;
-    manager: string;
-    branch: string;
-    readiness: string;
-}
+import { ACTIVATION_SORT_FIELDS, sortFromState, sortToState } from './counterpartySort';
 
 // Rows of any readiness can be selected; the review step explains what will be skipped.
 const props = defineProps<{
-    items: ActivationCandidate[];
-    loading: boolean;
-    totalItems: number;
-    page: number;
-    pageSize: number;
-    filters: ActivationFilters;
-    statusFilter: 'active' | 'inactive' | '';
-    branchOptions: BranchOption[];
-    readinessCounts: ReadinessCounts;
+    list: ActivationCandidatesState;
     selectedIds: Set<string>;
-    managerName: (managerErpId: string | null) => string;
-    branchName: (branchId: string | null) => string;
+    administratorId: string;
 }>();
+const emit = defineEmits<{ 'update:selectedIds': [ids: Set<string>] }>();
+const list = props.list;
 
-const emit = defineEmits<{
-    'update:filters': [value: ActivationFilters];
-    'update:status-filter': [value: 'active' | 'inactive' | ''];
-    'update:page': [page: number];
-    'update:page-size': [size: number];
-    'update:sort': [sort: CounterpartySortParameter];
-    'update:selectedIds': [ids: Set<string>];
-}>();
+const baseColumns = buildActivationColumns([]);
+const columns = computed(() => buildActivationColumns(list.branches.value));
 
-const columns = computed(() => buildActivationColumns(props.branchOptions));
-const FILTER_KEYS = ['shortName', 'manager', 'branch', 'readiness'];
-const BLANK_FILTERS: ActivationFilters = { shortName: '', manager: '', branch: '', readiness: '' };
-
-const { state: tableState } = useDataTableState<ActivationFilters>(
-    'bulk-operations-counterparty-activation-datatable',
+const { state: tableState } = useDataTableState<{ [key: string]: unknown; shortName: string }>(
+    `bulk-activation-select:${props.administratorId}`,
     {
-        columnOrder: columns.value.map(c => c.field),
-        columnWidths: Object.fromEntries(columns.value.map(c => [c.field, c.width])),
-        hiddenColumns: [],
-        sort: [{ field: 'shortName', order: 1 }],
-        filters: { ...props.filters },
-        pageSize: props.pageSize,
+        columnOrder: baseColumns.map(c => c.field),
+        columnWidths: Object.fromEntries(baseColumns.map(c => [c.field, c.width])),
+        hiddenColumns: DEFAULT_HIDDEN_COLUMNS,
+        sort: sortToState(list.sort.value, baseColumns),
+        filters: { shortName: list.filters.value.search },
+        pageSize: list.pageSize.value,
     },
     {
-        columns: columns.value,
-        allowedFilterKeys: FILTER_KEYS,
-        externallyOwned: { pageSize: true, filterKeys: FILTER_KEYS },
+        columns: baseColumns,
+        allowedFilterKeys: [],
+        externallyOwned: { pageSize: true, filterKeys: ['shortName'] },
     },
 );
-
-function sameFilters(a: ActivationFilters, b: ActivationFilters): boolean {
-    return FILTER_KEYS.every(k => a[k] === b[k]);
-}
+tableState.value.sort = sortToState(list.sort.value, baseColumns);
 
 watch(
-    () => tableState.value.filters,
-    f => {
-        if (!sameFilters(f, props.filters)) emit('update:filters', { ...f });
+    () => tableState.value.filters.shortName,
+    search => {
+        if (search !== list.filters.value.search)
+            list.filters.value = { ...list.filters.value, search: String(search) };
     },
-    { deep: true },
 );
 watch(
-    () => props.filters,
-    f => {
-        if (!sameFilters(f, tableState.value.filters)) tableState.value.filters = { ...f };
+    () => list.filters.value.search,
+    search => {
+        if (search !== tableState.value.filters.shortName)
+            tableState.value.filters.shortName = search;
+    },
+);
+watch(
+    () => tableState.value.sort,
+    s => {
+        list.sort.value = sortFromState(s, baseColumns);
     },
     { deep: true },
 );
 watch(
     () => tableState.value.pageSize,
-    size => emit('update:page-size', size),
+    size => {
+        list.pageSize.value = size;
+    },
 );
 watch(
-    () => tableState.value.sort,
-    meta => emit('update:sort', mapSortToApi(meta, columns.value)),
-    { deep: true },
-);
-watch(
-    () => props.pageSize,
-    v => {
-        tableState.value.pageSize = v;
+    () => list.pageSize.value,
+    size => {
+        tableState.value.pageSize = size;
     },
 );
 
-const STATUS_OPTIONS = [
-    { value: '', label: 'Any status' },
-    { value: 'active', label: 'Active (ERP)' },
-    { value: 'inactive', label: 'Inactive (ERP)' },
-];
-
-const viewChips = computed<FilterChip[]>(() => [
-    { key: '', label: `All (${props.readinessCounts.all})` },
-    ...READINESS_VALUES.map(value => ({
-        key: value,
-        label: `${READINESS_LABEL[value]} (${props.readinessCounts[value]})`,
-        variant: READINESS_BADGE_VARIANT[value],
-    })),
-]);
-
-function selectReadiness(key: string): void {
-    tableState.value.filters = { ...tableState.value.filters, readiness: key };
-}
-
-interface Row {
-    [key: string]: unknown;
-    id: string;
-    shortName: string;
-    inn: string;
-    manager: string;
-    branch: string;
-    phone: string;
-    officialEmail: string;
-    readiness: Readiness;
-    readinessText: string;
-}
-
-const rows = computed<Row[]>(() =>
-    props.items.map(c => {
+const rows = computed(() =>
+    list.items.value.map(c => {
         const readiness = activationReadiness(c);
         return {
             id: c.id,
             shortName: c.shortName,
             inn: c.inn ?? '—',
-            manager: props.managerName(c.managerErpId),
-            branch: props.branchName(c.branchId),
+            manager: list.managerName(c.managerErpId),
+            branch: list.branchName(c.branchId),
             phone: c.phone ?? '—',
             officialEmail: c.officialEmail ?? '—',
+            isActive: c.isActive ? 'Yes' : 'No',
             readiness,
             readinessText: readinessText(readiness, c),
         };
     }),
 );
+type Row = (typeof rows.value)[number];
+
+const chips = computed<FilterChip[]>(() =>
+    ACTIVATION_VIEWS.map(v => ({
+        key: v.key,
+        label: v.label,
+        variant: v.key === 'all' ? undefined : READINESS_BADGE_VARIANT[v.key as Readiness],
+        count: list.readinessCounts.value?.[v.key as Readiness | 'all'],
+        countLoading: list.readinessCounts.value === null,
+    })),
+);
+
+const router = useRouter();
+const customerHref = (id: string): string => router.resolve(`/customers/${id}`).href;
+
+const viewsKey = 'bulk-activation-select';
+const openedWithLink = ['search', 'view', 'filters', 'sortField', 'pageSize'].some(
+    k => k in useRoute().query,
+);
+
+function captureView(): TableViewState {
+    return {
+        filters: { ...list.filters.value },
+        sort: { ...list.sort.value },
+        columnOrder: [...tableState.value.columnOrder],
+        hiddenColumns: [...tableState.value.hiddenColumns],
+    };
+}
+function applyView(state: TableViewState): void {
+    const fields = baseColumns.map(c => c.field);
+    const order = state.columnOrder.filter(f => fields.includes(f));
+    tableState.value.columnOrder = [...order, ...fields.filter(f => !order.includes(f))];
+    tableState.value.hiddenColumns = state.hiddenColumns.filter(
+        f => fields.includes(f) && !baseColumns.find(c => c.field === f)?.required,
+    );
+    const field = ACTIVATION_SORT_FIELDS.find(f => f === state.sort.field);
+    const sort = sortToState({ field: field ?? 'shortName', dir: state.sort.dir }, baseColumns);
+    tableState.value.sort = sort;
+    list.sort.value = sortFromState(sort, baseColumns);
+    list.filters.value = { ...state.filters };
+}
 </script>
 
 <template>
@@ -165,40 +151,61 @@ const rows = computed<Row[]>(() =>
         v-model:table-state="tableState"
         :columns="columns"
         :rows="rows"
-        :loading="loading"
-        :total-items="totalItems"
-        :page="page"
+        :loading="list.loading.value"
+        :total-items="list.totalItems.value"
+        :page="list.page.value"
         data-key="id"
         :row-height-px="52"
         :header-height-px="65"
-        :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'shortName', placeholder: 'Search company name…' }"
+        :search="{ filterKey: 'shortName', placeholder: 'Search company, legal name or INN…' }"
+        :conditions="list.filters.value.conditions"
+        :default-filters="{ shortName: '' }"
         empty-message="No counterparties match these filters"
         selectable
         :selected-ids="selectedIds"
-        @update:page="p => emit('update:page', p)"
-        @reset-page="emit('update:page', 1)"
+        @update:conditions="list.filters.value = { ...list.filters.value, conditions: $event }"
+        @update:page="list.page.value = $event"
+        @reset-page="list.page.value = 1"
+        @clear-filters="list.filters.value = { ...BLANK_ACTIVATION_FILTERS }"
         @update:selected-ids="emit('update:selectedIds', $event)"
     >
+        <template #empty>
+            <MvErrorState
+                v-if="list.failed.value"
+                title="Could not load counterparties"
+                message="Check the connection and try again."
+                @retry="list.reload"
+            />
+            <template v-else>{{
+                list.loading.value ? '' : 'No counterparties match your filters'
+            }}</template>
+        </template>
+
         <template #toolbar-start>
             <MvFilterChips
-                :chips="viewChips"
-                :active="tableState.filters.readiness"
-                @select="selectReadiness"
-            />
-            <MvSelect
-                :model-value="statusFilter"
-                :options="STATUS_OPTIONS"
-                @update:model-value="
-                    emit('update:status-filter', $event as 'active' | 'inactive' | '')
-                "
+                scrollable
+                :chips="chips"
+                :active="list.filters.value.view"
+                @select="list.filters.value = { ...list.filters.value, view: $event }"
             />
         </template>
 
         <template #toolbar-end>
             <slot name="toolbar-end" />
+            <TableViewsMenu
+                :views-key="viewsKey"
+                :owner-key="administratorId"
+                :capture="captureView"
+                :apply="applyView"
+                :skip-restore="() => openedWithLink"
+            />
         </template>
 
+        <template #cell-shortName="{ data }">
+            <a :href="customerHref((data as Row).id)" target="_blank" rel="noopener">{{
+                (data as Row).shortName
+            }}</a>
+        </template>
         <template #cell-readiness="{ data }">
             <MvStatusBadge :variant="READINESS_BADGE_VARIANT[(data as Row).readiness]">
                 {{ (data as Row).readinessText }}

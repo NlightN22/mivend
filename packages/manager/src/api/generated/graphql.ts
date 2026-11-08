@@ -1204,7 +1204,7 @@ export type CounterpartyListOptions = {
     branchUnassigned?: InputMaybe<Scalars['Boolean']['input']>;
     /** Exact ERP ids; narrows inside the caller's visibility scope (batch lookup for references) */
     erpIds?: InputMaybe<Array<Scalars['String']['input']>>;
-    /** Allows the results to be filtered */
+    /** Filter builder conditions; fixed field whitelist, no regex, applied on top of the visibility scope */
     filter?: InputMaybe<CounterpartyFilterParameter>;
     /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
     filterOperator?: InputMaybe<LogicalOperator>;
@@ -11568,6 +11568,28 @@ export type ResetCheckPolicyOverrideMutationVariables = Exact<{
 
 export type ResetCheckPolicyOverrideMutation = { resetCheckPolicyOverride: boolean };
 
+export type CounterpartyActivationCandidatesQueryVariables = Exact<{
+    options?: InputMaybe<CounterpartyListOptions>;
+}>;
+
+export type CounterpartyActivationCandidatesQuery = {
+    counterparties: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            shortName: string;
+            inn: string | null;
+            isActive: boolean;
+            managerErpId: string | null;
+            branchId: string | null;
+            erpGroupLabel: string | null;
+            phone: string | null;
+            officialEmail: string | null;
+            linkedCustomerId: string | null;
+        }>;
+    };
+};
+
 export type CounterpartyActivationCountsQueryVariables = Exact<{
     all?: InputMaybe<CounterpartyListOptions>;
     ready?: InputMaybe<CounterpartyListOptions>;
@@ -15328,6 +15350,28 @@ export const ResetCheckPolicyOverrideDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ResetCheckPolicyOverrideMutation,
     ResetCheckPolicyOverrideMutationVariables
+>;
+export const CounterpartyActivationCandidatesDocument = new TypedDocumentString(`
+    query CounterpartyActivationCandidates($options: CounterpartyListOptions) {
+  counterparties(options: $options) {
+    items {
+      id
+      shortName
+      inn
+      isActive
+      managerErpId
+      branchId
+      erpGroupLabel
+      phone
+      officialEmail
+      linkedCustomerId
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyActivationCandidatesQuery,
+    CounterpartyActivationCandidatesQueryVariables
 >;
 export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
     query CounterpartyActivationCounts($all: CounterpartyListOptions, $ready: CounterpartyListOptions, $missing: CounterpartyListOptions, $inactive: CounterpartyListOptions, $activated: CounterpartyListOptions) {

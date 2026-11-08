@@ -1,6 +1,10 @@
 import { adminApi } from './client';
+import {
+    CounterpartyActivationCandidatesDocument,
+    type CounterpartyFilterParameter,
+} from './generated/graphql';
 
-// Raw strings until codegen migration; backend only has batch applyCounterpartyPortalAccessChanges.
+// Raw strings below until codegen migration; backend only has batch applyCounterpartyPortalAccessChanges.
 // phone/officialEmail are ERP-sourced and read-only, not manually entered.
 
 export interface ActivationCandidate {
@@ -25,60 +29,23 @@ export interface CounterpartySortParameter {
     officialEmail?: 'ASC' | 'DESC';
 }
 
-export interface ActivationFilterOptions {
+export interface ActivationCandidatesOptions {
     search?: string;
-    status?: 'active' | 'inactive';
-    managerErpId?: string;
-    branchId?: string;
-    branchUnassigned?: boolean;
     readiness?: string;
-}
-
-export interface ActivationCandidatesOptions extends ActivationFilterOptions {
+    filter?: CounterpartyFilterParameter;
     take: number;
     skip: number;
     sort?: CounterpartySortParameter;
 }
 
-export function toListOptions(filters: ActivationFilterOptions): Record<string, unknown> {
-    return {
-        search: filters.search || undefined,
-        status: filters.status,
-        managerErpId: filters.managerErpId || undefined,
-        branchId: filters.branchUnassigned ? undefined : filters.branchId || undefined,
-        branchUnassigned: filters.branchUnassigned || undefined,
-        readiness: filters.readiness || undefined,
-    };
-}
-
-const ACTIVATION_CANDIDATES_QUERY = /* GraphQL */ `
-    query CounterpartyActivationCandidates($options: CounterpartyListOptions) {
-        counterparties(options: $options) {
-            items {
-                id
-                shortName
-                inn
-                isActive
-                managerErpId
-                branchId
-                erpGroupLabel
-                phone
-                officialEmail
-                linkedCustomerId
-            }
-            totalItems
-        }
-    }
-`;
-
 export async function fetchActivationCandidates(
     options: ActivationCandidatesOptions,
 ): Promise<{ items: ActivationCandidate[]; totalItems: number }> {
-    const result = await adminApi<{
-        counterparties: { items: ActivationCandidate[]; totalItems: number };
-    }>(ACTIVATION_CANDIDATES_QUERY, {
+    const result = await adminApi(CounterpartyActivationCandidatesDocument, {
         options: {
-            ...toListOptions(options),
+            search: options.search || undefined,
+            readiness: options.readiness || undefined,
+            filter: options.filter,
             take: options.take,
             skip: options.skip,
             sort: options.sort,

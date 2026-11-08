@@ -1,18 +1,18 @@
 import { adminApi } from './client';
 import { CounterpartyActivationCountsDocument } from './generated/graphql';
-import {
-    activationReadiness,
-    toListOptions,
-    type ActivationFilterOptions,
-} from './counterpartyPortalAccess';
+import type { CounterpartyFilterParameter } from './generated/graphql';
+import type { activationReadiness } from './counterpartyPortalAccess';
 
 export type ReadinessCounts = Record<ReturnType<typeof activationReadiness> | 'all', number>;
 
-// Counts follow every active filter except readiness itself, so a chip shows what clicking it yields.
-export async function fetchReadinessCounts(
-    filters: Omit<ActivationFilterOptions, 'readiness'>,
-): Promise<ReadinessCounts> {
-    const base = { ...toListOptions(filters), take: 0 };
+export interface ReadinessCountBase {
+    search?: string;
+    filter?: CounterpartyFilterParameter;
+}
+
+// Counts follow the search and the builder conditions, not the chip itself, so a chip shows what clicking it yields.
+export async function fetchReadinessCounts(filters: ReadinessCountBase): Promise<ReadinessCounts> {
+    const base = { search: filters.search || undefined, filter: filters.filter, take: 0 };
     const result = await adminApi(CounterpartyActivationCountsDocument, {
         all: base,
         ready: { ...base, readiness: 'ready' },

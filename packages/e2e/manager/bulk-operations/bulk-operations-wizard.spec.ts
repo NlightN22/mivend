@@ -45,4 +45,61 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await footer.getByRole('button', { name: 'Back' }).click();
         await expect(page.getByText('What to do with the selected counterparties')).toBeVisible();
     });
+
+    test('the select step is the standard list: chips, Filter builder, Views and URL sync', async ({
+        page,
+    }) => {
+        await page.goto('/bulk-operations/counterparty-portal-access');
+        await expect(page.getByTestId('filter-trigger')).toBeVisible();
+        await expect(page.getByTestId('table-views-trigger')).toBeVisible();
+        await expect(page.locator('.p-datatable-filter')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /^Ready to activate/ })).toBeVisible();
+
+        await page.getByTestId('filter-trigger').click();
+        await page.getByTestId('filter-column-inn').click();
+        await page.getByTestId('filter-operator').selectOption('contains');
+        await page.getByTestId('filter-value').fill('zzz-no-such-inn');
+        await page.getByRole('button', { name: 'Apply filter' }).click();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+        await expect(page.getByText('No counterparties match your filters')).toBeVisible();
+        await expect(page).toHaveURL(/filters=inn/);
+
+        await page.reload();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+        await page
+            .getByTestId('filter-chip')
+            .getByRole('button', { name: /Remove/ })
+            .click();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(0);
+        await expect(page).not.toHaveURL(/filters=/);
+    });
+
+    test('a readiness chip filters the list and a saved view brings it back', async ({ page }) => {
+        const name = `e2e activation view ${Date.now()}`;
+        await page.goto('/bulk-operations/counterparty-portal-access?view=activated');
+        await page.getByTestId('table-views-trigger').click();
+        await page.getByTestId('table-views-name').fill(name);
+        await page.getByTestId('table-views-save').click();
+        await expect(page.getByTestId('table-views-trigger')).toContainText(name);
+
+        await page.goto('/bulk-operations/counterparty-portal-access?view=all');
+        await page.getByTestId('table-views-trigger').click();
+        const panel = page.getByTestId('table-views-panel');
+        await panel.getByRole('button', { name, exact: true }).click();
+        await expect(page).toHaveURL(/view=activated/);
+
+        await page.getByTestId('table-views-trigger').click();
+        await page.locator('.mv-table-views__item', { hasText: name }).getByTitle('Delete').click();
+        await expect(panel.getByRole('button', { name, exact: true })).toHaveCount(0);
+    });
+
+    test('on a phone the select step is a card list and Select all still works', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 390, height: 800 });
+        await page.goto('/bulk-operations/counterparty-portal-access?pageSize=10');
+        await expect(page.getByRole('table')).toHaveCount(0);
+        await page.getByRole('button', { name: /^Select all \(\d+\)$/ }).click();
+        await expect(page.getByText(/^\d+ selected$/)).toBeVisible();
+    });
 });

@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue';
+import { onMounted, ref, shallowRef, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import { fetchBranchOptions, type BranchOption } from '../api/orders';
@@ -7,30 +7,30 @@ import {
     fetchManagerLookup,
     formatManagerName,
     type ActivationCandidate,
-    type ActivationFilterOptions,
-    type CounterpartySortParameter,
     type ManagerLookup,
 } from '../api/counterpartyPortalAccess';
 import { fetchReadinessCounts, type ReadinessCounts } from '../api/counterpartyActivationCounts';
-import { UNASSIGNED_BRANCH } from '../components/bulk-operations/activationColumns';
-import type { ActivationFilters } from '../components/bulk-operations/CounterpartyActivationDataTable.vue';
+import {
+    ACTIVATION_VIEWS,
+    activationConditionsFromUrl,
+    activationConditionsToUrl,
+    conditionsToCounterpartyFilter,
+    readinessOfView,
+    type ActivationFilters,
+} from '../api/activationFilter';
+import {
+    ACTIVATION_SORT_FIELDS,
+    DEFAULT_ACTIVATION_SORT,
+    sortParameter,
+    type ActivationSort,
+} from '../components/bulk-operations/counterpartySort';
 
-interface UrlFilters {
-    [key: string]: string;
-    status: string;
-    search: string;
-    manager: string;
-    branch: string;
-    readiness: string;
-    pageSize: string;
-}
-
-const URL_DEFAULTS: UrlFilters = {
-    status: '',
+const URL_DEFAULTS = {
     search: '',
-    manager: '',
-    branch: '',
-    readiness: '',
+    view: 'all',
+    filters: '',
+    sortField: DEFAULT_ACTIVATION_SORT.field as string,
+    sortDir: DEFAULT_ACTIVATION_SORT.dir as string,
     pageSize: '20',
 };
 
@@ -38,135 +38,130 @@ export interface ActivationCandidatesState {
     items: Ref<ActivationCandidate[]>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
-    error: Ref<string>;
+    failed: Ref<boolean>;
     page: Ref<number>;
     pageSize: Ref<number>;
     filters: Ref<ActivationFilters>;
-    statusFilter: Ref<'active' | 'inactive' | ''>;
-    sort: Ref<CounterpartySortParameter>;
-    readinessCounts: Ref<ReadinessCounts>;
+    sort: Ref<ActivationSort>;
+    readinessCounts: Ref<ReadinessCounts | null>;
     branches: Ref<BranchOption[]>;
     managerName: (managerErpId: string | null) => string;
     branchName: (branchId: string | null) => string;
+    reload: () => void;
 }
 
 // The select step's list: server-paginated, filters, sort, page and page size live in the URL.
 export function useActivationCandidates(): ActivationCandidatesState {
+    const { fromQuery, toQuery } = useUrlSyncedState(URL_DEFAULTS);
+    const url = { ...URL_DEFAULTS };
     const page = ref(1);
-    const pageSize = ref(20);
-    const totalItems = ref(0);
+    fromQuery(url, page);
+
+    const filters = shallowRef<ActivationFilters>({
+        search: url.search,
+        view: ACTIVATION_VIEWS.some(v => v.key === url.view) ? url.view : 'all',
+        conditions: activationConditionsFromUrl(url.filters),
+    });
+    const sortField = ACTIVATION_SORT_FIELDS.find(f => f === url.sortField);
+    const sort = ref<ActivationSort>({
+        field: sortField ?? DEFAULT_ACTIVATION_SORT.field,
+        dir: url.sortDir === 'DESC' ? 'DESC' : 'ASC',
+    });
+    const pageSize = ref(Number(url.pageSize) > 0 ? Number(url.pageSize) : 20);
     const items = ref<ActivationCandidate[]>([]);
-    const filters = ref<ActivationFilters>({
-        shortName: '',
-        manager: '',
-        branch: '',
-        readiness: '',
-    });
-    const statusFilter = ref<'active' | 'inactive' | ''>('');
-    const sort = ref<CounterpartySortParameter>({ shortName: 'ASC' });
-    const error = ref('');
-    const readinessCounts = ref<ReadinessCounts>({
-        all: 0,
-        ready: 0,
-        'missing-data': 0,
-        'erp-inactive': 0,
-        activated: 0,
-    });
+    const totalItems = ref(0);
+    const failed = ref(false);
+    const readinessCounts = ref<ReadinessCounts | null>(null);
     const managerLookup = ref<ManagerLookup>({ administrators: [], erpUsers: [] });
     const branches = ref<BranchOption[]>([]);
 
-    const { fromQuery, toQuery } = useUrlSyncedState(URL_DEFAULTS);
-    const parsed = { ...URL_DEFAULTS };
-    fromQuery(parsed, page);
-    if (parsed.status) statusFilter.value = parsed.status as 'active' | 'inactive';
-    filters.value = {
-        shortName: parsed.search,
-        manager: parsed.manager,
-        branch: parsed.branch,
-        readiness: parsed.readiness,
-    };
-    if (Number(parsed.pageSize) > 0) pageSize.value = Number(parsed.pageSize);
-
-    function filterOptions(): Omit<ActivationFilterOptions, 'readiness'> {
-        return {
-            search: filters.value.shortName || undefined,
-            status: statusFilter.value || undefined,
-            managerErpId: filters.value.manager || undefined,
-            branchId: filters.value.branch || undefined,
-            branchUnassigned: filters.value.branch === UNASSIGNED_BRANCH,
-        };
-    }
-
-    const { loading, run: loadCandidates } = useLatestRequest(
-        () =>
-            fetchActivationCandidates({
-                ...filterOptions(),
-                readiness: filters.value.readiness || undefined,
-                take: pageSize.value,
-                skip: (page.value - 1) * pageSize.value,
-                sort: sort.value,
-            }),
+    const { loading, run } = useLatestRequest(
+        async () => {
+            try {
+                return await fetchActivationCandidates({
+                    search: filters.value.search,
+                    readiness: readinessOfView(filters.value.view),
+                    filter: conditionsToCounterpartyFilter(filters.value.conditions),
+                    take: pageSize.value,
+                    skip: (page.value - 1) * pageSize.value,
+                    sort: sortParameter(sort.value),
+                });
+            } catch (e) {
+                console.warn('[activation select] could not load the list:', e);
+                return null;
+            }
+        },
         result => {
-            items.value = result.items;
-            totalItems.value = result.totalItems;
+            failed.value = result === null;
+            items.value = result?.items ?? [];
+            totalItems.value = result?.totalItems ?? 0;
         },
     );
+    const reload = (): void => void run();
+
     const { run: loadCounts } = useLatestRequest(
-        () => fetchReadinessCounts(filterOptions()),
+        async () => {
+            try {
+                return await fetchReadinessCounts({
+                    search: filters.value.search,
+                    filter: conditionsToCounterpartyFilter(filters.value.conditions),
+                });
+            } catch {
+                return null;
+            }
+        },
         result => {
             readinessCounts.value = result;
         },
     );
 
-    async function load(): Promise<void> {
-        error.value = '';
-        try {
-            await Promise.all([loadCandidates(), loadCounts()]);
-        } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load counterparties';
-        }
-    }
-
-    // Manager and branch names are display only: a failed lookup falls back to raw ids.
-    void Promise.all([fetchManagerLookup(), fetchBranchOptions()])
-        .then(([lookup, options]) => {
-            managerLookup.value = lookup;
-            branches.value = options;
-        })
-        .catch(() => undefined);
-    void load();
-
-    watch([statusFilter, filters, pageSize], () => {
+    watch([filters, sort, pageSize], () => {
         page.value = 1;
     });
-    watch([page, statusFilter, filters, pageSize, sort], () => {
-        void load();
+    watch([filters, sort, pageSize, page], () => {
+        reload();
         toQuery(
             {
-                status: statusFilter.value,
-                search: filters.value.shortName,
-                manager: filters.value.manager,
-                branch: filters.value.branch,
-                readiness: filters.value.readiness,
+                search: filters.value.search,
+                view: filters.value.view,
+                filters: activationConditionsToUrl(filters.value.conditions),
+                sortField: sort.value.field,
+                sortDir: sort.value.dir,
                 pageSize: String(pageSize.value),
             },
             page,
         );
+    });
+    watch(
+        () => [filters.value.search, filters.value.conditions],
+        () => void loadCounts(),
+    );
+
+    // Manager and branch names are display only: a failed lookup falls back to raw ids.
+    onMounted(() => {
+        reload();
+        void loadCounts();
+        void Promise.all([fetchManagerLookup(), fetchBranchOptions()])
+            .then(([lookup, options]) => {
+                managerLookup.value = lookup;
+                branches.value = options;
+            })
+            .catch(() => undefined);
     });
 
     return {
         items,
         totalItems,
         loading,
-        error,
+        failed,
         page,
         pageSize,
         filters,
-        statusFilter,
         sort,
         readinessCounts,
         branches,
         managerName: id => formatManagerName(id, managerLookup.value),
         branchName: id => (id ? (branches.value.find(b => b.id === id)?.name ?? id) : 'Unassigned'),
+        reload,
     };
 }

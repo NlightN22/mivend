@@ -12,7 +12,7 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
         page,
     }) => {
         await page.goto('/bulk-operations/counterparty-portal-access');
-        await page.getByPlaceholder('Search company name…').fill('E2E INN');
+        await page.getByPlaceholder('Search company, legal name or INN…').fill('E2E INN');
         await expect(row(page, INN_TWIN_B.shortName)).toBeVisible({ timeout: 15000 });
         await expect(row(page, INN_TWIN_A.shortName)).toContainText('Activated');
 

@@ -1,0 +1,17 @@
+query CounterpartyActivationCandidates($options: CounterpartyListOptions) {
+    counterparties(options: $options) {
+        items {
+            id
+            shortName
+            inn
+            isActive
+            managerErpId
+            branchId
+            erpGroupLabel
+            phone
+            officialEmail
+            linkedCustomerId
+        }
+        totalItems
+    }
+}

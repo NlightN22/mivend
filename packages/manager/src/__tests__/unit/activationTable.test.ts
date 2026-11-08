@@ -1,54 +1,119 @@
 import { describe, expect, it } from 'vitest';
-import { toListOptions } from '../../api/counterpartyPortalAccess';
+import { toFilterColumns } from '@mivend/ui-kit/src/components/MvAdvancedDataTable/advancedDataTableTypes';
+import { operatorsFor } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterOperators';
+import {
+    ACTIVATION_VIEWS,
+    activationConditionsFromUrl,
+    activationConditionsToUrl,
+    conditionsToCounterpartyFilter,
+    readinessOfView,
+} from '../../api/activationFilter';
 import {
     buildActivationColumns,
+    DEFAULT_HIDDEN_COLUMNS,
     UNASSIGNED_BRANCH,
 } from '../../components/bulk-operations/activationColumns';
-import {
-    READINESS_BADGE_VARIANT,
-    readinessText,
-} from '../../components/bulk-operations/activationReadiness';
+import { readinessText } from '../../components/bulk-operations/activationReadiness';
 
 describe('activation table columns', () => {
+    const columns = buildActivationColumns([
+        { id: 'b1', erpId: 'e1', name: 'Branch A' },
+        { id: 'b2', erpId: 'e2', name: 'Branch B' },
+    ]);
+
+    it('uses the filter builder only: no header funnels', () => {
+        expect(columns.every(c => c.filterConfig.type === 'none')).toBe(true);
+    });
+
+    it('has one required identifying column with the mobile title, and one mobile badge', () => {
+        expect(columns.filter(c => c.required).map(c => c.field)).toEqual(['shortName']);
+        expect(columns.filter(c => c.mobile?.primary).map(c => c.field)).toEqual(['shortName']);
+        expect(columns.filter(c => c.mobile?.badge).map(c => c.field)).toEqual(['readiness']);
+    });
+
     it('branch filter lists Unassigned first, then every loaded branch', () => {
-        const columns = buildActivationColumns([
-            { id: 'b1', erpId: 'e1', name: 'Branch A' },
-            { id: 'b2', erpId: 'e2', name: 'Branch B' },
-        ]);
-        const filter = columns.find(c => c.field === 'branch')?.filterConfig;
-        expect(filter).toMatchObject({ type: 'select' });
-        expect(filter && 'options' in filter ? filter.options : []).toEqual([
+        expect(columns.find(c => c.field === 'branch')?.filterOptions).toEqual([
             { value: UNASSIGNED_BRANCH, label: 'Unassigned' },
             { value: 'b1', label: 'Branch A' },
             { value: 'b2', label: 'Branch B' },
         ]);
     });
 
-    it('branch options follow the branches passed in, so a late load reaches the filter', () => {
-        const before = buildActivationColumns([]).find(c => c.field === 'branch')?.filterConfig;
-        const after = buildActivationColumns([{ id: 'b1', erpId: 'e1', name: 'Branch A' }]).find(
-            c => c.field === 'branch',
-        )?.filterConfig;
-        expect(before && 'options' in before ? before.options : []).toHaveLength(1);
-        expect(after && 'options' in after ? after.options : []).toHaveLength(2);
+    it('offers no operator the server rejects (regex-based starts/ends with)', () => {
+        for (const column of toFilterColumns(columns)) {
+            const operators = operatorsFor(column);
+            expect(operators).not.toContain('startsWith');
+            expect(operators).not.toContain('endsWith');
+        }
     });
 
-    it('readiness column filters by status with the same variants as the row badge', () => {
-        const filter = buildActivationColumns([]).find(c => c.field === 'readiness')?.filterConfig;
-        expect(filter).toMatchObject({ type: 'status' });
-        const options = filter && 'options' in filter ? filter.options : [];
-        for (const o of options) {
-            expect(o).toHaveProperty(
-                'variant',
-                READINESS_BADGE_VARIANT[o.value as keyof typeof READINESS_BADGE_VARIANT],
-            );
-        }
-        expect(options.map(o => o.value)).toEqual([
+    it('hides the secondary columns by default', () => {
+        expect(DEFAULT_HIDDEN_COLUMNS).toEqual(['phone', 'isActive']);
+    });
+});
+
+describe('activation views', () => {
+    it('are All plus the four readiness states, and only the states reach the server', () => {
+        expect(ACTIVATION_VIEWS.map(v => v.key)).toEqual([
+            'all',
             'ready',
             'missing-data',
             'erp-inactive',
             'activated',
         ]);
+        expect(readinessOfView('all')).toBeUndefined();
+        expect(readinessOfView('missing-data')).toBe('missing-data');
+        expect(readinessOfView('bogus')).toBeUndefined();
+    });
+});
+
+describe('conditionsToCounterpartyFilter', () => {
+    it('maps builder conditions to the server field names', () => {
+        expect(
+            conditionsToCounterpartyFilter([
+                { columnKey: 'manager', operator: 'contains', value: 'pat' },
+                { columnKey: 'branch', operator: 'eq', value: 'b1' },
+                { columnKey: 'isActive', operator: 'isFalse', value: '' },
+                { columnKey: 'officialEmail', operator: 'isNull', value: '' },
+            ]),
+        ).toEqual({
+            managerErpId: { contains: 'pat' },
+            branchId: { eq: 'b1' },
+            isActive: { eq: false },
+            officialEmail: { isNull: true },
+        });
+    });
+
+    it('turns Unassigned into an emptiness test on the branch id', () => {
+        expect(
+            conditionsToCounterpartyFilter([
+                { columnKey: 'branch', operator: 'eq', value: UNASSIGNED_BRANCH },
+            ]),
+        ).toEqual({ branchId: { isNull: true } });
+        expect(
+            conditionsToCounterpartyFilter([
+                { columnKey: 'branch', operator: 'notEq', value: UNASSIGNED_BRANCH },
+            ]),
+        ).toEqual({ branchId: { isNull: false } });
+    });
+
+    it('puts a second condition on the same field into _and and ignores unknown columns', () => {
+        const filter = conditionsToCounterpartyFilter([
+            { columnKey: 'inn', operator: 'contains', value: '77' },
+            { columnKey: 'inn', operator: 'notContains', value: '88' },
+            { columnKey: 'nope', operator: 'eq', value: 'x' },
+        ]);
+        expect(filter).toEqual({
+            inn: { contains: '77' },
+            _and: [{ inn: { notContains: '88' } }],
+        });
+    });
+
+    it('round-trips through the URL', () => {
+        const conditions = [{ columnKey: 'branch', operator: 'eq' as const, value: 'b1' }];
+        expect(activationConditionsFromUrl(activationConditionsToUrl(conditions))).toEqual(
+            conditions,
+        );
     });
 });
 
@@ -72,29 +137,5 @@ describe('readinessText', () => {
         expect(readinessText('erp-inactive', { phone: null, officialEmail: null })).toBe(
             'ERP inactive',
         );
-    });
-});
-
-describe('toListOptions', () => {
-    it('maps the Unassigned flag to branchUnassigned and drops branchId', () => {
-        expect(
-            toListOptions({ branchId: UNASSIGNED_BRANCH, branchUnassigned: true }),
-        ).toMatchObject({
-            branchId: undefined,
-            branchUnassigned: true,
-        });
-    });
-
-    it('passes a real branch and readiness through and drops empty values', () => {
-        expect(
-            toListOptions({ branchId: 'b1', readiness: 'ready', search: '', managerErpId: '' }),
-        ).toEqual({
-            search: undefined,
-            status: undefined,
-            managerErpId: undefined,
-            branchId: 'b1',
-            branchUnassigned: undefined,
-            readiness: 'ready',
-        });
     });
 });
