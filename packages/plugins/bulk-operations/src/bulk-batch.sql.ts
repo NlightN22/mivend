@@ -192,6 +192,7 @@ export async function actorHoldsPermission(
     administratorId: string,
     permission: string,
 ): Promise<boolean> {
+    // Same channel as ctx.userHasPermissions: only roles assigned to the job's channel count.
     const rows = await ctxQuery<Array<{ ok: number }>>(
         db,
         ctx,
@@ -199,9 +200,10 @@ export async function actorHoldsPermission(
          JOIN "user" u ON u.id = a."userId"
          JOIN user_roles_role ur ON ur."userId" = u.id
          JOIN role r ON r.id = ur."roleId"
+         JOIN role_channels_channel rc ON rc."roleId" = r.id AND rc."channelId"::text = $3
          WHERE a.id::text = $1 AND a."deletedAt" IS NULL AND u."deletedAt" IS NULL
            AND $2 = ANY(string_to_array(r.permissions, ',')) LIMIT 1`,
-        [administratorId, permission],
+        [administratorId, permission, String(ctx.channelId)],
     );
     return rows.length > 0;
 }
@@ -212,12 +214,15 @@ export async function skipPending(
     batchId: number,
     reasonCode: string,
     message: string,
-): Promise<void> {
-    await ctxQuery(
+): Promise<number> {
+    const rows = await ctxQuery<Array<{ n: number }>>(
         db,
         ctx,
-        `UPDATE bulk_batch_item SET outcome = 'skipped', "reasonCode" = $2, message = $3, "updatedAt" = now()
-         WHERE "batchId" = $1 AND outcome IS NULL`,
+        `WITH u AS (
+             UPDATE bulk_batch_item SET outcome = 'skipped', "reasonCode" = $2, message = $3, "updatedAt" = now()
+             WHERE "batchId" = $1 AND outcome IS NULL RETURNING 1)
+         SELECT count(*)::int AS n FROM u`,
         [batchId, reasonCode, message],
     );
+    return rows[0].n;
 }

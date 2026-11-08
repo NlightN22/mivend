@@ -23,6 +23,7 @@ export const HISTORY_VIEWS = [
     { key: 'running', label: 'In progress', status: 'running' },
     { key: 'done', label: 'Done', status: 'done' },
     { key: 'partial', label: 'Partly failed', status: 'partial' },
+    { key: 'stopped', label: 'Stopped', status: 'stopped' },
     { key: 'failed', label: 'Failed', status: 'failed' },
 ] as const;
 

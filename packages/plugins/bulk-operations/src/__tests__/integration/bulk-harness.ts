@@ -73,6 +73,7 @@ export const FAKE_TYPE = 'fake-activation';
 export function ctxFor(userId: string, permitted = true): RequestContext {
     return {
         activeUserId: userId,
+        channelId: 1,
         userHasPermissions: () => permitted,
         serialize: () => ({}),
     } as unknown as RequestContext;
@@ -200,11 +201,17 @@ export async function seedAuth(
         `CREATE TABLE IF NOT EXISTS user_roles_role ("userId" int, "roleId" int)`,
     );
     await dataSource.query(`CREATE TABLE IF NOT EXISTS role (id int, permissions text)`);
-    await dataSource.query('TRUNCATE administrator, "user", user_roles_role, role');
+    await dataSource.query(
+        `CREATE TABLE IF NOT EXISTS role_channels_channel ("roleId" int, "channelId" int)`,
+    );
+    await dataSource.query(
+        'TRUNCATE administrator, "user", user_roles_role, role, role_channels_channel',
+    );
     for (const id of [7, 8]) {
         await dataSource.query('INSERT INTO administrator VALUES ($1, $1, NULL)', [id]);
         await dataSource.query('INSERT INTO "user" VALUES ($1, NULL)', [id]);
         await dataSource.query('INSERT INTO user_roles_role VALUES ($1, 1)', [id]);
     }
     await dataSource.query('INSERT INTO role VALUES (1, $1)', [permissions]);
+    await dataSource.query('INSERT INTO role_channels_channel VALUES (1, 1)');
 }

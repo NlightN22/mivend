@@ -37,6 +37,7 @@ export const BATCH_STATUS_LABEL: Record<string, string> = {
     running: 'Running',
     done: 'Done',
     partial: 'Partly failed',
+    stopped: 'Stopped',
     failed: 'Failed',
 };
 
@@ -46,12 +47,18 @@ export const BATCH_STATUS_VARIANT: Record<string, StatusBadgeVariant> = {
     running: 'info',
     done: 'success',
     partial: 'warning',
+    stopped: 'warning',
     failed: 'danger',
 };
 
-export const BATCH_STATUS_OPTIONS = ['queued', 'running', 'done', 'partial', 'failed'].map(
-    value => ({ value, label: BATCH_STATUS_LABEL[value] }),
-);
+export const BATCH_STATUS_OPTIONS = [
+    'queued',
+    'running',
+    'done',
+    'partial',
+    'stopped',
+    'failed',
+].map(value => ({ value, label: BATCH_STATUS_LABEL[value] }));
 
 export function fetchBulkCatalog(): Promise<BulkOperationInfo[]> {
     return adminApi(BulkOperationCatalogDocument).then(r => r.bulkOperationCatalog);

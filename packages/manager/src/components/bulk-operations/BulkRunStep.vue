@@ -71,7 +71,7 @@ async function downloadReport(): Promise<void> {
                     Download report
                 </MvButton>
                 <MvButton
-                    v-if="batch.undoable && ['done', 'partial'].includes(batch.status)"
+                    v-if="batch.undoable && ['done', 'partial', 'stopped'].includes(batch.status)"
                     size="sm"
                     variant="danger"
                     :loading="busy"
@@ -88,7 +88,11 @@ async function downloadReport(): Promise<void> {
             :max="batch.totalCount"
             :label="`${progressOf(batch)} of ${batch.totalCount} records processed`"
         />
-        <MvNotice v-if="batch.errorMessage" variant="error">{{ batch.errorMessage }}</MvNotice>
+        <MvNotice
+            v-if="batch.errorMessage"
+            :variant="batch.status === 'stopped' ? 'warning' : 'error'"
+            >{{ batch.errorMessage }}</MvNotice
+        >
         <MvNotice v-if="batch.undoOfUuid" variant="info">
             This batch undoes
             <RouterLink :to="{ query: { batch: batch.undoOfUuid } }">an earlier batch</RouterLink>.

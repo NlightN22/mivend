@@ -119,6 +119,19 @@ describe('rights are re-read from the database for each chunk', () => {
     });
 });
 
+describe('channel of the rights check', () => {
+    it('ignores a role that is not assigned to the job channel', async () => {
+        const connection = connectionFor(dataSource);
+        const executor = fakeExecutor(connection);
+        const stack = buildStack(connection, executor);
+        const draft = await stack.batches.preview(actor, FAKE_TYPE, {}, ['1']);
+        await stack.batches.run(actor, draft.uuid);
+        await dataSource.query('UPDATE role_channels_channel SET "channelId" = 2');
+        await stack.runner.execute(actor, draft.uuid);
+        expect(executor.applied).toEqual([]);
+    });
+});
+
 describe('undo with an abandoned draft of another actor', () => {
     it('lets the first actor undo while a foreign draft is left open, and keeps one non-draft undo', async () => {
         const connection = connectionFor(dataSource);

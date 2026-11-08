@@ -6,7 +6,14 @@ export const MAX_TAKE = 100;
 // A running batch untouched for this long is treated as orphaned and may be claimed again.
 export const STALE_RUN_MINUTES = 10;
 
-export type BulkBatchStatus = 'draft' | 'queued' | 'running' | 'done' | 'partial' | 'failed';
+export type BulkBatchStatus =
+    | 'draft'
+    | 'queued'
+    | 'running'
+    | 'done'
+    | 'partial'
+    | 'stopped'
+    | 'failed';
 export type BulkItemOutcome = 'applied' | 'skipped' | 'failed';
 
 export interface BulkBatchRow {

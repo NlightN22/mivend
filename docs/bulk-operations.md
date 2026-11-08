@@ -81,8 +81,9 @@ Refinements of the model above; the sections above stay the contract.
   throws becomes `failed` and the run continues; permission is re-checked per record.
 - **Rights during a run.** A batch runs with the rights its creator holds when each chunk starts: before every chunk
   the runner re-reads from the database that the administrator is not deleted and still holds the operation's
-  permission; if not, the records still pending are marked `skipped` with reason `actor_not_allowed` (the narrower
-  choice: nothing already applied is touched and the batch still ends `done`/`partial`). Scope is derived from the
+  permission in the job's channel; if not, the records still pending are marked `skipped` with reason
+  `actor_not_allowed` and the batch ends with the distinct status `stopped` (warning badge in the History and the
+  result header, with the number of records not processed; nothing already applied is touched). Scope is derived from the
   database per record as well. The job carries a serialized request context without the session token and without
   the request headers, because the job table keeps its payload in clear text.
 - **Recovery.** A `running` batch whose `updatedAt` is older than 10 minutes (`STALE_RUN_MINUTES`) is treated as

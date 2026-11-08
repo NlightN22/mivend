@@ -27,6 +27,7 @@ export class BulkBatchRunner {
         if (!batch) return;
         try {
             const executor = this.registry.get(batch.operationType);
+            let stopped: string | null = null;
             for (;;) {
                 // A batch runs with the rights its creator holds when each chunk starts.
                 if (
@@ -37,13 +38,14 @@ export class BulkBatchRunner {
                         executor.permission,
                     ))
                 ) {
-                    await skipPending(
+                    const left = await skipPending(
                         this.connection,
                         ctx,
                         batch.id,
                         'actor_not_allowed',
                         'The administrator no longer holds the right to run this operation',
                     );
+                    stopped = `Stopped: the administrator was no longer allowed to run this operation; ${left} records were not processed`;
                     break;
                 }
                 const chunk = await pendingItems(this.connection, ctx, batch.id, RUN_CHUNK);
@@ -53,11 +55,11 @@ export class BulkBatchRunner {
                 }
                 await refreshCounters(this.connection, ctx, batch.id);
             }
-            await this.finish(ctx, batch.id, null);
+            await this.finish(ctx, batch.id, null, stopped);
         } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
             Logger.error(`Batch ${batch.uuid} stopped: ${message}`, loggerCtx);
-            await this.finish(ctx, batch.id, message);
+            await this.finish(ctx, batch.id, message, null);
             throw e;
         }
     }
@@ -102,18 +104,20 @@ export class BulkBatchRunner {
         ctx: RequestContext,
         batchId: number,
         error: string | null,
+        stopped: string | null,
     ): Promise<void> {
         await refreshCounters(this.connection, ctx, batchId);
         await ctxQuery(
             this.connection,
             ctx,
-            `UPDATE bulk_batch SET "finishedAt" = now(), "updatedAt" = now(), "errorMessage" = $2,
+            `UPDATE bulk_batch SET "finishedAt" = now(), "updatedAt" = now(), "errorMessage" = COALESCE($2, $3),
                 status = CASE WHEN $2::text IS NOT NULL THEN 'failed'
+                    WHEN $3::text IS NOT NULL THEN 'stopped'
                     WHEN "failedCount" = 0 THEN 'done'
                     WHEN "appliedCount" = 0 AND "skippedCount" = 0 THEN 'failed'
                     ELSE 'partial' END
              WHERE id = $1`,
-            [batchId, error],
+            [batchId, error, stopped],
         );
     }
 }

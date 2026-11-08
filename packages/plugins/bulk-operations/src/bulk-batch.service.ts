@@ -102,7 +102,7 @@ export class BulkBatchService {
         if (!original) throw new UserInputError(`Batch not found: ${uuid}`);
         const executor = this.registry.get(original.operationType);
         this.registry.assertAllowed(ctx, executor);
-        if (!['done', 'partial'].includes(original.status)) {
+        if (!['done', 'partial', 'stopped'].includes(original.status)) {
             throw new UserInputError('Only a finished batch can be undone');
         }
         const plan = executor.undoPlan?.(original.parameters) ?? null;
