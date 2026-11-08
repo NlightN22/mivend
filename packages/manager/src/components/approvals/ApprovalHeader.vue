@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvStatusBadge, MvDateTimeCell } from '@mivend/ui-kit';
+import { MvStatusBadge } from '@mivend/ui-kit';
 import { REQUEST_TYPE_LABEL, type ApprovalRequestDetail } from '../../api/approvals';
 import { APPROVAL_STATUS_LABEL } from './approvalsColumns';
+import { formatWhen } from './approvalTimeline';
 import { STATUS_VARIANT } from './approvalsListRows';
 
 export interface SubjectLink {
@@ -30,8 +31,8 @@ const escalated = computed(
         <div class="approval-header__breadcrumb">
             <RouterLink to="/approvals">Approvals</RouterLink> / {{ request.id }}
         </div>
-        <h1 class="approval-header__title">
-            Request {{ request.id }}
+        <div class="approval-header__heading">
+            <h1 class="approval-header__title">Request {{ request.id }}</h1>
             <MvStatusBadge variant="neutral">{{
                 REQUEST_TYPE_LABEL[request.requestType] ?? request.requestType
             }}</MvStatusBadge>
@@ -39,10 +40,10 @@ const escalated = computed(
                 APPROVAL_STATUS_LABEL[request.status] ?? request.status
             }}</MvStatusBadge>
             <MvStatusBadge v-if="escalated" variant="warning">Escalated</MvStatusBadge>
-        </h1>
+        </div>
         <p class="approval-header__meta">
             <span>Requested by {{ requestedBy }}</span>
-            <MvDateTimeCell :value="request.createdAt" />
+            <span>{{ formatWhen(request.createdAt) }}</span>
             <template v-if="subject">
                 <span aria-hidden="true">·</span>
                 <RouterLink v-if="subject.to" :to="subject.to">{{ subject.label }}</RouterLink>
@@ -64,14 +65,17 @@ const escalated = computed(
     color: inherit;
 }
 
-.approval-header__title {
-    margin: 0;
-    font-size: 28px;
-    letter-spacing: -0.03em;
+.approval-header__heading {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+}
+
+.approval-header__title {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: -0.03em;
 }
 
 .approval-header__meta {

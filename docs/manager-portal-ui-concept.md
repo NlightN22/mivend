@@ -156,6 +156,32 @@ action menu keeps everything the buttons show, the summary wraps.
 
 The Catalog item is removed from the portal (see principles).
 
+## Approvals
+
+One flow for every kind of request (price adjustment, discount grant, payment term extension and
+whatever the workflow engine adds). A discount or price request is not a separate document: it is
+an approval of that kind, with its own type, subject, requester, requested value and chain of steps.
+
+- **Inbox** (`/approvals`): the standard entity list. Chips "Awaiting me" (default), "My requests"
+  and "All" carry counts that follow the active filters; the Filter builder offers type, requested by,
+  submitted date and status; sortable headers (request number, type, submitted, status), saved views,
+  URL sync, search by request number, server-side pagination. "Current step" is a column that opens
+  hidden. Rows never exceed what the server lets the person see (department and price-type scope are
+  applied first).
+- **Decision page** (`/approvals/:id`): header (number, type, status, escalation mark, requester and
+  time, link to the order or customer), request details (old and requested value, the percent change
+  for a price request, the current step and its role), a vertical steps timeline (newest first, with
+  decision comments), and the decision panel. Approve and Reject are disabled with a reason when the
+  server reports the viewer may not decide the current step (`viewerCanDecide`, the same rule
+  `decide` enforces); a reject needs a comment. Escalation is offered only to the requester, as the
+  server enforces.
+- Server list arguments (`ApprovalListOptions`): `requestTypes`, `statuses`, `requestedByAdministratorId`,
+  `createdFrom` (inclusive), `createdTo` (exclusive), `search` (request number), `sortField`
+  (`id`, `requestType`, `status`, `createdAt`, `decidedAt`) and `sortDir`; `take` is clamped to 0..200
+  and `take: 0` returns the count only.
+- Not shown yet: the policy that required the approval (requests do not store a link to the check
+  policy that created them) and an approval request number separate from the row id.
+
 ## Data notes
 
 - Orders already store who placed them (`placedByAdministratorId`, set from the staff session or

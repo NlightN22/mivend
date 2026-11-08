@@ -74,3 +74,7 @@ export function buildTimeline(
     });
     return items.reverse();
 }
+
+export function formatWhen(iso: string): string {
+    return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+}

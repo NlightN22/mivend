@@ -9,14 +9,14 @@ export const APPROVAL_STATUS_LABEL: Record<string, string> = {
     rejected: 'Rejected',
 };
 
-// Widths sum to 1080, which fits the 1088px table of a 1360px page.
+// Visible widths sum to 1060 and fit the 1088px table of a 1360px page; Current step opens hidden.
 export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'id',
         header: 'Request #',
         sortField: 'id',
-        width: 100,
-        minWidth: 100,
+        width: 130,
+        minWidth: 130,
         priority: 10,
         required: true,
         filterConfig: NOT_FILTERED,
@@ -26,8 +26,8 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'type',
         header: 'Type',
         sortField: 'requestType',
-        width: 170,
-        minWidth: 150,
+        width: 190,
+        minWidth: 170,
         priority: 9,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
@@ -40,15 +40,15 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'subject',
         header: 'Subject',
-        width: 200,
-        minWidth: 150,
+        width: 220,
+        minWidth: 160,
         priority: 8,
         filterConfig: NOT_FILTERED,
     },
     {
         field: 'requested',
         header: 'Requested',
-        width: 130,
+        width: 120,
         minWidth: 110,
         priority: 5,
         filterConfig: NOT_FILTERED,
@@ -57,8 +57,8 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'requestedBy',
         header: 'Requested by',
-        width: 120,
-        minWidth: 100,
+        width: 150,
+        minWidth: 120,
         priority: 6,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
@@ -88,8 +88,8 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'status',
         header: 'Status',
         sortField: 'status',
-        width: 110,
-        minWidth: 110,
+        width: 120,
+        minWidth: 120,
         priority: 4,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
@@ -102,4 +102,4 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
 ];
 
-export const DEFAULT_HIDDEN_COLUMNS: string[] = [];
+export const DEFAULT_HIDDEN_COLUMNS: string[] = ['step'];

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { MvDateTimeCell } from '@mivend/ui-kit';
-import type { TimelineItem } from './approvalTimeline';
+import { formatWhen, type TimelineItem } from './approvalTimeline';
 
 defineProps<{ items: TimelineItem[] }>();
 </script>
@@ -18,7 +17,7 @@ defineProps<{ items: TimelineItem[] }>();
                 <div class="approval-timeline__title">{{ item.title }}</div>
                 <div v-if="item.meta || item.at" class="approval-timeline__meta">
                     <span v-if="item.meta">{{ item.meta }}</span>
-                    <MvDateTimeCell v-if="item.at" :value="item.at" />
+                    <span v-if="item.at">{{ formatWhen(item.at) }}</span>
                 </div>
                 <blockquote v-if="item.comment" class="approval-timeline__comment">
                     {{ item.comment }}

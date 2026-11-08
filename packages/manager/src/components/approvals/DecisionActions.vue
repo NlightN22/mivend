@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { MvButton, MvSelect, MvNotice } from '@mivend/ui-kit';
 import type { ManagerOption } from '../../api/orders';
 
@@ -20,6 +20,7 @@ const emit = defineEmits<{
 
 const comment = ref('');
 const error = ref('');
+watch(comment, () => (error.value = ''));
 const showEscalate = ref(false);
 const escalateToId = ref('');
 
@@ -56,7 +57,7 @@ function handleEscalate(): void {
             placeholder="Optional for approve, required for reject"
             :disabled="!canDecide || busy"
         />
-        <MvNotice v-if="!canDecide" variant="info">{{ disabledReason }}</MvNotice>
+        <MvNotice v-if="!canDecide" variant="warning">{{ disabledReason }}</MvNotice>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="decision-actions__buttons">
