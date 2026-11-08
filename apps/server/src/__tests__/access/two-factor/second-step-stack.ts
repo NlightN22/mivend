@@ -23,6 +23,7 @@ export interface Stack {
         query: string,
         variables?: Record<string, unknown>,
         token?: string,
+        headers?: Record<string, string>,
     ) => Promise<GqlResult<T>>;
     stop(): Promise<void>;
 }
@@ -43,7 +44,8 @@ export async function startSecondStepStack(extraEnv: Record<string, string> = {}
     );
     return {
         url: server.baseUrl,
-        call: (api, query, variables, token) => gql(server.baseUrl, api, query, variables, token),
+        call: (api, query, variables, token, headers) =>
+            gql(server.baseUrl, api, query, variables, token, headers),
         stop: async () => {
             await stopGroup(mailWorker);
             await server.stop();

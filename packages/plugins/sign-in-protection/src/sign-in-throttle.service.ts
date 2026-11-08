@@ -32,11 +32,11 @@ export class SignInThrottleService {
         return { login, loginIp: `${login}:${sha256(ip)}` };
     }
 
-    // Take before isLocked and hold through the password check and recordFailure. A concurrent attempt on the
-    // same login gets false at once instead of queueing, so one login can never pin more than one pool connection.
+    // Take before isLocked and hold through the password check and recordFailure. A concurrent attempt on the same
+    // login and address gets false at once instead of queueing, so another address is never refused as busy.
     async tryLock(ctx: RequestContext, scope: ThrottleScope, subject: string): Promise<boolean> {
         if (!this.enabled) return true;
-        return this.store.tryLock(ctx, `sign-in:${this.keys(ctx, scope, subject).login}`);
+        return this.store.tryLock(ctx, `sign-in:${this.keys(ctx, scope, subject).loginIp}`);
     }
 
     async isLocked(ctx: RequestContext, scope: ThrottleScope, subject: string): Promise<boolean> {

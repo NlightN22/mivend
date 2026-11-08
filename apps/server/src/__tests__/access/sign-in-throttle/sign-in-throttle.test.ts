@@ -228,4 +228,24 @@ describe('one hammered login cannot starve the server', () => {
         expect(await maxFailures()).toBeLessThanOrEqual(3);
         await clearCounters();
     }, 60_000);
+
+    it('does not refuse the same account from another address as busy while one address hammers it', async () => {
+        await clearCounters();
+        const victim = accounts.customer;
+        const started = Date.now();
+        const burst = Array.from({ length: 60 }, () =>
+            attempt(victim, victim.username, 'wrong-password'),
+        );
+        const owner = await stack.call<{ login: { __typename: string } }>(
+            victim.api,
+            LOGIN,
+            { u: victim.username, p: 'Reset-password-123456' },
+            undefined,
+            { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' },
+        );
+        expect(Date.now() - started).toBeLessThan(10_000);
+        expect(owner.data?.login).toMatchObject({ __typename: 'CurrentUser' });
+        await Promise.all(burst);
+        await clearCounters();
+    }, 60_000);
 });

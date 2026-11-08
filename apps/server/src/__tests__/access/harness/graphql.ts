@@ -12,12 +12,14 @@ export async function gql<T = Record<string, unknown>>(
     query: string,
     variables?: Record<string, unknown>,
     token?: string,
+    headers: Record<string, string> = {},
 ): Promise<GqlResult<T>> {
     const response = await fetch(`${baseUrl}/${api}`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json',
             ...(token ? { authorization: `Bearer ${token}` } : {}),
+            ...headers,
         },
         body: JSON.stringify({ query, variables }),
     });

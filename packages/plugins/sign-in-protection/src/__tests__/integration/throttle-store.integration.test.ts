@@ -163,9 +163,13 @@ describe('throttle service', () => {
 });
 
 // One login attempt as the password step runs it: admit, verify (slow), then record, all in one transaction.
-async function attempt(correct: boolean, verified: { count: number }): Promise<boolean> {
+async function attempt(
+    correct: boolean,
+    verified: { count: number },
+    from: RequestContext = ctx,
+): Promise<boolean> {
     return connection.withTransaction(ctx, async tx => {
-        const txCtx = Object.assign(tx, { req: ctx.req }) as unknown as RequestContext;
+        const txCtx = Object.assign(tx, { req: from.req }) as unknown as RequestContext;
         if (!(await guard.admit(txCtx, 'victim'))) return false;
         verified.count++;
         await new Promise(done => setTimeout(done, 25));
@@ -187,6 +191,16 @@ describe('concurrent password attempts (check-then-act)', () => {
         expect(await throttle.failureCount(ctx, 'password', 'victim')).toBeLessThanOrEqual(
             limits.threshold,
         );
+    });
+
+    it('serialises only the attacker address: the same login from another address is never refused as busy', async () => {
+        const verified = { count: 0 };
+        await Promise.all([
+            ...Array.from({ length: 6 }, () => attempt(false, verified)),
+            attempt(true, verified, otherIp),
+        ]);
+        expect(await throttle.failureCount(otherIp, 'password', 'victim')).toBe(0);
+        expect(verified.count).toBeGreaterThanOrEqual(2);
     });
 
     it('a parallel correct and wrong mix never leaves the login locked for good', async () => {

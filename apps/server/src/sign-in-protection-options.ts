@@ -39,6 +39,14 @@ function captchaFromEnv(env: Env): CaptchaProvider | null {
         'CAPTCHA_VERIFY_URL',
         'CAPTCHA_WIDGET_GLOBAL',
     ];
+    const scriptUrl = env.CAPTCHA_SCRIPT_URL ?? '';
+    const widgetGlobal = env.CAPTCHA_WIDGET_GLOBAL ?? '';
+    if (scriptUrl !== '' && !scriptUrl.startsWith('https://')) {
+        throw new Error('CAPTCHA_SCRIPT_URL must start with https://');
+    }
+    if (widgetGlobal !== '' && !/^[A-Za-z_$][\w$]*$/.test(widgetGlobal)) {
+        throw new Error('CAPTCHA_WIDGET_GLOBAL must be a plain identifier');
+    }
     const missing = required.filter(name => !env[name]);
     if (missing.length > 0)
         throw new Error(`CAPTCHA_PROVIDER=widget requires ${missing.join(', ')}`);

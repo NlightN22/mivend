@@ -123,11 +123,13 @@ Five layers, none of them a single point of failure.
    counted while locked. A locked, unknown and existing login get the identical `InvalidCredentialsError`, and a locked login
    is refused even with the right password. A success clears the counters. Covers the password step, the second step, the
    password re-check and recovery requests, on both APIs and the Dashboard. Stale counters are purged hourly.
-   The password step tries a per-login advisory lock inside the request transaction before it checks the counters and holds it
-   through the password check and the failure record. It never waits: a concurrent attempt on the same login is refused at once
-   with the same answer as a wrong password and is not counted, so one login holds at most one pool connection and at most the
-   threshold of parallel guesses reach the password check (the owner can be refused while a script hammers the login; the
-   hammering is itself limited by the proxy caps and the lock lapses on its own). (The
+   The password step tries an advisory lock on the login plus client address inside the request transaction before it checks the
+   counters and holds it through the password check and the failure record. It never waits: a concurrent attempt on the same
+   login from the same address is refused at once with the same answer as a wrong password and is not counted, so one
+   address holds at most one pool connection per login and at most the threshold of its parallel guesses reach the password
+   check. The owner on another address is never refused as busy. Residual risk: a distributed source can still occupy the
+   login plus address slots from many addresses and refuse the owner now and then; that is bounded by the proxy caps, the
+   per-login ceiling and the CAPTCHA demand below, and every lock lapses on its own. (The
    second step, recovery and the password re-check already run under the per-user lock). Trade-off against lockout abuse:
    the hard lock on login plus address is low (5), while the per-login counter over all addresses is only a high ceiling
    (50, same max lock) because anyone can drive it for a victim; below the ceiling it works through the CAPTCHA, which is

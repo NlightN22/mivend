@@ -35,6 +35,19 @@ describe('sign-in request marking', () => {
         expect(signInHeaders('query { activeCustomer { id } }')).toEqual({});
     });
 
+    it('keeps the token for operations the server does not verify it on', () => {
+        captchaToken.value = 'tok';
+        for (const op of [
+            'query { signInCaptchaRequirement(login: "a") { required } }',
+            'mutation { requestPasswordReset(emailAddress: "a") { __typename } }',
+            'mutation { resetPassword(token: "t", password: "p") { __typename } }',
+            'mutation { requestTwoFactorRecovery(challenge: "c") { __typename } }',
+        ]) {
+            expect(signInHeaders(op)).toEqual({});
+        }
+        expect(captchaToken.value).toBe('tok');
+    });
+
     it('spends the token on the first request that carries it', () => {
         captchaToken.value = 'tok';
         expect(signInHeaders('mutation { login(username: "a") { __typename } }')).toHaveProperty(
