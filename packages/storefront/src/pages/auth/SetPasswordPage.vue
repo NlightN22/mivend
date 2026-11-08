@@ -91,6 +91,14 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
                     </MvButton>
                 </template>
 
+                <template v-else-if="state === 'signin'">
+                    <h1 class="login-card__title">{{ t('twoFactor.passwordSetTitle') }}</h1>
+                    <p class="login-card__subtitle">{{ t('twoFactor.passwordSetText') }}</p>
+                    <MvButton variant="primary" size="lg" href="/login" class="login-form__submit">
+                        {{ t('twoFactor.toSignIn') }}
+                    </MvButton>
+                </template>
+
                 <template v-else>
                     <h1 class="login-card__title">{{ t('auth.setPassword.invalidTitle') }}</h1>
                     <p class="login-card__subtitle">{{ t(`${copy}.invalidText`) }}</p>

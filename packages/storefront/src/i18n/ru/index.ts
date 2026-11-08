@@ -12,6 +12,7 @@ import orders from './orders';
 import requests from './requests';
 import demo from './demo';
 import terms from './terms';
+import twoFactor from './twoFactor';
 
 export default {
     ...common,
@@ -28,4 +29,5 @@ export default {
     ...demo,
     ...terms,
     ...acting,
+    ...twoFactor,
 };

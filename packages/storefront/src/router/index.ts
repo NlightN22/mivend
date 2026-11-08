@@ -14,6 +14,11 @@ export const router = createRouter({
             component: () => import('../pages/acting/ActingEntryPage.vue'),
         },
         {
+            path: '/two-factor-recovery',
+            component: () => import('../pages/auth/TwoFactorRecoveryPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             path: '/set-password',
             component: () => import('../pages/auth/SetPasswordPage.vue'),
             props: { flow: 'reset' },

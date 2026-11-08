@@ -7,7 +7,7 @@ import { shopErrorMessage } from '../../utils/shopErrorMessage';
 import { useRedirectCountdown } from './useRedirectCountdown';
 import { canSubmit, isDeadLinkCode, isMismatch, isTooShort } from './passwordReset';
 
-type ViewState = 'form' | 'success' | 'invalid';
+type ViewState = 'form' | 'success' | 'signin' | 'invalid';
 export type TokenFlow = 'reset' | 'verify';
 
 export function useSetPassword(flow: TokenFlow): {
@@ -55,9 +55,13 @@ export function useSetPassword(flow: TokenFlow): {
                 flow === 'verify' ? authStore.verifyAccount : authStore.resetPassword
             )(token, form.password);
             if (!errorCode) {
-                await cartStore.fetchCart();
-                state.value = 'success';
-                start();
+                if (authStore.isLoggedIn) {
+                    await cartStore.fetchCart();
+                    state.value = 'success';
+                    start();
+                } else {
+                    state.value = 'signin';
+                }
             } else if (isDeadLinkCode(errorCode)) {
                 state.value = 'invalid';
             } else {

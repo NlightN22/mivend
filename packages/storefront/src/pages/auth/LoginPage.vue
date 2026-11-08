@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { readSiteIconUrl, readSiteName } from '@mivend/ui-kit';
+import { readSiteIconUrl, readSiteName, useTwoFactorSignIn } from '@mivend/ui-kit';
+import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
+import { useTwoFactorLabels } from './useTwoFactorLabels';
 
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
@@ -14,27 +16,33 @@ const route = useRoute();
 const { t } = useI18n();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const labels = useTwoFactorLabels();
 
 const form = reactive({ email: '', password: '', remember: false });
-const loading = ref(false);
-const error = ref('');
+const signIn = useTwoFactorSignIn(
+    createSignInApi({
+        plainLogin: (u, p, r) => authStore.login(u, p, r),
+        onSession: authStore.completeSignIn,
+    }),
+);
+const { step, error, loading, enrolment, username } = signIn;
+const recovered = route.query.notice === 'two-factor-recovered';
 
-async function handleSubmit() {
-    loading.value = true;
-    error.value = '';
-    try {
-        const ok = await authStore.login(form.email, form.password, form.remember);
-        if (ok) {
-            await cartStore.fetchCart();
-            await router.push((route.query.redirect as string) ?? '/');
-        } else {
-            error.value = t('auth.loginError');
-        }
-    } catch {
-        error.value = t('auth.loginError');
-    } finally {
-        loading.value = false;
-    }
+watch(step, async value => {
+    if (value !== 'done') return;
+    await cartStore.fetchCart();
+    await router.push((route.query.redirect as string) ?? '/');
+});
+
+function passwordError(): string {
+    if (!error.value) return '';
+    return error.value === 'INVALID_CREDENTIALS' || error.value === 'UNKNOWN'
+        ? t('auth.loginError')
+        : labels.value.errors[error.value];
+}
+
+function handleSubmit(): Promise<void> {
+    return signIn.submitPassword(form.email, form.password, form.remember);
 }
 </script>
 
@@ -46,52 +54,72 @@ async function handleSubmit() {
             </a>
 
             <div class="login-card">
-                <h1 class="login-card__title">{{ t('auth.signIn') }}</h1>
-                <p class="login-card__subtitle">{{ t('auth.signInSubtitle') }}</p>
+                <MvTwoFactorSignInStep
+                    v-if="step !== 'password' && step !== 'done'"
+                    :step="step"
+                    :error="error"
+                    :loading="loading"
+                    :enrolment="enrolment"
+                    :username="username"
+                    :labels="labels"
+                    @code="signIn.submitCode"
+                    @recover="signIn.openRecovery"
+                    @send-recovery="signIn.submitRecovery"
+                    @back="signIn.back"
+                />
+                <template v-else>
+                    <h1 class="login-card__title">{{ t('auth.signIn') }}</h1>
+                    <p class="login-card__subtitle">{{ t('auth.signInSubtitle') }}</p>
 
-                <MvNotice v-if="error" variant="error" class="login-card__error">
-                    {{ error }}
-                </MvNotice>
+                    <MvNotice v-if="recovered && !error" variant="info" class="login-card__error">
+                        {{ t('twoFactor.recovered') }}
+                    </MvNotice>
+                    <MvNotice v-if="error" variant="error" class="login-card__error">
+                        {{ passwordError() }}
+                    </MvNotice>
 
-                <form class="login-form" novalidate @submit.prevent="handleSubmit">
-                    <MvFormField :label="t('auth.emailOrPhone')">
-                        <MvInput
-                            v-model="form.email"
-                            type="email"
-                            :placeholder="t('auth.emailPlaceholder')"
-                            autocomplete="username"
-                            :error="!!error"
-                        />
-                    </MvFormField>
+                    <form class="login-form" novalidate @submit.prevent="handleSubmit">
+                        <MvFormField :label="t('auth.emailOrPhone')">
+                            <MvInput
+                                v-model="form.email"
+                                type="email"
+                                :placeholder="t('auth.emailPlaceholder')"
+                                autocomplete="username"
+                                :error="!!error"
+                            />
+                        </MvFormField>
 
-                    <MvFormField :label="t('auth.password')">
-                        <MvPasswordInput
-                            v-model="form.password"
-                            :placeholder="t('auth.passwordPlaceholder')"
-                            :show-label="t('auth.showPassword')"
-                            :hide-label="t('auth.hidePassword')"
-                            :error="!!error"
-                        />
-                    </MvFormField>
+                        <MvFormField :label="t('auth.password')">
+                            <MvPasswordInput
+                                v-model="form.password"
+                                :placeholder="t('auth.passwordPlaceholder')"
+                                :show-label="t('auth.showPassword')"
+                                :hide-label="t('auth.hidePassword')"
+                                :error="!!error"
+                            />
+                        </MvFormField>
 
-                    <div class="login-form__row">
-                        <label class="login-form__remember">
-                            <input v-model="form.remember" type="checkbox" />
-                            <span>{{ t('auth.rememberMe') }}</span>
-                        </label>
-                        <a class="login-form__forgot" href="#">{{ t('auth.forgotPassword') }}</a>
-                    </div>
+                        <div class="login-form__row">
+                            <label class="login-form__remember">
+                                <input v-model="form.remember" type="checkbox" />
+                                <span>{{ t('auth.rememberMe') }}</span>
+                            </label>
+                            <a class="login-form__forgot" href="#">{{
+                                t('auth.forgotPassword')
+                            }}</a>
+                        </div>
 
-                    <MvButton
-                        variant="primary"
-                        size="lg"
-                        :loading="loading"
-                        class="login-form__submit"
-                        native-type="submit"
-                    >
-                        {{ t('auth.login') }}
-                    </MvButton>
-                </form>
+                        <MvButton
+                            variant="primary"
+                            size="lg"
+                            :loading="loading"
+                            class="login-form__submit"
+                            native-type="submit"
+                        >
+                            {{ t('auth.login') }}
+                        </MvButton>
+                    </form>
+                </template>
             </div>
 
             <nav class="login-footer">

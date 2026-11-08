@@ -62,6 +62,17 @@ describe('useAuthStore.resetPassword', () => {
         expect(shopApiMock.mock.calls[0][1]).toEqual({ token: 'tok', password: 'new-password' });
     });
 
+    it('stays logged out when the account needs a second step and no session was created', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        shopApiMock
+            .mockResolvedValueOnce({ resetPassword: { __typename: 'CurrentUser', id: '1' } })
+            .mockResolvedValueOnce({ activeCustomer: null });
+        const store = useAuthStore();
+        expect(await store.resetPassword('tok', 'new-password')).toBeNull();
+        expect(store.isLoggedIn).toBe(false);
+        expect(store.authStatus).toBe('unauthenticated');
+    });
+
     it('returns the errorCode and stays logged out on a rejected token', async () => {
         const { useAuthStore } = await import('../../stores/auth');
         shopApiMock.mockResolvedValueOnce({

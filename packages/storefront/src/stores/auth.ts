@@ -208,6 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
         tradingPoint,
         counterparty,
         login,
+        completeSignIn: startSession,
         resetPassword,
         verifyAccount,
         logout,

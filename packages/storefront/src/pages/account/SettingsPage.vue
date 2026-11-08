@@ -4,6 +4,7 @@ import { useDemoMode } from '../../composables/useDemoMode';
 import { endAllSessions } from '../../api/sessions';
 import AccountSidebar from './AccountSidebar.vue';
 import SettingsSecurity from './SettingsSecurity.vue';
+import SettingsTwoFactor from './SettingsTwoFactor.vue';
 import SettingsProfile from './SettingsProfile.vue';
 import SettingsPreferences from './SettingsPreferences.vue';
 
@@ -44,6 +45,7 @@ async function signOutAll() {
             <SettingsPreferences />
 
             <SettingsSecurity />
+            <SettingsTwoFactor />
 
             <div class="set-block set-block--danger">
                 <div class="set-block__head">
