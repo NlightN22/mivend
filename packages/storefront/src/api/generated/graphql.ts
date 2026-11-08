@@ -3726,6 +3726,7 @@ export type Query = {
     settlementDocuments: SettlementDocumentPage;
     suggestAddress: Array<Scalars['String']['output']>;
     tradingPoint?: Maybe<TradingPoint>;
+    signInCaptchaRequirement: SignInCaptchaRequirement;
     twoFactorRequired: Scalars['Boolean']['output'];
     twoFactorStatus: TwoFactorStatus;
 };
@@ -4575,10 +4576,23 @@ export type UpdateOrderItemsResult =
     | OrderLimitError
     | OrderModificationError;
 
+export type SignInCaptchaRequirement = {
+    required: Scalars['Boolean']['output'];
+    siteKey: Maybe<Scalars['String']['output']>;
+};
+
+export type UserCustomFields = {
+    passwordChangeRequired: Maybe<Scalars['Boolean']['output']>;
+};
+
+export type QuerySignInCaptchaRequirementArgs = {
+    login: Scalars['String']['input'];
+};
+
 export type User = Node & {
     authenticationMethods: Array<AuthenticationMethod>;
     createdAt: Scalars['DateTime']['output'];
-    customFields?: Maybe<Scalars['JSON']['output']>;
+    customFields?: Maybe<UserCustomFields>;
     id: Scalars['ID']['output'];
     identifier: Scalars['String']['output'];
     lastLogin?: Maybe<Scalars['DateTime']['output']>;
@@ -5739,7 +5753,16 @@ export type ActiveCustomerForAuthQuery = {
             workingHours?: string | null;
             deliveryComment?: string | null;
         } | null;
+        user?: { customFields?: { passwordChangeRequired?: boolean | null } | null } | null;
     } | null;
+};
+
+export type SignInCaptchaRequirementQueryVariables = Exact<{
+    login: Scalars['String']['input'];
+}>;
+
+export type SignInCaptchaRequirementQuery = {
+    signInCaptchaRequirement: { required: boolean; siteKey: string | null };
 };
 
 export type LoginMutationVariables = Exact<{
@@ -7354,11 +7377,27 @@ export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
       workingHours
       deliveryComment
     }
+    user {
+      customFields {
+        passwordChangeRequired
+      }
+    }
   }
 }
     `) as unknown as TypedDocumentString<
     ActiveCustomerForAuthQuery,
     ActiveCustomerForAuthQueryVariables
+>;
+export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
+    query SignInCaptchaRequirement($login: String!) {
+  signInCaptchaRequirement(login: $login) {
+    required
+    siteKey
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SignInCaptchaRequirementQuery,
+    SignInCaptchaRequirementQueryVariables
 >;
 export const LoginDocument = new TypedDocumentString(`
     mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {

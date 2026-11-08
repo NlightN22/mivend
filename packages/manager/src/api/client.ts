@@ -1,3 +1,5 @@
+import { signInHeaders, signInUrl } from '@mivend/ui-kit';
+
 const ADMIN_API_URL = '/admin-api';
 
 // Portal auth is cookie-based, but Vendure echoes the bearer token in this header; the WS transport
@@ -62,9 +64,9 @@ export async function adminApi<
     variables?: TVariables,
 ): Promise<TResult> {
     const query = typeof document === 'string' ? document : document.toString();
-    const response = await fetchWithRetry(ADMIN_API_URL, {
+    const response = await fetchWithRetry(signInUrl(ADMIN_API_URL, query), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...signInHeaders(query) },
         credentials: 'include',
         body: JSON.stringify({ query, variables }),
     });

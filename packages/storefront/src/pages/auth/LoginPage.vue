@@ -3,11 +3,14 @@ import { reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
+    MvCaptchaWidget,
     MvTwoFactorSignInStep,
     readSiteIconUrl,
     readSiteName,
+    useSignInCaptcha,
     useTwoFactorSignIn,
 } from '@mivend/ui-kit';
+import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
@@ -33,10 +36,21 @@ const signIn = useTwoFactorSignIn(
 const { step, error, loading, enrolment, maskedEmail } = signIn;
 const recovered = route.query.notice === 'two-factor-recovered';
 
+const captcha = useSignInCaptcha(fetchCaptchaRequirement);
+
+watch(error, value => {
+    if (value) void captcha.refresh(form.email);
+});
+
 watch(step, async value => {
     if (value !== 'done') return;
+    captcha.clear();
     await cartStore.fetchCart();
-    await router.push((route.query.redirect as string) ?? '/');
+    await router.push(
+        authStore.passwordChangeRequired
+            ? '/account/settings'
+            : ((route.query.redirect as string) ?? '/'),
+    );
 });
 
 function passwordError(): string {
@@ -103,6 +117,13 @@ function handleSubmit(): Promise<void> {
                                 :error="!!error"
                             />
                         </MvFormField>
+
+                        <MvCaptchaWidget
+                            v-if="captcha.required.value"
+                            :key="captcha.widgetKey.value"
+                            :site-key="captcha.siteKey.value"
+                            @token="captcha.onToken"
+                        />
 
                         <div class="login-form__row">
                             <label class="login-form__remember">

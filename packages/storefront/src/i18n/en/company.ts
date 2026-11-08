@@ -175,6 +175,10 @@ export default {
             passwordRequired: 'Fill in all password fields',
             passwordMismatch: 'New password and confirmation do not match',
             passwordFailed: 'Could not change password',
+            passwordBreached:
+                'This password appears in known data breaches. Choose a different one.',
+            passwordChangeRequired:
+                'Your current password appears in known data breaches. Please change it now.',
             loadFailed: 'Could not load sessions',
             currentSession: 'Current session',
             signedIn: 'Signed in',

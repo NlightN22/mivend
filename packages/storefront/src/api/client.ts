@@ -1,3 +1,4 @@
+import { signInHeaders, signInUrl } from '@mivend/ui-kit';
 import { actingCredentials, actingHeaders, readActingSession } from './actingToken';
 
 const SHOP_API_URL = '/shop-api';
@@ -78,9 +79,13 @@ export async function shopApi<
 ): Promise<TResult> {
     const acting = readActingSession() !== null;
     const query = typeof document === 'string' ? document : document.toString();
-    const response = await fetchWithRetry(SHOP_API_URL, {
+    const response = await fetchWithRetry(signInUrl(SHOP_API_URL, query), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...actingHeaders() },
+        headers: {
+            'Content-Type': 'application/json',
+            ...actingHeaders(),
+            ...signInHeaders(query),
+        },
         credentials: actingCredentials(),
         body: JSON.stringify({ query, variables }),
     });

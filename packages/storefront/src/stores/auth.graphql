@@ -25,6 +25,11 @@ query ActiveCustomerForAuth {
             workingHours
             deliveryComment
         }
+        user {
+            customFields {
+                passwordChangeRequired
+            }
+        }
     }
 }
 

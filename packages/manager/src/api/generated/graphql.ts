@@ -8112,6 +8112,7 @@ export type Query = {
     tradingPointsNotConfirmedByErp: TradingPointList;
     /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
     tradingPointsWithoutLocation: TradingPointList;
+    signInCaptchaRequirement: SignInCaptchaRequirement;
     twoFactorRequired: Scalars['Boolean']['output'];
     twoFactorStatus: TwoFactorStatus;
     unassignedCounterpartyCount: Scalars['Int']['output'];
@@ -10542,10 +10543,23 @@ export type UpdateZoneInput = {
     name?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type SignInCaptchaRequirement = {
+    required: Scalars['Boolean']['output'];
+    siteKey: Maybe<Scalars['String']['output']>;
+};
+
+export type UserCustomFields = {
+    passwordChangeRequired: Maybe<Scalars['Boolean']['output']>;
+};
+
+export type QuerySignInCaptchaRequirementArgs = {
+    login: Scalars['String']['input'];
+};
+
 export type User = Node & {
     authenticationMethods: Array<AuthenticationMethod>;
     createdAt: Scalars['DateTime']['output'];
-    customFields: Maybe<Scalars['JSON']['output']>;
+    customFields: Maybe<UserCustomFields>;
     id: Scalars['ID']['output'];
     identifier: Scalars['String']['output'];
     lastLogin: Maybe<Scalars['DateTime']['output']>;
@@ -10966,6 +10980,7 @@ export type ActiveAdministratorFieldsFragment = {
     customFields: { departmentId: string | null; branchId: string | null } | null;
     user: {
         identifier: string;
+        customFields: { passwordChangeRequired: boolean | null } | null;
         roles: Array<{ code: string; description: string; permissions: Array<Permission> }>;
     };
 };
@@ -10981,9 +10996,18 @@ export type ActiveAdministratorQuery = {
         customFields: { departmentId: string | null; branchId: string | null } | null;
         user: {
             identifier: string;
+            customFields: { passwordChangeRequired: boolean | null } | null;
             roles: Array<{ code: string; description: string; permissions: Array<Permission> }>;
         };
     } | null;
+};
+
+export type SignInCaptchaRequirementQueryVariables = Exact<{
+    login: Scalars['String']['input'];
+}>;
+
+export type SignInCaptchaRequirementQuery = {
+    signInCaptchaRequirement: { required: boolean; siteKey: string | null };
 };
 
 export type LoginMutationVariables = Exact<{
@@ -13835,6 +13859,9 @@ export const ActiveAdministratorFieldsFragmentDoc = new TypedDocumentString(
   }
   user {
     identifier
+    customFields {
+      passwordChangeRequired
+    }
     roles {
       code
       description
@@ -14482,6 +14509,9 @@ export const ActiveAdministratorDocument = new TypedDocumentString(`
   }
   user {
     identifier
+    customFields {
+      passwordChangeRequired
+    }
     roles {
       code
       description
@@ -14489,6 +14519,17 @@ export const ActiveAdministratorDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<ActiveAdministratorQuery, ActiveAdministratorQueryVariables>;
+export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
+    query SignInCaptchaRequirement($login: String!) {
+  signInCaptchaRequirement(login: $login) {
+    required
+    siteKey
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SignInCaptchaRequirementQuery,
+    SignInCaptchaRequirementQueryVariables
+>;
 export const LoginDocument = new TypedDocumentString(`
     mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
   login(username: $username, password: $password, rememberMe: $rememberMe) {

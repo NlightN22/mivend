@@ -10,9 +10,12 @@ import {
     MvPasswordInput,
     MvButton,
     MvNotice,
+    MvCaptchaWidget,
     MvTwoFactorSignInStep,
+    useSignInCaptcha,
     useTwoFactorSignIn,
 } from '@mivend/ui-kit';
+import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
 import { RECOVERED_NOTICE, TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
@@ -34,8 +37,20 @@ const signIn = useTwoFactorSignIn(
 const { step, error, loading, enrolment, maskedEmail } = signIn;
 const recovered = route.query.notice === 'two-factor-recovered';
 
+const captcha = useSignInCaptcha(fetchCaptchaRequirement);
+
+watch(error, value => {
+    if (value) void captcha.refresh(form.username);
+});
+
 watch(step, async value => {
-    if (value === 'done') await router.push((route.query.redirect as string) ?? '/');
+    if (value !== 'done') return;
+    captcha.clear();
+    await router.push(
+        authStore.passwordChangeRequired
+            ? '/settings/security'
+            : ((route.query.redirect as string) ?? '/'),
+    );
 });
 
 function handleSubmit(): Promise<void> {
@@ -89,6 +104,13 @@ function handleSubmit(): Promise<void> {
                                 :error="!!error"
                             />
                         </MvFormField>
+
+                        <MvCaptchaWidget
+                            v-if="captcha.required.value"
+                            :key="captcha.widgetKey.value"
+                            :site-key="captcha.siteKey.value"
+                            @token="captcha.onToken"
+                        />
 
                         <label class="login-form__remember">
                             <input v-model="form.remember" type="checkbox" />

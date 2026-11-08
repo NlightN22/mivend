@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatDate } from '../../i18n/format';
 import { endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
+import { useAuthStore } from '../../stores/auth';
 import { usePasswordChange } from './usePasswordChange';
 
 const { t } = useI18n();
@@ -29,13 +30,17 @@ async function handleEndSession(id: string) {
     await loadSessions();
 }
 
-const showPasswordForm = ref(false);
+const authStore = useAuthStore();
+const showPasswordForm = ref(authStore.passwordChangeRequired);
 const {
     form: passwordForm,
     error: passwordError,
     submitting: passwordSubmitting,
     submit: submitPassword,
-} = usePasswordChange(() => (showPasswordForm.value = false));
+} = usePasswordChange(() => {
+    showPasswordForm.value = false;
+    void authStore.fetchCurrentCustomer();
+});
 </script>
 
 <template>
@@ -55,6 +60,10 @@ const {
                 }}
             </button>
         </div>
+
+        <MvNotice v-if="authStore.passwordChangeRequired" variant="warning">
+            {{ $t('settings.security.passwordChangeRequired') }}
+        </MvNotice>
 
         <form
             v-if="showPasswordForm"

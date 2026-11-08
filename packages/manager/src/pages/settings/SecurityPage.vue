@@ -45,10 +45,14 @@ async function handleChangePassword(): Promise<void> {
     try {
         await changeOwnPassword(newPassword.value);
         passwordSuccess.value = true;
+        await authStore.fetchActiveAdministrator();
         newPassword.value = '';
         confirmPassword.value = '';
     } catch (e) {
-        passwordError.value = e instanceof Error ? e.message : 'Could not change the password';
+        const message = e instanceof Error ? e.message : '';
+        passwordError.value = message.includes('PASSWORD_BREACHED')
+            ? 'This password appears in known data breaches. Choose a different one.'
+            : message || 'Could not change the password';
     } finally {
         passwordSubmitting.value = false;
     }
@@ -120,6 +124,9 @@ async function handleSignOutEverywhere(): Promise<void> {
         </MvPanel>
 
         <MvPanel title="Change password">
+            <MvNotice v-if="authStore.passwordChangeRequired" variant="warning">
+                Your current password appears in known data breaches. Please change it now.
+            </MvNotice>
             <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
                 You're currently using the default <strong>superadmin</strong> account and its
                 default password — set a new password below.

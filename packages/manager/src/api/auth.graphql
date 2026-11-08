@@ -9,6 +9,9 @@ fragment ActiveAdministratorFields on Administrator {
     }
     user {
         identifier
+        customFields {
+            passwordChangeRequired
+        }
         roles {
             code
             description

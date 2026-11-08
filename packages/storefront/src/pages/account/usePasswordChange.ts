@@ -29,7 +29,13 @@ export function usePasswordChange(onChanged: () => void): {
             });
             const errorCode = passwordChangeErrorCode(result.updateCustomerPassword);
             if (errorCode) {
-                error.value = shopErrorMessage({ errorCode }, 'settings.security.passwordFailed');
+                const message =
+                    'message' in result.updateCustomerPassword
+                        ? result.updateCustomerPassword.message
+                        : '';
+                error.value = message.includes('PASSWORD_BREACHED')
+                    ? t('settings.security.passwordBreached')
+                    : shopErrorMessage({ errorCode }, 'settings.security.passwordFailed');
                 return;
             }
             form.value = { current: '', next: '', confirm: '' };

@@ -284,12 +284,21 @@ export type { FontSizeToken } from './tokens/typography';
 export { formatDocumentNumber } from './utils/documentNumber';
 export { COMPACT_NAV_BREAKPOINT } from './styles/breakpoints';
 
+export { default as MvCaptchaWidget } from './components/MvCaptchaWidget/MvCaptchaWidget.vue';
 export { default as MvOtpInput } from './components/MvOtpInput/MvOtpInput.vue';
 export { default as MvAuthShell } from './components/MvAuthShell/MvAuthShell.vue';
 export { default as MvTwoFactorEnrol } from './components/MvTwoFactorEnrol/MvTwoFactorEnrol.vue';
 export { default as MvTwoFactorSignInStep } from './components/MvTwoFactorSignInStep/MvTwoFactorSignInStep.vue';
 export { default as MvTwoFactorSettings } from './components/MvTwoFactorSettings/MvTwoFactorSettings.vue';
 export { default as MvTwoFactorRecoveryForm } from './components/MvTwoFactorRecoveryForm/MvTwoFactorRecoveryForm.vue';
+export { useSignInCaptcha } from './composables/signIn/useSignInCaptcha';
+export type { CaptchaRequirement, SignInCaptcha } from './composables/signIn/useSignInCaptcha';
+export {
+    captchaToken,
+    isSignInRequest,
+    signInHeaders,
+    signInUrl,
+} from './composables/signIn/signInRequest';
 export { useTwoFactorSignIn } from './composables/twoFactor/useTwoFactorSignIn';
 export type { SignInStep } from './composables/twoFactor/useTwoFactorSignIn';
 export { useTwoFactorSettings } from './composables/twoFactor/useTwoFactorSettings';

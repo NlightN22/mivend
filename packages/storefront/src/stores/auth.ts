@@ -192,8 +192,13 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    const passwordChangeRequired = computed(
+        () => customer.value?.user?.customFields?.passwordChangeRequired === true,
+    );
+
     return {
         customer,
+        passwordChangeRequired,
         initialized,
         isLoggedIn,
         authStatus,

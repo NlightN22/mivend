@@ -229,8 +229,13 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    const passwordChangeRequired = computed(
+        () => administrator.value?.user.customFields?.passwordChangeRequired === true,
+    );
+
     return {
         administrator,
+        passwordChangeRequired,
         initialized,
         isLoggedIn,
         authStatus,
