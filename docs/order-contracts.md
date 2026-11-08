@@ -131,7 +131,7 @@ ERP never flagged is treated as controlled, so mivend can still be stricter than
 block. The storage-unit conversion is one place, the order check data service (`storageUnitRatios`). Changing a flag,
 the setting or a unit does not mark stored results stale; they refresh at the next recompute point. The manager's
 line availability (`OrderLineAvailabilityService`) applies the same skip rules (`organizationStockControlled`), so a
-manager is never refused a quantity the check no longer flags. Order accounting flags are stored as last non-empty
+manager is never refused a quantity the check no longer flags. Confirmed from the 1C posting code: the organization stock register is kept in the product's storage unit, the coefficient is base units per unit, so `needed = base-unit quantity / storage coefficient` (the balance may be fractional). Order accounting flags are stored as last non-empty
 value: an event without them does not clear a stored one.
 
 ## Order data controls (#241)
