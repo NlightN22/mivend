@@ -215,6 +215,12 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         await expect(page.getByTestId('add-row-available')).not.toHaveText('—');
         await expect(page.getByLabel('Price', { exact: true })).not.toHaveValue('');
         await page.getByRole('button', { name: 'Add position', exact: true }).click();
+        // The row appears on success; a refusal stays inline in the add row, so fail with its text.
+        await page
+            .locator(`[data-testid="order-line-${SKU}"], [data-testid="add-row-error"]`)
+            .first()
+            .waitFor({ timeout: 15000 });
+        expect(await page.getByTestId('add-row-error').allInnerTexts()).toEqual([]);
     }
 
     test('a position is added by its article and deleted with the row trash button', async ({
@@ -224,7 +230,7 @@ test.describe('adding and deleting positions of the shared e2e order', () => {
         await addBySearch(page, SKU);
 
         const row = page.getByTestId(`order-line-${SKU}`);
-        await expect(row).toBeVisible();
+        await expect(row).toBeVisible({ timeout: 15000 });
 
         await row.getByRole('button', { name: 'Delete position' }).click();
         await page
