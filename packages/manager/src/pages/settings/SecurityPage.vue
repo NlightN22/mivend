@@ -18,12 +18,7 @@ const loading = ref(true);
 const error = ref('');
 const endingId = ref<string | null>(null);
 
-// Real incident (2026-09-12): the default superadmin/superadmin account had no way to change its
-// own password anywhere in the manager portal at all — DefaultLayout.vue's warning banner links
-// here. Deliberately a plain self-service form, not a forced-change gate on login: this portal
-// has no concept yet of a "must change password" flag on Administrator, and adding one is a
-// separate, larger access-control change (a new customField + a login-flow redirect), not
-// something to bolt onto this narrow fix.
+// Plain self-service form: the default-account banner and the breached-password redirect (#278) both link here.
 const newPassword = ref('');
 const confirmPassword = ref('');
 const passwordSubmitting = ref(false);
