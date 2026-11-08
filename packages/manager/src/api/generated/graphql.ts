@@ -6171,10 +6171,8 @@ export type OrderLineQuote = {
     available: Scalars['Int']['output'];
     /** The order's customer price for one unit, in the order's price terms. */
     customerPrice: Scalars['Int']['output'];
-    /** Share of the reference price the customer price gives away; negative is a markup. */
-    discountPercent: Maybe<Scalars['Float']['output']>;
     name: Scalars['String']['output'];
-    /** The customer's price before any discount. */
+    /** What the line discount is measured from; the customer price itself (a placed line list price already carries it). */
     referencePrice: Scalars['Int']['output'];
     sku: Scalars['String']['output'];
     variantId: Scalars['ID']['output'];
@@ -7859,7 +7857,7 @@ export type Query = {
     /** Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder. */
     orderLineAvailability: Array<OrderLineAvailability>;
     orderLineDiscountLimits: Array<OrderLineDiscountLimit>;
-    /** Price and stock of an article for this order's customer, refused like addOrderLineBySku. Needs ConfirmOrder and order visibility. */
+    /** Price (for the given quantity, default 1) and stock of an article for this order's customer, refused like addOrderLineBySku. Needs ConfirmOrder and order visibility. */
     orderLineQuote: OrderLineQuote;
     /** Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility. */
     orderLineShortfalls: Array<OrderLineShortfall>;
@@ -8300,6 +8298,7 @@ export type QueryOrderLineDiscountLimitsArgs = {
 
 export type QueryOrderLineQuoteArgs = {
     orderId: Scalars['ID']['input'];
+    quantity?: InputMaybe<Scalars['Int']['input']>;
     sku: Scalars['String']['input'];
 };
 
@@ -12207,6 +12206,7 @@ export type OrderLineShortfallsQuery = {
 export type OrderLineQuoteQueryVariables = Exact<{
     orderId: Scalars['ID']['input'];
     sku: Scalars['String']['input'];
+    quantity?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 export type OrderLineQuoteQuery = {
@@ -12216,7 +12216,6 @@ export type OrderLineQuoteQuery = {
         name: string;
         customerPrice: number;
         referencePrice: number;
-        discountPercent: number | null;
         available: number;
     };
 };
@@ -15593,14 +15592,13 @@ export const OrderLineShortfallsDocument = new TypedDocumentString(`
     OrderLineShortfallsQueryVariables
 >;
 export const OrderLineQuoteDocument = new TypedDocumentString(`
-    query OrderLineQuote($orderId: ID!, $sku: String!) {
-  orderLineQuote(orderId: $orderId, sku: $sku) {
+    query OrderLineQuote($orderId: ID!, $sku: String!, $quantity: Int) {
+  orderLineQuote(orderId: $orderId, sku: $sku, quantity: $quantity) {
     variantId
     sku
     name
     customerPrice
     referencePrice
-    discountPercent
     available
   }
 }

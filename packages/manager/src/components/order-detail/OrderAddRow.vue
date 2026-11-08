@@ -35,7 +35,7 @@ defineProps<{
             <MvDocumentSuffixInput
                 :model-value="add.price.value"
                 :suffix="currencySymbol"
-                placeholder="Price, ₽"
+                placeholder="Price"
                 label="Price"
                 :disabled="busy"
                 @update:model-value="add.setPrice"

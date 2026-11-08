@@ -86,6 +86,10 @@ export async function findOrderLineBySku(orderId: string, sku: string): Promise<
         : null;
 }
 
-export async function fetchOrderLineQuote(orderId: string, sku: string): Promise<OrderLineQuote> {
-    return (await adminApi(OrderLineQuoteDocument, { orderId, sku })).orderLineQuote;
+export async function fetchOrderLineQuote(
+    orderId: string,
+    sku: string,
+    quantity: number,
+): Promise<OrderLineQuote> {
+    return (await adminApi(OrderLineQuoteDocument, { orderId, sku, quantity })).orderLineQuote;
 }

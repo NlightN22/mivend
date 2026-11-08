@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import {
     addOrderLineBySku,
     fetchOrderLineQuote,
@@ -11,6 +11,7 @@ import { requestPriceAdjustment } from '../api/priceAdjustment';
 import { percentFromPrice, priceFromPercent } from '../utils/lineValueModel';
 
 const MIN_QUERY = 2;
+const REQUOTE_DELAY_MS = 300;
 
 // Inline add row: pick a product (its quote prefills price and discount), then add in one user action.
 export function useOrderLineAdd(
@@ -29,6 +30,9 @@ export function useOrderLineAdd(
     const notice = ref('');
     let seq = 0;
     let quoteSeq = 0;
+    let edited = false;
+    let quotedQuantity = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const prefilled = (): string =>
         quote.value ? (quote.value.customerPrice / 100).toFixed(2) : '';
@@ -42,6 +46,8 @@ export function useOrderLineAdd(
         price.value = '';
         discount.value = '';
         error.value = '';
+        edited = false;
+        clearTimeout(timer);
     }
 
     function begin(): void {
@@ -61,6 +67,7 @@ export function useOrderLineAdd(
             picked.value = null;
             quote.value = null;
             quoteSeq += 1;
+            edited = false;
         }
         const mine = (seq += 1);
         if (value.trim().length < MIN_QUERY) {
@@ -71,6 +78,31 @@ export function useOrderLineAdd(
         if (mine === seq) matches.value = found;
     }
 
+    // Quotes the picked article for the current quantity; a hand-typed price survives, only its baseline moves.
+    async function requote(): Promise<void> {
+        const chosen = picked.value;
+        if (!chosen) return;
+        const mine = (quoteSeq += 1);
+        try {
+            const result = await fetchOrderLineQuote(orderId(), chosen.sku, quantity.value);
+            if (mine !== quoteSeq) return;
+            quote.value = result;
+            quotedQuantity = quantity.value;
+            error.value = '';
+            if (edited) {
+                discount.value = percentFromPrice(result.referencePrice, price.value) ?? '';
+            } else {
+                price.value = prefilled();
+                discount.value = '0';
+            }
+        } catch (e) {
+            if (mine === quoteSeq) {
+                quote.value = null;
+                error.value = e instanceof Error ? e.message : 'No price found';
+            }
+        }
+    }
+
     async function pick(match: SkuMatch): Promise<void> {
         picked.value = match;
         query.value = match.sku;
@@ -79,24 +111,23 @@ export function useOrderLineAdd(
         quote.value = null;
         price.value = '';
         discount.value = '';
-        const mine = (quoteSeq += 1);
-        try {
-            const result = await fetchOrderLineQuote(orderId(), match.sku);
-            if (mine !== quoteSeq) return;
-            quote.value = result;
-            price.value = prefilled();
-            discount.value = String(result.discountPercent ?? 0);
-        } catch (e) {
-            if (mine === quoteSeq) error.value = e instanceof Error ? e.message : 'No price found';
-        }
+        edited = false;
+        await requote();
     }
 
+    watch(quantity, () => {
+        clearTimeout(timer);
+        if (picked.value) timer = setTimeout(() => void requote(), REQUOTE_DELAY_MS);
+    });
+
     function setPrice(value: string): void {
+        edited = true;
         price.value = value;
         if (quote.value) discount.value = percentFromPrice(quote.value.referencePrice, value) ?? '';
     }
 
     function setDiscount(value: string): void {
+        edited = true;
         discount.value = value;
         const next = quote.value ? priceFromPercent(quote.value.referencePrice, value) : null;
         if (next !== null) price.value = next;
@@ -124,6 +155,10 @@ export function useOrderLineAdd(
     // A refusal stays in the add row; the line is added first, a changed price then goes through the price path.
     async function submit(): Promise<boolean> {
         const chosen = picked.value;
+        if (chosen && quote.value && quotedQuantity !== quantity.value) {
+            clearTimeout(timer);
+            await requote();
+        }
         if (!chosen || !quote.value) {
             error.value = error.value || 'Choose a product first';
             return false;

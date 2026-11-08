@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOrderLineAdd } from '../../composables/useOrderLineAdd';
 
 const api = vi.hoisted(() => ({
@@ -32,7 +33,6 @@ describe('useOrderLineAdd', () => {
             name: 'One',
             customerPrice: 10000,
             referencePrice: 10000,
-            discountPercent: 0,
             available: 7,
         });
         api.adjust.mockResolvedValue({ decision: 'apply-directly', approvalRequestId: null });
@@ -68,7 +68,7 @@ describe('useOrderLineAdd', () => {
     it('prefills price, discount and availability from the quote when a product is picked', async () => {
         const add = useOrderLineAdd(() => '5', runner);
         await add.pick(one);
-        expect(api.quote).toHaveBeenCalledWith('5', 'AB-1');
+        expect(api.quote).toHaveBeenCalledWith('5', 'AB-1', 1);
         expect(add.price.value).toBe('100.00');
         expect(add.discount.value).toBe('0');
         expect(add.quote.value?.available).toBe(7);
@@ -90,7 +90,7 @@ describe('useOrderLineAdd', () => {
         const add = useOrderLineAdd(() => '5', runner);
         const first = add.pick(one);
         await add.pick({ id: '2', sku: 'AB-2', name: 'Two' });
-        release({ customerPrice: 1, referencePrice: 1, discountPercent: 0, available: 1 });
+        release({ customerPrice: 1, referencePrice: 1, available: 1 });
         await first;
         expect(add.price.value).toBe('100.00');
     });
@@ -156,5 +156,86 @@ describe('useOrderLineAdd', () => {
         expect(await add.submit()).toBe(true);
         expect(add.notice.value).toContain('AB-1 added, but the price was not applied');
         expect(add.open.value).toBe(false);
+    });
+
+    describe('quantity re-quote', () => {
+        beforeEach(() => vi.useFakeTimers());
+        afterEach(() => vi.useRealTimers());
+
+        async function changeQuantity(add: ReturnType<typeof useOrderLineAdd>, value: number) {
+            add.quantity.value = value;
+            await nextTick();
+            await vi.advanceTimersByTimeAsync(300);
+        }
+
+        it('re-quotes the picked article for the new quantity after a short pause', async () => {
+            api.quote
+                .mockResolvedValueOnce({
+                    customerPrice: 10000,
+                    referencePrice: 10000,
+                    available: 7,
+                })
+                .mockResolvedValueOnce({ customerPrice: 9000, referencePrice: 9000, available: 7 });
+            const add = useOrderLineAdd(() => '5', runner);
+            await add.pick(one);
+            add.quantity.value = 50;
+            await nextTick();
+            expect(api.quote).toHaveBeenCalledTimes(1);
+            await vi.advanceTimersByTimeAsync(300);
+            expect(api.quote).toHaveBeenLastCalledWith('5', 'AB-1', 50);
+            expect(add.price.value).toBe('90.00');
+        });
+
+        it('keeps a hand-typed price and only moves the baseline and the percent', async () => {
+            api.quote
+                .mockResolvedValueOnce({
+                    customerPrice: 10000,
+                    referencePrice: 10000,
+                    available: 7,
+                })
+                .mockResolvedValueOnce({ customerPrice: 9000, referencePrice: 9000, available: 7 });
+            const add = useOrderLineAdd(() => '5', runner);
+            await add.pick(one);
+            add.setPrice('81');
+            await changeQuantity(add, 50);
+            expect(add.price.value).toBe('81');
+            expect(add.discount.value).toBe('10');
+        });
+
+        it('sends no price adjustment when the price equals the quote for that quantity', async () => {
+            api.quote
+                .mockResolvedValueOnce({
+                    customerPrice: 10000,
+                    referencePrice: 10000,
+                    available: 7,
+                })
+                .mockResolvedValueOnce({ customerPrice: 9000, referencePrice: 9000, available: 7 });
+            const add = useOrderLineAdd(() => '5', runner);
+            add.begin();
+            await add.pick(one);
+            add.setPrice('90');
+            await changeQuantity(add, 50);
+            await add.submit();
+            expect(api.add).toHaveBeenCalledWith('5', 'AB-1', 50);
+            expect(api.adjust).not.toHaveBeenCalled();
+        });
+
+        it('re-quotes at once on confirm when the pause has not elapsed', async () => {
+            api.quote
+                .mockResolvedValueOnce({
+                    customerPrice: 10000,
+                    referencePrice: 10000,
+                    available: 7,
+                })
+                .mockResolvedValueOnce({ customerPrice: 9000, referencePrice: 9000, available: 7 });
+            const add = useOrderLineAdd(() => '5', runner);
+            add.begin();
+            await add.pick(one);
+            add.quantity.value = 50;
+            await nextTick();
+            await add.submit();
+            expect(api.quote).toHaveBeenLastCalledWith('5', 'AB-1', 50);
+            expect(api.adjust).not.toHaveBeenCalled();
+        });
     });
 });

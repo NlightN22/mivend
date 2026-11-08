@@ -107,8 +107,9 @@ One page, no tabs, top to bottom:
 
    **Adding** a position: a dashed full-width "Add position" button under the table swaps for an inline add row
    (green outline): product search (SKU or name, `productVariants`), quantity stepper, Available, Reserve, Price and
-   Discount, a check and a cross. Picking a product calls `orderLineQuote` and prefills Price and Discount with the
-   customer's price and shows the warehouse stock; a refusal (no customer price, ambiguous article) shows inline at
+   Discount, a check and a cross. Picking a product calls `orderLineQuote` and prefills Price and Discount (0) with the
+   customer's price for the chosen quantity (re-quoted ~300 ms after the quantity changes; a price the manager typed
+   is kept) and shows the warehouse stock; a refusal (no customer price, ambiguous article) shows inline at
    once. Price and percent are linked as in edit mode. Confirming calls `addOrderLineBySku`; quantity or multiple
    refusals stay inline. Only a price the manager changed from the prefilled one is then applied to the new line
    through the price path in the same action (two server calls); if that second call fails the line stays added
