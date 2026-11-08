@@ -1,13 +1,16 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
+    PaymentCardDocument,
     PaymentsPageDocument,
     PaymentViewCountsDocument,
     type PaymentFilterParameter,
+    type PaymentCardQuery,
     type PaymentListItemFieldsFragment,
 } from './generated/graphql';
 
 export type PaymentListItem = PaymentListItemFieldsFragment;
+export type PaymentCardData = NonNullable<PaymentCardQuery['payment']>;
 
 export interface PaymentFilters {
     // Index signature lets PaymentFilters satisfy useUrlSyncedState's generic Record<string,
@@ -107,4 +110,16 @@ export async function fetchPaymentsPage(
         counterpartyId: filters.counterpartyId || undefined,
     });
     return result.visiblePayments;
+}
+
+export function formatPaymentAmount(amount: number, currencyCode: string): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(
+        amount / 100,
+    );
+}
+
+// The server returns null for a foreign, unknown or malformed id.
+export async function fetchPaymentCard(id: string): Promise<PaymentCardData | null> {
+    const result = await adminApi(PaymentCardDocument, { id });
+    return result.payment;
 }
