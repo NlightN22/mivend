@@ -295,9 +295,15 @@ export type ApplyCouponCodeResult =
     | Order;
 
 export type ApprovalListOptions = {
+    createdFrom?: InputMaybe<Scalars['DateTime']['input']>;
+    createdTo?: InputMaybe<Scalars['DateTime']['input']>;
     requestType?: InputMaybe<Scalars['String']['input']>;
+    requestTypes?: InputMaybe<Array<Scalars['String']['input']>>;
+    requestedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sortDir?: InputMaybe<Scalars['String']['input']>;
+    sortField?: InputMaybe<Scalars['String']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
     statuses?: InputMaybe<Array<Scalars['String']['input']>>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -317,6 +323,7 @@ export type ApprovalRequest = {
     stepRoles: Array<Scalars['String']['output']>;
     steps: Array<ApprovalStep>;
     totalSteps: Scalars['Int']['output'];
+    viewerCanDecide: Scalars['Boolean']['output'];
 };
 
 export type ApprovalRequestList = {
@@ -5928,7 +5935,9 @@ export type OrderCustomFields = {
     cancelRequestedAt: Maybe<Scalars['DateTime']['output']>;
     counterpartyId: Maybe<Scalars['String']['output']>;
     deliveryAddress: Maybe<Scalars['String']['output']>;
+    erpAccounting: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
+    erpLinkedDocuments: Maybe<Scalars['String']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
     erpOrderStatus: Maybe<Scalars['String']['output']>;
     erpPaidAmount: Maybe<Scalars['Float']['output']>;
@@ -5936,6 +5945,7 @@ export type OrderCustomFields = {
     erpRegistrationStatus: Maybe<Scalars['String']['output']>;
     erpRejectionReasonCode: Maybe<Scalars['String']['output']>;
     erpRejectionReasonText: Maybe<Scalars['String']['output']>;
+    erpShippedInSettlements: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
     externalLinesIncomplete: Maybe<Scalars['Boolean']['output']>;
@@ -5981,7 +5991,9 @@ export type OrderFilterParameter = {
     currencyCode?: InputMaybe<StringOperators>;
     customerLastName?: InputMaybe<StringOperators>;
     deliveryAddress?: InputMaybe<StringOperators>;
+    erpAccounting?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
+    erpLinkedDocuments?: InputMaybe<StringOperators>;
     erpOrderId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpPaidAmount?: InputMaybe<NumberOperators>;
@@ -5989,6 +6001,7 @@ export type OrderFilterParameter = {
     erpRegistrationStatus?: InputMaybe<StringOperators>;
     erpRejectionReasonCode?: InputMaybe<StringOperators>;
     erpRejectionReasonText?: InputMaybe<StringOperators>;
+    erpShippedInSettlements?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     externalLinesIncomplete?: InputMaybe<BooleanOperators>;
@@ -6310,7 +6323,9 @@ export type OrderSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     customerLastName?: InputMaybe<SortOrder>;
     deliveryAddress?: InputMaybe<SortOrder>;
+    erpAccounting?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
+    erpLinkedDocuments?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpPaidAmount?: InputMaybe<SortOrder>;
@@ -6318,6 +6333,7 @@ export type OrderSortParameter = {
     erpRegistrationStatus?: InputMaybe<SortOrder>;
     erpRejectionReasonCode?: InputMaybe<SortOrder>;
     erpRejectionReasonText?: InputMaybe<SortOrder>;
+    erpShippedInSettlements?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     externalLinesIncomplete?: InputMaybe<SortOrder>;
@@ -7040,6 +7056,8 @@ export type ProductCrossReference = {
 
 export type ProductCustomFields = {
     erpCreatedAt: Maybe<Scalars['DateTime']['output']>;
+    erpSourceFields: Maybe<Scalars['String']['output']>;
+    erpStorageUnitId: Maybe<Scalars['String']['output']>;
     externalId: Maybe<Scalars['String']['output']>;
     fullName: Maybe<Scalars['String']['output']>;
     manufacturer: Maybe<Manufacturer>;
@@ -7054,6 +7072,8 @@ export type ProductFilterParameter = {
     description?: InputMaybe<StringOperators>;
     enabled?: InputMaybe<BooleanOperators>;
     erpCreatedAt?: InputMaybe<DateOperators>;
+    erpSourceFields?: InputMaybe<StringOperators>;
+    erpStorageUnitId?: InputMaybe<StringOperators>;
     externalId?: InputMaybe<StringOperators>;
     facetValueId?: InputMaybe<IdOperators>;
     fullName?: InputMaybe<StringOperators>;
@@ -7295,6 +7315,8 @@ export type ProductSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     description?: InputMaybe<SortOrder>;
     erpCreatedAt?: InputMaybe<SortOrder>;
+    erpSourceFields?: InputMaybe<SortOrder>;
+    erpStorageUnitId?: InputMaybe<SortOrder>;
     externalId?: InputMaybe<SortOrder>;
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -10530,6 +10552,7 @@ export type ApprovalRequestPageFieldsFragment = {
 export type ApprovalsInboxQueryVariables = Exact<{
     awaitingOptions?: InputMaybe<ApprovalListOptions>;
     allInvolvedOptions?: InputMaybe<ApprovalListOptions>;
+    mineOptions?: InputMaybe<ApprovalListOptions>;
 }>;
 
 export type ApprovalsInboxQuery = {
@@ -10591,6 +10614,36 @@ export type ApprovalsInboxQuery = {
             }>;
         };
     };
+    mine: {
+        allInvolved: {
+            totalItems: number;
+            items: Array<{
+                id: string;
+                requestType: string;
+                status: string;
+                currentStepIndex: number;
+                currentStepRole: string | null;
+                stepRoles: Array<string>;
+                totalSteps: number;
+                requestedByAdministratorId: string | null;
+                createdAt: any;
+                decidedAt: any | null;
+                payload: string;
+                steps: Array<{
+                    id: string;
+                    stepIndex: number;
+                    requiredRole: string;
+                    approverAdministratorId: string | null;
+                    wasEscalated: boolean;
+                    escalatedByAdministratorId: string | null;
+                    escalatedToAdministratorId: string | null;
+                    decision: string | null;
+                    comment: string | null;
+                    decidedAt: any | null;
+                }>;
+            }>;
+        };
+    };
 };
 
 export type ApprovalDetailQueryVariables = Exact<{
@@ -10600,6 +10653,7 @@ export type ApprovalDetailQueryVariables = Exact<{
 export type ApprovalDetailQuery = {
     approvalRequest: {
         escalatesTo: Array<string>;
+        viewerCanDecide: boolean;
         id: string;
         requestType: string;
         status: string;
@@ -13808,7 +13862,7 @@ export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
     PendingApprovalsBadgeCountQueryVariables
 >;
 export const ApprovalsInboxDocument = new TypedDocumentString(`
-    query ApprovalsInbox($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions) {
+    query ApprovalsInbox($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions, $mineOptions: ApprovalListOptions) {
   myApprovalsInbox(
     awaitingOptions: $awaitingOptions
     allInvolvedOptions: $allInvolvedOptions
@@ -13816,6 +13870,14 @@ export const ApprovalsInboxDocument = new TypedDocumentString(`
     awaitingMyDecision {
       ...ApprovalRequestPageFields
     }
+    allInvolved {
+      ...ApprovalRequestPageFields
+    }
+  }
+  mine: myApprovalsInbox(
+    awaitingOptions: {take: 0}
+    allInvolvedOptions: $mineOptions
+  ) {
     allInvolved {
       ...ApprovalRequestPageFields
     }
@@ -13860,6 +13922,7 @@ export const ApprovalDetailDocument = new TypedDocumentString(`
   approvalRequest(id: $id) {
     ...ApprovalRequestSummaryFields
     escalatesTo
+    viewerCanDecide
   }
 }
     fragment ApprovalStepFields on ApprovalStep {

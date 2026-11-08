@@ -44,11 +44,17 @@ fragment ApprovalRequestPageFields on ApprovalRequestList {
 query ApprovalsInbox(
     $awaitingOptions: ApprovalListOptions
     $allInvolvedOptions: ApprovalListOptions
+    $mineOptions: ApprovalListOptions
 ) {
     myApprovalsInbox(awaitingOptions: $awaitingOptions, allInvolvedOptions: $allInvolvedOptions) {
         awaitingMyDecision {
             ...ApprovalRequestPageFields
         }
+        allInvolved {
+            ...ApprovalRequestPageFields
+        }
+    }
+    mine: myApprovalsInbox(awaitingOptions: { take: 0 }, allInvolvedOptions: $mineOptions) {
         allInvolved {
             ...ApprovalRequestPageFields
         }
@@ -59,6 +65,7 @@ query ApprovalDetail($id: ID!) {
     approvalRequest(id: $id) {
         ...ApprovalRequestSummaryFields
         escalatesTo
+        viewerCanDecide
     }
 }
 
