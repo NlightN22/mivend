@@ -1139,6 +1139,13 @@ export type CounterpartyListOptions = {
     unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/** Overdue debt of one counterparty over all its customer contracts; oldestDays is null when no due date is known. */
+export type CounterpartyOverdue = {
+    amount: Scalars['Money']['output'];
+    currency: Scalars['String']['output'];
+    oldestDays: Maybe<Scalars['Int']['output']>;
+};
+
 /** activate | deactivate — one entry in a bulk portal-access batch (issue #120). */
 export type CounterpartyPortalAccessChangeInput = {
     action: Scalars['String']['input'];
@@ -6159,6 +6166,13 @@ export type OrderLineOrganizationStock = {
     stock: Scalars['Float']['output'];
 };
 
+export type OrderLineRetroBonus = {
+    /** Null when the rule has a threshold. */
+    amount: Maybe<Scalars['Money']['output']>;
+    orderLineId: Scalars['ID']['output'];
+    percent: Scalars['Float']['output'];
+};
+
 export type OrderLineShortfall = {
     createdAt: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
@@ -6256,6 +6270,13 @@ export type OrderReservationDetail = {
     source: ReservationSource;
     status: Scalars['String']['output'];
     until: Maybe<Scalars['DateTime']['output']>;
+};
+
+/** The retro bonus the customer's active rules promise on one order line; display only, never part of the price. */
+export type OrderRetroBonus = {
+    /** True when the customer has at least one active rule, even if none covers a line of this order. */
+    hasRules: Scalars['Boolean']['output'];
+    lines: Array<OrderLineRetroBonus>;
 };
 
 export type OrderSortParameter = {
@@ -7736,6 +7757,7 @@ export type Query = {
     consistencySources: Array<ConsistencySource>;
     counterparties: CounterpartyList;
     counterparty: Maybe<Counterparty>;
+    counterpartyOverdue: Maybe<CounterpartyOverdue>;
     counterpartySummary: CounterpartySummary;
     countries: CountryList;
     country: Maybe<Country>;
@@ -7830,6 +7852,7 @@ export type Query = {
     /** Every hold behind an order's lines: our own reservation rows and what the ERP reports. */
     orderReservationDetails: Array<OrderReservationDetail>;
     orderReservations: Array<Reservation>;
+    orderRetroBonus: OrderRetroBonus;
     orderStatuses: Array<OrderStatusInfo>;
     orders: OrderList;
     /** Orders needing attention in one request: pending price adjustment (waiting), overdue shipment (overdueRows) and their intersection (both) */
@@ -8046,6 +8069,10 @@ export type QueryCounterpartiesArgs = {
 
 export type QueryCounterpartyArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryCounterpartyOverdueArgs = {
+    counterpartyId: Scalars['ID']['input'];
 };
 
 export type QueryCountriesArgs = {
@@ -8268,6 +8295,10 @@ export type QueryOrderReservationDetailsArgs = {
 };
 
 export type QueryOrderReservationsArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
+export type QueryOrderRetroBonusArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -10902,6 +10933,14 @@ export type CounterpartyActivationCountsQuery = {
     activated: { totalItems: number };
 };
 
+export type CounterpartyOverdueQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type CounterpartyOverdueQuery = {
+    counterpartyOverdue: { amount: any; currency: string; oldestDays: number | null } | null;
+};
+
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
     administratorId: string;
@@ -12165,6 +12204,17 @@ export type WithdrawProformaInvoiceMutationVariables = Exact<{
 }>;
 
 export type WithdrawProformaInvoiceMutation = { withdrawProformaInvoice: { id: string } };
+
+export type OrderRetroBonusQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderRetroBonusQuery = {
+    orderRetroBonus: {
+        hasRules: boolean;
+        lines: Array<{ orderLineId: string; percent: number; amount: any | null }>;
+    };
+};
 
 export type OrderStatusesQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -14156,6 +14206,18 @@ export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
     CounterpartyActivationCountsQuery,
     CounterpartyActivationCountsQueryVariables
 >;
+export const CounterpartyOverdueDocument = new TypedDocumentString(`
+    query CounterpartyOverdue($counterpartyId: ID!) {
+  counterpartyOverdue(counterpartyId: $counterpartyId) {
+    amount
+    currency
+    oldestDays
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyOverdueQuery,
+    CounterpartyOverdueQueryVariables
+>;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {
   counterparty(id: $id) {
@@ -15515,6 +15577,18 @@ export const WithdrawProformaInvoiceDocument = new TypedDocumentString(`
     WithdrawProformaInvoiceMutation,
     WithdrawProformaInvoiceMutationVariables
 >;
+export const OrderRetroBonusDocument = new TypedDocumentString(`
+    query OrderRetroBonus($orderId: ID!) {
+  orderRetroBonus(orderId: $orderId) {
+    hasRules
+    lines {
+      orderLineId
+      percent
+      amount
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<OrderRetroBonusQuery, OrderRetroBonusQueryVariables>;
 export const OrderStatusesDocument = new TypedDocumentString(`
     query OrderStatuses {
   orderStatuses {

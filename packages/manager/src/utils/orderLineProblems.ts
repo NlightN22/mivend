@@ -101,7 +101,12 @@ export function lineProblems(
                 of([BELOW_FLOOR_CODE]),
                 consequences,
                 row.adjustment?.label === 'Pending approval'
-                    ? [{ tone: 'orange', text: 'The price change waits for approval' }]
+                    ? [
+                          {
+                              tone: 'orange',
+                              text: 'Requires approval: the price change waits for the approvers',
+                          },
+                      ]
                     : [],
             ),
         ],
@@ -114,7 +119,7 @@ export function lineProblems(
                     ? [
                           {
                               tone: 'orange',
-                              text: `Discount above the allowed maximum (max ${row.maxDiscountPercent}%)`,
+                              text: `Requires approval: the discount is above the allowed maximum (max ${row.maxDiscountPercent}%)`,
                           },
                       ]
                     : [],

@@ -37,12 +37,12 @@ function act(action: 'confirm' | 'reject'): void {
             <li v-for="f in problem.findings" :key="f.id" class="cell-flag__item">
                 <span class="cell-flag__title">{{ findingTitle(f.messageKey) }}</span>
                 <span v-if="findingDetail(f)" class="cell-flag__meta">{{ findingDetail(f) }}</span>
-                <MvStatusBadge
-                    v-if="consequences.get(f.id)"
-                    :variant="consequences.get(f.id)!.variant"
-                >
-                    {{ consequences.get(f.id)!.label }}
-                </MvStatusBadge>
+                <span v-if="consequences.get(f.id)" class="cell-flag__consequence">
+                    <span class="cell-flag__meta">Consequence:</span>
+                    <MvStatusBadge :variant="consequences.get(f.id)!.variant">
+                        {{ consequences.get(f.id)!.label }}
+                    </MvStatusBadge>
+                </span>
             </li>
         </ul>
         <div v-if="(canConfirm && !blocked) || canReject" class="cell-flag__actions">
@@ -80,6 +80,12 @@ function act(action: 'confirm' | 'reject'): void {
 .cell-flag__meta {
     color: var(--app-text-grey);
     font-size: 12px;
+}
+
+.cell-flag__consequence {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .cell-flag__actions {

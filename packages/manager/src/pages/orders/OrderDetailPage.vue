@@ -10,6 +10,7 @@ import { useFindingConsequences } from '../../composables/useFindingConsequences
 import { useOrderChecks } from '../../composables/useOrderChecks';
 import { useOrderDetail } from '../../composables/useOrderDetail';
 import { useOrderHeaderCommands } from '../../composables/useOrderHeaderCommands';
+import { useOrderRetroBonus } from '../../composables/useOrderRetroBonus';
 import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { useReservationActions } from '../../composables/useReservationActions';
 import { contractBlockedSkus } from '../../utils/orderLineChecks';
@@ -57,6 +58,7 @@ const canEditLines = computed(
         !!order.value &&
         isNotRegisteredInErp(order.value.customFields),
 );
+const retro = useOrderRetroBonus(orderId, () => order.value?.lines);
 const edit = useOrderLineEdit(orderId, () => void data.reload());
 const anyShort = computed(() =>
     [...edit.availability.value.values()].some(a => a.fitting < a.needed),
@@ -124,12 +126,14 @@ watch([orderId, reservations], () => {
             :orders="kpiData.orders.value"
             :credit="data.credit.value"
             :outstanding="kpiData.outstanding.value"
+            :overdue="kpiData.overdue.value"
         />
 
         <MvPanel title="Order lines">
             <OrderLinesTable
                 :order-id="order.id"
                 :edit="edit"
+                :retro="retro.shown.value ? retro.byLine.value : null"
                 :panel-notes="panelNotes"
                 :lines="order.lines"
                 :currency-code="order.currencyCode"
@@ -146,7 +150,10 @@ watch([orderId, reservations], () => {
                 @confirm="commands.confirmOpen.value = true"
                 @reject="commands.cancelOpen.value = true"
             />
-            <OrderLinesTotals :order="order">
+            <OrderLinesTotals
+                :order="order"
+                :retro-total="retro.shown.value ? retro.total.value : null"
+            >
                 <template #flag>
                     <OrderCell
                         v-if="orderProblem"

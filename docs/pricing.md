@@ -530,3 +530,6 @@ needs no recompute.
 - _Retro-bonus display_: `retroBonusRules` returns a rule whose product or counterparty side is not evaluable with
   `inactiveReason` set (visible to the manager); nothing else reads retro-bonus rules (no accrual or grant logic
   depends on them), and the portal does not use `allProducts`, so such a rule is never presented as covering all products.
+  The manager order card reads them through `orderRetroBonus(orderId)` (same gate as `retroBonusRules`, plus the order's
+  visibility): per line the deepest percent among active, in-period rules whose product list or `allProducts` flag covers the
+  product, with an amount only for a rule without a threshold. A product-side filter rule is never evaluated for it. Display only.

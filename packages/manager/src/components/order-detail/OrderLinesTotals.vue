@@ -6,7 +6,7 @@ import { totalDiscountMinor } from '../../utils/orderTotals';
 import OrderOverpaymentNotice from './OrderOverpaymentNotice.vue';
 import OrderPaidAmount from './OrderPaidAmount.vue';
 
-const props = defineProps<{ order: OrderDetail }>();
+const props = defineProps<{ order: OrderDetail; retroTotal: number | null }>();
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', {
@@ -37,6 +37,13 @@ const overpaid = computed(() =>
         </span>
         <span v-if="order.shippingWithTax > 0" class="order-totals__item">
             Shipping: {{ money(order.shippingWithTax) }}
+        </span>
+        <span
+            v-if="retroTotal !== null"
+            class="order-totals__item"
+            data-testid="order-totals-retro"
+        >
+            Expected retro bonus: {{ money(retroTotal) }}
         </span>
         <OrderPaidAmount
             v-if="paid != null"

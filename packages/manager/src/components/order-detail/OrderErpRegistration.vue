@@ -46,6 +46,7 @@ const details = computed(() =>
             <span class="erp-registration__label">{{ label }}</span>
             <span>{{ value }}</span>
         </div>
+        <span v-if="rejected && !details.length">The ERP did not accept this order.</span>
     </MvPopover>
     <MvStatusBadge v-else-if="notRegistered" variant="warning"
         >Not registered in the ERP</MvStatusBadge

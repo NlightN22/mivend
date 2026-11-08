@@ -5,6 +5,7 @@ import type { OrderLineAvailability } from '../../api/orderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import { stepperMin } from '../../composables/orderLineStepper';
 import { useLineRowEdit } from '../../composables/useLineRowEdit';
+import type { LineBonus } from '../../composables/useOrderRetroBonus';
 import type { FindingConsequence } from '../../utils/findingConsequence';
 import type { LineProblems } from '../../utils/orderLineProblems';
 import type { OrderLineRow } from '../../utils/orderLineRows';
@@ -13,6 +14,7 @@ import OrderLineActions from './OrderLineActions.vue';
 import OrderLineDiscount from './OrderLineDiscount.vue';
 import OrderLinePrice from './OrderLinePrice.vue';
 import OrderLineProduct from './OrderLineProduct.vue';
+import OrderLineRetroBonus from './OrderLineRetroBonus.vue';
 import OrderLineReserve from './OrderLineReserve.vue';
 import OrderLineStockInfo from './OrderLineStockInfo.vue';
 
@@ -21,6 +23,8 @@ const props = defineProps<{
     problems: LineProblems;
     consequences: Map<string, FindingConsequence>;
     orderId: string;
+    retro: Map<string, LineBonus> | null;
+    lineBonus: LineBonus | null;
     packagesOnly: boolean;
     canEditPrice: boolean;
     canEditQuantity: boolean;
@@ -176,6 +180,9 @@ const priceChanged = computed(
                 <OrderLineDiscount :percent="row.discountPercent" />
             </OrderCell>
         </td>
+        <td v-if="retro" class="line-row__num" data-label="Retro bonus">
+            <OrderLineRetroBonus :bonus="lineBonus" :money="money" />
+        </td>
         <td class="line-row__num line-row__total" data-label="Total">
             {{ money(line.discountedLinePriceWithTax) }}
         </td>
@@ -194,7 +201,9 @@ const priceChanged = computed(
         </td>
     </tr>
     <tr v-if="edit.error.value" class="line-row__error-row">
-        <td :colspan="selectable ? 9 : 8" class="line-row__error">{{ edit.error.value }}</td>
+        <td :colspan="(selectable ? 9 : 8) + (retro ? 1 : 0)" class="line-row__error">
+            {{ edit.error.value }}
+        </td>
     </tr>
 </template>
 

@@ -17,7 +17,7 @@ export
         preview-build preview-up preview-down \
         prod-up prod-init-storage prod-backup prod-restore-check prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
-        seed-customer-detail seed-order-edit-states seed-order-flags seed-all \
+        seed-customer-detail seed-order-edit-states seed-order-flags seed-order-card-finance seed-order-card-states seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
         storefront storefront-dev
@@ -175,6 +175,16 @@ seed-order-edit-states:
 seed-order-flags:
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-order-flags.mjs
+
+# Overdue debt and a retro-bonus rule for the demo buyer (#320). Needs `make seed-order-flags`; idempotent.
+seed-order-card-finance:
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-order-card-finance.mjs
+
+# Orders with an ERP status history, one rejected by the ERP and one awaiting a manual payment (#320). Idempotent.
+seed-order-card-states:
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	node infrastructure/scripts/seed-order-card-states.mjs
 
 # One command for the full local seeding order (ERP data → approval requests — this exact order
 # matters, see seed-approvals' own comment above; manager-portal roles are no longer part of this

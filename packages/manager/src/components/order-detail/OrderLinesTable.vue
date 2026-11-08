@@ -5,6 +5,7 @@ import { removeOrderLine } from '../../api/orderLineEdit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 import type { OrderReservation } from '../../api/reservation';
 import { useOrderLineAdd } from '../../composables/useOrderLineAdd';
+import type { LineBonus } from '../../composables/useOrderRetroBonus';
 import type { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { useRowSelection } from '../../composables/useRowSelection';
 import type { FindingConsequence } from '../../utils/findingConsequence';
@@ -20,6 +21,7 @@ import OrderLinesEditBar from './OrderLinesEditBar.vue';
 const props = defineProps<{
     orderId: string;
     edit: ReturnType<typeof useOrderLineEdit>;
+    retro: Map<string, LineBonus> | null;
     panelNotes: PanelNotes;
     lines: OrderDetailLine[];
     currencyCode: string;
@@ -126,6 +128,7 @@ async function confirmDelete(): Promise<void> {
                     <th class="order-lines__num">Reserve</th>
                     <th class="order-lines__num">Price</th>
                     <th class="order-lines__num">Discount</th>
+                    <th v-if="retro" class="order-lines__num">Retro bonus</th>
                     <th class="order-lines__num">Total</th>
                     <th class="order-lines__actions" />
                 </tr>
@@ -144,6 +147,8 @@ async function confirmDelete(): Promise<void> {
                     "
                     :consequences="consequences"
                     :order-id="orderId"
+                    :retro="retro"
+                    :line-bonus="retro?.get(row.line.id) ?? null"
                     :packages-only="packagesOnly"
                     :can-edit-price="editable"
                     :can-edit-quantity="canEditLines"

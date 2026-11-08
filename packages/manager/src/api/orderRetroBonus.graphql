@@ -1,0 +1,10 @@
+query OrderRetroBonus($orderId: ID!) {
+    orderRetroBonus(orderId: $orderId) {
+        hasRules
+        lines {
+            orderLineId
+            percent
+            amount
+        }
+    }
+}

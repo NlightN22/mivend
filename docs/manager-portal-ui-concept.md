@@ -69,8 +69,10 @@ One page, no tabs, top to bottom:
    whole-order "send to approval" action: a price change goes to approval by itself when the
    price-adjustment rules say so; per-line sending does not exist either.
 2. **Customer summary.** One compact card: sales last 30 days, open orders, outstanding balance,
-   available credit, credit limit (same data as the customer card). A separate overdue figure is
-   not shown: no per-customer overdue source exists in the manager API yet.
+   available credit, credit limit (same data as the customer card) and the overdue debt (amount, and
+   the days since the oldest overdue lot, in the danger tone). The overdue figure is the same FIFO
+   aging the customer portal shows, read through `counterpartyOverdue` (needs the counterparty
+   credit right and the counterparty in the caller's scope); without the right it is not shown.
 3. **Lines table.** Product (image, name, SKU), Qty, Available, Reserve (display only), Price,
    Discount (read only), Total. A problem is shown in the cell where it occurs; a stripe on the
    row's left edge shows the worst one (red block or hold, orange approval needed, yellow warn,
@@ -92,9 +94,17 @@ One page, no tabs, top to bottom:
    The selection state lives in `useRowSelection` so a long-press entry on a phone can reuse it.
 5. **Totals footer.** Positions, weight and volume (from the product unit data, hidden when
    unknown), discount in money (reference price minus effective price over lines; a surcharge
-   line subtracts nothing), ERP paid amount and the order total. Retro bonuses to be applied to
-   the order are not shown: the backend only stores bonuses already granted from the ERP, with
-   no per-order figure. When such a figure exists, it goes next to the discount here.
+   line subtracts nothing), ERP paid amount, the expected retro bonus (only when the column below is
+   shown) and the order total.
+
+   **Retro bonus column.** When the order's counterparty has at least one active retro-bonus rule,
+   the lines table gets a "Retro bonus" column after Discount: the percent that covers the line and,
+   for a rule without a threshold, that percent of the line total; the footer adds the expected total.
+   With no active rule the column and the footer figure are absent. Coverage is evaluated from the
+   rule's explicit product list or its all-products flag; a rule whose product selection is an
+   ERP-evaluated filter (empty member list) cannot be evaluated here and shows nothing for its lines,
+   and a rule with a threshold shows the percent without an amount. When several rules cover a line
+   the deepest percent wins. It is display only: it never changes an order price, a discount or a total.
 6. **Below the table only.** Status history as a vertical timeline (newest first, all statuses,
    hidden when empty) and a compact list of the order's approval requests.
 

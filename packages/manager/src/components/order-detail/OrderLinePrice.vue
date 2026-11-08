@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvFlagChip, MvPopover } from '@mivend/ui-kit';
 import type { AdjustmentInfo } from '../../utils/orderLineRows';
 
 defineProps<{ price: string; adjustment: AdjustmentInfo | null }>();
@@ -8,25 +8,27 @@ defineProps<{ price: string; adjustment: AdjustmentInfo | null }>();
 <template>
     <div class="line-price">
         <span>{{ price }}</span>
-        <template v-if="adjustment && adjustment.label !== 'Pending approval'">
-            <RouterLink
-                v-if="adjustment.approvalRequestId"
-                :to="`/approvals/${adjustment.approvalRequestId}`"
-            >
-                <MvStatusBadge :variant="adjustment.variant">{{ adjustment.label }}</MvStatusBadge>
-            </RouterLink>
-            <MvStatusBadge v-else :variant="adjustment.variant">
-                {{ adjustment.label }}
-            </MvStatusBadge>
-        </template>
+        <span v-if="adjustment && adjustment.label !== 'Pending approval'" @click.stop>
+            <MvPopover>
+                <template #trigger>
+                    <MvFlagChip tone="info" :label="adjustment.label" />
+                </template>
+                <span>{{ adjustment.label }}</span>
+                <RouterLink
+                    v-if="adjustment.approvalRequestId"
+                    :to="`/approvals/${adjustment.approvalRequestId}`"
+                >
+                    Open the approval request
+                </RouterLink>
+            </MvPopover>
+        </span>
     </div>
 </template>
 
 <style scoped>
 .line-price {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    display: inline-flex;
+    align-items: center;
     gap: 4px;
 }
 </style>

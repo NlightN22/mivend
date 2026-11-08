@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { CustomerCredit, CustomerOrderItem } from '../../api/customers';
+import type { CounterpartyOverdue } from '../../api/counterpartyOverdue';
 import type { OutstandingBalance } from '../../api/proforma-invoices';
 import { useCurrency } from '../../composables/useCurrency';
 import { customerKpis } from '../../utils/customerKpis';
@@ -9,6 +10,7 @@ const props = defineProps<{
     orders: Pick<CustomerOrderItem, 'state' | 'orderPlacedAt' | 'totalWithTax'>[];
     credit: CustomerCredit | null;
     outstanding: OutstandingBalance | null;
+    overdue: CounterpartyOverdue | null;
 }>();
 
 const { formatWhole, formatMinor } = useCurrency();
@@ -25,6 +27,18 @@ function display(kind: 'minor' | 'whole' | 'count', value: number): string | num
         <div v-for="kpi in kpis" :key="kpi.key" class="customer-summary__item">
             <dt>{{ kpi.label }}</dt>
             <dd>{{ display(kpi.kind, kpi.value) }}</dd>
+        </div>
+        <div v-if="overdue" class="customer-summary__item" data-testid="order-summary-overdue">
+            <dt>Overdue</dt>
+            <dd :class="{ 'customer-summary__overdue': overdue.amount > 0 }">
+                {{ formatMinor(overdue.amount) }}
+                <span
+                    v-if="overdue.oldestDays !== null && overdue.amount > 0"
+                    class="customer-summary__days"
+                >
+                    {{ overdue.oldestDays }} d
+                </span>
+            </dd>
         </div>
     </dl>
 </template>
@@ -54,6 +68,15 @@ function display(kind: 'minor' | 'whole' | 'count', value: number): string | num
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+.customer-summary__overdue {
+    color: var(--app-danger-fg);
+}
+
+.customer-summary__days {
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .customer-summary dd {
