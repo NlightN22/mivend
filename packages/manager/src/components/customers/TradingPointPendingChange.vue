@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { MvButton } from '@mivend/ui-kit';
+
 import type { PendingTradingPointChange } from '../../api/customers';
 
 defineProps<{ change: PendingTradingPointChange; busy: boolean }>();
@@ -31,22 +33,23 @@ defineEmits<{ accept: []; reject: [] }>();
             </div>
         </dl>
         <div class="tp-pending__actions">
-            <button
-                type="button"
-                :disabled="busy"
+            <MvButton
+                size="sm"
+                :loading="busy"
                 data-testid="tp-pending-accept"
                 @click="$emit('accept')"
             >
                 Accept
-            </button>
-            <button
-                type="button"
+            </MvButton>
+            <MvButton
+                size="sm"
+                variant="secondary"
                 :disabled="busy"
                 data-testid="tp-pending-reject"
                 @click="$emit('reject')"
             >
                 Reject
-            </button>
+            </MvButton>
         </div>
     </div>
 </template>
@@ -56,8 +59,9 @@ defineEmits<{ accept: []; reject: [] }>();
     flex-basis: 100%;
     margin-top: 8px;
     padding: 10px 12px;
-    border: 1px solid var(--el-color-warning, #e6a23c);
-    border-radius: 6px;
+    background: var(--app-warn-bg);
+    color: var(--app-warn-fg);
+    border-radius: var(--app-radius-md);
     font-size: 13px;
 }
 
@@ -74,7 +78,7 @@ defineEmits<{ accept: []; reject: [] }>();
 
 .tp-pending dt {
     min-width: 110px;
-    color: var(--el-text-color-secondary, #6b7280);
+    opacity: 0.8;
 }
 
 .tp-pending dd {
