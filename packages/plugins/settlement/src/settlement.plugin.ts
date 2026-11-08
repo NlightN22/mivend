@@ -17,7 +17,9 @@ import { SettlementDocumentService } from './settlement-document.service';
 import { SettlementDocumentTypeService } from './settlement-document-type.service';
 import { SettlementPendingService } from './settlement-pending.service';
 import { SettlementReferenceResolver } from './settlement-reference-resolver';
+import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
+import { SettlementAdminResolver } from './settlement-admin.resolver';
 import { createSettlementReconcileTask } from './settlement-reconcile.scheduled-task';
 import { SettlementReconcileService } from './settlement-reconcile.service';
 import { createSettlementRetentionTask } from './settlement-retention.scheduled-task';
@@ -35,6 +37,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementBalance,
         SettlementDocumentType,
     ],
+    adminApiExtensions: { schema: adminApiExtensions, resolvers: [SettlementAdminResolver] },
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [SettlementShopResolver] },
     providers: [
         SettlementReferenceResolver,

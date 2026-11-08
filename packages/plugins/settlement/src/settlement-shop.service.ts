@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { SettlementDocument } from './entities/settlement-document.entity';
-import { capOverdue, paymentStatusOf } from './settlement-aging';
+import { capOverdue, paymentStatusOf, summariseOverdue } from './settlement-aging';
 import { AGING_CTE, ORDER_REFS_SQL, escapeLike } from './settlement-shop.sql';
 import type {
+    CounterpartyOverdue,
     SettlementBalanceCard,
     SettlementDocumentFilter,
     SettlementDocumentPage,
@@ -39,7 +40,9 @@ export class SettlementShopService {
                 bal.ob AS "openingBalance", bal.cb AS "closingBalance", bal.cname AS "contractName",
                 org."legalName" AS "organizationName",
                 COALESCE((SELECT SUM(a.open) FROM aged a WHERE a.org = bal.org
-                    AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue
+                    AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue,
+                (SELECT MIN(a.due) FROM aged a WHERE a.org = bal.org AND a.ctr = bal.ctr
+                    AND a.open > 0 AND a.due < now()) AS "oldestOverdueDue"
              FROM bal LEFT JOIN organization_requisites org ON org."erpId" = bal.org
              ORDER BY bal.org, bal.ctr`,
             [counterpartyId],
@@ -55,6 +58,9 @@ export class SettlementShopService {
                     openingBalance: Number(b.openingBalance),
                     currentBalance: Number(b.closingBalance),
                     overdue: capOverdue(Number(b.overdue), Number(b.closingBalance)),
+                    oldestOverdueDue: b.oldestOverdueDue
+                        ? new Date(b.oldestOverdueDue as string)
+                        : null,
                 }),
             )
             .filter(
@@ -62,6 +68,10 @@ export class SettlementShopService {
                     (!filter.contractId || c.contractId === filter.contractId) &&
                     (!filter.organizationId || c.organizationId === filter.organizationId),
             );
+    }
+
+    async overdue(ctx: RequestContext, counterpartyId: string): Promise<CounterpartyOverdue> {
+        return summariseOverdue(await this.balanceCards(ctx, counterpartyId), new Date());
     }
 
     async documents(

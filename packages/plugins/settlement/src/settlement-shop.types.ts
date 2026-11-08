@@ -49,4 +49,12 @@ export interface SettlementBalanceCard {
     openingBalance: number;
     currentBalance: number;
     overdue: number;
+    // Earliest due date among the overdue open lots; staff-only, not part of the shop schema.
+    oldestOverdueDue: Date | null;
+}
+
+export interface CounterpartyOverdue {
+    amount: number;
+    currency: string;
+    oldestDays: number | null;
 }
