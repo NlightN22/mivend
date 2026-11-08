@@ -150,6 +150,17 @@ cannot widen data scope; the data a view shows still passes the list's own permi
 stay private to their administrator; a foreign personal view is a silent no-op.
 Saved views are capped (name 80, pageKey 64 of `[A-Za-z0-9._-]`, filters 16 KB JSON, 100 columns, 50 personal per administrator and 50 shared per list). The query is `tableViews` (renamed from `myTableViews`), so the manager and server must ship together.
 
+### Bulk operations (#337)
+
+One permission per operation type, never one for the whole menu item; the executor declares it and the catalog,
+`previewBulkBatch`, `runBulkBatch`, `undoBulkBatch`, `bulkBatch`, `bulkBatchItems` and `bulkBatches` all check it
+through `BulkExecutorRegistry` (the resolvers carry only `@Allow(Authenticated)`). Activation uses
+`ManageCounterpartyPortalAccess`. Scope is checked per record, never per batch: at review and again at run time under
+the row lock, a record outside the actor's scope is skipped with `out_of_scope` and never changed. A draft belongs to
+its creator (only the creator reads or runs it); the history shows the batches of the operation types the viewer holds,
+and counters and per-record rows are recounted over the records the viewer's scope covers. Tests: the access matrix
+rows in `apps/server/src/__tests__/access/bulk`, and the plugin's real-Postgres scope tests.
+
 ### Check results and policies (#237)
 
 `ReadCheckResults` is granted to every role that sees orders in the manager portal (operator, manager,

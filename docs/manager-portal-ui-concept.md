@@ -179,7 +179,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
-| Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | exists, to be rebuilt on the framework |
+| Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
 | Analytics | placeholder | not implemented yet |
 | Settings | roles, branches, policies, and so on | exists |
 

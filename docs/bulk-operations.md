@@ -59,3 +59,36 @@ One batch model instead of per-operation code.
 ## Out of scope for the first iteration
 
 Select-all-matching-the-filter, scheduling of batches, chains of operations.
+
+## As built (first iteration, #337)
+
+Refinements of the model above; the sections above stay the contract.
+
+- **Plugin.** `packages/plugins/bulk-operations` owns the batch tables, the executor registry, the runner and the
+  GraphQL API. An operation registers its executor from the plugin that owns the data (the activation executor lives
+  in the counterparty plugin, which depends on the framework plugin, never the reverse).
+- **Tables.** `bulk_batch` (uuid, number from the table's own database sequence, operation type, parameters, status,
+  counters, creator, optional `undoOfBatchId`, selection hash) and `bulk_batch_item` (one row per record: dry-run
+  verdict, then outcome `applied|skipped|failed`, reason code, message). Statuses: `draft`, `queued`, `running`,
+  `done`, `partial` (some failed), `failed`.
+- **Draft minting.** `previewBulkBatch(type, parameters, selection)` is idempotent per creator, type, parameters and
+  selection (a hash over the sorted ids): previewing the same selection again reuses the draft and refreshes its
+  dry-run verdicts; any change mints a new draft with its own uuid and number. A selection holds at most 1000 ids.
+- **Run.** `runBulkBatch(uuid)` moves `draft` to `queued` once under a lock and enqueues a job on the existing
+  database-backed job queue (queue `bulk-batch-run`, listed in `apps/server/src/worker.ts`; no new worker process).
+  The job moves `queued` to `running` once, so a second call or a second job has no second effect, and applies the
+  records one at a time, each in its own short lock-and-transaction, recording the outcome row by row. A record that
+  throws becomes `failed` and the run continues; permission is re-checked per record.
+- **Undo.** `undoBulkBatch(uuid)` creates (once per original, enforced by a unique index) a new linked batch for the
+  applied records the viewer can see and runs it. Only an operation that declares `undoPlan` offers it. Activation
+  grants are undoable; a revoke is not (the customer login is soft-deleted and a re-grant would create a new one).
+- **History scope.** The list shows finished batches of the types the viewer holds; the header (number, operation,
+  who, when) is visible to every holder of the permission, while counters and the per-record table cover only the
+  records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date
+  range), sorts a whitelist of columns, `take` is clamped to 100.
+- **Select step.** Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
+  rows of the current page. Selection across pages is kept while the wizard is open; select-all-matching-the-filter is
+  still out of scope.
+- **Routes.** `/bulk-operations` (catalog), `/bulk-operations/history`, `/bulk-operations/:operation` (the wizard;
+  `?batch=<uuid>` reopens a draft at the review or a finished batch at the result). The old
+  `/bulk-operations/activate-customers` and `/counterparty-activation` links redirect.
