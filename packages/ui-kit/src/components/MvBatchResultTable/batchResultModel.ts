@@ -39,10 +39,17 @@ export function rowStatus(row: BatchResultRow, mode: BatchResultMode): RowStatus
     }
 }
 
+// The headline is the friendly reason; the technical message is secondary and may name raw record ids.
 export function rowDetail(row: BatchResultRow, reasonLabel?: (code: string) => string): string {
-    if (row.message) return row.message;
     if (row.reasonCode) return reasonLabel ? reasonLabel(row.reasonCode) : row.reasonCode;
-    return '';
+    return row.message ?? '';
+}
+
+export function technicalDetail(
+    row: BatchResultRow,
+    reasonLabel?: (code: string) => string,
+): string {
+    return row.message && row.message !== rowDetail(row, reasonLabel) ? row.message : '';
 }
 
 export function pendingCount(counters: BatchCounters): number {

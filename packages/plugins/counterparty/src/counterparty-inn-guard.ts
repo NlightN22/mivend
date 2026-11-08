@@ -1,7 +1,8 @@
-import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQuery, withAggregateLock } from 'shared';
 
 import type { Counterparty } from './entities/counterparty.entity';
+import { PortalAccessPreconditionError } from './portal-access-precondition';
 
 type InnHolder = Pick<Counterparty, 'id' | 'inn' | 'shortName'>;
 type InnStatusHolder = InnHolder & Pick<Counterparty, 'isActive'>;
@@ -48,14 +49,16 @@ export function withInnBindingGuard<T>(
 ): Promise<T> {
     const inn = normalizeInn(counterparty.inn);
     if (!inn) {
-        throw new UserInputError(
+        throw new PortalAccessPreconditionError(
+            'no_inn',
             `Counterparty "${counterparty.shortName}" has no INN — fill it in the ERP before portal binding`,
         );
     }
     return withAggregateLock(connection, ctx, `counterparty-inn:${inn}`, async txCtx => {
         const duplicate = await findLinkedInnDuplicate(connection, txCtx, counterparty.id, inn);
         if (duplicate) {
-            throw new UserInputError(
+            throw new PortalAccessPreconditionError(
+                'inn_duplicate',
                 `INN ${inn} is already used by counterparty "${duplicate.shortName}" (${duplicate.erpId}) that has portal access — merge the duplicates in the ERP first`,
             );
         }

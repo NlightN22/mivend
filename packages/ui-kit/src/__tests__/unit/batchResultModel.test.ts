@@ -4,6 +4,7 @@ import {
     pendingCount,
     rowDetail,
     rowStatus,
+    technicalDetail,
     type BatchResultRow,
 } from '../../components/MvBatchResultTable/batchResultModel';
 
@@ -29,10 +30,13 @@ describe('batch result model', () => {
         expect(rowStatus(row(outcome), mode)).toEqual({ text, variant });
     });
 
-    it('prefers the message, then a translated reason, then the raw code', () => {
-        expect(rowDetail(row('failed', { message: 'boom', reasonCode: 'error' }))).toBe('boom');
-        expect(rowDetail(row('skipped', { reasonCode: 'x' }), () => 'Because')).toBe('Because');
+    it('headlines the friendly reason and keeps the technical message secondary', () => {
+        const failed = row('failed', { message: 'Counterparty 7 boom', reasonCode: 'error' });
+        expect(rowDetail(failed, () => 'Could not be applied')).toBe('Could not be applied');
+        expect(technicalDetail(failed, () => 'Could not be applied')).toBe('Counterparty 7 boom');
         expect(rowDetail(row('skipped', { reasonCode: 'x' }))).toBe('x');
+        expect(technicalDetail(row('skipped', { reasonCode: 'x', message: 'x' }))).toBe('');
+        expect(rowDetail(row('failed', { message: 'only message' }))).toBe('only message');
         expect(rowDetail(row('applied'))).toBe('');
     });
 

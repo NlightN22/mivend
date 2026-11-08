@@ -5,6 +5,7 @@ import MvStatusBadge from '../MvStatusBadge/MvStatusBadge.vue';
 import {
     pendingCount,
     rowDetail,
+    technicalDetail,
     rowStatus,
     type BatchCounters,
     type BatchResultMode,
@@ -122,8 +123,17 @@ const total = computed(() => props.totalRows ?? props.rows.length);
                             rowStatus(row, mode).text
                         }}</MvStatusBadge>
                     </td>
-                    <td data-label="Reason" class="mv-batch-result__reason">
+                    <td
+                        data-label="Reason"
+                        class="mv-batch-result__reason"
+                        :title="technicalDetail(row, reasonLabel) || undefined"
+                    >
                         {{ rowDetail(row, reasonLabel) }}
+                        <small
+                            v-if="technicalDetail(row, reasonLabel)"
+                            class="mv-batch-result__technical"
+                            >{{ technicalDetail(row, reasonLabel) }}</small
+                        >
                     </td>
                 </tr>
             </tbody>
@@ -210,6 +220,13 @@ const total = computed(() => props.totalRows ?? props.rows.length);
 
 .mv-batch-result__reason {
     color: var(--el-text-color-secondary);
+}
+
+.mv-batch-result__technical {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    opacity: 0.8;
 }
 
 @media (max-width: 800px) {

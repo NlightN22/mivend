@@ -15,6 +15,7 @@ import {
 } from '@mivend/plugin-bulk-operations';
 
 import { Counterparty } from './entities/counterparty.entity';
+import { findLinkedInnDuplicate, normalizeInn } from './counterparty-inn-guard';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import {
     CounterpartyPortalAccessService,
@@ -97,6 +98,15 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
             return skip('no_contact', 'Phone or e-mail is missing', label);
         }
         if (linked) return skip('already_active', 'Portal access already granted', label);
+        const inn = normalizeInn(counterparty.inn);
+        if (!inn) return skip('no_inn', 'INN is missing in the ERP', label);
+        const twin = await findLinkedInnDuplicate(this.connection, ctx, counterparty.id, inn);
+        if (twin)
+            return skip(
+                'inn_duplicate',
+                'INN is used by another counterparty with portal access',
+                label,
+            );
         return applied(label);
     }
 

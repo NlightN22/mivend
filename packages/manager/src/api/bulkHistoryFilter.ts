@@ -26,7 +26,7 @@ export const HISTORY_VIEWS = [
     { key: 'failed', label: 'Failed', status: 'failed' },
 ] as const;
 
-export const HISTORY_SORT_FIELDS = ['createdAt', 'number', 'operationType', 'status', 'totalCount'];
+export const HISTORY_SORT_FIELDS = ['createdAt', 'number', 'operationType', 'status'];
 
 export const HISTORY_FILTER_COLUMNS: FilterColumn[] = [
     { key: 'date', label: 'Date', type: 'date', operators: ['before', 'after', 'between'] },

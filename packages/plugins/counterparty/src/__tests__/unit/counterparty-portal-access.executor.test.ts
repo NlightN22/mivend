@@ -10,8 +10,9 @@ const counterparty = {
     isActive: true,
     phone: '+1',
     officialEmail: 'a@example.test',
+    inn: '7700000001',
 };
-const repo = { findOne: vi.fn() };
+const repo = { findOne: vi.fn(), query: vi.fn() };
 const connection = { getRepository: () => repo };
 const accessScope = { assertCounterpartyWritable: vi.fn() };
 const portalAccess = {
@@ -31,11 +32,31 @@ const executor = new CounterpartyPortalAccessExecutor(
 beforeEach(() => {
     vi.clearAllMocks();
     repo.findOne.mockResolvedValue(counterparty);
+    repo.query.mockResolvedValue([]);
     accessScope.assertCounterpartyWritable.mockResolvedValue(undefined);
     portalAccess.linkedCustomerId.mockResolvedValue(null);
 });
 
 describe('CounterpartyPortalAccessExecutor', () => {
+    it('review reports the INN guards the run would hit, as skips with the same codes', async () => {
+        repo.findOne.mockResolvedValue({ ...counterparty, inn: ' ' });
+        expect(await executor.inspect(ctx, '5', { action: 'activate' })).toMatchObject({
+            outcome: 'skipped',
+            reasonCode: 'no_inn',
+        });
+        repo.findOne.mockResolvedValue(counterparty);
+        repo.query.mockResolvedValue([{ id: '9', shortName: 'Twin', erpId: 'e' }]);
+        expect(await executor.inspect(ctx, '5', { action: 'activate' })).toMatchObject({
+            outcome: 'skipped',
+            reasonCode: 'inn_duplicate',
+        });
+        portalAccess.activate.mockRejectedValue(new PortalAccessPreconditionError('no_inn', 'x'));
+        expect(await executor.apply(ctx, '5', { action: 'activate' })).toMatchObject({
+            outcome: 'skipped',
+            reasonCode: 'no_inn',
+        });
+    });
+
     it('validates the action and declares undo only for a grant', () => {
         expect(executor.validate({ action: 'activate' })).toEqual({ action: 'activate' });
         expect(() => executor.validate({ action: 'x' })).toThrow();

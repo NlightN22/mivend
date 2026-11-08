@@ -8,7 +8,10 @@ const REASON_LABELS: Record<string, string> = {
     no_portal_access: 'No portal access to revoke',
     inactive: 'Inactive in the ERP',
     no_contact: 'Phone or e-mail is missing',
-    error: 'Error',
+    no_inn: 'INN is missing in the ERP',
+    inn_duplicate: 'INN is used by another counterparty with portal access',
+    actor_not_allowed: 'Your access changed before this record was reached',
+    error: 'Could not be applied',
 };
 
 export function reasonLabel(code: string): string {

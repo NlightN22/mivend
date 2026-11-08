@@ -54,7 +54,6 @@ export function buildHistoryColumns(
         {
             field: 'records',
             header: 'Records',
-            sortField: 'totalCount',
             width: 130,
             minWidth: 110,
             priority: 7,
