@@ -104,11 +104,7 @@ describe('CounterpartyPortalAccessService', () => {
 
         it('rejects when a Customer is already linked', async () => {
             mockCounterpartyRepo.findOne.mockResolvedValue(counterparty());
-            rawQuery
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([{ id: 'cust-existing' }]);
+            rawQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'cust-existing' }]);
 
             await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(UserInputError);
             expect(mockCustomerService.create).not.toHaveBeenCalled();
@@ -126,12 +122,13 @@ describe('CounterpartyPortalAccessService', () => {
             rawQuery
                 .mockResolvedValueOnce([])
                 .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
                 .mockResolvedValueOnce([{ id: 'cp-2', shortName: 'Twin', erpId: 'erp-2' }]);
 
             await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(
                 /INN 7700000001 .*"Twin" \(erp-2\).*merge the duplicates in the ERP/,
             );
-            expect(rawQuery.mock.calls[2][1]).toEqual(['cp-1', '7700000001']);
+            expect(rawQuery.mock.calls[3][1]).toEqual(['cp-1', '7700000001']);
             expect(mockCustomerService.create).not.toHaveBeenCalled();
         });
 

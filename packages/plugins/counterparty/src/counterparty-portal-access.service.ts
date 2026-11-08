@@ -180,17 +180,23 @@ export class CounterpartyPortalAccessService {
 
     // The lock serializes the linked-customer check with the create, so two activations cannot both link.
     private doActivate(ctx: RequestContext, counterparty: Counterparty): Promise<Customer> {
-        return withAggregateLock(this.connection, ctx, `portal-access:${counterparty.id}`, txCtx =>
-            withInnBindingGuard(this.connection, txCtx, counterparty, guarded =>
-                this.createLinkedCustomer(guarded, counterparty),
-            ),
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `portal-access:${counterparty.id}`,
+            async txCtx => {
+                const contact = await this.assertActivatable(txCtx, counterparty);
+                return withInnBindingGuard(this.connection, txCtx, counterparty, guarded =>
+                    this.createLinkedCustomer(guarded, counterparty, contact),
+                );
+            },
         );
     }
 
-    private async createLinkedCustomer(
+    private async assertActivatable(
         ctx: RequestContext,
         counterparty: Counterparty,
-    ): Promise<Customer> {
+    ): Promise<{ email: string; phone: string }> {
         if (!counterparty.isActive) {
             throw new PortalAccessPreconditionError(
                 'inactive',
@@ -210,14 +216,21 @@ export class CounterpartyPortalAccessService {
                 `Counterparty ${counterparty.id} already has a linked portal Customer (id=${existingCustomerId})`,
             );
         }
+        return { email: counterparty.officialEmail, phone: counterparty.phone };
+    }
 
+    private async createLinkedCustomer(
+        ctx: RequestContext,
+        counterparty: Counterparty,
+        contact: { email: string; phone: string },
+    ): Promise<Customer> {
         // Password is omitted on purpose: Customer.create publishes AccountRegistrationEvent instead.
         // The counterparty sets their own password later via the storefront reset-link flow.
         const result = await this.customerService.create(ctx, {
-            emailAddress: counterparty.officialEmail,
+            emailAddress: contact.email,
             firstName: counterparty.fullName ?? '',
             lastName: '',
-            phoneNumber: counterparty.phone,
+            phoneNumber: contact.phone,
             customFields: {
                 counterpartyId: counterparty.id,
                 portalRole: 'client_admin',

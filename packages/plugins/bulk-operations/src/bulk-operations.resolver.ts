@@ -74,7 +74,7 @@ export class BulkOperationsResolver {
             args.parameters ?? {},
             args.selection.ids,
         );
-        return toBulkBatch(batch, this.registry.get(batch.operationType));
+        return this.scopedDto(ctx, batch.uuid);
     }
 
     @Mutation()
@@ -84,7 +84,7 @@ export class BulkOperationsResolver {
         @Args() args: { uuid: string },
     ): Promise<BulkBatchDto> {
         const batch = await this.batches.run(ctx, args.uuid);
-        return toBulkBatch(batch, this.registry.get(batch.operationType));
+        return this.scopedDto(ctx, batch.uuid);
     }
 
     @Mutation()
@@ -94,6 +94,11 @@ export class BulkOperationsResolver {
         @Args() args: { uuid: string },
     ): Promise<BulkBatchDto> {
         const batch = await this.batches.undo(ctx, args.uuid);
+        return this.scopedDto(ctx, batch.uuid);
+    }
+
+    private async scopedDto(ctx: RequestContext, uuid: string): Promise<BulkBatchDto> {
+        const batch = await this.queries.get(ctx, uuid);
         return toBulkBatch(batch, this.registry.get(batch.operationType));
     }
 }
