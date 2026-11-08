@@ -3,12 +3,14 @@ import { useDebouncedCallback, useLatestRequest } from '@mivend/ui-kit';
 import {
     fetchProformaInvoicesList,
     type ProformaInvoicesListFilters,
+    type ProformaInvoicesSort,
 } from '../api/proformaInvoicesList';
 import {
     fetchProformaInvoiceViewCounts,
     type ProformaInvoiceListItem,
     type ProformaInvoiceViewCounts,
 } from '../api/proforma-invoices';
+import { conditionsToProformaInvoicesFilter } from '../api/proformaInvoicesFilter';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import {
     PROFORMA_INVOICES_URL_DEFAULTS,
@@ -24,6 +26,7 @@ export interface ProformaInvoicesListState {
     failed: Ref<boolean>;
     reload: () => void;
     filters: Ref<ProformaInvoicesListFilters>;
+    sort: Ref<ProformaInvoicesSort>;
     counterpartyId: Ref<string>;
     page: Ref<number>;
     pageSize: Ref<number>;
@@ -40,6 +43,7 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
     const initial = fromProformaInvoicesUrlState(urlState);
 
     const filters = shallowRef<ProformaInvoicesListFilters>(initial.filters);
+    const sort = ref<ProformaInvoicesSort>(initial.sort);
     const counterpartyId = ref(initial.counterpartyId);
     const pageSize = ref(initial.pageSize);
     const items = ref<ProformaInvoiceListItem[]>([]);
@@ -54,6 +58,7 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
                     counterpartyId.value,
                     page.value,
                     pageSize.value,
+                    sort.value,
                 );
             } catch (e) {
                 console.warn('[proforma-invoices] could not load the list:', e);
@@ -71,7 +76,12 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
     // Chip counts follow the search; a failure keeps the previous numbers.
     const counts = ref<ProformaInvoiceViewCounts | null>(null);
     const { loading: countsLoading, run: runCounts } = useLatestRequest(
-        () => fetchProformaInvoiceViewCounts(counterpartyId.value, filters.value.search),
+        () =>
+            fetchProformaInvoiceViewCounts(
+                counterpartyId.value,
+                filters.value.search,
+                conditionsToProformaInvoicesFilter(filters.value.conditions),
+            ),
         result => {
             counts.value = result;
         },
@@ -83,18 +93,23 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
     };
     const refreshCountsSoon = useDebouncedCallback(refreshCounts, 250);
 
-    watch([filters, counterpartyId, pageSize], () => {
+    watch([filters, sort, counterpartyId, pageSize], () => {
         page.value = 1;
     });
-    watch([filters, counterpartyId, pageSize, page], () => {
+    watch([filters, sort, counterpartyId, pageSize, page], () => {
         reload();
         toQuery(
-            toProformaInvoicesUrlState(filters.value, counterpartyId.value, pageSize.value),
+            toProformaInvoicesUrlState(
+                filters.value,
+                counterpartyId.value,
+                sort.value,
+                pageSize.value,
+            ),
             page,
         );
     });
     watch(
-        () => [filters.value.search, counterpartyId.value],
+        () => [filters.value.search, filters.value.conditions, counterpartyId.value],
         () => refreshCountsSoon(),
     );
 
@@ -110,6 +125,7 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
         failed,
         reload,
         filters,
+        sort,
         counterpartyId,
         page,
         pageSize,

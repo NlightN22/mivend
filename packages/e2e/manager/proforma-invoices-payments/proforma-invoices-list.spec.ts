@@ -42,6 +42,28 @@ test('search from an order code link lists only that order proforma invoices @on
     }
 });
 
+test('the Filter builder and a sortable header narrow and order the list on the server @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.goto('/proforma-invoices?sortField=amount&sortDir=ASC');
+    await expect(page.locator(ROW_LINKS).first()).toBeVisible({ timeout: 15000 });
+    await page
+        .getByRole('button', { name: /Filter/ })
+        .first()
+        .click();
+    await page.getByText('Status', { exact: true }).last().click();
+    await page.locator('select').last().selectOption({ label: 'is' });
+    await page.getByRole('button', { name: 'Cancelled', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Apply filter' }).click();
+    await expect(page).toHaveURL(/filters=status/);
+    await expect(page.getByText('Current', { exact: true })).toHaveCount(0);
+    await page
+        .getByRole('columnheader', { name: /Amount/ })
+        .getByRole('button')
+        .click();
+    await expect(page).toHaveURL(/sortDir=DESC/);
+});
+
 test('a row opens the order card @on:manager-operator @read-only', async ({ page }) => {
     await page.goto('/proforma-invoices');
     const first = page.locator('.mv-advanced-data-table__grid tbody tr').first();

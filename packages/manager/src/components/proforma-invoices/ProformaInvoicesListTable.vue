@@ -14,8 +14,10 @@ import {
     BLANK_PROFORMA_INVOICES_FILTERS,
     restoreProformaInvoicesFilters,
     type ProformaInvoicesListFilters,
+    type ProformaInvoicesSort,
 } from '../../api/proformaInvoicesList';
 import { PROFORMA_INVOICES_URL_DEFAULTS } from '../../composables/proformaInvoicesListUrl';
+import { sortFromState, sortToState } from './proformaInvoicesSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import { PROFORMA_INVOICES_COLUMNS as COLUMNS } from './proformaInvoicesColumns';
@@ -29,11 +31,13 @@ const props = defineProps<{
     page: number;
     pageSize: number;
     filters: ProformaInvoicesListFilters;
+    sort: ProformaInvoicesSort;
     administratorId: string;
 }>();
 
 const emit = defineEmits<{
     'update:filters': [filters: ProformaInvoicesListFilters];
+    'update:sort': [sort: ProformaInvoicesSort];
     'update:page': [page: number];
     'update:page-size': [size: number];
     'clear-filters': [];
@@ -41,12 +45,12 @@ const emit = defineEmits<{
 }>();
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
-    `proforma-invoices-list-v1:${props.administratorId}`,
+    `proforma-invoices-list-v2:${props.administratorId}`,
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
         hiddenColumns: [],
-        sort: [],
+        sort: sortToState(props.sort, COLUMNS),
         filters: { search: props.filters.search },
         pageSize: props.pageSize,
     },
@@ -58,12 +62,22 @@ const { state: tableState } = useDataTableState<{ [key: string]: unknown; search
     },
 );
 
+tableState.value.sort = sortToState(props.sort, COLUMNS);
+
 // The chips own `view`; the table never emits it, the parent merges it back in.
 watch(
     () => tableState.value.filters.search,
     search => {
         if (search !== props.filters.search) emit('update:filters', { ...props.filters, search });
     },
+);
+function onConditions(conditions: ProformaInvoicesListFilters['conditions']): void {
+    emit('update:filters', { ...props.filters, conditions });
+}
+watch(
+    () => tableState.value.sort,
+    s => emit('update:sort', sortFromState(s, COLUMNS)),
+    { deep: true },
 );
 watch(
     () => tableState.value.pageSize,
@@ -86,8 +100,12 @@ const openedWithLink = Object.keys(PROFORMA_INVOICES_URL_DEFAULTS).some(k => k i
 
 function captureView(): TableViewState {
     return {
-        filters: { search: props.filters.search, view: props.filters.view, conditions: [] },
-        sort: { field: 'createdAt', dir: 'DESC' },
+        filters: {
+            search: props.filters.search,
+            view: props.filters.view,
+            conditions: props.filters.conditions,
+        },
+        sort: { ...props.sort },
         columnOrder: [...tableState.value.columnOrder],
         hiddenColumns: [...tableState.value.hiddenColumns],
     };
@@ -100,6 +118,12 @@ function applyView(state: TableViewState): void {
     tableState.value.hiddenColumns = state.hiddenColumns.filter(
         f => fields.includes(f) && !COLUMNS.find(c => c.field === f)?.required,
     );
+    const sort = sortToState(
+        { field: state.sort.field as ProformaInvoicesSort['field'], dir: state.sort.dir },
+        COLUMNS,
+    );
+    tableState.value.sort = sort;
+    emit('update:sort', sortFromState(sort, COLUMNS));
     emit('update:filters', restoreProformaInvoicesFilters(state.filters));
 }
 
@@ -126,8 +150,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         :row-height-px="61"
         :header-height-px="65"
         :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :conditions="filters.conditions"
         :default-filters="{ search: BLANK_PROFORMA_INVOICES_FILTERS.search }"
         empty-message="No proforma invoices match your filters"
+        @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
         @clear-filters="emit('clear-filters')"

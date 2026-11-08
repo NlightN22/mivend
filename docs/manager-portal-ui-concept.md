@@ -172,8 +172,11 @@ Current, Superseded, Cancelled) follow the search; the search box matches the nu
 number finds its `<order number>-NN` documents), the customer name and INN. Views, URL sync
 (`search`, `view`, `counterpartyId`, `pageSize`, `page`), top and bottom pagination and the mobile
 card view are shared with orders. A row opens the order card; there is no quick panel and no
-actions. The server orders newest first and filters only by status and search, so there is no
-Filter builder and no column sorting until the server offers a filter and sort argument.
+actions. The Filter builder (number, date, customer, order, status, amount, due date) and the
+sortable headers (all but order) are applied on the server: `visibleProformaInvoices` takes
+`options { filter sort }` over a fixed field whitelist, inside the caller's visible set. The chips
+and their counts follow the search and the builder conditions; the default sort is newest first.
+Money columns are end-aligned (`align: 'end'` on the table column).
 
 ## Not implemented yet
 

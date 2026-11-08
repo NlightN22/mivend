@@ -1,6 +1,17 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import {
+    sanitizeConditions,
+    type FilterCondition,
+} from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import { adminApi } from './client';
-import { ProformaInvoicesPageDocument } from './generated/graphql';
+import {
+    ProformaInvoicesPageDocument,
+    type ProformaInvoiceSortParameter,
+} from './generated/graphql';
+import {
+    PROFORMA_INVOICES_FILTER_COLUMNS,
+    conditionsToProformaInvoicesFilter,
+} from './proformaInvoicesFilter';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
     type ProformaInvoiceListItem,
@@ -28,11 +39,32 @@ export interface ProformaInvoicesListFilters {
     // Matches the number (also an order number), the customer name and its INN on the server.
     search: string;
     view: ProformaInvoicesView;
+    // Toolbar Filter builder, ANDed with the view.
+    conditions: FilterCondition[];
 }
+
+export type ProformaInvoicesSortField = keyof ProformaInvoiceSortParameter;
+export interface ProformaInvoicesSort {
+    field: ProformaInvoicesSortField;
+    dir: 'ASC' | 'DESC';
+}
+export const DEFAULT_PROFORMA_INVOICES_SORT: ProformaInvoicesSort = {
+    field: 'createdAt',
+    dir: 'DESC',
+};
+export const PROFORMA_INVOICES_SORT_FIELDS: ProformaInvoicesSortField[] = [
+    'number',
+    'createdAt',
+    'dueDate',
+    'amount',
+    'status',
+    'customer',
+];
 
 export const BLANK_PROFORMA_INVOICES_FILTERS: ProformaInvoicesListFilters = {
     search: '',
     view: 'all',
+    conditions: [],
 };
 
 export function isProformaInvoicesView(value: unknown): value is ProformaInvoicesView {
@@ -45,15 +77,16 @@ export function restoreProformaInvoicesFilters(raw: unknown): ProformaInvoicesLi
     return {
         search: typeof r.search === 'string' ? r.search : '',
         view: isProformaInvoicesView(r.view) ? r.view : 'all',
+        conditions: sanitizeConditions(r.conditions, PROFORMA_INVOICES_FILTER_COLUMNS),
     };
 }
 
-// The server orders the list by creation date, newest first; there is no client-side sorting.
 export async function fetchProformaInvoicesList(
     filters: ProformaInvoicesListFilters,
     counterpartyId: string,
     page: number,
     pageSize: number,
+    sort: ProformaInvoicesSort,
 ): Promise<{ items: ProformaInvoiceListItem[]; totalItems: number }> {
     const result = await adminApi(ProformaInvoicesPageDocument, {
         options: {
@@ -61,6 +94,8 @@ export async function fetchProformaInvoicesList(
             take: pageSize,
             status: filters.view === 'all' ? undefined : filters.view,
             search: filters.search || undefined,
+            filter: conditionsToProformaInvoicesFilter(filters.conditions),
+            sort: { [sort.field]: sort.dir },
         },
         counterpartyId: counterpartyId || undefined,
     });

@@ -7534,6 +7534,22 @@ export type ProformaInvoice = {
     version: Scalars['Int']['output'];
 };
 
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
+export type ProformaInvoiceFilterParameter = {
+    _and?: InputMaybe<Array<ProformaInvoiceFilterParameter>>;
+    _or?: InputMaybe<Array<ProformaInvoiceFilterParameter>>;
+    amount?: InputMaybe<NumberOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    customer?: InputMaybe<StringOperators>;
+    customerInn?: InputMaybe<StringOperators>;
+    dueDate?: InputMaybe<DateOperators>;
+    number?: InputMaybe<StringOperators>;
+    orderCode?: InputMaybe<StringOperators>;
+    /** Display status: current | superseded | cancelled. */
+    status?: InputMaybe<StringOperators>;
+};
+
 /** A line of the immutable snapshot taken when the proforma invoice was issued. */
 export type ProformaInvoiceLine = {
     linePriceWithTax: Scalars['Int']['output'];
@@ -7553,9 +7569,11 @@ export type ProformaInvoiceList = {
 };
 
 export type ProformaInvoiceListOptions = {
+    filter?: InputMaybe<ProformaInvoiceFilterParameter>;
     /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<ProformaInvoiceSortParameter>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -7576,6 +7594,15 @@ export type ProformaInvoiceSeller = {
     kpp: Maybe<Scalars['String']['output']>;
     legalAddress: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
+};
+
+export type ProformaInvoiceSortParameter = {
+    amount?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    dueDate?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
 };
 
 /** Another version of the same proforma invoice (a new version is a new document with its own number). */
@@ -12562,6 +12589,7 @@ export type ProformaInvoicesPageQuery = {
 export type ProformaInvoiceViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<ProformaInvoiceFilterParameter>;
 }>;
 
 export type ProformaInvoiceViewCountsQuery = {
@@ -15976,27 +16004,27 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
     ProformaInvoicesPageQueryVariables
 >;
 export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
-    query ProformaInvoiceViewCounts($counterpartyId: ID, $search: String) {
+    query ProformaInvoiceViewCounts($counterpartyId: ID, $search: String, $filter: ProformaInvoiceFilterParameter) {
   all: visibleProformaInvoices(
-    options: {take: 0, search: $search}
+    options: {take: 0, search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   current: visibleProformaInvoices(
-    options: {take: 0, status: "current", search: $search}
+    options: {take: 0, status: "current", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   superseded: visibleProformaInvoices(
-    options: {take: 0, status: "superseded", search: $search}
+    options: {take: 0, status: "superseded", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   cancelled: visibleProformaInvoices(
-    options: {take: 0, status: "cancelled", search: $search}
+    options: {take: 0, status: "cancelled", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
