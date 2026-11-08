@@ -59,6 +59,10 @@ export const adminOrderLineEditSchema = gql`
         customerPrice: Int!
         "What the line discount is measured from; the customer price itself (a placed line list price already carries it)."
         referencePrice: Int!
+        "The variant's sales unit from the ERP unit data; null when it has none."
+        unitName: String
+        "The quantity must be a multiple of this (pack rule or enforced multiplicity); 1 when free."
+        multiple: Int!
         "What the branch warehouses can cover now (the line's own organization cap applies once it is added)."
         available: Int!
     }

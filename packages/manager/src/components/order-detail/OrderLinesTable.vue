@@ -5,7 +5,6 @@ import {
     MvButton,
     MvDocumentLines,
     MvNotice,
-    MvQtyStepper,
     useLineSelection,
     type DocColumn,
 } from '@mivend/ui-kit';
@@ -14,6 +13,7 @@ import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/o
 import type { OrderReservation } from '../../api/reservation';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import { stepperMin } from '../../composables/orderLineStepper';
+import { quantityUnitHint } from '../../utils/quantityUnit';
 import { referencePrice } from '../../utils/lineValueModel';
 import { useOrderLineAdd } from '../../composables/useOrderLineAdd';
 import { useOrderLineEditing } from '../../composables/useOrderLineEditing';
@@ -33,6 +33,7 @@ import OrderLinePriceEdit from './OrderLinePriceEdit.vue';
 import OrderLineProduct from './OrderLineProduct.vue';
 import OrderLineReserve from './OrderLineReserve.vue';
 import OrderLineRetroBonus from './OrderLineRetroBonus.vue';
+import OrderLineQtyCell from './OrderLineQtyCell.vue';
 import OrderLineStockInfo from './OrderLineStockInfo.vue';
 import OrderLinesDeleteDialog from './OrderLinesDeleteDialog.vue';
 import OrderLinesEditBar from './OrderLinesEditBar.vue';
@@ -134,6 +135,9 @@ const money = (amount: number): string =>
         amount / 100,
     );
 
+const unitHint = (line: OrderDetailLine, step: number): string =>
+    quantityUnitHint(line.productVariant.customFields?.unitName, step);
+
 function stepOf(id: string): number {
     return edit.availability.value.get(id)?.step ?? 1;
 }
@@ -206,27 +210,23 @@ async function confirmDelete(): Promise<void> {
             />
         </template>
         <template #cell-qty="{ row, editing: isEditing }">
-            <template v-if="isEditing && caps.canEditQuantity">
-                <MvQtyStepper
-                    v-model="draft.quantity"
-                    size="sm"
-                    commit="live"
-                    :max="MAX_LINE_QUANTITY"
-                    :min="stepperMin(caps.canRemove, stepOf(row.id))"
-                    :step="stepOf(row.id)"
-                    :disabled="!!editing.savingId.value"
-                />
-                <span v-if="draft.quantity === 0" class="lines__hint">Line will be removed</span>
-            </template>
-            <template v-else>
-                {{
+            <OrderLineQtyCell
+                :quantity="isEditing ? draft.quantity : row.row.line.quantity"
+                :text="
                     formatLineQuantity(
                         row.row.line.quantity,
                         row.row.line.productVariant.customFields,
                         packagesOnly,
                     )
-                }}
-            </template>
+                "
+                :editing="isEditing && caps.canEditQuantity"
+                :min="stepperMin(caps.canRemove, stepOf(row.id))"
+                :step="stepOf(row.id)"
+                :max="MAX_LINE_QUANTITY"
+                :disabled="!!editing.savingId.value"
+                :unit="packagesOnly && !isEditing ? '' : unitHint(row.row.line, stepOf(row.id))"
+                @update:quantity="draft.quantity = $event"
+            />
         </template>
         <template #cell-available="{ row }">
             <OrderLineStockInfo

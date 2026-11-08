@@ -1,13 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { IconCheck, IconSearch, IconX } from '@tabler/icons-vue';
 import { MvDocumentSuffixInput, MvQtyStepper } from '@mivend/ui-kit';
+import { quantityUnitHint } from '../../utils/quantityUnit';
 import type { useOrderLineAdd } from '../../composables/useOrderLineAdd';
 
-defineProps<{
+const props = defineProps<{
     add: ReturnType<typeof useOrderLineAdd>;
     busy: boolean;
     currencySymbol: string;
 }>();
+
+const unitHint = computed(() =>
+    quantityUnitHint(props.add.quote.value?.unitName, props.add.step.value),
+);
 </script>
 
 <template>
@@ -29,9 +35,14 @@ defineProps<{
                 v-model="add.quantity.value"
                 size="sm"
                 commit="live"
+                :min="add.step.value"
+                :step="add.step.value"
                 :max="1000000"
                 :disabled="busy"
             />
+            <span v-if="unitHint" class="add-row__unit" data-testid="add-row-unit">
+                {{ unitHint }}
+            </span>
             <span class="add-row__dash" data-testid="add-row-available">
                 {{ add.quote.value ? add.quote.value.available : '—' }}
             </span>
@@ -83,8 +94,13 @@ defineProps<{
                 </button>
             </li>
         </ul>
-        <p v-if="add.error.value" class="add-row__error" role="alert" data-testid="add-row-error">
-            {{ add.error.value }}
+        <p
+            v-if="add.error.value || add.multipleError.value"
+            class="add-row__error"
+            role="alert"
+            data-testid="add-row-error"
+        >
+            {{ add.error.value || add.multipleError.value }}
         </p>
         <p v-else class="add-row__hint">Price and discount start at the customer price.</p>
     </div>
@@ -149,6 +165,12 @@ defineProps<{
 
 .add-row__match:hover {
     background: var(--app-row-hover);
+}
+
+.add-row__unit {
+    color: var(--app-text-grey);
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .add-row__dash {

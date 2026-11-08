@@ -97,6 +97,8 @@ query OrderLineQuote($orderId: ID!, $sku: String!, $quantity: Int) {
         name
         customerPrice
         referencePrice
+        unitName
+        multiple
         available
     }
 }

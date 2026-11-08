@@ -6171,10 +6171,14 @@ export type OrderLineQuote = {
     available: Scalars['Int']['output'];
     /** The order's customer price for one unit, in the order's price terms. */
     customerPrice: Scalars['Int']['output'];
+    /** The quantity must be a multiple of this (pack rule or enforced multiplicity); 1 when free. */
+    multiple: Scalars['Int']['output'];
     name: Scalars['String']['output'];
     /** What the line discount is measured from; the customer price itself (a placed line list price already carries it). */
     referencePrice: Scalars['Int']['output'];
     sku: Scalars['String']['output'];
+    /** The variant's sales unit from the ERP unit data; null when it has none. */
+    unitName: Maybe<Scalars['String']['output']>;
     variantId: Scalars['ID']['output'];
 };
 
@@ -12216,6 +12220,8 @@ export type OrderLineQuoteQuery = {
         name: string;
         customerPrice: number;
         referencePrice: number;
+        unitName: string | null;
+        multiple: number;
         available: number;
     };
 };
@@ -15599,6 +15605,8 @@ export const OrderLineQuoteDocument = new TypedDocumentString(`
     name
     customerPrice
     referencePrice
+    unitName
+    multiple
     available
   }
 }

@@ -10,6 +10,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
+import { PackagingPolicyService } from '@mivend/plugin-moq';
 
 import { MAX_LINE_QUANTITY } from './order-line-sku';
 import { LINE_PRICE_CHECK, type LinePriceCheck } from './line-price-check';
@@ -22,6 +23,10 @@ export interface OrderLineQuote {
     name: string;
     customerPrice: number;
     referencePrice: number;
+    // Sales unit from the ERP unit data of the variant; null when it has none.
+    unitName: string | null;
+    // The quantity step the add refuses to go below (the pack rule or enforced multiplicity), 1 if none.
+    multiple: number;
     available: number;
 }
 
@@ -34,6 +39,7 @@ export class OrderLineQuoteService {
         private variants: ProductVariantService,
         private orderVisibility: OrderVisibilityService,
         private availability: ReservationAvailabilityService,
+        private packaging: PackagingPolicyService,
         private moduleRef: ModuleRef,
     ) {}
 
@@ -76,6 +82,15 @@ export class OrderLineQuoteService {
             sku: variant.sku,
             name: (await this.variants.findOne(ctx, variant.id))?.name ?? variant.sku,
             ...priced,
+            unitName:
+                (variant.customFields as { unitName?: string | null } | undefined)?.unitName ??
+                null,
+            multiple: await this.packaging.requiredMultiple(
+                ctx,
+                variant,
+                order.customerId,
+                branchId ?? null,
+            ),
             available: Math.max(0, ...(free.get(String(variant.id))?.values() ?? [])),
         };
     }

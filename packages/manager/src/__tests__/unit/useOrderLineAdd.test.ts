@@ -33,6 +33,8 @@ describe('useOrderLineAdd', () => {
             name: 'One',
             customerPrice: 10000,
             referencePrice: 10000,
+            unitName: 'pack',
+            multiple: 1,
             available: 7,
         });
         api.adjust.mockResolvedValue({ decision: 'apply-directly', approvalRequestId: null });
@@ -156,6 +158,40 @@ describe('useOrderLineAdd', () => {
         expect(await add.submit()).toBe(true);
         expect(add.notice.value).toContain('AB-1 added, but the price was not applied');
         expect(add.open.value).toBe(false);
+    });
+
+    describe('pack multiple', () => {
+        const packed = {
+            variantId: '1',
+            sku: 'AB-1',
+            name: 'One',
+            customerPrice: 10000,
+            referencePrice: 10000,
+            unitName: 'pack',
+            multiple: 6,
+            available: 30,
+        };
+
+        it('steps by the multiple and starts the quantity at it', async () => {
+            api.quote.mockResolvedValue(packed);
+            const add = useOrderLineAdd(() => '5', runner);
+            await add.pick(one);
+            expect(add.step.value).toBe(6);
+            expect(add.quantity.value).toBe(6);
+            expect(add.multipleError.value).toBe('');
+        });
+
+        it('refuses a quantity off the multiple with the add message and does not add', async () => {
+            api.quote.mockResolvedValue(packed);
+            const add = useOrderLineAdd(() => '5', runner);
+            add.begin();
+            await add.pick(one);
+            add.quantity.value = 7;
+            expect(add.multipleError.value).toBe('AB-1 must be ordered in multiples of 6');
+            expect(await add.submit()).toBe(false);
+            expect(add.error.value).toContain('multiples of 6');
+            expect(api.add).not.toHaveBeenCalled();
+        });
     });
 
     describe('quantity re-quote', () => {

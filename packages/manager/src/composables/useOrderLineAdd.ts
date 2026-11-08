@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
     addOrderLineBySku,
     fetchOrderLineQuote,
@@ -8,6 +8,7 @@ import {
     type SkuMatch,
 } from '../api/orderLineEdit';
 import { requestPriceAdjustment } from '../api/priceAdjustment';
+import { multipleMessage, notMultiple } from '../utils/quantityUnit';
 import { percentFromPrice, priceFromPercent } from '../utils/lineValueModel';
 
 const MIN_QUERY = 2;
@@ -33,6 +34,13 @@ export function useOrderLineAdd(
     let edited = false;
     let quotedQuantity = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const step = computed(() => quote.value?.multiple ?? 1);
+    const multipleError = computed(() =>
+        picked.value && quote.value && notMultiple(quantity.value, step.value)
+            ? multipleMessage(picked.value.sku, step.value)
+            : '',
+    );
 
     const prefilled = (): string =>
         quote.value ? (quote.value.customerPrice / 100).toFixed(2) : '';
@@ -113,6 +121,8 @@ export function useOrderLineAdd(
         discount.value = '';
         edited = false;
         await requote();
+        const multiple = (quote.value as OrderLineQuote | null)?.multiple ?? 1;
+        if (notMultiple(quantity.value, multiple)) quantity.value = multiple;
     }
 
     watch(quantity, () => {
@@ -159,6 +169,10 @@ export function useOrderLineAdd(
             clearTimeout(timer);
             await requote();
         }
+        if (multipleError.value) {
+            error.value = multipleError.value;
+            return false;
+        }
         if (!chosen || !quote.value) {
             error.value = error.value || 'Choose a product first';
             return false;
@@ -186,6 +200,8 @@ export function useOrderLineAdd(
         matches,
         picked,
         quote,
+        step,
+        multipleError,
         quantity,
         price,
         discount,

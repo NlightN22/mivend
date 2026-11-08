@@ -10,9 +10,17 @@ function build(opts: {
     variants?: Array<{ id: string; sku: string }>;
     quote?: unknown;
     quoteFn?: ReturnType<typeof vi.fn>;
+    multiple?: number;
+    unit?: string | null;
     free?: Map<string, Map<string, number>>;
 }) {
-    const variants = opts.variants ?? [{ id: '7', sku: 'AB-1' }];
+    const variants = opts.variants ?? [
+        {
+            id: '7',
+            sku: 'AB-1',
+            customFields: { unitName: opts.unit === undefined ? 'pack' : opts.unit },
+        },
+    ];
     const qb = {
         where: () => qb,
         andWhere: () => qb,
@@ -61,6 +69,7 @@ function build(opts: {
         { findOne: async () => ({ name: 'One' }) } as never,
         visibility as never,
         availability as never,
+        { requiredMultiple: async () => opts.multiple ?? 1 } as never,
         { get: () => priceCheck } as never,
     );
     return { service, availability, quoteFn };
@@ -75,6 +84,8 @@ describe('OrderLineQuoteService', () => {
             name: 'One',
             customerPrice: 1000,
             referencePrice: 1000,
+            unitName: 'pack',
+            multiple: 1,
             available: 9,
         });
         expect(availability.findBranchStockLocationIds).toHaveBeenCalledWith(ctx, 'branch-a');
@@ -91,6 +102,12 @@ describe('OrderLineQuoteService', () => {
         await expect(build({}).service.quote(ctx, '5', 'AB-1', quantity)).rejects.toThrow(
             /whole number from 1/,
         );
+    });
+
+    it('returns the pack multiple and no unit when the variant has none', async () => {
+        const quote = await build({ multiple: 6, unit: null }).service.quote(ctx, '5', 'AB-1');
+        expect(quote.multiple).toBe(6);
+        expect(quote.unitName).toBeNull();
     });
 
     it('reports no stock when the warehouses hold none of it', async () => {
