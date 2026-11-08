@@ -106,8 +106,9 @@ export class OrderLineEditService {
             const line = this.lineOf(order, lineId);
             this.assertNotLast(order, 1);
             const removedQuantity = line.quantity;
+            // Filter before removal: the ORM clears the removed line's id, so an id filter would keep it.
+            order.lines = order.lines.filter(l => l !== line);
             await this.stockSync.removeLine(txCtx, order, line);
-            order.lines = order.lines.filter(l => String(l.id) !== String(lineId));
             await this.persist(txCtx, order, order.lines);
             return `Line ${line.productVariant.sku} removed (was ${removedQuantity})`;
         });
