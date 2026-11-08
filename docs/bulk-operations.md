@@ -23,10 +23,14 @@ One shared ui-kit wizard component serves every operation; an operation never br
    current page (the configured page size). Optional later: "select everything that matches the filter"; the filter is
    re-evaluated on the server at run time, the count is shown and confirmed.
 2. **Parameters.** What to do with the selected records (for example grant or revoke portal access).
-3. **Review.** A server-side dry run with no writes: how many records change, which are skipped and why (no e-mail,
-   no right, already in the target state), and conflicts.
+3. **Review.** A server-side dry run: how many records change, which are skipped and why (no e-mail, no right, already
+   in the target state), and conflicts. The dry run creates the batch as a draft (status `draft`, its `uuid` and number
+   are minted here, no per-record effects), so a double click on Run reuses the same batch and has one effect. The
+   review result is advisory: the executor re-validates every record under the row lock at run time, because state can
+   change between review and run, and reports any difference in the result table.
 4. **Run and result.** The batch runs in the background with progress, then a per-record result table, a downloadable
-   report, and undo where the operation is reversible.
+   report, and undo where the operation is reversible. Undo is a batch of its own (own `uuid` and number, linked to the
+   original, same permission and per-record scope), not a rollback of the old rows.
 
 ## The batch
 
@@ -36,7 +40,9 @@ Every run stores a batch; it is the audit trail and the guard against a repeated
   key: running the same batch twice has exactly one external effect.
 - **Content.** Operation type, parameters, status, counters, and one result row per record (applied, skipped with a
   reason, failed with a reason).
-- **History list.** An ordinary entity list (who, when, operation, records, result) with the standard filters.
+- **History list.** An ordinary entity list (who, when, operation, records, result) with the standard filters. It
+  follows the operation type's permission and shows only records inside the viewer's scope: a batch can touch records
+  the viewer cannot see, so the counters and the per-record table are scoped too.
 
 ## The server framework
 
