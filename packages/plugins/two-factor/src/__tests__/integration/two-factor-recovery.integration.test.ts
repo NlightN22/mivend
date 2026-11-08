@@ -26,7 +26,9 @@ async function verifyChallenge(): Promise<string> {
 }
 
 async function requestLink(): Promise<string> {
-    await fx.dataSource.query(`UPDATE two_factor_token SET "createdAt" = $1`, [past()]);
+    await fx.dataSource.query(
+        `UPDATE two_factor_token SET "createdAt" = now() - interval '2 minutes'`,
+    );
     const result = await fx.recovery.request(shopCtx, await verifyChallenge());
     expect(result).toMatchObject({ __typename: 'TwoFactorRecoveryRequested' });
     const event = fx.events.filter(e => e.name === 'TwoFactorRecoveryRequestedEvent').pop();
