@@ -15,6 +15,10 @@ const PROFORMAS = `query($cp: ID!) { visibleProformaInvoices(counterpartyId: $cp
     items { id } } }`;
 const PAYMENTS = `query($cp: ID!) { visiblePayments(counterpartyId: $cp, options: { take: 200 }) {
     totalItems items { id } } }`;
+const FILTERED = `query { visiblePayments(options: { take: 200,
+    filter: { amount: { gte: 0 }, _or: [{ customer: { contains: "" } }, { channel: { notEq: "x" } }] },
+    sort: { amount: ASC } }) { totalItems items { id } } }`;
+const PLAIN = `query { visiblePayments(options: { take: 200 }) { totalItems items { id } } }`;
 const REFUND = `mutation($p: ID!, $r: String!) { recordPaymentRefund(paymentId: $p, amount: 1,
     reason: "access denied probe", providerRefundId: $r) { id } }`;
 const REFUND_EXISTS = `query($r: String!) { paymentRefundExists(providerRefundId: $r) }`;
@@ -91,5 +95,21 @@ describe.each(STAFF.map(s => s.key))('payments for %s', (key: ActorKey) => {
             expect(withdraw.errors.join(' '), `withdraw ${number}`).toMatch(DENIED_OR_MISSING);
             expect(await proformaStatus(number)).toBe(status);
         }
+    });
+
+    it('a client filter and sort only narrow the visible set, never widen it', async () => {
+        const plain = await admin<{
+            visiblePayments: { totalItems: number; items: { id: string }[] };
+        }>(token, PLAIN);
+        const filtered = await admin<{
+            visiblePayments: { totalItems: number; items: { id: string }[] };
+        }>(token, FILTERED);
+        expect([...plain.errors, ...filtered.errors]).toEqual([]);
+        const visible = new Set(plain.data!.visiblePayments.items.map(i => i.id));
+        expect(filtered.data!.visiblePayments.totalItems).toBe(
+            plain.data!.visiblePayments.totalItems,
+        );
+        for (const item of filtered.data!.visiblePayments.items)
+            expect(visible.has(item.id)).toBe(true);
     });
 });

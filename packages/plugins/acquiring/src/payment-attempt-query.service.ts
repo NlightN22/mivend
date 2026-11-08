@@ -6,6 +6,7 @@ import { documentNumberSearchTerm } from 'shared';
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentStatus } from './entities/payment-attempt.entity';
 import { SettlementEntry } from './entities/settlement-entry.entity';
+import type { PaymentFilter, PaymentSort } from './payment-list-query';
 
 // Must match the GraphQL PaymentListOptions field name exactly: args.options is passed through,
 // and a mismatch silently drops the filter instead of erroring.
@@ -17,6 +18,9 @@ export interface PaymentListOptions {
     // Substring match against the payment's own internal number (see PaymentAttempt.number's
     // doc comment) — never providerPaymentId, the external reference, per the external-integration-rules skill.
     search?: string;
+    // Manager list only: whitelisted fields, see payment-list-query.ts.
+    filter?: PaymentFilter;
+    sort?: PaymentSort;
 }
 
 // One row of "what this payment was applied to" — a SettlementEntry that traces back to a

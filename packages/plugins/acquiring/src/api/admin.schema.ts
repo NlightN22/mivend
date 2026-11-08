@@ -130,6 +130,12 @@ export const adminApiExtensions: DocumentNode = gql`
         proformaInvoiceId: ID
         "Only populated when returned from visiblePayments (joined from its ProformaInvoice) — null elsewhere."
         counterpartyId: ID
+        "visiblePayments only: the customer's short name."
+        counterpartyShortName: String
+        "visiblePayments only: the number of the proforma invoice this payment belongs to."
+        proformaInvoiceNumber: String
+        "visiblePayments only: the number of the order the payment belongs to."
+        orderCode: String
     }
 
     type PaymentAttemptList {
@@ -142,8 +148,36 @@ export const adminApiExtensions: DocumentNode = gql`
         skip: Int
         status: String
         channel: String
-        "Substring match against the payment's own internal number (PaymentAttempt.number) — never providerPaymentId."
+        "Substring match against the payment's own internal number (PaymentAttempt.number) — never providerPaymentId — the customer name and INN."
         search: String
+        filter: PaymentFilterParameter
+        sort: PaymentSortParameter
+    }
+
+    "Filtered on the server inside the caller's visible set; field names are a fixed whitelist."
+    input PaymentFilterParameter {
+        number: StringOperators
+        createdAt: DateOperators
+        amount: NumberOperators
+        "Payment status."
+        status: StringOperators
+        channel: StringOperators
+        customer: StringOperators
+        customerInn: StringOperators
+        counterpartyId: IDOperators
+        proformaInvoiceNumber: StringOperators
+        orderCode: StringOperators
+        _and: [PaymentFilterParameter!]
+        _or: [PaymentFilterParameter!]
+    }
+
+    input PaymentSortParameter {
+        number: SortOrder
+        createdAt: SortOrder
+        amount: SortOrder
+        status: SortOrder
+        channel: SortOrder
+        customer: SortOrder
     }
 
     type PaymentRefund {
