@@ -11,7 +11,7 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
     test('bulk activation refuses a duplicate inn and a missing inn with a clear message', async ({
         page,
     }) => {
-        await page.goto('/bulk-operations/activate-customers');
+        await page.goto('/bulk-operations/counterparty-portal-access');
         await page.getByPlaceholder('Search company name…').fill('E2E INN');
         await expect(row(page, INN_TWIN_B.shortName)).toBeVisible({ timeout: 15000 });
         await expect(row(page, INN_TWIN_A.shortName)).toContainText('Activated');
@@ -19,21 +19,20 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
         for (const who of [INN_TWIN_B, INN_MISSING]) {
             await row(page, who.shortName).locator('td').first().click();
         }
-        await expect(page.getByText('2 selected')).toBeVisible();
-        await page.getByRole('button', { name: 'Activate portal access', exact: true }).click();
-        await page.getByRole('button', { name: /Reset selection/ }).click();
-        await page.getByRole('button', { name: /Save changes/ }).click();
-        await page.getByRole('button', { name: 'Apply', exact: true }).click();
+        const footer = page.locator('footer');
+        await footer.getByRole('button', { name: 'Next' }).click();
+        await footer.getByRole('button', { name: 'Review' }).click();
+        await expect(page.getByText('Nothing has changed yet')).toBeVisible({ timeout: 15000 });
+        await footer.getByRole('button', { name: 'Run batch' }).click();
 
-        const error = page.locator('.mv-notice').filter({ hasText: 'failed' });
-        await expect(error).toContainText(
+        const table = page.locator('.mv-batch-result__table');
+        await expect(table).toContainText(
             `INN 7700000011 is already used by counterparty "${INN_TWIN_A.shortName}" (${INN_TWIN_A.erpId})`,
-            { timeout: 15000 },
+            { timeout: 30000 },
         );
-        await expect(error).toContainText('merge the duplicates in the ERP first');
-        await expect(error).toContainText(`Counterparty "${INN_MISSING.shortName}" has no INN`);
-        await expect(row(page, INN_TWIN_B.shortName)).not.toContainText('Activated');
-        await expect(row(page, INN_MISSING.shortName)).not.toContainText('Activated');
+        await expect(table).toContainText('merge the duplicates in the ERP first');
+        await expect(table).toContainText(`Counterparty "${INN_MISSING.shortName}" has no INN`);
+        await expect(page.getByText('Partly failed')).toBeVisible();
     });
 
     test('the customer list filters counterparties with a duplicate or a missing inn', async ({

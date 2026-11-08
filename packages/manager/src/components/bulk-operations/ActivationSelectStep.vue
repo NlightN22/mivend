@@ -47,9 +47,6 @@ function clearSelection(): void {
             @update:selected-ids="emit('update:selectedIds', $event)"
         >
             <template #toolbar-end>
-                <span class="activation-select-step__count" aria-live="polite">
-                    Selected: {{ selectedIds.size }}
-                </span>
                 <MvButton
                     size="sm"
                     variant="secondary"
@@ -77,11 +74,5 @@ function clearSelection(): void {
     flex-direction: column;
     gap: 12px;
     min-width: 0;
-}
-
-.activation-select-step__count {
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-    white-space: nowrap;
 }
 </style>
