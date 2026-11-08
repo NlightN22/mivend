@@ -723,6 +723,7 @@ export const config: VendureConfig = {
                     'order-registration-result': orderEventsTopic,
                     'order-changed': orderEventsTopic,
                     'order-cancel-result': orderEventsTopic,
+                    'order-change-result': orderEventsTopic,
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
                         'erp.department.events.v1',
@@ -761,6 +762,19 @@ export const config: VendureConfig = {
                     'legal-form':
                         process.env.INTEGRATION_KAFKA_TOPIC_LEGAL_FORM ??
                         'erp.legal-form.events.v1',
+                    'counterparty-contact':
+                        process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CONTACT ??
+                        'erp.counterparty-contact.events.v1',
+                    'counterparty-group':
+                        process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_GROUP ??
+                        'erp.counterparty-group.events.v1',
+                    'product-group':
+                        process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_GROUP ??
+                        'erp.product-group.events.v1',
+                    'point-of-sale-type':
+                        process.env.INTEGRATION_KAFKA_TOPIC_POINT_OF_SALE_TYPE ??
+                        'erp.point-of-sale-type.events.v1',
+                    setting: process.env.INTEGRATION_KAFKA_TOPIC_SETTING ?? 'erp.setting.events.v1',
                     bank: process.env.INTEGRATION_KAFKA_TOPIC_BANK ?? 'erp.bank.events.v1',
                     'bank-account':
                         process.env.INTEGRATION_KAFKA_TOPIC_BANK_ACCOUNT ??
@@ -801,6 +815,16 @@ export const config: VendureConfig = {
                     'order-status':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATUS ??
                         'erp.order-status.events.v1',
+                    // #254: stored as received, see CustomerClaimStreamHandler and its siblings.
+                    'customer-claim':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_CLAIM ??
+                        'erp.customer-claim.events.v1',
+                    'sales-correction':
+                        process.env.INTEGRATION_KAFKA_TOPIC_SALES_CORRECTION ??
+                        'erp.sales-correction.events.v1',
+                    'order-correction':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CORRECTION ??
+                        'erp.order-correction.events.v1',
                 },
             },
             schemaRegistry: {

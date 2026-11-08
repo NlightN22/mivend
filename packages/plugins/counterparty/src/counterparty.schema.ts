@@ -148,6 +148,7 @@ export const adminApiSchema = gql`
         unassignedCounterpartyCount: Int!
         highUsageCounterparties(limit: Int!): [Counterparty!]!
         tradingPoint(id: ID!): TradingPoint
+        pendingTradingPointChanges: [TradingPointChange!]!
     }
 
     extend type Mutation {
@@ -220,6 +221,8 @@ export const adminApiSchema = gql`
         # Permission.UpdateCustomer; see TradingPointAdminResolver.
         updateTradingPointDetails(id: ID!, input: TradingPointDetailsInput!): TradingPoint!
         setTradingPointActive(id: ID!, isActive: Boolean!): TradingPoint!
+        acceptTradingPointChange(id: ID!): TradingPointChange!
+        rejectTradingPointChange(id: ID!, comment: String): TradingPointChange!
 
         requestCreditTermExtension(input: CreditTermRequestInput!): ApprovalRequest!
         decideCreditTermRequest(

@@ -2,6 +2,7 @@ import { create, toBinary } from '@bufbuild/protobuf';
 import {
     ErpOrderEventSchema,
     OrderCancelResultSchema,
+    OrderChangeResultSchema,
     OrderChangedSchema,
     OrderRegistrationResultSchema,
 } from '@nlightn22/event-contracts';
@@ -45,11 +46,19 @@ const cancel = toBinary(
     }),
 );
 
+const changeResult = toBinary(
+    ErpOrderEventSchema,
+    create(ErpOrderEventSchema, {
+        event: { case: 'changeResult', value: create(OrderChangeResultSchema, base) },
+    }),
+);
+
 describe('classifyOrderEventMessage', () => {
     it.each([
         ['registration-result', registration, 'order-registration-result'],
         ['changed', changed, 'order-changed'],
         ['cancel-result', cancel, 'order-cancel-result'],
+        ['change-result', changeResult, 'order-change-result'],
     ])('routes type %s to the %s inbox stream', (type, value, stream) => {
         const result = classifyOrderEventMessage(message(value, type), 0);
         expect(result).toMatchObject({
@@ -61,11 +70,6 @@ describe('classifyOrderEventMessage', () => {
     it('skips an unknown type without decoding the payload', () => {
         const result = classifyOrderEventMessage(message(Uint8Array.of(1, 2, 3), 'brand-new'), 0);
         expect(result).toEqual({ kind: 'skipped', type: 'brand-new' });
-    });
-
-    it('skips change-result, which has no consumer yet', () => {
-        const result = classifyOrderEventMessage(message(changed, 'change-result'), 0);
-        expect(result).toEqual({ kind: 'skipped', type: 'change-result' });
     });
 
     it('rejects a header type that disagrees with the payload case', () => {

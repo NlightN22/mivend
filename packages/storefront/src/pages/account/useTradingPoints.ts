@@ -30,7 +30,8 @@ function emptyAddForm(): TradingPointAddForm {
 }
 
 const POINT_FIELDS = `id name address latitude longitude workingHours deliveryComment customerStatus customerOwned
-  contacts { id name phone isPrimary }`;
+  contacts { id name phone isPrimary }
+  pendingChange { id status name address latitude longitude workingHours contactName contactPhone }`;
 
 function gql(
     query: string,

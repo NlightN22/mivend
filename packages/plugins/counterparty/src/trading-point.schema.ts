@@ -9,6 +9,20 @@ export const tradingPointFields = gql`
         isPrimary: Boolean!
     }
 
+    type TradingPointChange {
+        id: ID!
+        tradingPointId: ID!
+        status: String!
+        name: String!
+        address: String!
+        latitude: Float!
+        longitude: Float!
+        workingHours: String
+        contactName: String
+        contactPhone: String
+        createdAt: DateTime!
+    }
+
     type TradingPoint {
         id: ID!
         erpId: String!
@@ -23,6 +37,7 @@ export const tradingPointFields = gql`
         customerOwned: Boolean!
         servicingBranchId: String
         contacts: [ContactPerson!]!
+        pendingChange: TradingPointChange
     }
 `;
 

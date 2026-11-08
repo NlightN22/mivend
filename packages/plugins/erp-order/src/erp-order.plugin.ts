@@ -29,6 +29,8 @@ import { ExternalOrderCounterpartyListener } from './external-order-counterparty
 import { externalOrderProcess } from './external-order.guard';
 import { freightPointGuard } from './freight-point.guard';
 import { placementDenormalizeProcess } from './placement-denormalize.process';
+import { ERP_DOCUMENT_ENTITIES } from './erp-documents/erp-document-entities';
+import { ErpDocumentWriter } from './erp-documents/erp-document-writer.service';
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
@@ -120,6 +122,7 @@ const adminApiSchema = gql`
         SessionManagementPlugin,
     ],
     providers: [
+        ErpDocumentWriter,
         ErpOrderService,
         OrderStatusHistoryService,
         OrderStatusReferenceService,
@@ -136,13 +139,14 @@ const adminApiSchema = gql`
         ExternalOrderReconcileService,
     ],
     exports: [
+        ErpDocumentWriter,
         ErpOrderService,
         OrderStatusHistoryService,
         OrderStatusReferenceService,
         OrderVisibilityService,
         ExternalOrderService,
     ],
-    entities: [OrderStatusHistoryEntry, OrderStatusReference],
+    entities: [OrderStatusHistoryEntry, OrderStatusReference, ...ERP_DOCUMENT_ENTITIES],
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [

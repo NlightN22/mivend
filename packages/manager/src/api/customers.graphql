@@ -94,6 +94,36 @@ mutation SetTradingPointActive($id: ID!, $isActive: Boolean!) {
     }
 }
 
+fragment PendingTradingPointChangeFields on TradingPointChange {
+    id
+    tradingPointId
+    name
+    address
+    latitude
+    longitude
+    workingHours
+    contactName
+    contactPhone
+}
+
+query PendingTradingPointChanges {
+    pendingTradingPointChanges {
+        ...PendingTradingPointChangeFields
+    }
+}
+
+mutation AcceptTradingPointChange($id: ID!) {
+    acceptTradingPointChange(id: $id) {
+        id
+    }
+}
+
+mutation RejectTradingPointChange($id: ID!, $comment: String) {
+    rejectTradingPointChange(id: $id, comment: $comment) {
+        id
+    }
+}
+
 query CustomerIdForCounterparty($counterpartyId: String!) {
     customers(options: { take: 1, filter: { counterpartyId: { eq: $counterpartyId } } }) {
         items {

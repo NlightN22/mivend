@@ -1,6 +1,7 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
+    AcceptTradingPointChangeDocument,
     ActiveDiscountCountsDocument,
     CounterpartyShortNameDocument,
     CreditByCounterpartyIdDocument,
@@ -21,12 +22,15 @@ import {
     HighUsageCustomersDocument,
     LastOrderDatesDocument,
     OrderPaymentSummariesDocument,
+    PendingTradingPointChangesDocument,
     ReassignCounterpartyManagerDocument,
+    RejectTradingPointChangeDocument,
     SetTradingPointActiveDocument,
     UnassignedCounterpartyCountDocument,
     UpdateTradingPointDetailsDocument,
     type CustomerListItemFieldsFragment,
     type CustomerOrderItemFieldsFragment,
+    type PendingTradingPointChangeFieldsFragment,
 } from './generated/graphql';
 
 export type ContactPersonInfo =
@@ -168,6 +172,21 @@ export async function updateTradingPointDetails(
 // TradingPointService.setActive).
 export async function setTradingPointActive(id: string, isActive: boolean): Promise<void> {
     await adminApi(SetTradingPointActiveDocument, { id, isActive });
+}
+
+export type PendingTradingPointChange = PendingTradingPointChangeFieldsFragment;
+
+export async function fetchPendingTradingPointChanges(): Promise<PendingTradingPointChange[]> {
+    const result = await adminApi(PendingTradingPointChangesDocument);
+    return result.pendingTradingPointChanges;
+}
+
+export async function acceptTradingPointChange(id: string): Promise<void> {
+    await adminApi(AcceptTradingPointChangeDocument, { id });
+}
+
+export async function rejectTradingPointChange(id: string, comment?: string): Promise<void> {
+    await adminApi(RejectTradingPointChangeDocument, { id, comment: comment || null });
 }
 
 // Vendure's Customer.id is a different id from Counterparty.id, which this page is keyed by

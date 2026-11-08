@@ -5,6 +5,7 @@ import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
+import { backfillTradingPointUuid } from './trading-point-uuid-backfill';
 import { withBootstrapLock } from './bootstrap-lock';
 
 // Mounted only with API_DOCS_ENABLED=true; must run in `onBeforeAppListen` (later routes 404).
@@ -27,6 +28,7 @@ function mountApiDocs(app: INestApplication): void {
 
 assertDatabaseLocale()
     .then(carryOverOrderLineIdentity)
+    .then(backfillTradingPointUuid)
     .then(() =>
         withBootstrapLock(() =>
             bootstrap(config, {

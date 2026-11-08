@@ -19,7 +19,7 @@ and is never an idempotency key for a business entity.
 
 - **uuid + number** (documents): Order, ProformaInvoice (and proforma snapshots, #206), PaymentAttempt / payment document,
   Refund, SettlementEntry, DiscountGrant.
-- **uuid only**: OrderLine, Reservation (replaces the separate `erpOperationId` / `erpReleaseOperationId` ids as the
+- **uuid only**: OrderLine, TradingPoint (mivend's record; the ERP id stays in `erpId`, #328), Reservation (replaces the separate `erpOperationId` / `erpReleaseOperationId` ids as the
   entity identity; operation ids stay for operations), rendered Document records, reconciliation issue records, and every
   other mivend-created entity as it is touched (shared base for plugin entities, a custom field for Vendure core entities except OrderLine, whose uuid has its own
   table because line custom fields take part in Vendure's line merge, #221).

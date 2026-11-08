@@ -7,6 +7,7 @@ const NOT_EVENT_SCHEMAS = new Set([
     'OrderChangedLineSchema',
     'OrderChangedLinkedDocumentSchema',
     'OrganizationSignatorySchema',
+    'PowerOfAttorneySchema',
     'AccountingReflectionSchema',
     'CustomerClaimGoodsLineSchema',
     'CustomerClaimServiceLineSchema',

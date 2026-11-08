@@ -379,7 +379,40 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `trading-point-no-coordinates`, `ourCount` = active points with a null latitude or longitude) and auto-resolves
   it when none remain. The admin query `tradingPointsWithoutLocation` (ManageErpIntegration) lists them for backfill.
   The stream only fills a missing or unusable location (one conditional UPDATE); it never overwrites or clears a
-  location a person set. The full split of ERP-owned and mivend-owned point data is #328.
+  location a person set.
+- **Trading point ownership split (#328)**: `trading_point` is mivend's record, read by the storefront, checkout and
+  the manager portal. The `point-of-sale` stream writes `trading_point_erp`, the mirror of the last state the ERP
+  sent (name, address, coordinates, working hours, contact phone, activity), keyed by `erpId`. On first arrival the
+  mirror seeds mivend's record (and creates it); afterwards the stream moves only `isActive` and the owning
+  counterparty on mivend's record and never touches name, address, coordinates, working hours or contacts.
+  `upsertTradingPoint` follows the same rule.
+  The mirror also keeps the point-of-sale fields mivend does not read (region, managers, point types, product
+  groups, sales channels, contact infos; soft ids, lists as JSON text) and `isDeleted` (#254). The ERP dictionary
+  streams `counterparty-contact`, `counterparty-group`, `product-group`, `point-of-sale-type` and `setting` follow the
+  same ownership rule in their own `*_erp` tables; none of it is replicated to branches.
+- **ERP documents stored as received (#254)**: customer claims, sales corrections, order corrections, order change
+  results and powers of attorney are written by their streams into `_erp` tables (`customer_claim_erp`, ... ,
+  `contract_power_of_attorney_erp`) and nothing in mivend's own records changes. Links are plain ERP ids (no foreign
+  keys), a missing target never blocks the event, a tombstone sets `isDeleted` and keeps the data, a newer version
+  replaces the header and all lines. The tables are not replicated to branches: no branch feature reads them yet.
+  Ordering: an older event redelivered after a newer one is skipped by the inbox processor for every stream (a
+  stale contract event therefore cannot restore an older powers-of-attorney list), the dictionary mirrors need no
+  version column of their own. A tombstone for an unknown dictionary entity stores a flagged empty row (the
+  ERP did delete it); a tombstone for an unknown document stores nothing. An event without `version` is a logged
+  no-op. The Kafka topics `erp.<stream>.events.v1` for all eight new streams exist on the integration broker (checked
+  read-only, listing only).
+- **Moderation (#328)**: a customer edit of an ERP-confirmed point (`customerOwned = false`) is stored as a
+  `trading_point_change` (one pending change per point, a newer edit supersedes it) and does not touch the record
+  until a manager accepts it (`acceptTradingPointChange`, scope-checked like a staff edit; acceptance runs the staff
+  edit path with its row lock and version history). `rejectTradingPointChange` leaves the record as it was. The
+  delivery comment is the customer's own note and applies at once; points a customer created (`cust_…`) and staff
+  edits apply directly. Checkout and the storefront keep reading the current record while a change is pending.
+  Acceptance publishes `TradingPointChangeAcceptedEvent` with the point `uuid`, the change `uuid` and a per-point
+  `version`; the ERP side dedupes on point `uuid` + `version`. The outbound ERP message is not wired yet: it needs a
+  contract in the contracts package and the ERP side.
+- **Trading point drift (#328)**: `tradingPointsDifferingFromErp` lists points whose record differs from the mirror
+  (expected after people edit), `tradingPointsNotConfirmedByErp` lists customer-created points the ERP never sent
+  (both ManageErpIntegration).
 - **Location rule (#315)**: `customerAddTradingPoint`, `customerEditTradingPoint`, `upsertTradingPoint` and
   `updateTradingPointDetails` require latitude -90..90 and longitude -180..180, finite, not (0, 0). An edit cannot
   clear them, and any edit of a point stored without coordinates must supply them

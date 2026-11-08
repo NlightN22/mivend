@@ -1,10 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import {
+    ContractService,
+    CounterpartyService,
+    PowerOfAttorneyErpService,
+} from '@mivend/plugin-counterparty';
 import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
 import { MissingReferenceError } from '../types';
+import { powerOfAttorneyItems } from './contract-power-of-attorney';
+import { str } from './erp-document-payload';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -19,6 +25,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         private readonly counterpartyService: CounterpartyService,
         private readonly settlementPending: SettlementPendingService,
         private readonly orderCheckStale: OrderCheckStaleService,
+        private readonly powersOfAttorney: PowerOfAttorneyErpService,
     ) {}
 
     async apply(
@@ -31,6 +38,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         // Tombstone: no name, no reliable counterpartyId — deactivate-only, no lookup or field
         // write (docs/ai/erp-streams-map.md's `contract` field accounting).
         if (!name) {
+            await this.powersOfAttorney.markContractDeleted(ctx, entityId);
             const matched = await this.contractService.deactivateTombstone(ctx, entityId);
             if (matched) {
                 await this.orderCheckStale.requestForContract(ctx, entityId);
@@ -89,6 +97,13 @@ export class ContractStreamHandler implements InboundStreamHandler {
                 'brandManufacturerId' in payload
                     ? ((payload.brandManufacturerId as string | null) ?? null)
                     : undefined,
+        });
+        await this.powersOfAttorney.replaceForContract(ctx, {
+            contractId: entityId,
+            counterpartyId: counterpartyErpId,
+            organizationId: str(payload.organizationId),
+            isDeleted: payload.isDeleted === true,
+            items: powerOfAttorneyItems(payload),
         });
         const stored = await this.contractService.findByErpId(ctx, entityId);
         if (stored) await this.settlementPending.attachContract(ctx, entityId, String(stored.id));

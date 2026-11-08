@@ -62,7 +62,7 @@ jobs:
 
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 22
                   cache: pnpm
 
             - run: pnpm config set "//npm.pkg.github.com/:_authToken" "${{ secrets.PACKAGES_READ_TOKEN }}"
@@ -116,7 +116,7 @@ jobs:
                   version: 10
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 22
                   cache: pnpm
             - run: pnpm config set "//npm.pkg.github.com/:_authToken" "${{ secrets.PACKAGES_READ_TOKEN }}"
             - run: pnpm install --frozen-lockfile

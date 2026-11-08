@@ -83,12 +83,12 @@ afterAll(async () => {
 });
 
 describe('integrationStreamHealth', () => {
-    it('returns every consumed stream with zero backlog, and the contract-only ignored streams', async () => {
+    it('returns every consumed stream with zero backlog', async () => {
         const { streams } = await resolver.integrationStreamHealth(testRequestContext);
         const byStream = Object.fromEntries(streams.map(s => [s.stream, s]));
 
         expect(byStream.bank).toMatchObject({ pending: 0, failed: 0, lag: null, drift: null });
-        expect(byStream['order-change-result']).toMatchObject({ consumed: false, drift: null });
+        expect(byStream['order-change-result']).toMatchObject({ consumed: true, drift: null });
         expect(streams.filter(s => s.drift !== null)).toEqual([]);
     });
 

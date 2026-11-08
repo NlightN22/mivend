@@ -3,6 +3,7 @@ import { CustomerService, Logger, RequestContext, TransactionalConnection } from
 import { TradingPointService } from '../../trading-point.service';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { ContactPerson } from '../../entities/contact-person.entity';
+import { TradingPointErp } from '../../entities/trading-point-erp.entity';
 
 const mockFillExecute = vi.fn().mockResolvedValue(undefined);
 const mockFillSet = vi.fn();
@@ -23,12 +24,20 @@ const mockTpRepo = {
 
 const mockCpRepo = {};
 
+const mockMirrorRow: Record<string, unknown> = {};
+const mockMirrorRepo = {
+    findOne: vi.fn(),
+    create: vi.fn((v: Record<string, unknown>) => Object.assign(mockMirrorRow, v)),
+    save: vi.fn(),
+};
+
 const mockRawQuery = vi.fn();
 
 const mockConnection = {
     getRepository: vi.fn((ctx, entity) => {
         if (entity === TradingPoint) return mockTpRepo;
         if (entity === ContactPerson) return mockCpRepo;
+        if (entity === TradingPointErp) return mockMirrorRepo;
         if (entity === 'Channel') return { query: mockRawQuery };
         return mockTpRepo;
     }),
@@ -47,6 +56,8 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockMirrorRepo.findOne.mockResolvedValue(null);
+        for (const key of Object.keys(mockMirrorRow)) delete mockMirrorRow[key];
         service = new TradingPointService(
             mockConnection as unknown as TransactionalConnection,
             mockCustomerService,
@@ -265,9 +276,8 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             });
         });
 
-        // This stream never carries a contact name — contactPhone must only ever land on an
-        // already-existing ContactPerson, never fabricate one with a blank name.
-        it('applies contactPhone onto an existing primary contact', async () => {
+        // The ERP phone is mirrored only; it never writes mivend's contact person.
+        it('mirrors contactPhone and leaves the contact person untouched', async () => {
             const contact = { name: 'Ivan', phone: null, email: null, isPrimary: true };
             const existing = {
                 erpId: 'pos-1',
@@ -288,7 +298,40 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
                 contactPhone: '+79991234566',
             });
 
-            expect(contact.phone).toBe('+79991234566');
+            expect(contact.phone).toBeNull();
+            expect(mockMirrorRow.contactPhone).toBe('+79991234566');
+        });
+
+        it('keeps mivend data on a changed message and records what the ERP sent in the mirror', async () => {
+            const existing = {
+                erpId: 'pos-1',
+                name: 'Our Name',
+                address: 'Our Addr',
+                workingHours: '9-18',
+                isActive: true,
+                counterpartyId: 'cp1',
+                contacts: [],
+            };
+            mockTpRepo.findOne.mockResolvedValue(existing);
+            mockTpRepo.save.mockResolvedValue(existing);
+            const message = {
+                name: 'ERP Name',
+                address: 'ERP Addr',
+                counterpartyId: 'cp1',
+                servicingBranchId: null,
+                isActive: false,
+            };
+
+            await service.upsertFromStream(mockCtx, 'pos-1', message);
+            await service.upsertFromStream(mockCtx, 'pos-1', message);
+
+            expect(existing).toMatchObject({
+                name: 'Our Name',
+                address: 'Our Addr',
+                workingHours: '9-18',
+                isActive: false,
+            });
+            expect(mockMirrorRow).toMatchObject({ name: 'ERP Name', address: 'ERP Addr' });
         });
 
         it('skips contactPhone when no existing contact person to attach it to', async () => {

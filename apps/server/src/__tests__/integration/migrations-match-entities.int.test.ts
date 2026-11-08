@@ -45,7 +45,7 @@ beforeAll(async () => {
 afterAll(async () => {
     await rm(outDir, { recursive: true, force: true });
     await onMaintenanceDb(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
-});
+}, 60_000);
 
 describe('migrations vs entity-derived schema (integration, real Postgres)', () => {
     it('a database built only by migrations needs no schema changes to match the entities', async () => {

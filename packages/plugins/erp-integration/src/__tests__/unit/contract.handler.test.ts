@@ -27,6 +27,7 @@ function makeHandler(
         counterpartyService as never,
         { attachContract: vi.fn() } as never,
         { requestForContract: vi.fn(), drainSoon: vi.fn() } as never,
+        { replaceForContract: vi.fn(), markContractDeleted: vi.fn() } as never,
     );
     return { handler, contractService, counterpartyService };
 }

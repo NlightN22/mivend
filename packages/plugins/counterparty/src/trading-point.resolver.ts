@@ -5,6 +5,8 @@ import { Permission } from '@vendure/common/lib/generated-types';
 import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-control';
 
 import { TradingPoint } from './entities/trading-point.entity';
+import { TradingPointChangeService } from './trading-point-change.service';
+import { changeView } from './trading-point-change';
 import {
     TradingPointService,
     CustomerTradingPointInput,
@@ -47,8 +49,18 @@ export class CounterpartyTradingPointResolver {
 export class TradingPointResolver {
     constructor(
         private tradingPointService: TradingPointService,
+        private changes: TradingPointChangeService,
         private connection: TransactionalConnection,
     ) {}
+
+    @ResolveField()
+    async pendingChange(
+        @Ctx() ctx: RequestContext,
+        @Parent() point: TradingPoint,
+    ): Promise<Record<string, unknown> | null> {
+        const change = await this.changes.findPending(ctx, point.id);
+        return change ? changeView(change) : null;
+    }
 
     @Transaction()
     @Mutation()

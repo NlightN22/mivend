@@ -15,6 +15,11 @@ import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
 import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
+import { TradingPointErp } from './entities/trading-point-erp.entity';
+import { TradingPointChange } from './entities/trading-point-change.entity';
+import { savePendingChange, type ProposedPointFields } from './trading-point-change';
+import { writeErpMirror } from './trading-point-erp-mirror';
+import { markMirrorDeleted, type ErpPointExtra } from './trading-point-erp-extra';
 import { loggerCtx } from './types';
 import {
     fillMissingLocation,
@@ -58,6 +63,7 @@ export interface TradingPointStreamFields {
     longitude?: number | null;
     // Never used to create a ContactPerson — see upsertFromStream's own comment.
     contactPhone?: string | null;
+    extra?: ErpPointExtra;
 }
 
 export interface TradingPointUpsertPayload {
@@ -249,16 +255,14 @@ export class TradingPointService {
             where: { erpId: payload.erpId },
             relations: ['contacts'],
         });
+        await writeErpMirror(this.connection.getRepository(ctx, TradingPointErp), payload.erpId, {
+            ...payload,
+            counterpartyId,
+        });
         if (record) {
-            record.name = payload.name;
-            record.address = payload.address;
-            record.latitude = payload.latitude ?? null;
-            record.longitude = payload.longitude ?? null;
-            record.workingHours = payload.workingHours ?? null;
+            // mivend's record is the source of truth; the ERP only moves activity and ownership.
             record.isActive = payload.isActive;
             record.counterpartyId = counterpartyId;
-            // ERP has no notion of servicingBranchId; a staff override must survive repeated ERP upserts.
-            //
         } else {
             record = repo.create({
                 erpId: payload.erpId,
@@ -272,21 +276,17 @@ export class TradingPointService {
                 isActive: payload.isActive,
                 contacts: [],
             });
-        }
-
-        if (payload.contacts !== undefined) {
-            const cpRepo = this.connection.getRepository(ctx, ContactPerson);
-            if (record.id) {
-                await cpRepo.delete({ tradingPoint: { id: record.id } });
+            if (payload.contacts !== undefined) {
+                const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+                record.contacts = payload.contacts.map(c =>
+                    cpRepo.create({
+                        name: c.name,
+                        phone: c.phone ?? null,
+                        email: c.email ?? null,
+                        isPrimary: c.isPrimary ?? false,
+                    }),
+                );
             }
-            record.contacts = payload.contacts.map(c =>
-                cpRepo.create({
-                    name: c.name,
-                    phone: c.phone ?? null,
-                    email: c.email ?? null,
-                    isPrimary: c.isPrimary ?? false,
-                }),
-            );
         }
 
         const saved = await repo.save(record);
@@ -319,6 +319,13 @@ export class TradingPointService {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         let record = await repo.findOne({ where: { erpId }, relations: ['contacts'] });
         const usable = isUsableLocation(fields.latitude, fields.longitude);
+        if (record || fields.name) {
+            await writeErpMirror(
+                this.connection.getRepository(ctx, TradingPointErp),
+                erpId,
+                fields,
+            );
+        }
 
         if (!record) {
             if (!fields.name) {
@@ -350,23 +357,9 @@ export class TradingPointService {
                 contacts: [],
             });
         } else {
-            if (fields.name) record.name = fields.name;
+            // mivend's record is the source of truth; the ERP only moves activity and ownership.
             record.isActive = fields.isActive;
             record.counterpartyId = fields.counterpartyId;
-            if (fields.address !== undefined) record.address = fields.address;
-        }
-
-        if (fields.contactPhone !== undefined) {
-            const primary = record.contacts.find(c => c.isPrimary) ?? record.contacts[0];
-            if (primary) {
-                primary.phone = fields.contactPhone;
-            } else {
-                Logger.verbose(
-                    `trading point ${erpId}: contactPhone received but no existing contact ` +
-                        'person to attach it to — skipping, REST/portal must create it first',
-                    loggerCtx,
-                );
-            }
         }
 
         await repo.save(record);
@@ -377,6 +370,10 @@ export class TradingPointService {
             });
         }
         Logger.verbose(`Upserted trading point erpId=${erpId} from Kafka stream`, loggerCtx);
+    }
+
+    async markErpDeleted(ctx: RequestContext, erpId: string): Promise<boolean> {
+        return markMirrorDeleted(this.connection.getRepository(ctx, TradingPointErp), erpId);
     }
 
     async deactivate(ctx: RequestContext, erpId: string): Promise<boolean> {
@@ -606,6 +603,9 @@ export class TradingPointService {
             contactPhone: primary?.phone ?? null,
         });
         const location = resolveTradingPointLocation(input, record);
+        if (!record.customerOwned) {
+            return this.proposeCustomerEdit(ctx, record, primary, input, location);
+        }
         record.name = input.name;
         record.address = input.address;
         record.latitude = location.latitude;
@@ -627,6 +627,50 @@ export class TradingPointService {
         }
         const saved = await repo.save(record);
         Logger.verbose(`Customer edited trading point ${id}`, loggerCtx);
+        return saved;
+    }
+
+    // An ERP-confirmed point is not edited by the customer directly: the edit waits for a manager.
+    // The delivery comment is the customer's own note and applies at once.
+    private async proposeCustomerEdit(
+        ctx: RequestContext,
+        record: TradingPoint,
+        primary: ContactPerson | undefined,
+        input: CustomerTradingPointInput,
+        location: { latitude: number; longitude: number },
+    ): Promise<TradingPoint> {
+        const proposed: ProposedPointFields = {
+            name: input.name,
+            address: input.address,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            workingHours: input.workingHours ?? null,
+            contactName: input.contactName,
+            contactPhone: input.contactPhone,
+        };
+        const contactChanged =
+            input.contactName !== undefined &&
+            ((input.contactName ?? null) !== (primary?.name ?? null) ||
+                (input.contactPhone ?? null) !== (primary?.phone ?? null));
+        const changed =
+            proposed.name !== record.name ||
+            proposed.address !== record.address ||
+            proposed.latitude !== record.latitude ||
+            proposed.longitude !== record.longitude ||
+            proposed.workingHours !== record.workingHours ||
+            contactChanged;
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        record.deliveryComment = input.deliveryComment ?? null;
+        const saved = await repo.save(record);
+        if (changed) {
+            await savePendingChange(
+                this.connection.getRepository(ctx, TradingPointChange),
+                { id: String(record.id), counterpartyId: record.counterpartyId },
+                proposed,
+                ctx.activeUserId ? String(ctx.activeUserId) : null,
+            );
+        }
+        Logger.verbose(`Customer proposed an edit of trading point ${record.id}`, loggerCtx);
         return saved;
     }
 

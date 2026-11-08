@@ -17,6 +17,14 @@ export const operations = `
         tradingPointsWithoutLocation(
             options: OpenErpReconciliationIssueListOptions
         ): TradingPointList!
+        "Trading points whose mivend record differs from the last state the ERP sent (people edited them; issue #328)."
+        tradingPointsDifferingFromErp(
+            options: OpenErpReconciliationIssueListOptions
+        ): TradingPointList!
+        "Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328)."
+        tradingPointsNotConfirmedByErp(
+            options: OpenErpReconciliationIssueListOptions
+        ): TradingPointList!
         "Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll."
         kafkaConsumerLag: [KafkaTopicLag!]!
         "Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog."

@@ -26,6 +26,11 @@ import { ContractStreamHandler } from './handlers/contract.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
 import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { RegionStreamHandler } from './handlers/region.handler';
+import { CounterpartyContactStreamHandler } from './handlers/counterparty-contact.handler';
+import { CounterpartyGroupStreamHandler } from './handlers/counterparty-group.handler';
+import { PointOfSaleTypeStreamHandler } from './handlers/point-of-sale-type.handler';
+import { ProductGroupStreamHandler } from './handlers/product-group.handler';
+import { SettingStreamHandler } from './handlers/setting.handler';
 import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { BankStreamHandler } from './handlers/bank.handler';
 import { BankAccountStreamHandler } from './handlers/bank-account.handler';
@@ -34,6 +39,10 @@ import { SettlementDocumentStreamHandler } from './handlers/settlement-document.
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
+import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
+import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
+import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 
 // One provider per inbound stream; IntegrationInboxProcessorService maps stream -> handler.
 export const STREAM_HANDLERS = [
@@ -65,6 +74,11 @@ export const STREAM_HANDLERS = [
     UnitStreamHandler,
     ManufacturerStreamHandler,
     RegionStreamHandler,
+    CounterpartyContactStreamHandler,
+    CounterpartyGroupStreamHandler,
+    PointOfSaleTypeStreamHandler,
+    ProductGroupStreamHandler,
+    SettingStreamHandler,
     LegalFormStreamHandler,
     BankStreamHandler,
     BankAccountStreamHandler,
@@ -73,4 +87,8 @@ export const STREAM_HANDLERS = [
     SettlementBalanceStreamHandler,
     SettlementDocumentTypeStreamHandler,
     OrderStatusStreamHandler,
+    CustomerClaimStreamHandler,
+    SalesCorrectionStreamHandler,
+    OrderCorrectionStreamHandler,
+    OrderChangeResultStreamHandler,
 ];
