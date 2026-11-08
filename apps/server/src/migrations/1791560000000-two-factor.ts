@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #279: second-factor state (encrypted TOTP secrets) and the hashed sign-in challenge / recovery tokens.
-export class TwoFactor1791559000000 implements MigrationInterface {
-    name = 'TwoFactor1791559000000';
+export class TwoFactor1791560000000 implements MigrationInterface {
+    name = 'TwoFactor1791560000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
