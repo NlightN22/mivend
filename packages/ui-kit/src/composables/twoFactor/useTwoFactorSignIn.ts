@@ -6,7 +6,7 @@ import {
     type TwoFactorUiError,
 } from './twoFactorTypes';
 
-export type SignInStep = 'password' | 'verify' | 'enrol' | 'recovery' | 'recovery-sent' | 'done';
+export type SignInStep = 'password' | 'verify' | 'enrol' | 'recovery-sent' | 'done';
 
 export function useTwoFactorSignIn(api: TwoFactorSignInApi) {
     const state = reactive<{
@@ -15,7 +15,15 @@ export function useTwoFactorSignIn(api: TwoFactorSignInApi) {
         loading: boolean;
         enrolment: TwoFactorEnrolment | null;
         username: string;
-    }>({ step: 'password', error: null, loading: false, enrolment: null, username: '' });
+        maskedEmail: string;
+    }>({
+        step: 'password',
+        error: null,
+        loading: false,
+        enrolment: null,
+        username: '',
+        maskedEmail: '',
+    });
     let challenge = '';
     let rememberMe = false;
 
@@ -83,24 +91,29 @@ export function useTwoFactorSignIn(api: TwoFactorSignInApi) {
         });
     }
 
-    function openRecovery(): void {
-        state.error = null;
-        state.step = 'recovery';
+    function requestRecovery(): Promise<void> {
+        return guarded(async () => {
+            const result = await api.requestRecovery(challenge);
+            if (result.kind === 'sent') {
+                state.maskedEmail = result.maskedEmailAddress;
+                state.step = 'recovery-sent';
+            } else {
+                backToPassword(result.failure);
+            }
+        });
     }
 
-    function submitRecovery(emailAddress: string): Promise<void> {
-        return guarded(async () => {
-            await api.requestRecovery(emailAddress);
-            state.step = 'recovery-sent';
-        });
+    function backToCode(): void {
+        state.error = null;
+        state.step = 'verify';
     }
 
     return {
         ...toRefs(state),
         submitPassword,
         submitCode,
-        openRecovery,
-        submitRecovery,
+        requestRecovery,
+        backToCode,
         back: () => backToPassword(null),
     };
 }

@@ -11,7 +11,7 @@ export function useTwoFactorRecovery(token: string, api: TwoFactorRecoveryApi) {
     }>({ view: token ? 'form' : 'invalid', error: null, loading: false });
 
     async function submit(password: string): Promise<void> {
-        if (state.loading || !password) return;
+        if (state.loading || !token || !password) return;
         state.loading = true;
         state.error = null;
         try {

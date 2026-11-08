@@ -58,9 +58,15 @@ mutation ConfirmTwoFactorEnrolment($code: String!) {
     }
 }
 
-mutation RequestTwoFactorRecovery($emailAddress: String!) {
-    requestTwoFactorRecovery(emailAddress: $emailAddress) {
-        success
+mutation RequestTwoFactorRecovery($challenge: String!) {
+    requestTwoFactorRecovery(challenge: $challenge) {
+        __typename
+        ... on TwoFactorRecoveryRequested {
+            maskedEmailAddress
+        }
+        ... on TwoFactorError {
+            failure
+        }
     }
 }
 

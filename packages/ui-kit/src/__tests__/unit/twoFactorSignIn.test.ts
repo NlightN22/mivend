@@ -4,6 +4,7 @@ import { useTwoFactorRecovery } from '../../composables/twoFactor/useTwoFactorRe
 import { useTwoFactorSettings } from '../../composables/twoFactor/useTwoFactorSettings';
 import {
     authenticationErrorToFailure,
+    isCompleteCode,
     normalizeCode,
     type TwoFactorEnrolment,
     type TwoFactorSignInApi,
@@ -21,7 +22,9 @@ function makeApi(overrides: Partial<TwoFactorSignInApi> = {}): TwoFactorSignInAp
         plainLogin: vi.fn().mockResolvedValue(true),
         authenticate: vi.fn().mockResolvedValue({ kind: 'ok' }),
         startEnrolment: vi.fn().mockResolvedValue({ kind: 'enrolment', enrolment }),
-        requestRecovery: vi.fn().mockResolvedValue(undefined),
+        requestRecovery: vi
+            .fn()
+            .mockResolvedValue({ kind: 'sent', maskedEmailAddress: 'u***@example.test' }),
         ...overrides,
     };
 }
@@ -29,6 +32,10 @@ function makeApi(overrides: Partial<TwoFactorSignInApi> = {}): TwoFactorSignInAp
 describe('code and error mapping', () => {
     it('strips spaces and non-digits and caps at six', () => {
         expect(normalizeCode('12 34-56 78')).toBe('123456');
+        expect(normalizeCode(' 123 456 ')).toBe('123456');
+        expect(normalizeCode('abc')).toBe('');
+        expect(isCompleteCode('12345')).toBe(false);
+        expect(isCompleteCode('123 456')).toBe(true);
     });
     it('maps authenticationError values to failures', () => {
         expect(authenticationErrorToFailure('TWO_FACTOR_INVALID_CODE')).toBe('INVALID_CODE');
@@ -125,14 +132,31 @@ describe('useTwoFactorSignIn', () => {
         expect(flow.error.value).toBe('ENROLMENT_EXPIRED');
     });
 
-    it('recovery reports the same neutral result whatever the account', async () => {
+    it('lost access sends the link at once for the challenge and shows the masked address', async () => {
         const api = makeApi();
         const flow = useTwoFactorSignIn(api);
         await flow.submitPassword('u', 'p', false);
-        flow.openRecovery();
-        await flow.submitRecovery('nobody@example.test');
-        expect(api.requestRecovery).toHaveBeenCalledWith('nobody@example.test');
+        await flow.requestRecovery();
+        expect(api.requestRecovery).toHaveBeenCalledWith('c1');
         expect(flow.step.value).toBe('recovery-sent');
+        expect(flow.maskedEmail.value).toBe('u***@example.test');
+        flow.backToCode();
+        expect(flow.step.value).toBe('verify');
+        await flow.submitCode('123456');
+        expect(api.authenticate).toHaveBeenCalledWith('c1', '123456', false);
+    });
+
+    it('a dead challenge on the recovery request returns to the password step', async () => {
+        const api = makeApi({
+            requestRecovery: vi
+                .fn()
+                .mockResolvedValue({ kind: 'failure', failure: 'CHALLENGE_INVALID' }),
+        });
+        const flow = useTwoFactorSignIn(api);
+        await flow.submitPassword('u', 'p', false);
+        await flow.requestRecovery();
+        expect(flow.step.value).toBe('password');
+        expect(flow.error.value).toBe('CHALLENGE_INVALID');
     });
 
     it('a thrown request becomes UNKNOWN and does not advance', async () => {

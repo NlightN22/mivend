@@ -1975,7 +1975,7 @@ export type Mutation = {
     requestPasswordReset?: Maybe<RequestPasswordResetResult>;
     /** Issues (or returns the unchanged) current proforma invoices of the customer's own placed, not cancelled order; changed content makes a new version. */
     requestProformaInvoices: Array<ProformaInvoice>;
-    requestTwoFactorRecovery: Success;
+    requestTwoFactorRecovery: RequestTwoFactorRecoveryResult;
     /**
      * Request to update the emailAddress of the active Customer. If `authOptions.requireVerification` is enabled
      * (as is the default), then the `identifierChangeToken` will be assigned to the current User and
@@ -2169,7 +2169,7 @@ export type MutationRequestProformaInvoicesArgs = {
 };
 
 export type MutationRequestTwoFactorRecoveryArgs = {
-    emailAddress: Scalars['String']['input'];
+    challenge: Scalars['String']['input'];
 };
 
 export type MutationRequestUpdateCustomerEmailAddressArgs = {
@@ -3926,6 +3926,8 @@ export type RemoveOrderItemsResult = Order | OrderInterceptorError | OrderModifi
 
 export type RequestPasswordResetResult = NativeAuthStrategyError | Success;
 
+export type RequestTwoFactorRecoveryResult = TwoFactorError | TwoFactorRecoveryRequested;
+
 export type RequestUpdateCustomerEmailAddressResult =
     | EmailAddressConflictError
     | InvalidCredentialsError
@@ -4480,6 +4482,11 @@ export enum TwoFactorFailure {
     RecoveryLinkInvalid = 'RECOVERY_LINK_INVALID',
 }
 
+export type TwoFactorRecoveryRequested = {
+    maskedEmailAddress: Scalars['String']['output'];
+    success: Scalars['Boolean']['output'];
+};
+
 export enum TwoFactorStage {
     Enrol = 'ENROL',
     None = 'NONE',
@@ -4797,10 +4804,14 @@ export type ConfirmTwoFactorEnrolmentMutation = {
 };
 
 export type RequestTwoFactorRecoveryMutationVariables = Exact<{
-    emailAddress: Scalars['String']['input'];
+    challenge: Scalars['String']['input'];
 }>;
 
-export type RequestTwoFactorRecoveryMutation = { requestTwoFactorRecovery: { success: boolean } };
+export type RequestTwoFactorRecoveryMutation = {
+    requestTwoFactorRecovery:
+        | { __typename: 'TwoFactorError'; failure: TwoFactorFailure }
+        | { __typename: 'TwoFactorRecoveryRequested'; maskedEmailAddress: string };
+};
 
 export type CompleteTwoFactorRecoveryMutationVariables = Exact<{
     token: Scalars['String']['input'];
@@ -6383,9 +6394,15 @@ export const ConfirmTwoFactorEnrolmentDocument = new TypedDocumentString(`
     ConfirmTwoFactorEnrolmentMutationVariables
 >;
 export const RequestTwoFactorRecoveryDocument = new TypedDocumentString(`
-    mutation RequestTwoFactorRecovery($emailAddress: String!) {
-  requestTwoFactorRecovery(emailAddress: $emailAddress) {
-    success
+    mutation RequestTwoFactorRecovery($challenge: String!) {
+  requestTwoFactorRecovery(challenge: $challenge) {
+    __typename
+    ... on TwoFactorRecoveryRequested {
+      maskedEmailAddress
+    }
+    ... on TwoFactorError {
+      failure
+    }
   }
 }
     `) as unknown as TypedDocumentString<

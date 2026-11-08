@@ -19,12 +19,10 @@ export interface TwoFactorLabels {
     manualKey: string;
     copyKey: string;
     enrolSubmit: string;
-    emailLabel: string;
-    recoveryTitle: string;
-    recoverySubtitle: string;
-    recoverySubmit: string;
     recoverySentTitle: string;
     recoverySentText: string;
+    recoverySentValid: string;
+    backToCode: string;
     backToSignIn: string;
     passwordLabel: string;
     currentCodeLabel: string;
