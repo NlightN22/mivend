@@ -35,3 +35,11 @@ export class CompleteTwoFactorRecoveryResultResolver {
         return value.__typename;
     }
 }
+
+@Resolver('RequestTwoFactorRecoveryResult')
+export class RequestTwoFactorRecoveryResultResolver {
+    @ResolveField()
+    __resolveType(value: Typed): string {
+        return value.__typename;
+    }
+}

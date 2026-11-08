@@ -11,6 +11,7 @@ import type {
     TwoFactorChallengeResult,
     TwoFactorEnrolmentResult,
     TwoFactorErrorResult,
+    TwoFactorRecoveryRequestedResult,
     TwoFactorStatusResult,
 } from '../two-factor.types';
 
@@ -82,12 +83,11 @@ export class TwoFactorResolver {
     @Transaction()
     @Mutation()
     @Allow(Permission.Public)
-    async requestTwoFactorRecovery(
+    requestTwoFactorRecovery(
         @Ctx() ctx: RequestContext,
-        @Args() args: { emailAddress: string },
-    ): Promise<{ success: boolean }> {
-        await this.recovery.request(ctx, args.emailAddress);
-        return { success: true };
+        @Args() args: { challenge: string },
+    ): Promise<TwoFactorRecoveryRequestedResult | TwoFactorErrorResult> {
+        return this.recovery.request(ctx, args.challenge);
     }
 
     @Transaction()

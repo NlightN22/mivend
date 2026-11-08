@@ -7,6 +7,7 @@ export const TWO_FACTOR_STRATEGY_NAME = 'twoFactor';
 export const CHALLENGE_TTL_DEFAULT_MS = 5 * 60_000;
 export const PENDING_TTL_DEFAULT_MS = 10 * 60_000;
 export const RECOVERY_TTL_DEFAULT_MS = 30 * 60_000;
+export const RECOVERY_REQUEST_INTERVAL_DEFAULT_MS = 60_000;
 export const MAX_TOKEN_ATTEMPTS_DEFAULT = 5;
 export const CLEANUP_POLL_INTERVAL_DEFAULT = 60 * 60_000;
 
@@ -17,6 +18,7 @@ export interface TwoFactorPluginOptions {
     challengeTtlMs?: number;
     pendingTtlMs?: number;
     recoveryTtlMs?: number;
+    recoveryRequestIntervalMs?: number;
     maxTokenAttempts?: number;
     cleanupPollIntervalMs?: number;
 }
@@ -35,6 +37,12 @@ export type TwoFactorFailure =
     | 'NOT_ENROLLED'
     | 'ENROLMENT_EXPIRED'
     | 'RECOVERY_LINK_INVALID';
+
+export interface TwoFactorRecoveryRequestedResult {
+    __typename: 'TwoFactorRecoveryRequested';
+    success: true;
+    maskedEmailAddress: string;
+}
 
 export interface TwoFactorErrorResult {
     __typename: 'TwoFactorError';

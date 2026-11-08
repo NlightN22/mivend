@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RequestContext, SessionService, UserService } from '@vendure/core';
 
+import { maskEmailAddress } from './mask-email-address';
 import { FactorStoreService } from './factor-store.service';
 import { TokenStoreService } from './token-store.service';
 import { TwoFactorAuditService } from './two-factor-audit.service';
@@ -13,6 +14,7 @@ import {
 } from './two-factor.events';
 import {
     MAX_TOKEN_ATTEMPTS_DEFAULT,
+    RECOVERY_REQUEST_INTERVAL_DEFAULT_MS,
     RECOVERY_TTL_DEFAULT_MS,
     TWO_FACTOR_PLUGIN_OPTIONS,
     twoFactorError,
@@ -21,6 +23,7 @@ import type {
     TwoFactorChallengeResult,
     TwoFactorErrorResult,
     TwoFactorPluginOptions,
+    TwoFactorRecoveryRequestedResult,
 } from './two-factor.types';
 
 // Lost device: an emailed single-use link plus the account password. Extension point for a cooling-off delay:
@@ -39,17 +42,40 @@ export class TwoFactorRecoveryService {
         @Inject(TWO_FACTOR_PLUGIN_OPTIONS) private options: TwoFactorPluginOptions,
     ) {}
 
-    // Silent for unknown addresses and accounts without a factor, so the answer reveals nothing.
-    async request(ctx: RequestContext, emailAddress: string): Promise<void> {
-        const user = await this.users.getUserByEmailAddress(
-            ctx,
-            emailAddress,
-            ctx.apiType === 'admin' ? 'administrator' : 'customer',
-        );
-        if (!user) return;
-        const userId = String(user.id);
-        await this.locks.withUser(ctx, userId, async txCtx => {
-            if (!(await this.factors.hasActive(txCtx, userId))) return;
+    // The sign-in challenge (password already proven) names the account; the address is never taken from the caller.
+    async request(
+        ctx: RequestContext,
+        challenge: string,
+    ): Promise<TwoFactorRecoveryRequestedResult | TwoFactorErrorResult> {
+        const userId = await this.tokens.findUserId(ctx, challenge, 'sign-in');
+        if (!userId) return twoFactorError('CHALLENGE_INVALID');
+        return this.locks.withUser(ctx, userId, async txCtx => {
+            const row = await this.tokens.findUsable(
+                txCtx,
+                challenge,
+                'sign-in',
+                this.options.maxTokenAttempts ?? MAX_TOKEN_ATTEMPTS_DEFAULT,
+            );
+            if (!row || row.stage !== 'VERIFY' || row.apiType !== txCtx.apiType) {
+                return twoFactorError('CHALLENGE_INVALID');
+            }
+            const user = await this.users.getUserById(txCtx, userId);
+            if (
+                !user ||
+                !(await this.challenges.mayUseApi(txCtx, user)) ||
+                !(await this.factors.hasActive(txCtx, userId))
+            ) {
+                return twoFactorError('CHALLENGE_INVALID');
+            }
+            const result: TwoFactorRecoveryRequestedResult = {
+                __typename: 'TwoFactorRecoveryRequested',
+                success: true,
+                maskedEmailAddress: maskEmailAddress(user.identifier),
+            };
+            // #278: throttle recovery requests here
+            const interval =
+                this.options.recoveryRequestIntervalMs ?? RECOVERY_REQUEST_INTERVAL_DEFAULT_MS;
+            if (await this.tokens.hasRecentRecovery(txCtx, userId, interval)) return result;
             await this.tokens.supersedeOpen(txCtx, userId, 'recovery');
             const { token } = await this.tokens.issue(txCtx, {
                 userId,
@@ -62,6 +88,7 @@ export class TwoFactorRecoveryService {
                 'recovery-requested',
                 new TwoFactorRecoveryRequestedEvent(txCtx, user, token),
             );
+            return result;
         });
     }
 

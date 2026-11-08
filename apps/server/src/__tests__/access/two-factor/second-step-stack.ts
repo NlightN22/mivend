@@ -162,6 +162,10 @@ async function mailFiles(url: string, recipient: string, subject: string): Promi
         .map(item => item.fileName);
 }
 
+export async function mailCount(url: string, recipient: string, subject: string): Promise<number> {
+    return (await mailFiles(url, recipient, subject)).length;
+}
+
 // The mailbox directory outlives runs, so only a mail that appears after `trigger` counts.
 export async function tokenFromNewMail(
     url: string,

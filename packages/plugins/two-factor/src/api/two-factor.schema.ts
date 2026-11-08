@@ -46,6 +46,12 @@ export const twoFactorSchema: DocumentNode = gql`
         pendingEnrolment: Boolean!
     }
 
+    type TwoFactorRecoveryRequested {
+        success: Boolean!
+        maskedEmailAddress: String!
+    }
+
+    union RequestTwoFactorRecoveryResult = TwoFactorRecoveryRequested | TwoFactorError
     union StartTwoFactorSignInResult = TwoFactorChallenge | TwoFactorError
     union StartTwoFactorEnrolmentResult = TwoFactorEnrolment | TwoFactorError
     union ConfirmTwoFactorEnrolmentResult = TwoFactorStatus | TwoFactorError
@@ -64,7 +70,7 @@ export const twoFactorSchema: DocumentNode = gql`
             currentCode: String
         ): StartTwoFactorEnrolmentResult!
         confirmTwoFactorEnrolment(code: String!): ConfirmTwoFactorEnrolmentResult!
-        requestTwoFactorRecovery(emailAddress: String!): Success!
+        requestTwoFactorRecovery(challenge: String!): RequestTwoFactorRecoveryResult!
         completeTwoFactorRecovery(
             token: String!
             password: String!

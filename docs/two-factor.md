@@ -78,6 +78,7 @@ enum TwoFactorFailure {
 }
 type TwoFactorError implements ErrorResult { errorCode: ErrorCode! message: String! failure: TwoFactorFailure! }
 type TwoFactorChallenge { stage: TwoFactorStage! challenge: String expiresAt: DateTime }
+type TwoFactorRecoveryRequested { success: Boolean! maskedEmailAddress: String! }
 type TwoFactorEnrolment { otpauthUri: String! secret: String! expiresAt: DateTime! }
 type TwoFactorStatus { required: Boolean! enrolled: Boolean! method: String activatedAt: DateTime pendingEnrolment: Boolean! }
 
@@ -89,7 +90,7 @@ extend type Mutation {
   startTwoFactorSignIn(username: String!, password: String!): StartTwoFactorSignInResult!
   startTwoFactorEnrolment(challenge: String, password: String, currentCode: String): StartTwoFactorEnrolmentResult!
   confirmTwoFactorEnrolment(code: String!): ConfirmTwoFactorEnrolmentResult!
-  requestTwoFactorRecovery(emailAddress: String!): Success!
+  requestTwoFactorRecovery(challenge: String!): RequestTwoFactorRecoveryResult!
   completeTwoFactorRecovery(token: String!, password: String!): CompleteTwoFactorRecoveryResult!
 }
 # every *Result is a union of the success type and TwoFactorError
@@ -146,8 +147,14 @@ start a replacement: it works only for an account without a factor.
 
 ### Lost device (recovery)
 
-1. On the second-step page: `requestTwoFactorRecovery(emailAddress)`. Always answers `success: true` and sends a mail
-   only if the account has a factor. The link is single use, valid 30 minutes (a newer link replaces the older), and is
+1. On the second-step page: `requestTwoFactorRecovery(challenge)` with the sign-in challenge issued after the correct
+   password (stage `VERIFY`). The account comes from the challenge, so no address is accepted and an anonymous caller
+   cannot trigger mail. The link goes to the account's own address; the answer is `TwoFactorRecoveryRequested`
+   (`success`, `maskedEmailAddress` such as `j***@example.org`, the full address is never returned). An unknown, expired,
+   used, wrong-API or non-`VERIFY` challenge, or an account without a factor, gives `TwoFactorError` `CHALLENGE_INVALID`
+   and sends nothing. The challenge stays valid for the sign-in. A repeat within 60 seconds (per account) answers the
+   same success without a second mail; the extension point for a real throttle is the `#278` comment in
+   `two-factor-recovery.service.ts`. The link is single use, valid 30 minutes (a newer link replaces the older), and is
    stored hashed.
 2. The link opens `/two-factor-recovery?token=...` on the portal of that account type, which asks for the password and calls
    `completeTwoFactorRecovery(token, password)`. A wrong password keeps the link alive (five wrong tries). On success:
