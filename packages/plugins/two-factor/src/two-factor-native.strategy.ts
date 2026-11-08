@@ -10,43 +10,26 @@ import {
     User,
 } from '@vendure/core';
 
-import { FactorStoreService } from './factor-store.service';
-import { TwoFactorLockService } from './two-factor-lock.service';
 import { TwoFactorPolicyService } from './two-factor-policy.service';
-import { TwoFactorVerificationService } from './two-factor-verification.service';
 
 export const TWO_FACTOR_REQUIRED_ERROR = 'TWO_FACTOR_REQUIRED';
-export const TWO_FACTOR_INVALID_CODE_ERROR = 'TWO_FACTOR_INVALID_CODE';
-
-const INLINE_CODE = /^(.+) (\d{6})$/s;
 
 type PasswordStrategy = Pick<
     NativeAuthenticationStrategy,
     'init' | 'defineInputType' | 'authenticate' | 'verifyUserPassword'
 >;
 
-interface Candidate {
-    password: string;
-    code: string | null;
-}
-
 // Same name as the stock strategy, which it wraps: a password alone never opens a session where a second step
-// is needed. Admins may append " <code>" to the password (the stock Dashboard form has no code field).
+// is needed. The code is only ever taken by the `twoFactor` strategy.
 export class TwoFactorNativeAuthenticationStrategy implements AuthenticationStrategy<NativeAuthenticationData> {
     readonly name = NATIVE_AUTH_STRATEGY_NAME;
     private policy!: TwoFactorPolicyService;
-    private verification!: TwoFactorVerificationService;
-    private factors!: FactorStoreService;
-    private locks!: TwoFactorLockService;
 
     constructor(private readonly native: PasswordStrategy = new NativeAuthenticationStrategy()) {}
 
     async init(injector: Injector): Promise<void> {
         await this.native.init(injector);
         this.policy = injector.get(TwoFactorPolicyService);
-        this.verification = injector.get(TwoFactorVerificationService);
-        this.factors = injector.get(FactorStoreService);
-        this.locks = injector.get(TwoFactorLockService);
     }
 
     defineInputType(): DocumentNode {
@@ -67,33 +50,10 @@ export class TwoFactorNativeAuthenticationStrategy implements AuthenticationStra
         data: NativeAuthenticationData,
     ): Promise<User | false | string> {
         // #278: throttle failed password attempts here.
-        const inline = ctx.apiType === 'admin' ? INLINE_CODE.exec(data.password) : null;
-        const candidates: Candidate[] = [{ password: data.password, code: null }];
-        if (inline) candidates.unshift({ password: inline[1], code: inline[2] });
-        for (const candidate of candidates) {
-            const user = await this.native.authenticate(ctx, {
-                username: data.username,
-                password: candidate.password,
-            });
-            if (user) return this.secondStep(ctx, user, candidate.code);
-        }
-        return false;
-    }
-
-    private async secondStep(
-        ctx: RequestContext,
-        user: User,
-        code: string | null,
-    ): Promise<User | string> {
-        const userId = String(user.id);
-        if (!(await this.policy.isEnforced(ctx, userId))) return user;
-        if (!code) return TWO_FACTOR_REQUIRED_ERROR;
-        return this.locks.withUser(ctx, userId, async txCtx => {
-            const factor = await this.factors.find(txCtx, userId, 'active');
-            // #278: throttle failed second-step attempts here.
-            const accepted =
-                factor && (await this.verification.verifyAndClaim(txCtx, factor, code));
-            return accepted ? user : TWO_FACTOR_INVALID_CODE_ERROR;
-        });
+        const user = await this.native.authenticate(ctx, data);
+        if (!user) return false;
+        return (await this.policy.isEnforced(ctx, String(user.id)))
+            ? TWO_FACTOR_REQUIRED_ERROR
+            : user;
     }
 }

@@ -92,10 +92,6 @@ async function startEnrolment(
 
 const idle = (ms: number): Promise<void> => new Promise(done => setTimeout(done, ms));
 
-async function waitForNextTimeStep(): Promise<void> {
-    await idle(30_000 - (Date.now() % 30_000) + 1_000);
-}
-
 describe.each(['admin', 'customer'] as const)('%s account', kind => {
     const account = (): Account => accounts[kind];
     let secret: string;
@@ -222,36 +218,11 @@ describe.each(['admin', 'customer'] as const)('%s account', kind => {
         });
     });
 
-    it.runIf(kind === 'admin')(
-        'takes "<password> <code>" on the admin login, checked together',
-        async () => {
-            await waitForNextTimeStep();
-            const wrong = await passwordLogin(account(), LOGIN, `${PASSWORD} ${wrongCode(secret)}`);
-            expect(wrong.token).toBeNull();
-            expect(wrong.outcome?.authenticationError).toBe('TWO_FACTOR_INVALID_CODE');
-            const right = await passwordLogin(
-                account(),
-                LOGIN,
-                `${PASSWORD} ${codeFor(secret, 1)}`,
-            );
-            expect(right.outcome?.__typename).toBe('CurrentUser');
-            expect(right.token).toBeTruthy();
-        },
-        90_000,
-    );
-
-    it.runIf(kind === 'customer')(
-        'ignores a code appended to the password on the shop API',
-        async () => {
-            const { token, outcome } = await passwordLogin(
-                account(),
-                LOGIN,
-                `${PASSWORD} ${codeFor(secret, 1)}`,
-            );
-            expect(token).toBeNull();
-            expect(outcome?.authenticationError).toBe('');
-        },
-    );
+    it('does not read a code out of the password on either API', async () => {
+        const { token, outcome } = await passwordLogin(account(), LOGIN, `${PASSWORD} 123456`);
+        expect(token).toBeNull();
+        expect(outcome?.authenticationError).toBe('');
+    });
 
     it('recovers a lost device only with the emailed link and the password', async () => {
         const request = async (challenge: string) =>
