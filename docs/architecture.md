@@ -110,6 +110,9 @@ to authenticate a login **fully offline** — this is the same "unreliable netwo
 that drives the whole hub-spoke design. The synced record therefore carries the bcrypt hash
 itself (safe to transmit and store, same as it's stored on Central), not just a display name.
 
+**Second factor (#279):** the TOTP factor of an account is instance-local state and is not synced; an administrator who
+signs in on a branch enrols there. See docs/two-factor.md.
+
 **Known accepted limitation — deactivation lag:** if an Administrator is deactivated or deleted on
 Central while a branch is offline, that branch's local replica stays valid (and thus that person
 can still log in locally) until the branch reconnects and consumes the deactivation event. This

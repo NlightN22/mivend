@@ -17,6 +17,7 @@ import { TwoFactorVerificationService } from './two-factor-verification.service'
 import {
     CHALLENGE_TTL_DEFAULT_MS,
     MAX_TOKEN_ATTEMPTS_DEFAULT,
+    PENDING_TTL_DEFAULT_MS,
     TWO_FACTOR_PLUGIN_OPTIONS,
     twoFactorError,
 } from './two-factor.types';
@@ -79,7 +80,10 @@ export class TwoFactorChallengeService {
                 purpose: 'sign-in',
                 stage,
                 apiType: ctx.apiType as TwoFactorApi,
-                ttlMs: this.options.challengeTtlMs ?? CHALLENGE_TTL_DEFAULT_MS,
+                ttlMs:
+                    stage === 'ENROL'
+                        ? (this.options.pendingTtlMs ?? PENDING_TTL_DEFAULT_MS)
+                        : (this.options.challengeTtlMs ?? CHALLENGE_TTL_DEFAULT_MS),
             })
             .then(({ token, expiresAt }) => ({ challenge: token, expiresAt }));
     }

@@ -54,6 +54,8 @@ Expected sets are spelled out there, not recomputed. Specs live by entity under
 `apps/server/src/__tests__/access/`; files run one at a time and restore what they change.
 No skips; missing data is seeded, never worked around. Every restricted actor has a hidden row per
 entity, and scope `all` must see exactly the superadmin's set.
+`access/two-factor` is the exception to the shared server: it starts a second server with `TWO_FACTOR_REQUIRED=true`
+and a mail worker on the same database and proves that no route opens a session without the second step (docs/two-factor.md).
 Not part of `make test-int`.
 
 ### Component
