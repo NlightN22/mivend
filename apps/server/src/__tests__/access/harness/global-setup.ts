@@ -14,6 +14,8 @@ declare module 'vitest' {
     export interface ProvidedContext {
         accessBaseUrl: string;
         accessSeed: SeedIds;
+        accessServerEnv: Record<string, string>;
+        accessDatabase: string;
     }
 }
 
@@ -82,6 +84,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
         stop = server.stop;
         stopWorker = startPdfWorker(env, resolve(LOG_DIR, 'worker.log'));
         project.provide('accessBaseUrl', server.baseUrl);
+        project.provide('accessServerEnv', env);
+        project.provide('accessDatabase', name);
         project.provide('accessSeed', await runAccessSeed(server.baseUrl, importToken, name));
     } catch (error) {
         await teardown();
