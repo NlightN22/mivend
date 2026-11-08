@@ -6,13 +6,29 @@ export const SESSION_MANAGEMENT_PLUGIN_OPTIONS = Symbol('SESSION_MANAGEMENT_PLUG
 // check at auth time (see SessionService.findSessionByToken()). An hourly sweep is plenty.
 export const CLEANUP_POLL_INTERVAL_DEFAULT = 60 * 60_000;
 
-// Generous for people; bounds sessions leaked by automated logins that never log out.
-export const MAX_ACTIVE_SESSIONS_DEFAULT = 20;
+// A PC and a phone per customer; staff also use the Dashboard and a laptop.
+export const MAX_ACTIVE_SESSIONS_CUSTOMER_DEFAULT = 2;
+export const MAX_ACTIVE_SESSIONS_STAFF_DEFAULT = 3;
+
+export const DAILY_RESET_POLL_INTERVAL_MS = 5 * 60_000;
+
+export interface DailyResetOptions {
+    enabled: boolean;
+    hour: number;
+    timeZone: string;
+}
 
 export interface SessionManagementPluginOptions {
     cleanupPollIntervalMs?: number;
-    maxActiveSessionsPerUser?: number;
+    maxActiveSessionsCustomer?: number;
+    maxActiveSessionsStaff?: number;
+    dailyReset?: DailyResetOptions;
 }
+
+// Acting sessions (a manager inside a customer account) and API-key sessions follow their own lifetime rules.
+export const OWN_SESSION_SQL = `type = 'AuthenticatedSession' AND invalidated = false
+    AND "customFieldsActingadministratorid" IS NULL
+    AND "authenticationStrategy" IS DISTINCT FROM 'api-key'`;
 
 export interface SessionSummary {
     id: string;

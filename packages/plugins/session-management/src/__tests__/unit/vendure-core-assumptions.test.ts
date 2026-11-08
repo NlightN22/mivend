@@ -23,4 +23,31 @@ describe('Vendure core behavior that our plugins replace or work around', () => 
         expect(source).toContain('getActiveOrderForUser');
         expect(source).toContain('mergeOrders');
     });
+
+    // Deactivating an account (customer portal access, staff) ends all its sessions only through this chain.
+    describe('deactivation ends every session of the account', () => {
+        const body = (file: string, method: string): string => {
+            const source = read(file);
+            const start = source.indexOf(`async ${method}(`);
+            return source.slice(start, source.indexOf('\n    async ', start + 1));
+        };
+
+        it('customer soft delete goes through the user soft delete', () => {
+            expect(body('service/services/customer.service.js', 'softDelete')).toContain(
+                'userService.softDelete',
+            );
+        });
+
+        it('administrator soft delete goes through the user soft delete', () => {
+            expect(body('service/services/administrator.service.js', 'softDelete')).toContain(
+                'userService.softDelete',
+            );
+        });
+
+        it('user soft delete deletes all sessions of the user, acting ones included', () => {
+            expect(body('service/services/user.service.js', 'softDelete')).toContain(
+                'deleteSessionsByUser',
+            );
+        });
+    });
 });

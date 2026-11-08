@@ -632,7 +632,9 @@ export const config: VendureConfig = {
             instanceType,
         }),
         SessionManagementPlugin.init({
-            maxActiveSessionsPerUser: sessionOptions.maxActiveSessionsPerUser,
+            maxActiveSessionsCustomer: sessionOptions.maxActiveSessionsCustomer,
+            maxActiveSessionsStaff: sessionOptions.maxActiveSessionsStaff,
+            dailyReset: sessionOptions.dailyReset,
         }),
         // Before OrderIdentityPlugin: that plugin wraps whatever active-order strategy exists when it configures.
         ActingSessionPlugin.init({ storefrontPublicUrl: process.env.STOREFRONT_PUBLIC_URL ?? '' }),

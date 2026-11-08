@@ -11,13 +11,19 @@ export const sessionManagementSchema: DocumentNode = gql`
         current: Boolean!
     }
 
+    type SignInSettings {
+        newDeviceEmail: Boolean!
+    }
+
     extend type Query {
         mySessions: [SessionSummary!]!
+        mySignInSettings: SignInSettings!
     }
 
     extend type Mutation {
         endSession(id: ID!): Boolean!
         endOtherSessions: Boolean!
         endAllSessions: Boolean!
+        setNewDeviceEmail(enabled: Boolean!): SignInSettings!
     }
 `;

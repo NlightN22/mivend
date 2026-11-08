@@ -11,6 +11,13 @@ import {
 } from '@vendure/core';
 import { subscribeAndLog } from 'shared';
 
+import { KnownDevice } from './entities/known-device.entity';
+import { deviceCookieMiddleware } from './device-identity';
+import { KnownDeviceService } from './known-device.service';
+import { SessionDailyResetService } from './session-daily-reset.service';
+import { createSessionDailyResetTask } from './session-daily-reset.scheduled-task';
+import { SignInSettingsService } from './sign-in-settings.service';
+
 import { ShopLogoutResolver } from './api/shop-logout.resolver';
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
@@ -25,8 +32,12 @@ import type { SessionManagementPluginOptions } from './session.types';
 
 @VendurePlugin({
     imports: [PluginCommonModule],
+    entities: [KnownDevice],
     providers: [
         SessionManagementService,
+        SessionDailyResetService,
+        KnownDeviceService,
+        SignInSettingsService,
         SessionLoginListenerService,
         SessionCapService,
         ActingContextService,
@@ -55,9 +66,27 @@ import type { SessionManagementPluginOptions } from './session.types';
             },
             ...actingSessionCustomFields,
         ];
+        config.customFields.User = [
+            ...(config.customFields.User ?? []),
+            {
+                name: 'newDeviceEmailEnabled',
+                type: 'boolean' as const,
+                defaultValue: true,
+                nullable: false,
+                internal: true,
+            },
+        ];
+        config.apiOptions.middleware = [
+            ...(config.apiOptions.middleware ?? []),
+            { route: config.apiOptions.shopApiPath, handler: deviceCookieMiddleware },
+            { route: config.apiOptions.adminApiPath, handler: deviceCookieMiddleware },
+        ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createSessionCleanupTask(SessionManagementPlugin.options),
+            ...(SessionManagementPlugin.options.dailyReset?.enabled
+                ? [createSessionDailyResetTask()]
+                : []),
         ];
         return config;
     },
@@ -75,6 +104,7 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
         private readonly eventBus: EventBus,
         private readonly loginListenerService: SessionLoginListenerService,
         private readonly sessionCapService: SessionCapService,
+        private readonly knownDeviceService: KnownDeviceService,
         private readonly requestContextService: RequestContextService,
     ) {}
 
@@ -91,6 +121,15 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
             async event => {
                 const ctx = await this.requestContextService.create({ apiType: 'admin' });
                 await this.sessionCapService.enforceCap(ctx, event.user.id);
+            },
+            'SessionManagementPlugin',
+        );
+        subscribeAndLog(
+            this.eventBus,
+            LoginEvent,
+            async event => {
+                const ctx = await this.requestContextService.create({ apiType: 'admin' });
+                await this.knownDeviceService.recordSignIn(ctx, event.user, event.ctx);
             },
             'SessionManagementPlugin',
         );

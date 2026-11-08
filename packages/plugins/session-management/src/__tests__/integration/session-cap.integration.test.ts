@@ -16,12 +16,12 @@ const { schema, extra } = testSchemaOptions('session_cap');
 let dataSource: DataSource;
 let deleteFromCache: ReturnType<typeof vi.fn>;
 
-function capService(cap: number): SessionCapService {
+function capService(cap: number, staffCap = cap): SessionCapService {
     const configService = {
         authOptions: { sessionCacheStrategy: { delete: deleteFromCache } },
     } as unknown as ConfigService;
     return new SessionCapService(
-        { maxActiveSessionsPerUser: cap },
+        { maxActiveSessionsCustomer: cap, maxActiveSessionsStaff: staffCap },
         configService,
         createTestConnection(dataSource),
     );
@@ -31,12 +31,18 @@ async function insertSession(
     token: string,
     userId: number,
     minutesAgo: number,
-    overrides: { invalidated?: boolean; expired?: boolean; type?: string; acting?: boolean } = {},
+    overrides: {
+        invalidated?: boolean;
+        expired?: boolean;
+        type?: string;
+        acting?: boolean;
+        strategy?: string;
+    } = {},
 ): Promise<void> {
     const now = Date.now();
     await dataSource.query(
-        `INSERT INTO session (token, "userId", type, invalidated, expires, "createdAt", "customFieldsActingadministratorid")
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        `INSERT INTO session (token, "userId", type, invalidated, expires, "createdAt", "customFieldsActingadministratorid", "authenticationStrategy")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
             token,
             userId,
@@ -45,6 +51,7 @@ async function insertSession(
             new Date(now + (overrides.expired ? -1 : 1) * 86_400_000),
             new Date(now - minutesAgo * 60_000),
             overrides.acting ? '9' : null,
+            overrides.strategy ?? 'native',
         ],
     );
 }
@@ -70,8 +77,10 @@ beforeAll(async () => {
         invalidated boolean NOT NULL,
         expires timestamp NOT NULL,
         "createdAt" timestamp NOT NULL DEFAULT now(),
-        "customFieldsActingadministratorid" varchar
+        "customFieldsActingadministratorid" varchar,
+        "authenticationStrategy" varchar
     )`);
+    await dataSource.query('CREATE TABLE administrator (id serial PRIMARY KEY, "userId" integer)');
 });
 
 afterAll(async () => {
@@ -81,6 +90,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query('TRUNCATE session');
+    await dataSource.query('TRUNCATE administrator');
     deleteFromCache = vi.fn();
 });
 
@@ -138,5 +148,40 @@ describe('SessionCapService (integration, real Postgres)', () => {
 
         expect(results.reduce((a, b) => a + b, 0)).toBe(3);
         expect(await activeTokens(1)).toEqual(['s3', 's4', 's5']);
+    });
+
+    it('applies the staff cap to administrator users and the customer cap to the rest', async () => {
+        await dataSource.query('INSERT INTO administrator ("userId") VALUES (1)');
+        for (let i = 0; i < 4; i++) {
+            await insertSession(`staff${i}`, 1, 40 - i);
+            await insertSession(`customer${i}`, 2, 40 - i);
+        }
+
+        await capService(2, 3).enforceCap(testRequestContext, 1);
+        await capService(2, 3).enforceCap(testRequestContext, 2);
+
+        expect(await activeTokens(1)).toEqual(['staff1', 'staff2', 'staff3']);
+        expect(await activeTokens(2)).toEqual(['customer2', 'customer3']);
+    });
+
+    it('never ends the newest session, the one being created', async () => {
+        await insertSession('old-a', 1, 30);
+        await insertSession('old-b', 1, 20);
+        await insertSession('being-created', 1, 0);
+
+        await capService(1).enforceCap(testRequestContext, 1);
+
+        expect(await activeTokens(1)).toEqual(['being-created']);
+    });
+
+    it('leaves API-key sessions out of the count and untouched', async () => {
+        await insertSession('key', 1, 90, { strategy: 'api-key' });
+        await insertSession('mine-a', 1, 20);
+        await insertSession('mine-b', 1, 10);
+
+        const ended = await capService(2).enforceCap(testRequestContext, 1);
+
+        expect(ended).toBe(0);
+        expect(await activeTokens(1)).toEqual(['key', 'mine-a', 'mine-b']);
     });
 });
