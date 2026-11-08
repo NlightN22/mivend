@@ -260,7 +260,8 @@ test:
 	$(TEST_LOCK) bash infrastructure/scripts/tests/site-identity-envsh.test.sh
 
 # Quick loop: tests of the packages changed since BASE (default origin/main) and their dependents. Full runs stay required before audit and release.
-test-changed: up
+test-changed:
+	@if [ "$(DRY)" != 1 ]; then $(MAKE) --no-print-directory up; fi
 	bash infrastructure/scripts/test-changed.sh
 
 test-int: up

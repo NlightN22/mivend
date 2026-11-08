@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the unit, integration and access tests of the packages changed since $BASE and of the packages that depend on them.
 # Integration tests run for the changed packages only; DEPS=1 adds their dependents. Unit tests always follow the import graph (vitest --changed).
-# DRY=1 prints the plan only. A quick loop while working; the full make test / test-int / test-access stay required before audit and release.
+# DRY=1 prints the plan only. Files under infrastructure/scripts are outside this loop (their script tests run in make test). A quick loop while working; the full make test / test-int / test-access stay required before audit and release.
 set -euo pipefail
 
 BASE="${BASE:-origin/main}"
@@ -65,6 +65,7 @@ echo "  access matrix: $run_access"
 
 flock "$LOCK" pnpm exec vitest run "${unit_args[@]}" --passWithNoTests
 if [ "${#int_pkgs[@]}" -gt 0 ]; then
+    pnpm build:plugins
     filters=()
     for n in "${int_pkgs[@]}"; do filters+=(--filter "$n"); done
     flock "$LOCK" pnpm "${filters[@]}" --no-bail test:integration
