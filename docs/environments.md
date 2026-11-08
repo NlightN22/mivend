@@ -407,7 +407,7 @@ setting `api.host`/`api.port` to `'auto'` (derives the admin-api origin from `wi
 request time) plus a `/admin-api` (and `/assets`) dev proxy in `vite.config.ts`, same pattern as
 `packages/storefront`/`packages/manager`'s own vite proxies — every viewer's request now lands
 back on whichever origin they're actually looking at, same-origin, no server-side CORS needed at
-all (the `apiOptions.cors` config this doc used to mention has been removed).
+all.
 
 The server's `plugins` array also registers `DashboardPlugin` (from `@vendure/dashboard/plugin`)
 with no `.init()` call — same "standalone deployment" caveat the old `AdminUiPlugin` had for its
@@ -482,6 +482,17 @@ Ended sessions are only listed nowhere (`mySessions` shows active ones) and noth
 default, no Redis): another server process may accept an ended token until its cache entry
 expires (`sessionCacheTTL`, 300 s). The cap applies to every account; raise it on a contour where
 many tools share one login.
+
+## CORS and CSRF prevention (#331)
+
+Every client reaches the API through its own origin (nginx and Vite proxy `/shop-api`, `/admin-api`,
+`/assets`), so by default the server sends no CORS headers (`apiOptions.cors: false`).
+`CORS_ALLOWED_ORIGINS` (comma-separated explicit origins, empty by default, `*` refused) enables
+credentialed CORS for exactly those origins; set it only when a browser client calls the server
+directly from another origin. `apiOptions.csrfPrevention` is always on: a GraphQL request needs a
+non-simple content type (`application/json`) or the `Apollo-Require-Preflight` header, so a
+cross-site form POST cannot log a visitor in. Server-side REST callbacks are not Apollo and are
+unaffected; a new client that sends `multipart/form-data`, `text/plain` or a GET query must set that header.
 
 ## Migration and entity schema drift (#302)
 
