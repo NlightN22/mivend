@@ -209,8 +209,8 @@ proforma whose sales invoice number equals the document number). Views, URL sync
 mobile cards are shared with the payments list. `visibleSettlementDocuments` takes
 `options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
 caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
-in the customer card. Gated by its own `ReadSettlementDocument` (granted to every default role; it exposes no credit
-limit or balance, unlike `ReadCounterpartyCredit`), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
+in the customer card. Gated by its own `ReadSettlementDocument` (granted to every default role; it shows no credit
+limit, balance or overdue figure, unlike `ReadCounterpartyCredit`, though the signed amounts can be added up), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
 `proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
 correlated order-code aggregation used by the search and the type counts is the first thing to
 profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.

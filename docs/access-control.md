@@ -99,7 +99,11 @@ to a role, nothing inherits it from `ManageErpIntegration`.
 default role (operator, manager, department-head, general-director, security-officer, portal-admin). It is a
 separate permission from `ReadCounterpartyCredit` on purpose: credit limits and balances stay with the credit
 holders, while the documents (sales invoices, payments, returns) are shown to anyone within the counterparty
-scope. The rows are limited to the counterparties the caller sees (`CounterpartyService.visibleErpIdsSql`),
+scope. The owner decided that managers, operators and department heads read settlement documents within their
+access scope (decision recorded in the #320 discussion, 2026-11-08), which is why a dedicated permission exists
+instead of widening `ReadCounterpartyCredit`. The documents' signed amounts are the inputs of the balance, so a
+reader of the list can add them up; that is the accepted trade-off of showing the documents at all, while the
+balance, limit and overdue figures themselves stay behind `ReadCounterpartyCredit`. The rows are limited to the counterparties the caller sees (`CounterpartyService.visibleErpIdsSql`),
 applied before any client filter, search or counterparty argument. The grant lives in `default-roles.ts`
 (re-provisioned on every start, never by hand in the Admin UI).
 
