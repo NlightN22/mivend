@@ -650,6 +650,11 @@ and re-check the result after recalculation, so a concurrent edit cannot lower t
 returns the current employee's ceiling per line for the manager card (null for a line the limit does not judge); the limit
 and the floor are never part of a finding and never reach the customer.
 
+`orderLineQuote(orderId, sku)` (the add-position row of the order card) needs `ConfirmOrder` like `addOrderLineBySku`, is refused
+for an order outside the caller's scope (`OrderVisibilityService`), and refuses an unknown, ambiguous or unpriced article with
+the same messages as the add. It returns the customer's unit price (the cart's resolution, `orderRules: false`), the reference
+price, the discount percent from it and the free stock of the branch warehouses; it writes nothing.
+
 Recalculation today: a line with a manual price keeps it (`customer-price-calculation.strategy.ts` returns it and
 `OrderDiscountService` skips manual lines), so an automatic discount that appears later does not replace a manual price
 until `revertOrderLineDiscount` is called. No machinery was added for that.

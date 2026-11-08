@@ -4,6 +4,7 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { OrderLineAddService } from './order-line-add.service';
+import { OrderLineQuoteService } from './order-line-quote.service';
 import { OrderLineEditService } from './order-line-edit.service';
 import { OrderLineShortfallService } from './order-line-shortfall.service';
 
@@ -13,6 +14,7 @@ export class OrderLineEditResolver {
         private edits: OrderLineEditService,
         private adds: OrderLineAddService,
         private shortfalls: OrderLineShortfallService,
+        private quotes: OrderLineQuoteService,
     ) {}
 
     @Query()
@@ -20,6 +22,12 @@ export class OrderLineEditResolver {
     async orderLineAvailability(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
         const rows = await this.edits.availability(ctx, args.orderId);
         return rows.map(({ lineId, ...rest }) => ({ orderLineId: lineId, ...rest }));
+    }
+
+    @Query()
+    @Allow(CustomPermission.ConfirmOrder.Permission)
+    orderLineQuote(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID; sku: string }) {
+        return this.quotes.quote(ctx, args.orderId, args.sku);
     }
 
     @Query()

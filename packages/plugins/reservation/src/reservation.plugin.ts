@@ -67,6 +67,7 @@ import { OrderDeliveryEditResolver } from './order-delivery-edit.resolver';
 import { adminOrderDeliveryEditSchema } from './order-delivery-edit.schema';
 import { OrderDeliveryEditService } from './order-delivery-edit.service';
 import { OrderLineAddService } from './order-line-add.service';
+import { OrderLineQuoteService } from './order-line-quote.service';
 import { OrderLineEditGuard } from './order-line-edit.guard';
 import { OrderLineStockSyncService } from './order-line-stock-sync.service';
 import { orderCancelReleaseProcess } from './order-cancel-release.process';
@@ -112,6 +113,7 @@ import type { ReservationPluginOptions } from './types';
         ReservationAccessService,
         OrderLineEditService,
         OrderLineAddService,
+        OrderLineQuoteService,
         OrderDeliveryEditService,
         OrderLineShortfallService,
         OrderLinesEditPortRegistry,

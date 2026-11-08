@@ -15,6 +15,8 @@ const OVERDUE = `query($id: ID!) { counterpartyOverdue(counterpartyId: $id) { am
 const RETRO = `query($id: ID!) { orderRetroBonus(orderId: $id) { hasRules lines { orderLineId } } }`;
 const ADD = `mutation($o: ID!, $s: String!, $q: Int!) { addOrderLineBySku(orderId: $o, sku: $s, quantity: $q) }`;
 
+const QUOTE = `query($o: ID!, $s: String!) { orderLineQuote(orderId: $o, sku: $s) { sku customerPrice } }`;
+
 const hidden = (e: string): boolean => DENIED.test(e) || NOT_FOUND.test(e);
 
 describe('counterpartyOverdue follows the credit right and the counterparty scope', () => {
@@ -57,7 +59,7 @@ describe('counterpartyOverdue follows the credit right and the counterparty scop
     });
 });
 
-describe('orderRetroBonus and addOrderLineBySku follow the order scope', () => {
+describe('orderRetroBonus, orderLineQuote and addOrderLineBySku follow the order scope', () => {
     it.each(STAFF.map(s => s.key))(
         '%s gets no retro bonus rows for an order it cannot see',
         async (key: ActorKey) => {
@@ -93,9 +95,26 @@ describe('orderRetroBonus and addOrderLineBySku follow the order scope', () => {
         },
     );
 
-    it('both are refused without a staff session', async () => {
+    it.each(STAFF.map(s => s.key))(
+        '%s cannot quote an article for an order it cannot see',
+        async (key: ActorKey) => {
+            const token = await staffToken(key);
+            for (const { key: orderKey } of ORDERS) {
+                if (VISIBLE_ORDERS[key].includes(orderKey)) continue;
+                const result = await admin(token, QUOTE, {
+                    o: orderOf(orderKey).id,
+                    s: 'ACCESS-SKU-1',
+                });
+                expect(result.errors.length, `${key} -> ${orderKey}`).toBeGreaterThan(0);
+                for (const e of result.errors) expect(hidden(e)).toBe(true);
+            }
+        },
+    );
+
+    it('all are refused without a staff session', async () => {
         const noToken = undefined as unknown as string;
         expect((await admin(noToken, RETRO, { id: '1' })).errors.length).toBeGreaterThan(0);
+        expect((await admin(noToken, QUOTE, { o: '1', s: 'X' })).errors.length).toBeGreaterThan(0);
         expect((await admin(noToken, ADD, { o: '1', s: 'X', q: 1 })).errors.length).toBeGreaterThan(
             0,
         );
