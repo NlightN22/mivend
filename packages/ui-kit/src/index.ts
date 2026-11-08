@@ -317,6 +317,8 @@ export { default as MvFlaggedValue } from './components/MvFlaggedValue/MvFlagged
 export type { FlagSeverity } from './components/MvFlaggedValue/MvFlaggedValue.vue';
 export { default as MvDocumentLines } from './components/MvDocumentLines/MvDocumentLines.vue';
 export { default as MvDocumentCell } from './components/MvDocumentLines/MvDocumentCell.vue';
+export { default as MvDocumentAddButton } from './components/MvDocumentLines/MvDocumentAddButton.vue';
+export { default as MvDocumentSuffixInput } from './components/MvDocumentLines/MvDocumentSuffixInput.vue';
 export { default as MvDocumentTotals } from './components/MvDocumentLines/MvDocumentTotals.vue';
 export type { DocTotalRow } from './components/MvDocumentLines/MvDocumentTotals.vue';
 export * from './components/MvDocumentLines/documentLinesModel';

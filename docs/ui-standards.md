@@ -122,11 +122,14 @@ order card.
 orders today, proforma invoices, payments, sales invoices and discount requests next. Use it whenever a card shows
 positions with per-cell problems; use `MvAdvancedDataTable` for lists of documents.
 
-What the kit owns: the toolbar (title with count, an inline `toolbar` slot for the primary control, a ghost "Select"
-toggle; in selection mode a bulk bar with "N selected", the `bulk` slot and "Cancel"), the header row, left-aligned
-value cells (a flag icon follows the value, no empty icon slot is reserved), per-cell flags, the left stripe in the worst
-tone of the row, optional per-row edit (check and cross) and a row menu, a mobile card per row and a skeleton.
-`MvDocumentTotals` is the right-aligned stacked totals block (label left, value right, a muted note, the document total
+What the kit owns: the toolbar (title with a muted position count, an inline `toolbar` slot), an always-visible checkbox
+column on desktop (none on a phone) with a selection bar above the table (`bulk` slot, "Selected: N"; selected rows
+tinted), the header row, left-aligned value cells (a flag icon follows the value, no empty icon slot is reserved),
+per-cell flags (a column marked `inputWhenEditing` drops its flag while its row is edited, the others keep it), the
+left stripe in the worst tone of the row, per-row pencil and trash buttons, inline edit (green tint and accent, check
+and cross; `MvDocumentSuffixInput` is the numeric input with a "%" or currency suffix), the inline add row (`adding`
+prop, `add-row` slot) with the dashed `MvDocumentAddButton` (`add-label` prop, `add` event), a mobile card per row
+and a skeleton. `MvDocumentTotals` is the right-aligned stacked totals block (label left, value right, a muted note, the document total
 emphasised). Selection state is `useLineSelection`.
 
 How a new document type plugs in (all in its own package, nothing document-specific enters the kit):
@@ -138,8 +141,8 @@ How a new document type plugs in (all in its own package, nothing document-speci
    actions are allowed come from the document's checks and policies, not from the kit.
 3. Render each cell through the `cell-<columnKey>` slot (it receives `row` and `editing`); the kit wraps the content in
    the flag. Put the edit inputs in the same slot when `editing` is true; editing state, drafts and mutations stay in the
-   caller (`editing-id`, `saving-id`, `errors`, `start`/`commit`/`cancel`/`remove` events).
-4. Fill the `toolbar`, `bulk`, `notices` and `totals` slots. Totals are `DocTotalRow[]`; a flag that belongs to the whole
+   caller (`editing-id`, `saving-id`, `errors`, `start`/`commit`/`cancel`/`remove`/`add` events).
+4. Fill the `toolbar`, `bulk`, `notices`, `add-row` and `totals` slots. Totals are `DocTotalRow[]`; a flag that belongs to the whole
    document goes into the `value-<key>` slot of its totals row with `MvDocumentCell`.
 
 Reference: `OrderLinesTable.vue` and `orderDocFlags.ts` in the manager portal.

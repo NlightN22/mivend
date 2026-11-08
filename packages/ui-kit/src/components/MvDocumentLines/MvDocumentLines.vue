@@ -3,8 +3,10 @@ import MvCheckbox from '../MvCheckbox/MvCheckbox.vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import type { useLineSelection } from '../../composables/useLineSelection';
 import MvDocumentLineRow from './MvDocumentLineRow.vue';
+import MvDocumentAddButton from './MvDocumentAddButton.vue';
 import MvDocumentLinesToolbar from './MvDocumentLinesToolbar.vue';
-import { visibleColumns, type DocColumn, type DocRow } from './documentLinesModel';
+import MvDocumentSelectionBar from './MvDocumentSelectionBar.vue';
+import { columnCount, visibleColumns, type DocColumn, type DocRow } from './documentLinesModel';
 
 const props = defineProps<{
     title: string;
@@ -18,38 +20,40 @@ const props = defineProps<{
     canEdit?: (row: R) => boolean;
     canRemove?: (row: R) => boolean;
     errors?: Record<string, string>;
+    adding?: boolean;
+    addLabel?: string;
 }>();
 defineEmits<{
     start: [id: string];
     commit: [id: string];
     cancel: [id: string];
     remove: [id: string];
+    add: [];
     'flag-action': [id: string, column: string, action: string];
 }>();
 
-const selecting = () => !!props.selection?.active.value;
+const selectable = () => !!props.selection;
 </script>
 
 <template>
     <div class="mv-doc-lines">
-        <MvDocumentLinesToolbar
-            :title="title"
-            :count="rows.length"
-            :selectable="!!selection"
-            :selecting="selecting()"
-            :selected-count="selection?.count.value ?? 0"
-            @select="selection!.active.value = true"
-            @cancel="selection!.clear()"
-        >
+        <MvDocumentLinesToolbar :title="title" :count="rows.length">
             <template #toolbar><slot name="toolbar" /></template>
-            <template #bulk="{ count }"><slot name="bulk" :count="count" /></template>
         </MvDocumentLinesToolbar>
         <slot name="notices" />
+        <MvDocumentSelectionBar
+            v-if="selection && selection.count.value > 0"
+            :count="selection.count.value"
+            :total="rows.length"
+            @select-all="selection.setAll"
+        >
+            <slot name="bulk" :count="selection.count.value" />
+        </MvDocumentSelectionBar>
         <div class="mv-doc-lines__scroll">
             <table class="mv-doc-lines__table">
                 <thead>
                     <tr>
-                        <th v-if="selecting()" class="mv-doc-lines__select">
+                        <th v-if="selectable()" class="mv-doc-lines__select">
                             <MvCheckbox
                                 :model-value="selection!.allSelected.value"
                                 :indeterminate="
@@ -78,7 +82,7 @@ const selecting = () => !!props.selection?.active.value;
                         :key="row.id"
                         :row="row"
                         :columns="columns"
-                        :selectable="selecting()"
+                        :selectable="selectable()"
                         :selected="selection?.selected.value.has(row.id) ?? false"
                         :editing="editingId === row.id"
                         :saving="savingId === row.id"
@@ -97,9 +101,20 @@ const selecting = () => !!props.selection?.active.value;
                             <slot :name="name" v-bind="slotProps ?? {}" />
                         </template>
                     </MvDocumentLineRow>
+                    <tr v-if="adding" class="mv-doc-lines__add-row">
+                        <td :colspan="columnCount(columns, selectable())">
+                            <slot name="add-row" />
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
+        <MvDocumentAddButton
+            v-if="addLabel && !adding"
+            :label="addLabel"
+            :disabled="busy"
+            @click="$emit('add')"
+        />
         <slot name="totals" />
     </div>
 </template>
@@ -116,7 +131,7 @@ const selecting = () => !!props.selection?.active.value;
 }
 
 .mv-doc-lines__table th {
-    padding: 12px;
+    padding: 12px 8px;
     text-align: left;
     font-size: 14px;
     font-weight: 500;
@@ -129,6 +144,16 @@ const selecting = () => !!props.selection?.active.value;
 .mv-doc-lines__select,
 .mv-doc-lines__actions {
     width: 1%;
+}
+
+.mv-doc-lines__table :deep(.mv-doc-lines__select) {
+    padding-right: 0;
+}
+
+.mv-doc-lines__add-row td {
+    padding: 8px 12px;
+    border: 2px solid var(--app-primary-btn);
+    background: var(--app-stock-in-bg);
 }
 
 .mv-doc-lines__skeleton td {

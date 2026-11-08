@@ -1,38 +1,16 @@
 <script setup lang="ts">
-import MvButton from '../MvButton/MvButton.vue';
-
-defineProps<{
-    title: string;
-    count: number;
-    selectable: boolean;
-    selecting: boolean;
-    selectedCount: number;
-}>();
-defineEmits<{ select: []; cancel: [] }>();
+defineProps<{ title: string; count: number }>();
 </script>
 
 <template>
-    <div class="doc-toolbar" :class="{ 'doc-toolbar--selecting': selecting }">
-        <template v-if="selecting">
-            <span class="doc-toolbar__count" data-testid="doc-selected-count">
-                {{ selectedCount }} selected
+    <div class="doc-toolbar">
+        <h3 class="doc-toolbar__title">
+            {{ title }}
+            <span class="doc-toolbar__count" data-testid="doc-lines-count">
+                {{ count }} {{ count === 1 ? 'position' : 'positions' }}
             </span>
-            <div class="doc-toolbar__end">
-                <slot name="bulk" :count="selectedCount" />
-                <MvButton size="sm" variant="ghost" @click="$emit('cancel')">Cancel</MvButton>
-            </div>
-        </template>
-        <template v-else>
-            <h3 class="doc-toolbar__title">
-                {{ title }} <span class="doc-toolbar__count">{{ count }}</span>
-            </h3>
-            <div class="doc-toolbar__end">
-                <slot name="toolbar" />
-                <MvButton v-if="selectable" size="sm" variant="ghost" @click="$emit('select')">
-                    Select
-                </MvButton>
-            </div>
-        </template>
+        </h3>
+        <div class="doc-toolbar__end"><slot name="toolbar" /></div>
     </div>
 </template>
 
@@ -47,12 +25,6 @@ defineEmits<{ select: []; cancel: [] }>();
     margin-bottom: 4px;
 }
 
-.doc-toolbar--selecting {
-    padding: 4px 8px;
-    border-radius: var(--app-radius-sm, 8px);
-    background: var(--app-stock-in-bg);
-}
-
 .doc-toolbar__title {
     margin: 0;
     font-size: 15px;
@@ -61,8 +33,8 @@ defineEmits<{ select: []; cancel: [] }>();
 }
 
 .doc-toolbar__count {
-    margin-left: 4px;
-    font-weight: 600;
+    margin-left: 6px;
+    font-weight: 500;
     color: var(--app-text-grey);
 }
 
@@ -71,11 +43,5 @@ defineEmits<{ select: []; cancel: [] }>();
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-}
-
-@media (max-width: 800px) {
-    .doc-toolbar__end {
-        width: 100%;
-    }
 }
 </style>

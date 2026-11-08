@@ -38,7 +38,10 @@ const stripe = computed(() => rowStripe(props.row.flags));
 <template>
     <tr
         class="doc-row"
-        :class="[`doc-row--${stripe}`, { 'doc-row--editing': editing }]"
+        :class="[
+            `doc-row--${stripe}`,
+            { 'doc-row--editing': editing, 'doc-row--selected': selected },
+        ]"
         :data-testid="row.testId"
     >
         <td v-if="selectable" class="doc-row__select">
@@ -56,7 +59,7 @@ const stripe = computed(() => rowStripe(props.row.flags));
             :data-label="col.label"
         >
             <MvDocumentCell
-                :flag="editing ? undefined : row.flags?.[col.key]"
+                :flag="editing && col.inputWhenEditing ? undefined : row.flags?.[col.key]"
                 @action="$emit('flag-action', col.key, $event)"
             >
                 <slot :name="`cell-${col.key}`" :row="row" :editing="editing" />

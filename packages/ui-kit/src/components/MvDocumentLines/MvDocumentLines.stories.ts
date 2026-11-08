@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { ref } from 'vue';
 import { useLineSelection } from '../../composables/useLineSelection';
 import MvDocumentLines from './MvDocumentLines.vue';
+import MvDocumentSuffixInput from './MvDocumentSuffixInput.vue';
 import MvDocumentTotals from './MvDocumentTotals.vue';
 import type { DocColumn, DocRow } from './documentLinesModel';
 
@@ -14,7 +15,7 @@ interface DemoRow extends DocRow {
 const columns: DocColumn[] = [
     { key: 'name', label: 'Item' },
     { key: 'qty', label: 'Qty' },
-    { key: 'price', label: 'Price' },
+    { key: 'price', label: 'Price', inputWhenEditing: true },
 ];
 const rows: DemoRow[] = [
     { id: '1', name: 'Clean line', qty: 2, price: '10.00' },
@@ -55,8 +56,10 @@ type Story = StoryObj;
 
 export const WithFlagsAndTotals: Story = {
     render: () => ({
-        components: { MvDocumentLines, MvDocumentTotals },
+        components: { MvDocumentLines, MvDocumentTotals, MvDocumentSuffixInput },
         setup: () => ({
+            adding: ref(false),
+            editingId: ref<string | null>(null),
             columns,
             rows,
             selection: useLineSelection(ref(rows.map(r => r.id))),
@@ -66,10 +69,22 @@ export const WithFlagsAndTotals: Story = {
             ],
         }),
         template: `<MvDocumentLines title="Lines" :columns="columns" :rows="rows" :selection="selection"
-            :can-edit="() => true" :can-remove="() => true">
+            :editing-id="editingId" :adding="adding" add-label="Add position"
+            :can-edit="() => true" :can-remove="() => true"
+            @start="editingId = $event" @commit="editingId = null" @cancel="editingId = null"
+            @add="adding = true">
+            <template #bulk><button type="button">Delete</button></template>
+            <template #add-row>
+                New position form
+                <button type="button" @click="adding = false">Cancel</button>
+            </template>
             <template #cell-name="{ row }">{{ row.name }}</template>
             <template #cell-qty="{ row }">{{ row.qty }}</template>
-            <template #cell-price="{ row }">{{ row.price }}</template>
+            <template #cell-price="{ row, editing }">
+                <MvDocumentSuffixInput v-if="editing" :model-value="row.price" suffix="$"
+                    label="Price" />
+                <template v-else>{{ row.price }}</template>
+            </template>
             <template #totals><MvDocumentTotals :rows="totals" /></template>
         </MvDocumentLines>`,
     }),

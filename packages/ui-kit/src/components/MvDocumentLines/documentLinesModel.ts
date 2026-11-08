@@ -26,6 +26,8 @@ export interface DocColumn {
     key: string;
     label: string;
     hidden?: boolean;
+    // The cell turns into inputs while its row is edited, so its flag chip steps aside.
+    inputWhenEditing?: boolean;
 }
 
 export interface DocRow {
