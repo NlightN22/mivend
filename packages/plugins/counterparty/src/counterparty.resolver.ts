@@ -18,6 +18,7 @@ import { CounterpartyService } from './counterparty.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { CounterpartySortParameter } from './types';
+import type { CounterpartyFilterParameter } from './counterparty-filter-engine';
 
 @Resolver('Customer')
 export class CustomerCounterpartyResolver {
@@ -130,6 +131,7 @@ export class CounterpartyResolver {
                 unassignedOnly?: boolean;
                 innStatus?: string;
                 readiness?: string;
+                filter?: CounterpartyFilterParameter;
                 sort?: CounterpartySortParameter;
             };
         },

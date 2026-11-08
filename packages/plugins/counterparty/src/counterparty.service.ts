@@ -26,6 +26,10 @@ import {
 import { selectHighUsage, summarizeCounterparties } from './counterparty-credit-queries';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { applyCounterpartySort } from './counterparty-sort';
+import {
+    applyCounterpartyFilterParameter,
+    type CounterpartyFilterParameter,
+} from './counterparty-filter-engine';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
 
 @Injectable()
@@ -179,10 +183,12 @@ export class CounterpartyService {
         options: CounterpartyListFilter & {
             take?: number;
             skip?: number;
+            filter?: CounterpartyFilterParameter;
             sort?: CounterpartySortParameter;
         } = {},
     ): Promise<PaginatedList<Counterparty>> {
         const qb = await this.visibleFilteredQb(ctx, options);
+        applyCounterpartyFilterParameter(qb, options.filter);
         applyCounterpartySort(qb, options.sort);
         const totalItems = await qb.getCount();
         if (options.take === 0) return { items: [], totalItems };

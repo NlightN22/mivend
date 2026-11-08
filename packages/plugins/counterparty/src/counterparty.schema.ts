@@ -103,7 +103,20 @@ export const adminApiSchema = gql`
         innStatus: String
         "ready | missing-data | erp-inactive | activated — whether portal access can be switched on"
         readiness: String
+        "Filter builder conditions; fixed field whitelist, no regex, applied on top of the visibility scope"
+        filter: CounterpartyFilterParameter
         sort: CounterpartySortParameter
+    }
+
+    input CounterpartyFilterParameter {
+        shortName: StringOperators
+        inn: StringOperators
+        phone: StringOperators
+        officialEmail: StringOperators
+        managerErpId: StringOperators
+        branchId: StringOperators
+        isActive: BooleanOperators
+        _and: [CounterpartyFilterParameter!]
     }
 
     "Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136)"
