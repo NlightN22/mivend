@@ -23,6 +23,7 @@
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-acquiring": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
+        "@mivend/plugin-bulk-operations": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",

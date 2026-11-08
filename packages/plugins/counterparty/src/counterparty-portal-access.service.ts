@@ -15,6 +15,22 @@ import { loggerCtx } from './types';
 import { ctxQuery, withAggregateLock } from 'shared';
 import { withInnBindingGuard } from './counterparty-inn-guard';
 
+export type PortalAccessSkipCode =
+    | 'inactive'
+    | 'no_contact'
+    | 'already_active'
+    | 'no_portal_access';
+
+// A precondition that no longer holds; bulk runs report it as a skip, not a failure.
+export class PortalAccessPreconditionError extends UserInputError {
+    constructor(
+        readonly code: PortalAccessSkipCode,
+        message: string,
+    ) {
+        super(message);
+    }
+}
+
 export type PortalAccessAction = 'activate' | 'deactivate';
 
 export interface PortalAccessChangeInput {
@@ -137,6 +153,31 @@ export class CounterpartyPortalAccessService {
         return results;
     }
 
+    // Revokes by counterparty under the same lock as activation, so a revoke cannot race a grant.
+    async revoke(ctx: RequestContext, counterpartyId: ID): Promise<Customer> {
+        const counterparty = await this.findCounterpartyOrFail(ctx, counterpartyId);
+        await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `portal-access:${counterpartyId}`,
+            async txCtx => {
+                const linkedCustomerId = await this.getLinkedCustomerId(txCtx, counterpartyId);
+                if (!linkedCustomerId) {
+                    throw new PortalAccessPreconditionError(
+                        'no_portal_access',
+                        `Counterparty ${counterpartyId} has no linked portal Customer to deactivate`,
+                    );
+                }
+                return this.doDeactivate(txCtx, linkedCustomerId);
+            },
+        );
+    }
+
+    async linkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
+        return this.getLinkedCustomerId(ctx, counterpartyId);
+    }
+
     // The lock serializes the linked-customer check with the create, so two activations cannot both link.
     private doActivate(ctx: RequestContext, counterparty: Counterparty): Promise<Customer> {
         return withAggregateLock(this.connection, ctx, `portal-access:${counterparty.id}`, txCtx =>
@@ -151,18 +192,21 @@ export class CounterpartyPortalAccessService {
         counterparty: Counterparty,
     ): Promise<Customer> {
         if (!counterparty.isActive) {
-            throw new UserInputError(
+            throw new PortalAccessPreconditionError(
+                'inactive',
                 `Counterparty ${counterparty.id} is inactive in the ERP — portal access cannot be activated`,
             );
         }
         if (!counterparty.phone || !counterparty.officialEmail) {
-            throw new UserInputError(
+            throw new PortalAccessPreconditionError(
+                'no_contact',
                 `Counterparty ${counterparty.id} is missing phone and/or officialEmail — both are required before portal access can be activated`,
             );
         }
         const existingCustomerId = await this.getLinkedCustomerId(ctx, counterparty.id);
         if (existingCustomerId) {
-            throw new UserInputError(
+            throw new PortalAccessPreconditionError(
+                'already_active',
                 `Counterparty ${counterparty.id} already has a linked portal Customer (id=${existingCustomerId})`,
             );
         }

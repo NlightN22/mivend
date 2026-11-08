@@ -17,6 +17,9 @@
             "path": "../approval-workflow"
         },
         {
+            "path": "../bulk-operations"
+        },
+        {
             "path": "../checks"
         },
         {

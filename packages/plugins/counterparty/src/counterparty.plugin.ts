@@ -65,6 +65,8 @@ import { EntityVersionScopeRegistrar } from './entity-version-scope.registrar';
 import { CreditTermScopeRegistrar } from './credit-term-scope.registrar';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
+import { CounterpartyPortalAccessExecutor } from './counterparty-portal-access.executor';
+import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
 import {
     CounterpartyPortalAccessFieldResolver,
     CounterpartyPortalAccessMutationResolver,
@@ -124,6 +126,7 @@ const adminResolvers = [
         CustomerPricingPlugin,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
+        BulkOperationsPlugin,
         ChecksPlugin,
         VersioningPlugin,
         SessionManagementPlugin,
@@ -159,6 +162,7 @@ const adminResolvers = [
     },
     providers: [
         ...visibilityBundle.providers,
+        CounterpartyPortalAccessExecutor,
         CounterpartyService,
         CounterpartyBatchLoaders,
         ErpIdLookupService,

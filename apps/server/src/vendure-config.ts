@@ -61,6 +61,7 @@ import {
     offlineTermsPaymentHandler,
 } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
+import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
@@ -882,6 +883,7 @@ export const config: VendureConfig = {
         NotificationPlugin,
         MoqPlugin,
         SavedViewsPlugin,
+        BulkOperationsPlugin,
         CustomFieldWritePolicyPlugin,
     ],
 };

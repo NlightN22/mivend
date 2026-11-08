@@ -11,6 +11,7 @@ const ALL_QUEUES_EXCEPT_EMAIL = [
     'update-search-index', // Vendure core (DefaultSearchPlugin), listed so it's never orphaned
     'generate-document', // this project's own (plugin-documents, PdfGeneratorService)
     'product-photo-sync', // this project's own (plugin-erp-integration, ProductPhotoSyncService)
+    'bulk-batch-run', // this project's own (plugin-bulk-operations, BulkRunQueue)
 ];
 
 // Nest's shutdown hooks close the app but leftover handles can keep the process alive with no
