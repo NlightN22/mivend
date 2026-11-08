@@ -19,7 +19,7 @@ query PaymentCard($id: ID!) {
             version
             amount
             currencyCode
-            status
+            displayStatus
             dueDate
         }
         order {

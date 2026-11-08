@@ -6536,7 +6536,8 @@ export type PaymentCardProforma = {
     dueDate: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
     number: Scalars['String']['output'];
-    status: Scalars['String']['output'];
+    /** current | superseded | cancelled; never the stored status. */
+    displayStatus: Scalars['String']['output'];
     version: Scalars['Int']['output'];
 };
 
@@ -12585,7 +12586,7 @@ export type PaymentCardQuery = {
             version: number;
             amount: number;
             currencyCode: string;
-            status: string;
+            displayStatus: string;
             dueDate: any;
         } | null;
         order: { code: string; state: string; orderTotal: number; currencyCode: string } | null;
@@ -16039,7 +16040,7 @@ export const PaymentCardDocument = new TypedDocumentString(`
       version
       amount
       currencyCode
-      status
+      displayStatus
       dueDate
     }
     order {

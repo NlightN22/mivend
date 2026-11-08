@@ -201,7 +201,8 @@ export const adminApiExtensions: DocumentNode = gql`
         version: Int!
         amount: Int!
         currencyCode: String!
-        status: String!
+        "current | superseded | cancelled; never the stored status."
+        displayStatus: String!
         dueDate: DateTime!
     }
 

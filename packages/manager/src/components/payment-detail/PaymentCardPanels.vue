@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { MvDateTimeCell, MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { formatPaymentAmount, type PaymentCardData } from '../../api/payments';
-import { channelLabel, proformaLinkFor, statusLabel, statusVariant } from './paymentCardModel';
+import {
+    channelLabel,
+    orderStateLabel,
+    orderStateVariant,
+    proformaLinkFor,
+    proformaStatusLabel,
+    proformaStatusVariant,
+    statusLabel,
+    statusVariant,
+} from './paymentCardModel';
 
 defineProps<{ payment: PaymentCardData }>();
 </script>
@@ -65,7 +74,14 @@ defineProps<{ payment: PaymentCardData }>();
                 <dt>Due date</dt>
                 <dd>{{ new Date(payment.proformaInvoice.dueDate).toLocaleDateString('en-US') }}</dd>
                 <dt>Status</dt>
-                <dd>{{ payment.proformaInvoice.status }}</dd>
+                <dd>
+                    <MvStatusBadge
+                        :variant="proformaStatusVariant(payment.proformaInvoice.displayStatus)"
+                        >{{
+                            proformaStatusLabel(payment.proformaInvoice.displayStatus)
+                        }}</MvStatusBadge
+                    >
+                </dd>
             </dl>
             <p v-else class="payment-card-panels__empty">No proforma invoice</p>
         </MvPanel>
@@ -79,7 +95,11 @@ defineProps<{ payment: PaymentCardData }>();
                     }}</RouterLink>
                 </dd>
                 <dt>Status</dt>
-                <dd>{{ payment.order.state }}</dd>
+                <dd>
+                    <MvStatusBadge :variant="orderStateVariant(payment.order.state)">{{
+                        orderStateLabel(payment.order.state)
+                    }}</MvStatusBadge>
+                </dd>
                 <dt>Total</dt>
                 <dd>
                     {{ formatPaymentAmount(payment.order.orderTotal, payment.order.currencyCode) }}

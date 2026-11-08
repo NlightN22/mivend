@@ -50,7 +50,7 @@ beforeAll(async () => {
         ]);
         await dataSource.query(
             `INSERT INTO proforma_invoice (number, version, amount, "currencyCode", status, "dueDate")
-             VALUES ($1, $2, 1050, 'USD', 'current', now())`,
+             VALUES ($1, $2, 1050, 'USD', 'paid', now())`,
             [`pi-${i}`, i],
         );
     }
@@ -93,7 +93,14 @@ describe('PaymentCardLoader', () => {
         counter.count = 0;
         const proformas = await Promise.all([1, 2, 3].map(id => loader.proforma(ctx, String(id))));
         expect(counter.count).toBe(1);
-        expect(proformas[1]).toMatchObject({ id: '2', number: 'pi-2', version: 2, amount: 1050 });
+        expect(proformas[1]).toMatchObject({
+            id: '2',
+            number: 'pi-2',
+            version: 2,
+            amount: 1050,
+            displayStatus: 'current',
+        });
+        expect(proformas[1]).not.toHaveProperty('status');
         counter.count = 0;
         const orders = await Promise.all([1, 12, 999].map(id => loader.order(ctx, String(id))));
         expect(counter.count).toBe(1);

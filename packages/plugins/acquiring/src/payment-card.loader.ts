@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { CtxLoader, ctxQuery } from 'shared';
 
+import type { ProformaInvoiceStatus } from './entities/proforma-invoice.entity';
+import { displayStatusOf } from './proforma-invoice-display';
+
 export const MAX_CARD_REFUNDS = 50;
 
 export interface CardRefund {
@@ -19,7 +22,7 @@ export interface CardProforma {
     version: number;
     amount: number;
     currencyCode: string;
-    status: string;
+    displayStatus: string;
     dueDate: Date;
 }
 
@@ -82,14 +85,26 @@ export class PaymentCardLoader {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Array<CardProforma | null>> {
-        const rows = await ctxQuery<Array<Omit<CardProforma, 'id'> & { id: number }>>(
+        const rows = await ctxQuery<
+            Array<
+                Omit<CardProforma, 'id' | 'displayStatus'> & {
+                    id: number;
+                    status: ProformaInvoiceStatus;
+                }
+            >
+        >(
             this.connection,
             ctx,
             `SELECT id, number, version, amount, "currencyCode", status, "dueDate"
              FROM proforma_invoice WHERE id = ANY($1::int[])`,
             [keys.map(Number)],
         );
-        const byId = new Map(rows.map(row => [String(row.id), { ...row, id: String(row.id) }]));
+        const byId = new Map(
+            rows.map(({ status, ...row }) => [
+                String(row.id),
+                { ...row, id: String(row.id), displayStatus: displayStatusOf(status) },
+            ]),
+        );
         return keys.map(key => byId.get(key) ?? null);
     }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { MvDateTimeCell, MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { formatPaymentAmount, type PaymentCardData } from '../../api/payments';
-import { refundVariant } from './paymentCardModel';
+import { refundLabel, refundVariant } from './paymentCardModel';
 
 defineProps<{ payment: PaymentCardData }>();
 </script>
@@ -13,7 +13,7 @@ defineProps<{ payment: PaymentCardData }>();
                 <div class="payment-refunds__head">
                     <strong>{{ formatDocumentNumber(refund.number) }}</strong>
                     <MvStatusBadge :variant="refundVariant(refund.status)">{{
-                        refund.status
+                        refundLabel(refund.status)
                     }}</MvStatusBadge>
                     <span class="payment-refunds__amount">{{
                         formatPaymentAmount(refund.amount, payment.currencyCode)
