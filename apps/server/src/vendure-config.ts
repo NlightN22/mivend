@@ -50,6 +50,8 @@ import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ActingSessionPlugin } from '@mivend/plugin-acting-session';
+import { TwoFactorPlugin } from '@mivend/plugin-two-factor';
+import { twoFactorOptionsFromEnv } from './two-factor-options';
 import {
     AcquiringPlugin,
     cashPaymentHandler,
@@ -140,6 +142,10 @@ const emailPlugin = EmailPlugin.init({
         {
             staff: `${managerPublicUrl}/set-password`,
             customer: `${process.env.STOREFRONT_PUBLIC_URL ?? ''}/set-password`,
+        },
+        {
+            staff: `${managerPublicUrl}/two-factor-recovery`,
+            customer: `${process.env.STOREFRONT_PUBLIC_URL ?? ''}/two-factor-recovery`,
         },
         emailLanguage,
     ),
@@ -607,6 +613,7 @@ export const config: VendureConfig = {
         }),
         // Before OrderIdentityPlugin: that plugin wraps whatever active-order strategy exists when it configures.
         ActingSessionPlugin.init({ storefrontPublicUrl: process.env.STOREFRONT_PUBLIC_URL ?? '' }),
+        TwoFactorPlugin.init(twoFactorOptionsFromEnv(process.env, cookieSecret)),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,

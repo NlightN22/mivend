@@ -11,6 +11,7 @@
         "test:access": "vitest run --config vitest.access.config.ts",
         "start": "node dist/main.js",
         "start:worker": "node dist/worker.js",
+        "two-factor:reset": "ts-node --transpile-only src/two-factor-reset.cli.ts",
         "migration:generate": "ts-node --transpile-only src/migration.ts generate",
         "migration:run": "ts-node --transpile-only src/migration.ts run",
         "migration:revert": "ts-node --transpile-only src/migration.ts revert"
@@ -48,6 +49,7 @@
         "@mivend/plugin-acting-session": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
+        "@mivend/plugin-two-factor": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/graphql": "^13.1.0",

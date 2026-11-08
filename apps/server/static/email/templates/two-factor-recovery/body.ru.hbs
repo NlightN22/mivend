@@ -1,0 +1,23 @@
+{{> header title="Восстановление доступа к аутентификатору" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Запрошено восстановление доступа к вашей учётной записи после потери устройства аутентификации. Ссылка ниже одноразовая и скоро перестанет действовать; потребуется пароль от учётной записи.
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ twoFactorRecoveryUrl }}?token={{ twoFactorRecoveryToken }}">
+            Восстановить доступ
+        </mj-button>
+
+        <mj-text color="#525252">
+            Если вы не отправляли этот запрос, просто проигнорируйте письмо: в вашей учётной записи ничего не изменилось.
+        </mj-text>
+
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="Это автоматическое сообщение, отвечать на него не нужно." }}

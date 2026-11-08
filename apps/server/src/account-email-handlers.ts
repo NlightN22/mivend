@@ -12,6 +12,22 @@ export const EMAIL_SUBJECTS = {
         en: 'Please verify your change of email address',
         ru: 'Подтвердите новый адрес электронной почты',
     },
+    twoFactorEnabled: {
+        en: 'Two-factor authentication is on',
+        ru: 'Двухфакторная аутентификация включена',
+    },
+    twoFactorChanged: {
+        en: 'Your authenticator device was changed',
+        ru: 'Устройство аутентификации заменено',
+    },
+    twoFactorRecovery: {
+        en: 'Recover access to your authenticator',
+        ru: 'Восстановление доступа к аутентификатору',
+    },
+    twoFactorRecoveryCompleted: {
+        en: 'Access to your authenticator was recovered',
+        ru: 'Доступ к аутентификатору восстановлен',
+    },
 } satisfies Record<string, Record<EmailLanguage, string>>;
 
 export function createEmailVerificationHandler(fallback: EmailLanguage) {

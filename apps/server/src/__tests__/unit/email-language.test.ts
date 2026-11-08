@@ -46,9 +46,28 @@ const URLS = {
     staff: 'https://m.example.org/set-password',
     customer: 'https://shop.example.org/set-password',
 };
-const REGISTERED = createEmailHandlers(URLS, 'en').map(h => h.type);
-type MailType = 'password-reset' | 'email-verification' | 'email-address-change';
-const MAIL_TYPES: MailType[] = ['password-reset', 'email-verification', 'email-address-change'];
+const RECOVERY_URLS = {
+    staff: 'https://m.example.org/two-factor-recovery',
+    customer: 'https://shop.example.org/two-factor-recovery',
+};
+const REGISTERED = createEmailHandlers(URLS, RECOVERY_URLS, 'en').map(h => h.type);
+type MailType =
+    | 'password-reset'
+    | 'email-verification'
+    | 'email-address-change'
+    | 'two-factor-enabled'
+    | 'two-factor-changed'
+    | 'two-factor-recovery'
+    | 'two-factor-recovery-completed';
+const MAIL_TYPES: MailType[] = [
+    'password-reset',
+    'email-verification',
+    'email-address-change',
+    'two-factor-enabled',
+    'two-factor-changed',
+    'two-factor-recovery',
+    'two-factor-recovery-completed',
+];
 
 async function render(
     type: MailType,
@@ -62,7 +81,9 @@ async function render(
         authenticationMethods: [],
         getNativeAuthenticationMethod: () => method,
     };
-    const handler = createEmailHandlers(URLS, fallback).find(h => h.type === type) as unknown as {
+    const handler = createEmailHandlers(URLS, RECOVERY_URLS, fallback).find(
+        h => h.type === type,
+    ) as unknown as {
         handle: (
             e: unknown,
             g: unknown,
@@ -83,7 +104,7 @@ async function render(
             ...env,
         }),
     };
-    const details = await handler.handle({ ctx, user }, globals, injector);
+    const details = await handler.handle({ ctx, user, token: 'tok1' }, globals, injector);
     if (!details) throw new Error('no mail');
     const generator = new HandlebarsMjmlGenerator();
     await generator.onInit({ templateLoader: loader } as unknown as InitializedEmailPluginOptions);
@@ -105,6 +126,10 @@ const LINKS: Record<MailType, string> = {
     'password-reset': 'https://shop.example.org/set-password?token=tok1',
     'email-verification': 'https://shop.example.org/verify?token=tok1',
     'email-address-change': 'href="?token=tok1"',
+    'two-factor-enabled': 'Site A',
+    'two-factor-changed': 'Site A',
+    'two-factor-recovery': 'https://shop.example.org/two-factor-recovery?token=tok1',
+    'two-factor-recovery-completed': 'Site A',
 };
 const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'password-reset': { en: 'Forgotten password reset', ru: 'Восстановление пароля' },
@@ -115,6 +140,22 @@ const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'email-address-change': {
         en: 'Please verify your change of email address',
         ru: 'Подтвердите новый адрес электронной почты',
+    },
+    'two-factor-enabled': {
+        en: 'Two-factor authentication is on',
+        ru: 'Двухфакторная аутентификация включена',
+    },
+    'two-factor-changed': {
+        en: 'Your authenticator device was changed',
+        ru: 'Устройство аутентификации заменено',
+    },
+    'two-factor-recovery': {
+        en: 'Recover access to your authenticator',
+        ru: 'Восстановление доступа к аутентификатору',
+    },
+    'two-factor-recovery-completed': {
+        en: 'Access to your authenticator was recovered',
+        ru: 'Доступ к аутентификатору восстановлен',
     },
 };
 const DEFAULT_FOOTER: Record<EmailLanguage, string> = {
@@ -255,7 +296,11 @@ describe('mail tables', () => {
 });
 
 describe('registered mail types', () => {
-    const registered = createEmailHandlers({ staff: '', customer: '' }, 'en').map(h => h.type);
+    const registered = createEmailHandlers(
+        { staff: '', customer: '' },
+        { staff: '', customer: '' },
+        'en',
+    ).map(h => h.type);
     const templatesDir = path.join(__dirname, '../../../static/email/templates');
 
     it('registers every template directory and the other way round', () => {
