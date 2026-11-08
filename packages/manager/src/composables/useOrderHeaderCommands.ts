@@ -27,7 +27,7 @@ export function useOrderHeaderCommands(deps: {
         return (
             !!order &&
             canConfirmOrder({
-                cancellable: order.cancellable,
+                state: order.state,
                 lineCount: order.lines.length,
                 customFields: order.customFields,
             })

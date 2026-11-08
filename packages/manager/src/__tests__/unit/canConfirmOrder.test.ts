@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canConfirmOrder, type ConfirmEligibilityInput } from '../../utils/canConfirmOrder';
 
 const open: ConfirmEligibilityInput = {
-    cancellable: true,
+    state: 'PaymentSettled',
     lineCount: 2,
     customFields: { isExternal: false, erpOrderId: null, erpRegistrationStatus: null },
 };
@@ -16,8 +16,9 @@ describe('canConfirmOrder', () => {
         expect(canConfirmOrder(open)).toBe(true);
     });
 
-    it('refuses an order the server no longer lets anyone cancel (cancelled, shipped, settled)', () => {
-        expect(canConfirmOrder(with_({ cancellable: false }))).toBe(false);
+    it('refuses a cancelled order but not a paid one, which the server still reserves', () => {
+        expect(canConfirmOrder(with_({ state: 'Cancelled' }))).toBe(false);
+        expect(canConfirmOrder(with_({ state: 'PaymentSettled' }))).toBe(true);
     });
 
     it('refuses an empty draft', () => {

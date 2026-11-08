@@ -1,7 +1,7 @@
 import { isNotRegisteredInErp } from '../composables/isNotRegisteredInErp';
 
 export interface ConfirmEligibilityInput {
-    cancellable: boolean;
+    state: string;
     lineCount: number;
     customFields: {
         isExternal: boolean | null;
@@ -10,10 +10,10 @@ export interface ConfirmEligibilityInput {
     };
 }
 
-// Mirrors the refusals of ReservationService.reserveOrder; Order.cancellable is false for shipped, cancelled and ERP-owned states.
+// Mirrors the refusals of ReservationService.reserveOrder; a paid order is not cancellable but can still be confirmed.
 export function canConfirmOrder(order: ConfirmEligibilityInput): boolean {
     return (
-        order.cancellable &&
+        order.state !== 'Cancelled' &&
         order.lineCount > 0 &&
         order.customFields.isExternal !== true &&
         isNotRegisteredInErp(order.customFields)
