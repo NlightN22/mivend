@@ -12,6 +12,12 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import {
+    SignInThrottleService,
+    ThrottleStoreService,
+    type SignInProtectionOptions,
+} from '@mivend/plugin-sign-in-protection';
+
 import { FactorStoreService } from '../../factor-store.service';
 import { TokenStoreService } from '../../token-store.service';
 import { TwoFactorAuditService } from '../../two-factor-audit.service';
@@ -42,7 +48,27 @@ const DDL = `
         id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
         uuid uuid NOT NULL UNIQUE, "tokenHash" varchar NOT NULL UNIQUE, purpose varchar NOT NULL, "userId" varchar NOT NULL,
         stage varchar, "apiType" varchar, "expiresAt" timestamptz NOT NULL, "usedAt" timestamptz, attempts int NOT NULL DEFAULT 0);
+    CREATE TABLE sign_in_throttle (
+        id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
+        uuid uuid NOT NULL UNIQUE, "key" varchar NOT NULL UNIQUE, failures int NOT NULL DEFAULT 0, "lastFailureAt" timestamptz NOT NULL);
 `;
+
+const LIMITS = { threshold: 3, baseLockMs: 60_000, maxLockMs: 600_000 };
+
+export function throttleOptions(enabled: boolean): SignInProtectionOptions {
+    return {
+        throttle: {
+            enabled,
+            perLogin: LIMITS,
+            perLoginIp: LIMITS,
+            resetAfterMs: 3_600_000,
+            trustedProxyHops: 2,
+            cleanupPollIntervalMs: 3_600_000,
+        },
+        captcha: { provider: null, afterFailures: 3 },
+        breach: { checker: null },
+    };
+}
 
 export interface Fixture {
     dataSource: DataSource;
@@ -51,6 +77,7 @@ export interface Fixture {
     factors: FactorStoreService;
     tokens: TokenStoreService;
     policy: TwoFactorPolicyService;
+    throttle: SignInThrottleService;
     enrolment: TwoFactorEnrolmentService;
     challenges: TwoFactorChallengeService;
     recovery: TwoFactorRecoveryService;
@@ -81,7 +108,11 @@ function withApiType(base: TransactionalConnection): TransactionalConnection {
     } as unknown as TransactionalConnection;
 }
 
-export async function openFixture(tag: string, required = true): Promise<Fixture> {
+export async function openFixture(
+    tag: string,
+    required = true,
+    throttle = false,
+): Promise<Fixture> {
     const { schema, extra } = testSchemaOptions(tag);
     await createTestSchema(schema);
     const dataSource = new DataSource({
@@ -139,7 +170,17 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
     const locks = new TwoFactorLockService(connection);
     const audit = new TwoFactorAuditService(versioning, eventBus);
     const policy = new TwoFactorPolicyService(factors, options);
-    const verification = new TwoFactorVerificationService(factors, authService, methods, options);
+    const throttleService = new SignInThrottleService(
+        new ThrottleStoreService(connection),
+        throttleOptions(throttle),
+    );
+    const verification = new TwoFactorVerificationService(
+        factors,
+        authService,
+        methods,
+        throttleService,
+        options,
+    );
     const enrolment = new TwoFactorEnrolmentService(
         factors,
         tokens,
@@ -160,6 +201,7 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
         locks,
         users,
         administrators,
+        throttleService,
         configService,
         options,
     );
@@ -172,6 +214,7 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
         verification,
         users,
         sessions,
+        throttleService,
         options,
     );
     return {
@@ -181,6 +224,7 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
         factors,
         tokens,
         policy,
+        throttle: throttleService,
         enrolment,
         challenges,
         recovery,
@@ -188,7 +232,9 @@ export async function openFixture(tag: string, required = true): Promise<Fixture
         events,
         revokedUsers,
         reset: async () => {
-            await dataSource.query('TRUNCATE two_factor_factor, two_factor_token RESTART IDENTITY');
+            await dataSource.query(
+                'TRUNCATE two_factor_factor, two_factor_token, sign_in_throttle RESTART IDENTITY',
+            );
             audits.length = 0;
             events.length = 0;
             revokedUsers.length = 0;

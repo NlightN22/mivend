@@ -29,6 +29,7 @@
         { "path": "./versioning" },
         { "path": "./session-management" },
         { "path": "./acting-session" },
+        { "path": "./sign-in-protection" },
         { "path": "./two-factor" },
         { "path": "./saved-views" },
         { "path": "./checks" },

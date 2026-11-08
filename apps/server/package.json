@@ -49,6 +49,7 @@
         "@mivend/plugin-acting-session": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
+        "@mivend/plugin-sign-in-protection": "workspace:*",
         "@mivend/plugin-two-factor": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "@nestjs/common": "^11.0.0",

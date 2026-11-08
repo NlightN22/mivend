@@ -9,6 +9,7 @@ import {
     RequestContext,
     User,
 } from '@vendure/core';
+import { SignInGuardService } from '@mivend/plugin-sign-in-protection';
 
 import { TwoFactorPolicyService } from './two-factor-policy.service';
 
@@ -24,12 +25,14 @@ type PasswordStrategy = Pick<
 export class TwoFactorNativeAuthenticationStrategy implements AuthenticationStrategy<NativeAuthenticationData> {
     readonly name = NATIVE_AUTH_STRATEGY_NAME;
     private policy!: TwoFactorPolicyService;
+    private guard!: SignInGuardService;
 
     constructor(private readonly native: PasswordStrategy = new NativeAuthenticationStrategy()) {}
 
     async init(injector: Injector): Promise<void> {
         await this.native.init(injector);
         this.policy = injector.get(TwoFactorPolicyService);
+        this.guard = injector.get(SignInGuardService);
     }
 
     defineInputType(): DocumentNode {
@@ -40,17 +43,26 @@ export class TwoFactorNativeAuthenticationStrategy implements AuthenticationStra
         return this.native.verifyUserPassword(ctx, userId, password);
     }
 
-    // Password check only, for the step that issues a challenge.
-    verifyCredentials(ctx: RequestContext, data: NativeAuthenticationData): Promise<User | false> {
-        return this.native.authenticate(ctx, data);
+    // Password check only, for the step that issues a challenge. A throttled or CAPTCHA-less attempt is a plain false.
+    async verifyCredentials(
+        ctx: RequestContext,
+        data: NativeAuthenticationData,
+    ): Promise<User | false> {
+        if (!(await this.guard.admit(ctx, data.username))) return false;
+        const user = await this.native.authenticate(ctx, data);
+        if (!user) {
+            await this.guard.recordFailure(ctx, data.username);
+            return false;
+        }
+        await this.guard.recordSuccess(ctx, data.username, user, data.password);
+        return user;
     }
 
     async authenticate(
         ctx: RequestContext,
         data: NativeAuthenticationData,
     ): Promise<User | false | string> {
-        // #278: throttle failed password attempts here.
-        const user = await this.native.authenticate(ctx, data);
+        const user = await this.verifyCredentials(ctx, data);
         if (!user) return false;
         return (await this.policy.isEnforced(ctx, String(user.id)))
             ? TWO_FACTOR_REQUIRED_ERROR

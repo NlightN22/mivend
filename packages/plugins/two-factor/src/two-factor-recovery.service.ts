@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RequestContext, SessionService, UserService } from '@vendure/core';
+import { SignInThrottleService } from '@mivend/plugin-sign-in-protection';
 
 import { maskEmailAddress } from './mask-email-address';
 import { FactorStoreService } from './factor-store.service';
@@ -39,6 +40,7 @@ export class TwoFactorRecoveryService {
         private verification: TwoFactorVerificationService,
         private users: UserService,
         private sessions: SessionService,
+        private throttle: SignInThrottleService,
         @Inject(TWO_FACTOR_PLUGIN_OPTIONS) private options: TwoFactorPluginOptions,
     ) {}
 
@@ -72,10 +74,12 @@ export class TwoFactorRecoveryService {
                 success: true,
                 maskedEmailAddress: maskEmailAddress(user.identifier),
             };
-            // A newer request never voids an open link, so a password holder cannot keep killing the owner's link. #278: throttle here
+            // A newer request never voids an open link, so a password holder cannot keep killing the owner's link.
             const interval =
                 this.options.recoveryRequestIntervalMs ?? RECOVERY_REQUEST_INTERVAL_DEFAULT_MS;
             if (await this.tokens.hasRecentRecovery(txCtx, userId, interval)) return result;
+            if (await this.throttle.isLocked(txCtx, 'recovery-request', userId)) return result;
+            await this.throttle.recordFailure(txCtx, 'recovery-request', userId);
             const { token } = await this.tokens.issue(txCtx, {
                 userId,
                 purpose: 'recovery',
@@ -112,7 +116,6 @@ export class TwoFactorRecoveryService {
                 return twoFactorError('RECOVERY_LINK_INVALID');
             }
             if (!(await this.verification.passwordMatches(txCtx, userId, password))) {
-                // #278: throttle failed password attempts here.
                 await this.tokens.recordFailure(txCtx, row.id);
                 return twoFactorError('PASSWORD_INVALID');
             }

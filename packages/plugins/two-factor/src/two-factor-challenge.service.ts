@@ -6,6 +6,7 @@ import {
     User,
     UserService,
 } from '@vendure/core';
+import { SignInThrottleService } from '@mivend/plugin-sign-in-protection';
 
 import { FactorStoreService } from './factor-store.service';
 import { TokenStoreService } from './token-store.service';
@@ -44,6 +45,7 @@ export class TwoFactorChallengeService {
         private locks: TwoFactorLockService,
         private users: UserService,
         private administrators: AdministratorService,
+        private throttle: SignInThrottleService,
         private configService: ConfigService,
         @Inject(TWO_FACTOR_PLUGIN_OPTIONS) private options: TwoFactorPluginOptions,
     ) {}
@@ -54,7 +56,6 @@ export class TwoFactorChallengeService {
         username: string,
         password: string,
     ): Promise<TwoFactorChallengeResult | TwoFactorErrorResult> {
-        // #278: throttle failed password attempts here.
         const user = await this.native.verifyCredentials(ctx, { username, password });
         if (!user || !(await this.mayUseApi(ctx, user)))
             return twoFactorError('INVALID_CREDENTIALS');
@@ -109,7 +110,6 @@ export class TwoFactorChallengeService {
                     ? await this.checkEnrolStep(txCtx, userId, code)
                     : await this.checkVerifyStep(txCtx, userId, code);
             if (failure === INVALID_CODE_ERROR) {
-                // #278: throttle failed second-step attempts here.
                 await this.tokens.recordFailure(txCtx, token.id);
             }
             if (failure) return failure;
@@ -136,9 +136,15 @@ export class TwoFactorChallengeService {
         code: string,
     ): Promise<string | null> {
         if (await this.factors.hasActive(ctx, userId)) return CHALLENGE_INVALID_ERROR;
+        if (await this.throttle.isLocked(ctx, 'second-step', userId)) return INVALID_CODE_ERROR;
         const outcome = await this.enrolment.activate(ctx, userId, code);
-        if (outcome === 'ACTIVATED') return null;
-        return outcome === 'INVALID_CODE' ? INVALID_CODE_ERROR : ENROLMENT_EXPIRED_ERROR;
+        if (outcome === 'ACTIVATED') {
+            await this.throttle.reset(ctx, 'second-step', userId);
+            return null;
+        }
+        if (outcome !== 'INVALID_CODE') return ENROLMENT_EXPIRED_ERROR;
+        await this.throttle.recordFailure(ctx, 'second-step', userId);
+        return INVALID_CODE_ERROR;
     }
 
     // Mirrors what core enforces after authenticating: an administrator login needs an Administrator, and unverified accounts stay out.

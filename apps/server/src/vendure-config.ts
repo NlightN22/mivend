@@ -51,7 +51,9 @@ import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ActingSessionPlugin } from '@mivend/plugin-acting-session';
+import { SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
 import { TwoFactorPlugin } from '@mivend/plugin-two-factor';
+import { signInProtectionOptionsFromEnv } from './sign-in-protection-options';
 import { twoFactorOptionsFromEnv } from './two-factor-options';
 import {
     AcquiringPlugin,
@@ -634,6 +636,7 @@ export const config: VendureConfig = {
         }),
         // Before OrderIdentityPlugin: that plugin wraps whatever active-order strategy exists when it configures.
         ActingSessionPlugin.init({ storefrontPublicUrl: process.env.STOREFRONT_PUBLIC_URL ?? '' }),
+        SignInProtectionPlugin.init(signInProtectionOptionsFromEnv(process.env)),
         TwoFactorPlugin.init(twoFactorOptionsFromEnv(process.env, cookieSecret)),
         ApprovalWorkflowPlugin,
         VersioningPlugin,

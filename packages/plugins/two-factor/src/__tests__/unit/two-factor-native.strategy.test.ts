@@ -5,6 +5,7 @@ import {
     TWO_FACTOR_REQUIRED_ERROR,
     TwoFactorNativeAuthenticationStrategy,
 } from '../../two-factor-native.strategy';
+import { SignInGuardService } from '@mivend/plugin-sign-in-protection';
 import { TwoFactorPolicyService } from '../../two-factor-policy.service';
 
 const USER = { id: 7 } as User;
@@ -14,8 +15,14 @@ const shopCtx = { apiType: 'shop' } as RequestContext;
 async function build(options: {
     passwords: Record<string, boolean>;
     enforced: boolean;
-}): Promise<{ strategy: TwoFactorNativeAuthenticationStrategy; attempted: string[] }> {
+    locked?: boolean;
+}): Promise<{
+    strategy: TwoFactorNativeAuthenticationStrategy;
+    attempted: string[];
+    failures: string[];
+}> {
     const attempted: string[] = [];
+    const failures: string[] = [];
     const native = {
         init: async () => {},
         defineInputType: vi.fn(),
@@ -27,10 +34,22 @@ async function build(options: {
     };
     const services = new Map<unknown, unknown>([
         [TwoFactorPolicyService, { isEnforced: async () => options.enforced }],
+        [
+            SignInGuardService,
+            {
+                admit: async () => !options.locked,
+                recordFailure: async () => {
+                    failures.push('failure');
+                },
+                recordSuccess: async () => {
+                    failures.push('success');
+                },
+            },
+        ],
     ]);
     const strategy = new TwoFactorNativeAuthenticationStrategy(native);
     await strategy.init({ get: (token: unknown) => services.get(token) } as unknown as Injector);
-    return { strategy, attempted };
+    return { strategy, attempted, failures };
 }
 
 describe('native strategy wrapper', () => {
@@ -74,5 +93,25 @@ describe('native strategy wrapper', () => {
         expect(
             await strategy.authenticate(adminCtx, { username: 'u', password: 'pw 123456' }),
         ).toBe(USER);
+    });
+
+    it('answers a locked login with false and never checks the password', async () => {
+        const { strategy, attempted } = await build({
+            passwords: { pw: true },
+            enforced: false,
+            locked: true,
+        });
+        expect(await strategy.authenticate(shopCtx, { username: 'u', password: 'pw' })).toBe(false);
+        expect(await strategy.verifyCredentials(adminCtx, { username: 'u', password: 'pw' })).toBe(
+            false,
+        );
+        expect(attempted).toEqual([]);
+    });
+
+    it('records a failure for a wrong password and a success for a right one', async () => {
+        const { strategy, failures } = await build({ passwords: { pw: true }, enforced: false });
+        await strategy.authenticate(shopCtx, { username: 'u', password: 'bad' });
+        await strategy.authenticate(shopCtx, { username: 'u', password: 'pw' });
+        expect(failures).toEqual(['failure', 'success']);
     });
 });

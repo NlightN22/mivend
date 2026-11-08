@@ -1,6 +1,7 @@
 import { Logger, PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { RuntimeVendureConfig, Type } from '@vendure/core';
 import type { OnApplicationBootstrap } from '@nestjs/common';
+import { SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 
@@ -44,7 +45,12 @@ const resolvers = [
 ];
 
 @VendurePlugin({
-    imports: [PluginCommonModule, SessionManagementPlugin, VersioningPlugin],
+    imports: [
+        PluginCommonModule,
+        SessionManagementPlugin,
+        SignInProtectionPlugin,
+        VersioningPlugin,
+    ],
     entities: [TwoFactorFactor, TwoFactorToken],
     providers: [
         FactorStoreService,

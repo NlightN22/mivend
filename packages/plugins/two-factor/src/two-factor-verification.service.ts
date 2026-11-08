@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuthService, Logger, RequestContext } from '@vendure/core';
+import { SignInThrottleService } from '@mivend/plugin-sign-in-protection';
 
 import { FactorStoreService } from './factor-store.service';
 import { decryptSecret } from './secret-cipher';
@@ -13,6 +14,7 @@ export class TwoFactorVerificationService {
         private factors: FactorStoreService,
         private authService: AuthService,
         private methods: SecondFactorMethodRegistry,
+        private throttle: SignInThrottleService,
         @Inject(TWO_FACTOR_PLUGIN_OPTIONS) private options: TwoFactorPluginOptions,
     ) {}
 
@@ -32,14 +34,25 @@ export class TwoFactorVerificationService {
         return this.methods.get(factor.method).verify(secret, code, nowMs, factor.lastUsedStep);
     }
 
-    // #278: throttle failed second-step attempts here.
+    // A locked account is answered as a wrong code without looking at the code.
     async verifyAndClaim(ctx: RequestContext, factor: FactorRow, code: string): Promise<boolean> {
+        if (await this.throttle.isLocked(ctx, 'second-step', factor.userId)) return false;
         const step = this.matchStep(factor, code);
-        return step !== null && (await this.factors.claimStep(ctx, factor.id, step));
+        if (step !== null && (await this.factors.claimStep(ctx, factor.id, step))) {
+            await this.throttle.reset(ctx, 'second-step', factor.userId);
+            return true;
+        }
+        await this.throttle.recordFailure(ctx, 'second-step', factor.userId);
+        return false;
     }
 
-    // #278: throttle failed password attempts here.
     async passwordMatches(ctx: RequestContext, userId: string, password: string): Promise<boolean> {
-        return (await this.authService.verifyUserPassword(ctx, userId, password)) === true;
+        if (await this.throttle.isLocked(ctx, 'password-recheck', userId)) return false;
+        if ((await this.authService.verifyUserPassword(ctx, userId, password)) === true) {
+            await this.throttle.reset(ctx, 'password-recheck', userId);
+            return true;
+        }
+        await this.throttle.recordFailure(ctx, 'password-recheck', userId);
+        return false;
     }
 }

@@ -3,6 +3,7 @@ import { Logger } from '@vendure/core';
 import type { AuthService } from '@vendure/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { SignInThrottleService } from '@mivend/plugin-sign-in-protection';
 import type { FactorStoreService } from '../../factor-store.service';
 import { encryptSecret } from '../../secret-cipher';
 import { SecondFactorMethodRegistry } from '../../totp/second-factor-method';
@@ -22,6 +23,7 @@ function serviceWithKey(key: Buffer): TwoFactorVerificationService {
         {} as FactorStoreService,
         {} as AuthService,
         new SecondFactorMethodRegistry([totpMethod]),
+        {} as SignInThrottleService,
         options,
     );
 }

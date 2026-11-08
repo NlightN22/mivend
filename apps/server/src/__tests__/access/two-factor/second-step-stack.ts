@@ -28,11 +28,12 @@ export interface Stack {
 }
 
 // A second server on the same database with the obligation on, plus the mail worker its links need.
-export async function startSecondStepStack(): Promise<Stack> {
+export async function startSecondStepStack(extraEnv: Record<string, string> = {}): Promise<Stack> {
     const env = {
         ...inject('accessServerEnv'),
         TWO_FACTOR_REQUIRED: 'true',
         EMAIL_DEV_MAILBOX_ENABLED: 'true',
+        ...extraEnv,
     };
     const server: RunningServer = await startServer(env, resolve(LOG_DIR, 'server-two-factor.log'));
     const mailWorker = spawnGroup(
