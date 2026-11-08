@@ -94,6 +94,10 @@ beforeAll(async () => {
         counterpartyService as never,
         pending,
         { requestForContract: async () => undefined, drainSoon: () => undefined } as never,
+        {
+            replaceForContract: async () => undefined,
+            markContractDeleted: async () => undefined,
+        } as never,
     );
 });
 

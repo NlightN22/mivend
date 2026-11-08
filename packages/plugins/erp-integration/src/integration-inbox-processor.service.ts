@@ -25,6 +25,10 @@ import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.h
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
+import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
+import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
+import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { RetroBonusSetupStreamHandler } from './handlers/retro-bonus-setup.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
@@ -41,6 +45,11 @@ import { UnitStreamHandler } from './handlers/unit.handler';
 import { BankStreamHandler } from './handlers/bank.handler';
 import { BankAccountStreamHandler } from './handlers/bank-account.handler';
 import { RegionStreamHandler } from './handlers/region.handler';
+import { CounterpartyContactStreamHandler } from './handlers/counterparty-contact.handler';
+import { CounterpartyGroupStreamHandler } from './handlers/counterparty-group.handler';
+import { PointOfSaleTypeStreamHandler } from './handlers/point-of-sale-type.handler';
+import { ProductGroupStreamHandler } from './handlers/product-group.handler';
+import { SettingStreamHandler } from './handlers/setting.handler';
 import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
@@ -105,6 +114,15 @@ export class IntegrationInboxProcessorService {
         settlementDocumentTypeHandler: SettlementDocumentTypeStreamHandler,
         orderStatusHandler: OrderStatusStreamHandler,
         stockOrganizationHandler: StockOrganizationStreamHandler,
+        counterpartyContactHandler: CounterpartyContactStreamHandler,
+        counterpartyGroupHandler: CounterpartyGroupStreamHandler,
+        productGroupHandler: ProductGroupStreamHandler,
+        pointOfSaleTypeHandler: PointOfSaleTypeStreamHandler,
+        settingHandler: SettingStreamHandler,
+        customerClaimHandler: CustomerClaimStreamHandler,
+        salesCorrectionHandler: SalesCorrectionStreamHandler,
+        orderCorrectionHandler: OrderCorrectionStreamHandler,
+        orderChangeResultHandler: OrderChangeResultStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -144,6 +162,15 @@ export class IntegrationInboxProcessorService {
             'settlement-document-type': settlementDocumentTypeHandler,
             'order-status': orderStatusHandler,
             'stock-organization': stockOrganizationHandler,
+            'counterparty-contact': counterpartyContactHandler,
+            'counterparty-group': counterpartyGroupHandler,
+            'product-group': productGroupHandler,
+            'point-of-sale-type': pointOfSaleTypeHandler,
+            setting: settingHandler,
+            'customer-claim': customerClaimHandler,
+            'sales-correction': salesCorrectionHandler,
+            'order-correction': orderCorrectionHandler,
+            'order-change-result': orderChangeResultHandler,
         };
     }
 

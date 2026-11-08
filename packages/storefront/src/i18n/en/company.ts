@@ -10,6 +10,8 @@ export default {
         restore: 'Restore',
         current: 'Current delivery',
         addedByYou: 'Added by you',
+        pendingTitle: 'Your change waits for a manager',
+        pendingHint: 'The point keeps its current data until a manager confirms the change.',
         setCurrent: 'Set as current',
         edit: 'Edit',
         remove: 'Remove',

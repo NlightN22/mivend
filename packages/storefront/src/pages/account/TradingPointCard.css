@@ -160,3 +160,18 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+.tp-card__pending {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--app-warn-bg);
+    color: var(--app-warn-fg);
+    font-size: 13px;
+}
+.tp-card__pending-title {
+    font-weight: 700;
+}
+.tp-card__pending-hint {
+    margin-top: 4px;
+}

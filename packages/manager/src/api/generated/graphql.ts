@@ -3954,6 +3954,7 @@ export type MultipleOrderError = ErrorResult & {
 };
 
 export type Mutation = {
+    acceptTradingPointChange: TradingPointChange;
     activateCounterpartyPortalAccess: Customer;
     addCounterpartyTeamMember: CounterpartyTeamMember;
     /** Add Customers to a CustomerGroup */
@@ -4225,6 +4226,7 @@ export type Mutation = {
     recordWitnessedPayment: Scalars['Boolean']['output'];
     refundOrder: RefundOrderResult;
     reindex: Job;
+    rejectTradingPointChange: TradingPointChange;
     releaseOrderReservation: Scalars['Int']['output'];
     /** Removes Collections from the specified Channel */
     removeCollectionsFromChannel: Array<Collection>;
@@ -4416,6 +4418,10 @@ export type Mutation = {
     upsertWorkflowDefinition: WorkflowDefinition;
     /** Withdraws the current proforma invoice of an organization without a replacement (status cancelled). */
     withdrawProformaInvoice: ProformaInvoice;
+};
+
+export type MutationAcceptTradingPointChangeArgs = {
+    id: Scalars['ID']['input'];
 };
 
 export type MutationActivateCounterpartyPortalAccessArgs = {
@@ -5044,6 +5050,11 @@ export type MutationRecordWitnessedPaymentArgs = {
 
 export type MutationRefundOrderArgs = {
     input: RefundOrderInput;
+};
+
+export type MutationRejectTradingPointChangeArgs = {
+    comment?: InputMaybe<Scalars['String']['input']>;
+    id: Scalars['ID']['input'];
 };
 
 export type MutationReleaseOrderReservationArgs = {
@@ -7713,6 +7724,7 @@ export type Query = {
     pendingErpUsers: ErpUserList;
     pendingPriceAdjustmentOrderIds: Array<Scalars['String']['output']>;
     pendingSearchIndexUpdates: Scalars['Int']['output'];
+    pendingTradingPointChanges: Array<TradingPointChange>;
     portalUsers: AdministratorList;
     positions: Array<ErpPosition>;
     /** Used for real-time previews of the contents of a Collection */
@@ -7786,6 +7798,10 @@ export type Query = {
     testEligibleShippingMethods: Array<ShippingMethodQuote>;
     testShippingMethod: TestShippingMethodResult;
     tradingPoint: Maybe<TradingPoint>;
+    /** Trading points whose mivend record differs from the last state the ERP sent (people edited them; issue #328). */
+    tradingPointsDifferingFromErp: TradingPointList;
+    /** Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328). */
+    tradingPointsNotConfirmedByErp: TradingPointList;
     /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
     tradingPointsWithoutLocation: TradingPointList;
     unassignedCounterpartyCount: Scalars['Int']['output'];
@@ -8350,6 +8366,14 @@ export type QueryTestShippingMethodArgs = {
 
 export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryTradingPointsDifferingFromErpArgs = {
+    options?: InputMaybe<OpenErpReconciliationIssueListOptions>;
+};
+
+export type QueryTradingPointsNotConfirmedByErpArgs = {
+    options?: InputMaybe<OpenErpReconciliationIssueListOptions>;
 };
 
 export type QueryTradingPointsWithoutLocationArgs = {
@@ -9588,7 +9612,22 @@ export type TradingPoint = {
     latitude: Maybe<Scalars['Float']['output']>;
     longitude: Maybe<Scalars['Float']['output']>;
     name: Scalars['String']['output'];
+    pendingChange: Maybe<TradingPointChange>;
     servicingBranchId: Maybe<Scalars['String']['output']>;
+    workingHours: Maybe<Scalars['String']['output']>;
+};
+
+export type TradingPointChange = {
+    address: Scalars['String']['output'];
+    contactName: Maybe<Scalars['String']['output']>;
+    contactPhone: Maybe<Scalars['String']['output']>;
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    latitude: Scalars['Float']['output'];
+    longitude: Scalars['Float']['output'];
+    name: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+    tradingPointId: Scalars['ID']['output'];
     workingHours: Maybe<Scalars['String']['output']>;
 };
 
@@ -10905,6 +10944,47 @@ export type SetTradingPointActiveMutationVariables = Exact<{
 }>;
 
 export type SetTradingPointActiveMutation = { setTradingPointActive: { id: string } };
+
+export type PendingTradingPointChangeFieldsFragment = {
+    id: string;
+    tradingPointId: string;
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    workingHours: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+};
+
+export type PendingTradingPointChangesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PendingTradingPointChangesQuery = {
+    pendingTradingPointChanges: Array<{
+        id: string;
+        tradingPointId: string;
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        workingHours: string | null;
+        contactName: string | null;
+        contactPhone: string | null;
+    }>;
+};
+
+export type AcceptTradingPointChangeMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type AcceptTradingPointChangeMutation = { acceptTradingPointChange: { id: string } };
+
+export type RejectTradingPointChangeMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    comment?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type RejectTradingPointChangeMutation = { rejectTradingPointChange: { id: string } };
 
 export type CustomerIdForCounterpartyQueryVariables = Exact<{
     counterpartyId: Scalars['String']['input'];
@@ -12917,6 +12997,22 @@ export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CustomerListItemFields' },
 ) as unknown as TypedDocumentString<CustomerListItemFieldsFragment, unknown>;
+export const PendingTradingPointChangeFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment PendingTradingPointChangeFields on TradingPointChange {
+  id
+  tradingPointId
+  name
+  address
+  latitude
+  longitude
+  workingHours
+  contactName
+  contactPhone
+}
+    `,
+    { fragmentName: 'PendingTradingPointChangeFields' },
+) as unknown as TypedDocumentString<PendingTradingPointChangeFieldsFragment, unknown>;
 export const CustomerOrderItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment CustomerOrderItemFields on Order {
@@ -13898,6 +13994,46 @@ export const SetTradingPointActiveDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SetTradingPointActiveMutation,
     SetTradingPointActiveMutationVariables
+>;
+export const PendingTradingPointChangesDocument = new TypedDocumentString(`
+    query PendingTradingPointChanges {
+  pendingTradingPointChanges {
+    ...PendingTradingPointChangeFields
+  }
+}
+    fragment PendingTradingPointChangeFields on TradingPointChange {
+  id
+  tradingPointId
+  name
+  address
+  latitude
+  longitude
+  workingHours
+  contactName
+  contactPhone
+}`) as unknown as TypedDocumentString<
+    PendingTradingPointChangesQuery,
+    PendingTradingPointChangesQueryVariables
+>;
+export const AcceptTradingPointChangeDocument = new TypedDocumentString(`
+    mutation AcceptTradingPointChange($id: ID!) {
+  acceptTradingPointChange(id: $id) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AcceptTradingPointChangeMutation,
+    AcceptTradingPointChangeMutationVariables
+>;
+export const RejectTradingPointChangeDocument = new TypedDocumentString(`
+    mutation RejectTradingPointChange($id: ID!, $comment: String) {
+  rejectTradingPointChange(id: $id, comment: $comment) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RejectTradingPointChangeMutation,
+    RejectTradingPointChangeMutationVariables
 >;
 export const CustomerIdForCounterpartyDocument = new TypedDocumentString(`
     query CustomerIdForCounterparty($counterpartyId: String!) {

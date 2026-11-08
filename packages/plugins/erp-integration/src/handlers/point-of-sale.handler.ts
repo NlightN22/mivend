@@ -3,13 +3,14 @@ import type { RequestContext } from '@vendure/core';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
 import { MissingReferenceError } from '../types';
+import { pointOfSaleExtra } from './point-of-sale-extra';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPointOfSaleHandler';
 
 // Applies the `point-of-sale` stream (issue #100) — TradingPoint's live counterpart. Field
-// accounting: docs/ai/erp-streams-map.md's `point-of-sale` row (contactInfos is deferred there).
+// accounting: docs/ai/erp-streams-map.md's `point-of-sale` row (the fields mivend does not read go to the trading_point_erp mirror).
 @Injectable()
 export class PointOfSaleStreamHandler implements InboundStreamHandler {
     constructor(private readonly tradingPointService: TradingPointService) {}
@@ -25,7 +26,8 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
         if (!name) {
             // A tombstone deactivates an already-known point but never looks up a counterparty
             // (it likely has none) — deactivate() is a safe no-op when no row exists yet.
-            const matched = await this.tradingPointService.deactivate(ctx, entityId);
+            const mirrored = await this.tradingPointService.markErpDeleted(ctx, entityId);
+            const matched = (await this.tradingPointService.deactivate(ctx, entityId)) || mirrored;
             Logger.verbose(
                 `point-of-sale ${entityId}: no name (deletion tombstone) — deactivated if an ` +
                     'existing row matched, never created one',
@@ -57,6 +59,7 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
             latitude: typeof payload.latitude === 'number' ? payload.latitude : null,
             longitude: typeof payload.longitude === 'number' ? payload.longitude : null,
             contactPhone: text(payload.contactPhone),
+            extra: pointOfSaleExtra(payload),
         });
 
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);

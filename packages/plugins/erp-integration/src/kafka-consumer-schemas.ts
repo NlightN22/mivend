@@ -1,6 +1,11 @@
 import type { fromBinary } from '@bufbuild/protobuf';
 import {
     CategoryChangedSchema,
+    CounterpartyContactChangedSchema,
+    CounterpartyGroupChangedSchema,
+    PointOfSaleTypeChangedSchema,
+    ProductGroupChangedSchema,
+    SettingChangedSchema,
     ContractChangedSchema,
     CounterpartyChangedSchema,
     CounterpartyCreditBalanceChangedSchema,
@@ -29,6 +34,9 @@ import {
     LegalFormChangedSchema,
     BankChangedSchema,
     BankAccountChangedSchema,
+    CustomerClaimChangedSchema,
+    OrderCorrectionChangedSchema,
+    SalesCorrectionChangedSchema,
     ProductPhotoChangedSchema,
     UnitChangedSchema,
     UserChangedSchema,
@@ -38,7 +46,11 @@ import {
 
 import type { InboundStream } from './types';
 
-type OrderEventStream = 'order-registration-result' | 'order-changed' | 'order-cancel-result';
+type OrderEventStream =
+    | 'order-registration-result'
+    | 'order-changed'
+    | 'order-cancel-result'
+    | 'order-change-result';
 
 export const SCHEMA_BY_STREAM: Record<
     Exclude<InboundStream, OrderEventStream>,
@@ -75,7 +87,15 @@ export const SCHEMA_BY_STREAM: Record<
     manufacturer: ManufacturerChangedSchema,
     region: RegionChangedSchema,
     'legal-form': LegalFormChangedSchema,
+    'counterparty-contact': CounterpartyContactChangedSchema,
+    'counterparty-group': CounterpartyGroupChangedSchema,
+    'product-group': ProductGroupChangedSchema,
+    'point-of-sale-type': PointOfSaleTypeChangedSchema,
+    setting: SettingChangedSchema,
     bank: BankChangedSchema,
     'bank-account': BankAccountChangedSchema,
     'product-photo': ProductPhotoChangedSchema,
+    'customer-claim': CustomerClaimChangedSchema,
+    'sales-correction': SalesCorrectionChangedSchema,
+    'order-correction': OrderCorrectionChangedSchema,
 };

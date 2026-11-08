@@ -9,6 +9,8 @@ import {
 } from '../../api/customers';
 import { useCurrency } from '../../composables/useCurrency';
 import TradingPointEditForm from './TradingPointEditForm.vue';
+import TradingPointPendingChange from './TradingPointPendingChange.vue';
+import { usePendingTradingPointChanges } from '../../composables/usePendingTradingPointChanges';
 
 const props = defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
 const emit = defineEmits<{ changed: [] }>();
@@ -17,6 +19,7 @@ const editingTradingPoint = ref<TradingPointInfo | null>(null);
 const reactivating = ref<string | null>(null);
 
 const { formatWhole } = useCurrency();
+const pending = usePendingTradingPointChanges(() => emit('changed'));
 
 function siblingOf(tp: TradingPointInfo): { latitude: number; longitude: number } | null {
     const other = props.customer.tradingPoints.find(
@@ -119,9 +122,21 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                             Edit
                         </button>
                     </div>
+                    <TradingPointPendingChange
+                        v-if="pending.byPoint.value.get(tp.id)"
+                        :change="pending.byPoint.value.get(tp.id)!"
+                        :busy="pending.busyId.value !== null"
+                        @accept="pending.accept(pending.byPoint.value.get(tp.id)!)"
+                        @reject="pending.reject(pending.byPoint.value.get(tp.id)!)"
+                    />
                 </li>
             </ul>
-            <p v-else class="overview-tab__empty">No trading points on file</p>
+            <p v-if="pending.error.value" class="overview-tab__no-location">
+                {{ pending.error.value }}
+            </p>
+            <p v-else-if="!customer.tradingPoints.length" class="overview-tab__empty">
+                No trading points on file
+            </p>
         </div>
 
         <MvModal
@@ -231,6 +246,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 
 .overview-tab__trading-points li {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
