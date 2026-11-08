@@ -18,6 +18,8 @@ import { TradingPointConsumer } from './consumers/trading-point.consumer';
 import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
+import { TradingPointErp } from './entities/trading-point-erp.entity';
+import { TradingPointChange } from './entities/trading-point-change.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import { Contract } from './entities/contract.entity';
 import { ContractService } from './contract.service';
@@ -49,6 +51,8 @@ import {
 import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
+import { TradingPointChangeAdminResolver } from './trading-point-change.resolver';
+import { TradingPointChangeService } from './trading-point-change.service';
 import { TradingPointLocationReportService } from './trading-point-location-report.service';
 import { CreditTermExtensionCheck } from './credit-term-extension.check';
 import { CreditTermService } from './credit-term.service';
@@ -98,6 +102,7 @@ const adminResolvers = [
     CounterpartyCreditResolver,
     CounterpartyCustomerLinkResolver,
     TradingPointAdminResolver,
+    TradingPointChangeAdminResolver,
     AdminGeoResolver,
     CreditTermResolver,
     CounterpartyTeamFieldResolver,
@@ -118,7 +123,15 @@ const adminResolvers = [
         VersioningPlugin,
         SessionManagementPlugin,
     ],
-    entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember, Contract],
+    entities: [
+        Counterparty,
+        TradingPoint,
+        TradingPointErp,
+        TradingPointChange,
+        ContactPerson,
+        CounterpartyTeamMember,
+        Contract,
+    ],
     shopApiExtensions: {
         schema: gql`
             ${shopApiSchema}
@@ -142,6 +155,7 @@ const adminResolvers = [
         ErpIdLookupService,
         CounterpartyConsumer,
         TradingPointService,
+        TradingPointChangeService,
         TradingPointLocationReportService,
         AddressSuggestService,
         GeoService,
@@ -163,6 +177,7 @@ const adminResolvers = [
         CounterpartyService,
         ErpIdLookupService,
         TradingPointService,
+        TradingPointChangeService,
         TradingPointLocationReportService,
         ContractService,
         CreditLimitCheckService,

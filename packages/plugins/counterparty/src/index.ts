@@ -5,6 +5,8 @@ export { ContactPerson } from './entities/contact-person.entity';
 export { Contract } from './entities/contract.entity';
 export { CounterpartyService } from './counterparty.service';
 export { TradingPointService } from './trading-point.service';
+export { TradingPointChangeService } from './trading-point-change.service';
+export { TradingPointChangeAcceptedEvent } from './trading-point-change.events';
 export { ContractService } from './contract.service';
 export type { ContractStreamFields } from './contract.service';
 export { CreditLimitCheckService } from './credit-limit-check.service';

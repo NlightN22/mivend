@@ -8,6 +8,7 @@ import {
 import { TradingPointService } from '../../trading-point.service';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { ContactPerson } from '../../entities/contact-person.entity';
+import { TradingPointChange } from '../../entities/trading-point-change.entity';
 
 const mockTpRepo = {
     find: vi.fn(),
@@ -22,12 +23,19 @@ const mockCpRepo = {
     delete: vi.fn(),
 };
 
+const mockChangeRepo = {
+    create: vi.fn((v: unknown) => v),
+    save: vi.fn(async (v: unknown) => v),
+    update: vi.fn(),
+};
+
 const mockRawQuery = vi.fn();
 
 const mockConnection = {
     getRepository: vi.fn((ctx, entity) => {
         if (entity === TradingPoint) return mockTpRepo;
         if (entity === ContactPerson) return mockCpRepo;
+        if (entity === TradingPointChange) return mockChangeRepo;
         if (entity === 'Channel') return { query: mockRawQuery };
         return mockTpRepo;
     }),
@@ -145,6 +153,7 @@ describe('TradingPointService — customer methods', () => {
         it('customerEdit keeps the stored location when the edit omits it', async () => {
             const record = {
                 id: 'tp1',
+                customerOwned: true,
                 address: valid.address,
                 latitude: 5,
                 longitude: 6,
@@ -159,6 +168,7 @@ describe('TradingPointService — customer methods', () => {
         it('customerEdit refuses to clear the location', async () => {
             mockTpRepo.findOne.mockResolvedValue({
                 id: 'tp1',
+                customerOwned: true,
                 address: valid.address,
                 latitude: 5,
                 longitude: 6,
@@ -176,6 +186,7 @@ describe('TradingPointService — customer methods', () => {
         it('customerEdit of a legacy point needs a location, and saves one when supplied', async () => {
             const record = {
                 id: 'tp1',
+                customerOwned: true,
                 address: valid.address,
                 latitude: null,
                 longitude: null,
@@ -192,6 +203,73 @@ describe('TradingPointService — customer methods', () => {
                 longitude: 4,
             });
             expect(record).toMatchObject({ latitude: 3, longitude: 4 });
+        });
+    });
+
+    describe('customerEdit of an ERP-confirmed point', () => {
+        const base = { name: 'Point A', address: 'Main street 12, office 3', workingHours: '9-18' };
+        const erpPoint = () => ({
+            id: 'tp1',
+            counterpartyId: 'cp1',
+            customerOwned: false,
+            name: 'Point A',
+            address: 'Main street 12, office 3',
+            workingHours: '9-18',
+            deliveryComment: null as string | null,
+            latitude: 5,
+            longitude: 6,
+            contacts: [],
+        });
+
+        beforeEach(() => {
+            mockTpRepo.save.mockImplementation(async (r: unknown) => r);
+        });
+
+        it('queues the change and leaves the record as it was', async () => {
+            const record = erpPoint();
+            mockTpRepo.findOne.mockResolvedValue(record);
+
+            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+                ...base,
+                name: 'Renamed',
+                latitude: 7,
+                longitude: 8,
+            });
+
+            expect(record).toMatchObject({ name: 'Point A', latitude: 5, longitude: 6 });
+            expect(mockChangeRepo.save).toHaveBeenCalledTimes(1);
+            const saved = mockChangeRepo.create.mock.calls[0][0] as { payload: string };
+            expect(JSON.parse(saved.payload)).toMatchObject({
+                name: 'Renamed',
+                latitude: 7,
+                longitude: 8,
+            });
+        });
+
+        it('applies the delivery comment at once and queues nothing when only it changed', async () => {
+            const record = erpPoint();
+            mockTpRepo.findOne.mockResolvedValue(record);
+
+            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+                ...base,
+                deliveryComment: 'Gate 3',
+            });
+
+            expect(record.deliveryComment).toBe('Gate 3');
+            expect(mockChangeRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('still refuses an edit without a usable location', async () => {
+            mockTpRepo.findOne.mockResolvedValue({
+                ...erpPoint(),
+                latitude: null,
+                longitude: null,
+            });
+
+            await expect(service.customerEdit(mockCtx, 'tp1', 'cp1', base)).rejects.toThrow(
+                UserInputError,
+            );
+            expect(mockChangeRepo.save).not.toHaveBeenCalled();
         });
     });
 

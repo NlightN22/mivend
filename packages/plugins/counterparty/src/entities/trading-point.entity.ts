@@ -1,12 +1,12 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
 import { Counterparty } from './counterparty.entity';
 import { ContactPerson } from './contact-person.entity';
 
 @Entity()
-export class TradingPoint extends VendureEntity {
+export class TradingPoint extends UuidEntity {
     constructor(input?: DeepPartial<TradingPoint>) {
         super(input);
     }
