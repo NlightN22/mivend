@@ -16,6 +16,8 @@ export interface AdvancedDataTableColumn {
     // Or a legibility floor, such as a status badge that must not shrink.
     minWidth?: number;
     maxWidth?: number;
+    // 'end' right-aligns the header and cells (money columns); mobile cards are unaffected.
+    align?: 'start' | 'end';
     // Higher keeps its width when the table is tight: lower ones shrink to minWidth first, then
     // drop out of view (still in the column settings). Set minWidth = width to never shrink.
     priority?: number;

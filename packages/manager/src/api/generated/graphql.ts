@@ -6497,13 +6497,19 @@ export type PaymentAttempt = {
     channel: Scalars['String']['output'];
     /** Only populated when returned from visiblePayments (joined from its ProformaInvoice) — null elsewhere. */
     counterpartyId: Maybe<Scalars['ID']['output']>;
+    /** visiblePayments only: the customer's short name. */
+    counterpartyShortName: Maybe<Scalars['String']['output']>;
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
     /** The payment's own internal, human-facing business number — generated the same way as Order.code/ProformaInvoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill). */
     number: Scalars['String']['output'];
+    /** visiblePayments only: the number of the order the payment belongs to. */
+    orderCode: Maybe<Scalars['String']['output']>;
     paymentStatus: Scalars['String']['output'];
     proformaInvoiceId: Maybe<Scalars['ID']['output']>;
+    /** visiblePayments only: the number of the proforma invoice this payment belongs to. */
+    proformaInvoiceNumber: Maybe<Scalars['String']['output']>;
     /** The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity. */
     providerPaymentId: Scalars['String']['output'];
 };
@@ -6518,11 +6524,29 @@ export type PaymentInboxSweepResult = {
     processed: Scalars['Int']['output'];
 };
 
+export type PaymentFilterParameter = {
+    _and?: InputMaybe<Array<PaymentFilterParameter>>;
+    _or?: InputMaybe<Array<PaymentFilterParameter>>;
+    amount?: InputMaybe<NumberOperators>;
+    channel?: InputMaybe<StringOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    customer?: InputMaybe<StringOperators>;
+    customerInn?: InputMaybe<StringOperators>;
+    number?: InputMaybe<StringOperators>;
+    orderCode?: InputMaybe<StringOperators>;
+    proformaInvoiceNumber?: InputMaybe<StringOperators>;
+    /** Payment status. */
+    status?: InputMaybe<StringOperators>;
+};
+
 export type PaymentListOptions = {
     channel?: InputMaybe<Scalars['String']['input']>;
-    /** Substring match against the payment's own internal number (PaymentAttempt.number) — never providerPaymentId. */
+    filter?: InputMaybe<PaymentFilterParameter>;
+    /** Substring match against the payment's own internal number (PaymentAttempt.number) — never providerPaymentId — the customer name and INN. */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<PaymentSortParameter>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -6650,6 +6674,15 @@ export type PaymentRefund = {
     providerRefundId: Maybe<Scalars['String']['output']>;
     reason: Scalars['String']['output'];
     status: Scalars['String']['output'];
+};
+
+export type PaymentSortParameter = {
+    amount?: InputMaybe<SortOrder>;
+    channel?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
 };
 
 /** Returned when there is an error in transitioning the Payment state */
@@ -7562,6 +7595,22 @@ export type ProformaInvoice = {
     versions: Array<ProformaInvoice>;
 };
 
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
+export type ProformaInvoiceFilterParameter = {
+    _and?: InputMaybe<Array<ProformaInvoiceFilterParameter>>;
+    _or?: InputMaybe<Array<ProformaInvoiceFilterParameter>>;
+    amount?: InputMaybe<NumberOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    customer?: InputMaybe<StringOperators>;
+    customerInn?: InputMaybe<StringOperators>;
+    dueDate?: InputMaybe<DateOperators>;
+    number?: InputMaybe<StringOperators>;
+    orderCode?: InputMaybe<StringOperators>;
+    /** Display status: current | superseded | cancelled. */
+    status?: InputMaybe<StringOperators>;
+};
+
 /** A line of the immutable snapshot taken when the proforma invoice was issued. */
 export type ProformaInvoiceLine = {
     /** Total of the line discounts of the snapshot, positive; linePriceWithTax minus this is the line total. */
@@ -7583,9 +7632,11 @@ export type ProformaInvoiceList = {
 };
 
 export type ProformaInvoiceListOptions = {
+    filter?: InputMaybe<ProformaInvoiceFilterParameter>;
     /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<ProformaInvoiceSortParameter>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -7606,6 +7657,15 @@ export type ProformaInvoiceSeller = {
     kpp: Maybe<Scalars['String']['output']>;
     legalAddress: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
+};
+
+export type ProformaInvoiceSortParameter = {
+    amount?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    dueDate?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
 };
 
 /** Another version of the same proforma invoice (a new version is a new document with its own number). */
@@ -12514,10 +12574,15 @@ export type PaymentListItemFieldsFragment = {
     currencyCode: string;
     proformaInvoiceId: string | null;
     counterpartyId: string | null;
+    counterpartyShortName: string | null;
+    proformaInvoiceNumber: string | null;
+    orderCode: string | null;
 };
 
 export type PaymentViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<PaymentFilterParameter>;
 }>;
 
 export type PaymentViewCountsQuery = {
@@ -12547,6 +12612,9 @@ export type PaymentsPageQuery = {
             currencyCode: string;
             proformaInvoiceId: string | null;
             counterpartyId: string | null;
+            counterpartyShortName: string | null;
+            proformaInvoiceNumber: string | null;
+            orderCode: string | null;
         }>;
     };
 };
@@ -12630,6 +12698,8 @@ export type ProformaInvoicesPageQuery = {
 
 export type ProformaInvoiceViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<ProformaInvoiceFilterParameter>;
 }>;
 
 export type ProformaInvoiceViewCountsQuery = {
@@ -13822,6 +13892,9 @@ export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
   currencyCode
   proformaInvoiceId
   counterpartyId
+  counterpartyShortName
+  proformaInvoiceNumber
+  orderCode
 }
     `,
     { fragmentName: 'PaymentListItemFields' },
@@ -16008,30 +16081,33 @@ export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
     ConfirmPaymentReceivedMutationVariables
 >;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
-    query PaymentViewCounts($counterpartyId: ID) {
-  all: visiblePayments(options: {take: 0}, counterpartyId: $counterpartyId) {
+    query PaymentViewCounts($counterpartyId: ID, $search: String, $filter: PaymentFilterParameter) {
+  all: visiblePayments(
+    options: {take: 0, search: $search, filter: $filter}
+    counterpartyId: $counterpartyId
+  ) {
     totalItems
   }
   captured: visiblePayments(
-    options: {take: 0, status: "captured"}
+    options: {take: 0, status: "captured", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   pending: visiblePayments(
-    options: {take: 0, status: "pending"}
+    options: {take: 0, status: "pending", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   failed: visiblePayments(
-    options: {take: 0, status: "failed"}
+    options: {take: 0, status: "failed", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   refunded: visiblePayments(
-    options: {take: 0, status: "refunded"}
+    options: {take: 0, status: "refunded", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
@@ -16058,6 +16134,9 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   currencyCode
   proformaInvoiceId
   counterpartyId
+  counterpartyShortName
+  proformaInvoiceNumber
+  orderCode
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
 export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
     mutation RequestPriceAdjustment($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
@@ -16128,27 +16207,27 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
     ProformaInvoicesPageQueryVariables
 >;
 export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
-    query ProformaInvoiceViewCounts($counterpartyId: ID) {
+    query ProformaInvoiceViewCounts($counterpartyId: ID, $search: String, $filter: ProformaInvoiceFilterParameter) {
   all: visibleProformaInvoices(
-    options: {take: 0}
+    options: {take: 0, search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   current: visibleProformaInvoices(
-    options: {take: 0, status: "current"}
+    options: {take: 0, status: "current", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   superseded: visibleProformaInvoices(
-    options: {take: 0, status: "superseded"}
+    options: {take: 0, status: "superseded", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
   cancelled: visibleProformaInvoices(
-    options: {take: 0, status: "cancelled"}
+    options: {take: 0, status: "cancelled", search: $search, filter: $filter}
     counterpartyId: $counterpartyId
   ) {
     totalItems

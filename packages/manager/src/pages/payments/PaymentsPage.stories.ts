@@ -13,65 +13,28 @@ const meta: Meta<typeof PaymentsPage> = {
 export default meta;
 type Story = StoryObj<typeof PaymentsPage>;
 
-const PAYMENTS = [
-    {
-        id: '1',
-        channel: 'online-acquiring',
-        paymentStatus: 'captured',
-        amount: 450000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '1',
-        counterpartyId: '1',
-    },
-    {
-        id: '2',
-        channel: 'branch-kassa',
-        paymentStatus: 'pending',
-        amount: 129000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '2',
-        counterpartyId: '2',
-    },
-    {
-        id: '3',
-        channel: 'online-acquiring',
-        paymentStatus: 'failed',
-        amount: 78000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '3',
-        counterpartyId: '1',
-    },
-    {
-        id: '4',
-        channel: 'bank-transfer',
-        paymentStatus: 'captured',
-        amount: 315000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '4',
-        counterpartyId: '3',
-    },
-    {
-        id: '5',
-        channel: 'branch-kassa',
-        paymentStatus: 'captured',
-        amount: 54000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '5',
-        counterpartyId: '2',
-    },
-    {
-        id: '6',
-        channel: 'online-acquiring',
-        paymentStatus: 'refunded',
-        amount: 96000,
-        currencyCode: 'RUB',
-        proformaInvoiceId: '6',
-        counterpartyId: '3',
-    },
-];
+const CUSTOMERS = ['Customer One', 'Customer Two', 'Customer Three'];
+const STATUSES = ['captured', 'pending', 'failed', 'captured', 'refunded'];
+const CHANNELS = ['online-acquiring', 'branch-kassa', 'bank-transfer-erp'];
+
+const PAYMENTS = Array.from({ length: 24 }, (_, i) => ({
+    id: String(i + 1),
+    number: String(2000 + i),
+    createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+    providerPaymentId: `ext-${i + 1}`,
+    channel: CHANNELS[i % 3],
+    paymentStatus: STATUSES[i % 5],
+    amount: 45000 + i * 12345,
+    currencyCode: 'RUB',
+    proformaInvoiceId: String(i + 1),
+    counterpartyId: String((i % 3) + 1),
+    counterpartyShortName: CUSTOMERS[i % 3],
+    proformaInvoiceNumber: `${1000 + i}-01-1`,
+    orderCode: String(1000 + i),
+}));
 
 interface PaymentsPageVariables {
-    options?: { skip?: number; take?: number; status?: string; channel?: string };
+    options?: { skip?: number; take?: number; status?: string; search?: string };
     counterpartyId?: string;
 }
 
@@ -81,14 +44,26 @@ function mockPaymentsData(): void {
         if (variables.options?.status) {
             filtered = filtered.filter(p => p.paymentStatus === variables.options!.status);
         }
-        if (variables.options?.channel) {
-            filtered = filtered.filter(p => p.channel === variables.options!.channel);
+        const term = variables.options?.search?.toLowerCase();
+        if (term) {
+            filtered = filtered.filter(
+                p =>
+                    p.number.includes(term) || p.counterpartyShortName.toLowerCase().includes(term),
+            );
         }
         if (variables.counterpartyId) {
             filtered = filtered.filter(p => p.counterpartyId === variables.counterpartyId);
         }
         return { visiblePayments: paginate(filtered, variables.options) };
     });
+    registerMock('PaymentViewCounts', () => ({
+        all: { totalItems: 24 },
+        captured: { totalItems: 10 },
+        pending: { totalItems: 5 },
+        failed: { totalItems: 5 },
+        refunded: { totalItems: 4 },
+    }));
+    registerMock('TableViews', () => ({ tableViews: [] }));
 }
 
 export const Default: Story = {

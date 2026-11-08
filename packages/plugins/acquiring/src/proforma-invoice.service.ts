@@ -4,6 +4,7 @@ import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure
 import { documentNumberSearchTerm } from 'shared';
 
 import { applyStatusFilter } from './proforma-invoice-display';
+import type { ProformaInvoiceFilter, ProformaInvoiceSort } from './proforma-invoice-list-query';
 import { ProformaInvoice, ProformaInvoiceStatus } from './entities/proforma-invoice.entity';
 
 export interface ProformaInvoiceListOptions {
@@ -14,6 +15,9 @@ export interface ProformaInvoiceListOptions {
     search?: string;
     // Shop API: only the proforma invoices of one own order.
     orderCode?: string;
+    // Manager list only: whitelisted fields, see proforma-invoice-list-query.ts.
+    filter?: ProformaInvoiceFilter;
+    sort?: ProformaInvoiceSort;
 }
 
 @Injectable()

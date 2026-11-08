@@ -9,7 +9,9 @@ test('proforma invoices page loads and shows rows for an all-scope account @on:m
             timeout: 15000,
         },
     );
-    await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mv-advanced-data-table__grid tbody tr a').first()).toBeVisible({
+        timeout: 15000,
+    });
 });
 
 test('payments page loads and shows rows for an all-scope account @on:manager-operator @read-only', async ({
@@ -19,7 +21,9 @@ test('payments page loads and shows rows for an all-scope account @on:manager-op
     await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible({
         timeout: 15000,
     });
-    await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mv-advanced-data-table__grid tbody tr a').first()).toBeVisible({
+        timeout: 15000,
+    });
 });
 
 // The customer tab lists its proforma invoices in place; the standalone page keeps the deep link.

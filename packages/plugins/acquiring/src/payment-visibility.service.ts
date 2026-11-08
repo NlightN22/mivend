@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Brackets } from 'typeorm';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { documentNumberSearchTerm } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
@@ -7,6 +8,11 @@ import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentListOptions } from './payment-attempt-query.service';
+import { applyListFilter, applyListSort, likeTerm } from './payment-list-query';
+import { clampSkip, clampTake } from './list-filter-engine';
+
+const ORDER_CODE_SQL =
+    '(SELECT o."code" FROM "order" o WHERE o."id" = COALESCE(payment."orderId", "proformaInvoice"."orderId"))';
 
 // Payment inherits visibility from its ProformaInvoice, so reuse that service's scope and filters,
 // not a separate resolvePaymentScope (derived-resource rule).
@@ -23,8 +29,8 @@ export class PaymentVisibilityService {
         counterpartyId?: string,
     ): Promise<PaginatedList<PaymentAttempt>> {
         const scope = await this.proformaInvoiceVisibilityService.resolveScope(ctx);
-        const take = options?.take ?? 50;
-        const skip = options?.skip ?? 0;
+        const take = clampTake(options?.take);
+        const skip = clampSkip(options?.skip);
 
         const qb = this.connection
             .getRepository(ctx, PaymentAttempt)
@@ -54,9 +60,18 @@ export class PaymentVisibilityService {
             qb.andWhere('payment.channel = :channel', { channel: options.channel });
         }
         if (options?.search) {
-            qb.andWhere('payment.number ILIKE :search', {
-                search: documentNumberSearchTerm(options.search),
-            });
+            const search = options.search;
+            const term = likeTerm(search);
+            qb.andWhere(
+                new Brackets(bqb => {
+                    bqb.where('payment.number ILIKE :search', {
+                        search: documentNumberSearchTerm(search),
+                    })
+                        .orWhere('counterparty.shortName ILIKE :term', { term })
+                        .orWhere('counterparty.legalName ILIKE :term', { term })
+                        .orWhere('counterparty.inn ILIKE :term', { term });
+                }),
+            );
         }
         this.proformaInvoiceVisibilityService.applyScope(
             qb,
@@ -64,19 +79,27 @@ export class PaymentVisibilityService {
             'proformaInvoice',
             'counterparty',
         );
+        applyListFilter(qb, options?.filter);
 
         const totalItems = await qb.getCount();
-        // getRawAndEntities: proformaInvoice.counterpartyId is not a PaymentAttempt column, so it only
-        // comes back only in the raw row; attach it as a transient property to avoid per-row lookups.
+        if (take === 0) return { items: [], totalItems };
+        // Joins are to-one, so offset/limit is exact; joined columns come back in the raw row only.
+        applyListSort(qb, options?.sort);
         const { entities, raw } = await qb
             .addSelect('proformaInvoice.counterpartyId', 'proformaInvoice_counterpartyId')
-            .orderBy('payment.createdAt', 'DESC')
-            .addOrderBy('payment.id', 'DESC')
-            .skip(skip)
-            .take(take)
+            .addSelect('counterparty.shortName', 'counterpartyShortName')
+            .addSelect('proformaInvoice.number', 'proformaInvoiceNumber')
+            .addSelect(ORDER_CODE_SQL, 'orderCode')
+            .offset(skip)
+            .limit(take)
             .getRawAndEntities();
         const items = entities.map((item, i) =>
-            Object.assign(item, { counterpartyId: String(raw[i].proformaInvoice_counterpartyId) }),
+            Object.assign(item, {
+                counterpartyId: String(raw[i].proformaInvoice_counterpartyId),
+                counterpartyShortName: raw[i].counterpartyShortName ?? null,
+                proformaInvoiceNumber: raw[i].proformaInvoiceNumber ?? null,
+                orderCode: raw[i].orderCode ?? null,
+            }),
         );
         return { items, totalItems };
     }

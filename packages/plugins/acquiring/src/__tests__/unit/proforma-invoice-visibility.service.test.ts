@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Brackets } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
@@ -167,6 +168,24 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
+    it('clamps a negative skip to 0', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '3' });
+
+        await service.findVisible(mockCtx, { skip: -5 });
+        expect(qb.offset).toHaveBeenCalledWith(0);
+    });
+
+    it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '3' });
+
+        await service.findVisible(mockCtx, { take: -5 });
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
+        await service.findVisible(mockCtx, { take: 100000 });
+        expect(qb.limit).toHaveBeenCalledWith(200);
+    });
+
     it('take 0 returns only the count without loading rows', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
         qb.getRawOne.mockResolvedValue({ total: '3' });
@@ -187,13 +206,39 @@ describe('ProformaInvoiceVisibilityService', () => {
         });
     });
 
-    it('filters by search (number substring) when provided, in addition to scope', async () => {
+    it('filters by search (number or customer) when provided, in addition to scope', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
+        const brackets = qb.andWhere.mock.calls
+            .map(call => call[0])
+            .find((arg): arg is Brackets => arg instanceof Brackets);
+        const inner = {
+            where: vi.fn().mockReturnThis(),
+            orWhere: vi.fn().mockReturnThis(),
+        };
+        brackets?.whereFactory(inner as never);
+        expect(inner.where).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
             search: '%42%',
+        });
+        expect(inner.orWhere).toHaveBeenCalledWith('counterparty.shortName ILIKE :term', {
+            term: '%42%',
+        });
+    });
+
+    it('escapes LIKE wildcards in the customer part of the search', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { search: '5%_' });
+
+        const brackets = qb.andWhere.mock.calls
+            .map(call => call[0])
+            .find((arg): arg is Brackets => arg instanceof Brackets);
+        const inner = { where: vi.fn().mockReturnThis(), orWhere: vi.fn().mockReturnThis() };
+        brackets?.whereFactory(inner as never);
+        expect(inner.orWhere).toHaveBeenCalledWith('counterparty.inn ILIKE :term', {
+            term: '%5\\%\\_%',
         });
     });
 

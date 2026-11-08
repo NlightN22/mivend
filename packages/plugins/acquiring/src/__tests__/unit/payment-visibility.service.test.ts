@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Brackets } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PaymentVisibilityService } from '../../payment-visibility.service';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
@@ -14,8 +15,8 @@ function mockQueryBuilder() {
         addSelect: vi.fn(),
         orderBy: vi.fn(),
         addOrderBy: vi.fn(),
-        skip: vi.fn(),
-        take: vi.fn(),
+        offset: vi.fn(),
+        limit: vi.fn(),
         getCount: vi.fn(async () => 0),
         getRawAndEntities: vi.fn(
             async (): Promise<{
@@ -33,8 +34,8 @@ function mockQueryBuilder() {
     qb.addSelect.mockReturnValue(qb);
     qb.orderBy.mockReturnValue(qb);
     qb.addOrderBy.mockReturnValue(qb);
-    qb.skip.mockReturnValue(qb);
-    qb.take.mockReturnValue(qb);
+    qb.offset.mockReturnValue(qb);
+    qb.limit.mockReturnValue(qb);
     return qb;
 }
 
@@ -88,14 +89,50 @@ describe('PaymentVisibilityService', () => {
         });
     });
 
-    it('filters by search (number substring) when provided, in addition to scope', async () => {
+    it('search matches the number, customer name or INN in one bracket, in addition to scope', async () => {
         proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('payment.number ILIKE :search', {
-            search: '%42%',
+        expect(qb.andWhere.mock.calls.some(([arg]) => arg instanceof Brackets)).toBe(true);
+    });
+
+    it('clamps a negative skip to 0', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { skip: -5 });
+        expect(qb.offset).toHaveBeenCalledWith(0);
+    });
+
+    it('clamps take to 0..200: negative is count-only, huge is capped', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { take: -5 });
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
+        await service.findVisible(mockCtx, { take: 100000 });
+        expect(qb.limit).toHaveBeenCalledWith(200);
+        await service.findVisible(mockCtx, { take: 0 });
+        expect(qb.limit).toHaveBeenCalledTimes(1);
+    });
+
+    it('applies the scope before the client filter and returns only a count for take 0', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+        qb.getCount.mockResolvedValue(7);
+        const order: string[] = [];
+        proformaInvoiceVisibilityService.applyScope.mockImplementation(() => order.push('scope'));
+        qb.andWhere.mockImplementation(() => {
+            order.push('filter');
+            return qb;
         });
+
+        const result = await service.findVisible(mockCtx, {
+            take: 0,
+            filter: { amount: { gt: 5 } },
+        });
+
+        expect(order).toEqual(['scope', 'filter']);
+        expect(result).toEqual({ items: [], totalItems: 7 });
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
     });
 
     it('filters by counterpartyId when provided, in addition to scope', async () => {

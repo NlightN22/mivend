@@ -223,6 +223,35 @@ an approval of that kind, with its own type, subject, requester, requested value
   analytics later needs "by responsible at the time of sale" and "by current responsible", it is
   decided inside the analytics work.
 
+## Proforma invoices list
+
+Same list shape as orders (`components/proforma-invoices/`): the numeric proforma invoice number
+first, then date, customer, order, status, amount and due date. Status chips with counts (All,
+Current, Superseded, Cancelled) follow the search; the search box matches the number (an order
+number finds its `<order number>-NN` documents), the customer name and INN. Views, URL sync
+(`search`, `view`, `counterpartyId`, `pageSize`, `page`), top and bottom pagination and the mobile
+card view are shared with orders. A row opens the order card; there is no quick panel and no
+actions. The Filter builder (number, date, customer, order, status, amount, due date) and the
+sortable headers (all but order) are applied on the server: `visibleProformaInvoices` takes
+`options { filter sort }` over a fixed field whitelist, inside the caller's visible set. The chips
+and their counts follow the search and the builder conditions; the default sort is newest first.
+Money columns are end-aligned (`align: 'end'` on the table column).
+
+## Payments list
+
+Same list shape as orders (`components/payments/`): the numeric payment number first, then date,
+customer, proforma invoice, order, source, status and amount. Status chips with counts (All,
+Captured, Pending, Failed, Refunded) follow the search and the Filter builder conditions; the
+search box matches the payment number, the customer name and INN. Views, URL sync (`search`,
+`view`, `filters`, `sortField`, `sortDir`, `counterpartyId`, `pageSize`, `page`), top and bottom
+pagination and the mobile card view are shared with orders. The customer links to its card, the
+order to the order card, the proforma invoice to the proforma list searched by its number; there
+is no quick panel and no row actions. The Filter builder and the sortable headers (all but
+proforma invoice and order) are applied on the server: `visiblePayments` takes
+`options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
+scope of the payment's proforma invoice). The default sort is newest first. Money columns are
+end-aligned (`align: 'end'` on the table column).
+
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,

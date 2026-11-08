@@ -102,6 +102,8 @@ const columnFilters = defineModel<DataTableFilterMeta>('columnFilters', { requir
             :key="col.field"
             :field="col.field"
             :style="columnStyle(col)"
+            :header-class="col.align === 'end' ? 'mv-advanced-data-table__align-end' : undefined"
+            :body-class="col.align === 'end' ? 'mv-advanced-data-table__align-end' : undefined"
             :show-filter-match-modes="false"
             :show-filter-operator="false"
             :show-add-button="false"

@@ -4,6 +4,7 @@ import {
     ProformaInvoiceOutstandingBalanceDocument,
     ProformaInvoicesPageDocument,
     ProformaInvoiceViewCountsDocument,
+    type ProformaInvoiceFilterParameter,
     type ProformaInvoiceListItemFieldsFragment,
 } from './generated/graphql';
 
@@ -74,8 +75,14 @@ export interface ProformaInvoiceViewCounts {
 // not one page. Do not derive them from loaded rows.
 export async function fetchProformaInvoiceViewCounts(
     counterpartyId: string,
+    search?: string,
+    filter?: ProformaInvoiceFilterParameter,
 ): Promise<ProformaInvoiceViewCounts> {
-    const result = await adminApi(ProformaInvoiceViewCountsDocument, { counterpartyId });
+    const result = await adminApi(ProformaInvoiceViewCountsDocument, {
+        counterpartyId: counterpartyId || undefined,
+        search: search || undefined,
+        filter,
+    });
     return {
         all: result.all.totalItems,
         current: result.current.totalItems,

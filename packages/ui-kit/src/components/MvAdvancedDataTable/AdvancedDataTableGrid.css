@@ -26,6 +26,15 @@
     gap: 2px;
 }
 
+/* `align: 'end'` columns: header content and cell text sit at the right edge. */
+:deep(.mv-advanced-data-table__align-end) {
+    text-align: right;
+}
+
+:deep(.mv-advanced-data-table__align-end .p-datatable-column-header-content) {
+    justify-content: flex-end;
+}
+
 .mv-advanced-data-table__col-title {
     cursor: default;
     overflow: hidden;
