@@ -62,6 +62,8 @@ export const adminOrderLineEditSchema = gql`
         "Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment."
         changeOrderLineQuantity(orderId: ID!, orderLineId: ID!, quantity: Int!): Boolean!
         removeOrderLine(orderId: ID!, orderLineId: ID!): Boolean!
+        "Adds a position by its exact article (SKU); an existing line of the same product grows."
+        addOrderLineBySku(orderId: ID!, sku: String!, quantity: Int!): Boolean!
         "Cuts the short lines to what stock covers and records the rest as shortfall."
         splitOrderLinesByStock(orderId: ID!): [OrderLineSplitOutcome!]!
     }

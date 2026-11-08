@@ -31,6 +31,7 @@ import { freightPointGuard } from './freight-point.guard';
 import { placementDenormalizeProcess } from './placement-denormalize.process';
 import { ERP_DOCUMENT_ENTITIES } from './erp-documents/erp-document-entities';
 import { ErpDocumentWriter } from './erp-documents/erp-document-writer.service';
+import { AdminOrderStatusHistoryResolver } from './admin-order-status-history.resolver';
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
@@ -107,6 +108,25 @@ const adminApiSchema = gql`
         rejected: Boolean!
     }
 
+    type OrderStatusHistoryEntry {
+        uuid: String!
+        previousStatus: String
+        status: String!
+        occurredAt: DateTime!
+        reference: OrderStatusReferenceInfo
+    }
+
+    type OrderStatusReferenceInfo {
+        code: String!
+        name: String!
+        description: String!
+        customerVisible: Boolean!
+    }
+
+    extend type Order {
+        statusHistory: [OrderStatusHistoryEntry!]!
+    }
+
     extend type Mutation {
         "Staff pick one of the order client's trading points on a draft order; null means self-pickup."
         setDraftOrderTradingPoint(orderId: ID!, tradingPointId: ID): Boolean!
@@ -160,6 +180,8 @@ const adminApiSchema = gql`
         schema: adminApiSchema,
         resolvers: [
             AdminOrderVisibilityResolver,
+            AdminOrderStatusHistoryResolver,
+            OrderStatusReferenceResolver,
             OrderVisibilityAggregatesResolver,
             OrdersAttentionResolver,
             OrderStatusDictionaryResolver,

@@ -3,6 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
+import { OrderLineAddService } from './order-line-add.service';
 import { OrderLineEditService } from './order-line-edit.service';
 import { OrderLineShortfallService } from './order-line-shortfall.service';
 
@@ -10,6 +11,7 @@ import { OrderLineShortfallService } from './order-line-shortfall.service';
 export class OrderLineEditResolver {
     constructor(
         private edits: OrderLineEditService,
+        private adds: OrderLineAddService,
         private shortfalls: OrderLineShortfallService,
     ) {}
 
@@ -45,6 +47,17 @@ export class OrderLineEditResolver {
         @Args() args: { orderId: ID; orderLineId: ID },
     ): Promise<boolean> {
         await this.edits.removeLine(ctx, args.orderId, args.orderLineId);
+        return true;
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ConfirmOrder.Permission)
+    async addOrderLineBySku(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID; sku: string; quantity: number },
+    ): Promise<boolean> {
+        await this.adds.addBySku(ctx, args.orderId, args.sku, args.quantity);
         return true;
     }
 

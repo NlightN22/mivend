@@ -5,6 +5,7 @@ import { withAggregateLock } from 'shared';
 import { ReservationReleasedEvent } from '../../reservation.events';
 import { OrderLineEditGuard } from '../../order-line-edit.guard';
 import { OrderLineStockSyncService } from '../../order-line-stock-sync.service';
+import { OrderLineAddService } from '../../order-line-add.service';
 import { OrderLineEditService } from '../../order-line-edit.service';
 import {
     mockCtx,
@@ -354,5 +355,48 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
         expect(
             results.filter(r => r.status === 'rejected' && /deadlock/i.test(String(r.reason))),
         ).toEqual([]);
+    });
+});
+
+describe('OrderLineAddService (integration, real Postgres, concurrency)', () => {
+    it('two concurrent adds of the same article both land, one line carries the summed quantity', async () => {
+        const order = await h.dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1' });
+        const edits = editService();
+        const qb = { where: () => qb, andWhere: () => qb, getOne: async () => h.productVariant };
+        const modifier = {
+            getOrCreateOrderLine: async (
+                ctx: never,
+                o: { id: string; lines: Array<{ productVariantEntityId: unknown }> },
+            ) => {
+                const repo = h.connection.getRepository(ctx, TestOrderLine);
+                const existing = await repo.findOne({ where: { orderId: o.id } });
+                if (existing) return existing;
+                return repo.save({
+                    orderId: o.id,
+                    productVariantId: 'variant-add',
+                    productVariantEntityId: h.productVariant.id,
+                    quantity: 0,
+                });
+            },
+        };
+        const add = new OrderLineAddService(
+            { getRepository: () => ({ createQueryBuilder: () => qb }) } as never,
+            edits,
+            modifier as never,
+            { requiredMultiple: async () => 1 } as never,
+            { addQuantity: async () => undefined } as never,
+        );
+        const results = await Promise.allSettled([
+            add.addBySku(mockCtx, order.id, 'SKU', 2),
+            add.addBySku(mockCtx, order.id, 'SKU', 3),
+        ]);
+        expect(results.map(outcome)).toEqual(['ok', 'ok']);
+        const lines = await h.dataSource
+            .getRepository(TestOrderLine)
+            .find({ where: { orderId: order.id } });
+        expect(lines).toHaveLength(1);
+        expect(lines[0].quantity).toBe(5);
     });
 });

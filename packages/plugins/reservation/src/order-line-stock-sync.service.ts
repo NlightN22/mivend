@@ -44,6 +44,24 @@ export class OrderLineStockSyncService {
         if (release > 0) await this.release(ctx, line, release);
     }
 
+    // A new line follows its siblings: allocated when the placed order's other lines are.
+    async addQuantity(
+        ctx: RequestContext,
+        order: Order,
+        line: OrderLine,
+        quantity: number,
+    ): Promise<void> {
+        const owners = order.lines.filter(l => l.id != null);
+        for (const owner of owners) {
+            if ((await this.allocationOf(ctx, owner.id)).allocated) {
+                await this.stockMovement.createAllocationsForOrderLines(ctx, [
+                    { orderLineId: line.id, quantity },
+                ]);
+                return;
+            }
+        }
+    }
+
     // A line with stock movements cannot be deleted (foreign key); once the allocation is released its
     // allocation and release rows net to zero, so they are dropped with it.
     async removeLine(ctx: RequestContext, _order: Order, line: OrderLine): Promise<void> {
