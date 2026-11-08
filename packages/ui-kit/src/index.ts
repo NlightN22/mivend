@@ -332,3 +332,11 @@ export { default as MvDocumentTotals } from './components/MvDocumentLines/MvDocu
 export type { DocTotalRow } from './components/MvDocumentLines/MvDocumentTotals.vue';
 export * from './components/MvDocumentLines/documentLinesModel';
 export { useLineSelection } from './composables/useLineSelection';
+export { default as MvWizard } from './components/MvWizard/MvWizard.vue';
+export type { WizardStep } from './components/MvWizard/wizardModel';
+export { default as MvBatchResultTable } from './components/MvBatchResultTable/MvBatchResultTable.vue';
+export type {
+    BatchCounters,
+    BatchResultMode,
+    BatchResultRow,
+} from './components/MvBatchResultTable/batchResultModel';
