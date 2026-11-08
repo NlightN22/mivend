@@ -1,14 +1,9 @@
-import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { ErpMirrorEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 // Last state of the `counterparty-contact` stream; counterpartyId is a soft link (no FK), contactInfos is the sent list as JSON text.
 @Entity()
-export class CounterpartyContactErp extends VendureEntity {
-    constructor(input?: DeepPartial<CounterpartyContactErp>) {
-        super(input);
-    }
-
+export class CounterpartyContactErp extends ErpMirrorEntity {
     @Index({ unique: true })
     @Column({ type: 'varchar' })
     erpId!: string;

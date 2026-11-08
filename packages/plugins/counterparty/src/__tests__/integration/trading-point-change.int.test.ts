@@ -7,8 +7,9 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { TradingPointChange } from '../../entities/trading-point-change.entity';
+import type { TradingPointChange } from '../../entities/trading-point-change.entity';
 import { TradingPointErp } from '../../entities/trading-point-erp.entity';
+import { TestTradingPointChange } from './trading-point-test-entities';
 import { savePendingChange, type ProposedPointFields } from '../../trading-point-change';
 import { writeErpMirror } from '../../trading-point-erp-mirror';
 
@@ -22,7 +23,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TradingPointChange, TradingPointErp],
+        entities: [TestTradingPointChange, TradingPointErp],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -37,7 +38,8 @@ beforeEach(async () => {
     await dataSource.query(`TRUNCATE trading_point_change, trading_point_erp RESTART IDENTITY`);
 });
 
-const changes = (): Repository<TradingPointChange> => dataSource.getRepository(TradingPointChange);
+const changes = (): Repository<TradingPointChange> =>
+    dataSource.getRepository(TestTradingPointChange) as unknown as Repository<TradingPointChange>;
 const mirror = (): Repository<TradingPointErp> => dataSource.getRepository(TradingPointErp);
 const proposed = (name: string): ProposedPointFields => ({
     name,

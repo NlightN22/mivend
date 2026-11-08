@@ -2,17 +2,19 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
 import {
-    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
 
-import { ContactPerson } from '../../entities/contact-person.entity';
-import { Counterparty } from '../../entities/counterparty.entity';
-import { TradingPoint } from '../../entities/trading-point.entity';
 import { TradingPointErp } from '../../entities/trading-point-erp.entity';
+import {
+    TestContact,
+    TestCounterparty,
+    TestTradingPoint,
+    mirroredConnection,
+} from './trading-point-test-entities';
 import { TradingPointLocationReportService } from '../../trading-point-location-report.service';
 
 const { schema, extra } = testSchemaOptions('trading_point_erp_drift');
@@ -28,11 +30,11 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [Counterparty, TradingPoint, ContactPerson, TradingPointErp],
+        entities: [TestCounterparty, TestTradingPoint, TestContact, TradingPointErp],
         synchronize: true,
     });
     await dataSource.initialize();
-    service = new TradingPointLocationReportService(createTestConnection(dataSource));
+    service = new TradingPointLocationReportService(mirroredConnection(dataSource));
 });
 
 afterAll(async () => {
@@ -44,13 +46,7 @@ beforeEach(async () => {
     await dataSource.query(
         `TRUNCATE contact_person, trading_point, trading_point_erp, counterparty RESTART IDENTITY CASCADE`,
     );
-    const cp = await dataSource
-        .getRepository(Counterparty)
-        .save(
-            dataSource
-                .getRepository(Counterparty)
-                .create({ erpId: 'cp-1' } as never) as unknown as Counterparty,
-        );
+    const cp = await dataSource.getRepository(TestCounterparty).save({ erpId: 'cp-1' });
     counterpartyId = String(cp.id);
 });
 
@@ -59,8 +55,8 @@ const sent = { name: 'Point', address: 'Test Street 12', latitude: 10.5, longitu
 async function seed(erpId: string, ours: Partial<typeof sent>, mirrored = true): Promise<void> {
     const base = { erpId, counterpartyId, workingHours: null, isActive: true };
     await dataSource
-        .getRepository(TradingPoint)
-        .save(dataSource.getRepository(TradingPoint).create({ ...base, ...sent, ...ours }));
+        .getRepository(TestTradingPoint)
+        .save(dataSource.getRepository(TestTradingPoint).create({ ...base, ...sent, ...ours }));
     if (mirrored) {
         await dataSource
             .getRepository(TradingPointErp)

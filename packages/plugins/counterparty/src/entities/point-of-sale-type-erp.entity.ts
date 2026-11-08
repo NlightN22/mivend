@@ -1,14 +1,9 @@
-import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { ErpMirrorEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 // Last state of the `point-of-sale-type` stream; referenced by TradingPointErp.pointTypeIds (soft).
 @Entity()
-export class PointOfSaleTypeErp extends VendureEntity {
-    constructor(input?: DeepPartial<PointOfSaleTypeErp>) {
-        super(input);
-    }
-
+export class PointOfSaleTypeErp extends ErpMirrorEntity {
     @Index({ unique: true })
     @Column({ type: 'varchar' })
     erpId!: string;

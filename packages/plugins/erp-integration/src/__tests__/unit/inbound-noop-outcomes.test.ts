@@ -26,7 +26,10 @@ describe.each([
     [
         'point-of-sale',
         (m: boolean) =>
-            new PointOfSaleStreamHandler({ deactivate: vi.fn().mockResolvedValue(m) } as never),
+            new PointOfSaleStreamHandler({
+                deactivate: vi.fn().mockResolvedValue(m),
+                markErpDeleted: vi.fn().mockResolvedValue(false),
+            } as never),
         { isDeleted: true },
     ],
     [

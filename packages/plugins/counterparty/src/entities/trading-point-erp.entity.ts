@@ -1,14 +1,9 @@
-import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { ErpMirrorEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 // The last state the ERP stream sent for a point; ids and lists beyond the editable fields are soft, as sent. Only the stream writes it; TradingPoint is mivend's record.
 @Entity()
-export class TradingPointErp extends VendureEntity {
-    constructor(input?: DeepPartial<TradingPointErp>) {
-        super(input);
-    }
-
+export class TradingPointErp extends ErpMirrorEntity {
     @Index({ unique: true })
     @Column({ type: 'varchar' })
     erpId!: string;

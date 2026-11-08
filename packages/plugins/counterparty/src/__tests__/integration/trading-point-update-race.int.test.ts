@@ -21,6 +21,7 @@ import { ContactPerson } from '../../entities/contact-person.entity';
 import { Counterparty } from '../../entities/counterparty.entity';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { TradingPointChange } from '../../entities/trading-point-change.entity';
+import { TestTradingPointChange } from './trading-point-test-entities';
 import { savePendingChange } from '../../trading-point-change';
 import { TradingPointChangeService } from '../../trading-point-change.service';
 import { TradingPointService } from '../../trading-point.service';
@@ -58,6 +59,7 @@ const mirrors = new Map<unknown, unknown>([
     [TradingPoint, TestTradingPoint],
     [ContactPerson, TestContact],
     [Counterparty, TestCounterparty],
+    [TradingPointChange, TestTradingPointChange],
 ]);
 const recordChange = vi.fn();
 let dataSource: DataSource;
@@ -81,7 +83,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestCounterparty, TestTradingPoint, TestContact, TradingPointChange],
+        entities: [TestCounterparty, TestTradingPoint, TestContact, TestTradingPointChange],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -204,7 +206,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                 .getRepository(TestTradingPoint)
                 .findOneByOrFail({ id: pointId });
             const change = await savePendingChange(
-                dataSource.getRepository(TradingPointChange),
+                dataSource.getRepository(TestTradingPointChange) as never,
                 { id: String(pointId), counterpartyId: row.counterpartyId },
                 proposal,
                 null,
@@ -244,7 +246,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                     }
                 }
                 const pending = await dataSource
-                    .getRepository(TradingPointChange)
+                    .getRepository(TestTradingPointChange)
                     .count({ where: { status: 'pending' } });
                 expect(pending).toBeLessThanOrEqual(1);
             },
@@ -254,7 +256,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
             const results = await Promise.allSettled([decide('accept'), decide('reject')]);
 
             expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
-            const rows = await dataSource.getRepository(TradingPointChange).find();
+            const rows = await dataSource.getRepository(TestTradingPointChange).find();
             expect(rows.filter(r => r.status === 'pending')).toHaveLength(0);
         });
     });

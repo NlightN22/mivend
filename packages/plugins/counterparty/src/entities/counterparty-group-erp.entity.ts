@@ -1,14 +1,9 @@
-import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { ErpMirrorEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 // Last state of the `counterparty-group` stream; parentId is a soft link (no FK).
 @Entity()
-export class CounterpartyGroupErp extends VendureEntity {
-    constructor(input?: DeepPartial<CounterpartyGroupErp>) {
-        super(input);
-    }
-
+export class CounterpartyGroupErp extends ErpMirrorEntity {
     @Index({ unique: true })
     @Column({ type: 'varchar' })
     erpId!: string;
