@@ -1,6 +1,13 @@
 # Project Context
 
-Updated: 2026-11-07 19:00
+Updated: 2026-11-08
+
+## #279 two-factor authentication (2026-11-08, DONE: audited, on prod 0.0.55 with `TWO_FACTOR_REQUIRED=false`, issue closed)
+- Plugin `packages/plugins/two-factor`: TOTP for every account type (storefront, manager portal, Vendure Dashboard via an overlay in `apps/server/src/dashboard/two-factor-sign-in`). Purpose is binding a person to a personal device, not hardening. Contract and release condition: `docs/two-factor.md`.
+- Obligation is binary (`TWO_FACTOR_REQUIRED`), forced enrolment at next sign-in, no grace, no recovery codes, no trusted devices. Lost device: e-mail link to a reset page. Ops reset: `infrastructure/scripts/two-factor-reset.sh`.
+- Before switching it on in prod: every admin incl. superadmin enrols from an open session first, and #278 (throttling at the `// #278` markers) should land, otherwise the second step has no brute-force limit. API keys bypass 2FA (only superadmin holds those permissions). The Dashboard overlay depends on the login extension rendering inside the form: re-check on Dashboard upgrades.
+- Migration `1791560000000-two-factor` shipped before the older `1791559000000-discount-limit` (order card, unreleased): check both apply in either order when the card ships.
+- Planned next: #278 brute-force protection; #335 session policy (daily reset 03:00 business time zone incl. staff, max 2 sessions per customer, new-device e-mail with opt-out, deactivation ends sessions); #332 contacts design; #333 ERP document pages; #334 Node 22 in Docker images.
 
 ## #309 chunked category-tree recompute (2026-11-07, DONE: audited, pushed to origin/main e429ca50, issue closed)
 - `recomputeCategoryTree` plans the whole tree once unlocked, then takes the `category-tree` lock per top-level subtree that has writes; each chunk re-reads and re-plans under the lock. Idle tick takes no lock (~0.16 s for 8000 categories). Gap: a category created or moved mid-run waits for the next tick. Docs: `docs/category-hierarchy.md`.
