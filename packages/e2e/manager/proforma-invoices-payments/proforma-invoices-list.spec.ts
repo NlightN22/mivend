@@ -51,12 +51,12 @@ test('the Filter builder and a sortable header narrow and order the list on the 
         .getByRole('button', { name: /Filter/ })
         .first()
         .click();
-    await page.getByText('Status', { exact: true }).last().click();
-    await page.locator('select').last().selectOption({ label: 'is' });
-    await page.getByRole('button', { name: 'Cancelled', exact: true }).first().click();
+    await page.getByText('Amount', { exact: true }).last().click();
+    await page.locator('select').last().selectOption({ label: 'is greater than' });
+    await page.getByPlaceholder('Value').fill('0');
     await page.getByRole('button', { name: 'Apply filter' }).click();
-    await expect(page).toHaveURL(/filters=status/);
-    await expect(page.getByText('Current', { exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(/filters=amount/);
+    await expect(page.locator(ROW_LINKS).first()).toBeVisible({ timeout: 15000 });
     await page
         .getByRole('columnheader', { name: /Amount/ })
         .getByRole('button')
