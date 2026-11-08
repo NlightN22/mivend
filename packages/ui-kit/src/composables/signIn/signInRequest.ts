@@ -16,8 +16,10 @@ export function signInUrl(url: string, query: string): string {
 
 export const captchaToken = ref('');
 
+// A token is single use: it is taken for exactly one request, whatever the outcome.
 export function signInHeaders(query: string): Record<string, string> {
-    return isSignInRequest(query) && captchaToken.value
-        ? { [CAPTCHA_TOKEN_HEADER]: captchaToken.value }
-        : {};
+    if (!isSignInRequest(query) || !captchaToken.value) return {};
+    const headers = { [CAPTCHA_TOKEN_HEADER]: captchaToken.value };
+    captchaToken.value = '';
+    return headers;
 }

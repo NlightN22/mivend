@@ -5,11 +5,15 @@ import { captchaToken } from './signInRequest';
 export interface CaptchaRequirement {
     required: boolean;
     siteKey: string | null;
+    scriptUrl: string | null;
+    widgetGlobal: string | null;
 }
 
 export interface SignInCaptcha {
     required: Ref<boolean>;
     siteKey: Ref<string>;
+    scriptUrl: Ref<string>;
+    widgetGlobal: Ref<string>;
     widgetKey: Ref<number>;
     onToken(token: string): void;
     refresh(login: string): Promise<void>;
@@ -22,6 +26,8 @@ export function useSignInCaptcha(
 ): SignInCaptcha {
     const required = ref(false);
     const siteKey = ref('');
+    const scriptUrl = ref('');
+    const widgetGlobal = ref('');
     const widgetKey = ref(0);
 
     function clear(): void {
@@ -31,6 +37,8 @@ export function useSignInCaptcha(
     return {
         required,
         siteKey,
+        scriptUrl,
+        widgetGlobal,
         widgetKey,
         onToken: token => {
             captchaToken.value = token;
@@ -39,8 +47,11 @@ export function useSignInCaptcha(
             clear();
             try {
                 const requirement = await fetchRequirement(login);
-                required.value = requirement.required && !!requirement.siteKey;
+                required.value =
+                    requirement.required && !!requirement.siteKey && !!requirement.scriptUrl;
                 siteKey.value = requirement.siteKey ?? '';
+                scriptUrl.value = requirement.scriptUrl ?? '';
+                widgetGlobal.value = requirement.widgetGlobal ?? '';
             } catch {
                 // best-effort: the server still decides, an unknown state must not block the form
                 required.value = false;

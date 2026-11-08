@@ -123,8 +123,11 @@ Five layers, none of them a single point of failure.
    counted while locked. A locked, unknown and existing login get the identical `InvalidCredentialsError`, and a locked login
    is refused even with the right password. A success clears the counters. Covers the password step, the second step, the
    password re-check and recovery requests, on both APIs and the Dashboard. Stale counters are purged hourly.
-   The password step takes a per-login advisory lock inside the request transaction before it checks the counters and holds it
-   through the password check and the failure record, so parallel guesses queue and at most the threshold are verified (the
+   The password step tries a per-login advisory lock inside the request transaction before it checks the counters and holds it
+   through the password check and the failure record. It never waits: a concurrent attempt on the same login is refused at once
+   with the same answer as a wrong password and is not counted, so one login holds at most one pool connection and at most the
+   threshold of parallel guesses reach the password check (the owner can be refused while a script hammers the login; the
+   hammering is itself limited by the proxy caps and the lock lapses on its own). (The
    second step, recovery and the password re-check already run under the per-user lock). Trade-off against lockout abuse:
    the hard lock on login plus address is low (5), while the per-login counter over all addresses is only a high ceiling
    (50, same max lock) because anyone can drive it for a victim; below the ceiling it works through the CAPTCHA, which is
@@ -132,16 +135,19 @@ Five layers, none of them a single point of failure.
    only cross-address protection, and a determined attacker can lock a known login for at most the max lock at a time. The
    second-step lock (per account, from the login+address threshold of wrong codes) does not block the e-mail recovery link:
    recovery completion uses its own password re-check counter.
-3. **CAPTCHA (adaptive).** After `SIGN_IN_CAPTCHA_AFTER_FAILURES` failures of a login the portals show a Cloudflare Turnstile
-   widget and send its token in the `X-Captcha-Token` header; `signInCaptchaRequirement(login)` tells them when. A missing or
-   rejected token counts as a refused attempt; an unreachable Turnstile never blocks (warning in the log). Off when the keys
-   are empty. The Dashboard cannot show the widget: a Dashboard sign-in for a login past the failure count is refused until
-   the counter expires. Another provider implements `CaptchaProvider` in `packages/plugins/sign-in-protection`.
+3. **CAPTCHA (adaptive).** After `SIGN_IN_CAPTCHA_AFTER_FAILURES` failures of a login the portals load the widget script and
+   show the widget, and send its token in the `X-Captcha-Token` header; `signInCaptchaRequirement(login)` tells them when and
+   returns the site key, script URL and widget global name from configuration. The script loads only after that threshold, from
+   `CAPTCHA_SCRIPT_URL`, so the provider's host belongs on the consent/cookie and third-party list (#272, #268). A token is
+   single use: the portals drop it after every request that carried it. A missing or rejected token counts as a refused attempt;
+   an unreachable verify endpoint never blocks (warning in the log). Off when `CAPTCHA_PROVIDER` is empty. The Dashboard
+   cannot show the widget: a Dashboard sign-in for a login past the failure count is refused until the counter expires. Another
+   provider implements `CaptchaProvider` in `packages/plugins/sign-in-protection`.
 4. **fail2ban (host).** Example files in `infrastructure/fail2ban/`: a filter matching `429` on the Shop/Admin API in the
    access log, and a jail with escalating bans. Complement only; copy and enable them by hand on the host whose log holds the
    real client address.
 5. **Breached passwords.** With `PASSWORD_BREACH_CHECK_ENABLED=true` a new password (registration, change, reset, administrator
-   create) is checked against the Pwned Passwords range API; only the first 5 characters of its SHA-1 leave the server. A
+   create) is checked against a k-anonymity range service at `PASSWORD_BREACH_API_URL` (`GET <url>/range/<prefix>`); only the first 5 characters of the SHA-1 leave the server. A
    confirmed hit is rejected with `PASSWORD_BREACHED`. At a successful sign-in the password in hand is checked once; a hit sets
    `User.customFields.passwordChangeRequired` and the portals send the user to the password change (cleared by any new
    password). The forced change is a UI redirect and a notice only, not an API gate: the session works until the user changes
@@ -159,9 +165,12 @@ Five layers, none of them a single point of failure.
 | `SIGN_IN_THROTTLE_RESET_AFTER_SECONDS` | no | `3600` | A counter without a failure for this long restarts; must be at least the max lock. |
 | `SIGN_IN_TRUSTED_PROXY_HOPS` | no | `2` | Proxies in front of the server (counted from the right of `X-Forwarded-For`). |
 | `SIGN_IN_CAPTCHA_AFTER_FAILURES` | no | `3` | Failures before the widget is required. |
-| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | empty | Both or neither; both set enables Turnstile. Add each portal hostname to the widget. |
+| `CAPTCHA_PROVIDER` | no | empty | `widget` enables the CAPTCHA; then the five variables below are required (wrong or partial values fail boot). |
+| `CAPTCHA_SITE_KEY`, `CAPTCHA_SECRET_KEY` | with provider | empty | Public key rendered into the widget; secret sent only to the verify endpoint. |
+| `CAPTCHA_SCRIPT_URL`, `CAPTCHA_VERIFY_URL` | with provider | empty | Widget script loaded by the portals; verify endpoint called by the server. |
+| `CAPTCHA_WIDGET_GLOBAL` | with provider | empty | Name of the global object the script defines (`render`/`remove`). |
 | `PASSWORD_BREACH_CHECK_ENABLED` | no | `false` (set `true` in `.env.production.example`) | Layer 5 on or off. |
-| `PASSWORD_BREACH_API_URL` | no | `https://api.pwnedpasswords.com` | Range API base URL. |
+| `PASSWORD_BREACH_API_URL` | when the check is on | empty | Base URL of the range service. |
 | `PASSWORD_BREACH_TIMEOUT_MS` | no | `3000` | Lookup timeout. |
 
 A wrong value fails boot. Local, branch and staging-integration contours keep both switches `false` so tests and e2e can sign

@@ -5,6 +5,8 @@ export const signInProtectionSchema: DocumentNode = gql`
     type SignInCaptchaRequirement {
         required: Boolean!
         siteKey: String
+        scriptUrl: String
+        widgetGlobal: String
     }
 
     extend type Query {

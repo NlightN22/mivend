@@ -1,6 +1,7 @@
 import {
-    HibpPasswordChecker,
-    TurnstileProvider,
+    RangeBreachChecker,
+    WidgetCaptchaProvider,
+    type CaptchaProvider,
     type SignInProtectionOptions,
 } from '@mivend/plugin-sign-in-protection';
 
@@ -26,6 +27,30 @@ function positiveInt(env: Env, name: string, fallback: number): number {
     return value;
 }
 
+function captchaFromEnv(env: Env): CaptchaProvider | null {
+    const kind = env.CAPTCHA_PROVIDER ?? '';
+    if (kind === '') return null;
+    if (kind !== 'widget')
+        throw new Error(`CAPTCHA_PROVIDER must be "widget" or empty, got "${kind}"`);
+    const required = [
+        'CAPTCHA_SITE_KEY',
+        'CAPTCHA_SECRET_KEY',
+        'CAPTCHA_SCRIPT_URL',
+        'CAPTCHA_VERIFY_URL',
+        'CAPTCHA_WIDGET_GLOBAL',
+    ];
+    const missing = required.filter(name => !env[name]);
+    if (missing.length > 0)
+        throw new Error(`CAPTCHA_PROVIDER=widget requires ${missing.join(', ')}`);
+    return new WidgetCaptchaProvider({
+        siteKey: env.CAPTCHA_SITE_KEY!,
+        secretKey: env.CAPTCHA_SECRET_KEY!,
+        scriptUrl: env.CAPTCHA_SCRIPT_URL!,
+        verifyUrl: env.CAPTCHA_VERIFY_URL!,
+        widgetGlobal: env.CAPTCHA_WIDGET_GLOBAL!,
+    });
+}
+
 export function signInProtectionOptionsFromEnv(env: Env): SignInProtectionOptions {
     const baseLockMs = positiveInt(env, 'SIGN_IN_THROTTLE_BASE_LOCK_SECONDS', 30) * SECOND_MS;
     const maxLockMs = positiveInt(env, 'SIGN_IN_THROTTLE_MAX_LOCK_SECONDS', 900) * SECOND_MS;
@@ -33,10 +58,13 @@ export function signInProtectionOptionsFromEnv(env: Env): SignInProtectionOption
     if (resetAfterMs < maxLockMs) {
         throw new Error('SIGN_IN_THROTTLE_RESET_AFTER_SECONDS must not be below the max lock');
     }
-    const siteKey = env.TURNSTILE_SITE_KEY ?? '';
-    const secretKey = env.TURNSTILE_SECRET_KEY ?? '';
-    if ((siteKey === '') !== (secretKey === '')) {
-        throw new Error('TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY must be set together');
+    const captchaProvider = captchaFromEnv(env);
+    const breachEnabled = flag(env, 'PASSWORD_BREACH_CHECK_ENABLED');
+    const breachUrl = (env.PASSWORD_BREACH_API_URL ?? '').replace(/\/$/, '');
+    if (breachEnabled && breachUrl === '') {
+        throw new Error(
+            'PASSWORD_BREACH_API_URL is required when PASSWORD_BREACH_CHECK_ENABLED=true',
+        );
     }
     return {
         throttle: {
@@ -56,16 +84,13 @@ export function signInProtectionOptionsFromEnv(env: Env): SignInProtectionOption
             cleanupPollIntervalMs: 60 * 60 * SECOND_MS,
         },
         captcha: {
-            provider: siteKey ? new TurnstileProvider(siteKey, secretKey) : null,
+            provider: captchaProvider,
             afterFailures: positiveInt(env, 'SIGN_IN_CAPTCHA_AFTER_FAILURES', 3),
         },
         breach: {
-            checker: flag(env, 'PASSWORD_BREACH_CHECK_ENABLED')
-                ? new HibpPasswordChecker(
-                      (env.PASSWORD_BREACH_API_URL || 'https://api.pwnedpasswords.com').replace(
-                          /\/$/,
-                          '',
-                      ),
+            checker: breachEnabled
+                ? new RangeBreachChecker(
+                      breachUrl,
                       positiveInt(env, 'PASSWORD_BREACH_TIMEOUT_MS', 3000),
                   )
                 : null,

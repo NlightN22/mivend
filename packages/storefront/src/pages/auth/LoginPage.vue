@@ -122,6 +122,8 @@ function handleSubmit(): Promise<void> {
                             v-if="captcha.required.value"
                             :key="captcha.widgetKey.value"
                             :site-key="captcha.siteKey.value"
+                            :script-url="captcha.scriptUrl.value"
+                            :widget-global="captcha.widgetGlobal.value"
                             @token="captcha.onToken"
                         />
 

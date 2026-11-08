@@ -19,7 +19,7 @@ export class SignInGuardService {
     }
 
     async admit(ctx: RequestContext, login: string): Promise<boolean> {
-        await this.throttle.lock(ctx, 'password', login);
+        if (!(await this.throttle.tryLock(ctx, 'password', login))) return false;
         if (await this.throttle.isLocked(ctx, 'password', login)) return false;
         return this.captcha.passes(ctx, login);
     }

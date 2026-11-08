@@ -9,7 +9,16 @@ import type { SignInProtectionOptions } from '../types';
 export interface CaptchaRequirement {
     required: boolean;
     siteKey: string | null;
+    scriptUrl: string | null;
+    widgetGlobal: string | null;
 }
+
+const NOT_REQUIRED: CaptchaRequirement = {
+    required: false,
+    siteKey: null,
+    scriptUrl: null,
+    widgetGlobal: null,
+};
 
 @Injectable()
 export class CaptchaService {
@@ -21,11 +30,16 @@ export class CaptchaService {
     // Same answer for an unknown and an existing login: only the counters decide.
     async requirement(ctx: RequestContext, login: string): Promise<CaptchaRequirement> {
         const { provider, afterFailures } = this.options.captcha;
-        if (!provider) return { required: false, siteKey: null };
+        if (!provider) return NOT_REQUIRED;
         const failures = await this.throttle.failureCount(ctx, 'password', login);
         return failures >= afterFailures
-            ? { required: true, siteKey: provider.siteKey }
-            : { required: false, siteKey: null };
+            ? {
+                  required: true,
+                  siteKey: provider.siteKey,
+                  scriptUrl: provider.scriptUrl,
+                  widgetGlobal: provider.widgetGlobal,
+              }
+            : NOT_REQUIRED;
     }
 
     // False only when a challenge is due and the token is missing or rejected; an unreachable provider never blocks.

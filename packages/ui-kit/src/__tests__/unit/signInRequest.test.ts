@@ -34,11 +34,25 @@ describe('sign-in request marking', () => {
         });
         expect(signInHeaders('query { activeCustomer { id } }')).toEqual({});
     });
+
+    it('spends the token on the first request that carries it', () => {
+        captchaToken.value = 'tok';
+        expect(signInHeaders('mutation { login(username: "a") { __typename } }')).toHaveProperty(
+            'X-Captcha-Token',
+        );
+        expect(captchaToken.value).toBe('');
+        expect(signInHeaders('mutation { login(username: "a") { __typename } }')).toEqual({});
+    });
 });
 
 describe('useSignInCaptcha', () => {
     it('shows the widget when required and drops the spent token on refresh', async () => {
-        const captcha = useSignInCaptcha(async () => ({ required: true, siteKey: 'site' }));
+        const captcha = useSignInCaptcha(async () => ({
+            required: true,
+            siteKey: 'site',
+            scriptUrl: 'https://captcha.test/api.js',
+            widgetGlobal: 'g',
+        }));
         captcha.onToken('spent');
         await captcha.refresh('a');
         expect(captcha.required.value).toBe(true);

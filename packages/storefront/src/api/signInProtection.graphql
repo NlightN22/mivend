@@ -2,5 +2,7 @@ query SignInCaptchaRequirement($login: String!) {
     signInCaptchaRequirement(login: $login) {
         required
         siteKey
+        scriptUrl
+        widgetGlobal
     }
 }

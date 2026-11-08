@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CaptchaProvider, CaptchaVerdict } from '../../captcha/captcha-provider';
 import { CaptchaService } from '../../captcha/captcha.service';
-import { TurnstileProvider } from '../../captcha/turnstile-provider';
+import { WidgetCaptchaProvider } from '../../captcha/widget-captcha-provider';
 import type { SignInThrottleService } from '../../sign-in-throttle.service';
 import type { SignInProtectionOptions } from '../../types';
 
@@ -13,7 +13,15 @@ const limits = { threshold: 5, baseLockMs: 1, maxLockMs: 1 };
 function service(failures: number, verdict: CaptchaVerdict | null) {
     const verify = vi.fn(async () => verdict ?? 'valid');
     const provider: CaptchaProvider | null =
-        verdict === null ? null : { name: 'test', siteKey: 'site', verify };
+        verdict === null
+            ? null
+            : {
+                  name: 'test',
+                  siteKey: 'site',
+                  scriptUrl: 'https://captcha.test/api.js',
+                  widgetGlobal: 'g',
+                  verify,
+              };
     const options: SignInProtectionOptions = {
         throttle: {
             enabled: true,
@@ -49,6 +57,8 @@ describe('CaptchaService', () => {
         expect(await service(3, 'valid').captcha.requirement(withToken(), 'a')).toEqual({
             required: true,
             siteKey: 'site',
+            scriptUrl: 'https://captcha.test/api.js',
+            widgetGlobal: 'g',
         });
     });
 
@@ -71,9 +81,18 @@ describe('CaptchaService', () => {
     });
 });
 
-describe('TurnstileProvider', () => {
+describe('WidgetCaptchaProvider', () => {
     const make = (respond: () => Promise<Response>) =>
-        new TurnstileProvider('site', 'secret', vi.fn(respond), 'https://verify.test');
+        new WidgetCaptchaProvider(
+            {
+                siteKey: 'site',
+                secretKey: 'secret',
+                scriptUrl: 'https://captcha.test/api.js',
+                verifyUrl: 'https://verify.test',
+                widgetGlobal: 'g',
+            },
+            vi.fn(respond),
+        );
 
     it('maps success, rejection and outages', async () => {
         expect(await make(async () => Response.json({ success: true })).verify('t', 'ip')).toBe(

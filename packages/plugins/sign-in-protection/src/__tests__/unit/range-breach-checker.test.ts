@@ -1,17 +1,17 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 
-import { HibpPasswordChecker } from '../../breach/hibp-checker';
+import { RangeBreachChecker } from '../../breach/range-breach-checker';
 
 const sha1 = (value: string): string =>
     createHash('sha1').update(value).digest('hex').toUpperCase();
 
 function checker(respond: () => Promise<Response>) {
     const fetchImpl = vi.fn(respond);
-    return { fetchImpl, checker: new HibpPasswordChecker('https://hibp.test', 1000, fetchImpl) };
+    return { fetchImpl, checker: new RangeBreachChecker('https://range.test', 1000, fetchImpl) };
 }
 
-describe('HibpPasswordChecker', () => {
+describe('RangeBreachChecker', () => {
     it('sends only the 5-character prefix and reports a hit', async () => {
         const hash = sha1('password1');
         const { fetchImpl, checker: c } = checker(
@@ -20,7 +20,7 @@ describe('HibpPasswordChecker', () => {
         );
         expect(await c.check('password1')).toBe('breached');
         const [url] = fetchImpl.mock.calls[0] as unknown as [string];
-        expect(url).toBe(`https://hibp.test/range/${hash.slice(0, 5)}`);
+        expect(url).toBe(`https://range.test/range/${hash.slice(0, 5)}`);
         expect(url).not.toContain(hash.slice(5));
     });
 

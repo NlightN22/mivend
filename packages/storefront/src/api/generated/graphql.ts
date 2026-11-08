@@ -4578,7 +4578,9 @@ export type UpdateOrderItemsResult =
 
 export type SignInCaptchaRequirement = {
     required: Scalars['Boolean']['output'];
+    scriptUrl: Maybe<Scalars['String']['output']>;
     siteKey: Maybe<Scalars['String']['output']>;
+    widgetGlobal: Maybe<Scalars['String']['output']>;
 };
 
 export type UserCustomFields = {
@@ -5762,7 +5764,12 @@ export type SignInCaptchaRequirementQueryVariables = Exact<{
 }>;
 
 export type SignInCaptchaRequirementQuery = {
-    signInCaptchaRequirement: { required: boolean; siteKey: string | null };
+    signInCaptchaRequirement: {
+        required: boolean;
+        siteKey: string | null;
+        scriptUrl: string | null;
+        widgetGlobal: string | null;
+    };
 };
 
 export type LoginMutationVariables = Exact<{
@@ -7393,6 +7400,8 @@ export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
   signInCaptchaRequirement(login: $login) {
     required
     siteKey
+    scriptUrl
+    widgetGlobal
   }
 }
     `) as unknown as TypedDocumentString<

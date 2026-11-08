@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-interface TurnstileApi {
+interface WidgetApi {
     render(
         el: HTMLElement,
         options: { sitekey: string; theme: string; callback: (token: string) => void },
@@ -9,22 +9,20 @@ interface TurnstileApi {
     remove(widgetId: string): void;
 }
 
-const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-
-const props = defineProps<{ siteKey: string }>();
+const props = defineProps<{ siteKey: string; scriptUrl: string; widgetGlobal: string }>();
 const emit = defineEmits<{ token: [token: string] }>();
 const host = ref<HTMLElement | null>(null);
 let widgetId: string | null = null;
 
-function turnstile(): TurnstileApi | undefined {
-    return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+function widget(): WidgetApi | undefined {
+    return (window as unknown as Record<string, WidgetApi | undefined>)[props.widgetGlobal];
 }
 
 function loadScript(): Promise<void> {
-    if (turnstile()) return Promise.resolve();
+    if (widget()) return Promise.resolve();
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = SCRIPT_SRC;
+        script.src = props.scriptUrl;
         script.async = true;
         script.onload = () => resolve();
         script.onerror = () => reject(new Error('CAPTCHA script blocked'));
@@ -37,7 +35,7 @@ onMounted(async () => {
         await loadScript();
         if (!host.value) return;
         widgetId =
-            turnstile()?.render(host.value, {
+            widget()?.render(host.value, {
                 sitekey: props.siteKey,
                 theme: 'auto',
                 callback: token => emit('token', token),
@@ -48,7 +46,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-    if (widgetId) turnstile()?.remove(widgetId);
+    if (widgetId) widget()?.remove(widgetId);
 });
 </script>
 

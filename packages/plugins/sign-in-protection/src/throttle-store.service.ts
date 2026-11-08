@@ -13,9 +13,14 @@ export class ThrottleStoreService {
         return ctxQuery<T>(this.connection, ctx, sql, params);
     }
 
-    // Serialises every attempt on one key until the surrounding transaction ends (a no-op outside one).
-    async lock(ctx: RequestContext, key: string): Promise<void> {
-        await this.query(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [key]);
+    // Never waits: false means another attempt on the key is in flight. Held until the transaction ends.
+    async tryLock(ctx: RequestContext, key: string): Promise<boolean> {
+        const rows = await this.query<Array<{ ok: boolean }>>(
+            ctx,
+            `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS ok`,
+            [key],
+        );
+        return rows[0].ok;
     }
 
     // One atomic statement: concurrent failures are serialised by the row lock and all counted.

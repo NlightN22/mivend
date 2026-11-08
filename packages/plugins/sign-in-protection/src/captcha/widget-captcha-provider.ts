@@ -1,27 +1,40 @@
 import type { CaptchaProvider, CaptchaVerdict } from './captcha-provider';
 
-const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const TIMEOUT_MS = 3000;
 
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
-export class TurnstileProvider implements CaptchaProvider {
-    readonly name = 'turnstile';
+export interface WidgetCaptchaConfig {
+    siteKey: string;
+    secretKey: string;
+    scriptUrl: string;
+    verifyUrl: string;
+    widgetGlobal: string;
+}
+
+// Site key rendered into a container, a response token back, one verify POST with secret, response and remote address.
+export class WidgetCaptchaProvider implements CaptchaProvider {
+    readonly name = 'widget';
+    readonly siteKey: string;
+    readonly scriptUrl: string;
+    readonly widgetGlobal: string;
 
     constructor(
-        readonly siteKey: string,
-        private secretKey: string,
+        private config: WidgetCaptchaConfig,
         private fetchImpl: Fetch = fetch,
-        private verifyUrl: string = VERIFY_URL,
-    ) {}
+    ) {
+        this.siteKey = config.siteKey;
+        this.scriptUrl = config.scriptUrl;
+        this.widgetGlobal = config.widgetGlobal;
+    }
 
     async verify(token: string, remoteIp: string): Promise<CaptchaVerdict> {
         try {
-            const response = await this.fetchImpl(this.verifyUrl, {
+            const response = await this.fetchImpl(this.config.verifyUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    secret: this.secretKey,
+                    secret: this.config.secretKey,
                     response: token,
                     remoteip: remoteIp,
                 }),

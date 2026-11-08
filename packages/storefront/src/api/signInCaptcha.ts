@@ -6,5 +6,10 @@ export async function fetchCaptchaRequirement(login: string): Promise<CaptchaReq
     const { signInCaptchaRequirement: r } = await shopApi(SignInCaptchaRequirementDocument, {
         login,
     });
-    return { required: r.required, siteKey: r.siteKey ?? null };
+    return {
+        required: r.required,
+        siteKey: r.siteKey ?? null,
+        scriptUrl: r.scriptUrl ?? null,
+        widgetGlobal: r.widgetGlobal ?? null,
+    };
 }

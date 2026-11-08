@@ -1,8 +1,10 @@
 export type CaptchaVerdict = 'valid' | 'invalid' | 'unavailable';
 
-// Turnstile today; a self-hosted proof-of-work service replaces it by implementing this.
+// Any widget-and-verify service implements this; the portals load `scriptUrl` only when a challenge is due.
 export interface CaptchaProvider {
     readonly name: string;
     readonly siteKey: string;
+    readonly scriptUrl: string;
+    readonly widgetGlobal: string;
     verify(token: string, remoteIp: string): Promise<CaptchaVerdict>;
 }

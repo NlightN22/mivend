@@ -205,3 +205,26 @@ describe('shop resetPassword clears the forced password change flag', () => {
         expect(await flagFor(customer.username)).toBe(false);
     }, 150_000);
 });
+
+describe('one hammered login cannot starve the server', () => {
+    it('answers another account promptly while 60 parallel guesses hit one login, identically', async () => {
+        await clearCounters();
+        const victim = accounts.customer;
+        const started = Date.now();
+        const burst = Array.from({ length: 60 }, () =>
+            attempt(victim, victim.username, 'wrong-password'),
+        );
+        const other = await attempt(
+            accounts.admin,
+            accounts.admin.username,
+            'Another-password-123456',
+        );
+        expect(Date.now() - started).toBeLessThan(10_000);
+        expect(other).toMatchObject({ __typename: 'CurrentUser' });
+        const responses = await Promise.all(burst);
+        for (const response of responses) expect(response).toEqual(responses[0]);
+        expect(responses[0]).toMatchObject({ __typename: 'InvalidCredentialsError' });
+        expect(await maxFailures()).toBeLessThanOrEqual(3);
+        await clearCounters();
+    }, 60_000);
+});

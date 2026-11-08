@@ -5,7 +5,7 @@ import type { BreachedPasswordChecker, BreachVerdict } from './breached-password
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
 // k-anonymity range lookup: only the first 5 hex characters of the SHA-1 leave the server.
-export class HibpPasswordChecker implements BreachedPasswordChecker {
+export class RangeBreachChecker implements BreachedPasswordChecker {
     constructor(
         private apiUrl: string,
         private timeoutMs: number,

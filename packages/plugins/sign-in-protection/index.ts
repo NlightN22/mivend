@@ -3,9 +3,10 @@ export { SignInGuardService } from './src/sign-in-guard.service';
 export { SignInThrottleService } from './src/sign-in-throttle.service';
 export { ThrottleStoreService } from './src/throttle-store.service';
 export { lockDurationMs, remainingLockMs, liveFailures } from './src/throttle-policy';
-export { TurnstileProvider } from './src/captcha/turnstile-provider';
+export { WidgetCaptchaProvider } from './src/captcha/widget-captcha-provider';
+export type { WidgetCaptchaConfig } from './src/captcha/widget-captcha-provider';
 export type { CaptchaProvider, CaptchaVerdict } from './src/captcha/captcha-provider';
-export { HibpPasswordChecker } from './src/breach/hibp-checker';
+export { RangeBreachChecker } from './src/breach/range-breach-checker';
 export type {
     BreachedPasswordChecker,
     BreachVerdict,
