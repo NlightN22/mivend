@@ -10,6 +10,7 @@ import {
 } from 'shared';
 
 import { ApprovalRequestService } from '../../approval-request.service';
+import { ApprovalEligibilityRegistry } from '../../approval-eligibility.registry';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 // Promise.allSettled alone doesn't reliably overlap the reads on a fast local Postgres;
@@ -148,6 +149,7 @@ beforeAll(async () => {
         workflowDefinitionService,
         administratorService,
         companyWideRegistry(connectionShim),
+        new ApprovalEligibilityRegistry(),
     );
 });
 

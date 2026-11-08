@@ -11,3 +11,6 @@ export { ApprovalStep } from './src/entities/approval-step.entity';
 export { WorkflowDefinition } from './src/entities/workflow-definition.entity';
 export type { WorkflowStepDefinition, ApprovalStepDecision } from './src/types';
 export { buildApprovalMachine, stepIndexFromStateValue } from './src/approval-machine';
+export { activeAdministratorId } from './src/active-administrator-id';
+export { ApprovalEligibilityRegistry } from './src/approval-eligibility.registry';
+export type { ApprovalEligibilityRule } from './src/approval-eligibility.registry';

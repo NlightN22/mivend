@@ -10,6 +10,7 @@ import { ApprovalRequestQueryService } from './approval-request-query.service';
 import { ApprovalReadAccessService } from './approval-read-access.service';
 import { ApprovalStepService } from './approval-step.service';
 import { ApprovalScopeRegistry } from './approval-scope.registry';
+import { ApprovalEligibilityRegistry } from './approval-eligibility.registry';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { ApprovalRequestResolver, WorkflowDefinitionResolver } from './approval-workflow.resolver';
 
@@ -121,12 +122,14 @@ const adminApiSchema = gql`
         ApprovalStepService,
         ApprovalReadAccessService,
         ApprovalScopeRegistry,
+        ApprovalEligibilityRegistry,
         WorkflowDefinitionService,
     ],
     exports: [
         ApprovalRequestService,
         ApprovalRequestQueryService,
         ApprovalScopeRegistry,
+        ApprovalEligibilityRegistry,
         WorkflowDefinitionService,
     ],
     compatibility: '>0.0.0',

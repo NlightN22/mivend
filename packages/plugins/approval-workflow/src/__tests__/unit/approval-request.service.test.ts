@@ -5,6 +5,7 @@ import type { AdministratorService, RequestContext, TransactionalConnection } fr
 
 import { ApprovalRequestQueryService } from '../../approval-request-query.service';
 import { ApprovalRequestService } from '../../approval-request.service';
+import { ApprovalEligibilityRegistry } from '../../approval-eligibility.registry';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 const OPEN_SCOPE = {
@@ -57,6 +58,7 @@ describe('ApprovalRequestService', () => {
         findOneByUserId: ReturnType<typeof vi.fn>;
     };
     let service: ApprovalRequestService;
+    let eligibility: ApprovalEligibilityRegistry;
     let queryService: ApprovalRequestQueryService;
 
     beforeEach(() => {
@@ -97,11 +99,13 @@ describe('ApprovalRequestService', () => {
             })),
         };
         administratorService = { findOneByUserId: vi.fn() };
+        eligibility = new ApprovalEligibilityRegistry();
         service = new ApprovalRequestService(
             connection as unknown as TransactionalConnection,
             workflowDefinitionService as unknown as WorkflowDefinitionService,
             administratorService as unknown as AdministratorService,
             OPEN_SCOPE,
+            eligibility,
         );
         queryService = new ApprovalRequestQueryService(
             connection as unknown as TransactionalConnection,
@@ -126,6 +130,27 @@ describe('ApprovalRequestService', () => {
             ForbiddenError,
         );
         expect(requestRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses an approval the eligibility rule denies, but still lets the same caller reject', async () => {
+        const base = {
+            id: 'req-1',
+            status: 'pending',
+            currentStepIndex: 0,
+            requestType: 'priceAdjustmentApproval',
+            xstateSnapshot: null,
+        };
+        requestRepo.findOneOrFail.mockImplementation(async () => ({ ...base }));
+        stepRepo.findOne.mockResolvedValue(null);
+        administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+        eligibility.register('priceAdjustmentApproval', async () => false);
+
+        await expect(service.decide(mockCtx(true), 'req-1', 'approved')).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(requestRepo.save).not.toHaveBeenCalled();
+        const rejected = await service.decide(mockCtx(true), 'req-1', 'rejected');
+        expect(rejected.status).toBe('rejected');
     });
 
     it('allows decide() for a caller with the current step permission, advancing the step', async () => {

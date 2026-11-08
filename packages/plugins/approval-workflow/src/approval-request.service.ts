@@ -25,6 +25,7 @@ import {
 } from './types';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { ApprovalScopeRegistry } from './approval-scope.registry';
+import { ApprovalEligibilityRegistry } from './approval-eligibility.registry';
 
 @Injectable()
 export class ApprovalRequestService {
@@ -33,6 +34,7 @@ export class ApprovalRequestService {
         private workflowDefinitionService: WorkflowDefinitionService,
         private administratorService: AdministratorService,
         private scope: ApprovalScopeRegistry,
+        private eligibility: ApprovalEligibilityRegistry,
     ) {}
 
     async createRequest(
@@ -95,6 +97,9 @@ export class ApprovalRequestService {
             !this.canDecideStep(ctx, stepDef, stepRow, adminId) ||
             !(await this.scope.isVisible(ctx, request.id))
         ) {
+            throw new ForbiddenError();
+        }
+        if (decision === 'approved' && !(await this.eligibility.mayApprove(ctx, request))) {
             throw new ForbiddenError();
         }
 
