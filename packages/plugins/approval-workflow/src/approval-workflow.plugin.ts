@@ -61,6 +61,12 @@ const adminApiSchema = gql`
         requestType: String
         status: String
         statuses: [String!]
+        requestTypes: [String!]
+        requestedByAdministratorId: String
+        createdFrom: DateTime
+        createdTo: DateTime
+        sortField: String
+        sortDir: String
     }
 
     type ApprovalsInbox {

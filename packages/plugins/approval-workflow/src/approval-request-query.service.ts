@@ -16,6 +16,7 @@ import { ApprovalListOptions } from './types';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { applyPriceTypeGate } from './payload-price-type-gate';
 import { ApprovalScopeRegistry, payloadField } from './approval-scope.registry';
+import { applyListSort, runPage } from './approval-list-options';
 
 @Injectable()
 export class ApprovalRequestQueryService {
@@ -96,14 +97,9 @@ export class ApprovalRequestQueryService {
             .where('request.requestType = :requestType', { requestType });
         this.applyListFilters(qb, options);
         await this.scope.apply(ctx, qb);
-        qb.orderBy('request.createdAt', 'DESC');
+        applyListSort(qb, options);
 
-        const totalItems = await qb.getCount();
-        const items = await qb
-            .take(options.take ?? 50)
-            .skip(options.skip ?? 0)
-            .getMany();
-        return { items, totalItems };
+        return runPage(qb, options);
     }
 
     // canDecideStep() depends only on the caller and the step's permission, so the eligible pairs
@@ -176,6 +172,26 @@ export class ApprovalRequestQueryService {
                 filterRequestType: options.requestType,
             });
         }
+        if (options.requestTypes && options.requestTypes.length > 0) {
+            qb.andWhere('request.requestType IN (:...filterRequestTypes)', {
+                filterRequestTypes: options.requestTypes,
+            });
+        }
+        if (options.requestedByAdministratorId) {
+            qb.andWhere('request.requestedByAdministratorId = :filterRequestedBy', {
+                filterRequestedBy: options.requestedByAdministratorId,
+            });
+        }
+        if (options.createdFrom) {
+            qb.andWhere('request.createdAt >= :filterCreatedFrom', {
+                filterCreatedFrom: options.createdFrom,
+            });
+        }
+        if (options.createdTo) {
+            qb.andWhere('request.createdAt < :filterCreatedTo', {
+                filterCreatedTo: options.createdTo,
+            });
+        }
         if (options.statuses && options.statuses.length > 0) {
             qb.andWhere('request.status IN (:...filterStatuses)', {
                 filterStatuses: options.statuses,
@@ -204,14 +220,9 @@ export class ApprovalRequestQueryService {
         qb.where(this.buildAwaitingDecisionBracket(ctx, pairs, adminId));
         this.applyListFilters(qb, options);
         await this.scope.apply(ctx, qb);
-        qb.orderBy('request.createdAt', 'DESC');
+        applyListSort(qb, options);
 
-        const totalItems = await qb.getCount();
-        const items = await qb
-            .take(options.take ?? 50)
-            .skip(options.skip ?? 0)
-            .getMany();
-        return { items, totalItems };
+        return runPage(qb, options);
     }
 
     // History, not a to-do list: every status is included, so no status filter is applied.
@@ -257,13 +268,8 @@ export class ApprovalRequestQueryService {
         );
         this.applyListFilters(qb, options);
         await this.scope.apply(ctx, qb);
-        qb.orderBy('request.createdAt', 'DESC');
+        applyListSort(qb, options);
 
-        const totalItems = await qb.getCount();
-        const items = await qb
-            .take(options.take ?? 50)
-            .skip(options.skip ?? 0)
-            .getMany();
-        return { items, totalItems };
+        return runPage(qb, options);
     }
 }
