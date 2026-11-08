@@ -40,6 +40,7 @@ async function loginViaApi(): Promise<string> {
     const cookies = res.headers
         .getSetCookie()
         .map(c => c.split(';')[0])
+        .filter(c => c.startsWith('session'))
         .join('; ');
     if (!cookies.includes('session=')) throw new Error('login did not return a session cookie');
     return cookies;
