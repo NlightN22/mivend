@@ -195,11 +195,11 @@ describe('concurrent password attempts (check-then-act)', () => {
 
     it('serialises only the attacker address: the same login from another address is never refused as busy', async () => {
         const verified = { count: 0 };
-        await Promise.all([
+        const results = await Promise.all([
             ...Array.from({ length: 6 }, () => attempt(false, verified)),
             attempt(true, verified, otherIp),
         ]);
-        expect(await throttle.failureCount(otherIp, 'password', 'victim')).toBe(0);
+        expect(results[6]).toBe(true);
         expect(verified.count).toBeGreaterThanOrEqual(2);
     });
 
