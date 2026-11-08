@@ -42,6 +42,7 @@ const adminApiSchema = gql`
         stepRoles: [String!]!
         totalSteps: Int!
         escalatesTo: [String!]!
+        viewerCanDecide: Boolean!
     }
 
     type ApprovalRequestsSummary {

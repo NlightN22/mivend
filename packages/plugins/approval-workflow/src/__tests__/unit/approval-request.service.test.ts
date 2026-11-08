@@ -115,6 +115,32 @@ describe('ApprovalRequestService', () => {
         );
     });
 
+    describe('viewerCanDecide', () => {
+        const pending = { id: 'req-1', status: 'pending', currentStepIndex: 0, requestType: 'x' };
+        beforeEach(() => {
+            administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+            stepRepo.findOne.mockResolvedValue(null);
+        });
+
+        it('is true with the current step permission and false without it', async () => {
+            expect(await service.viewerCanDecide(mockCtx(true), pending as never)).toBe(true);
+            expect(await service.viewerCanDecide(mockCtx(false), pending as never)).toBe(false);
+        });
+
+        it('is true for the administrator the step was escalated to', async () => {
+            stepRepo.findOne.mockResolvedValue({
+                wasEscalated: true,
+                escalatedToAdministratorId: 'admin-1',
+            });
+            expect(await service.viewerCanDecide(mockCtx(false), pending as never)).toBe(true);
+        });
+
+        it('is false once the request is decided', async () => {
+            const decided = { ...pending, status: 'approved' };
+            expect(await service.viewerCanDecide(mockCtx(true), decided as never)).toBe(false);
+        });
+    });
+
     it('rejects a decide() call from a caller without the current step permission and no escalation', async () => {
         requestRepo.findOneOrFail.mockResolvedValue({
             id: 'req-1',

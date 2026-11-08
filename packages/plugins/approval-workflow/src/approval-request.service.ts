@@ -228,6 +228,21 @@ export class ApprovalRequestService {
         return request;
     }
 
+    // Same rule decide() enforces, for the decision page to show or disable the actions.
+    async viewerCanDecide(ctx: RequestContext, request: ApprovalRequest): Promise<boolean> {
+        if (request.status !== 'pending') return false;
+        const { stepDef } = await this.getCurrentStepDefinition(ctx, request);
+        if (!stepDef) return false;
+        const stepRow = await this.connection.getRepository(ctx, ApprovalStep).findOne({
+            where: {
+                approvalRequestId: String(request.id),
+                stepIndex: request.currentStepIndex,
+            },
+        });
+        const adminId = await activeAdministratorId(this.administratorService, ctx);
+        return this.canDecideStep(ctx, stepDef, stepRow, adminId);
+    }
+
     private canDecideStep(
         ctx: RequestContext,
         stepDef: WorkflowStepDefinition,

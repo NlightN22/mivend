@@ -208,6 +208,14 @@ export class ApprovalRequestResolver {
         return stepDef?.escalatesTo ?? [];
     }
 
+    @ResolveField()
+    async viewerCanDecide(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: ApprovalRequest,
+    ): Promise<boolean> {
+        return this.approvalRequestService.viewerCanDecide(ctx, request);
+    }
+
     @Transaction()
     @Mutation()
     async createApprovalRequest(
