@@ -1,10 +1,15 @@
+import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
+import { isolationOptions, listTestFiles } from '../../../vitest-isolation';
 
 export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
-        include: ['src/__tests__/integration/**/*.test.ts'],
+        ...isolationOptions(
+            listTestFiles(resolve(__dirname, 'src/__tests__/integration')),
+            'src/__tests__/integration/**/*.test.ts',
+        ),
         testTimeout: 30_000,
         // Each test file gets its own Postgres schema, so fileParallelism can stay on.
         // Avoid dropSchema on shared public. See docs/testing-strategy.md (Database isolation).
