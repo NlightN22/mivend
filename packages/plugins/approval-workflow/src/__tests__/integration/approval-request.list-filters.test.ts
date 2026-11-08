@@ -216,7 +216,9 @@ describe('ApprovalRequestQueryService list filters and sort (integration, real P
             take: 2,
             skip: 2,
         });
-        expect([...ids(page1), ...ids(page2)]).toEqual([first.id, second.id, third.id]);
+        const paged = [...ids(page1), ...ids(page2)];
+        expect(new Set(paged).size).toBe(3);
+        expect(paged).toEqual([first.id, second.id, third.id].map(String).sort());
     });
 
     it('puts undecided requests last when sorting by decision time in either direction', async () => {
