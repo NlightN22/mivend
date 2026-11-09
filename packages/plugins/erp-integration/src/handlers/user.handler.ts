@@ -1,16 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { UserEnrichmentService } from '@mivend/plugin-access-control';
+import { ContactPointService } from '@mivend/plugin-counterparty';
+import { parseContactInfos } from './contact-infos';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationUserHandler';
 
 // Never creates Administrator; links by email, then persists erpId so reprocessing is idempotent.
-// isActive/isDeleted only sync a linked Administrator, never ErpUser; role is intentionally unused.
+// contactInfos replace the ERP channels of the linked Administrator only. isActive/isDeleted only sync a linked Administrator, never ErpUser; role is intentionally unused.
 @Injectable()
 export class UserStreamHandler implements InboundStreamHandler {
-    constructor(private readonly userEnrichmentService: UserEnrichmentService) {}
+    constructor(
+        private readonly userEnrichmentService: UserEnrichmentService,
+        private readonly contactPoints: ContactPointService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -42,6 +47,15 @@ export class UserStreamHandler implements InboundStreamHandler {
         });
         if (!admin) {
             return inboundNoop(`user ${entityId}: no linked Administrator (skipped)`);
+        }
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        if (contactInfos) {
+            await this.contactPoints.replaceErpPointsByErpId(
+                ctx,
+                'administrator',
+                entityId,
+                contactInfos,
+            );
         }
         Logger.verbose(`Enriched administrator erpId=${entityId}`, loggerCtx);
         return inboundApplied();

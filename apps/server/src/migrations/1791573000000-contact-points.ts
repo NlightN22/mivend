@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #332: contact points (channels), roles and per-owner link tables; contact_person gains uuid/source/ERP id so ERP-backed people fit.
-export class ContactPoints1791566000000 implements MigrationInterface {
-    name = 'ContactPoints1791566000000';
+export class ContactPoints1791573000000 implements MigrationInterface {
+    name = 'ContactPoints1791573000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
@@ -46,6 +46,12 @@ export class ContactPoints1791566000000 implements MigrationInterface {
         );
         await queryRunner.query(
             `CREATE UNIQUE INDEX "IDX_c43ea64e0a904bda5447df8bbc" ON "administrator_contact_point" ("administratorId", "contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE TABLE "organization_contact_point" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "contactPointId" integer NOT NULL, "roleId" integer, "isPrimary" boolean NOT NULL DEFAULT false, "organizationId" integer NOT NULL, "id" SERIAL NOT NULL, CONSTRAINT "PK_83ac74d6ecd5b97328b449dfac5" PRIMARY KEY ("id"))`,
+        );
+        await queryRunner.query(
+            `CREATE UNIQUE INDEX "IDX_32f28bcb30066d78891881813b" ON "organization_contact_point" ("organizationId", "contactPointId")`,
         );
         await queryRunner.query(
             `CREATE TABLE "counterparty_contact_person" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "counterpartyId" integer NOT NULL, "contactPersonId" integer NOT NULL, "roleId" integer, "isPrimary" boolean NOT NULL DEFAULT false, "id" SERIAL NOT NULL, CONSTRAINT "PK_e6a137c896c224dc05d374909b5" PRIMARY KEY ("id"))`,
@@ -112,6 +118,15 @@ export class ContactPoints1791566000000 implements MigrationInterface {
             `ALTER TABLE "administrator_contact_point" ADD CONSTRAINT "FK_2080bad48ffeacecdfc3d46cc38" FOREIGN KEY ("administratorId") REFERENCES "administrator"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
         );
         await queryRunner.query(
+            `ALTER TABLE "organization_contact_point" ADD CONSTRAINT "FK_46151944292ab8870c10382dc5f" FOREIGN KEY ("contactPointId") REFERENCES "contact_point"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+        );
+        await queryRunner.query(
+            `ALTER TABLE "organization_contact_point" ADD CONSTRAINT "FK_66d35b453a75a37c4b3fecc6b1f" FOREIGN KEY ("roleId") REFERENCES "contact_role"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
+        );
+        await queryRunner.query(
+            `ALTER TABLE "organization_contact_point" ADD CONSTRAINT "FK_d325b1100e5c8c5afb8652fde51" FOREIGN KEY ("organizationId") REFERENCES "organization_requisites"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+        );
+        await queryRunner.query(
             `ALTER TABLE "counterparty_contact_person" ADD CONSTRAINT "FK_c12e625e59dc97a1826cd8172af" FOREIGN KEY ("counterpartyId") REFERENCES "counterparty"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
         );
         await queryRunner.query(
@@ -124,6 +139,7 @@ export class ContactPoints1791566000000 implements MigrationInterface {
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP TABLE "counterparty_contact_person"`);
+        await queryRunner.query(`DROP TABLE "organization_contact_point"`);
         await queryRunner.query(`DROP TABLE "administrator_contact_point"`);
         await queryRunner.query(`DROP TABLE "contact_person_contact_point"`);
         await queryRunner.query(`DROP TABLE "trading_point_contact_point"`);

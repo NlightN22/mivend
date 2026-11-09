@@ -7,7 +7,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { ContactPoints1791566000000 } from '../../migrations/1791566000000-contact-points';
+import { ContactPoints1791573000000 } from '../../migrations/1791573000000-contact-points';
 
 const { schema, extra } = testSchemaOptions('contact_points_migration');
 let dataSource: DataSource;
@@ -25,6 +25,7 @@ beforeAll(async () => {
     await dataSource.query(`
         CREATE TABLE counterparty (id SERIAL PRIMARY KEY);
         CREATE TABLE administrator (id SERIAL PRIMARY KEY);
+        CREATE TABLE organization_requisites (id SERIAL PRIMARY KEY);
         CREATE TABLE trading_point (id SERIAL PRIMARY KEY);
         CREATE TABLE contact_person (
             "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
@@ -36,7 +37,7 @@ beforeAll(async () => {
             VALUES ('Person A', '+79120000001', 'a@example.com', true, 1), ('Person B', NULL, NULL, false, 1);
     `);
     const runner = dataSource.createQueryRunner();
-    await new ContactPoints1791566000000().up(runner);
+    await new ContactPoints1791573000000().up(runner);
     await runner.release();
 });
 

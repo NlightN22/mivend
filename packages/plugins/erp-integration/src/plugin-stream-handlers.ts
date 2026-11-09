@@ -44,6 +44,10 @@ import { OrderChangeResultStreamHandler } from './handlers/order-change-result.h
 import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
 import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 
+import { IndividualStreamHandler } from './handlers/individual.handler';
+import { ContactPersonStreamHandler } from './handlers/contact-person.handler';
+import { PersonalContactStreamHandler } from './handlers/personal-contact.handler';
+
 // One provider per inbound stream; IntegrationInboxProcessorService maps stream -> handler.
 export const STREAM_HANDLERS = [
     CategoryStreamHandler,
@@ -75,6 +79,9 @@ export const STREAM_HANDLERS = [
     ManufacturerStreamHandler,
     RegionStreamHandler,
     CounterpartyContactStreamHandler,
+    IndividualStreamHandler,
+    ContactPersonStreamHandler,
+    PersonalContactStreamHandler,
     CounterpartyGroupStreamHandler,
     PointOfSaleTypeStreamHandler,
     ProductGroupStreamHandler,

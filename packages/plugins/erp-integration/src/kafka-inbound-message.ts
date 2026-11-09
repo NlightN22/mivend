@@ -3,6 +3,7 @@ import type { KafkaMessage } from 'kafkajs';
 
 import type { RejectedInboxMessage } from './integration-inbox-rejected';
 import type { EnqueueInboxEventInput } from './integration-inbox.service';
+import { hasPersonalFields, stripPersonalFields } from './personal-data-allowlist';
 import type { InboundStream } from './types';
 
 export type ClassifiedKafkaMessage =
@@ -68,17 +69,25 @@ export function rejectedUndecodable(
         stream,
         message,
         partition,
-        { reason, payload: { rawBase64: message.value?.toString('base64') ?? '' } },
+        {
+            reason,
+            payload: {
+                rawBase64: hasPersonalFields(stream)
+                    ? ''
+                    : (message.value?.toString('base64') ?? ''),
+            },
+        },
         { undecodable: true },
     );
 }
 
 export function classifyDecodedRecord(
     stream: InboundStream,
-    record: Record<string, unknown>,
+    fullRecord: Record<string, unknown>,
     message: KafkaMessage,
     partition: number,
 ): ClassifiedKafkaMessage {
+    const record = stripPersonalFields(stream, fullRecord);
     const entityId = String(record.entityId ?? '');
     const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
     if (!entityId || !sourceEventId) {

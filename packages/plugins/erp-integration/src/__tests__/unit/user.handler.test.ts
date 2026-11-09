@@ -10,7 +10,10 @@ describe('UserStreamHandler', () => {
         const userEnrichmentService = {
             linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
         };
-        const handler = new UserStreamHandler(userEnrichmentService as never);
+        const handler = new UserStreamHandler(
+            userEnrichmentService as never,
+            { replaceErpPointsByErpId: vi.fn() } as never,
+        );
 
         await handler.apply(ctx, 'user-1', {
             fullName: 'Ivan Ivanov',
@@ -34,7 +37,10 @@ describe('UserStreamHandler', () => {
         const userEnrichmentService = {
             linkAndEnrich: vi.fn().mockResolvedValue(null),
         };
-        const handler = new UserStreamHandler(userEnrichmentService as never);
+        const handler = new UserStreamHandler(
+            userEnrichmentService as never,
+            { replaceErpPointsByErpId: vi.fn() } as never,
+        );
 
         await handler.apply(ctx, 'user-1', {});
 
@@ -54,7 +60,10 @@ describe('UserStreamHandler', () => {
         const userEnrichmentService = {
             linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
         };
-        const handler = new UserStreamHandler(userEnrichmentService as never);
+        const handler = new UserStreamHandler(
+            userEnrichmentService as never,
+            { replaceErpPointsByErpId: vi.fn() } as never,
+        );
 
         await handler.apply(ctx, 'user-1', { fullName: 'Ivan Ivanov' });
 
@@ -68,7 +77,10 @@ describe('UserStreamHandler', () => {
         const userEnrichmentService = {
             linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
         };
-        const handler = new UserStreamHandler(userEnrichmentService as never);
+        const handler = new UserStreamHandler(
+            userEnrichmentService as never,
+            { replaceErpPointsByErpId: vi.fn() } as never,
+        );
 
         await handler.apply(ctx, 'user-1', { isActive: true, isDeleted: true });
 
@@ -82,11 +94,43 @@ describe('UserStreamHandler', () => {
         const userEnrichmentService = {
             linkAndEnrich: vi.fn().mockResolvedValue(null),
         };
-        const handler = new UserStreamHandler(userEnrichmentService as never);
+        const handler = new UserStreamHandler(
+            userEnrichmentService as never,
+            { replaceErpPointsByErpId: vi.fn() } as never,
+        );
 
         await expect(handler.apply(ctx, 'user-unknown', { fullName: 'Nobody' })).resolves.toEqual({
             kind: 'noop',
             reason: expect.any(String),
         });
+    });
+
+    it('replaces the linked administrator channels from the list, an explicit empty list included, and skips an absent one', async () => {
+        const points = { replaceErpPointsByErpId: vi.fn() };
+        const handler = new UserStreamHandler(
+            { linkAndEnrich: vi.fn().mockResolvedValue({ id: 1 }) } as never,
+            points as never,
+        );
+        await handler.apply(ctx, 'user-1', { email: 'a@example.com', contactInfos: [] });
+        expect(points.replaceErpPointsByErpId).toHaveBeenCalledWith(
+            ctx,
+            'administrator',
+            'user-1',
+            [],
+        );
+        points.replaceErpPointsByErpId.mockClear();
+        await handler.apply(ctx, 'user-1', { email: 'a@example.com' });
+        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
+    });
+
+    it('stores no channels when no administrator is linked', async () => {
+        const points = { replaceErpPointsByErpId: vi.fn() };
+        const handler = new UserStreamHandler(
+            { linkAndEnrich: vi.fn().mockResolvedValue(null) } as never,
+            points as never,
+        );
+        const outcome = await handler.apply(ctx, 'user-1', { contactInfos: [] });
+        expect(outcome.kind).toBe('noop');
+        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
     });
 });

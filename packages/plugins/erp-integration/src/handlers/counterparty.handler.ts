@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { ContactPointService, CounterpartyService } from '@mivend/plugin-counterparty';
+import {
+    ContactPointService,
+    CounterpartyService,
+    ErpContactPersonService,
+} from '@mivend/plugin-counterparty';
 import { BranchAssignmentService, UserEnrichmentService } from '@mivend/plugin-access-control';
 
 import { parseContactInfos } from './contact-infos';
@@ -25,6 +29,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         private readonly userEnrichmentService: UserEnrichmentService,
         private readonly branchAssignment: BranchAssignmentService,
         private readonly contactPoints: ContactPointService,
+        private readonly persons: ErpContactPersonService,
     ) {}
 
     async apply(
@@ -81,6 +86,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 contactInfos,
             );
         }
+        if (name) await this.persons.linkWaitingContacts(ctx, entityId);
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +

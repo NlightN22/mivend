@@ -806,6 +806,16 @@ export const config: VendureConfig = {
                     'counterparty-contact':
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CONTACT ??
                         'erp.counterparty-contact.events.v1',
+                    // #332: people and contact channels.
+                    individual:
+                        process.env.INTEGRATION_KAFKA_TOPIC_INDIVIDUAL ??
+                        'erp.individual.events.v1',
+                    'contact-person':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CONTACT_PERSON ??
+                        'erp.contact-person.events.v1',
+                    'personal-contact':
+                        process.env.INTEGRATION_KAFKA_TOPIC_PERSONAL_CONTACT ??
+                        'erp.personal-contact.events.v1',
                     'counterparty-group':
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_GROUP ??
                         'erp.counterparty-group.events.v1',

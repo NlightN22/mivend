@@ -47,7 +47,7 @@ describe('CounterpartyContactStreamHandler contact person', () => {
         ]);
     });
 
-    it('keeps the person unlinked for an unknown counterparty and leaves channels alone without a list', async () => {
+    it('keeps the person unlinked for an unknown counterparty (linked when it arrives) and leaves channels alone without a list', async () => {
         const { handler, persons, points } = setup(null);
         await handler.apply(ctx, 'c-1', named);
         expect(persons.upsert.mock.calls[0][2].counterpartyId).toBeNull();

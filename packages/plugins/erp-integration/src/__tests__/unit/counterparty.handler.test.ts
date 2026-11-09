@@ -12,10 +12,12 @@ function makeHandler(
     counterpartyService: { upsertActiveState: ReturnType<typeof vi.fn> };
     userEnrichmentService: { findManagerLink: ReturnType<typeof vi.fn> };
     contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
+    persons: { linkWaitingContacts: ReturnType<typeof vi.fn> };
 } {
     const counterpartyService = { upsertActiveState };
     const userEnrichmentService = { findManagerLink };
     const contactPoints = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    const persons = { linkWaitingContacts: vi.fn().mockResolvedValue(undefined) };
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,
         userEnrichmentService as never,
@@ -25,12 +27,24 @@ function makeHandler(
             ),
         } as never,
         contactPoints as never,
+        persons as never,
     );
-    return { handler, counterpartyService, userEnrichmentService, contactPoints };
+    return { handler, counterpartyService, userEnrichmentService, contactPoints, persons };
 }
 
 describe('CounterpartyStreamHandler', () => {
     const ctx = {} as RequestContext;
+
+    describe('late contact link', () => {
+        it('links contacts that waited for this counterparty, but not on a nameless tombstone', async () => {
+            const { handler, persons } = makeHandler();
+            await handler.apply(ctx, 'cp-1', { name: 'Acme', isActive: true });
+            expect(persons.linkWaitingContacts).toHaveBeenCalledWith(ctx, 'cp-1');
+            persons.linkWaitingContacts.mockClear();
+            await handler.apply(ctx, 'cp-1', { isDeleted: true });
+            expect(persons.linkWaitingContacts).not.toHaveBeenCalled();
+        });
+    });
 
     describe('contactInfos', () => {
         it('replaces the ERP channels from a present list and keeps the legacy phone/e-mail written', async () => {

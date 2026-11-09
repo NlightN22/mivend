@@ -78,9 +78,10 @@ describe.each([
     [
         'organization',
         (m: boolean) =>
-            new OrganizationStreamHandler({
-                upsertFromEvent: vi.fn().mockResolvedValue(m),
-            } as never),
+            new OrganizationStreamHandler(
+                { upsertFromEvent: vi.fn().mockResolvedValue(m) } as never,
+                { replaceErpPointsByErpId: vi.fn() } as never,
+            ),
         { isDeleted: true },
     ],
     [
@@ -94,6 +95,7 @@ describe.each([
                         async (_c: unknown, _e: string, write: () => unknown) => write(),
                     ),
                 } as never,
+                {} as never,
                 {} as never,
             ),
         { isDeleted: true },

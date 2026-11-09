@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Administrator, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { FindOptionsWhere, ObjectType } from 'typeorm';
 import { In } from 'typeorm';
 import { withAggregateLock } from 'shared';
 
 import { AdministratorContactPoint } from './entities/administrator-contact-point.entity';
+import { OrganizationContactPoint } from './entities/organization-contact-point.entity';
 import type { ContactPointLink } from './entities/contact-link.base';
 import { ContactPersonContactPoint } from './entities/contact-person-contact-point.entity';
 import { ContactPoint } from './entities/contact-point.entity';
@@ -16,13 +17,27 @@ import { resolveContactPoints } from './contact-point-normalize';
 import type { ContactPointInput, ResolvedContactPoint } from './contact-point-normalize';
 import { planContactPointReplace } from './contact-point-replace-plan';
 
-export type ContactOwnerKind = 'counterparty' | 'tradingPoint' | 'contactPerson' | 'administrator';
+type ErpOwnerKind = 'counterparty' | 'tradingPoint' | 'organization' | 'administrator';
+export type ContactOwnerKind =
+    | 'counterparty'
+    | 'tradingPoint'
+    | 'contactPerson'
+    | 'administrator'
+    | 'organization';
 
 const LINKS: Record<ContactOwnerKind, { entity: ObjectType<ContactPointLink>; column: string }> = {
     counterparty: { entity: CounterpartyContactPoint, column: 'counterpartyId' },
     tradingPoint: { entity: TradingPointContactPoint, column: 'tradingPointId' },
     contactPerson: { entity: ContactPersonContactPoint, column: 'contactPersonId' },
     administrator: { entity: AdministratorContactPoint, column: 'administratorId' },
+    organization: { entity: OrganizationContactPoint, column: 'organizationId' },
+};
+
+const OWNER_ENTITIES: Record<ErpOwnerKind, string | ObjectType<{ id: unknown }>> = {
+    counterparty: Counterparty,
+    tradingPoint: TradingPoint,
+    organization: 'OrganizationRequisites',
+    administrator: Administrator,
 };
 
 @Injectable()
@@ -45,14 +60,16 @@ export class ContactPointService {
     // Owners that come from the ERP are addressed by their ERP id; false when the owner is not stored.
     async replaceErpPointsByErpId(
         ctx: RequestContext,
-        kind: 'counterparty' | 'tradingPoint',
+        kind: ErpOwnerKind,
         erpId: string,
         inputs: readonly ContactPointInput[],
     ): Promise<boolean> {
-        const entity = kind === 'counterparty' ? Counterparty : TradingPoint;
-        const owner = await this.connection
-            .getRepository(ctx, entity)
-            .findOne({ where: { erpId }, select: { id: true } });
+        const owner = await this.connection.getRepository(ctx, OWNER_ENTITIES[kind]).findOne({
+            where: (kind === 'administrator'
+                ? { customFields: { erpId } }
+                : { erpId }) as unknown as FindOptionsWhere<{ id: unknown }>,
+            select: { id: true },
+        });
         if (!owner) return false;
         await this.replaceErpPoints(ctx, kind, owner.id as number, inputs);
         return true;

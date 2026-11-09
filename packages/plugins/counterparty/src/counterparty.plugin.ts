@@ -23,6 +23,7 @@ import { CounterpartyContactPoint } from './entities/counterparty-contact-point.
 import { TradingPointContactPoint } from './entities/trading-point-contact-point.entity';
 import { ContactPersonContactPoint } from './entities/contact-person-contact-point.entity';
 import { AdministratorContactPoint } from './entities/administrator-contact-point.entity';
+import { OrganizationContactPoint } from './entities/organization-contact-point.entity';
 import { CounterpartyContactPerson } from './entities/counterparty-contact-person.entity';
 import { ContactPointService } from './contact-point.service';
 import { ErpContactPersonService } from './erp-contact-person.service';
@@ -155,6 +156,7 @@ const adminResolvers = [
         TradingPointContactPoint,
         ContactPersonContactPoint,
         AdministratorContactPoint,
+        OrganizationContactPoint,
         CounterpartyContactPerson,
         CounterpartyTeamMember,
         Contract,

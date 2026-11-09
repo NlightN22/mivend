@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
+import { ContactPointService } from '@mivend/plugin-counterparty';
+import { parseContactInfos } from './contact-infos';
 import { OrganizationEventService, REQUISITE_FIELDS } from '@mivend/plugin-documents';
 import type { OrganizationSignatory, RequisiteFields } from '@mivend/plugin-documents';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -11,7 +13,10 @@ const loggerCtx = 'IntegrationOrganizationHandler';
 // requisite means "not provided" and never wipes a stored value (docs/payments.md "Organizations").
 @Injectable()
 export class OrganizationStreamHandler implements InboundStreamHandler {
-    constructor(private readonly organizationEvents: OrganizationEventService) {}
+    constructor(
+        private readonly organizationEvents: OrganizationEventService,
+        private readonly contactPoints: ContactPointService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -40,6 +45,15 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         });
         if (!stored) {
             return inboundNoop(`organization ${entityId}: nameless tombstone for an unknown row`);
+        }
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        if (contactInfos) {
+            await this.contactPoints.replaceErpPointsByErpId(
+                ctx,
+                'organization',
+                entityId,
+                contactInfos,
+            );
         }
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
         return inboundApplied();

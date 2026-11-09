@@ -135,6 +135,10 @@ export type InboundStream =
     | 'counterparty-group'
     | 'product-group'
     | 'point-of-sale-type'
+    // #332: people and contact channels; applied to ERP-backed contact persons and channel owners, see docs/ai/erp-streams-map.md.
+    | 'individual'
+    | 'contact-person'
+    | 'personal-contact'
     | 'setting'
     // Bank directory and bank accounts (owner = counterparty/organization by owner_type); soft links only.
     | 'bank'
@@ -244,6 +248,9 @@ const ALL_INBOUND_STREAMS_MAP = {
     'counterparty-group': true,
     'product-group': true,
     'point-of-sale-type': true,
+    individual: true,
+    'contact-person': true,
+    'personal-contact': true,
     setting: true,
     bank: true,
     'bank-account': true,

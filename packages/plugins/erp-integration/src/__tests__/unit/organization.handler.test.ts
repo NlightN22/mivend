@@ -6,7 +6,12 @@ import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 const ctx = {} as RequestContext;
 const setup = (stored = true) => {
     const service = { upsertFromEvent: vi.fn().mockResolvedValue(stored) };
-    return { service, handler: new OrganizationStreamHandler(service as never) };
+    const points = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    return {
+        service,
+        points,
+        handler: new OrganizationStreamHandler(service as never, points as never),
+    };
 };
 const empty = {
     inn: null,
@@ -113,5 +118,19 @@ describe('OrganizationStreamHandler', () => {
         await handler.apply(ctx, 'org-1', { name: 'Acme' });
         const flags = service.upsertFromEvent.mock.calls.map(c => c[2].controlsStock);
         expect(flags).toEqual([false, true, undefined]);
+    });
+
+    it('replaces the ERP channels from a present list and keeps them when the list is absent', async () => {
+        const { points, handler } = setup();
+        await handler.apply(ctx, 'org-1', {
+            name: 'Org',
+            contactInfos: [{ type: 'Телефон', presentation: '+7 912 345-67-89' }],
+        });
+        expect(points.replaceErpPointsByErpId).toHaveBeenCalledWith(ctx, 'organization', 'org-1', [
+            expect.objectContaining({ type: 'phone' }),
+        ]);
+        points.replaceErpPointsByErpId.mockClear();
+        await handler.apply(ctx, 'org-1', { name: 'Org' });
+        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
     });
 });
