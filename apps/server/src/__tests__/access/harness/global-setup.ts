@@ -78,6 +78,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
             SEARCH_SERVICE_URL: 'http://127.0.0.1:9',
             SEARCH_SERVICE_API_KEY: 'access-test',
             S3_ENDPOINT: '',
+            // Only builds the acting hand-off link; no storefront is contacted.
+            STOREFRONT_PUBLIC_URL: 'http://127.0.0.1:9',
             DOCUMENT_PDF_DIR: pdfDir,
         };
         const server = await startServer(env, resolve(LOG_DIR, 'server.log'));
