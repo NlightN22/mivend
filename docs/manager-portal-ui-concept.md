@@ -348,7 +348,7 @@ portal API layer only and not re-checked on the server.
 | Settlements | Shared engine | Conforms |
 | Customers (counterparties) | Shared engine (field whitelist in `counterparty-list-query.ts`), legacy list args beside it; sort is still `counterparty-sort.ts` | Filter conforms; sort follow-up |
 | Customer activation list (bulk) | Same counterparty filter plus search and readiness chip | Conforms |
-| Orders | Native Vendure list options (`filter`/`sort`) via `orders-filter.ts` | Deviates |
+| Orders | Shared engine (field whitelist in `order-list-query.ts`, `visibleOrders(list: OrderListInput)`); the Vendure `options` argument stays for the dashboard and other server callers; the customer card Orders tab still uses `options` | Conforms for the list; card tab follow-up |
 | Approvals inbox | Bespoke query service (`approval-request-query.service.ts`) with its own filter args | Deviates |
 | Discounts | Bespoke registry list args (verify) | Deviates |
 | Team / users | Native Vendure administrator list options (verify) | Deviates |

@@ -7,6 +7,8 @@ export const adminApiSchema = gql`
             managerId: ID
             customerId: ID
             search: String
+            "Replaces options: shared list engine, same visibility, no Vendure filter/sort."
+            list: OrderListInput
         ): OrderList!
         "Sum of totalWithTax over the caller's visible orders matching options.filter"
         visibleOrdersAmount(options: OrderListOptions): Money!

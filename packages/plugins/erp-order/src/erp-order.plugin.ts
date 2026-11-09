@@ -1,3 +1,4 @@
+import { concatAST } from 'graphql';
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
@@ -61,6 +62,8 @@ import { AdminOrderCounterpartyResolver } from './admin-order-counterparty.resol
 import { OrderCounterpartyLoader } from './order-counterparty.loader';
 import { adminApiSchema } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
+import { orderListSchema } from './api/order-list.schema';
+import { OrderListService } from './order-list.service';
 
 @VendurePlugin({
     imports: [
@@ -77,6 +80,7 @@ import { shopApiExtensions } from './api/shop.schema';
         OrderStatusReferenceService,
         OrderStatusProvisioningService,
         OrderVisibilityService,
+        OrderListService,
         OrderVisibilityAggregatesService,
         OrderCounterpartyLoader,
         OrdersAttentionService,
@@ -107,7 +111,7 @@ import { shopApiExtensions } from './api/shop.schema';
         ],
     },
     adminApiExtensions: {
-        schema: adminApiSchema,
+        schema: concatAST([adminApiSchema, orderListSchema]),
         resolvers: [
             AdminOrderVisibilityResolver,
             AdminOrderStatusHistoryResolver,

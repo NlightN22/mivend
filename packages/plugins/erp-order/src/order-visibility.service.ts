@@ -27,7 +27,6 @@ export class OrderVisibilityService {
         search?: string,
         relations: string[] = [],
     ): Promise<SelectQueryBuilder<Order>> {
-        const scope = await this.accessScopeService.resolveOrderScope(ctx);
         // Vendure's Order.totalQuantity resolver throws unless lines and fulfillments are joined here.
         const qb = this.listQueryBuilder.build(Order, options, {
             ctx,
@@ -45,6 +44,19 @@ export class OrderVisibilityService {
             orderCounterpartyJoinSql(qb.alias),
         );
 
+        await this.applyVisibility(qb, ctx, managerId, customerId, search);
+        return qb;
+    }
+
+    // qb must alias the order table and join `customer` and `counterparty` (orderCounterpartyJoinSql).
+    async applyVisibility(
+        qb: SelectQueryBuilder<Order>,
+        ctx: RequestContext,
+        managerId?: string,
+        customerId?: string,
+        search?: string,
+    ): Promise<void> {
+        const scope = await this.accessScopeService.resolveOrderScope(ctx);
         if (managerId) {
             qb.andWhere('counterparty.assignedManagerId = :filterManagerId', {
                 filterManagerId: managerId,
@@ -93,8 +105,6 @@ export class OrderVisibilityService {
             case 'all':
                 break;
         }
-
-        return qb;
     }
 
     // The caller's visible order ids as SQL for another plugin's own filter; null for scope 'all'.
