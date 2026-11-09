@@ -200,11 +200,11 @@ async function activateAllMatching(page: Page, search: string, total: number): P
     await footer.getByRole('button', { name: 'Run batch' }).click();
 
     const counters = page.getByRole('group', { name: 'Counters' });
-    await expect(counters.getByRole('button', { name: /Applied/ })).toContainText(String(total), {
-        timeout: 120000,
-    });
-    await expect(counters.getByRole('button', { name: /^All/ })).toContainText(String(total));
-    await expect(counters.getByRole('button', { name: /Failed/ })).toContainText('0');
+    const counter = (count: number, label: string) =>
+        counters.getByRole('button', { name: `${count}${label}`, exact: true });
+    await expect(counter(total, 'Applied')).toBeVisible({ timeout: 120000 });
+    await expect(counter(total, 'All')).toBeVisible();
+    await expect(counter(0, 'Failed')).toBeVisible();
 }
 
 test.describe('select all matching the filter (#337) @on:manager-portal-admin', () => {
