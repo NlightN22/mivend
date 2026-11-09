@@ -112,7 +112,7 @@ One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGri
 - `mv-cell-meta` for secondary text (contract, organization, notes): 12px, secondary colour, two-line clamp, `title`.
 - `mv-cell-amount` for money: nowrap, tabular figures, right-aligned column (`align: 'end'`), sign and currency code always
   in one format (`-2,075.00 RUB`); give it a `minWidth` equal to its `width`.
-- `mv-cell-link` removes the link colour and underlines on hover; `MvStatusBadge clamp` wraps a long badge to two lines.
+- `mv-cell-link` removes the link colour and underlines on hover and is `width: fit-content` (a clamped link must never fill the cell: a click outside its text has to reach the row click); `MvStatusBadge clamp` wraps a long badge to two lines.
 - Cells are middle-aligned; the default cell text clamps to two lines. Every column declares `width` (and `minWidth` for
   columns that must not shrink); the table is `table-layout: fixed` and reserves the scrollbar gutter, so columns stay put
   between pages and sorts. Skeleton rows use the list's `rowHeightPx`.
