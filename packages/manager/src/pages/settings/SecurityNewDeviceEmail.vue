@@ -12,8 +12,8 @@ onMounted(async () => {
     try {
         enabled.value = await fetchNewDeviceEmail();
         loaded.value = true;
-    } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load the setting';
+    } catch {
+        error.value = 'Не удалось загрузить настройку';
     }
 });
 
@@ -22,8 +22,8 @@ async function toggle(value: boolean): Promise<void> {
     error.value = '';
     try {
         enabled.value = await setNewDeviceEmail(value);
-    } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not save the setting';
+    } catch {
+        error.value = 'Не удалось сохранить настройку';
     } finally {
         saving.value = false;
     }
@@ -31,12 +31,12 @@ async function toggle(value: boolean): Promise<void> {
 </script>
 
 <template>
-    <MvPanel title="Sign-in notifications">
+    <MvPanel title="Уведомления о входе">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <MvSwitch
             :model-value="enabled"
             :disabled="!loaded || saving"
-            label="E-mail me when my account is signed in to from a new device"
+            label="Писать мне на почту, когда в мою учётную запись входят с нового устройства"
             @update:model-value="toggle"
         />
     </MvPanel>

@@ -78,7 +78,7 @@ function handleSubmit(): Promise<void> {
                     @back="signIn.back"
                 />
                 <template v-else>
-                    <h1 class="login-card__title">Manager portal sign in</h1>
+                    <h1 class="login-card__title">Вход в портал менеджера</h1>
 
                     <MvNotice v-if="recovered && !error" variant="info" class="login-card__error">
                         {{ RECOVERED_NOTICE }}
@@ -88,7 +88,7 @@ function handleSubmit(): Promise<void> {
                     </MvNotice>
 
                     <form class="login-form" novalidate @submit.prevent="handleSubmit">
-                        <MvFormField label="Username">
+                        <MvFormField label="Логин">
                             <MvInput
                                 v-model="form.username"
                                 type="text"
@@ -97,10 +97,12 @@ function handleSubmit(): Promise<void> {
                             />
                         </MvFormField>
 
-                        <MvFormField label="Password">
+                        <MvFormField label="Пароль">
                             <MvPasswordInput
                                 v-model="form.password"
                                 autocomplete="current-password"
+                                show-label="Показать"
+                                hide-label="Скрыть"
                                 :error="!!error"
                             />
                         </MvFormField>
@@ -116,7 +118,7 @@ function handleSubmit(): Promise<void> {
 
                         <label class="login-form__remember">
                             <input v-model="form.remember" type="checkbox" />
-                            <span>Remember me</span>
+                            <span>Запомнить меня</span>
                         </label>
 
                         <MvButton
@@ -126,7 +128,7 @@ function handleSubmit(): Promise<void> {
                             :loading="loading"
                             class="login-form__submit"
                         >
-                            Sign in
+                            Войти
                         </MvButton>
                     </form>
                 </template>

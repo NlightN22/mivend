@@ -16,8 +16,8 @@ async function loadSessions() {
     sessionsError.value = '';
     try {
         sessions.value = await fetchMySessions();
-    } catch (e) {
-        sessionsError.value = e instanceof Error ? e.message : t('settings.security.loadFailed');
+    } catch {
+        sessionsError.value = t('settings.security.loadFailed');
     } finally {
         sessionsLoading.value = false;
     }

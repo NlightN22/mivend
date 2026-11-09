@@ -30,11 +30,11 @@ async function handleChangePassword(): Promise<void> {
     passwordError.value = '';
     passwordSuccess.value = false;
     if (newPassword.value.length < 8) {
-        passwordError.value = 'Password must be at least 8 characters.';
+        passwordError.value = 'Пароль должен быть не короче 8 символов.';
         return;
     }
     if (newPassword.value !== confirmPassword.value) {
-        passwordError.value = 'Passwords do not match.';
+        passwordError.value = 'Пароли не совпадают.';
         return;
     }
     passwordSubmitting.value = true;
@@ -47,8 +47,8 @@ async function handleChangePassword(): Promise<void> {
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         passwordError.value = message.includes('PASSWORD_BREACHED')
-            ? 'This password appears in known data breaches. Choose a different one.'
-            : message || 'Could not change the password';
+            ? 'Этот пароль встречается в известных утечках данных. Выберите другой.'
+            : 'Не удалось изменить пароль';
     } finally {
         passwordSubmitting.value = false;
     }
@@ -59,8 +59,8 @@ async function load(): Promise<void> {
     error.value = '';
     try {
         sessions.value = await fetchMySessions();
-    } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load sessions';
+    } catch {
+        error.value = 'Не удалось загрузить сеансы';
     } finally {
         loading.value = false;
     }
@@ -87,8 +87,8 @@ async function handleSignOutEverywhere(): Promise<void> {
 
 <template>
     <div class="security-page">
-        <div class="security-page__breadcrumb">Workspace / Settings</div>
-        <h1 class="security-page__title">Security</h1>
+        <div class="security-page__breadcrumb">Рабочее пространство / Настройки</div>
+        <h1 class="security-page__title">Безопасность</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
@@ -96,17 +96,17 @@ async function handleSignOutEverywhere(): Promise<void> {
 
         <SecurityNewDeviceEmail />
 
-        <MvPanel v-if="!loading" title="Active sessions">
+        <MvPanel v-if="!loading" title="Активные сеансы">
             <ul v-if="sessions.length" class="security-page__items">
                 <li v-for="s in sessions" :key="s.id" class="security-page__row">
                     <div class="security-page__identity">
                         <strong>{{ s.deviceLabel }}</strong>
                         <span class="security-page__meta">
-                            {{ s.current ? 'Current session' : 'Signed in' }} · since
-                            {{ new Date(s.createdAt).toLocaleString() }}
+                            {{ s.current ? 'Текущий сеанс' : 'Вход выполнен' }} · с
+                            {{ new Date(s.createdAt).toLocaleString('ru-RU') }}
                         </span>
                     </div>
-                    <span v-if="s.current" class="security-page__current">Current</span>
+                    <span v-if="s.current" class="security-page__current">Текущий</span>
                     <MvButton
                         v-else
                         variant="secondary"
@@ -114,46 +114,48 @@ async function handleSignOutEverywhere(): Promise<void> {
                         :disabled="endingId === s.id"
                         @click="handleEndSession(s.id)"
                     >
-                        End session
+                        Завершить сеанс
                     </MvButton>
                 </li>
             </ul>
-            <p v-else class="security-page__empty">No active sessions.</p>
+            <p v-else class="security-page__empty">Нет активных сеансов.</p>
         </MvPanel>
 
-        <MvPanel title="Change password">
+        <MvPanel title="Смена пароля">
             <MvNotice v-if="authStore.passwordChangeRequired" variant="warning">
-                Your current password appears in known data breaches. Please change it now.
+                Ваш текущий пароль встречается в известных утечках данных. Смените его сейчас.
             </MvNotice>
             <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
-                You're currently using the default <strong>superadmin</strong> account and its
-                default password — set a new password below.
+                Вы используете стандартную учётную запись <strong>superadmin</strong> с паролем по
+                умолчанию — задайте новый пароль ниже.
             </MvNotice>
             <form class="security-page__password-form" @submit.prevent="handleChangePassword">
-                <MvFormField label="New password" required>
-                    <MvPasswordInput v-model="newPassword" placeholder="At least 8 characters" />
+                <MvFormField label="Новый пароль" required>
+                    <MvPasswordInput v-model="newPassword" placeholder="Не менее 8 символов" show-label="Показать" hide-label="Скрыть" />
                 </MvFormField>
-                <MvFormField label="Confirm new password" required>
+                <MvFormField label="Повторите новый пароль" required>
                     <MvPasswordInput
                         v-model="confirmPassword"
-                        placeholder="Repeat the new password"
+                        placeholder="Повторите новый пароль"
+                        show-label="Показать"
+                        hide-label="Скрыть"
                     />
                 </MvFormField>
                 <MvNotice v-if="passwordError" variant="error">{{ passwordError }}</MvNotice>
-                <MvNotice v-if="passwordSuccess" variant="success">Password changed.</MvNotice>
+                <MvNotice v-if="passwordSuccess" variant="success">Пароль изменён.</MvNotice>
                 <div class="security-page__password-actions">
                     <MvButton native-type="submit" :loading="passwordSubmitting"
-                        >Change password</MvButton
+                        >Сменить пароль</MvButton
                     >
                 </div>
             </form>
         </MvPanel>
 
-        <MvPanel v-if="!loading" title="Sign out">
+        <MvPanel v-if="!loading" title="Выход">
             <div class="security-page__danger">
-                <p>Sign out from all devices, including this one.</p>
+                <p>Выйти со всех устройств, включая это.</p>
                 <MvButton variant="danger" @click="handleSignOutEverywhere"
-                    >Sign out everywhere</MvButton
+                    >Выйти везде</MvButton
                 >
             </div>
         </MvPanel>

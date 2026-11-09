@@ -77,7 +77,7 @@ async function handleSubmit(): Promise<void> {
         } else {
             state.value = result.reason ? REASON_TO_STATE[result.reason] : 'invalid';
             if (result.reason === 'validation')
-                validationMessage.value = 'Password does not meet requirements.';
+                validationMessage.value = 'Пароль не соответствует требованиям.';
         }
     } catch {
         state.value = 'invalid';
@@ -100,9 +100,9 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 
             <div class="set-password-card">
                 <template v-if="state === 'form' || state === 'validation'">
-                    <h1 class="set-password-card__title">Set your password</h1>
+                    <h1 class="set-password-card__title">Задайте пароль</h1>
                     <p class="set-password-card__desc">
-                        Create a password for your manager portal account.
+                        Создайте пароль для учётной записи в портале менеджера.
                     </p>
 
                     <div v-if="identity" class="set-password-card__identity">
@@ -126,28 +126,32 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     </MvNotice>
 
                     <form class="set-password-form" novalidate @submit.prevent="handleSubmit">
-                        <MvFormField label="New password">
+                        <MvFormField label="Новый пароль">
                             <MvPasswordInput
                                 v-model="form.password"
                                 autocomplete="new-password"
+                                show-label="Показать"
+                                hide-label="Скрыть"
                                 :error="tooShortError"
                             />
                         </MvFormField>
 
-                        <MvFormField label="Confirm password">
+                        <MvFormField label="Повторите пароль">
                             <MvPasswordInput
                                 v-model="form.confirmPassword"
                                 autocomplete="new-password"
+                                show-label="Показать"
+                                hide-label="Скрыть"
                                 :error="mismatchError"
                             />
                         </MvFormField>
                         <MvNotice v-if="mismatchError" variant="error"
-                            >Passwords do not match.</MvNotice
+                            >Пароли не совпадают.</MvNotice
                         >
 
                         <p class="set-password-card__rules">
-                            Use at least {{ MIN_PASSWORD_LENGTH }} characters. The password should
-                            meet the security policy configured for the manager portal.
+                            Не короче {{ MIN_PASSWORD_LENGTH }} символов. Пароль должен соответствовать
+                            политике безопасности портала менеджера.
                         </p>
 
                         <MvButton
@@ -158,7 +162,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                             :disabled="!form.password || mismatchError || tooShortError"
                             class="set-password-form__submit"
                         >
-                            Save password
+                            Сохранить пароль
                         </MvButton>
                     </form>
                 </template>
@@ -168,10 +172,9 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     class="set-password-state set-password-state--success"
                 >
                     <div class="set-password-state__icon">✓</div>
-                    <h3>Password saved</h3>
+                    <h3>Пароль сохранён</h3>
                     <p>
-                        Your password has been set successfully. You can now sign in to the manager
-                        portal.
+                        Пароль успешно задан. Теперь вы можете войти в портал менеджера.
                     </p>
 
                     <div
@@ -189,19 +192,18 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                         </div>
                     </div>
 
-                    <p role="status">Redirecting to sign in in {{ remaining }}s...</p>
+                    <p role="status">Переход ко входу через {{ remaining }} с...</p>
 
                     <MvButton variant="primary" size="lg" @click="goToSignIn"
-                        >Go to sign in</MvButton
+                        >Перейти ко входу</MvButton
                     >
                 </div>
 
                 <div v-else class="set-password-state set-password-state--error">
                     <div class="set-password-state__icon">!</div>
-                    <h3>Link is invalid or expired</h3>
+                    <h3>Ссылка недействительна или устарела</h3>
                     <p>
-                        This password setup link can no longer be used. Request a new invitation
-                        from an administrator.
+                        Эту ссылку для установки пароля больше нельзя использовать. Запросите новое приглашение у администратора.
                     </p>
 
                     <div
@@ -220,7 +222,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     </div>
 
                     <MvButton variant="secondary" size="lg" @click="goToSignIn"
-                        >Back to sign in</MvButton
+                        >Вернуться ко входу</MvButton
                     >
                 </div>
             </div>
