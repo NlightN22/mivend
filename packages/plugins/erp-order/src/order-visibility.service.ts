@@ -6,6 +6,7 @@ import { documentNumberSearchTerm } from 'shared';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { orderBranchClause } from './order-branch-clause';
+import { orderCounterpartyJoinSql } from './order-counterparty-join';
 
 // Must stay in sync with CounterpartyService.findVisible (access-control layer 3).
 @Injectable()
@@ -41,7 +42,7 @@ export class OrderVisibilityService {
         qb.leftJoinAndSelect(`${qb.alias}.customer`, 'customer').leftJoin(
             Counterparty,
             'counterparty',
-            `COALESCE("${qb.alias}"."customFieldsCounterpartyid", customer."customFieldsCounterpartyid")::text = counterparty.id::text`,
+            orderCounterpartyJoinSql(qb.alias),
         );
 
         if (managerId) {
