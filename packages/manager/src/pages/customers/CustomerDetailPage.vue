@@ -138,7 +138,10 @@ const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
 
 // Tab-switch/URL-sync logic lives in useTabSync.ts (unit-tested there) — see its own doc comment
 // for the two real regressions this replaced.
-const { activeTab: requestedTab, selectTab: selectTabInternal } = useTabSync<CustomerDetailTab>(TABS, 'overview');
+const { activeTab: requestedTab, selectTab: selectTabInternal } = useTabSync<CustomerDetailTab>(
+    TABS,
+    'overview',
+);
 
 // Mobile-only tab-overflow pattern, see the manager-portal-rules skill — 7 tabs don't fit a
 // mobile row; the first 3 (most used day-to-day) stay visible, the rest collapse into "More",
