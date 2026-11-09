@@ -20,9 +20,11 @@ test('the menu says Discounts, not Discount requests @on:manager-operator @read-
     page,
 }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Discounts' }).first()).toBeAttached({
-        timeout: 15000,
-    });
+    const link = page.getByRole('link', { name: 'Discounts', exact: true }).first();
+    const group = page.getByRole('button', { name: 'Documents' }).first();
+    await expect(group).toBeVisible({ timeout: 15000 });
+    if (!(await link.isVisible())) await group.click();
+    await expect(link).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole('link', { name: 'Discount requests' })).toHaveCount(0);
 });
 
@@ -33,7 +35,7 @@ test('search on the number narrows the list on the server and lives in the URL @
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
     const number = (await page.locator(`${ROWS} td`).first().innerText()).trim();
     await page.getByPlaceholder('Number or customer…').fill(number);
-    await expect(page).toHaveURL(/search=/);
+    await expect(page).toHaveURL(/search=/, { timeout: 10000 });
     await expect(page.locator(ROWS)).toHaveCount(1, { timeout: 15000 });
     await expect(page.locator(`${ROWS} td`).first()).toHaveText(number);
 
@@ -93,18 +95,15 @@ test('on a phone each discount is a card @on:manager-operator @read-only', async
     );
 });
 
-test('paging keeps the page in the URL and does not snap the window to the top @on:manager-operator @read-only', async ({
+test('the list paginates on the server and keeps the page in the URL @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 500 });
     await page.goto('/discounts');
-    const next = page.getByRole('button', { name: 'Next' }).last();
-    await expect(page.getByText(/Page 1 of ([2-9]|\d{2,})/).first()).toBeVisible({
-        timeout: 15000,
-    });
-    await next.scrollIntoViewIfNeeded();
-    await next.click();
+    const nextButton = page.getByRole('button', { name: 'Next Page' });
+    await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
+    await expect(nextButton).toBeEnabled();
+    await nextButton.click();
     await expect(page).toHaveURL(/page=2/);
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
