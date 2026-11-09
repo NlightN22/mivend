@@ -13,6 +13,7 @@ import { activationReadiness } from '../../api/counterpartyPortalAccess';
 import { ACTIVATION_VIEWS, BLANK_ACTIVATION_FILTERS } from '../../api/activationFilter';
 import type { ActivationCandidatesState } from '../../composables/useActivationCandidates';
 import type { TableViewState } from '../../composables/tableViewState';
+import ActivationQuickFilters from './ActivationQuickFilters.vue';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import { buildActivationColumns, DEFAULT_HIDDEN_COLUMNS } from './activationColumns';
 import { READINESS_BADGE_VARIANT, readinessText, type Readiness } from './activationReadiness';
@@ -188,6 +189,7 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-start>
+            <ActivationQuickFilters :list="list" />
             <MvFilterChips
                 scrollable
                 :chips="chips"

@@ -95,6 +95,20 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await expect(panel.getByRole('button', { name, exact: true })).toHaveCount(0);
     });
 
+    test('Branch and Manager quick filters edit the builder conditions and Reset clears them', async ({
+        page,
+    }) => {
+        await page.goto('/bulk-operations/counterparty-portal-access');
+        const branch = page.getByTestId('quick-filter-branch');
+        await expect(branch.locator('option')).not.toHaveCount(2);
+        await branch.selectOption({ index: 2 });
+        await expect(page).toHaveURL(/filters=branch/);
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+        await page.getByTestId('quick-filter-reset').click();
+        await expect(page).not.toHaveURL(/filters=/);
+        await expect(page.getByTestId('filter-chip')).toHaveCount(0);
+    });
+
     test('on a phone the select step is a card list with a page checkbox and the selection bar', async ({
         page,
     }) => {

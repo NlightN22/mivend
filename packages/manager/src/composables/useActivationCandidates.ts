@@ -1,4 +1,4 @@
-import { onMounted, ref, shallowRef, watch, type Ref } from 'vue';
+import { computed, onMounted, ref, shallowRef, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import { fetchBranchOptions, type BranchOption } from '../api/orders';
@@ -46,6 +46,7 @@ export interface ActivationCandidatesState {
     readinessCounts: Ref<ReadinessCounts | null>;
     branches: Ref<BranchOption[]>;
     managerName: (managerErpId: string | null) => string;
+    managerOptions: Ref<Array<{ value: string; label: string }>>;
     branchName: (branchId: string | null) => string;
     reload: () => void;
 }
@@ -149,6 +150,15 @@ export function useActivationCandidates(): ActivationCandidatesState {
             .catch(() => undefined);
     });
 
+    const managerOptions = computed(() => {
+        const byErpId = new Map<string, string>();
+        for (const u of managerLookup.value.erpUsers) byErpId.set(u.erpId, u.fullName ?? u.erpId);
+        for (const a of managerLookup.value.administrators) {
+            if (a.erpId) byErpId.set(a.erpId, a.name);
+        }
+        return [...byErpId].map(([value, label]) => ({ value, label }));
+    });
+
     return {
         items,
         totalItems,
@@ -160,6 +170,7 @@ export function useActivationCandidates(): ActivationCandidatesState {
         sort,
         readinessCounts,
         branches,
+        managerOptions,
         managerName: id => formatManagerName(id, managerLookup.value),
         branchName: id => (id ? (branches.value.find(b => b.id === id)?.name ?? id) : 'Unassigned'),
         reload,

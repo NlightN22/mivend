@@ -22,7 +22,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px 12px;
-    margin-bottom: 8px;
+    margin: 8px 0;
     padding: 6px 12px;
     background: var(--app-stock-in-bg);
     border: 1px solid var(--app-primary-btn);
@@ -31,4 +31,15 @@
 
 .mv-advanced-data-table__selection-reset {
     margin-left: auto;
+}
+
+.mv-advanced-data-table__below-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mv-advanced-data-table__below-toolbar:empty {
+    display: none;
 }

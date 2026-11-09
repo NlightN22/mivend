@@ -111,6 +111,13 @@ function selectAll(): void {
 }
 
 .activation-select-step__link:hover {
+    color: var(--el-color-primary-dark-2);
     text-decoration: underline;
+}
+
+.activation-select-step__link:focus-visible {
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
 }
 </style>

@@ -170,7 +170,15 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
             <template #toolbar-end><slot name="toolbar-end" /></template>
         </AdvancedDataTableToolbar>
 
-        <slot name="below-toolbar" />
+        <!-- Per-column filters have no UI on mobile, and selection hides the chips like the toolbar. -->
+        <MvActiveFilterChips
+            v-if="!isMobile"
+            :chips="filters.activeFilterChips.value"
+            @remove="filters.onRemoveFilterChip"
+            @clear-all="filters.clearFilters"
+        />
+
+        <div class="mv-advanced-data-table__below-toolbar"><slot name="below-toolbar" /></div>
         <div
             v-if="selectionActive"
             class="mv-advanced-data-table__selection-bar"
@@ -190,14 +198,6 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
                 >Clear selection</MvButton
             >
         </div>
-
-        <!-- Per-column filters have no UI on mobile, and selection hides the chips like the toolbar. -->
-        <MvActiveFilterChips
-            v-if="!isMobile"
-            :chips="filters.activeFilterChips.value"
-            @remove="filters.onRemoveFilterChip"
-            @clear-all="filters.clearFilters"
-        />
 
         <MvAdvancedMobileCardList
             v-if="isMobile"
