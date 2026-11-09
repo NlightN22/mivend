@@ -68,6 +68,7 @@ describe('DiscountGrantService', () => {
     let discountRegistryService: {
         createFromRequest: ReturnType<typeof vi.fn>;
         markDecided: ReturnType<typeof vi.fn>;
+        numberFor: ReturnType<typeof vi.fn>;
     };
     let service: DiscountGrantService;
 
@@ -97,6 +98,7 @@ describe('DiscountGrantService', () => {
         discountRegistryService = {
             createFromRequest: vi.fn(async () => undefined),
             markDecided: vi.fn(async () => undefined),
+            numberFor: vi.fn(async () => null),
         };
         service = new DiscountGrantService(
             discountRuleService as unknown as DiscountRuleService,
@@ -245,6 +247,22 @@ describe('DiscountGrantService', () => {
                     discountRuleId: 'rule-1',
                     counterparties: [],
                 }),
+            );
+        });
+
+        it('gives the grant the number its request was filed under', async () => {
+            discountRegistryService.numberFor.mockResolvedValue('1000000042');
+            approvalRequestService.decide.mockResolvedValue({
+                id: 'req-1',
+                status: 'approved',
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify({ ...validInput, supersedesDiscountRuleId: null }),
+            });
+
+            await service.decideAndApply(mockCtx(['ApproveDiscountRequest']), 'req-1', 'approved');
+
+            expect(grantRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ number: '1000000042' }),
             );
         });
 

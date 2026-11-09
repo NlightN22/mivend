@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import type { NumberingService } from '@mivend/plugin-numbering';
 import { DiscountRegistryService } from '../../discount-registry.service';
 
 const mockQb = {
     andWhere: vi.fn(),
     orderBy: vi.fn(),
+    addOrderBy: vi.fn(),
     take: vi.fn(),
     skip: vi.fn(),
     getManyAndCount: vi.fn(),
@@ -12,6 +14,7 @@ const mockQb = {
 };
 mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.addOrderBy.mockReturnValue(mockQb);
 mockQb.take.mockReturnValue(mockQb);
 mockQb.skip.mockReturnValue(mockQb);
 
@@ -54,7 +57,10 @@ describe('DiscountRegistryService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new DiscountRegistryService(mockConnection as unknown as TransactionalConnection);
+        service = new DiscountRegistryService(
+            mockConnection as unknown as TransactionalConnection,
+            { next: vi.fn(async () => '1000000007') } as unknown as NumberingService,
+        );
     });
 
     describe('createFromRequest', () => {
@@ -67,6 +73,7 @@ describe('DiscountRegistryService', () => {
                     discountRuleId: null,
                     status: 'pending',
                     priceTypeCode: 'WHOLESALE',
+                    number: '1000000007',
                 }),
             );
             expect(mockRepo.save).toHaveBeenCalledOnce();
@@ -116,13 +123,35 @@ describe('DiscountRegistryService', () => {
 
     describe('findAllPaginated', () => {
         beforeEach(() => {
+            mockQb.getCount.mockResolvedValue(0);
             mockQb.getManyAndCount.mockResolvedValue([[], 0]);
         });
 
-        it('paginates with defaults when no options are given', async () => {
+        it('paginates with the default page size when no options are given', async () => {
             await service.findAllPaginated(mockCtx);
-            expect(mockQb.take).toHaveBeenCalledWith(20);
+            expect(mockQb.take).toHaveBeenCalledWith(50);
             expect(mockQb.skip).toHaveBeenCalledWith(0);
+        });
+
+        it('clamps a huge or negative take and skip', async () => {
+            await service.findAllPaginated(mockCtx, { take: 100000, skip: -5 });
+            expect(mockQb.take).toHaveBeenCalledWith(200);
+            expect(mockQb.skip).toHaveBeenCalledWith(0);
+        });
+
+        it('answers take:0 with a count only', async () => {
+            mockQb.getCount.mockResolvedValue(3);
+            const result = await service.findAllPaginated(mockCtx, { take: 0 });
+            expect(result).toEqual({ items: [], totalItems: 3 });
+            expect(mockQb.getManyAndCount).not.toHaveBeenCalled();
+        });
+
+        it('applies the allowed price types first, empty list meaning none', async () => {
+            await service.findAllPaginated(mockCtx, { allowedPriceTypeCodes: [] });
+            expect(mockQb.andWhere.mock.calls[0]).toEqual([
+                'entry.priceTypeCode IN (:...allowedPriceTypeCodes)',
+                { allowedPriceTypeCodes: [''] },
+            ]);
         });
 
         it('filters by priceTypeCode', async () => {
@@ -132,27 +161,37 @@ describe('DiscountRegistryService', () => {
             });
         });
 
-        it('filters pending/rejected by the status column directly', async () => {
-            await service.findAllPaginated(mockCtx, { status: 'pending' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith('entry.status = :status', {
-                status: 'pending',
-            });
-        });
-
-        it('filters active/expiring-soon/expired by validTo, scoped to materialized entries', async () => {
+        it('binds the status view as a parameter against the derived status', async () => {
             await service.findAllPaginated(mockCtx, { status: 'expired' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith('entry.status = :materialized', {
-                materialized: 'materialized',
+            expect(mockQb.andWhere).toHaveBeenCalledWith(expect.stringContaining('= :statusView'), {
+                statusView: 'expired',
             });
-            expect(mockQb.andWhere).toHaveBeenCalledWith(
-                'entry.validTo < :now',
-                expect.objectContaining({ now: expect.any(Date) }),
-            );
         });
 
-        it('builds a search filter across denormalized columns', async () => {
+        it('builds a search filter across the number and denormalized columns', async () => {
             await service.findAllPaginated(mockCtx, { search: 'acme' });
             expect(mockQb.andWhere).toHaveBeenCalledWith(expect.any(Object));
+        });
+
+        it('binds builder values as parameters and never inlines them', async () => {
+            await service.findAllPaginated(mockCtx, {
+                filter: { customer: { contains: "x'; DROP TABLE y; --" } },
+            });
+            const [sql, params] = mockQb.andWhere.mock.calls.at(-1) as [string, object];
+            expect(sql).not.toContain('DROP');
+            expect(Object.values(params)).toEqual(["%x'; DROP TABLE y; --%"]);
+        });
+
+        it('rejects a field outside the whitelist', async () => {
+            await expect(
+                service.findAllPaginated(mockCtx, { filter: { justification: { eq: 'x' } } }),
+            ).rejects.toBeInstanceOf(UserInputError);
+        });
+
+        it('rejects sorting by a field outside the whitelist', async () => {
+            await expect(
+                service.findAllPaginated(mockCtx, { sort: { justification: 'ASC' } }),
+            ).rejects.toBeInstanceOf(UserInputError);
         });
     });
 

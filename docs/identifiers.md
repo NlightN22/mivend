@@ -122,7 +122,8 @@ and is never an idempotency key for a business entity.
     not order-scoped. Reasoning: docs/identifiers.md's "Payment documents" paragraph says the number "always comes
     from the sequence", unlike ProformaInvoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
     `providerRefundId` already carry the acquirer/kassa reference separately. Revisit if this reading turns out wrong.
-  - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply.
+  - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply. The number is taken when the request is filed (on its `DiscountRegistryEntry`, which also has a `uuid`) and the
+    grant keeps it on approval; a rejected request therefore consumes a number.
   - **Contract payment proforma** (`kind` `debt-repayment`/`advance`, #260): no order, so a flat per-instance number
     from the `proforma-invoice` sequence (`1000000123`); it never collides with `<order>-NN-<version>`. Idempotency of
     issuing is a client key per form open, unique per counterparty.

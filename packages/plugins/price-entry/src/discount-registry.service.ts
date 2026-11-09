@@ -3,9 +3,20 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, In, WhereExpressionBuilder } from 'typeorm';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { getPageAndCount, withAggregateLock } from 'shared';
+import { NumberingService } from '@mivend/plugin-numbering';
+import { clampSkip, clampTake, getPageAndCount, likeTerm, normalizeDocumentNumber, withAggregateLock } from 'shared';
 
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
+import {
+    EXPIRING_SOON_DAYS,
+    REGISTRY_STATUS_SQL,
+    applyListFilter,
+    applyListSort,
+    type DiscountRegistryFilter,
+    type DiscountRegistrySort,
+} from './discount-registry-list-query';
+
+export { EXPIRING_SOON_DAYS };
 
 export type DiscountRegistryFilterStatus =
     | 'active'
@@ -22,6 +33,8 @@ export interface DiscountRegistryListOptions {
     // Set by the resolver from PriceTypeAccessService; never a client argument.
     allowedPriceTypeCodes?: string[];
     status?: DiscountRegistryFilterStatus;
+    filter?: DiscountRegistryFilter;
+    sort?: DiscountRegistrySort;
 }
 
 export interface DiscountRegistryEntryInput {
@@ -48,15 +61,22 @@ export interface DiscountRuleForRegistry {
     validTo: Date;
 }
 
-// Shared with DiscountGrantService.findForCounterparty so the two expiring-soon checks can't drift.
-// 14 days is a placeholder; the threshold is not decided yet (see manager-portal-concept.md §8.2).
-export const EXPIRING_SOON_DAYS = 14;
-
 // The only file in the codebase allowed to touch DiscountRegistryEntry directly (see the backend-plugin-rules skill's
 // "Pagination" section — read-model/projection tables). Every other file goes through these methods.
 @Injectable()
 export class DiscountRegistryService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private numberingService: NumberingService,
+    ) {}
+
+    // The number the request was filed under; the materialized grant reuses it. Null before the registry existed.
+    async numberFor(ctx: RequestContext, approvalRequestId: ID): Promise<string | null> {
+        const entry = await this.connection
+            .getRepository(ctx, DiscountRegistryEntry)
+            .findOne({ where: { approvalRequestId: String(approvalRequestId) } });
+        return entry?.number ?? null;
+    }
 
     private async resolveCustomerNamesForSearch(
         ctx: RequestContext,
@@ -74,6 +94,7 @@ export class DiscountRegistryService {
     async createFromRequest(ctx: RequestContext, input: DiscountRegistryEntryInput): Promise<void> {
         const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
         const entry = repo.create({
+            number: await this.numberingService.next(ctx, 'discount-grant'),
             approvalRequestId: String(input.approvalRequestId),
             discountRuleId: null,
             status: 'pending' as const,
@@ -105,6 +126,7 @@ export class DiscountRegistryService {
                 let entry = await repo.findOne({ where: { discountRuleId: String(rule.id) } });
                 if (!entry) {
                     entry = repo.create({
+                        number: await this.numberingService.next(txCtx, 'discount-grant'),
                         discountRuleId: String(rule.id),
                         approvalRequestId: null,
                     });
@@ -167,6 +189,7 @@ export class DiscountRegistryService {
         ctx: RequestContext,
         options: DiscountRegistryListOptions = {},
     ): Promise<PaginatedList<DiscountRegistryEntry>> {
+        const take = clampTake(options.take);
         const qb = this.connection
             .getRepository(ctx, DiscountRegistryEntry)
             .createQueryBuilder('entry');
@@ -183,37 +206,26 @@ export class DiscountRegistryService {
                 priceTypeCode: options.priceTypeCode,
             });
         }
-
-        if (options.status === 'pending' || options.status === 'rejected') {
-            qb.andWhere('entry.status = :status', { status: options.status });
-        } else if (options.status) {
-            const now = new Date();
-            const soon = new Date(now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000);
-            qb.andWhere('entry.status = :materialized', { materialized: 'materialized' });
-            if (options.status === 'expired') {
-                qb.andWhere('entry.validTo < :now', { now });
-            } else if (options.status === 'expiring-soon') {
-                qb.andWhere('entry.validTo >= :now AND entry.validTo < :soon', { now, soon });
-            } else {
-                qb.andWhere('entry.validTo >= :soon', { soon });
-            }
+        if (options.status) {
+            qb.andWhere(`${REGISTRY_STATUS_SQL} = :statusView`, { statusView: options.status });
         }
-
         if (options.search) {
-            const term = `%${options.search}%`;
+            const term = likeTerm(options.search);
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {
-                    bqb.where('entry.priceTypeCode ILIKE :term', { term })
+                    bqb.where('entry.number ILIKE :numberTerm', {
+                        numberTerm: likeTerm(normalizeDocumentNumber(options.search as string)),
+                    })
+                        .orWhere('entry.priceTypeCode ILIKE :term', { term })
                         .orWhere('entry.facetValueCode ILIKE :term', { term })
                         .orWhere('entry.facetCode ILIKE :term', { term })
                         .orWhere('entry.customerNamesForSearch ILIKE :term', { term });
                 }),
             );
         }
+        applyListFilter(qb, options.filter);
 
-        qb.orderBy('entry.validTo', 'DESC');
-
-        return getPageAndCount(qb, options.take ?? 20, options.skip ?? 0);
+        return getPageAndCount(qb, take, clampSkip(options.skip), (q) => applyListSort(q, options.sort));
     }
 
     // Counts only — powers the /discounts KPI cards without fetching rows.
@@ -281,7 +293,8 @@ export class DiscountRegistryService {
             Object.assign(existing, fields);
             await repo.save(existing);
         } else {
-            await repo.save(repo.create(fields));
+            const number = await this.numberingService.next(ctx, 'discount-grant');
+            await repo.save(repo.create({ ...fields, number }));
         }
     }
 }

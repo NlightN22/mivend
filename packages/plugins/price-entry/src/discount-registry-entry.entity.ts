@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 export type DiscountRegistryStatus = 'pending' | 'rejected' | 'materialized';
@@ -7,10 +7,15 @@ export type DiscountRegistryStatus = 'pending' | 'rejected' | 'materialized';
 // Read model for /discounts list only; synced by DiscountRegistryService, never written alone.
 // Not a source of truth: pricing reads DiscountRule, grant applicability reads DiscountGrant.
 @Entity()
-export class DiscountRegistryEntry extends VendureEntity {
+export class DiscountRegistryEntry extends UuidEntity {
     constructor(input?: DeepPartial<DiscountRegistryEntry>) {
         super(input);
     }
+
+    // Allocated when the request is filed; the grant it materializes into takes the same number.
+    @Index()
+    @Column({ type: 'varchar' })
+    number!: string;
 
     // Stable for the entry's lifecycle: the request link never changes after approval.
     // Null for ERP-pushed rules (no request, start 'materialized'); one id is always set.

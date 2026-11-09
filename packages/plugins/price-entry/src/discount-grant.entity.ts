@@ -13,8 +13,8 @@ export class DiscountGrant extends UuidEntity {
         super(input);
     }
 
-    // Flat per-instance sequence via NumberingService.next(ctx, 'discount-grant') — not
-    // order-scoped, DiscountGrant has no orderId.
+    // Flat per-instance sequence ('discount-grant'), taken when the request is filed and carried over from
+    // its registry entry; not order-scoped, DiscountGrant has no orderId.
     @Index()
     @Column({ type: 'varchar' })
     number!: string;

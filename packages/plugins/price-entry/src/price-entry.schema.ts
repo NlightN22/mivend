@@ -166,6 +166,10 @@ export const adminApiSchema: DocumentNode = gql`
     # ApprovalRequest.
     type DiscountRegistryEntry {
         id: ID!
+        uuid: String!
+        "Human-facing business number, taken when the request is filed; the grant it becomes keeps it."
+        number: String!
+        createdAt: DateTime!
         approvalRequestId: ID
         discountRuleId: ID
         status: String!
@@ -187,10 +191,41 @@ export const adminApiSchema: DocumentNode = gql`
     input DiscountRegistryListOptions {
         take: Int
         skip: Int
-        search: String
         priceTypeCode: String
         # active | expiring-soon | expired | pending | rejected
         status: String
+        "Substring match against the number, price type, product group and customer names."
+        search: String
+        filter: DiscountRegistryFilterParameter
+        sort: DiscountRegistrySortParameter
+    }
+
+    "Filtered on the server inside the caller's visible set; field names are a fixed whitelist."
+    input DiscountRegistryFilterParameter {
+        number: StringOperators
+        createdAt: DateOperators
+        customer: StringOperators
+        priceType: StringOperators
+        productGroup: StringOperators
+        percent: NumberOperators
+        validFrom: DateOperators
+        validTo: DateOperators
+        "active | expiring-soon | expired | pending | rejected"
+        status: StringOperators
+        _and: [DiscountRegistryFilterParameter!]
+        _or: [DiscountRegistryFilterParameter!]
+    }
+
+    input DiscountRegistrySortParameter {
+        number: SortOrder
+        createdAt: SortOrder
+        customer: SortOrder
+        priceType: SortOrder
+        productGroup: SortOrder
+        percent: SortOrder
+        validFrom: SortOrder
+        validTo: SortOrder
+        status: SortOrder
     }
 
     extend type Query {

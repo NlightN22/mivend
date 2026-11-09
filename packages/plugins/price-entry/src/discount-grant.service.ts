@@ -141,7 +141,9 @@ export class DiscountGrantService {
 
             const grantRepo = this.connection.getRepository(ctx, DiscountGrant);
             const grant = grantRepo.create({
-                number: await this.numberingService.next(ctx, 'discount-grant'),
+                number:
+                    (await this.discountRegistryService.numberFor(ctx, request.id)) ??
+                    (await this.numberingService.next(ctx, 'discount-grant')),
                 discountRuleId: String(rule.id),
                 scopeType: counterparties.length ? 'customer' : 'all',
                 validTo: new Date(payload.validTo),
