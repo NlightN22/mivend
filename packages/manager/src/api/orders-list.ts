@@ -133,7 +133,7 @@ export async function fetchOrdersList(
 ): Promise<{ items: OrderListItem[]; totalItems: number }> {
     const query = buildOrdersListQuery(filters, rejectedCodes);
     const result = await adminApi(OrdersPageDocument, {
-        options: {
+        list: {
             skip: (page - 1) * pageSize,
             take: pageSize,
             sort,

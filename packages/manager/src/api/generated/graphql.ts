@@ -6381,6 +6381,28 @@ export type OrderList = PaginatedList & {
     totalItems: Scalars['Int']['output'];
 };
 
+export type OrderListFilter = {
+    _and?: InputMaybe<Array<OrderListFilter>>;
+    code?: InputMaybe<StringOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    erpStatus?: InputMaybe<StringOperators>;
+    hasCheckFindings?: InputMaybe<BooleanOperators>;
+    orderPlacedAt?: InputMaybe<DateOperators>;
+    placedByAdministratorId?: InputMaybe<StringOperators>;
+    reservationFailureReason?: InputMaybe<StringOperators>;
+    reservationState?: InputMaybe<StringOperators>;
+    state?: InputMaybe<StringOperators>;
+    totalWithTax?: InputMaybe<NumberOperators>;
+};
+
+/** Paging, filter and sort for visibleOrders; field names are a fixed whitelist, at most 20 conditions. */
+export type OrderListInput = {
+    filter?: InputMaybe<OrderListFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<OrderListSort>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type OrderListOptions = {
     /** Allows the results to be filtered */
     filter?: InputMaybe<OrderFilterParameter>;
@@ -6392,6 +6414,14 @@ export type OrderListOptions = {
     sort?: InputMaybe<OrderSortParameter>;
     /** Takes n results, for use in pagination */
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type OrderListSort = {
+    code?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    orderPlacedAt?: InputMaybe<SortOrder>;
+    state?: InputMaybe<SortOrder>;
+    totalWithTax?: InputMaybe<SortOrder>;
 };
 
 export type OrderModification = Node & {
@@ -8928,6 +8958,7 @@ export type QueryVisibilityGrantsArgs = {
 
 export type QueryVisibleOrdersArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
+    list?: InputMaybe<OrderListInput>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
     options?: InputMaybe<OrderListOptions>;
     search?: InputMaybe<Scalars['String']['input']>;
@@ -13056,7 +13087,7 @@ export type OrderListItemFieldsFragment = {
 };
 
 export type OrdersPageQueryVariables = Exact<{
-    options?: InputMaybe<OrderListOptions>;
+    list?: InputMaybe<OrderListInput>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
     customerId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
@@ -13098,14 +13129,14 @@ export type OrdersViewCountsQueryVariables = Exact<{
     managerId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     overdueBefore: Scalars['DateTime']['input'];
-    all?: InputMaybe<OrderFilterParameter>;
-    awaitingConfirmation?: InputMaybe<OrderFilterParameter>;
-    processing?: InputMaybe<OrderFilterParameter>;
-    awaitingShipment?: InputMaybe<OrderFilterParameter>;
-    rejectedByErp?: InputMaybe<OrderFilterParameter>;
-    reservationFailed?: InputMaybe<OrderFilterParameter>;
-    erpRequirements?: InputMaybe<OrderFilterParameter>;
-    overdue?: InputMaybe<OrderFilterParameter>;
+    all?: InputMaybe<OrderListFilter>;
+    awaitingConfirmation?: InputMaybe<OrderListFilter>;
+    processing?: InputMaybe<OrderListFilter>;
+    awaitingShipment?: InputMaybe<OrderListFilter>;
+    rejectedByErp?: InputMaybe<OrderListFilter>;
+    reservationFailed?: InputMaybe<OrderListFilter>;
+    erpRequirements?: InputMaybe<OrderListFilter>;
+    overdue?: InputMaybe<OrderListFilter>;
 }>;
 
 export type OrdersViewCountsQuery = {
@@ -17011,9 +17042,9 @@ export const OrderStatusesDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
 export const OrdersPageDocument = new TypedDocumentString(`
-    query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $search: String) {
+    query OrdersPage($list: OrderListInput, $managerId: ID, $customerId: ID, $search: String) {
   visibleOrders(
-    options: $options
+    list: $list
     managerId: $managerId
     customerId: $customerId
     search: $search
@@ -17053,9 +17084,9 @@ export const OrdersPageDocument = new TypedDocumentString(`
   }
 }`) as unknown as TypedDocumentString<OrdersPageQuery, OrdersPageQueryVariables>;
 export const OrdersViewCountsDocument = new TypedDocumentString(`
-    query OrdersViewCounts($customerId: ID, $managerId: ID, $search: String, $overdueBefore: DateTime!, $all: OrderFilterParameter, $awaitingConfirmation: OrderFilterParameter, $processing: OrderFilterParameter, $awaitingShipment: OrderFilterParameter, $rejectedByErp: OrderFilterParameter, $reservationFailed: OrderFilterParameter, $erpRequirements: OrderFilterParameter, $overdue: OrderFilterParameter) {
+    query OrdersViewCounts($customerId: ID, $managerId: ID, $search: String, $overdueBefore: DateTime!, $all: OrderListFilter, $awaitingConfirmation: OrderListFilter, $processing: OrderListFilter, $awaitingShipment: OrderListFilter, $rejectedByErp: OrderListFilter, $reservationFailed: OrderListFilter, $erpRequirements: OrderListFilter, $overdue: OrderListFilter) {
   all: visibleOrders(
-    options: {take: 0, filter: $all}
+    list: {take: 0, filter: $all}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17063,7 +17094,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   awaitingConfirmation: visibleOrders(
-    options: {take: 0, filter: $awaitingConfirmation}
+    list: {take: 0, filter: $awaitingConfirmation}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17071,7 +17102,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   processing: visibleOrders(
-    options: {take: 0, filter: $processing}
+    list: {take: 0, filter: $processing}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17079,7 +17110,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   awaitingShipment: visibleOrders(
-    options: {take: 0, filter: $awaitingShipment}
+    list: {take: 0, filter: $awaitingShipment}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17087,7 +17118,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   rejectedByErp: visibleOrders(
-    options: {take: 0, filter: $rejectedByErp}
+    list: {take: 0, filter: $rejectedByErp}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17095,7 +17126,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   reservationFailed: visibleOrders(
-    options: {take: 0, filter: $reservationFailed}
+    list: {take: 0, filter: $reservationFailed}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17103,7 +17134,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   erpRequirements: visibleOrders(
-    options: {take: 0, filter: $erpRequirements}
+    list: {take: 0, filter: $erpRequirements}
     customerId: $customerId
     managerId: $managerId
     search: $search
@@ -17111,7 +17142,7 @@ export const OrdersViewCountsDocument = new TypedDocumentString(`
     totalItems
   }
   overdue: visibleOrders(
-    options: {take: 0, filter: $overdue}
+    list: {take: 0, filter: $overdue}
     customerId: $customerId
     managerId: $managerId
     search: $search

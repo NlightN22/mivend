@@ -27,9 +27,9 @@ fragment OrderListItemFields on Order {
     }
 }
 
-query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $search: String) {
+query OrdersPage($list: OrderListInput, $managerId: ID, $customerId: ID, $search: String) {
     visibleOrders(
-        options: $options
+        list: $list
         managerId: $managerId
         customerId: $customerId
         search: $search
@@ -46,17 +46,17 @@ query OrdersViewCounts(
     $managerId: ID
     $search: String
     $overdueBefore: DateTime!
-    $all: OrderFilterParameter
-    $awaitingConfirmation: OrderFilterParameter
-    $processing: OrderFilterParameter
-    $awaitingShipment: OrderFilterParameter
-    $rejectedByErp: OrderFilterParameter
-    $reservationFailed: OrderFilterParameter
-    $erpRequirements: OrderFilterParameter
-    $overdue: OrderFilterParameter
+    $all: OrderListFilter
+    $awaitingConfirmation: OrderListFilter
+    $processing: OrderListFilter
+    $awaitingShipment: OrderListFilter
+    $rejectedByErp: OrderListFilter
+    $reservationFailed: OrderListFilter
+    $erpRequirements: OrderListFilter
+    $overdue: OrderListFilter
 ) {
     all: visibleOrders(
-        options: { take: 0, filter: $all }
+        list: { take: 0, filter: $all }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -64,7 +64,7 @@ query OrdersViewCounts(
         totalItems
     }
     awaitingConfirmation: visibleOrders(
-        options: { take: 0, filter: $awaitingConfirmation }
+        list: { take: 0, filter: $awaitingConfirmation }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -72,7 +72,7 @@ query OrdersViewCounts(
         totalItems
     }
     processing: visibleOrders(
-        options: { take: 0, filter: $processing }
+        list: { take: 0, filter: $processing }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -80,7 +80,7 @@ query OrdersViewCounts(
         totalItems
     }
     awaitingShipment: visibleOrders(
-        options: { take: 0, filter: $awaitingShipment }
+        list: { take: 0, filter: $awaitingShipment }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -88,7 +88,7 @@ query OrdersViewCounts(
         totalItems
     }
     rejectedByErp: visibleOrders(
-        options: { take: 0, filter: $rejectedByErp }
+        list: { take: 0, filter: $rejectedByErp }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -96,7 +96,7 @@ query OrdersViewCounts(
         totalItems
     }
     reservationFailed: visibleOrders(
-        options: { take: 0, filter: $reservationFailed }
+        list: { take: 0, filter: $reservationFailed }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -104,7 +104,7 @@ query OrdersViewCounts(
         totalItems
     }
     erpRequirements: visibleOrders(
-        options: { take: 0, filter: $erpRequirements }
+        list: { take: 0, filter: $erpRequirements }
         customerId: $customerId
         managerId: $managerId
         search: $search
@@ -112,7 +112,7 @@ query OrdersViewCounts(
         totalItems
     }
     overdue: visibleOrders(
-        options: { take: 0, filter: $overdue }
+        list: { take: 0, filter: $overdue }
         customerId: $customerId
         managerId: $managerId
         search: $search

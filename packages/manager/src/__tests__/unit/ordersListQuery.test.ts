@@ -172,7 +172,7 @@ describe('fetchOrdersList preset', () => {
         );
         expect(preset()).toMatchObject({
             customerId: 'customer-123',
-            options: { skip: 10, take: 10, filter: { state: { in: ['Cancelled'] } } },
+            list: { skip: 10, take: 10, filter: { state: { in: ['Cancelled'] } } },
         });
     });
 });
@@ -201,5 +201,53 @@ describe('saved views', () => {
 
     it('falls back to a blank list for a non-object', () => {
         expect(restoreOrdersFilters(null)).toEqual(BLANK_ORDERS_FILTERS);
+    });
+
+    it('drops a stored starts-with condition on the number, keeping the rest', () => {
+        const restored = restoreOrdersFilters({
+            view: 'processing',
+            conditions: [
+                { columnKey: 'code', operator: 'startsWith', value: '10' },
+                { columnKey: 'code', operator: 'contains', value: '10' },
+                { columnKey: 'state', operator: 'in', value: ['Shipped'] },
+            ],
+        });
+        expect(restored.view).toBe('processing');
+        expect(restored.conditions.map(c => `${c.columnKey}:${c.operator}`)).toEqual([
+            'code:contains',
+            'state:in',
+        ]);
+    });
+
+    it('builds only fields the server whitelist accepts, for every filter column', () => {
+        const served = new Set([
+            'code',
+            'createdAt',
+            'orderPlacedAt',
+            'state',
+            'totalWithTax',
+            'placedByAdministratorId',
+            'reservationState',
+            'reservationFailureReason',
+            'erpStatus',
+            'hasCheckFindings',
+            '_and',
+        ]);
+        const q = buildOrdersListQuery(
+            filters({
+                view: 'overdue',
+                conditions: [
+                    { columnKey: 'code', operator: 'contains', value: '1' },
+                    { columnKey: 'date', operator: 'before', value: '2026-01-02' },
+                    { columnKey: 'state', operator: 'eq', value: 'Shipped' },
+                    { columnKey: 'total', operator: 'gt', value: '5' },
+                    { columnKey: 'placedBy', operator: 'notEq', value: '3' },
+                    { columnKey: 'reservationState', operator: 'eq', value: 'RESERVED' },
+                ],
+            }),
+            [],
+            NOW,
+        );
+        expect(Object.keys(q.filter).filter(k => !served.has(k))).toEqual([]);
     });
 });

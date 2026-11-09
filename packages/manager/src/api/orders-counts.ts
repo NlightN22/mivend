@@ -1,7 +1,7 @@
 import { adminApi } from './client';
 import {
     OrdersViewCountsDocument,
-    type OrderFilterParameter,
+    type OrderListFilter,
     type OrdersViewCountsQueryVariables,
 } from './generated/graphql';
 import { OVERDUE_AFTER_DAYS, buildOrdersListQuery } from './orders-list';
@@ -21,9 +21,9 @@ export function countsQueryVariables(
     rejectedCodes: string[],
     now: Date,
 ): OrdersViewCountsQueryVariables {
-    const forView = (view: OrdersView): OrderFilterParameter | undefined => {
+    const forView = (view: OrdersView): OrderListFilter | undefined => {
         const { filter } = buildOrdersListQuery({ ...filters, view }, rejectedCodes, now);
-        return Object.keys(filter).length ? (filter as OrderFilterParameter) : undefined;
+        return Object.keys(filter).length ? (filter as OrderListFilter) : undefined;
     };
     const { managerId, search } = buildOrdersListQuery(filters, rejectedCodes, now);
     return {

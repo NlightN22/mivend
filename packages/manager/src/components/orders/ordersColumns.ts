@@ -5,6 +5,7 @@ const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
 const NON_BLANK_RESERVATIONS = ORDER_RESERVATION_STATE_OPTIONS.filter(o => o.value);
 const NOT_FILTERED = { type: 'none' } as const;
 
+// The code column omits starts/ends-with: the server has no regex operator.
 // Widths are the widest realistic cell text + 32px padding; sum 1080 fits a 1360px page (1088px table).
 // Filtering is the toolbar Filter builder (`filterType`); the search box covers order, company, INN
 // and phone. Customer, branch and attention have no server-side filter.
@@ -19,6 +20,7 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         required: true,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterOperators: ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'],
         mobile: { primary: true },
     },
     {
