@@ -20,8 +20,8 @@ One shared ui-kit wizard component serves every operation; an operation never br
 
 1. **Select.** The entity list of the page the operation works on (same columns, filters, filter builder and saved
    views as its list page) with the row selection column. Baseline: filter, then "Select all" for the rows of the
-   current page (the configured page size). Optional later: "select everything that matches the filter"; the filter is
-   re-evaluated on the server at run time, the count is shown and confirmed.
+   current page (the configured page size), then "Select all N matching the filter" for every record the filter
+   matches (see "Select all matching" below).
 2. **Parameters.** What to do with the selected records (for example grant or revoke portal access).
 3. **Review.** A server-side dry run: how many records change, which are skipped and why (no e-mail, no right, already
    in the target state), and conflicts. The dry run creates the batch as a draft (status `draft`, its `uuid` and number
@@ -58,7 +58,7 @@ One batch model instead of per-operation code.
 
 ## Out of scope for the first iteration
 
-Select-all-matching-the-filter, scheduling of batches, chains of operations.
+Scheduling of batches, chains of operations.
 
 ## As built (first iteration, #337)
 
@@ -101,14 +101,30 @@ Refinements of the model above; the sections above stay the contract.
   records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date
   range), sorts a whitelist of columns (never the stored unscoped record count), `take` is clamped to 100.
 - **Select step.** It is the standard manager list (`.claude/skills/manager-table-standard/SKILL.md`): filter builder, saved views under its own key, URL sync, mobile cards; the selection column, the readiness chips and "Select all" are the only additions. The counterparties query takes the builder conditions as `filter` (fixed field whitelist, no regex, on top of the visibility scope). Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
-  rows of the current page. Selection across pages is kept while the wizard is open; select-all-matching-the-filter is
-  still out of scope.
+  rows of the current page. Selection across pages is kept while the wizard is open. The selection bar is the table's
+  own (tinted bar with the count, the action and "Clear selection"); on a phone the cards carry a checkbox and a
+  "Select this page" row.
 - **Routes.** `/bulk-operations` (catalog), `/bulk-operations/history`, `/bulk-operations/:operation` (the wizard;
   `?batch=<uuid>` reopens a draft at the review or a finished batch at the result). The old
   `/bulk-operations/activate-customers` and `/counterparty-activation` links redirect.
 
+### Select all matching
+
+- **Gmail style.** Ticking the header selects the page; the bar then offers "Select all N matching the filter" (N is
+  the list's filtered total). It switches to "All N selected". Unticking a row, or a changed filter or search, leaves
+  that mode with a visible message; "Clear selection" empties everything.
+- **Server snapshot.** In this mode the client sends the list criteria (`search`, `readiness`, builder `filter`), never
+  ids. `previewBulkBatch(selection: { matching })` resolves them through the executor's `resolveMatching` on top of the
+  actor's visibility scope and snapshots the ids into the draft, so review equals run: the run processes exactly the
+  snapshot (rows that start matching later are not added), and each record is still re-validated under its lock.
+  A record outside the scope is never included. The draft stays idempotent (hash over the resolved ids).
+- **Cap.** One constant, `MAX_SELECTION` (2000, `bulk-operations/src/types.ts`), bounds every batch, ticked or
+  matched: the dry run is synchronous. A larger match is refused with "narrow the filter"; the page shows the count and
+  the limit (served as `maxRecords` in the catalog) before the user commits.
+- **Executors** opt in with `resolveMatching`; the catalog reports `supportsMatching`.
+
 ### Known scale limit of the history list
 
 `scoped()` loads the item rows of the page's batches and calls `visibleTargets` once per operation type over all their
-ids. It is fine for batches of up to 1000 records and pages of 100. When it grows, compute the visible counts in SQL
+ids. It is fine for batches of up to the 2000 cap and pages of 100 (each poll of a running batch reads its item ids once). When it grows, compute the visible counts in SQL
 over the visible id set and cache `visibleTargets` per request.
