@@ -10,3 +10,25 @@
 .mv-advanced-data-table__scroll-host {
     position: relative;
 }
+
+.mv-advanced-data-table__selection-count {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    white-space: nowrap;
+}
+
+.mv-advanced-data-table__selection-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+    padding: 6px 12px;
+    background: var(--app-stock-in-bg);
+    border: 1px solid var(--app-primary-btn);
+    border-radius: var(--app-radius-sm, 8px);
+}
+
+.mv-advanced-data-table__selection-reset {
+    margin-left: auto;
+}

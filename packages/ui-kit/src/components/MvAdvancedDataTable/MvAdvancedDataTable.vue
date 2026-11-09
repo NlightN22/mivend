@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
 import { computed, ref, useSlots } from 'vue';
+import MvButton from '../MvButton/MvButton.vue';
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
 import MvActiveFilterChips from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
@@ -44,7 +45,7 @@ const props = withDefaults(
         // Only the "Clear filters" values; valid filter keys come from `columns`/`search`.
         defaultFilters: Record<string, unknown>;
         emptyMessage?: string;
-        // Opt-in checkbox column; a selection swaps the toolbar for a bulk-actions bar.
+        // Opt-in checkbox column; a selection shows a bar between the toolbar and the table.
         selectable?: boolean;
         // Selected `String(row[dataKey])` ids, owned by the consumer (v-model), never persisted here.
         selectedIds?: Set<string>;
@@ -160,25 +161,39 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
             :filter-columns="filterColumns"
             :column-toggle-items="layout.columnToggleItems.value"
             :is-mobile="isMobile"
-            :selected-ids="selectedIds"
-            :selection-active="selectionActive"
-            :selection-label="selectionLabel"
             @search-change="search && filters.setFilter(search.filterKey, $event)"
-            @reset-selection="selection.resetSelection"
             @column-toggle="layout.onColumnToggle"
             @columns-reorder="layout.onColumnsReorder"
             @columns-reset="layout.onColumnsReset"
         >
-            <template #selection-actions="slotProps">
-                <slot name="selection-actions" v-bind="slotProps" />
-            </template>
             <template #toolbar-start><slot name="toolbar-start" /></template>
             <template #toolbar-end><slot name="toolbar-end" /></template>
         </AdvancedDataTableToolbar>
 
+        <slot name="below-toolbar" />
+        <div
+            v-if="selectionActive"
+            class="mv-advanced-data-table__selection-bar"
+            data-testid="table-selection-bar"
+        >
+            <span
+                class="mv-advanced-data-table__selection-count"
+                data-testid="table-selection-count"
+                >{{ selectionLabel ?? `Selected ${selectedIds.size}` }}</span
+            >
+            <slot name="selection-actions" :selected-ids="selectedIds" :count="selectedIds.size" />
+            <MvButton
+                class="mv-advanced-data-table__selection-reset"
+                size="sm"
+                variant="ghost"
+                @click="selection.resetSelection"
+                >Clear selection</MvButton
+            >
+        </div>
+
         <!-- Per-column filters have no UI on mobile, and selection hides the chips like the toolbar. -->
         <MvActiveFilterChips
-            v-if="!isMobile && !selectionActive"
+            v-if="!isMobile"
             :chips="filters.activeFilterChips.value"
             @remove="filters.onRemoveFilterChip"
             @clear-all="filters.clearFilters"

@@ -102,7 +102,7 @@ Refinements of the model above; the sections above stay the contract.
   range), sorts a whitelist of columns (never the stored unscoped record count), `take` is clamped to 100.
 - **Select step.** It is the standard manager list (`.claude/skills/manager-table-standard/SKILL.md`): filter builder, saved views under its own key, URL sync, mobile cards; the selection column, the readiness chips and "Select all" are the only additions. The counterparties query takes the builder conditions as `filter` (fixed field whitelist, no regex, on top of the visibility scope). Rows of any readiness can be selected (the review explains what is skipped); "Select all" takes the
   rows of the current page. Selection across pages is kept while the wizard is open. The selection bar is the table's
-  own (tinted bar with the count, the action and "Clear selection"); on a phone the cards carry a checkbox and a
+  own (a tinted row between the unchanged filter toolbar and the table: "Selected N of M", a "Select all M records" link, "Clear selection"); on a phone the cards carry a checkbox and a
   "Select this page" row.
 - **Routes.** `/bulk-operations` (catalog), `/bulk-operations/history`, `/bulk-operations/:operation` (the wizard;
   `?batch=<uuid>` reopens a draft at the review or a finished batch at the result). The old
@@ -119,8 +119,8 @@ Refinements of the model above; the sections above stay the contract.
   snapshot (rows that start matching later are not added), and each record is still re-validated under its lock.
   A record outside the scope is never included. The draft stays idempotent (hash over the resolved ids).
 - **Cap.** One constant, `MAX_SELECTION` (2000, `bulk-operations/src/types.ts`), bounds every batch, ticked or
-  matched: the dry run is synchronous. A larger match is refused with "narrow the filter"; the page shows the count and
-  the limit (served as `maxRecords` in the catalog) before the user commits.
+  matched: the dry run is synchronous. A larger match is refused with "narrow the filter"; above the cap the page shows a warning notice with the count and
+  the limit (served as `maxRecords` in the catalog) and hides the link; ticked pages still work.
 - **Executors** opt in with `resolveMatching`; the catalog reports `supportsMatching`.
 
 ### Known scale limit of the history list

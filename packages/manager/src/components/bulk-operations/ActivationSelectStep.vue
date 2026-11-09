@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvNotice } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useActivationCandidates } from '../../composables/useActivationCandidates';
 import { conditionsToCounterpartyFilter, readinessOfView } from '../../api/activationFilter';
@@ -42,7 +42,11 @@ const overCap = computed(() => total.value > props.maxRecords);
 const canOfferAll = computed(
     () => !matching.value && pageFullySelected.value && total.value > props.selection.ids.size,
 );
-const label = computed(() => (matching.value ? `All ${matching.value.total} selected` : undefined));
+const label = computed(() =>
+    matching.value
+        ? `All ${matching.value.total} selected`
+        : `Selected ${props.selection.ids.size} of ${total.value}`,
+);
 
 watch(criteria, value => {
     const next = criteriaChanged(props.selection, value);
@@ -67,23 +71,22 @@ function selectAll(): void {
             :administrator-id="administratorId"
             @update:selected-ids="onRows"
         >
+            <template #below-toolbar>
+                <MvNotice v-if="overCap" variant="warning" data-testid="select-over-cap">
+                    {{ total }} match; at most {{ maxRecords }} can be processed in one batch.
+                    Narrow the filter (for example by branch, manager or readiness).
+                </MvNotice>
+            </template>
             <template #selection-actions>
-                <MvButton
+                <button
                     v-if="canOfferAll && !overCap"
-                    size="sm"
-                    variant="secondary"
+                    type="button"
+                    class="activation-select-step__link"
                     data-testid="select-all-matching"
                     @click="selectAll"
                 >
-                    Select all {{ total }} matching the filter
-                </MvButton>
-                <span
-                    v-else-if="canOfferAll"
-                    class="activation-select-step__cap"
-                    data-testid="select-all-capped"
-                >
-                    {{ total }} match; at most {{ maxRecords }} per batch, narrow the filter
-                </span>
+                    Select all {{ total }} records
+                </button>
             </template>
         </CounterpartyActivationDataTable>
     </div>
@@ -97,8 +100,17 @@ function selectAll(): void {
     min-width: 0;
 }
 
-.activation-select-step__cap {
-    font-size: 13px;
-    color: var(--el-text-color-secondary);
+.activation-select-step__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--el-color-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.activation-select-step__link:hover {
+    text-decoration: underline;
 }
 </style>

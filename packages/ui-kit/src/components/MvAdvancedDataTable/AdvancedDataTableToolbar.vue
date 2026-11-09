@@ -14,14 +14,10 @@ defineProps<{
     filterColumns: FilterColumn[];
     columnToggleItems: (ColumnVisibilityDef & { visible: boolean })[];
     isMobile: boolean;
-    selectedIds: Set<string>;
-    selectionActive: boolean;
-    selectionLabel?: string;
 }>();
 
 const emit = defineEmits<{
     'search-change': [value: unknown];
-    'reset-selection': [];
     'column-toggle': [field: string];
     'columns-reorder': [order: string[]];
     'columns-reset': [];
@@ -32,27 +28,7 @@ const conditions = defineModel<FilterCondition[]>('conditions', { required: true
 
 <template>
     <div class="mv-advanced-data-table__toolbar">
-        <!-- Selection replaces search/filters while anything is selected (bulk bar). -->
-        <div
-            v-if="selectionActive"
-            class="mv-advanced-data-table__toolbar-start mv-advanced-data-table__selection-bar"
-            data-testid="table-selection-bar"
-        >
-            <span
-                class="mv-advanced-data-table__selection-count"
-                data-testid="table-selection-count"
-                >{{ selectionLabel ?? `${selectedIds.size} selected` }}</span
-            >
-            <slot name="selection-actions" :selected-ids="selectedIds" :count="selectedIds.size" />
-            <MvButton
-                class="mv-advanced-data-table__selection-reset"
-                size="sm"
-                variant="ghost"
-                @click="emit('reset-selection')"
-                >✕ Clear selection</MvButton
-            >
-        </div>
-        <div v-else class="mv-advanced-data-table__toolbar-start">
+        <div class="mv-advanced-data-table__toolbar-start">
             <MvColumnFilterText
                 v-if="search"
                 :config="{

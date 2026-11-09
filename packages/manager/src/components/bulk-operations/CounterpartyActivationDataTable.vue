@@ -179,6 +179,10 @@ function applyView(state: TableViewState): void {
             }}</template>
         </template>
 
+        <template #below-toolbar>
+            <slot name="below-toolbar" />
+        </template>
+
         <template #selection-actions>
             <slot name="selection-actions" />
         </template>

@@ -28,7 +28,7 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await expect(footer.getByText('Select at least one record')).toBeVisible();
 
         await page.getByRole('checkbox').first().check();
-        await expect(page.getByTestId('table-selection-count')).toHaveText(/^\d+ selected$/);
+        await expect(page.getByTestId('table-selection-count')).toHaveText(/^Selected \d+ of \d+$/);
         await footer.getByRole('button', { name: 'Next' }).click();
 
         await page.getByText('Revoke portal access').click();
@@ -102,7 +102,7 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await page.goto('/bulk-operations/counterparty-portal-access?pageSize=10');
         await expect(page.getByRole('table')).toHaveCount(0);
         await page.getByLabel('Select this page').check();
-        await expect(page.getByTestId('table-selection-count')).toHaveText(/^\d+ selected$/);
+        await expect(page.getByTestId('table-selection-count')).toHaveText(/^Selected \d+ of \d+$/);
         await expect(page.getByRole('button', { name: 'Clear selection' })).toBeVisible();
     });
 });
@@ -168,7 +168,7 @@ async function activateAllMatching(page: Page, search: string, total: number): P
         page.getByText(`1–10 of ${total}`).or(page.getByText(`1-10 of ${total}`)),
     ).toBeVisible({ timeout: 20000 });
     await page.getByRole('checkbox').first().check();
-    await expect(page.getByTestId('table-selection-count')).toHaveText('10 selected');
+    await expect(page.getByTestId('table-selection-count')).toHaveText(`Selected 10 of ${total}`);
     await page.getByTestId('select-all-matching').click();
     await expect(page.getByTestId('table-selection-count')).toHaveText(`All ${total} selected`);
 
@@ -225,13 +225,14 @@ test.describe('select all matching the filter (#337) @on:manager-portal-admin', 
                 `/bulk-operations/counterparty-portal-access?pageSize=10&search=${encodeURIComponent(created.search)}`,
             );
             await page.getByRole('checkbox').first().check();
+            await expect(page.getByTestId('filter-trigger')).toBeVisible();
             await page.getByTestId('select-all-matching').click();
             await expect(page.getByTestId('table-selection-count')).toHaveText('All 12 selected');
             await page.getByRole('checkbox').nth(1).uncheck();
             await expect(
                 page.getByText(/selection of all matching records was reset/),
             ).toBeVisible();
-            await expect(page.getByTestId('table-selection-count')).toHaveText('9 selected');
+            await expect(page.getByTestId('table-selection-count')).toHaveText('Selected 9 of 12');
             await page.getByRole('button', { name: 'Clear selection' }).click();
             await expect(page.getByTestId('table-selection-bar')).toHaveCount(0);
         } finally {
