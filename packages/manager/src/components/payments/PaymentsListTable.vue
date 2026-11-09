@@ -185,7 +185,7 @@ function applyView(state: TableViewState): void {
 
         <template #cell-number="{ data }">
             <RouterLink
-                class="payments-list-table__link payments-list-table__number"
+                class="mv-cell-id mv-cell-link"
                 :to="`/payments/${(data as PaymentRow).id}`"
                 >{{ formatDocumentNumber((data as PaymentRow).number) }}</RouterLink
             >
@@ -198,7 +198,8 @@ function applyView(state: TableViewState): void {
         <template #cell-customer="{ data }">
             <RouterLink
                 v-if="(data as PaymentRow).counterpartyId"
-                class="payments-list-table__customer"
+                class="mv-cell-primary mv-cell-link"
+                :title="(data as PaymentRow).customer"
                 :to="`/customers/${(data as PaymentRow).counterpartyId}`"
                 >{{ (data as PaymentRow).customer }}</RouterLink
             >
@@ -208,7 +209,7 @@ function applyView(state: TableViewState): void {
         <template #cell-proformaInvoice="{ data }">
             <RouterLink
                 v-if="(data as PaymentRow).proformaInvoice"
-                class="payments-list-table__link"
+                class="mv-cell-id mv-cell-link"
                 :to="{
                     path: '/proforma-invoices',
                     query: { search: (data as PaymentRow).proformaInvoice },
@@ -221,7 +222,7 @@ function applyView(state: TableViewState): void {
         <template #cell-order="{ data }">
             <RouterLink
                 v-if="(data as PaymentRow).orderCode"
-                class="payments-list-table__link"
+                class="mv-cell-id mv-cell-link"
                 :to="`/orders/${(data as PaymentRow).orderCode}`"
                 >{{ formatDocumentNumber((data as PaymentRow).orderCode) }}</RouterLink
             >
@@ -235,5 +236,3 @@ function applyView(state: TableViewState): void {
         </template>
     </MvAdvancedDataTable>
 </template>
-
-<style scoped src="./PaymentsListTable.css"></style>

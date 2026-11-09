@@ -3,16 +3,16 @@ import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 const NOT_FILTERED = { type: 'none' } as const;
 const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'] as const;
 
-// Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
+// Organization and Proforma invoice start hidden (SETTLEMENTS_DEFAULT_HIDDEN). Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
 // Filtering is the toolbar Filter builder; the search box covers number, customer, INN and orders.
 export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'number',
         header: 'Document #',
         sortField: 'number',
-        width: 150,
+        width: 140,
         priority: 10,
-        minWidth: 150,
+        minWidth: 140,
         required: true,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
@@ -23,9 +23,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'date',
         header: 'Date',
         sortField: 'date',
-        width: 120,
+        width: 110,
         priority: 6,
-        minWidth: 120,
+        minWidth: 110,
         filterConfig: NOT_FILTERED,
         filterType: 'date',
     },
@@ -33,9 +33,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'type',
         header: 'Type',
         sortField: 'typeLabel',
-        width: 170,
+        width: 190,
         priority: 8,
-        minWidth: 150,
+        minWidth: 160,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -46,9 +46,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'customer',
         header: 'Customer',
         sortField: 'customer',
-        width: 170,
+        width: 240,
         priority: 9,
-        minWidth: 150,
+        minWidth: 180,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -56,9 +56,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'contract',
         header: 'Contract',
-        width: 180,
+        width: 200,
         priority: 3,
-        minWidth: 160,
+        minWidth: 150,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -67,9 +67,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'organization',
         header: 'Organization',
-        width: 180,
+        width: 200,
         priority: 2,
-        minWidth: 160,
+        minWidth: 150,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -78,9 +78,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'order',
         header: 'Order',
-        width: 130,
+        width: 120,
         priority: 5,
-        minWidth: 120,
+        minWidth: 110,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -89,9 +89,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'proformaInvoice',
         header: 'Proforma invoice',
-        width: 175,
+        width: 140,
         priority: 4,
-        minWidth: 175,
+        minWidth: 140,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
         filterOperators: [...TEXT_OPERATORS],
@@ -102,12 +102,14 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'amount',
         header: 'Amount',
         sortField: 'amount',
-        width: 150,
-        priority: 7,
-        minWidth: 150,
+        width: 170,
+        priority: 11,
+        minWidth: 170,
         align: 'end',
         filterConfig: NOT_FILTERED,
         filterType: 'number',
         filterScale: 100,
     },
 ];
+
+export const SETTLEMENTS_DEFAULT_HIDDEN = ['organization', 'proformaInvoice'];

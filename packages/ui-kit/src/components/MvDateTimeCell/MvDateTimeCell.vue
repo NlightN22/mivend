@@ -35,11 +35,13 @@ const timeLabel = computed(() =>
 }
 
 .mv-date-time-cell__date {
-    font-size: 13px;
+    font-size: var(--mv-cell-font-size);
+    white-space: nowrap;
 }
 
 .mv-date-time-cell__time {
-    font-size: 11px;
+    font-size: var(--mv-cell-meta-font-size);
+    white-space: nowrap;
     color: var(--el-text-color-secondary);
 }
 </style>

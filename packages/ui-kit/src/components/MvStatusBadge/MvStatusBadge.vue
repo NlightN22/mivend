@@ -3,11 +3,21 @@
 // from MvStatusTag, whose variants are storefront product/cart states (in-stock, in-cart, ...).
 export type StatusBadgeVariant = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 
-withDefaults(defineProps<{ variant?: StatusBadgeVariant }>(), { variant: 'neutral' });
+// `clamp` wraps long text inside the column to two lines instead of widening the cell.
+withDefaults(defineProps<{ variant?: StatusBadgeVariant; clamp?: boolean }>(), {
+    variant: 'neutral',
+    clamp: false,
+});
 </script>
 
 <template>
-    <span :class="['mv-status-badge', `mv-status-badge--${variant}`]">
+    <span
+        :class="[
+            'mv-status-badge',
+            `mv-status-badge--${variant}`,
+            { 'mv-status-badge--clamp': clamp },
+        ]"
+    >
         <slot />
     </span>
 </template>
@@ -23,6 +33,17 @@ withDefaults(defineProps<{ variant?: StatusBadgeVariant }>(), { variant: 'neutra
     white-space: nowrap;
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
     line-height: 20px;
+}
+
+.mv-status-badge--clamp {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    max-width: 100%;
+    white-space: normal;
+    line-height: 16px;
 }
 
 .mv-status-badge--neutral {

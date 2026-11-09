@@ -19,7 +19,7 @@ import { SETTLEMENTS_URL_DEFAULTS } from '../../composables/settlementsListUrl';
 import { sortFromState, sortToState } from './settlementsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { SETTLEMENTS_COLUMNS as COLUMNS } from './settlementsColumns';
+import { SETTLEMENTS_COLUMNS as COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
 
 const props = defineProps<{
@@ -48,7 +48,7 @@ const { state: tableState } = useDataTableState<{ [key: string]: unknown; search
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
-        hiddenColumns: [],
+        hiddenColumns: [...SETTLEMENTS_DEFAULT_HIDDEN],
         sort: sortToState(props.sort, COLUMNS),
         filters: { search: props.filters.search },
         pageSize: props.pageSize,
@@ -174,7 +174,7 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #cell-number="{ data }">
-            <span class="settlements-list-table__number">{{ (data as SettlementRow).number }}</span>
+            <span class="mv-cell-id">{{ (data as SettlementRow).number }}</span>
         </template>
 
         <template #cell-date="{ data }">
@@ -182,15 +182,19 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #cell-type="{ data }">
-            <MvStatusBadge :variant="(data as SettlementRow).typeVariant">{{
-                (data as SettlementRow).type
-            }}</MvStatusBadge>
+            <MvStatusBadge
+                clamp
+                :title="(data as SettlementRow).type"
+                :variant="(data as SettlementRow).typeVariant"
+                >{{ (data as SettlementRow).type }}</MvStatusBadge
+            >
         </template>
 
         <template #cell-customer="{ data }">
             <RouterLink
                 v-if="(data as SettlementRow).counterpartyId"
-                class="settlements-list-table__customer"
+                class="mv-cell-primary mv-cell-link"
+                :title="(data as SettlementRow).customer"
                 :to="`/customers/${(data as SettlementRow).counterpartyId}`"
                 >{{ (data as SettlementRow).customer }}</RouterLink
             >
@@ -202,7 +206,7 @@ function applyView(state: TableViewState): void {
                 <RouterLink
                     v-for="code in (data as SettlementRow).orderCodes"
                     :key="code"
-                    class="settlements-list-table__link settlements-list-table__order"
+                    class="mv-cell-id mv-cell-link"
                     :to="`/orders/${code}`"
                     >{{ formatDocumentNumber(code) }}</RouterLink
                 >
@@ -210,10 +214,26 @@ function applyView(state: TableViewState): void {
             <template v-else>—</template>
         </template>
 
+        <template #cell-contract="{ data }">
+            <span class="mv-cell-meta" :title="(data as SettlementRow).contract">{{
+                (data as SettlementRow).contract
+            }}</span>
+        </template>
+
+        <template #cell-organization="{ data }">
+            <span class="mv-cell-meta" :title="(data as SettlementRow).organization">{{
+                (data as SettlementRow).organization
+            }}</span>
+        </template>
+
+        <template #cell-amount="{ data }">
+            <span class="mv-cell-amount">{{ (data as SettlementRow).amount }}</span>
+        </template>
+
         <template #cell-proformaInvoice="{ data }">
             <RouterLink
                 v-if="(data as SettlementRow).proformaInvoice"
-                class="settlements-list-table__link"
+                class="mv-cell-id mv-cell-link"
                 :to="{
                     path: '/proforma-invoices',
                     query: { search: (data as SettlementRow).proformaInvoice },
@@ -224,5 +244,3 @@ function applyView(state: TableViewState): void {
         </template>
     </MvAdvancedDataTable>
 </template>
-
-<style scoped src="./SettlementsListTable.css"></style>

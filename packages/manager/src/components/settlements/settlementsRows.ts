@@ -18,11 +18,12 @@ export type SettlementRow = {
 
 // Signed: a plus raises the customer's debt (a sale), a minus lowers it (a payment, a return).
 export function formatSettlementAmount(minor: number, currency: string): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
+    const value = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
         signDisplay: 'exceptZero',
     }).format(minor / 100);
+    return `${value} ${currency}`;
 }
 
 export function toSettlementRows(items: SettlementListItem[]): SettlementRow[] {

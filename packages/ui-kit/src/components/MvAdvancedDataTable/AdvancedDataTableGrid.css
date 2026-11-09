@@ -13,11 +13,67 @@
     table-layout: fixed;
 }
 
+/* Text clamps to two lines (full value in the title); row height stays bounded. */
 .mv-advanced-data-table__cell-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+}
+
+/* One cell scale: size, line height and vertical alignment are the same in every list. */
+:deep(.p-datatable-tbody > tr > td) {
+    vertical-align: middle;
+    font-size: var(--mv-cell-font-size);
+    line-height: var(--mv-cell-line-height);
+}
+
+/* Reserves the scrollbar width so columns do not shift when it appears. */
+:deep(.p-datatable-table-container) {
+    scrollbar-gutter: stable;
+}
+
+:deep(.mv-cell-id),
+:deep(.mv-cell-amount) {
     display: block;
+    white-space: nowrap;
+    font-weight: var(--mv-cell-weight-strong);
+    font-variant-numeric: tabular-nums;
+}
+
+:deep(.mv-cell-id--inline) {
+    display: inline-block;
+}
+
+:deep(.mv-cell-primary),
+:deep(.mv-cell-meta) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+:deep(.mv-cell-primary) {
+    font-weight: var(--mv-cell-weight-strong);
+}
+
+:deep(.mv-cell-meta) {
+    font-size: var(--mv-cell-meta-font-size);
+    color: var(--el-text-color-secondary);
+}
+
+:deep(.mv-cell-link) {
+    color: inherit;
+    text-decoration: none;
+}
+
+:deep(.mv-cell-link:hover),
+:deep(.mv-cell-link:focus-visible) {
+    text-decoration: underline;
 }
 
 /* Keeps the sort and funnel icons next to the title instead of at opposite ends. */

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
+import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
+import { shouldCollapseChips } from './chipOverflow';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Quick-filter chip row — reused across manager portal pages (Dashboard, Orders, Discounts,
@@ -35,14 +38,28 @@ export interface FilterChip {
     emphasis?: boolean;
 }
 
-withDefaults(defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(), {
-    scrollable: false,
-});
+// More than `maxInline` chips collapse into one horizontally scrolling row with a fade edge.
+const props = withDefaults(
+    defineProps<{
+        chips: FilterChip[];
+        active: string;
+        scrollable?: boolean;
+        maxInline?: number;
+    }>(),
+    { scrollable: false, maxInline: 6 },
+);
+const collapsed = computed(() => shouldCollapseChips(props.chips.length, props.maxInline));
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-    <div class="mv-filter-chips" :class="{ 'mv-filter-chips--scrollable': scrollable }">
+    <div
+        class="mv-filter-chips"
+        :class="{
+            'mv-filter-chips--scrollable': scrollable,
+            'mv-filter-chips--collapsed': collapsed,
+        }"
+    >
         <button
             v-for="chip in chips"
             :key="chip.key"
@@ -58,7 +75,7 @@ const emit = defineEmits<{ select: [key: string] }>();
             ]"
             @click="emit('select', chip.key)"
         >
-            {{ chip.label }}
+            <span class="mv-filter-chip__label" :title="chip.label">{{ chip.label }}</span>
             <span
                 v-if="chip.countLoading"
                 class="mv-filter-chip__count-skeleton"
@@ -71,7 +88,8 @@ const emit = defineEmits<{ select: [key: string] }>();
                 v-else-if="chip.count !== undefined"
                 class="mv-filter-chip__count"
                 :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
-                >{{ chip.count }}</span
+                :title="formatExactCount(chip.count)"
+                >{{ formatCompactCount(chip.count) }}</span
             >
         </button>
     </div>
@@ -103,12 +121,22 @@ const emit = defineEmits<{ select: [key: string] }>();
     font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    max-width: 260px;
+}
+
+.mv-filter-chip__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mv-filter-chip__count {
     margin-left: 6px;
     padding: 1px 7px;
     min-width: 28px;
+    flex: none;
+    font-variant-numeric: tabular-nums;
     box-sizing: border-box;
     text-align: center;
     border-radius: 999px;
@@ -126,6 +154,20 @@ const emit = defineEmits<{ select: [key: string] }>();
 .mv-filter-chip__count--emphasis {
     background: var(--app-warn-fg);
     color: var(--app-warn-bg);
+}
+
+.mv-filter-chips--collapsed {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+    padding-inline-end: 24px;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, var(--mv-fade-mask-solid) calc(100% - 24px), transparent);
+}
+
+.mv-filter-chips--collapsed .mv-filter-chip {
+    flex: none;
 }
 
 /* Wraps on desktop; on a phone the row scrolls sideways instead of growing tall. */

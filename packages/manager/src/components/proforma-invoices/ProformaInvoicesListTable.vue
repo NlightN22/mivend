@@ -186,7 +186,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         </template>
 
         <template #cell-number="{ data }">
-            <span class="proforma-invoices-list-table__number">{{
+            <span class="mv-cell-id mv-cell-id--inline">{{
                 formatDocumentNumber((data as ProformaInvoiceRow).number)
             }}</span>
             <MvStatusBadge
@@ -202,7 +202,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         </template>
 
         <template #cell-customer="{ data }">
-            <div class="proforma-invoices-list-table__customer">
+            <div class="mv-cell-primary" :title="(data as ProformaInvoiceRow).customer">
                 {{ (data as ProformaInvoiceRow).customer }}
             </div>
         </template>
@@ -210,7 +210,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         <template #cell-order="{ data }">
             <RouterLink
                 v-if="(data as ProformaInvoiceRow).orderCode"
-                class="proforma-invoices-list-table__link"
+                class="mv-cell-id mv-cell-link"
                 :to="`/orders/${(data as ProformaInvoiceRow).orderCode}`"
                 >{{ formatDocumentNumber((data as ProformaInvoiceRow).orderCode) }}</RouterLink
             >

@@ -16,6 +16,12 @@
     --app-font-size-search: 16px;
     --app-font-size-title: 20px;
 
+    --mv-cell-font-size: 13px;
+    --mv-cell-meta-font-size: 12px;
+    --mv-cell-line-height: 18px;
+    --mv-cell-weight-strong: 600;
+    --mv-fade-mask-solid: #000;
+
     --mv-bottom-bar-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
     /* Page-level layers, mirrored in tokens/layers.ts. Never use a raw z-index between components. */

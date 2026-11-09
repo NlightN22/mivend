@@ -215,7 +215,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
 
         <template #cell-code="{ data }">
             <RouterLink
-                class="orders-list-table__code"
+                class="mv-cell-id mv-cell-link"
                 :to="`/orders/${(data as OrderListRow).code}`"
                 >{{ formatDocumentNumber((data as OrderListRow).code) }}</RouterLink
             >
@@ -227,19 +227,21 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
 
         <template #cell-customer="{ data }">
             <div class="orders-list-table__customer">
-                <span class="orders-list-table__customer-name">{{
+                <span class="mv-cell-primary" :title="(data as OrderListRow).customer">{{
                     (data as OrderListRow).customer
                 }}</span>
                 <span
                     v-if="customerMetaText(data as OrderListRow, priceTypes.names.value)"
-                    class="orders-list-table__customer-meta"
+                    class="mv-cell-meta"
                     >{{ customerMetaText(data as OrderListRow, priceTypes.names.value) }}</span
                 >
             </div>
         </template>
 
         <template #cell-manager="{ data }">
-            <div class="orders-list-table__customer">{{ (data as OrderListRow).manager }}</div>
+            <span class="mv-cell-primary" :title="(data as OrderListRow).manager">{{
+                (data as OrderListRow).manager
+            }}</span>
         </template>
 
         <template #cell-state="{ data }">
@@ -258,10 +260,8 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
 
         <template #cell-placedBy="{ data }">
             <div class="orders-list-table__customer">
-                <span>{{ (data as OrderListRow).placedBy }}</span>
-                <span class="orders-list-table__customer-meta">{{
-                    (data as OrderListRow).placedByMeta
-                }}</span>
+                <span class="mv-cell-primary">{{ (data as OrderListRow).placedBy }}</span>
+                <span class="mv-cell-meta">{{ (data as OrderListRow).placedByMeta }}</span>
             </div>
         </template>
 

@@ -1,20 +1,3 @@
-.proforma-invoices-list-table__link {
-    color: inherit;
-    text-decoration: none;
-}
-
-.proforma-invoices-list-table__link:hover,
-.proforma-invoices-list-table__link:focus-visible {
-    text-decoration: underline;
-}
-
-.proforma-invoices-list-table__customer {
-    font-weight: 700;
-    line-height: 1.3;
-    white-space: normal;
-    overflow-wrap: anywhere;
-}
-
 .proforma-invoices-list-table__version {
     margin-left: 6px;
 }

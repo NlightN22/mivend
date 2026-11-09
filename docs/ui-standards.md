@@ -103,6 +103,23 @@ Layout: the table takes the full page width; at a 1360px viewport the identifyin
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
 list and the chips are one horizontally scrolling row (`scrollable`).
 
+## List cell standard
+
+One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGrid.css`, sizes in `tokens.css`):
+
+- `mv-cell-id` for identifiers (document numbers): 13px, semibold, nowrap, tabular figures, never truncated.
+- `mv-cell-primary` for the main text (customer, manager): 13px semibold, clamped to two lines, full value in `title`.
+- `mv-cell-meta` for secondary text (contract, organization, notes): 12px, secondary colour, two-line clamp, `title`.
+- `mv-cell-amount` for money: nowrap, tabular figures, right-aligned column (`align: 'end'`), sign and currency code always
+  in one format (`-2,075.00 RUB`); give it a `minWidth` equal to its `width`.
+- `mv-cell-link` removes the link colour and underlines on hover; `MvStatusBadge clamp` wraps a long badge to two lines.
+- Cells are middle-aligned; the default cell text clamps to two lines. Every column declares `width` (and `minWidth` for
+  columns that must not shrink); the table is `table-layout: fixed` and reserves the scrollbar gutter, so columns stay put
+  between pages and sorts. Skeleton rows use the list's `rowHeightPx`.
+- Chip rows with more than six chips become one scrolling row with a fade edge (`MvFilterChips`); counts of 10,000 and
+  more are shown as `309.9k` with the exact value in the title. ERP-provided type names are shown as received.
+- A column that is empty for most rows (e.g. organization, proforma invoice on settlements) starts hidden.
+
 ## Flagged cells and row stripes
 
 A problem is shown only in the cell where it occurs, as an `MvFlagChip`: the plain value followed by a small

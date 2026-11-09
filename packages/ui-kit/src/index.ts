@@ -282,6 +282,7 @@ export type { LayerToken } from './tokens/layers';
 export type { FontSizeToken } from './tokens/typography';
 
 export { formatDocumentNumber } from './utils/documentNumber';
+export { formatCompactCount, formatExactCount } from './utils/compactCount';
 export { COMPACT_NAV_BREAKPOINT } from './styles/breakpoints';
 
 export { default as MvCaptchaWidget } from './components/MvCaptchaWidget/MvCaptchaWidget.vue';
