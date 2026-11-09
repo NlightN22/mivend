@@ -25,7 +25,7 @@ export class DiscountRegistryIdentity1791570000000 implements MigrationInterface
         await queryRunner.query(`ALTER TABLE ${table} ALTER COLUMN "uuid" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE ${table} ALTER COLUMN "number" SET NOT NULL`);
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_discount_registry_entry_uuid" ON ${table} ("uuid")`,
+            `CREATE UNIQUE INDEX "IDX_9eb0b3cd148bfc23c0a68ab61c" ON ${table} ("uuid")`,
         );
         await queryRunner.query(
             `CREATE UNIQUE INDEX "IDX_discount_registry_entry_number" ON ${table} ("number")`,
@@ -34,7 +34,7 @@ export class DiscountRegistryIdentity1791570000000 implements MigrationInterface
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP INDEX "IDX_discount_registry_entry_number"`);
-        await queryRunner.query(`DROP INDEX "IDX_discount_registry_entry_uuid"`);
+        await queryRunner.query(`DROP INDEX "IDX_9eb0b3cd148bfc23c0a68ab61c"`);
         await queryRunner.query(`ALTER TABLE "discount_registry_entry" DROP COLUMN "number"`);
         await queryRunner.query(`ALTER TABLE "discount_registry_entry" DROP COLUMN "uuid"`);
     }
