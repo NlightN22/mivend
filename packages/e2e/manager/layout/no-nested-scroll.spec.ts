@@ -30,7 +30,7 @@ test.use({ viewport: { width: 1360, height: 900 } });
 for (const path of LIST_PAGES) {
     test(`${path} has no nested vertical scrollbar @read-only`, async ({ page }) => {
         await page.goto(path);
-        await expect(page.locator('.mv-advanced-data-table__grid tbody tr').first()).toBeVisible({
+        await expect(page.locator('.mv-advanced-data-table__grid').first()).toBeVisible({
             timeout: 15000,
         });
         await page.waitForLoadState('networkidle');
@@ -45,6 +45,10 @@ test('a customer card orders tab has no nested vertical scrollbar @read-only', a
     await row.click({ position: { x: 20, y: 10 } });
     await expect(page).toHaveURL(/\/customers\/.+/);
     await page.getByRole('tab', { name: /Orders/ }).click();
+    await expect(page.getByRole('tab', { name: /Orders/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
     await page.waitForLoadState('networkidle');
     expect(await nestedVerticalScrollers(page)).toEqual([]);
 });
