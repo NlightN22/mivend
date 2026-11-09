@@ -9,7 +9,6 @@ import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
-import { pickerSeedRecords } from './fixtures/seed-picker';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
@@ -18,6 +17,7 @@ import { prepareMarkupCustomer } from './fixtures/seed-markup';
 import { seedDiscountGrants } from './fixtures/discount-grants';
 import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
 import { SEED_LOCATION } from './fixtures/seed-location';
+import { seedPicker } from './fixtures/seed-picker-run';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -34,8 +34,6 @@ async function warmStorefront(page: Page): Promise<void> {
             .waitFor({ timeout: 60_000 });
     }
 }
-
-const PICKER_BATCH_SIZE = 100;
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -76,35 +74,7 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
-    const pickerSeedStart = Date.now();
-    // Many records: sent in chunks so no single request exceeds the server body limit.
-    for (let i = 0; i < pickerSeedRecords.length; i += PICKER_BATCH_SIZE) {
-        const chunkId = `e2e-seed-picker-${i}-${Date.now()}`;
-        await postBatch(chunkId, pickerSeedRecords.slice(i, i + PICKER_BATCH_SIZE));
-        await waitForRun(chunkId);
-    }
-    console.log(`e2e picker seed: ${Math.round((Date.now() - pickerSeedStart) / 1000)}s`);
-
-    // The own-scope manager role sees only counterparties assigned to it; the picker spec runs for that role too.
-    const pickerManager = await adminGql<{ administrators: { items: { id: string }[] } }>(
-        `query($email: String!) { administrators(options: { filter: { emailAddress: { eq: $email } } }) { items { id } } }`,
-        { email: MANAGER_ACCOUNTS.manager.username },
-        adminToken,
-    );
-    const pickerCounterparties = await adminGql<{
-        counterparties: { items: { id: string }[] };
-    }>(
-        `query($s: String) { counterparties(options: { search: $s, take: 20 }) { items { id } } }`,
-        { s: 'Zzz Picker' },
-        adminToken,
-    );
-    for (const { id } of pickerCounterparties.data.counterparties.items) {
-        await adminGql(
-            `mutation($c: ID!, $a: ID!) { reassignCounterpartyManager(counterpartyId: $c, administratorId: $a) { id } }`,
-            { c: id, a: pickerManager.data.administrators.items[0].id },
-            adminToken,
-        );
-    }
+    if (process.env.E2E_PICKER_SEED !== '0') await seedPicker(adminToken);
 
     // erp-import never writes servicingBranchId, so e2e trading points start null. Order visibility and
     // stock allocation key on the Branch row id, so patch it through the staff-editing mutation.
