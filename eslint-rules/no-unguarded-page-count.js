@@ -13,8 +13,9 @@ export default {
                 if (
                     callee.type === 'MemberExpression' &&
                     !callee.computed &&
-                    (callee.property.name === 'getManyAndCount' ||
-                        callee.property.name === 'findAndCount')
+                    ['getManyAndCount', 'findAndCount', 'findAndCountBy'].includes(
+                        callee.property.name,
+                    )
                 )
                     context.report({
                         node,

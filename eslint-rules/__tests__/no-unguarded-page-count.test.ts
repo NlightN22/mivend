@@ -15,6 +15,7 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
         invalid: [
             { code: 'qb.getManyAndCount();', errors: 1 },
             { code: 'await repo.findAndCount({ take });', errors: 1 },
+            { code: 'await repo.findAndCountBy({ id });', errors: 1 },
         ],
     },
 );
