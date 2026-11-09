@@ -56,8 +56,9 @@ test('status chips form one scrollable row, the arrows reveal the clipped ones a
     if (overflowing) {
         const next = page.getByRole('button', { name: 'Scroll chips right' });
         for (let i = 0; i < count && (await next.isEnabled()); i++) {
-            await next.click();
-            await page.waitForTimeout(250);
+            // The arrow disables itself when the smooth scroll reaches the end, so a click can race it.
+            await next.click({ timeout: 1000 }).catch(() => undefined);
+            await page.waitForTimeout(400);
         }
         await expect(next).toBeDisabled();
         await expect(chips.nth(count - 1)).toBeInViewport();
