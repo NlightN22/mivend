@@ -355,3 +355,8 @@ portal API layer only and not re-checked on the server.
 | Bulk history | Bespoke `BulkBatchFilter` input (fixed fields, own SQL) | Deviates |
 | Entity history panel | Bespoke `EntityVersionListOptions` (typed columns) | Deviates |
 | Roles | Native Vendure role list (verify) | Deviates |
+
+Orders list performance follow-ups (measured on a prod-scaled clone, #320): the list sort indexes cover `orderPlacedAt` and
+`createdAt` descending only (ascending sorts and code, state, total sorts have no index on either path); the department
+scope costs about 600-1200 ms per query at 50k orders (a sequential scan of order, customer, counterparty and trading
+point) and needs its own index or query rework; counts and text search scan the order table (55-740 ms at 50k).
