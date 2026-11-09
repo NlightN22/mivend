@@ -121,6 +121,8 @@ Refinements of the model above; the sections above stay the contract.
 - **Cap.** One constant, `MAX_SELECTION` (2000, `bulk-operations/src/types.ts`), bounds every batch, ticked or
   matched: the dry run is synchronous. A larger match is refused with "narrow the filter"; above the cap the page shows a warning notice with the count and
   the limit (served as `maxRecords` in the catalog) and hides the link; ticked pages still work.
+  Measured on the dev stack: the dry run of 1218 records takes about 11.5 s (about 9.5 ms per record), so the cap of 2000
+  is about 19 s, under the default 60 s proxy read timeout. Raise the cap only together with an asynchronous dry run.
 - **Executors** opt in with `resolveMatching`; the catalog reports `supportsMatching`.
 
 ### Known scale limit of the history list
