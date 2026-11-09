@@ -10,7 +10,7 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 ## Principles
 
 - **One entity, one business logic, many contexts.** Build the entity tables first (orders,
-  proforma invoices, payments, discounts, customers, approvals), then reuse the same table in other
+  proforma invoices, settlements, discounts, customers, approvals), then reuse the same table in other
   places with a preset filter. Example: the customer card's Orders tab is the global orders table
   with `customer` fixed. Same columns, statuses, filters, actions and pagination everywhere.
 - **Scope is enforced on the server.** A route or a preset filter never grants access; every
@@ -181,9 +181,21 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Team | users and managers | exists |
 | Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
 | Analytics | placeholder | not implemented yet |
-| Settings | roles, branches, policies, and so on | exists |
+| System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, to be renamed and separated from user settings |
+| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | not implemented yet |
 
 The Catalog item is removed from the portal (see principles).
+
+**Payments and sales documents live in Settlements.** All ERP documents that move a customer's settlement (payments,
+sales invoices, returns, corrections, retro bonuses) are one list, so there is no separate Payments entry in the menu and
+no payments tab in the customer card (it shows Settlements instead). The payment page (`/payments/:id`) stays reachable
+from its links (order, proforma invoice, settlement row); whether the payment-attempt list is kept as a Settlements type
+or tab is decided when the settlement document card is built.
+
+**System settings are not user settings.** The sidebar entry "Settings" becomes "System settings" and holds only
+system-level things (roles, branches, policies and so on). Everything personal (profile, password, two-factor,
+language, the light/dark theme switch) moves to the user menu that opens when the user block in the header is clicked,
+next to "Log out". The dark theme itself and this menu come in the later stage of #320.
 
 ## Approvals
 
@@ -311,7 +323,8 @@ schema only.
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,
-quick article entry, change-of-assignment action, dashboard redesign (a separate step).
+quick article entry, change-of-assignment action, dashboard redesign (a separate step), the user menu
+with user settings and the theme switch, renaming Settings to System settings.
 
 ## Order of work
 
