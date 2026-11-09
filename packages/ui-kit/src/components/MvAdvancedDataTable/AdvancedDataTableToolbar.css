@@ -33,3 +33,14 @@
     width: 15px;
     height: 15px;
 }
+
+.mv-advanced-data-table__selection-bar {
+    padding: 6px 12px;
+    background: var(--app-stock-in-bg);
+    border: 1px solid var(--app-primary-btn);
+    border-radius: var(--app-radius-sm, 8px);
+}
+
+.mv-advanced-data-table__selection-reset {
+    margin-left: auto;
+}

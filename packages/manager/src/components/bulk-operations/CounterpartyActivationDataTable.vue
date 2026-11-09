@@ -15,17 +15,14 @@ import type { ActivationCandidatesState } from '../../composables/useActivationC
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import { buildActivationColumns, DEFAULT_HIDDEN_COLUMNS } from './activationColumns';
-import {
-    READINESS_BADGE_VARIANT,
-    readinessText,
-    type Readiness,
-} from './activationReadiness';
+import { READINESS_BADGE_VARIANT, readinessText, type Readiness } from './activationReadiness';
 import { ACTIVATION_SORT_FIELDS, sortFromState, sortToState } from './counterpartySort';
 
 // Rows of any readiness can be selected; the review step explains what will be skipped.
 const props = defineProps<{
     list: ActivationCandidatesState;
     selectedIds: Set<string>;
+    selectionLabel?: string;
     administratorId: string;
 }>();
 const emit = defineEmits<{ 'update:selectedIds': [ids: Set<string>] }>();
@@ -163,6 +160,7 @@ function applyView(state: TableViewState): void {
         empty-message="No counterparties match these filters"
         selectable
         :selected-ids="selectedIds"
+        :selection-label="selectionLabel"
         @update:conditions="list.filters.value = { ...list.filters.value, conditions: $event }"
         @update:page="list.page.value = $event"
         @reset-page="list.page.value = 1"
@@ -181,6 +179,10 @@ function applyView(state: TableViewState): void {
             }}</template>
         </template>
 
+        <template #selection-actions>
+            <slot name="selection-actions" />
+        </template>
+
         <template #toolbar-start>
             <MvFilterChips
                 scrollable
@@ -191,7 +193,6 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-end>
-            <slot name="toolbar-end" />
             <TableViewsMenu
                 :views-key="viewsKey"
                 :owner-key="administratorId"

@@ -50,6 +50,8 @@ const props = withDefaults(
         selectedIds?: Set<string>;
         // Gates which rows can be selected; every row by default.
         rowSelectable?: (row: TRow) => boolean;
+        // Replaces the default "N selected" text, e.g. when the selection is not the loaded rows.
+        selectionLabel?: string;
     }>(),
     {
         rowsPerPageOptions: () => [10, 20, 50],
@@ -58,6 +60,7 @@ const props = withDefaults(
         selectable: false,
         selectedIds: () => new Set(),
         rowSelectable: () => true,
+        selectionLabel: undefined,
     },
 );
 
@@ -159,6 +162,7 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
             :is-mobile="isMobile"
             :selected-ids="selectedIds"
             :selection-active="selectionActive"
+            :selection-label="selectionLabel"
             @search-change="search && filters.setFilter(search.filterKey, $event)"
             @reset-selection="selection.resetSelection"
             @column-toggle="layout.onColumnToggle"
@@ -190,8 +194,14 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
             :page="page"
             :page-size="tableState.pageSize"
             :empty-message="emptyMessage"
+            :selectable="selectable"
+            :header-checkbox="selection.headerCheckboxState.value"
+            :is-row-selected="selection.isRowSelected"
+            :row-selectable="rowSelectable"
             @row-click="emit('row-click', $event)"
             @update:page="p => emit('update:page', p)"
+            @toggle-row="selection.toggleRowSelected"
+            @toggle-all="selection.toggleSelectAllOnPage"
         >
             <template #empty>
                 <slot name="empty">{{ emptyMessage }}</slot>

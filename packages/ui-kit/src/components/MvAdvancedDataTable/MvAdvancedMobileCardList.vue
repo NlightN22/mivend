@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
 import { computed } from 'vue';
+import MvCheckbox from '../MvCheckbox/MvCheckbox.vue';
 import MvPagination from '../MvPagination/MvPagination.vue';
 import MvTableSkeletonCards from './MvTableSkeletonCards.vue';
 import { skeletonRowCount } from './tableSkeleton';
@@ -31,11 +32,17 @@ const props = defineProps<{
     page: number;
     pageSize: number;
     emptyMessage: string;
+    selectable?: boolean;
+    headerCheckbox?: { checked: boolean; indeterminate: boolean };
+    isRowSelected?: (row: TRow) => boolean;
+    rowSelectable?: (row: TRow) => boolean;
 }>();
 
 const emit = defineEmits<{
     'row-click': [payload: AdvancedDataTableRowClickPayload<TRow>];
     'update:page': [page: number];
+    'toggle-row': [row: TRow];
+    'toggle-all': [];
 }>();
 
 const primaryColumn = computed(() => props.columns.find(c => c.mobile?.primary));
@@ -60,6 +67,17 @@ function rowKey(row: TRow): unknown {
             :fields="fieldColumns.length"
             :badge="!!badgeColumn"
         />
+        <label
+            v-if="selectable && !loading && rows.length"
+            class="mv-advanced-mobile-cards__select-page"
+        >
+            <MvCheckbox
+                :model-value="headerCheckbox?.checked ?? false"
+                :indeterminate="headerCheckbox?.indeterminate ?? false"
+                @update:model-value="emit('toggle-all')"
+            />
+            Select this page
+        </label>
         <article
             v-for="row in loading ? [] : rows"
             :key="String(rowKey(row))"
@@ -67,6 +85,13 @@ function rowKey(row: TRow): unknown {
             @click="emit('row-click', { row, originalEvent: $event })"
         >
             <div class="mv-advanced-mobile-card__head">
+                <span v-if="selectable" class="mv-advanced-mobile-card__select" @click.stop>
+                    <MvCheckbox
+                        :model-value="isRowSelected?.(row) ?? false"
+                        :disabled="rowSelectable ? !rowSelectable(row) : false"
+                        @update:model-value="emit('toggle-row', row)"
+                    />
+                </span>
                 <div class="mv-advanced-mobile-card__title">
                     <slot v-if="primaryColumn" :name="`cell-${primaryColumn.field}`" :data="row" />
                 </div>
@@ -109,6 +134,19 @@ function rowKey(row: TRow): unknown {
     background: var(--el-fill-color-light);
     padding: 10px;
     border-radius: 12px;
+}
+
+.mv-advanced-mobile-cards__select-page {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mv-advanced-mobile-card__select {
+    display: inline-flex;
+    align-items: center;
 }
 
 .mv-advanced-mobile-cards__empty {

@@ -8,13 +8,18 @@ import {
     type BulkBatch,
 } from '../api/bulkOperations';
 
+import type { BulkSelectionPayload } from '../components/bulk-operations/bulkSelection';
+
 const POLL_MS = 1500;
 
 export interface BulkBatchFlow {
     batch: Ref<BulkBatch | null>;
     busy: Ref<boolean>;
     error: Ref<string>;
-    preview: (parameters: Record<string, unknown>, ids: string[]) => Promise<boolean>;
+    preview: (
+        parameters: Record<string, unknown>,
+        selection: BulkSelectionPayload,
+    ) => Promise<boolean>;
     run: () => Promise<boolean>;
     undo: () => Promise<boolean>;
     open: (uuid: string) => Promise<boolean>;
@@ -66,7 +71,8 @@ export function useBulkBatchFlow(type: string): BulkBatchFlow {
         batch,
         busy,
         error,
-        preview: (parameters, ids) => guarded(() => previewBulkBatch(type, parameters, ids)),
+        preview: (parameters, selection) =>
+            guarded(() => previewBulkBatch(type, parameters, selection)),
         run: () => guarded(() => runBulkBatch(batch.value?.uuid ?? '')),
         undo: () => guarded(() => undoBulkBatch(batch.value?.uuid ?? '')),
         open: uuid => guarded(() => fetchBulkBatch(uuid)),

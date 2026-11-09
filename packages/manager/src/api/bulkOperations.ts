@@ -21,6 +21,8 @@ export interface BulkOperationInfo {
     description: string;
     area: string;
     undoable: boolean;
+    supportsMatching: boolean;
+    maxRecords: number;
 }
 export interface BulkItemsPage {
     items: BulkBatchItem[];
@@ -87,9 +89,9 @@ export function fetchBulkBatchItems(
 export function previewBulkBatch(
     type: string,
     parameters: Record<string, unknown>,
-    ids: string[],
+    selection: { ids: string[] } | { matching: Record<string, unknown> },
 ): Promise<BulkBatch> {
-    return adminApi(PreviewBulkBatchDocument, { type, parameters, selection: { ids } }).then(
+    return adminApi(PreviewBulkBatchDocument, { type, parameters, selection }).then(
         r => r.previewBulkBatch,
     );
 }

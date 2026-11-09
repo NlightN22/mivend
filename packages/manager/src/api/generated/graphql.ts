@@ -11311,6 +11311,8 @@ export type BulkOperationCatalogQuery = {
         description: string;
         area: string;
         undoable: boolean;
+        supportsMatching: boolean;
+        maxRecords: number;
     }>;
 };
 
@@ -11323,8 +11325,6 @@ export type BulkBatchesQuery = {
         totalItems: number;
         items: Array<{
             uuid: string;
-            supportsMatching: boolean;
-            maxRecords: number;
             number: string;
             operationType: string;
             parameters: any;
@@ -15084,6 +15084,8 @@ export const BulkOperationCatalogDocument = new TypedDocumentString(`
     description
     area
     undoable
+    supportsMatching
+    maxRecords
   }
 }
     `) as unknown as TypedDocumentString<
@@ -15094,8 +15096,6 @@ export const BulkOperationCatalogDocument = new TypedDocumentString(`
 export const BulkBatchesDocument = new TypedDocumentString(`
     query BulkBatches($options: BulkBatchListOptions) {
   bulkBatches(options: $options) {
-    supportsMatching
-    maxRecords
     totalItems
     items {
       ...BulkBatchFields

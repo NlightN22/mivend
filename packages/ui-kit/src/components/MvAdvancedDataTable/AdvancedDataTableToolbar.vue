@@ -16,6 +16,7 @@ defineProps<{
     isMobile: boolean;
     selectedIds: Set<string>;
     selectionActive: boolean;
+    selectionLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -32,13 +33,23 @@ const conditions = defineModel<FilterCondition[]>('conditions', { required: true
 <template>
     <div class="mv-advanced-data-table__toolbar">
         <!-- Selection replaces search/filters while anything is selected (bulk bar). -->
-        <div v-if="selectionActive" class="mv-advanced-data-table__toolbar-start">
-            <span class="mv-advanced-data-table__selection-count"
-                >{{ selectedIds.size }} selected</span
+        <div
+            v-if="selectionActive"
+            class="mv-advanced-data-table__toolbar-start mv-advanced-data-table__selection-bar"
+            data-testid="table-selection-bar"
+        >
+            <span
+                class="mv-advanced-data-table__selection-count"
+                data-testid="table-selection-count"
+                >{{ selectionLabel ?? `${selectedIds.size} selected` }}</span
             >
             <slot name="selection-actions" :selected-ids="selectedIds" :count="selectedIds.size" />
-            <MvButton size="sm" variant="ghost" @click="emit('reset-selection')"
-                >✕ Reset selection</MvButton
+            <MvButton
+                class="mv-advanced-data-table__selection-reset"
+                size="sm"
+                variant="ghost"
+                @click="emit('reset-selection')"
+                >✕ Clear selection</MvButton
             >
         </div>
         <div v-else class="mv-advanced-data-table__toolbar-start">

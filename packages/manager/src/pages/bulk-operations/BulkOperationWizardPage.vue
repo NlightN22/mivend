@@ -19,7 +19,11 @@ const title = ref('Bulk operation');
 onMounted(() => {
     void wizard?.init();
     void fetchBulkCatalog()
-        .then(list => (title.value = list.find(o => o.type === type)?.title ?? title.value))
+        .then(list => {
+            const info = list.find(o => o.type === type);
+            title.value = info?.title ?? title.value;
+            if (wizard && info) wizard.maxRecords.value = info.maxRecords;
+        })
         .catch(() => undefined);
 });
 </script>
@@ -53,8 +57,9 @@ onMounted(() => {
             <component
                 :is="ui.selectStep"
                 v-show="wizard.step.value === 'select'"
-                :selected-ids="wizard.selected.value"
-                @update:selected-ids="wizard.selected.value = $event"
+                :selection="wizard.selection.value"
+                :max-records="wizard.maxRecords.value"
+                @update:selection="wizard.selection.value = $event"
             />
             <component
                 :is="ui.parametersStep"
