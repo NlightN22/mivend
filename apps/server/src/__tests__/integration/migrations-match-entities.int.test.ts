@@ -20,6 +20,7 @@ const MIGRATION_ONLY_INDEXES = [
     'UQ_administrator_email_active',
     'IDX_integration_outbox_event_order',
     'IDX_order_custom_fields_counterpartyid',
+    'IDX_customer_custom_fields_counterpartyid',
     'IDX_order_custom_fields_pendingcounterpartyerpid',
     'IDX_proforma_invoice_created_at_id',
     'IDX_order_acting_session',
