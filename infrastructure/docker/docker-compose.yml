@@ -329,6 +329,7 @@ services:
         image: ghcr.io/nlightn22/mivend-storefront:${STOREFRONT_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server:3000
+            TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:-172.16.0.0/12}
             SITE_NAME: ${SITE_NAME:-Shop}
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
             MANAGER_PUBLIC_URL: ${MANAGER_PUBLIC_URL:-}
@@ -348,6 +349,7 @@ services:
         image: ghcr.io/nlightn22/mivend-manager:${MANAGER_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server-admin:3000
+            TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:-172.16.0.0/12}
             SITE_NAME: ${SITE_NAME:-Shop}
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
         ports:
@@ -366,6 +368,7 @@ services:
         image: ghcr.io/nlightn22/mivend-dashboard:${DASHBOARD_IMAGE_TAG:-${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}}
         environment:
             API_TARGET: http://server-admin:3000
+            TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:-172.16.0.0/12}
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.png}
         ports:
             - '${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8006}:80'

@@ -39,6 +39,7 @@ COPY packages/storefront/nginx.conf.template /etc/nginx/templates/default.conf.t
 # own benchmark run, see docs/frontend-load-benchmarks.md).
 COPY infrastructure/docker/nginx/15-site-identity.envsh /docker-entrypoint.d/15-site-identity.envsh
 ENV API_TARGET=http://server:3000
+ENV TRUSTED_PROXY_CIDR=172.16.0.0/12
 ENV LISTEN_PORT=80
 ENV SITE_NAME=Shop
 ENV SITE_FAVICON_URL=/favicon.svg

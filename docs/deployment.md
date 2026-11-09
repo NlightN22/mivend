@@ -117,8 +117,10 @@ Five layers, none of them a single point of failure.
    `/admin-api`, since it cannot mark requests). Both answer `429`. The numbers are an estimate, not a measurement: a portal
    page load issues a handful to a few dozen API calls, spread over seconds, so normal use stays well below the
    blanket cap; an office sharing one address is the case to watch, so check the `429` count in the access log after a
-   rollout. Behind another proxy, configure `set_real_ip_from`/`real_ip_header` there, otherwise every client shares the
-   proxy address.
+   rollout. The portal containers take the client address from `X-Real-IP`, which the host proxy sets from its own
+   `$remote_addr` (a client-supplied value is overwritten), and only from peers inside `TRUSTED_PROXY_CIDR` (default
+   `172.16.0.0/12`, the docker bridge range; set it to the proxy's network if it differs). Without a trusted proxy in front the
+   direct address stays. Without this every client shares the bridge gateway's bucket.
 2. **Per-account throttling (server).** Failures are counted per login and per login plus client address in the
    `sign_in_throttle` table (hashed keys, atomic upserts on the database clock). From the threshold on the account is locked
    for `BASE_LOCK` seconds, doubling with each further failure up to `MAX_LOCK`; there is no permanent lock, and nothing is
