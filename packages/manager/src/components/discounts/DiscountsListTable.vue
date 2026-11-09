@@ -237,14 +237,16 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         }}</template>
 
         <template #cell-validTo="{ data }">
-            {{ dateLabel((data as DiscountRow).validTo) }}
-            <MvButton
-                v-if="(data as DiscountRow).status === 'expiring-soon'"
-                size="sm"
-                variant="ghost"
-                @click="emit('renew', data as DiscountRow)"
-                >Renew</MvButton
-            >
+            <span class="discounts-list-table__valid-to">
+                {{ dateLabel((data as DiscountRow).validTo) }}
+                <MvButton
+                    v-if="(data as DiscountRow).status === 'expiring-soon'"
+                    size="sm"
+                    variant="ghost"
+                    @click="emit('renew', data as DiscountRow)"
+                    >Renew</MvButton
+                >
+            </span>
         </template>
 
         <template #cell-status="{ data }">
