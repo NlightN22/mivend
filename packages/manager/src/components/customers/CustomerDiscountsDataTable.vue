@@ -15,7 +15,7 @@ import {
 } from '../../api/customers';
 
 // Fourth consumer of @mivend/ui-kit's MvAdvancedDataTable, same shape as
-// CustomerPaymentsDataTable.vue — see manager-table-standard skill for the checklist this
+// CustomerProformaInvoicesDataTable.vue — see manager-table-standard skill for the checklist this
 // follows: `number` (Discount #) is the identifying/required column, backed by a real toolbar
 // search + funnel filter (DiscountGrantForCustomerListOptions.search, a substring match against
 // DiscountGrant.number — generated at creation, see that column's own doc comment); `status` is a
@@ -97,7 +97,7 @@ const { state: tableState } = useDataTableState<DiscountFilterState>(
         ),
         // status/number(search)/pageSize are the tab's own concern (it owns the fetch) — always
         // seed from the tab's current prop values, never from stale localStorage (see
-        // CustomerPaymentsDataTable.vue's identical reasoning).
+        // CustomerProformaInvoicesDataTable.vue's identical reasoning).
         externallyOwned: { pageSize: true, filterKeys: ['status', 'number'] },
     },
 );

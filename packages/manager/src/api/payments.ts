@@ -74,7 +74,7 @@ export interface PaymentViewCounts {
 }
 
 // Counts use take: 0 (real COUNT, no rows), batched in one round trip via GraphQL aliases.
-// Only 5 chips on purpose; the rest use the column filter. Sync CustomerPaymentsTab.vue VIEWS.
+// Only 5 chips on purpose; the rest use the column filter.
 export async function fetchPaymentViewCounts(
     counterpartyId: string,
     search?: string,

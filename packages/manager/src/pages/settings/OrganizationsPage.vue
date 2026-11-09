@@ -84,7 +84,7 @@ onMounted(loadAll);
     </div>
 
     <div v-else class="organizations-page">
-        <div class="organizations-page__breadcrumb">Workspace / Settings</div>
+        <div class="organizations-page__breadcrumb">Workspace / System settings</div>
         <h1 class="organizations-page__title">Organizations</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>

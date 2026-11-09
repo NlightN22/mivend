@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // Backoffice topbar shell (logo + global search placeholder + user pill + logout) — shared
 // across every manager portal page, see docs/ai/manager-portal-pages/00-shared-conventions.md.
+import { ref } from 'vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
+import MvPopover from '../MvPopover/MvPopover.vue';
 
 withDefaults(
     defineProps<{
@@ -9,18 +11,17 @@ withDefaults(
         userRoleLabel?: string | null;
         userInitials: string;
         brandTo?: string;
-        profileTo?: string;
         searchPlaceholder?: string;
     }>(),
     {
         brandTo: '/',
-        profileTo: '/profile',
         searchPlaceholder: 'Search…',
         userRoleLabel: null,
     },
 );
 
 const emit = defineEmits<{ logout: [] }>();
+const menuOpen = ref(false);
 </script>
 
 <template>
@@ -44,12 +45,25 @@ const emit = defineEmits<{ logout: [] }>();
             <slot name="actions" />
         </div>
 
-        <RouterLink class="mv-app-topbar__user" :to="profileTo">
-            <span class="mv-app-topbar__avatar">{{ userInitials }}</span>
-            <span class="mv-app-topbar__user-text">
-                {{ userName }}<template v-if="userRoleLabel"> · {{ userRoleLabel }}</template>
-            </span>
-        </RouterLink>
+        <MvPopover v-model:open="menuOpen" :width="260" placement="bottom-end">
+            <template #trigger>
+                <button
+                    class="mv-app-topbar__user"
+                    type="button"
+                    aria-haspopup="menu"
+                    :aria-expanded="menuOpen"
+                >
+                    <span class="mv-app-topbar__avatar">{{ userInitials }}</span>
+                    <span class="mv-app-topbar__user-text">
+                        {{ userName
+                        }}<template v-if="userRoleLabel"> · {{ userRoleLabel }}</template>
+                    </span>
+                </button>
+            </template>
+            <div role="menu" @keydown.esc="menuOpen = false" @click="menuOpen = false">
+                <slot name="user-menu" />
+            </div>
+        </MvPopover>
         <button class="mv-app-topbar__logout" type="button" @click="emit('logout')">Log out</button>
     </header>
 </template>
@@ -130,8 +144,9 @@ const emit = defineEmits<{ logout: [] }>();
     padding: 6px 10px;
     border: 1px solid var(--el-border-color);
     border-radius: 999px;
+    background: none;
     color: inherit;
-    text-decoration: none;
+    cursor: pointer;
     font-size: 13px;
 }
 

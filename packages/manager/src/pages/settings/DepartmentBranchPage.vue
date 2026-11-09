@@ -31,7 +31,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="department-branch">
-        <div class="department-branch__breadcrumb">Workspace / Settings</div>
+        <div class="department-branch__breadcrumb">Workspace / System settings</div>
         <h1 class="department-branch__title">Departments to branch</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>

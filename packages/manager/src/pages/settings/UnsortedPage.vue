@@ -33,7 +33,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="unsorted-page">
-        <div class="unsorted-page__breadcrumb">Workspace / Settings</div>
+        <div class="unsorted-page__breadcrumb">Workspace / System settings</div>
         <h1 class="unsorted-page__title">Unsorted</h1>
 
         <MvNotice variant="info">

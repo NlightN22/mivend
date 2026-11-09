@@ -29,6 +29,7 @@ test('More sheet opens, lists secondary nav, and closes on backdrop click @on:ma
     const sheet = page.locator('.mv-mobile-sheet');
     await expect(sheet).toHaveClass(/mv-mobile-sheet--open/);
     await expect(sheet.getByRole('link', { name: 'Analytics' })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Payments', exact: true })).toHaveCount(0);
 
     await page.locator('.mv-mobile-sheet-backdrop').click();
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);

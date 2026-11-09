@@ -262,7 +262,7 @@ onMounted(async () => {
     </div>
 
     <div v-else class="users-page">
-        <div class="users-page__breadcrumb">Workspace / Settings</div>
+        <div class="users-page__breadcrumb">Workspace / System settings</div>
         <h1 class="users-page__title">Users</h1>
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>

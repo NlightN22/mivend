@@ -75,3 +75,23 @@ test('on a phone each document is a card @on:manager-portal-admin @read-only', a
         390,
     );
 });
+
+test('the Online payments link opens the payment attempt list @on:manager-portal-admin @read-only', async ({
+    page,
+}) => {
+    await page.goto('/settlements');
+    await page.getByRole('link', { name: 'Online payments' }).click();
+    await expect(page).toHaveURL(/\/payments$/);
+    await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
+});
+
+test('the sidebar has no Payments entry while /payments stays reachable by address @on:manager-portal-admin @read-only', async ({
+    page,
+}) => {
+    await page.goto('/customers');
+    await expect(
+        page.locator('.mv-app-sidebar').getByRole('link', { name: 'Payments' }),
+    ).toHaveCount(0);
+    await page.goto('/payments');
+    await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
+});

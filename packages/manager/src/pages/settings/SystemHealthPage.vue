@@ -63,7 +63,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="system-health-page">
-        <div class="system-health-page__breadcrumb">Workspace / Settings</div>
+        <div class="system-health-page__breadcrumb">Workspace / System settings</div>
         <h1 class="system-health-page__title">System health</h1>
 
         <MvPanel

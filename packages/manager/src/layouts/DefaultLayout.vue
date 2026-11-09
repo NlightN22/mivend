@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserMenu from '../components/layout/UserMenu.vue';
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
@@ -101,6 +102,9 @@ function handleRelogin(): void {
                     :unread-count="unreadCount"
                     @click="notificationPanelOpen = !notificationPanelOpen"
                 />
+            </template>
+            <template #user-menu>
+                <UserMenu @logout="handleLogout" />
             </template>
         </MvAppTopbar>
         <div v-if="notificationPanelOpen" class="layout__notification-panel">

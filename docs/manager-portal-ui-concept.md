@@ -174,15 +174,15 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Item | Content | Status |
 | --- | --- | --- |
 | Dashboard | KPI and widgets | exists, redesign deferred |
-| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list exists, card with tabs later |
-| Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; Payments is no longer an entry |
+| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list exists; the card has a Settlements tab (the standard list fixed to the customer, shown with `ReadSettlementDocument`) |
+| Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; the Payments entry is removed (sidebar and More sheet) |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
 | Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
 | Analytics | placeholder | not implemented yet |
-| System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, to be renamed and separated from user settings |
-| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | not implemented yet |
+| System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, renamed System settings; the security page (password, two-factor) is also linked from the user menu |
+| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built with "Account settings" (password and two-factor sign-in, the existing security page) and Log out; profile, language and theme switch not built yet (no dark theme) |
 
 The Catalog item is removed from the portal (see principles).
 
@@ -190,7 +190,7 @@ The Catalog item is removed from the portal (see principles).
 sales invoices, returns, corrections, retro bonuses) are one list, so there is no separate Payments entry in the menu and
 no payments tab in the customer card (it shows Settlements instead). The payment page (`/payments/:id`) stays reachable
 from its links (order, proforma invoice, settlement row); whether the payment-attempt list is kept as a Settlements type
-or tab is decided when the settlement document card is built.
+or tab is decided when the settlement document card is built. Until then the Settlements page has an "Online payments" link (with `ReadPayment`) to `/payments`.
 
 **System settings are not user settings.** The sidebar entry "Settings" becomes "System settings" and holds only
 system-level things (roles, branches, policies and so on). Everything personal (profile, password, two-factor,

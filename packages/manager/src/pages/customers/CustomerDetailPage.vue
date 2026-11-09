@@ -43,7 +43,7 @@ import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue'
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
 import CustomerProformaInvoicesTab from '../../components/customers/CustomerProformaInvoicesTab.vue';
-import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
+import SettlementsList from '../../components/settlements/SettlementsList.vue';
 import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
 import ActAsCustomerButton from '../../components/acting/ActAsCustomerButton.vue';
@@ -78,6 +78,7 @@ const notFound = ref(false);
 // ReadEntityHistory) — not a role-code allowlist. Reassigning the primary manager moved out of
 // this header (info-only now, see the info-row's own doc comment) — that edit belongs on a
 // future Team tab, gated to specific roles, not here.
+const canViewSettlements = computed(() => authStore.hasPermission('ReadSettlementDocument'));
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 const canViewChangeJournal = computed(() => authStore.hasPermission('ReadChangeJournal'));
 const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
@@ -91,7 +92,7 @@ type CustomerDetailTab =
     | 'overview'
     | 'orders'
     | 'proformaInvoices'
-    | 'payments'
+    | 'settlements'
     | 'discounts'
     | 'documents'
     | 'team'
@@ -102,7 +103,7 @@ const TABS: CustomerDetailTab[] = [
     'overview',
     'orders',
     'proformaInvoices',
-    'payments',
+    'settlements',
     'discounts',
     'documents',
     'team',
@@ -114,7 +115,7 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
     overview: 'Overview',
     orders: 'Orders',
     proformaInvoices: 'Proforma invoices',
-    payments: 'Payments',
+    settlements: 'Settlements',
     discounts: 'Discounts',
     documents: 'Documents',
     team: 'Team',
@@ -126,7 +127,7 @@ const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     overview: IconHome2,
     orders: IconShoppingBag,
     proformaInvoices: IconFileInvoice,
-    payments: IconCreditCard,
+    settlements: IconCreditCard,
     discounts: IconDiscount,
     documents: IconFolder,
     team: IconUsers,
@@ -155,6 +156,7 @@ const PRIMARY_TAB_COUNT = 3;
 const visibleTabs = computed(() =>
     TABS.filter(t => t !== 'history' || canViewHistory.value)
         .filter(t => t !== 'changeJournal' || canViewChangeJournal.value)
+        .filter(t => t !== 'settlements' || canViewSettlements.value)
         .filter(t => t !== 'portalUsers' || canManagePortalAccess.value),
 );
 const primaryTabs = computed(() =>
@@ -232,7 +234,7 @@ async function load(): Promise<void> {
             ? await fetchOrdersForCustomer(vendureCustomerId.value)
             : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
-        // CustomerProformaInvoicesTab/CustomerPaymentsTab/CustomerDiscountsTab now own their own
+        // CustomerProformaInvoicesTab/CustomerDiscountsTab now own their own
         // fetching/pagination (same shape as CustomerOrdersTab) — this page only still needs
         // outstandingBalance for its own KPI card.
         outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
@@ -472,8 +474,8 @@ function initials(name: string | null): string {
                 v-else-if="activeTab === 'proformaInvoices'"
                 :counterparty-id="customer.id"
             />
-            <CustomerPaymentsTab
-                v-else-if="activeTab === 'payments'"
+            <SettlementsList
+                v-else-if="activeTab === 'settlements'"
                 :counterparty-id="customer.id"
             />
             <CustomerDiscountsTab

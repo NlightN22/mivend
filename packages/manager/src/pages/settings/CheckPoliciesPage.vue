@@ -40,7 +40,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="check-policies">
-        <div class="check-policies__breadcrumb">Workspace / Settings</div>
+        <div class="check-policies__breadcrumb">Workspace / System settings</div>
         <h1 class="check-policies__title">Controls and policies</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>

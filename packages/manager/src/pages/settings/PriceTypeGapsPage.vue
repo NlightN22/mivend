@@ -16,7 +16,7 @@ onMounted(() => void g.load());
 
 <template>
     <div class="price-type-gaps-page">
-        <div class="price-type-gaps-page__breadcrumb">Workspace / Settings</div>
+        <div class="price-type-gaps-page__breadcrumb">Workspace / System settings</div>
         <h1 class="price-type-gaps-page__title">Price type gaps</h1>
 
         <MvNotice variant="info">

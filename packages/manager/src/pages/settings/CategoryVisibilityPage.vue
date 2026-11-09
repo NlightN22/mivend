@@ -64,7 +64,7 @@ onMounted(loadAll);
     </div>
 
     <div v-else class="category-visibility-page">
-        <div class="category-visibility-page__breadcrumb">Workspace / Settings</div>
+        <div class="category-visibility-page__breadcrumb">Workspace / System settings</div>
         <h1 class="category-visibility-page__title">Category visibility</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>

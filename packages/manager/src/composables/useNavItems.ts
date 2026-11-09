@@ -10,12 +10,10 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
 
     // Order per docs/manager-portal-ui-concept.md; Analytics routes to the shared "coming soon" page.
     const menuItems = computed<AppSidebarItem[]>(() => {
-        // Proforma invoices/Payments are gated on the same permissions as their visible* queries.
+        // Proforma invoices are gated on the same permissions as their visible* queries.
         const documents: AppSidebarItem[] = [{ label: 'Orders', path: '/orders' }];
         if (authStore.hasPermission('ReadProformaInvoice'))
             documents.push({ label: 'Proforma invoices', path: '/proforma-invoices' });
-        if (authStore.hasPermission('ReadPayment'))
-            documents.push({ label: 'Payments', path: '/payments' });
         documents.push({ label: 'Discounts', path: '/discounts' });
         // Settlements are gated like their visibleSettlementDocuments query.
         const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
@@ -39,9 +37,9 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         // itself checks — not a role-code allowlist, so granting/revoking this via the native
         // Vendure admin UI (any role) is enough, no manager-portal code change needed.
         if (authStore.hasPermission('ManageAccessControl')) {
-            items.push({ label: 'Settings', path: '/settings' });
+            items.push({ label: 'System settings', path: '/settings' });
         } else if (authStore.hasPermission('ManageVisibilityGrants')) {
-            items.push({ label: 'Settings', path: '/settings/visibility-grants' });
+            items.push({ label: 'System settings', path: '/settings/visibility-grants' });
         }
         return items;
     });
@@ -74,8 +72,6 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                 label: 'Proforma invoices',
                 path: '/proforma-invoices',
             });
-        if (authStore.hasPermission('ReadPayment'))
-            items.push({ key: 'payments', label: 'Payments', path: '/payments' });
         items.push({ key: 'discounts', label: 'Discounts', path: '/discounts' });
         if (authStore.hasPermission('ReadSettlementDocument'))
             items.push({ key: 'settlements', label: 'Settlements', path: '/settlements' });
@@ -90,9 +86,13 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                 path: '/change-journal',
             });
         if (authStore.hasPermission('ManageAccessControl')) {
-            items.push({ key: 'settings', label: 'Settings', path: '/settings' });
+            items.push({ key: 'settings', label: 'System settings', path: '/settings' });
         } else if (authStore.hasPermission('ManageVisibilityGrants')) {
-            items.push({ key: 'settings', label: 'Settings', path: '/settings/visibility-grants' });
+            items.push({
+                key: 'settings',
+                label: 'System settings',
+                path: '/settings/visibility-grants',
+            });
         }
         return items;
     });

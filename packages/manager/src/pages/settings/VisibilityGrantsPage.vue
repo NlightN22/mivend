@@ -55,7 +55,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="visibility-grants-page">
-        <div class="visibility-grants-page__breadcrumb">Workspace / Settings</div>
+        <div class="visibility-grants-page__breadcrumb">Workspace / System settings</div>
         <h1 class="visibility-grants-page__title">Visibility grants</h1>
 
         <MvNotice variant="info">

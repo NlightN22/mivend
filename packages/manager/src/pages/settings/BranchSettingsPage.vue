@@ -208,7 +208,7 @@ onMounted(loadAll);
     </div>
 
     <div v-else class="branch-settings-page">
-        <div class="branch-settings-page__breadcrumb">Workspace / Settings</div>
+        <div class="branch-settings-page__breadcrumb">Workspace / System settings</div>
         <h1 class="branch-settings-page__title">Branches</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>

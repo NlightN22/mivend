@@ -36,7 +36,7 @@ onMounted(load);
     </div>
 
     <div v-else class="roles-list">
-        <div class="roles-list__breadcrumb">Workspace / Settings</div>
+        <div class="roles-list__breadcrumb">Workspace / System settings</div>
         <h1 class="roles-list__title">Roles & access</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
