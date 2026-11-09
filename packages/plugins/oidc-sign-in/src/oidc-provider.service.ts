@@ -49,7 +49,10 @@ export class OidcProviderService {
     }
 
     async authorizationUrl(state: string, nonce: string, verifier: string): Promise<string> {
-        const { authorization_endpoint } = await this.discover();
+        const { authorization_endpoint } = await this.discover().catch((error: Error) => {
+            Logger.error(`OIDC discovery failed: ${error.message}`, loggerCtx);
+            throw new Error('OIDC sign-in is unavailable');
+        });
         const url = new URL(authorization_endpoint);
         url.search = new URLSearchParams({
             response_type: 'code',
@@ -124,6 +127,7 @@ export class OidcProviderService {
             requiredClaims: ['exp', 'sub'],
         });
         if (payload.nonce !== nonce) throw new Error('nonce mismatch');
+        if (payload.email_verified === false) throw new Error('e-mail not verified');
         if (typeof payload.sub !== 'string' || payload.sub === '') throw new Error('no sub');
         const email = typeof payload.email === 'string' ? payload.email.trim() : '';
         return { sub: payload.sub, email: email === '' ? null : email };

@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService, Logger, RequestContext, User, UserService } from '@vendure/core';
+import {
+    ConfigService,
+    Logger,
+    RequestContext,
+    TransactionalConnection,
+    User,
+    UserService,
+} from '@vendure/core';
 import { SignInThrottleService } from '@mivend/plugin-sign-in-protection';
 
 import { randomToken } from './oidc-crypto';
@@ -7,6 +14,7 @@ import { OidcIdentityService } from './oidc-identity.service';
 import { OidcProviderService } from './oidc-provider.service';
 import { OidcRequestStoreService } from './oidc-request-store.service';
 import { loggerCtx } from './oidc.types';
+import type { OidcClaims } from './oidc.types';
 
 // The provider decides its own factors (docs/access-control.md), so no local second step is asked here.
 @Injectable()
@@ -18,23 +26,38 @@ export class OidcSignInService {
         private throttle: SignInThrottleService,
         private users: UserService,
         private configService: ConfigService,
+        private connection: TransactionalConnection,
     ) {}
 
     async start(ctx: RequestContext): Promise<string> {
         const nonce = randomToken();
         const verifier = randomToken();
         const state = await this.requests.create(ctx, nonce, verifier);
+        if (!state) {
+            Logger.warn('OIDC sign-in start refused: too many pending requests', loggerCtx);
+            throw new Error('OIDC sign-in is unavailable');
+        }
         return this.provider.authorizationUrl(state, nonce, verifier);
     }
 
     // False for every refusal, so a caller cannot tell a wrong state from an unknown account.
+    // The provider is called between two short transactions, never inside one.
     async complete(ctx: RequestContext, code: string, state: string): Promise<boolean> {
-        const request = await this.requests.beginExchange(ctx, state);
+        const request = await this.connection.withTransaction(ctx, tx =>
+            this.requests.beginExchange(tx, state),
+        );
         if (!request) return false;
         const claims = await this.provider.exchange(code, request.codeVerifier, request.nonce);
         if (!claims) return false;
-        if (await this.throttle.isLocked(ctx, 'oidc', claims.sub)) return false;
+        return this.connection.withTransaction(ctx, tx => this.link(tx, request.id, claims));
+    }
 
+    private async link(
+        ctx: RequestContext,
+        requestId: number,
+        claims: OidcClaims,
+    ): Promise<boolean> {
+        if (await this.throttle.isLocked(ctx, 'oidc', claims.sub)) return false;
         const userId = await this.identity.resolve(ctx, claims);
         const user = userId ? await this.users.getUserById(ctx, userId) : undefined;
         if (!user || !this.mayUseApi(user)) {
@@ -43,7 +66,7 @@ export class OidcSignInService {
             return false;
         }
         await this.throttle.reset(ctx, 'oidc', claims.sub);
-        await this.requests.markVerified(ctx, request.id, String(user.id));
+        await this.requests.markVerified(ctx, requestId, String(user.id));
         return true;
     }
 

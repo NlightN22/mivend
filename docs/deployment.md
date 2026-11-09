@@ -126,9 +126,11 @@ required, the redirect URI above, scopes `openid` and `email`, and an `email` cl
 to edit their e-mail at the provider, because the first sign-in links by it (`docs/access-control.md`, "Sign-in through an
 external provider"). Signing algorithms accepted: RS256/384/512, PS256, ES256/384, EdDSA.
 
+Only the `sub` is stored, without the issuer: changing `OIDC_ISSUER_URL` to another provider later needs every `oidc` link removed first (see below), or a `sub` from the new provider could match an old link.
+
 Operational notes: the server needs outbound HTTPS to the provider (discovery, token endpoint, key set; 10 s timeout each).
 An unreachable provider only breaks this button; local password sign-in keeps working. Expired sign-in requests are deleted
-by a scheduled task. To move an administrator to another provider account, remove their `authentication_method` row with
+by a scheduled task (an hour after expiry); at most 500 unexpired requests may be pending (`startOidcSignIn` is public), beyond which starting a sign-in is refused. To move an administrator to another provider account, remove their `authentication_method` row with
 strategy `oidc`; the next sign-in links again by e-mail.
 
 ## Sign-in protection (#278)

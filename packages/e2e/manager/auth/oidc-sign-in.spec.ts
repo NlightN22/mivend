@@ -63,6 +63,20 @@ test.describe('Manager sign-in through the corporate account', () => {
         await expect(page.locator('.mv-notice--error')).toBeVisible();
     });
 
+    test('a callback opened without this browser starting the flow is refused', async ({
+        page,
+        request,
+    }) => {
+        await actAs(request, 'sub-operator', OPERATOR_EMAIL);
+        const started = await page.request.post('/admin-api', {
+            data: { query: 'mutation { startOidcSignIn { authorizationUrl } }' },
+        });
+        const url = (await started.json()).data.startOidcSignIn.authorizationUrl as string;
+        const callback = await page.request.get(url, { maxRedirects: 0 });
+        await page.goto(callback.headers().location);
+        await expect(page.locator('.mv-notice--error')).toBeVisible();
+    });
+
     test('a replayed callback URL is refused', async ({ page, request }) => {
         await actAs(request, 'sub-operator', OPERATOR_EMAIL);
         await page.goto('/login');

@@ -40,6 +40,9 @@ everything after it is ours.
   update, so a replayed or concurrent second callback gets nothing) and expire after 10 minutes. The ID token must have a
   valid signature from the provider key set, `iss`, `aud`, `exp` and the request's `nonce`. The code exchange sends the PKCE
   verifier.
+- **Browser binding.** The portal keeps the `state` in `sessionStorage` before redirecting and the callback page refuses a
+  different or missing one, so a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
+  with `email_verified: false` is refused. The provider is called outside any database transaction.
 - **Linking.** A first sign-in matches an active (not soft-deleted) Administrator by e-mail, case-insensitive, and the e-mail
   claim must be present. Exactly one match stores the provider `sub` in an `ExternalAuthenticationMethod` (strategy `oidc`,
   `externalIdentifier` = `sub`). Every later sign-in matches by `sub` only, so a changed e-mail neither blocks nor

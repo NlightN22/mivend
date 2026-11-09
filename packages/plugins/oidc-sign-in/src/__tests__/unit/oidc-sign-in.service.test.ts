@@ -12,18 +12,35 @@ function build(over: {
     begin?: unknown;
     verification?: boolean;
     verified?: boolean;
+    create?: string | null;
 }) {
     const failures: string[] = [];
+    const tx = { open: 0, openAtExchange: -1, transactions: 0 };
+    const connection = {
+        withTransaction: async (_c: unknown, work: (c: unknown) => Promise<unknown>) => {
+            tx.open++;
+            tx.transactions++;
+            try {
+                return await work(ctx);
+            } finally {
+                tx.open--;
+            }
+        },
+    };
     const requests = {
         beginExchange: async () =>
             'begin' in over ? over.begin : { id: 1, nonce: 'n', codeVerifier: 'v' },
         markVerified: vi.fn(),
+        create: async () => ('create' in over ? over.create : 'state-1'),
         claimVerified: async () => '5',
     };
     const service = new OidcSignInService(
         {
-            exchange: async () =>
-                'exchange' in over ? over.exchange : { sub: 's', email: 'a@b.c' },
+            exchange: async () => {
+                tx.openAtExchange = tx.open;
+                return 'exchange' in over ? over.exchange : { sub: 's', email: 'a@b.c' };
+            },
+            authorizationUrl: async (st: string) => `https://idp.example.com/auth?state=${st}`,
         } as never,
         requests as never,
         { resolve: async () => ('resolved' in over ? over.resolved : '5') } as never,
@@ -34,8 +51,9 @@ function build(over: {
         } as never,
         { getUserById: async () => ({ id: 5, verified: over.verified ?? true }) } as never,
         { authOptions: { requireVerification: over.verification ?? false } } as never,
+        connection as never,
     );
-    return { service, requests, failures };
+    return { service, requests, failures, tx };
 }
 
 describe('OidcSignInService', () => {
@@ -44,6 +62,20 @@ describe('OidcSignInService', () => {
         expect(await service.complete(ctx, 'code', 'state')).toBe(true);
         expect(requests.markVerified).toHaveBeenCalledWith(ctx, 1, '5');
         expect(failures).toEqual(['reset']);
+    });
+
+    it('calls the provider with no transaction open, between two short transactions', async () => {
+        const { service, tx } = build({});
+        await service.complete(ctx, 'code', 'state');
+        expect(tx.openAtExchange).toBe(0);
+        expect(tx.transactions).toBe(2);
+    });
+
+    it('refuses to start above the pending cap with a generic error', async () => {
+        await expect(build({ create: null }).service.start(ctx)).rejects.toThrow(
+            'OIDC sign-in is unavailable',
+        );
+        await expect(build({}).service.start(ctx)).resolves.toContain('state=state-1');
     });
 
     it('opens a session from a verified request without any second-step policy', async () => {

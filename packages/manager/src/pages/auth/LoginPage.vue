@@ -16,6 +16,7 @@ import {
     useTwoFactorSignIn,
 } from '@mivend/ui-kit';
 import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
+import { rememberOidcState } from '../../composables/oidcBinding';
 import { fetchAuthorizationUrl, fetchOidcEnabled } from '../../api/oidc';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
@@ -69,7 +70,9 @@ onMounted(async () => {
 async function startOidc(): Promise<void> {
     oidcError.value = false;
     try {
-        window.location.assign(await fetchAuthorizationUrl());
+        const url = await fetchAuthorizationUrl();
+        rememberOidcState(url);
+        window.location.assign(url);
     } catch {
         oidcError.value = true;
     }

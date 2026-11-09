@@ -1,5 +1,5 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 
 import { OidcProviderService } from '../oidc-provider.service';
 import { OidcSignInService } from '../oidc-sign-in.service';
@@ -17,7 +17,6 @@ export class OidcResolver {
         return this.provider.enabled;
     }
 
-    @Transaction()
     @Mutation()
     @Allow(Permission.Public)
     async startOidcSignIn(@Ctx() ctx: RequestContext): Promise<{ authorizationUrl: string }> {
@@ -25,7 +24,6 @@ export class OidcResolver {
         return { authorizationUrl: await this.signIn.start(ctx) };
     }
 
-    @Transaction()
     @Mutation()
     @Allow(Permission.Public)
     completeOidcSignIn(

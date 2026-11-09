@@ -24,6 +24,8 @@ const MIGRATION_ONLY_INDEXES = [
     'IDX_order_custom_fields_pendingcounterpartyerpid',
     'IDX_proforma_invoice_created_at_id',
     'IDX_order_acting_session',
+    'UQ_authentication_method_oidc_subject',
+    'UQ_authentication_method_oidc_user',
 ];
 
 async function onMaintenanceDb(sql: string): Promise<void> {

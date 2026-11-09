@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { readSiteIconUrl, readSiteName, MvLogo, MvButton, MvNotice } from '@mivend/ui-kit';
+import { consumeOidcState } from '../../composables/oidcBinding';
 import { completeOidcSignIn, openOidcSession } from '../../api/oidc';
 import { useAuthStore } from '../../stores/auth';
 import { OIDC_LABELS } from './oidcLabels';
@@ -20,7 +21,12 @@ onMounted(async () => {
     // The one-time code is read once above; clearing the query keeps it out of the address bar and history.
     await router.replace({ query: {} });
     try {
-        if (!code || !state || !(await completeOidcSignIn(code, state))) {
+        if (
+            !code ||
+            !state ||
+            !consumeOidcState(state) ||
+            !(await completeOidcSignIn(code, state))
+        ) {
             failed.value = true;
         } else if (await openOidcSession(state)) {
             await authStore.completeSignIn();

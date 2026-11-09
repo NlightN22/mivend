@@ -101,6 +101,10 @@ describe('OidcProviderService', () => {
         ],
         ['wrong audience', () => token({ sub: 'u1', nonce: 'n1' }, { aud: 'client-b' })],
         ['expired', () => token({ sub: 'u1', nonce: 'n1' }, { exp: '-1m' })],
+        [
+            'unverified e-mail',
+            () => token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: false }),
+        ],
         ['no sub', () => token({ nonce: 'n1' })],
     ])('refuses a token with %s', async (_name, make) => {
         stubProvider(make);

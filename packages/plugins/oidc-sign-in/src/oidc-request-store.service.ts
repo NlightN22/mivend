@@ -4,7 +4,12 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
 import { randomToken, sha256Hex } from './oidc-crypto';
-import { OIDC_PLUGIN_OPTIONS, REQUEST_TTL_DEFAULT_MS, VERIFIED_TTL_DEFAULT_MS } from './oidc.types';
+import {
+    MAX_PENDING_DEFAULT,
+    OIDC_PLUGIN_OPTIONS,
+    REQUEST_TTL_DEFAULT_MS,
+    VERIFIED_TTL_DEFAULT_MS,
+} from './oidc.types';
 import type { ExchangeRow, OidcPluginOptions } from './oidc.types';
 
 @Injectable()
@@ -18,7 +23,9 @@ export class OidcRequestStoreService {
         return ctxQuery<T>(this.connection, ctx, sql, params);
     }
 
-    async create(ctx: RequestContext, nonce: string, codeVerifier: string): Promise<string> {
+    async create(ctx: RequestContext, nonce: string, codeVerifier: string): Promise<string | null> {
+        const pending = await this.countPending(ctx);
+        if (pending >= (this.options?.maxPendingRequests ?? MAX_PENDING_DEFAULT)) return null;
         const state = randomToken();
         await this.query(
             ctx,
@@ -33,6 +40,15 @@ export class OidcRequestStoreService {
             ],
         );
         return state;
+    }
+
+    private async countPending(ctx: RequestContext): Promise<number> {
+        const rows = await this.query<Array<{ n: number }>>(
+            ctx,
+            `SELECT count(*)::int AS n FROM oidc_auth_request WHERE status = 'PENDING' AND "expiresAt" > now()`,
+            [],
+        );
+        return rows[0]?.n ?? 0;
     }
 
     // The single-use gate for the code exchange: a replayed or concurrent second claim matches nothing.
@@ -56,14 +72,6 @@ export class OidcRequestStoreService {
         );
     }
 
-    async markUsed(ctx: RequestContext, id: number): Promise<void> {
-        await this.query(
-            ctx,
-            `UPDATE oidc_auth_request SET status = 'USED', "updatedAt" = now() WHERE id = $1`,
-            [id],
-        );
-    }
-
     async claimVerified(ctx: RequestContext, state: string): Promise<string | null> {
         const rows = await this.query<Array<{ userId: string }>>(
             ctx,
@@ -77,7 +85,7 @@ export class OidcRequestStoreService {
     async deleteExpired(ctx: RequestContext): Promise<number> {
         const rows = await this.query<Array<{ n: number }>>(
             ctx,
-            `WITH d AS (DELETE FROM oidc_auth_request WHERE "expiresAt" < now() - interval '1 day' RETURNING id)
+            `WITH d AS (DELETE FROM oidc_auth_request WHERE "expiresAt" < now() - interval '1 hour' RETURNING id)
              SELECT count(*)::int AS n FROM d`,
             [],
         );
