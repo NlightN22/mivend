@@ -8,6 +8,6 @@ export async function loginAsManager(
     await page.goto('/login');
     await page.locator('input[type="text"]').fill(username);
     await page.locator('input[type="password"]').fill(password);
-    await page.getByRole('button', { name: 'Войти' }).click();
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
     await page.waitForURL(url => !url.pathname.includes('/login'));
 }

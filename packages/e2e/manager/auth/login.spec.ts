@@ -10,7 +10,7 @@ test.describe('Manager login page', () => {
     test('successful login redirects to the dashboard', async ({ page }) => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('Password123!');
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(page.url()).not.toContain('/login');
@@ -20,7 +20,7 @@ test.describe('Manager login page', () => {
     test('wrong password shows an error and stays on the login page', async ({ page }) => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('wrong-password');
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
         await expect(page.locator('.mv-notice--error')).toBeVisible();
         expect(page.url()).toContain('/login');
@@ -39,7 +39,7 @@ test.describe('Manager login page', () => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('Password123!');
         await page.locator('input[type="checkbox"]').check();
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         const cookies = await context.cookies();
@@ -53,7 +53,7 @@ test.describe('Manager login page', () => {
     test('a transient admin-api outage after login does not force a re-login', async ({ page }) => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('Password123!');
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         // Simulate the admin-api being briefly unreachable (e.g. a dev server restart) for the
@@ -81,7 +81,7 @@ test.describe('Manager login page', () => {
     }) => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('Password123!');
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         const outageStart = Date.now();

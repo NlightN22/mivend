@@ -55,7 +55,7 @@ test.describe('Password reset mail link depends on the recipient (#137)', () => 
             await page.goto('/login');
             await page.locator('input').first().fill(email);
             await page.locator('input[type="password"]').fill(NEW_PASSWORD);
-            await page.getByRole('button', { name: 'Войти' }).click();
+            await page.getByRole('button', { name: 'Войти', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
         } finally {
             await adminGql(
