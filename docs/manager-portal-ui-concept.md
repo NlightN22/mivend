@@ -174,8 +174,8 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Item | Content | Status |
 | --- | --- | --- |
 | Dashboard | KPI and widgets | exists, redesign deferred |
-| Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
-| Documents (group) | Orders, Proforma invoices, Payments, Discounts | exists |
+| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list exists, card with tabs later |
+| Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; Payments is no longer an entry |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
