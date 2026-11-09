@@ -99,11 +99,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function listValue(value: unknown, b: ClauseBuilder): unknown[] {
+    if (!Array.isArray(value)) throw new UserInputError('Invalid filter value');
     const max = b.limits.maxValues;
-    if (!Array.isArray(value) || (max !== undefined && value.length > max)) {
-        throw new UserInputError(
-            max === undefined ? 'Invalid filter value' : `At most ${max} values per filter`,
-        );
+    if (max !== undefined && value.length > max) {
+        throw new UserInputError(`At most ${max} values per filter`);
     }
     return value;
 }

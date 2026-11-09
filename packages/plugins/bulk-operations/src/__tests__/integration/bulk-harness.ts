@@ -206,7 +206,7 @@ export async function seedAuth(
     permissions = 'ReadX,ManageFake',
 ): Promise<void> {
     await dataSource.query(
-        `CREATE TABLE IF NOT EXISTS administrator (id int, "userId" int, "deletedAt" timestamp)`,
+        `CREATE TABLE IF NOT EXISTS administrator (id int, "userId" int, "deletedAt" timestamp, "firstName" text, "lastName" text)`,
     );
     await dataSource.query(`CREATE TABLE IF NOT EXISTS "user" (id int, "deletedAt" timestamp)`);
     await dataSource.query(
@@ -220,7 +220,11 @@ export async function seedAuth(
         'TRUNCATE administrator, "user", user_roles_role, role, role_channels_channel',
     );
     for (const id of [7, 8]) {
-        await dataSource.query('INSERT INTO administrator VALUES ($1, $1, NULL)', [id]);
+        await dataSource.query('INSERT INTO administrator VALUES ($1, $1, NULL, $2, $3)', [
+            id,
+            `Admin${id}`,
+            'Test',
+        ]);
         await dataSource.query('INSERT INTO "user" VALUES ($1, NULL)', [id]);
         await dataSource.query('INSERT INTO user_roles_role VALUES ($1, 1)', [id]);
     }
