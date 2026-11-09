@@ -28,6 +28,8 @@ const MIGRATION_ONLY_INDEXES = [
     'UQ_authentication_method_oidc_user',
     'IDX_counterparty_short_name_prefix',
     'IDX_settlement_document_number_prefix',
+    'IDX_order_placed_at_list',
+    'IDX_order_created_at_list',
 ];
 
 async function onMaintenanceDb(sql: string): Promise<void> {
