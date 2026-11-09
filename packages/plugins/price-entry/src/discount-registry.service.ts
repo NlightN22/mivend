@@ -4,7 +4,14 @@ import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure
 import { Brackets, In, WhereExpressionBuilder } from 'typeorm';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { NumberingService } from '@mivend/plugin-numbering';
-import { clampSkip, clampTake, getPageAndCount, likeTerm, normalizeDocumentNumber, withAggregateLock } from 'shared';
+import {
+    clampSkip,
+    clampTake,
+    getPageAndCount,
+    likeTerm,
+    normalizeDocumentNumber,
+    withAggregateLock,
+} from 'shared';
 
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 import {
@@ -225,7 +232,9 @@ export class DiscountRegistryService {
         }
         applyListFilter(qb, options.filter);
 
-        return getPageAndCount(qb, take, clampSkip(options.skip), (q) => applyListSort(q, options.sort));
+        return getPageAndCount(qb, take, clampSkip(options.skip), q =>
+            applyListSort(q, options.sort),
+        );
     }
 
     // Counts only — powers the /discounts KPI cards without fetching rows.
