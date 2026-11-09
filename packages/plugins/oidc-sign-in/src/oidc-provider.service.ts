@@ -85,6 +85,10 @@ export class OidcProviderService {
             const { end_session_endpoint } = await this.discover();
             if (!end_session_endpoint) return null;
             const url = new URL(end_session_endpoint);
+            const local = ['localhost', '127.0.0.1'].includes(url.hostname);
+            if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) {
+                throw new Error('end-session endpoint is not https');
+            }
             url.searchParams.set('id_token_hint', idToken);
             url.searchParams.set('client_id', this.config.clientId);
             url.searchParams.set('post_logout_redirect_uri', this.postLogoutRedirectUri);

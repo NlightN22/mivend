@@ -9,6 +9,9 @@ beforeAll(async () => {
 afterAll(() => fx.close());
 beforeEach(() => fx.reset());
 
+const ageTokens = (): Promise<unknown> =>
+    fx.dataSource.query(`UPDATE oidc_session_token SET "updatedAt" = now() - interval '1 hour'`);
+
 async function session(
     token: string,
     userId: number,
@@ -39,6 +42,7 @@ describe('OIDC ID token store (real Postgres)', () => {
     it('hands out the token for a provider session and drops it with the last such session', async () => {
         await fx.tokens.save(ctx, 7, 'tok');
         await session('s1', 7);
+        await ageTokens();
         expect(await fx.tokens.takeForSession(ctx, 7, 's1')).toEqual({ idToken: 'tok' });
         expect(await stored()).toEqual([]);
     });
@@ -47,11 +51,19 @@ describe('OIDC ID token store (real Postgres)', () => {
         await fx.tokens.save(ctx, 7, 'tok');
         await session('s1', 7);
         await session('s2', 7);
+        await ageTokens();
         expect(await fx.tokens.takeForSession(ctx, 7, 's1')).toEqual({ idToken: 'tok' });
         expect(await stored()).toHaveLength(1);
         await fx.dataSource.query(`UPDATE session SET invalidated = true WHERE token = 's1'`);
         expect(await fx.tokens.takeForSession(ctx, 7, 's2')).toEqual({ idToken: 'tok' });
         expect(await stored()).toEqual([]);
+    });
+
+    it('keeps a freshly saved token even when no other provider session exists', async () => {
+        await fx.tokens.save(ctx, 7, 'tok');
+        await session('s1', 7);
+        expect(await fx.tokens.takeForSession(ctx, 7, 's1')).toEqual({ idToken: 'tok' });
+        expect(await stored()).toHaveLength(1);
     });
 
     it('gives nothing for a local session, another administrator, or an ended session', async () => {

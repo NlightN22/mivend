@@ -44,6 +44,7 @@ export class OidcSessionTokenStoreService {
             ctx,
             `WITH gone AS (
                 DELETE FROM oidc_session_token t WHERE t."userId" = $1
+                AND t."updatedAt" < now() - interval '2 minutes'
                 AND NOT EXISTS (${LIVE_OIDC_SESSION} AND s.token <> $2) RETURNING t."idToken"
             ) SELECT * FROM gone`,
             [userId, sessionToken],

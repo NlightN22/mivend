@@ -174,6 +174,14 @@ describe('OidcProviderService', () => {
         expect(await new OidcProviderService(OPTIONS).endSessionUrl('t')).toBeNull();
     });
 
+    it.each(['javascript:alert(1)', 'data:text/html,x', 'http://idp.example.com/logout'])(
+        'refuses the end-session endpoint %s',
+        async endpoint => {
+            endSessionEndpoint = endpoint;
+            expect(await new OidcProviderService(OPTIONS).endSessionUrl('t')).toBeNull();
+        },
+    );
+
     it('gives no end-session URL when discovery fails, without throwing', async () => {
         discoveryIssuer = 'https://other.example.com';
         expect(await new OidcProviderService(OPTIONS).endSessionUrl('t')).toBeNull();

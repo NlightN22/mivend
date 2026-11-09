@@ -949,5 +949,9 @@ staff on the Admin API see all of them. A hidden category hides its whole subtre
   ends our session as for any sign-out and navigates to that URL. A local session gets `null` and signs out as before. If
   discovery fails or the provider has no end-session endpoint, the answer is `null` and a warning is logged: local sign-out
   is never blocked. Sessions ended by other routes (idle, forced, evicted, expired) get no browser redirect; the hourly
-  cleanup removes tokens that no live provider session needs. Accepted limit: with several provider sessions of one
-  administrator the newest token is the hint for all of them.
+  cleanup removes tokens that no live provider session needs. Known limit: the token is kept per administrator, so
+  with two browsers the older session's sign-out may use the newest login's `id_token_hint`, and the provider may end the
+  other browser's provider session. Retention: the ID token is stored in plaintext until the last provider session ends
+  (a token saved less than 2 minutes ago is kept) or the hourly orphan sweep removes it; acceptable for a logout hint. The
+  end-session URL is returned only for an `https` endpoint (`http` only on `localhost`/`127.0.0.1`). The anonymous
+  `oidcSignIn` query exposes the provider host and its favicon URL, intentionally.
