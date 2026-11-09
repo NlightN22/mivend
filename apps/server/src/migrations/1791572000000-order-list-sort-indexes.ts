@@ -1,7 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // The orders list sorts NULLS LAST (shared list engine), which the plain btree on orderPlacedAt cannot serve.
-export class OrderListSortIndexes1791571000000 implements MigrationInterface {
+// Plain CREATE INDEX on purpose (not CONCURRENTLY): the migration runs in a transaction and the table is small.
+export class OrderListSortIndexes1791572000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
             `CREATE INDEX IF NOT EXISTS "IDX_order_placed_at_list"
