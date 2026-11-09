@@ -36,3 +36,7 @@ export type {
 export type { PortalRole, CounterpartyUpsertPayload } from './src/types';
 export type { CounterpartyErpDetails } from './src/counterparty-erp-details';
 export { CounterpartyCreatedEvent } from './src/counterparty-created.event';
+export { ContactPointService } from './src/contact-point.service';
+export { ErpContactPersonService } from './src/erp-contact-person.service';
+export type { ContactPointInput } from './src/contact-point-normalize';
+export type { ContactPointType } from './src/entities/contact-point.entity';

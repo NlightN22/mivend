@@ -12,6 +12,11 @@ export function normalizePhone(raw: string): string | null {
     return parsed?.isValid() ? parsed.formatInternational() : null;
 }
 
+export function normalizePhoneE164(raw: string): string | null {
+    const parsed = parsePhoneNumberFromString(raw, 'RU');
+    return parsed?.isValid() ? parsed.number : null;
+}
+
 export function isValidPersonName(raw: string): boolean {
     const words = raw.trim().split(/\s+/).filter(Boolean);
     return words.length >= 2 && words.every(w => /\p{L}{2,}|^\p{L}\.$/u.test(w));

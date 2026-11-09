@@ -17,6 +17,15 @@ import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
 import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
+import { ContactPoint } from './entities/contact-point.entity';
+import { ContactRole } from './entities/contact-role.entity';
+import { CounterpartyContactPoint } from './entities/counterparty-contact-point.entity';
+import { TradingPointContactPoint } from './entities/trading-point-contact-point.entity';
+import { ContactPersonContactPoint } from './entities/contact-person-contact-point.entity';
+import { AdministratorContactPoint } from './entities/administrator-contact-point.entity';
+import { CounterpartyContactPerson } from './entities/counterparty-contact-person.entity';
+import { ContactPointService } from './contact-point.service';
+import { ErpContactPersonService } from './erp-contact-person.service';
 import { TradingPoint } from './entities/trading-point.entity';
 import { ContractPowerOfAttorneyErp } from './entities/contract-power-of-attorney-erp.entity';
 import { PowerOfAttorneyErpService } from './power-of-attorney-erp.service';
@@ -140,6 +149,13 @@ const adminResolvers = [
         PointOfSaleTypeErp,
         TradingPointChange,
         ContactPerson,
+        ContactPoint,
+        ContactRole,
+        CounterpartyContactPoint,
+        TradingPointContactPoint,
+        ContactPersonContactPoint,
+        AdministratorContactPoint,
+        CounterpartyContactPerson,
         CounterpartyTeamMember,
         Contract,
         ContractPowerOfAttorneyErp,
@@ -166,6 +182,8 @@ const adminResolvers = [
         CounterpartyService,
         CounterpartyBatchLoaders,
         ErpIdLookupService,
+        ContactPointService,
+        ErpContactPersonService,
         CounterpartyConsumer,
         TradingPointService,
         TradingPointChangeService,
@@ -189,6 +207,8 @@ const adminResolvers = [
     ],
     exports: [
         CounterpartyService,
+        ContactPointService,
+        ErpContactPersonService,
         ErpIdLookupService,
         TradingPointService,
         TradingPointChangeService,
