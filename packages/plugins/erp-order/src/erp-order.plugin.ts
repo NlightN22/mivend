@@ -58,6 +58,8 @@ import {
     ScopedOrderLineOrderResolver,
     ScopedOrdersResolver,
 } from './core-order-scope/scoped-order-list.resolver';
+import { AdminOrderCounterpartyResolver } from './admin-order-counterparty.resolver';
+import { OrderCounterpartyLoader } from './order-counterparty.loader';
 import { shopApiExtensions } from './api/shop.schema';
 
 const adminApiSchema = gql`
@@ -75,6 +77,11 @@ const adminApiSchema = gql`
         "Latest placed-order date per listed counterparty, visible orders only"
         lastOrderDates(counterpartyIds: [ID!]!): [CounterpartyLastOrder!]!
         orderStatuses: [OrderStatusInfo!]!
+    }
+
+    extend type Order {
+        "The order's own counterparty, else its customer's"
+        counterparty: Counterparty
     }
 
     type OrdersAttention {
@@ -149,6 +156,7 @@ const adminApiSchema = gql`
         OrderStatusProvisioningService,
         OrderVisibilityService,
         OrderVisibilityAggregatesService,
+        OrderCounterpartyLoader,
         OrdersAttentionService,
         OrderTargetService,
         CoreOrderScopeService,
@@ -181,6 +189,7 @@ const adminApiSchema = gql`
         resolvers: [
             AdminOrderVisibilityResolver,
             AdminOrderStatusHistoryResolver,
+            AdminOrderCounterpartyResolver,
             OrderStatusReferenceResolver,
             OrderVisibilityAggregatesResolver,
             OrdersAttentionResolver,
