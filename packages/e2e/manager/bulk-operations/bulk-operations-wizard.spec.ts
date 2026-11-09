@@ -201,7 +201,7 @@ async function activateAllMatching(page: Page, search: string, total: number): P
 
     const counters = page.getByRole('group', { name: 'Counters' });
     const counter = (count: number, label: string) =>
-        counters.getByRole('button', { name: `${count}${label}`, exact: true });
+        counters.getByRole('button', { name: new RegExp(`^${count}\\s*${label}$`) });
     await expect(counter(total, 'Applied')).toBeVisible({ timeout: 120000 });
     await expect(counter(total, 'All')).toBeVisible();
     await expect(counter(0, 'Failed')).toBeVisible();
