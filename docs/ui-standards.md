@@ -107,6 +107,7 @@ list and the chips are one horizontally scrolling row (`scrollable`).
 
 No nested scrollbars: the page is the only vertical scroll. A table never has its own vertical scrollbar and grows with its
 rows (no scroll height or max-height on the grid); horizontal table scroll appears only when the columns do not fit.
+Accepted trade-off: because the table container no longer scrolls vertically, its header does not stay pinned while the page scrolls through a long page (measured: 50 rows, the header leaves the screen). A page-level sticky header needs the horizontal overflow wrapper out of the way (a header clone synced by script) and is a follow-up if long pages need it.
 
 One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGrid.css`, sizes in `tokens.css`):
 
