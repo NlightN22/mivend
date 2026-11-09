@@ -83,6 +83,15 @@
     color: var(--el-text-color-secondary);
 }
 
+:deep(.mv-cell-raw) {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+    line-height: normal;
+    font-size: inherit;
+}
+
 :deep(.mv-cell-link) {
     color: inherit;
     text-decoration: none;

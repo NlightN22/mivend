@@ -211,6 +211,8 @@ function applyView(state: TableViewState): void {
                 <span
                     v-if="(data as SettlementRow).orderCodes.length > 1"
                     class="mv-cell-more"
+                    role="note"
+                    :aria-label="`Also orders: ${(data as SettlementRow).orderCodes.slice(1).map(formatDocumentNumber).join(', ')}`"
                     :title="(data as SettlementRow).orderCodes.map(formatDocumentNumber).join(', ')"
                     >+{{ (data as SettlementRow).orderCodes.length - 1 }}</span
                 >

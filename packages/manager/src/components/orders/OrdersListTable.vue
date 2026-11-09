@@ -255,6 +255,8 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
                 <span
                     v-if="(data as OrderListRow).flags.length"
                     class="mv-cell-more"
+                    role="note"
+                    :aria-label="`Also: ${(data as OrderListRow).flags.map(flag => flag.label).join(', ')}`"
                     :title="(data as OrderListRow).flags.map(flag => flag.label).join(', ')"
                     >+{{ (data as OrderListRow).flags.length }}</span
                 >

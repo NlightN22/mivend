@@ -126,6 +126,10 @@ One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGri
   arrows and a fade only on the side that has more; the active chip is scrolled into view. The table never exceeds its
   parent, and the default visible columns must fit about 1090px of table width.
 - On a phone the table container reserves the bottom tab bar height.
+- The `+N` pill is `role="note"` with an `aria-label` and title listing the hidden items; the order card/detail shows the
+  same items. Chip scroll arrows are always rendered and `disabled` at the ends; the selected chip has `aria-pressed`.
+- Cells with buttons, inputs, selects or switches keep the table's 13px/18px defaults; wrap content in `mv-cell-raw` to
+  reset the clamp, line height and font size where a control needs its own box.
 - A column that is empty for most rows (e.g. organization, proforma invoice on settlements) starts hidden.
 
 ## Flagged cells and row stripes
