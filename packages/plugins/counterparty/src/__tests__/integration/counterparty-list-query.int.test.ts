@@ -10,7 +10,7 @@ import {
 } from 'shared';
 
 import { CounterpartyService } from '../../counterparty.service';
-import type { CounterpartyFilterParameter } from '../../counterparty-filter-engine';
+import type { CounterpartyFilterParameter } from '../../counterparty-list-query';
 
 // Hand-rolled tables with the columns the filter reads stand in for the Vendure entities.
 @Entity('counterparty')
@@ -53,7 +53,7 @@ const mockCtx = {} as RequestContext;
 const scope = vi.fn(async () => ({ kind: 'all' }) as Record<string, unknown>);
 const accessScope = { resolveCounterpartyScope: scope, managerClause: vi.fn(() => null) };
 
-const { schema, extra } = testSchemaOptions('counterparty_filter_engine');
+const { schema, extra } = testSchemaOptions('counterparty_list_query');
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -124,7 +124,7 @@ async function erpIds(filter: CounterpartyFilterParameter): Promise<string[]> {
     return page.items.map(c => c.erpId).sort();
 }
 
-describe('counterparty filter engine', () => {
+describe('counterparty list filter (shared engine)', () => {
     it('contains is case-insensitive and treats % and _ as literal characters', async () => {
         expect(await erpIds({ shortName: { contains: 'trade' } })).toEqual(['a', 'b', 'c']);
         expect(await erpIds({ shortName: { contains: '100%' } })).toEqual(['b']);
@@ -224,6 +224,15 @@ describe('counterparty filter engine', () => {
             }
         });
 
+        it('rejects _or and non-object operators or items', async () => {
+            await expect(
+                erpIds({ _or: [{ inn: { eq: '1' } }] } as unknown as CounterpartyFilterParameter),
+            ).rejects.toThrow(/_or/);
+            await expect(
+                erpIds({ inn: { in: 'x' } } as unknown as CounterpartyFilterParameter),
+            ).rejects.toThrow(/Invalid/);
+        });
+
         it('rejects a field outside the whitelist', async () => {
             await expect(
                 erpIds({ creditLimit: { eq: '1' } } as unknown as CounterpartyFilterParameter),
@@ -242,7 +251,7 @@ describe('counterparty filter engine', () => {
             const many = Array.from({ length: 21 }, () => ({ shortName: { contains: 'a' } }));
             await expect(erpIds({ _and: many })).rejects.toThrow(/At most/);
             const deep: CounterpartyFilterParameter = {
-                _and: [{ _and: [{ _and: [{ _and: [{}] }] }] }],
+                _and: [{ _and: [{ _and: [{ _and: [{ _and: [{}] }] }] }] }],
             };
             await expect(erpIds(deep)).rejects.toThrow(/nested/);
         });

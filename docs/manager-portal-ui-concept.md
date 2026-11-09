@@ -304,3 +304,25 @@ quick article entry, change-of-assignment action, dashboard redesign (a separate
    until then the card keeps its current layout with the "Act as customer" button).
 3. Shell and menu per this document.
 4. Dashboard, then the deferred items, one page at a time.
+
+## Filter mechanism inventory (#337)
+
+Rule: every server list that filters or sorts uses the shared list filter engine
+(`packages/shared/src/list-filter-engine.ts`) and the standard filter builder in the portal.
+Deviations below are follow-ups, not migrated in #337. "Verify" marks a mechanism read from the
+portal API layer only and not re-checked on the server.
+
+| List | Server mechanism | Status |
+| --- | --- | --- |
+| Proforma invoices | Shared engine | Conforms |
+| Payments | Shared engine | Conforms |
+| Settlements | Shared engine | Conforms |
+| Customers (counterparties) | Shared engine (field whitelist in `counterparty-list-query.ts`), legacy list args beside it; sort is still `counterparty-sort.ts` | Filter conforms; sort follow-up |
+| Customer activation list (bulk) | Same counterparty filter plus search and readiness chip | Conforms |
+| Orders | Native Vendure list options (`filter`/`sort`) via `orders-filter.ts` | Deviates |
+| Approvals inbox | Bespoke query service (`approval-request-query.service.ts`) with its own filter args | Deviates |
+| Discounts | Bespoke registry list args (verify) | Deviates |
+| Team / users | Native Vendure administrator list options (verify) | Deviates |
+| Bulk history | Bespoke `BulkBatchFilter` input (fixed fields, own SQL) | Deviates |
+| Entity history panel | Bespoke `EntityVersionListOptions` (typed columns) | Deviates |
+| Roles | Native Vendure role list (verify) | Deviates |

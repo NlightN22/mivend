@@ -210,6 +210,7 @@ bottom margin shifts the visible content off-center within it.
    4a) instead of a bespoke color/style.
 5. Confirm pagination is either real (server `skip`/`take`) or explicitly exempted with a comment
    explaining why, per the `backend-plugin-rules` skill's bounded-list test.
+6a. Confirm the table's filters use the standard filter builder over the shared server list filter engine (no bespoke filter UI or engine).
 6. Confirm filter/page state is URL-synced if the table has real, user-facing filters.
 7. Confirm the primary action button lives in `#toolbar-end` (point 9) and there's no separate
    header block with a title/row-count above the table.

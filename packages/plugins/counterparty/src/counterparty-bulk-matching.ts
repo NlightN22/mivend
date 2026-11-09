@@ -4,7 +4,7 @@ import type { RequestContext } from '@vendure/core';
 import {
     applyCounterpartyFilterParameter,
     type CounterpartyFilterParameter,
-} from './counterparty-filter-engine';
+} from './counterparty-list-query';
 import type { CounterpartyService } from './counterparty.service';
 
 const MATCHING_KEYS = ['search', 'readiness', 'filter'];

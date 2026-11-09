@@ -139,6 +139,8 @@ Define TypeScript union types or `as const` arrays **only** for internal technic
 
 ## Pagination
 
+**Every list that filters or sorts uses the shared list filter engine (`packages/shared/src/list-filter-engine.ts`)** with a per-list field whitelist (see `counterparty-list-query.ts`); extend the shared engine if a feature is missing, never add a second engine.
+
 **Every list that can grow unboundedly over time must be paginated server-side from day one.** "Fetch everything, then filter/paginate in application code or on the frontend" is a recognized antipattern, not a defer-until-scale concern — see `docs/ai/PROJECT_CONTEXT.md`'s "Approvals inbox: real server-side pagination" (2026-07-14) for the real incident this rule comes from: `myApprovalsInbox` had no pagination at all, loaded every pending `ApprovalRequest` company-wide on every call, and filtered in JS.
 
 **A list is exempt only if it is genuinely, structurally bounded** — not "small today." Judgement call at planning time, not a blanket rule:

@@ -12,7 +12,7 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { withAggregateLock, ctxQuery } from 'shared';
+import { clampSkip, clampTake, withAggregateLock, ctxQuery } from 'shared';
 
 import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn-guard';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
@@ -29,7 +29,7 @@ import { applyCounterpartySort } from './counterparty-sort';
 import {
     applyCounterpartyFilterParameter,
     type CounterpartyFilterParameter,
-} from './counterparty-filter-engine';
+} from './counterparty-list-query';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
 
 @Injectable()
@@ -191,11 +191,9 @@ export class CounterpartyService {
         applyCounterpartyFilterParameter(qb, options.filter);
         applyCounterpartySort(qb, options.sort);
         const totalItems = await qb.getCount();
-        if (options.take === 0) return { items: [], totalItems };
-        const items = await qb
-            .take(options.take ?? 50)
-            .skip(options.skip ?? 0)
-            .getMany();
+        const take = clampTake(options.take);
+        if (take === 0) return { items: [], totalItems };
+        const items = await qb.take(take).skip(clampSkip(options.skip)).getMany();
         return { items, totalItems };
     }
 

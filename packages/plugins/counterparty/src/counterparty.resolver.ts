@@ -18,7 +18,7 @@ import { CounterpartyService } from './counterparty.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { CounterpartySortParameter } from './types';
-import type { CounterpartyFilterParameter } from './counterparty-filter-engine';
+import type { CounterpartyFilterParameter } from './counterparty-list-query';
 
 @Resolver('Customer')
 export class CustomerCounterpartyResolver {
