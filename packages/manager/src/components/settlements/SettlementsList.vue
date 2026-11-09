@@ -62,6 +62,7 @@ function clearFilters(): void {
         :page-size="list.pageSize.value"
         :filters="list.filters.value"
         :sort="list.sort.value"
+        :type-options="list.typeOptions.value"
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"

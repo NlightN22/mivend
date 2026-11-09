@@ -1,5 +1,6 @@
 import { onMounted, ref, shallowRef, watch, type Ref } from 'vue';
 import { useDebouncedCallback, useLatestRequest } from '@mivend/ui-kit';
+import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 import {
     fetchSettlementsList,
     type SettlementsListFilters,
@@ -32,6 +33,7 @@ export interface SettlementsListState {
     pageSize: Ref<number>;
     counts: Ref<SettlementTypeCount[] | null>;
     countsLoading: Ref<boolean>;
+    typeOptions: Ref<FilterOption[]>;
 }
 
 // Search, type, customer, page and page size live in the URL, so a filtered list is a shareable link.
@@ -94,6 +96,23 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
     };
     const refreshCountsSoon = useDebouncedCallback(refreshCounts, 250);
 
+    // The Filter builder's Type choices: every type of the customer scope, unaffected by search and filters.
+    const typeOptions = ref<FilterOption[]>([]);
+    const { run: runTypeOptions } = useLatestRequest(
+        () => fetchSettlementTypeCounts(counterpartyId.value),
+        result => {
+            typeOptions.value = result
+                .map(c => ({ value: c.label, label: c.label }))
+                .sort((a, b) => a.label.localeCompare(b.label));
+        },
+    );
+    const refreshTypeOptions = (): void => {
+        runTypeOptions().catch(e => {
+            console.warn('[settlements] could not load document types:', e);
+        });
+    };
+    watch(counterpartyId, refreshTypeOptions);
+
     watch([filters, sort, counterpartyId, pageSize], () => {
         page.value = 1;
     });
@@ -112,6 +131,7 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
     onMounted(() => {
         reload();
         refreshCounts();
+        refreshTypeOptions();
     });
 
     return {
@@ -127,5 +147,6 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
         pageSize,
         counts,
         countsLoading,
+        typeOptions,
     };
 }

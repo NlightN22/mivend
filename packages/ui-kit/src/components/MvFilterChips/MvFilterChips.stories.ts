@@ -72,7 +72,7 @@ const manyTemplate = {
         '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
 };
 
-export const ScrollableWrapsOnDesktop: Story = { render: () => manyTemplate };
+export const TwoRowsWithMore: Story = { render: () => manyTemplate };
 
 export const ScrollableScrollsOnPhone: Story = {
     render: () => manyTemplate,

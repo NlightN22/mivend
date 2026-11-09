@@ -82,7 +82,7 @@ export class SettlementAdminListService {
         return { items: rows.map(toItem), totalItems };
     }
 
-    // Follows the search and the filter but not the type itself, so every chip keeps its own number.
+    // Follows the search and the filter but not the type itself; largest first, then by label.
     async typeCounts(
         ctx: RequestContext,
         options?: SettlementListOptions | null,
@@ -95,7 +95,8 @@ export class SettlementAdminListService {
             .addSelect(`MIN(${TYPE_LABEL_SQL})`, 'label')
             .addSelect('COUNT(*)::int', 'count')
             .groupBy('"d"."documentType"')
-            .orderBy('MIN("t"."sortOrder")', 'ASC', 'NULLS LAST')
+            .orderBy('COUNT(*)', 'DESC')
+            .addOrderBy(`MIN(${TYPE_LABEL_SQL})`, 'ASC')
             .addOrderBy('"d"."documentType"', 'ASC')
             .getRawMany<Raw>();
         return rows.map(r => ({

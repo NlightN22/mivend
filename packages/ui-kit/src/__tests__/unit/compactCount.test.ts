@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
-import { shouldCollapseChips } from '../../components/MvFilterChips/chipOverflow';
 
 describe('formatCompactCount', () => {
     it('keeps small counts exact', () => {
@@ -16,13 +15,5 @@ describe('formatCompactCount', () => {
 
     it('keeps the exact value for tooltips', () => {
         expect(formatExactCount(309861)).toBe('309,861');
-    });
-});
-
-describe('shouldCollapseChips', () => {
-    it('collapses only above the limit', () => {
-        expect(shouldCollapseChips(6)).toBe(false);
-        expect(shouldCollapseChips(7)).toBe(true);
-        expect(shouldCollapseChips(3, 2)).toBe(true);
     });
 });

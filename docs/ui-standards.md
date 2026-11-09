@@ -120,18 +120,17 @@ One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGri
 - Cells are middle-aligned; the default cell text clamps to two lines. Every column declares `width` (and `minWidth` for
   columns that must not shrink); the table is `table-layout: fixed` and reserves the scrollbar gutter, so columns stay put
   between pages and sorts. Skeleton rows use the list's `rowHeightPx`.
-- Chip rows with more than six chips become one scrolling row with a fade edge (`MvFilterChips`); counts of 10,000 and
+- Chip rows wrap to at most two rows; a `More` button expands all rows and `Collapse` folds back, shown only when the chips overflow two rows (`MvFilterChips`); counts of 10,000 and
   more are shown as `309.9k` with the exact value in the title. ERP-provided type names are shown as received.
 - Rows have one uniform height (`rowHeightPx`, 64px on the document lists; every cell has that as its minimum height,
   skeleton rows included). A cell never grows the row: several orders or flags show the first one plus a `mv-cell-more`
   `+N` with the full list in the title.
 - The toolbar keeps search, Filter, Views and column settings on one row (end group right-aligned); chips (`view-chips`
-  in `toolbar-start`) take their own full-width row below. Chip rows over six chips scroll in one line, with prev/next
-  arrows and a fade only on the side that has more; the active chip is scrolled into view. The table never exceeds its
+  in `toolbar-start`) take their own full-width row below. Chip rows wrap to two rows with `More`/`Collapse`. The table never exceeds its
   parent, and the default visible columns must fit about 1090px of table width.
 - On a phone the table container reserves the bottom tab bar height.
 - The `+N` pill is `role="note"` with an `aria-label` and title listing the hidden items; the order card/detail shows the
-  same items. Chip scroll arrows are always rendered and `disabled` at the ends; the selected chip has `aria-pressed`.
+  same items. The `More`/`Collapse` button has `aria-expanded`; the selected chip has `aria-pressed`.
 - Cells with buttons, inputs, selects or switches keep the table's 13px/18px defaults; wrap content in `mv-cell-raw` to
   reset the clamp, line height and font size where a control needs its own box.
 - A column that is empty for most rows (e.g. organization, proforma invoice on settlements) starts hidden.

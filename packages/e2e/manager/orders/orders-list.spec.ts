@@ -41,38 +41,34 @@ test('the seven main columns fit the page width untruncated @read-only', async (
     );
 });
 
-test('status chips form one scrollable row, the arrows reveal the clipped ones and none overlaps @read-only', async ({
+test('status chips wrap to two rows, More reveals the rest and none overlaps @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
     const chips = page.locator('.mv-filter-chip');
     await expect(chips.first()).toBeVisible({ timeout: 15000 });
-    const count = await chips.count();
-    expect(count).toBeGreaterThan(0);
 
     const row = page.locator('.mv-filter-chips').first();
-    const overflowing = await row.evaluate(el => el.scrollWidth > el.clientWidth);
-    if (overflowing) {
-        const next = page.getByRole('button', { name: 'Scroll chips right' });
-        for (let i = 0; i < count && (await next.isEnabled()); i++) {
-            // The arrow disables itself when the smooth scroll reaches the end, so a click can race it.
-            await next.click({ timeout: 1000 }).catch(() => undefined);
-            await page.waitForTimeout(400);
-        }
-        await expect(next).toBeDisabled();
-        await expect(chips.nth(count - 1)).toBeInViewport();
-    } else {
-        for (let i = 0; i < count; i++) await expect(chips.nth(i)).toBeInViewport();
+    expect((await row.boundingBox())?.height ?? 0).toBeLessThanOrEqual(69);
+    const toggle = page.locator('.mv-filter-chips__toggle');
+    if (await toggle.isVisible()) {
+        await toggle.click();
+        await expect(toggle).toHaveText('Collapse');
+        await expect(chips.last()).toBeInViewport();
+        await toggle.click();
+        await expect(toggle).toHaveText('More');
+        await toggle.click();
     }
 
-    await row.evaluate(el => el.scrollTo({ left: 0 }));
+    const count = await chips.count();
     const boxes = [];
     for (let i = 0; i < count; i++) boxes.push(await chips.nth(i).boundingBox());
     for (let i = 1; i < boxes.length; i++) {
         const prev = boxes[i - 1];
         const cur = boxes[i];
-        if (prev && cur) expect(cur.x).toBeGreaterThanOrEqual(prev.x + prev.width - 1);
+        if (prev && cur && cur.y < prev.y + prev.height - 1)
+            expect(cur.x).toBeGreaterThanOrEqual(prev.x + prev.width - 1);
     }
 });
 

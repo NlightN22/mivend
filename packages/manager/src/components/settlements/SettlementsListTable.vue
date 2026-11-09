@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
     MvStatusBadge,
@@ -19,6 +19,7 @@ import { SETTLEMENTS_URL_DEFAULTS } from '../../composables/settlementsListUrl';
 import { sortFromState, sortToState } from './settlementsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
+import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 import { SETTLEMENTS_COLUMNS as COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
 
@@ -32,6 +33,7 @@ const props = defineProps<{
     filters: SettlementsListFilters;
     sort: SettlementsSort;
     administratorId: string;
+    typeOptions: FilterOption[];
 }>();
 
 const emit = defineEmits<{
@@ -42,6 +44,10 @@ const emit = defineEmits<{
     'clear-filters': [];
     retry: [];
 }>();
+
+const filterColumns = computed(() =>
+    COLUMNS.map(c => (c.field === 'type' ? { ...c, filterOptions: props.typeOptions } : c)),
+);
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
     `settlements-list-v1:${props.administratorId}`,
@@ -130,7 +136,7 @@ function applyView(state: TableViewState): void {
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="COLUMNS"
+        :columns="filterColumns"
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
-import { shouldCollapseChips } from './chipOverflow';
-import { useChipScroll } from './useChipScroll';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Quick-filter chip row; a `variant` chip mirrors its table badge colour, see docs/ui-standards.md.
@@ -19,47 +17,46 @@ export interface FilterChip {
     emphasis?: boolean;
 }
 
-// More than `maxInline` chips collapse into one horizontally scrolling row with a fade edge.
-const props = withDefaults(
-    defineProps<{
-        chips: FilterChip[];
-        active: string;
-        scrollable?: boolean;
-        maxInline?: number;
-    }>(),
-    { scrollable: false, maxInline: 6 },
-);
-const collapsed = computed(() => shouldCollapseChips(props.chips.length, props.maxInline));
+// Chips wrap to at most two rows; "More" expands to all rows when they overflow.
+const props = withDefaults(defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(), {
+    scrollable: false,
+});
+const TWO_ROWS_PX = 68;
+const row = ref<HTMLElement | null>(null);
+const expanded = ref(false);
+const overflows = ref(false);
 
-const { row, canPrev, canNext, measure, step } = useChipScroll(
-    () => props.active,
+function measure(): void {
+    if (row.value) overflows.value = row.value.scrollHeight > TWO_ROWS_PX + 1;
+}
+let observer: ResizeObserver | undefined;
+onMounted(() => {
+    measure();
+    if (typeof ResizeObserver !== 'undefined' && row.value) {
+        observer = new ResizeObserver(measure);
+        observer.observe(row.value);
+    }
+});
+onBeforeUnmount(() => observer?.disconnect());
+watch(
     () => props.chips.length,
+    async () => {
+        await nextTick();
+        measure();
+    },
 );
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
     <div class="mv-filter-chips-wrap">
-        <button
-            v-if="collapsed"
-            :disabled="!canPrev"
-            type="button"
-            class="mv-filter-chips__arrow"
-            aria-label="Scroll chips left"
-            @click="step(-1)"
-        >
-            ‹
-        </button>
         <div
             ref="row"
             class="mv-filter-chips"
             :class="{
                 'mv-filter-chips--scrollable': scrollable,
-                'mv-filter-chips--collapsed': collapsed,
-                'mv-filter-chips--fade-start': collapsed && canPrev,
-                'mv-filter-chips--fade-end': collapsed && canNext,
+                'mv-filter-chips--clamped': !expanded,
             }"
-            @scroll.passive="measure"
         >
             <button
                 v-for="chip in chips"
@@ -97,14 +94,13 @@ const emit = defineEmits<{ select: [key: string] }>();
             </button>
         </div>
         <button
-            v-if="collapsed"
-            :disabled="!canNext"
+            v-if="overflows"
             type="button"
-            class="mv-filter-chips__arrow"
-            aria-label="Scroll chips right"
-            @click="step(1)"
+            class="mv-filter-chips__toggle"
+            :aria-expanded="expanded"
+            @click="expanded = !expanded"
         >
-            ›
+            {{ expanded ? 'Collapse' : 'More' }}
         </button>
     </div>
 </template>
