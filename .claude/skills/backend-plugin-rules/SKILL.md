@@ -386,6 +386,8 @@ A trading point written outside the ERP stream (staff edit, customer add, `upser
 
 ---
 
+- Never import `pg`/`pg-pool` in plugin source (lint-enforced): use the TypeORM/Vendure connection so the UTC parser and session zone from `apps/server/src/pg-utc.ts` apply; the only exception is notification's LISTEN/NOTIFY clients.
+
 ## Concurrency
 
 Full rules: `docs/concurrency.md`. Hard rules for any read-compute-write of shared rows:

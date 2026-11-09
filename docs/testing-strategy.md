@@ -390,6 +390,7 @@ A change is not done until:
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
 - `make test-access` — access integration matrix on a throwaway server and database (about 4 min).
 - `make bench-pricing` — pricing benchmark (see "Pricing benchmark"); manual, never in CI.
+- Lint also forbids importing `pg`/`pg-pool` in plugin source (outside tests): direct connections miss the UTC parser and session zone pinned in `apps/server/src/pg-utc.ts`.
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
 - `make e2e-dev` — Playwright E2E on its own throwaway stack and database (needs no `make dev`).
 

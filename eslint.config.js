@@ -13,6 +13,28 @@ import noSwallowedHandlerError from './eslint-rules/no-swallowed-handler-error.j
 import noRawAdvisoryLock from './eslint-rules/no-raw-advisory-lock.js';
 import noRawConnection from './eslint-rules/no-raw-connection.js';
 
+const pgPaths = ['pg', 'pg-pool'].map(name => ({
+    name,
+    message:
+        'Do not open your own pg connection in a plugin: use the TypeORM/Vendure connection, which gets the UTC type parser and session zone from apps/server/src/pg-utc.ts. If a direct connection is truly needed, ask the maintainers and see pg-utc.ts (no shared helper exists yet).',
+}));
+const amqpPaths = ['amqplib', 'amqp-connection-manager'].map(name => ({
+    name,
+    message:
+        'RabbitMQ is owned exclusively by plugin-sync (AGENTS.md sync rule #5). Publish/subscribe via Vendure EventBus instead.',
+}));
+const erpAdapterPatterns = [
+    {
+        group: [
+            '**/erp-adapter.interface',
+            '**/erp-adapter.stub',
+            '@mivend/plugin-sync/**/erp-adapter*',
+        ],
+        message:
+            'The ERP adapter is owned exclusively by plugin-sync (AGENTS.md sync rule #6 — branches never call the ERP). Only plugin-sync may import it.',
+    },
+];
+
 export default [
     js.configs.recommended,
     {
@@ -153,35 +175,36 @@ export default [
         languageOptions: { parser: tsParser },
         plugins: { '@typescript-eslint': tsPlugin },
         rules: {
+            'no-restricted-imports': ['error', { paths: amqpPaths, patterns: erpAdapterPatterns }],
+        },
+    },
+    // pg/pg-pool in plugin source bypass the UTC parser and session zone (apps/server/src/pg-utc.ts).
+    // notification's LISTEN/NOTIFY clients read no timestamps; they are the only accepted exception.
+    // Repeats the amqp/ERP restrictions: a later block overrides an earlier no-restricted-imports.
+    {
+        files: ['packages/plugins/*/src/**/*.ts'],
+        ignores: [
+            'packages/plugins/sync/**',
+            '**/*.test.ts',
+            '**/__tests__/**',
+            'packages/plugins/notification/src/notification-pub-sub.ts',
+            'packages/plugins/notification/src/notification-pg-pub-sub.ts',
+        ],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: {
             'no-restricted-imports': [
                 'error',
-                {
-                    paths: [
-                        {
-                            name: 'amqplib',
-                            message:
-                                'RabbitMQ is owned exclusively by plugin-sync (AGENTS.md sync rule #5). Publish/subscribe via Vendure EventBus instead.',
-                        },
-                        {
-                            name: 'amqp-connection-manager',
-                            message:
-                                'RabbitMQ is owned exclusively by plugin-sync (AGENTS.md sync rule #5). Publish/subscribe via Vendure EventBus instead.',
-                        },
-                    ],
-                    patterns: [
-                        {
-                            group: [
-                                '**/erp-adapter.interface',
-                                '**/erp-adapter.stub',
-                                '@mivend/plugin-sync/**/erp-adapter*',
-                            ],
-                            message:
-                                'The ERP adapter is owned exclusively by plugin-sync (AGENTS.md sync rule #6 — branches never call the ERP). Only plugin-sync may import it.',
-                        },
-                    ],
-                },
+                { paths: [...pgPaths, ...amqpPaths], patterns: erpAdapterPatterns },
             ],
         },
+    },
+    {
+        files: ['packages/plugins/sync/src/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: { 'no-restricted-imports': ['error', { paths: pgPaths }] },
     },
     // All storefront GraphQL operations must go through codegen (packages/storefront/codegen.ts)
     // — a hand-written query/mutation string is invisible to the schema and can't be typed.
