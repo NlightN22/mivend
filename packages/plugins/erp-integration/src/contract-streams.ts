@@ -26,6 +26,7 @@ const NOT_EVENT_SCHEMAS = new Set([
     'SettlementEntrySchema',
     'SettlementOrderLinkSchema',
     'ContactInfoSchema',
+    'OrganizationContactInfoSchema',
     'SelectionConditionSchema',
     'DiscountBonusLineSchema',
     'DiscountPriceGroupSchema',

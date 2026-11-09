@@ -22,16 +22,20 @@ describe('streamToAggregateType', () => {
         expect(streamToAggregateType('order-cancel-result')).toBeNull();
     });
 
+    // The person streams have no replay aggregate type in the Integration Service map (like counterparty-contact).
     it('every consumed stream is either replayable or deliberately excluded', () => {
         const unmapped = ALL_INBOUND_STREAMS.filter(s => streamToAggregateType(s) === null);
         expect([...unmapped].sort()).toEqual(
             [
                 'counterparty-contact',
+                'contact-person',
                 'counterparty-group',
                 'customer-claim',
+                'individual',
                 'order-cancel-result',
                 'order-change-result',
                 'order-correction',
+                'personal-contact',
                 'point-of-sale-type',
                 'product-group',
                 'sales-correction',
