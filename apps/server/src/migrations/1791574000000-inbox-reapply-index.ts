@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// #332: keyset slices of the one-off contact reapply over processed inbox rows.
+// #332: keyset slices of the one-off contact reapply, and the 24 h contact-failure summary of stream health.
 export class InboxReapplyIndex1791574000000 implements MigrationInterface {
     name = 'InboxReapplyIndex1791574000000';
     // CONCURRENTLY cannot run in a transaction; Vendure runs migrations with transaction 'each'.
@@ -14,9 +14,16 @@ export class InboxReapplyIndex1791574000000 implements MigrationInterface {
         await queryRunner.query(
             `CREATE INDEX CONCURRENTLY "integration_inbox_event_reapply" ON "integration_inbox_event" ("stream", "id") WHERE "status" = 'processed'`,
         );
+        await queryRunner.query(
+            `DROP INDEX CONCURRENTLY IF EXISTS "integration_inbox_event_contact_failure"`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX CONCURRENTLY "integration_inbox_event_contact_failure" ON "integration_inbox_event" ("stream", "processed_at") WHERE "outcome" = 'applied' AND "outcome_reason" IS NOT NULL`,
+        );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP INDEX IF EXISTS "integration_inbox_event_reapply"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "integration_inbox_event_contact_failure"`);
     }
 }

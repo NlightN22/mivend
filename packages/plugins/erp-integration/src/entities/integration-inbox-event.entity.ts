@@ -42,6 +42,10 @@ export type IntegrationInboxEventStatus =
 })
 // Serves the one-off contact reapply's keyset slices (ContactReapplyService).
 @Index('integration_inbox_event_reapply', ['stream', 'id'], { where: `"status" = 'processed'` })
+// Serves the 24 h contact-failure summary of stream health (outcome_reason set on applied rows only).
+@Index('integration_inbox_event_contact_failure', ['stream', 'processedAt'], {
+    where: `"outcome" = 'applied' AND "outcome_reason" IS NOT NULL`,
+})
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;

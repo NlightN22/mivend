@@ -109,7 +109,7 @@ export class IntegrationInboxHealthService {
                    COUNT(*)::int AS count,
                    (ARRAY_AGG(outcome_reason ORDER BY processed_at DESC))[1] AS "lastReason"
             FROM integration_inbox_event
-            WHERE outcome = 'applied' AND outcome_reason LIKE 'contact step failed%'
+            WHERE outcome = 'applied' AND outcome_reason IS NOT NULL AND outcome_reason LIKE 'contact step failed%'
               AND processed_at > now() - interval '24 hours'
             GROUP BY stream
         `,
