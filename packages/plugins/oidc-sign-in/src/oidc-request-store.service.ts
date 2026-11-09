@@ -52,12 +52,15 @@ export class OidcRequestStoreService {
     }
 
     // The single-use gate for the code exchange: a replayed or concurrent second claim matches nothing.
+    // UPDATE ... RETURNING goes through a CTE: the driver returns [rows, count] for a bare UPDATE.
     async beginExchange(ctx: RequestContext, state: string): Promise<ExchangeRow | null> {
         const rows = await this.query<ExchangeRow[]>(
             ctx,
-            `UPDATE oidc_auth_request SET status = 'EXCHANGING', "updatedAt" = now()
-             WHERE "stateHash" = $1 AND status = 'PENDING' AND "expiresAt" > now()
-             RETURNING id, nonce, "codeVerifier"`,
+            `WITH claimed AS (
+                UPDATE oidc_auth_request SET status = 'EXCHANGING', "updatedAt" = now()
+                WHERE "stateHash" = $1 AND status = 'PENDING' AND "expiresAt" > now()
+                RETURNING id, nonce, "codeVerifier"
+            ) SELECT * FROM claimed`,
             [sha256Hex(state)],
         );
         return rows[0] ?? null;
@@ -75,8 +78,10 @@ export class OidcRequestStoreService {
     async claimVerified(ctx: RequestContext, state: string): Promise<string | null> {
         const rows = await this.query<Array<{ userId: string }>>(
             ctx,
-            `UPDATE oidc_auth_request SET status = 'USED', "updatedAt" = now()
-             WHERE "stateHash" = $1 AND status = 'VERIFIED' AND "expiresAt" > now() RETURNING "userId"`,
+            `WITH claimed AS (
+                UPDATE oidc_auth_request SET status = 'USED', "updatedAt" = now()
+                WHERE "stateHash" = $1 AND status = 'VERIFIED' AND "expiresAt" > now() RETURNING "userId"
+            ) SELECT * FROM claimed`,
             [sha256Hex(state)],
         );
         return rows[0]?.userId ?? null;
