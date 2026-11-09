@@ -472,7 +472,7 @@ detects: it writes the status file atomically and never touches a process unless
 a process group recorded by `dev-run-tracked.sh` (`/tmp/mivend-dev*.pgid`; the file must be owned by root or the suspect's user and
 a member of the group must still run with its cwd inside this repo), whose stdout is a regular file untouched for
 `STUCK_LOG_QUIET_SECS`, logging the kill to stderr. Workers and import children never listen and can run hot for long, so
-`STUCK_KILL` must not be used where the child's output is not a file that keeps growing while it works. Docker containers are never touched.
+`STUCK_KILL` must not be used where the child's output is not a file that keeps growing while it works. Kill mode therefore rarely fires: `make dev` normally streams to a terminal or pipe, which is the safe side. Docker containers are never touched.
 
 Install (nothing is installed by the repo): copy `infrastructure/systemd/mivend-stuck-scan.service` to `/etc/systemd/system/`,
 fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without systemd,
@@ -491,7 +491,7 @@ fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without
 
 Status file: `{"updated": <epoch>, "interval": <s>, "stuck": [{"pid", "command", "cwd", "cpu_percent", "busy_seconds",
 "listening": false, "last_log_lines": [...]}]}`; `stuck` is an empty list when all is well. `last_log_lines` is filled when the
-process's stdout is a regular file. The file is created with mode 0640 (it holds command lines and log tails). The scanner
+process's stdout is a regular file. The file is created with mode 0640, so the reader needs the dev user's group (or run the scanner as the dev user, or read as root); otherwise `stuck-check.sh` reads nothing, silently. It holds command lines and log tails. The scanner
 test (`stuck-scan.test.sh`) needs python3, jq, ss and setsid.
 
 `make up` (so `test-int`, `test-access`, `test-changed` and every `e2e-*` target) and `make e2e-integration` run

@@ -75,15 +75,19 @@ def is_tracked(pid, pgid):
         for member in os.listdir("/proc"):
             if member.isdigit() and read_proc(member) and read_proc(member)[2] == pgid:
                 try:
-                    if os.path.realpath(f"/proc/{member}/cwd").startswith(REPO_ROOT):
+                    cwd = os.path.realpath(f"/proc/{member}/cwd")
+                    if os.path.commonpath([cwd, REPO_ROOT]) == REPO_ROOT:
                         return True
-                except OSError:
+                except (OSError, ValueError):
                     pass
     return False
 
 
 def log_quiet(path):
-    return path is not None and time.time() - os.stat(path).st_mtime >= LOG_QUIET_SECS
+    try:
+        return path is not None and time.time() - os.stat(path).st_mtime >= LOG_QUIET_SECS
+    except OSError:
+        return False
 
 
 def write_status(suspects):
@@ -97,6 +101,7 @@ def scan(state):
     now = time.time()
     listening = listening_pids()
     if listening is None:
+        print("[stuck-scan] ss is not available, nothing can be checked", file=sys.stderr, flush=True)
         return []
     suspects, seen = [], set()
     for entry in os.listdir("/proc"):

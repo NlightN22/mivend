@@ -6,9 +6,9 @@ fail() { echo "FAIL: $1"; exit 1; }
 alive() { kill -0 "$1" 2>/dev/null; }
 
 work=$(mktemp -d)
-trap 'for f in "$work"/*.pgid "$work"/*.grp "$work"/*.stale "$work"/*.foreign; do [ -f "$f" ] && kill -9 -- "-$(cat "$f")" 2>/dev/null; done; rm -rf "$work"' EXIT
+trap 'for f in "$work"/*.pgid "$work"/*.grp "$work"/*.stale "$work"/*.foreign; do [ -f "$f" ] && kill -9 -- "-$(cat "$f")" 2>/dev/null; done; rm -rf "$work" "${sibling_dir:-}"' EXIT
 
-export STUCK_STATUS_FILE="$work/status.json" STUCK_INTERVAL_SECS=1 STUCK_CPU_PCT=50 STUCK_BUSY_SECS=2 STUCK_LOG_QUIET_SECS=2
+export STUCK_STATUS_FILE="$work/status.json" STUCK_INTERVAL_SECS=1 STUCK_CPU_PCT=15 STUCK_BUSY_SECS=2 STUCK_LOG_QUIET_SECS=2
 export STUCK_COMM='^python3$' STUCK_PGID_GLOB="$work/*.pgid"
 
 port_live=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
@@ -28,7 +28,9 @@ start_group() {
 
 start_group tracked "stuck python3 $work/spin.py" "serving python3 $work/serve.py" "sibling sleep 602" "growing python3 $work/grow.py"
 GROUP_EXT=grp start_group other "other python3 $work/spin.py"
-(cd / && GROUP_EXT=stale start_group stale "stale python3 $work/spin.py")
+sibling_dir="$(cd "$here/../.." && pwd)-sibling-$$"
+mkdir "$sibling_dir"
+(cd "$sibling_dir" && GROUP_EXT=stale start_group stale "stale python3 $work/spin.py")
 GROUP_EXT=foreign start_group foreign "foreign python3 $work/spin.py"
 chown nobody "$work"/foreign.foreign 2>/dev/null || true
 stuck=$(cat "$work/stuck.pid"); serving=$(cat "$work/serving.pid")
