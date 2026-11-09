@@ -631,13 +631,17 @@ export type BulkBatchSort = {
 export type BulkOperation = {
     area: Scalars['String']['output'];
     description: Scalars['String']['output'];
+    maxRecords: Scalars['Int']['output'];
+    supportsMatching: Scalars['Boolean']['output'];
     title: Scalars['String']['output'];
     type: Scalars['String']['output'];
     undoable: Scalars['Boolean']['output'];
 };
 
+/** Exactly one of ids or matching; matching is the list filter the server resolves itself, inside the caller's scope */
 export type BulkSelectionInput = {
-    ids: Array<Scalars['String']['input']>;
+    ids?: InputMaybe<Array<Scalars['String']['input']>>;
+    matching?: InputMaybe<Scalars['JSON']['input']>;
 };
 
 /** Returned if an attempting to cancel lines from an Order which is still active */
@@ -11319,6 +11323,8 @@ export type BulkBatchesQuery = {
         totalItems: number;
         items: Array<{
             uuid: string;
+            supportsMatching: boolean;
+            maxRecords: number;
             number: string;
             operationType: string;
             parameters: any;
@@ -15088,6 +15094,8 @@ export const BulkOperationCatalogDocument = new TypedDocumentString(`
 export const BulkBatchesDocument = new TypedDocumentString(`
     query BulkBatches($options: BulkBatchListOptions) {
   bulkBatches(options: $options) {
+    supportsMatching
+    maxRecords
     totalItems
     items {
       ...BulkBatchFields

@@ -27,6 +27,7 @@ const executor = new CounterpartyPortalAccessExecutor(
     connection as never,
     accessScope as never,
     portalAccess as never,
+    {} as never,
 );
 
 beforeEach(() => {

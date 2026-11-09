@@ -35,6 +35,8 @@ query BulkOperationCatalog {
         description
         area
         undoable
+        supportsMatching
+        maxRecords
     }
 }
 

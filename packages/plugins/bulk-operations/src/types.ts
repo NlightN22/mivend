@@ -1,6 +1,7 @@
 export const loggerCtx = 'BulkOperations';
 export const BULK_RUN_QUEUE = 'bulk-batch-run';
-export const MAX_SELECTION = 1000;
+// Hard cap of one batch (ids or a resolved filter); the dry run is synchronous, so it stays bounded.
+export const MAX_SELECTION = 2000;
 export const RUN_CHUNK = 25;
 export const MAX_TAKE = 100;
 // A running batch untouched for this long is treated as orphaned and may be claimed again.

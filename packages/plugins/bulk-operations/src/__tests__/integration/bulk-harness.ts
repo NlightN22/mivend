@@ -129,6 +129,18 @@ export function fakeExecutor(
         validate: (p: BulkParameters) => ({ action: p.action ?? 'activate' }),
         undoPlan: () => ({ type: FAKE_TYPE, parameters: { action: 'deactivate' } }),
         visibleTargets: async (_ctx, ids) => new Set(ids.filter(visible)),
+        async resolveMatching(ctx, matching, limit) {
+            const rows: Array<{ id: number }> = await connection
+                .getRepository(ctx, 'Channel')
+                .query(
+                    'SELECT id FROM fake_target WHERE ($1::boolean IS NULL OR active = $1) ORDER BY id',
+                    [matching.active ?? null],
+                );
+            return rows
+                .map(r => String(r.id))
+                .filter(visible)
+                .slice(0, limit);
+        },
         async inspect(ctx, id) {
             if (!visible(id)) return verdict('skipped', 'out_of_scope');
             const [row] = await read(ctx, id);

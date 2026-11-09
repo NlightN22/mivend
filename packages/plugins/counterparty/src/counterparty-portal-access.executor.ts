@@ -16,6 +16,8 @@ import {
 
 import { Counterparty } from './entities/counterparty.entity';
 import { findLinkedInnDuplicate, normalizeInn } from './counterparty-inn-guard';
+import { parseCounterpartyMatching, resolveCounterpartyIds } from './counterparty-bulk-matching';
+import { CounterpartyService } from './counterparty.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import {
     CounterpartyPortalAccessService,
@@ -54,6 +56,7 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         private connection: TransactionalConnection,
         private accessScope: AccessScopeService,
         private portalAccess: CounterpartyPortalAccessService,
+        private counterparties: CounterpartyService,
     ) {}
 
     onModuleInit(): void {
@@ -73,6 +76,19 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         return parameters.action === 'activate'
             ? { type: this.type, parameters: { action: 'deactivate' } }
             : null;
+    }
+
+    resolveMatching(
+        ctx: RequestContext,
+        matching: Record<string, unknown>,
+        limit: number,
+    ): Promise<string[]> {
+        return resolveCounterpartyIds(
+            this.counterparties,
+            ctx,
+            parseCounterpartyMatching(matching),
+            limit,
+        );
     }
 
     async inspect(

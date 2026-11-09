@@ -39,6 +39,12 @@ export interface BulkExecutor {
     ): Promise<BulkRecordVerdict>;
     // The subset of ids the actor may see; the history list shows only these.
     visibleTargets(ctx: RequestContext, targetIds: string[]): Promise<Set<string>>;
+    // Resolves a list filter to record ids inside the actor's scope, at most `limit`, sorted by id.
+    resolveMatching?(
+        ctx: RequestContext,
+        matching: Record<string, unknown>,
+        limit: number,
+    ): Promise<string[]>;
     // Present only for reversible operations; null when these parameters cannot be reversed.
     undoPlan?(parameters: BulkParameters): BulkUndoPlan | null;
 }

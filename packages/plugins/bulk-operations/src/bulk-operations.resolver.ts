@@ -1,12 +1,12 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext, UserInputError } from '@vendure/core';
 
 import { BulkBatchQueryService, type ItemListOptions } from './bulk-batch-query.service';
 import { BulkBatchService } from './bulk-batch.service';
 import { toBulkBatch, type BulkBatchDto } from './bulk-batch.mapper';
 import type { BatchListOptions } from './bulk-batch-list-filter';
 import { BulkExecutorRegistry } from './bulk-executor-registry';
-import type { BulkItemRow } from './types';
+import { MAX_SELECTION, type BulkItemRow } from './types';
 
 // Every operation has its own permission, checked per call by the registry, not by @Allow.
 @Resolver()
@@ -26,6 +26,8 @@ export class BulkOperationsResolver {
             description: e.description,
             area: e.area,
             undoable: e.undoPlan != null,
+            supportsMatching: e.resolveMatching != null,
+            maxRecords: MAX_SELECTION,
         }));
     }
 
@@ -66,14 +68,20 @@ export class BulkOperationsResolver {
     async previewBulkBatch(
         @Ctx() ctx: RequestContext,
         @Args()
-        args: { type: string; parameters?: Record<string, unknown>; selection: { ids: string[] } },
+        args: {
+            type: string;
+            parameters?: Record<string, unknown>;
+            selection: { ids?: string[] | null; matching?: Record<string, unknown> | null };
+        },
     ): Promise<BulkBatchDto> {
-        const batch = await this.batches.preview(
-            ctx,
-            args.type,
-            args.parameters ?? {},
-            args.selection.ids,
-        );
+        const { ids, matching } = args.selection;
+        if ((ids == null) === (matching == null)) {
+            throw new UserInputError('Pass either ids or matching in the selection');
+        }
+        const parameters = args.parameters ?? {};
+        const batch = ids
+            ? await this.batches.preview(ctx, args.type, parameters, ids)
+            : await this.batches.previewMatching(ctx, args.type, parameters, matching ?? {});
         return this.scopedDto(ctx, batch.uuid);
     }
 

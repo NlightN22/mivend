@@ -22,7 +22,7 @@ import {
 import { actorIdOf } from './actor-id';
 import { BulkRunQueue } from './bulk-run-queue';
 import { normaliseSelection, selectionHash } from './selection-hash';
-import type { BulkBatchRow } from './types';
+import { MAX_SELECTION, type BulkBatchRow } from './types';
 
 @Injectable()
 export class BulkBatchService {
@@ -32,6 +32,28 @@ export class BulkBatchService {
         private runQueue: BulkRunQueue,
         private administratorService: AdministratorService,
     ) {}
+
+    // The server resolves the filter itself inside the actor's scope and snapshots the ids into the draft.
+    async previewMatching(
+        ctx: RequestContext,
+        type: string,
+        rawParameters: BulkParameters,
+        matching: Record<string, unknown>,
+    ): Promise<BulkBatchRow> {
+        const executor = this.registry.get(type);
+        this.registry.assertAllowed(ctx, executor);
+        if (!executor.resolveMatching) {
+            throw new UserInputError('This operation cannot select by filter');
+        }
+        const ids = await executor.resolveMatching(ctx, matching, MAX_SELECTION + 1);
+        if (ids.length > MAX_SELECTION) {
+            throw new UserInputError(
+                `More than ${MAX_SELECTION} records match the filter; narrow the filter and try again`,
+            );
+        }
+        if (ids.length === 0) throw new UserInputError('No records match the filter');
+        return this.preview(ctx, type, rawParameters, ids);
+    }
 
     // The same actor previewing the same operation, parameters and selection reuses one draft.
     async preview(

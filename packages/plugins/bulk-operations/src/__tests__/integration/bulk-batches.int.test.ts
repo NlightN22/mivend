@@ -7,6 +7,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { MAX_SELECTION } from '../../types';
 import {
     FAKE_TYPE,
     seedAuth,
@@ -123,7 +124,7 @@ describe('draft minting (preview)', () => {
                 actor,
                 FAKE_TYPE,
                 {},
-                Array.from({ length: 1001 }, (_, i) => String(i)),
+                Array.from({ length: MAX_SELECTION + 1 }, (_, i) => String(i)),
             ),
         ).rejects.toThrow(/At most/);
         await expect(

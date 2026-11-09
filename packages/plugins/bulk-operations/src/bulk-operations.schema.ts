@@ -8,6 +8,8 @@ export const adminApiSchema: DocumentNode = gql`
         description: String!
         area: String!
         undoable: Boolean!
+        supportsMatching: Boolean!
+        maxRecords: Int!
     }
 
     type BulkBatch {
@@ -77,8 +79,10 @@ export const adminApiSchema: DocumentNode = gql`
         outcome: String
     }
 
+    "Exactly one of ids or matching; matching is the list filter the server resolves itself, inside the caller's scope"
     input BulkSelectionInput {
-        ids: [String!]!
+        ids: [String!]
+        matching: JSON
     }
 
     extend type Query {
