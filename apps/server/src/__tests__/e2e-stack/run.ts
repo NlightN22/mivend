@@ -10,8 +10,10 @@ import {
     assertPortsFree,
     runForeground,
     spawnBackend,
+    spawnMockOidcProvider,
     spawnPortal,
     waitForPortal,
+    waitForMockOidcProvider,
     waitForServer,
 } from './processes';
 import { deleteIndices } from './search-indices';
@@ -69,12 +71,14 @@ async function bootAndSeed(): Promise<void> {
     await assertPortsFree();
     await createDatabase(name);
     const env = serverEnv(base, name, await createVhost(name));
+    const mockOidc = spawnMockOidcProvider();
     const backend = spawnBackend(env);
     const portals = [
         spawnPortal('storefront', E2E_PORTS.storefront),
         spawnPortal('manager', E2E_PORTS.manager),
     ];
-    track(...backend, ...portals);
+    track(mockOidc, ...backend, ...portals);
+    await waitForMockOidcProvider(mockOidc);
     await waitForServer(backend[0]);
     console.log(`e2e stack: server up on :${E2E_PORTS.server} after ${elapsed(started)}`);
     const seeded = Date.now();

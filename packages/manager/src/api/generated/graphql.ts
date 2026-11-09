@@ -13809,6 +13809,32 @@ export type StartTwoFactorSignInMutationVariables = Exact<{
     password: Scalars['String']['input'];
 }>;
 
+export type OidcSignInEnabledQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OidcSignInEnabledQuery = { oidcSignInEnabled: boolean };
+
+export type StartOidcSignInMutationVariables = Exact<{ [key: string]: never }>;
+
+export type StartOidcSignInMutation = { startOidcSignIn: { authorizationUrl: string } };
+
+export type CompleteOidcSignInMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+    state: Scalars['String']['input'];
+}>;
+
+export type CompleteOidcSignInMutation = { completeOidcSignIn: boolean };
+
+export type AuthenticateOidcMutationVariables = Exact<{
+    state: Scalars['String']['input'];
+}>;
+
+export type AuthenticateOidcMutation = {
+    authenticate:
+        | { __typename: 'CurrentUser' }
+        | { __typename: 'InvalidCredentialsError'; authenticationError: string }
+        | { __typename: 'NotVerifiedError' };
+};
+
 export type StartTwoFactorSignInMutation = {
     startTwoFactorSignIn:
         | { __typename: 'TwoFactorChallenge'; stage: TwoFactorStage; challenge: string | null }
@@ -18053,4 +18079,38 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UnsortedAdministratorsQuery,
     UnsortedAdministratorsQueryVariables
+>;
+
+export const OidcSignInEnabledDocument = new TypedDocumentString(`
+    query OidcSignInEnabled {
+  oidcSignInEnabled
+}
+    `) as unknown as TypedDocumentString<OidcSignInEnabledQuery, OidcSignInEnabledQueryVariables>;
+export const StartOidcSignInDocument = new TypedDocumentString(`
+    mutation StartOidcSignIn {
+  startOidcSignIn {
+    authorizationUrl
+  }
+}
+    `) as unknown as TypedDocumentString<StartOidcSignInMutation, StartOidcSignInMutationVariables>;
+export const CompleteOidcSignInDocument = new TypedDocumentString(`
+    mutation CompleteOidcSignIn($code: String!, $state: String!) {
+  completeOidcSignIn(code: $code, state: $state)
+}
+    `) as unknown as TypedDocumentString<
+    CompleteOidcSignInMutation,
+    CompleteOidcSignInMutationVariables
+>;
+export const AuthenticateOidcDocument = new TypedDocumentString(`
+    mutation AuthenticateOidc($state: String!) {
+  authenticate(input: {oidc: {state: $state}}) {
+    __typename
+    ... on InvalidCredentialsError {
+      authenticationError
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AuthenticateOidcMutation,
+    AuthenticateOidcMutationVariables
 >;

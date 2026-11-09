@@ -50,6 +50,24 @@ export function spawnPortal(pkg: 'storefront' | 'manager', port: number): ChildP
     });
 }
 
+export function spawnMockOidcProvider(): ChildProcess {
+    return spawnCommandGroup({
+        command: 'node',
+        args: ['packages/e2e/helpers/mock-oidc-provider.mjs'],
+        cwd: REPO_ROOT,
+        env: { MOCK_OIDC_PORT: String(E2E_PORTS.oidc) },
+        logPath: log('mock-oidc'),
+    });
+}
+
+export function waitForMockOidcProvider(child: ChildProcess): Promise<void> {
+    return waitForUrl(
+        `http://localhost:${E2E_PORTS.oidc}/realms/staff/.well-known/openid-configuration`,
+        child,
+        log('mock-oidc'),
+    );
+}
+
 export function waitForPortal(child: ChildProcess, pkg: string, port: number): Promise<void> {
     return waitForUrl(`http://localhost:${port}`, child, log(pkg));
 }

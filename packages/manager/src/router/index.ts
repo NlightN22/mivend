@@ -11,6 +11,11 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            path: '/oidc/callback',
+            component: () => import('../pages/auth/OidcCallbackPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             path: '/two-factor-recovery',
             component: () => import('../pages/auth/TwoFactorRecoveryPage.vue'),
             meta: { layout: 'auth' },

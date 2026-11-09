@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
     readSiteIconUrl,
@@ -16,8 +16,10 @@ import {
     useTwoFactorSignIn,
 } from '@mivend/ui-kit';
 import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
+import { fetchAuthorizationUrl, fetchOidcEnabled } from '../../api/oidc';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
+import { OIDC_LABELS } from './oidcLabels';
 import { RECOVERED_NOTICE, TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
 
 const siteName = readSiteName();
@@ -52,6 +54,26 @@ watch(step, async value => {
             : ((route.query.redirect as string) ?? '/'),
     );
 });
+
+const oidcEnabled = ref(false);
+const oidcError = ref(false);
+
+onMounted(async () => {
+    try {
+        oidcEnabled.value = await fetchOidcEnabled();
+    } catch {
+        oidcEnabled.value = false;
+    }
+});
+
+async function startOidc(): Promise<void> {
+    oidcError.value = false;
+    try {
+        window.location.assign(await fetchAuthorizationUrl());
+    } catch {
+        oidcError.value = true;
+    }
+}
 
 function handleSubmit(): Promise<void> {
     return signIn.submitPassword(form.username, form.password, form.remember);
@@ -131,6 +153,21 @@ function handleSubmit(): Promise<void> {
                             Войти
                         </MvButton>
                     </form>
+
+                    <MvNotice v-if="oidcError" variant="error" class="login-card__error">
+                        {{ OIDC_LABELS.startFailed }}
+                    </MvNotice>
+                    <MvButton
+                        v-if="oidcEnabled"
+                        variant="secondary"
+                        size="lg"
+                        native-type="button"
+                        class="login-form__submit"
+                        data-testid="oidc-sign-in"
+                        @click="startOidc"
+                    >
+                        {{ OIDC_LABELS.button }}
+                    </MvButton>
                 </template>
             </div>
         </div>

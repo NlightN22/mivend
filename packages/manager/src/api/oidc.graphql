@@ -1,0 +1,22 @@
+query OidcSignInEnabled {
+    oidcSignInEnabled
+}
+
+mutation StartOidcSignIn {
+    startOidcSignIn {
+        authorizationUrl
+    }
+}
+
+mutation CompleteOidcSignIn($code: String!, $state: String!) {
+    completeOidcSignIn(code: $code, state: $state)
+}
+
+mutation AuthenticateOidc($state: String!) {
+    authenticate(input: { oidc: { state: $state } }) {
+        __typename
+        ... on InvalidCredentialsError {
+            authenticationError
+        }
+    }
+}

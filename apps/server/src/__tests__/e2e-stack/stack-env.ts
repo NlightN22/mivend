@@ -8,7 +8,7 @@ export const E2E_LOCK_FILE = '/tmp/mivend-e2e.lock';
 // Playwright's storage states: tokens for this run's database, useless once it is dropped.
 export const E2E_AUTH_DIR = resolve(REPO_ROOT, 'packages/e2e/.auth');
 // Clear of make dev (3000, 5173/5174) and staging-integration (3010, 5183-5185).
-export const E2E_PORTS = { server: 3020, storefront: 5193, manager: 5194 };
+export const E2E_PORTS = { server: 3020, storefront: 5193, manager: 5194, oidc: 3995 };
 
 function parseEnvFile(path: string): Record<string, string> {
     const env: Record<string, string> = {};
@@ -35,6 +35,10 @@ export function serverEnv(
         PORT: String(E2E_PORTS.server),
         MANAGER_PUBLIC_URL: `http://localhost:${E2E_PORTS.manager}`,
         STOREFRONT_PUBLIC_URL: `http://localhost:${E2E_PORTS.storefront}`,
+        OIDC_ISSUER_URL: `http://localhost:${E2E_PORTS.oidc}/realms/staff`,
+        OIDC_CLIENT_ID: 'mivend-local',
+        OIDC_CLIENT_SECRET: 'mivend-local-secret',
+        OIDC_REDIRECT_URI: `http://localhost:${E2E_PORTS.manager}/oidc/callback`,
         EMAIL_DEV_MAILBOX_ENABLED: 'true',
         SESSION_MAX_ACTIVE_CUSTOMER: '20',
         SESSION_MAX_ACTIVE_STAFF: '20',
@@ -56,5 +60,6 @@ export function testRunEnv(base: Record<string, string>, name: string): Record<s
         SUPERADMIN_USERNAME: base.SUPERADMIN_USERNAME,
         SUPERADMIN_PASSWORD: base.SUPERADMIN_PASSWORD,
         E2E_DB_NAME: name,
+        MOCK_OIDC_URL: `http://localhost:${E2E_PORTS.oidc}`,
     };
 }

@@ -13,6 +13,7 @@
         "report": "playwright show-report"
     },
     "devDependencies": {
+        "jose": "^5.10.0",
         "@playwright/test": "^1.49.0",
         "@types/node": "^20.0.0"
     }
