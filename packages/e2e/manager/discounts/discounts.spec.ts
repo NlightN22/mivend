@@ -33,6 +33,7 @@ test('search on the number narrows the list on the server and lives in the URL @
 }) => {
     await page.goto('/discounts');
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator(`${ROWS} td`).first()).toHaveText(/\S/, { timeout: 15000 });
     const number = (await page.locator(`${ROWS} td`).first().innerText()).trim();
     await page.getByPlaceholder('Number or customer…').fill(number);
     await expect(page).toHaveURL(/search=/, { timeout: 10000 });
