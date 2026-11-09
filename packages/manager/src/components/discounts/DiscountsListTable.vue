@@ -171,7 +171,7 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         :total-items="totalItems"
         :page="page"
         data-key="id"
-        :row-height-px="61"
+        :row-height-px="64"
         :header-height-px="65"
         :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
         :conditions="filters.conditions"
@@ -211,11 +211,13 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         <template #cell-number="{ data }">
             <RouterLink
                 v-if="requestPath(data as DiscountRow)"
-                class="discounts-list-table__link"
+                class="mv-cell-id mv-cell-link"
                 :to="requestPath(data as DiscountRow) as string"
                 >{{ formatDocumentNumber((data as DiscountRow).number) }}</RouterLink
             >
-            <template v-else>{{ formatDocumentNumber((data as DiscountRow).number) }}</template>
+            <span v-else class="mv-cell-id">{{
+                formatDocumentNumber((data as DiscountRow).number)
+            }}</span>
         </template>
 
         <template #cell-date="{ data }">
@@ -223,7 +225,9 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         </template>
 
         <template #cell-customer="{ data }">
-            <div class="discounts-list-table__customer">{{ (data as DiscountRow).customer }}</div>
+            <span class="mv-cell-primary" :title="(data as DiscountRow).customer">{{
+                (data as DiscountRow).customer
+            }}</span>
         </template>
 
         <template #cell-percent="{ data }">
@@ -256,7 +260,7 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         </template>
 
         <template #cell-justification="{ data }">
-            <span class="discounts-list-table__justification">{{
+            <span class="mv-cell-meta" :title="(data as DiscountRow).justification ?? ''">{{
                 (data as DiscountRow).justification ?? '—'
             }}</span>
         </template>
