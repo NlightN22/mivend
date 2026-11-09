@@ -26,6 +26,8 @@ function update(event: Event): void {
     syncCaret();
 }
 
+defineExpose({ focus: () => input.value?.focus() });
+
 onMounted(() => {
     if (props.autofocus) input.value?.focus();
 });

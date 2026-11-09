@@ -7,6 +7,7 @@ import MvOtpInput from '../MvOtpInput/MvOtpInput.vue';
 import MvPasswordInput from '../MvPasswordInput/MvPasswordInput.vue';
 import MvTwoFactorEnrol from '../MvTwoFactorEnrol/MvTwoFactorEnrol.vue';
 import { isCompleteCode } from '../../composables/twoFactor/twoFactorTypes';
+import { useOtpAutoSubmit } from '../../composables/twoFactor/useOtpAutoSubmit';
 import type {
     TwoFactorEnrolment,
     TwoFactorStatusView,
@@ -31,7 +32,12 @@ const emit = defineEmits<{
 const open = ref(false);
 const password = ref('');
 const currentCode = ref('');
-const newCode = ref('');
+const newCodeInput = ref<InstanceType<typeof MvOtpInput> | null>(null);
+const { code: newCode, trigger: confirmCode } = useOtpAutoSubmit(
+    value => emit('confirm', value),
+    { loading: () => props.loading, failed: () => !!props.error },
+    () => newCodeInput.value?.focus(),
+);
 
 const canBegin = (): boolean =>
     !!password.value && (!props.status?.enrolled || isCompleteCode(currentCode.value));
@@ -99,11 +105,14 @@ function close(): void {
             v-else
             class="mv-tf-settings__form"
             novalidate
-            @submit.prevent="emit('confirm', newCode)"
+            @submit.prevent="confirmCode"
         >
             <MvTwoFactorEnrol :enrolment="enrolment" :labels="labels" />
             <MvFormField :label="labels.codeLabel">
-                <MvOtpInput v-model="newCode" autofocus :aria-label="labels.codeLabel" />
+                <MvOtpInput
+                    ref="newCodeInput"
+                    v-model="newCode"
+                    autofocus :aria-label="labels.codeLabel" />
             </MvFormField>
             <div class="mv-tf-settings__actions">
                 <MvButton

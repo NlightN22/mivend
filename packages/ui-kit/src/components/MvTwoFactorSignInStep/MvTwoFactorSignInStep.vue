@@ -6,6 +6,7 @@ import MvNotice from '../MvNotice/MvNotice.vue';
 import MvOtpInput from '../MvOtpInput/MvOtpInput.vue';
 import MvTwoFactorEnrol from '../MvTwoFactorEnrol/MvTwoFactorEnrol.vue';
 import { isCompleteCode } from '../../composables/twoFactor/twoFactorTypes';
+import { useOtpAutoSubmit } from '../../composables/twoFactor/useOtpAutoSubmit';
 import type {
     TwoFactorEnrolment,
     TwoFactorUiError,
@@ -13,7 +14,7 @@ import type {
 import type { TwoFactorLabels } from '../../composables/twoFactor/twoFactorLabels';
 import type { SignInStep } from '../../composables/twoFactor/useTwoFactorSignIn';
 
-defineProps<{
+const props = defineProps<{
     step: Exclude<SignInStep, 'password' | 'done'>;
     error: TwoFactorUiError | null;
     loading: boolean;
@@ -28,7 +29,12 @@ const emit = defineEmits<{
     back: [];
 }>();
 
-const code = ref('');
+const otp = ref<InstanceType<typeof MvOtpInput> | null>(null);
+const { code, trigger } = useOtpAutoSubmit(
+    value => emit('code', value),
+    { loading: () => props.loading, failed: () => !!props.error },
+    () => otp.value?.focus(),
+);
 </script>
 
 <template>
@@ -46,9 +52,10 @@ const code = ref('');
                 :enrolment="enrolment"
                 :labels="labels"
             />
-            <form class="mv-tf-step__form" novalidate @submit.prevent="emit('code', code)">
+            <form class="mv-tf-step__form" novalidate @submit.prevent="trigger">
                 <MvFormField :label="labels.codeLabel">
                     <MvOtpInput
+                        ref="otp"
                         v-model="code"
                         :error="!!error"
                         autofocus

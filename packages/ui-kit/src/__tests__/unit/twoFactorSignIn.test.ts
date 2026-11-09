@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { nextTick, ref } from 'vue';
+import { useOtpAutoSubmit } from '../../composables/twoFactor/useOtpAutoSubmit';
 import { useTwoFactorSignIn } from '../../composables/twoFactor/useTwoFactorSignIn';
 import { useTwoFactorRecovery } from '../../composables/twoFactor/useTwoFactorRecovery';
 import { useTwoFactorSettings } from '../../composables/twoFactor/useTwoFactorSettings';
@@ -247,5 +249,88 @@ describe('useTwoFactorSettings', () => {
         await s.confirm('000000');
         expect(s.error.value).toBe('INVALID_CODE');
         expect(s.enrolment.value).toEqual(enrolment);
+    });
+});
+
+describe('useOtpAutoSubmit', () => {
+    function setup() {
+        const loading = ref(false);
+        const error = ref<string | null>(null);
+        const submit = vi.fn((_code: string) => {
+            loading.value = true;
+        });
+        const onReset = vi.fn();
+        const otp = useOtpAutoSubmit(
+            submit,
+            { loading: () => loading.value, failed: () => !!error.value },
+            onReset,
+        );
+        async function finish(failure: string | null): Promise<void> {
+            error.value = failure;
+            loading.value = false;
+            await nextTick();
+        }
+        return { ...otp, submit, onReset, loading, finish };
+    }
+
+    it('submits once when the sixth digit is typed, not before', async () => {
+        const t = setup();
+        for (const value of ['1', '12', '123', '1234', '12345']) {
+            t.code.value = value;
+            await nextTick();
+        }
+        expect(t.submit).not.toHaveBeenCalled();
+        t.code.value = '123456';
+        await nextTick();
+        expect(t.submit).toHaveBeenCalledExactlyOnceWith('123456');
+    });
+
+    it('submits a pasted or autofilled code at once', async () => {
+        const t = setup();
+        t.code.value = '654321';
+        await nextTick();
+        expect(t.submit).toHaveBeenCalledExactlyOnceWith('654321');
+    });
+
+    it('ignores the button while the auto-submit is pending and for the same code', async () => {
+        const t = setup();
+        t.code.value = '123456';
+        await nextTick();
+        t.trigger();
+        t.loading.value = false;
+        t.trigger();
+        expect(t.submit).toHaveBeenCalledTimes(1);
+    });
+
+    it('the button still submits a complete code', () => {
+        const t = setup();
+        t.trigger();
+        expect(t.submit).not.toHaveBeenCalled();
+        t.code.value = '123456';
+        t.trigger();
+        expect(t.submit).toHaveBeenCalledExactlyOnceWith('123456');
+    });
+
+    it('clears the code after a failure and waits for a new code', async () => {
+        const t = setup();
+        t.code.value = '000000';
+        await nextTick();
+        await t.finish('INVALID_CODE');
+        expect(t.code.value).toBe('');
+        expect(t.onReset).toHaveBeenCalledTimes(1);
+        await nextTick();
+        expect(t.submit).toHaveBeenCalledTimes(1);
+        t.code.value = '000000';
+        await nextTick();
+        expect(t.submit).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the code after a success', async () => {
+        const t = setup();
+        t.code.value = '123456';
+        await nextTick();
+        await t.finish(null);
+        expect(t.code.value).toBe('123456');
+        expect(t.onReset).not.toHaveBeenCalled();
     });
 });
