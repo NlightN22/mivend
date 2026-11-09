@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { adminGql, postBatch, waitForRun } from '../../helpers/api';
+import { adminTokenFor } from '../../helpers/api-tokens';
 
 // Activate customers on the shared wizard; only reviews and skipped rows are asserted, so nothing is granted.
 test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
@@ -17,7 +19,7 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await expect(page).toHaveURL(/\/bulk-operations\/counterparty-portal-access/);
     });
 
-    test('Select all takes the page, Next is blocked without a selection, review lists skips with reasons', async ({
+    test('the header checkbox takes the page, Next is blocked without a selection, review lists skips with reasons', async ({
         page,
     }) => {
         await page.goto('/bulk-operations/counterparty-portal-access?pageSize=10');
@@ -25,8 +27,8 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await expect(footer.getByRole('button', { name: 'Next' })).toBeDisabled();
         await expect(footer.getByText('Select at least one record')).toBeVisible();
 
-        await page.getByRole('button', { name: /^Select all \(\d+\)$/ }).click();
-        await expect(page.getByText(/^\d+ selected$/)).toBeVisible();
+        await page.getByRole('checkbox').first().check();
+        await expect(page.getByTestId('table-selection-count')).toHaveText(/^\d+ selected$/);
         await footer.getByRole('button', { name: 'Next' }).click();
 
         await page.getByText('Revoke portal access').click();
@@ -93,13 +95,147 @@ test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
         await expect(panel.getByRole('button', { name, exact: true })).toHaveCount(0);
     });
 
-    test('on a phone the select step is a card list and Select all still works', async ({
+    test('on a phone the select step is a card list with a page checkbox and the selection bar', async ({
         page,
     }) => {
         await page.setViewportSize({ width: 390, height: 800 });
         await page.goto('/bulk-operations/counterparty-portal-access?pageSize=10');
         await expect(page.getByRole('table')).toHaveCount(0);
-        await page.getByRole('button', { name: /^Select all \(\d+\)$/ }).click();
-        await expect(page.getByText(/^\d+ selected$/)).toBeVisible();
+        await page.getByLabel('Select this page').check();
+        await expect(page.getByTestId('table-selection-count')).toHaveText(/^\d+ selected$/);
+        await expect(page.getByRole('button', { name: 'Clear selection' })).toBeVisible();
+    });
+});
+
+// Counterparties created through the ERP import REST of the e2e stack, not the demo seed; each test
+// retires its own (inactive in the ERP) so later specs do not see them as ready to activate.
+const RUN = Date.now().toString(36);
+
+interface Created {
+    search: string;
+    retire: () => Promise<void>;
+}
+
+const innBase = (tag: string): string =>
+    String([...tag].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 100_000_000, 7)).padStart(8, '0');
+
+async function importCounterparties(tag: string, count: number, isActive: boolean): Promise<void> {
+    const records = Array.from({ length: count }, (_, i) => ({
+        type: 'counterparty',
+        data: {
+            erpId: `e2e-bulkm-${tag}-${i}`,
+            legalName: `E2E Bulk ${tag} ${String(i).padStart(3, '0')} LLC`,
+            shortName: `E2E Bulk ${tag} ${String(i).padStart(3, '0')}`,
+            inn: `78${innBase(tag)}${String(i).padStart(4, '0')}`,
+            phone: '+7 900 000-02-00',
+            officialEmail: `e2e-bulkm-${tag}-${i}@test.example`,
+            creditLimit: 10000,
+            creditBalance: 0,
+            paymentDelayDays: 7,
+            priceType: 'WHOLESALE',
+            isActive,
+            departmentId: 'dept-sales',
+        },
+    }));
+    const run = await postBatch(`e2e-bulkm-${tag}-${isActive ? 'on' : 'off'}`, records);
+    await waitForRun(run.runId, 60_000);
+}
+
+async function createReady(prefix: string, count: number): Promise<Created> {
+    const tag = `${prefix}-${RUN}`;
+    await importCounterparties(tag, count, true);
+    return { search: `E2E Bulk ${tag}`, retire: () => importCounterparties(tag, count, false) };
+}
+
+async function counterpartyCount(search: string, readiness: string): Promise<number> {
+    const token = await adminTokenFor(
+        process.env.SUPERADMIN_USERNAME ?? 'superadmin',
+        process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
+    );
+    const { data } = await adminGql<{ counterparties: { totalItems: number } }>(
+        `query($o: CounterpartyListOptions) { counterparties(options: $o) { totalItems } }`,
+        { o: { search, readiness, take: 1 } },
+        token,
+    );
+    return data.counterparties.totalItems;
+}
+
+async function activateAllMatching(page: Page, search: string, total: number): Promise<void> {
+    await page.goto(
+        `/bulk-operations/counterparty-portal-access?pageSize=10&search=${encodeURIComponent(search)}`,
+    );
+    await expect(
+        page.getByText(`1–10 of ${total}`).or(page.getByText(`1-10 of ${total}`)),
+    ).toBeVisible({ timeout: 20000 });
+    await page.getByRole('checkbox').first().check();
+    await expect(page.getByTestId('table-selection-count')).toHaveText('10 selected');
+    await page.getByTestId('select-all-matching').click();
+    await expect(page.getByTestId('table-selection-count')).toHaveText(`All ${total} selected`);
+
+    const footer = page.locator('footer');
+    await footer.getByRole('button', { name: 'Next' }).click();
+    await footer.getByRole('button', { name: 'Review' }).click();
+    await expect(page.getByText(`${total} of ${total} records will change`)).toBeVisible({
+        timeout: 30000,
+    });
+    await footer.getByRole('button', { name: 'Run batch' }).click();
+
+    const counters = page.getByRole('group', { name: 'Counters' });
+    await expect(counters.getByRole('button', { name: /Applied/ })).toContainText(String(total), {
+        timeout: 120000,
+    });
+    await expect(counters.getByRole('button', { name: /^All/ })).toContainText(String(total));
+    await expect(counters.getByRole('button', { name: /Failed/ })).toContainText('0');
+}
+
+test.describe('select all matching the filter (#337) @on:manager-portal-admin', () => {
+    test.describe.configure({ mode: 'serial', timeout: 240000 });
+
+    for (const [pages, total] of [
+        [3, 30],
+        [5, 50],
+    ] as const) {
+        test(`activates every one of ${total} counterparties spanning ${pages} pages and undoes it`, async ({
+            page,
+        }) => {
+            const created = await createReady(`p${pages}`, total);
+            const { search } = created;
+            try {
+                expect(await counterpartyCount(search, 'ready')).toBe(total);
+                await activateAllMatching(page, search, total);
+                expect(await counterpartyCount(search, 'activated')).toBe(total);
+                expect(await counterpartyCount(search, 'ready')).toBe(0);
+            } finally {
+                const undo = page.getByRole('button', { name: 'Undo', exact: true });
+                if (await undo.isVisible()) await undo.click();
+                await expect
+                    .poll(() => counterpartyCount(search, 'activated'), { timeout: 120000 })
+                    .toBe(0);
+                await created.retire();
+            }
+        });
+    }
+
+    test('a manual untick or a changed search leaves the all-matching mode with a message', async ({
+        page,
+    }) => {
+        const created = await createReady('reset', 12);
+        try {
+            await page.goto(
+                `/bulk-operations/counterparty-portal-access?pageSize=10&search=${encodeURIComponent(created.search)}`,
+            );
+            await page.getByRole('checkbox').first().check();
+            await page.getByTestId('select-all-matching').click();
+            await expect(page.getByTestId('table-selection-count')).toHaveText('All 12 selected');
+            await page.getByRole('checkbox').nth(1).uncheck();
+            await expect(
+                page.getByText(/selection of all matching records was reset/),
+            ).toBeVisible();
+            await expect(page.getByTestId('table-selection-count')).toHaveText('9 selected');
+            await page.getByRole('button', { name: 'Clear selection' }).click();
+            await expect(page.getByTestId('table-selection-bar')).toHaveCount(0);
+        } finally {
+            await created.retire();
+        }
     });
 });
