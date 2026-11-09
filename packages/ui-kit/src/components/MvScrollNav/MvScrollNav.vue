@@ -61,24 +61,32 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="mv-scroll-nav">
-        <MvRoundIconButton
-            v-if="showUp"
-            variant="primary"
-            :aria-label="props.upLabel"
-            :title="props.upLabel"
-            @click="scrollToTop"
+        <div class="mv-scroll-nav__slot" :class="{ 'mv-scroll-nav__slot--hidden': !showUp }">
+            <MvRoundIconButton
+                variant="primary"
+                :aria-label="props.upLabel"
+                :title="props.upLabel"
+                :tabindex="showUp ? 0 : -1"
+                @click="scrollToTop"
+            >
+                <IconArrowUp :size="22" stroke="2.25" aria-hidden="true" />
+            </MvRoundIconButton>
+        </div>
+        <div
+            v-if="props.down"
+            class="mv-scroll-nav__slot"
+            :class="{ 'mv-scroll-nav__slot--hidden': !showDown }"
         >
-            <IconArrowUp :size="22" stroke="2.25" aria-hidden="true" />
-        </MvRoundIconButton>
-        <MvRoundIconButton
-            v-if="props.down && showDown"
-            variant="primary"
-            :aria-label="props.downLabel"
-            :title="props.downLabel"
-            @click="scrollToBottom"
-        >
-            <IconArrowDown :size="22" stroke="2.25" aria-hidden="true" />
-        </MvRoundIconButton>
+            <MvRoundIconButton
+                variant="primary"
+                :aria-label="props.downLabel"
+                :title="props.downLabel"
+                :tabindex="showDown ? 0 : -1"
+                @click="scrollToBottom"
+            >
+                <IconArrowDown :size="22" stroke="2.25" aria-hidden="true" />
+            </MvRoundIconButton>
+        </div>
     </div>
 </template>
 
@@ -91,6 +99,12 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* Each arrow has its own fixed slot: showing or hiding one never moves the other. */
+.mv-scroll-nav__slot--hidden {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 @media (max-width: 800px) {
