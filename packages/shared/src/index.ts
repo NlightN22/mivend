@@ -66,6 +66,7 @@ export {
 
 export { isUnconfirmedTaxRateName, unconfirmedTaxRateName } from './vatRate';
 export { cronEveryMs } from './scheduled-task-cron';
+export { lastDailyInstant } from './daily-instant';
 export {
     CATEGORY_FACET_CODE,
     CATEGORY_SLUG_PREFIX,

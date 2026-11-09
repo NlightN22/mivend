@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, lastDailyInstant } from 'shared';
 
-import { lastResetInstant } from './reset-instant';
 import { OWN_SESSION_SQL, SESSION_MANAGEMENT_PLUGIN_OPTIONS } from './session.types';
 import type { SessionManagementPluginOptions } from './session.types';
 
@@ -16,7 +15,7 @@ export class SessionDailyResetService {
     ) {}
 
     // Idempotent and stateless: every run ends sessions created before the latest reset instant,
-    // so concurrent or missed runs converge. The clock is the database's, not the process's.
+    // so concurrent or missed runs converge. The hour is in the process zone (TZ).
     async endSessionsBeforeLastReset(ctx: RequestContext): Promise<number> {
         const reset = this.options.dailyReset;
         if (!reset?.enabled) {
@@ -27,7 +26,7 @@ export class SessionDailyResetService {
             ctx,
             'SELECT now() AS now',
         );
-        const instant = lastResetInstant(now, reset.hour, reset.timeZone);
+        const instant = lastDailyInstant(now, reset.hour);
         // createdAt is written by the DB default (DB session zone): compare as timestamptz, not a node-local wall time.
         const rows = await ctxQuery<Array<{ token: string }>>(
             this.connection,

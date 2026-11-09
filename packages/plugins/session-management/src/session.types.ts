@@ -15,7 +15,6 @@ export const DAILY_RESET_POLL_INTERVAL_MS = 5 * 60_000;
 export interface DailyResetOptions {
     enabled: boolean;
     hour: number;
-    timeZone: string;
 }
 
 export interface SessionManagementPluginOptions {

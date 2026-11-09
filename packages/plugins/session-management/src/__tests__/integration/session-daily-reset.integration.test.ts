@@ -4,17 +4,16 @@ import type { ConfigService } from '@vendure/core';
 import {
     createTestConnection,
     createTestSchema,
+    lastDailyInstant,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
-import { lastResetInstant } from '../../reset-instant';
 import { SessionDailyResetService } from '../../session-daily-reset.service';
 
 const { schema, extra } = testSchemaOptions('session_daily_reset');
-const ZONE = 'Europe/Berlin';
 let dataSource: DataSource;
 let deleteFromCache: ReturnType<typeof vi.fn>;
 
@@ -23,7 +22,7 @@ function service(enabled = true): SessionDailyResetService {
         authOptions: { sessionCacheStrategy: { delete: deleteFromCache } },
     } as unknown as ConfigService;
     return new SessionDailyResetService(
-        { dailyReset: { enabled, hour: 3, timeZone: ZONE } },
+        { dailyReset: { enabled, hour: 3 } },
         configService,
         createTestConnection(dataSource),
     );
@@ -91,7 +90,7 @@ beforeEach(async () => {
 
 describe('SessionDailyResetService (integration, real Postgres)', () => {
     it('ends sessions created before the latest reset instant and keeps newer ones', async () => {
-        const instant = lastResetInstant(new Date(), 3, ZONE);
+        const instant = lastDailyInstant(new Date(), 3);
         await insertSession('before-a', new Date(instant.getTime() - 3_600_000), { userId: 1 });
         await insertSession('before-b', new Date(instant.getTime() - 86_400_000 * 5), {
             userId: 2,

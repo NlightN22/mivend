@@ -3,7 +3,7 @@ export interface SessionOptions {
     maxActiveSessionsCustomer: number;
     maxActiveSessionsStaff: number;
     knownDeviceRetentionDays: number;
-    dailyReset: { enabled: boolean; hour: number; timeZone: string };
+    dailyReset: { enabled: boolean; hour: number };
 }
 
 function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -24,18 +24,6 @@ function resetHour(env: NodeJS.ProcessEnv): number {
     return value;
 }
 
-function resetTimeZone(env: NodeJS.ProcessEnv): string {
-    const timeZone = env.SESSION_DAILY_RESET_TIME_ZONE || 'UTC';
-    try {
-        new Intl.DateTimeFormat('en-CA', { timeZone });
-    } catch {
-        throw new Error(
-            `SESSION_DAILY_RESET_TIME_ZONE must be an IANA time zone name, got "${timeZone}"`,
-        );
-    }
-    return timeZone;
-}
-
 function flag(env: NodeJS.ProcessEnv, name: string): boolean {
     const raw = (env[name] ?? '').trim().toLowerCase();
     if (['', 'false', '0'].includes(raw)) return false;
@@ -49,6 +37,11 @@ export function sessionOptionsFromEnv(env: NodeJS.ProcessEnv): SessionOptions {
             'SESSION_MAX_ACTIVE_PER_USER was removed: set SESSION_MAX_ACTIVE_CUSTOMER and SESSION_MAX_ACTIVE_STAFF instead',
         );
     }
+    if (env.SESSION_DAILY_RESET_TIME_ZONE !== undefined) {
+        throw new Error(
+            'SESSION_DAILY_RESET_TIME_ZONE was removed: the daily reset uses the process time zone, set TZ instead',
+        );
+    }
     return {
         sessionDuration: env.SESSION_DURATION || '30d',
         maxActiveSessionsCustomer: positiveInt(env, 'SESSION_MAX_ACTIVE_CUSTOMER', 2),
@@ -57,7 +50,6 @@ export function sessionOptionsFromEnv(env: NodeJS.ProcessEnv): SessionOptions {
         dailyReset: {
             enabled: flag(env, 'SESSION_DAILY_RESET_ENABLED'),
             hour: resetHour(env),
-            timeZone: resetTimeZone(env),
         },
     };
 }

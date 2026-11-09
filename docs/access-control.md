@@ -36,9 +36,9 @@ wrong layer — move it.
 Layer 1 (who is making the request) is bounded in time and in number, for every account type:
 
 - **Daily reset.** With `SESSION_DAILY_RESET_ENABLED=true` the `session-daily-reset` scheduled task ends every
-  customer and staff session created before the latest `SESSION_DAILY_RESET_HOUR`:00 in `SESSION_DAILY_RESET_TIME_ZONE`
-  (default 3 and `UTC`; production sets the business zone). The cut-off instant is derived from the zone on each run
-  (DST-correct), so the task is stateless and idempotent: a missed run is caught up by the next one, and a session
+  customer and staff session created before the latest `SESSION_DAILY_RESET_HOUR`:00 in the process
+  time zone (`TZ`; default hour 3; production containers get `TZ` from the deployment env, equal to the host zone). The cut-off
+  instant is derived from `TZ` on each run (`lastDailyInstant` in `packages/shared`, DST-correct), so the task is stateless and idempotent: a missed run is caught up by the next one, and a session
   created after the instant is never touched. "Remember me" cannot outlive it, because the server-side session is ended.
 - **Concurrent sessions.** At most `SESSION_MAX_ACTIVE_CUSTOMER` (default 2: a PC and a phone) per customer and
   `SESSION_MAX_ACTIVE_STAFF` (default 3: portal and Dashboard on a workstation plus a second device) per administrator.

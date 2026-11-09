@@ -9,7 +9,7 @@ describe('sessionOptionsFromEnv', () => {
             maxActiveSessionsCustomer: 2,
             maxActiveSessionsStaff: 3,
             knownDeviceRetentionDays: 400,
-            dailyReset: { enabled: false, hour: 3, timeZone: 'UTC' },
+            dailyReset: { enabled: false, hour: 3 },
         });
     });
 
@@ -21,14 +21,13 @@ describe('sessionOptionsFromEnv', () => {
                 SESSION_MAX_ACTIVE_STAFF: '6',
                 SESSION_DAILY_RESET_ENABLED: 'true',
                 SESSION_DAILY_RESET_HOUR: '4',
-                SESSION_DAILY_RESET_TIME_ZONE: 'Europe/Berlin',
             }),
         ).toEqual({
             sessionDuration: '7d',
             maxActiveSessionsCustomer: 5,
             maxActiveSessionsStaff: 6,
             knownDeviceRetentionDays: 400,
-            dailyReset: { enabled: true, hour: 4, timeZone: 'Europe/Berlin' },
+            dailyReset: { enabled: true, hour: 4 },
         });
     });
 
@@ -48,7 +47,7 @@ describe('sessionOptionsFromEnv', () => {
     });
 
     it('refuses an unknown time zone', () => {
-        expect(() => sessionOptionsFromEnv({ SESSION_DAILY_RESET_TIME_ZONE: 'Mars/Base' })).toThrow(
+        expect(() => sessionOptionsFromEnv({ SESSION_DAILY_RESET_TIME_ZONE: 'UTC' })).toThrow(
             /SESSION_DAILY_RESET_TIME_ZONE/,
         );
     });
