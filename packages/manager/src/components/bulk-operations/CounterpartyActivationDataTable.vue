@@ -30,7 +30,9 @@ const emit = defineEmits<{ 'update:selectedIds': [ids: Set<string>] }>();
 const list = props.list;
 
 const baseColumns = buildActivationColumns([]);
-const columns = computed(() => buildActivationColumns(list.branches.value));
+const columns = computed(() =>
+    buildActivationColumns(list.branches.value, list.managerOptions.value),
+);
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; shortName: string }>(
     `bulk-activation-select:${props.administratorId}`,
@@ -190,12 +192,14 @@ function applyView(state: TableViewState): void {
 
         <template #toolbar-start>
             <ActivationQuickFilters :list="list" />
-            <MvFilterChips
-                scrollable
-                :chips="chips"
-                :active="list.filters.value.view"
-                @select="list.filters.value = { ...list.filters.value, view: $event }"
-            />
+            <div class="activation-chips">
+                <MvFilterChips
+                    scrollable
+                    :chips="chips"
+                    :active="list.filters.value.view"
+                    @select="list.filters.value = { ...list.filters.value, view: $event }"
+                />
+            </div>
         </template>
 
         <template #toolbar-end>
@@ -220,3 +224,16 @@ function applyView(state: TableViewState): void {
         </template>
     </MvAdvancedDataTable>
 </template>
+
+<style scoped>
+.activation-chips {
+    min-width: 0;
+}
+
+@media (max-width: 800px) {
+    .activation-chips {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+}
+</style>

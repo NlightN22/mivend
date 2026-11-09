@@ -19,7 +19,7 @@ const managerOptions = computed(() => [
     ...props.list.managerOptions.value,
 ]);
 const branch = computed(() => quickValue(conditions.value, 'branch', 'eq'));
-const manager = computed(() => quickValue(conditions.value, 'manager', 'contains'));
+const manager = computed(() => quickValue(conditions.value, 'manager', 'eq'));
 const dirty = computed(() => conditions.value.length > 0 || props.list.filters.value.search !== '');
 
 function setConditions(next: typeof conditions.value): void {
@@ -50,7 +50,7 @@ function reset(): void {
                 aria-label="Manager"
                 data-testid="quick-filter-manager"
                 @update:model-value="
-                    setConditions(withQuickValue(conditions, 'manager', 'contains', $event))
+                    setConditions(withQuickValue(conditions, 'manager', 'eq', $event))
                 "
             />
         </div>
@@ -79,8 +79,15 @@ function reset(): void {
 }
 
 @media (max-width: 800px) {
+    .activation-quick-filters {
+        flex: 1 1 100%;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
     .activation-quick-filters__select {
-        flex: 1 1 140px;
+        flex: 1 1 0;
+        min-width: 0;
     }
 }
 </style>

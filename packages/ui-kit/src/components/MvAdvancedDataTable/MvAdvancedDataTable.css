@@ -43,3 +43,10 @@
 .mv-advanced-data-table__below-toolbar:empty {
     display: none;
 }
+
+.mv-advanced-data-table__selection-bar,
+.mv-advanced-data-table__below-toolbar {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

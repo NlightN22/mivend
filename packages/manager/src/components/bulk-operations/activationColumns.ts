@@ -9,7 +9,10 @@ const TEXT_OR_EMPTY = [...TEXT_OPERATORS, 'isNull', 'notNull'] as const;
 
 // Widths sum to 990 plus the selection column and fit a 1360px page; filtering is the toolbar
 // Filter builder. Readiness is the quick-filter chip row, not a builder column.
-export function buildActivationColumns(branches: BranchOption[]): AdvancedDataTableColumn[] {
+export function buildActivationColumns(
+    branches: BranchOption[],
+    managers: Array<{ value: string; label: string }> = [],
+): AdvancedDataTableColumn[] {
     return [
         {
             field: 'shortName',
@@ -44,9 +47,10 @@ export function buildActivationColumns(branches: BranchOption[]): AdvancedDataTa
             priority: 6,
             sortField: 'managerErpId',
             filterConfig: NOT_FILTERED,
-            filterType: 'string',
+            filterType: 'select',
             filterField: 'managerErpId',
-            filterOperators: ['contains', 'notContains', 'isNull', 'notNull'],
+            filterOperators: ['eq', 'notEq'],
+            filterOptions: managers,
         },
         {
             field: 'branch',

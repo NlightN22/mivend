@@ -156,7 +156,9 @@ export function useActivationCandidates(): ActivationCandidatesState {
         for (const a of managerLookup.value.administrators) {
             if (a.erpId) byErpId.set(a.erpId, a.name);
         }
-        return [...byErpId].map(([value, label]) => ({ value, label }));
+        return [...byErpId]
+            .map(([value, label]) => ({ value, label }))
+            .sort((a, b) => a.label.localeCompare(b.label));
     });
 
     return {

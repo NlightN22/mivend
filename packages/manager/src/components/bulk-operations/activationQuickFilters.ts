@@ -15,7 +15,7 @@ export function quickValue(
 export function withQuickValue(
     conditions: FilterCondition[],
     columnKey: string,
-    operator: 'eq' | 'contains',
+    operator: 'eq',
     value: string,
 ): FilterCondition[] {
     const rest = conditions.filter(c => c.columnKey !== columnKey);

@@ -71,13 +71,13 @@ describe('conditionsToCounterpartyFilter', () => {
     it('maps builder conditions to the server field names', () => {
         expect(
             conditionsToCounterpartyFilter([
-                { columnKey: 'manager', operator: 'contains', value: 'pat' },
+                { columnKey: 'manager', operator: 'eq', value: 'pat' },
                 { columnKey: 'branch', operator: 'eq', value: 'b1' },
                 { columnKey: 'isActive', operator: 'isFalse', value: '' },
                 { columnKey: 'officialEmail', operator: 'isNull', value: '' },
             ]),
         ).toEqual({
-            managerErpId: { contains: 'pat' },
+            managerErpId: { eq: 'pat' },
             branchId: { eq: 'b1' },
             isActive: { eq: false },
             officialEmail: { isNull: true },
