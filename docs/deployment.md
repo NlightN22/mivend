@@ -120,7 +120,8 @@ Five layers, none of them a single point of failure.
    rollout. The portal containers take the client address from `X-Real-IP`, which the host proxy sets from its own
    `$remote_addr` (a client-supplied value is overwritten), and only from peers inside `TRUSTED_PROXY_CIDR` (default
    `172.16.0.0/12`, the docker bridge range; set it to the proxy's network if it differs). Without a trusted proxy in front the
-   direct address stays. Without this every client shares the bridge gateway's bucket.
+   direct address stays. Without this every client shares the bridge gateway's bucket. The range covers the whole bridge, so
+   keep every portal `*_BIND_ADDRESS` on `127.0.0.1`: a publicly bound port would let a client send its own `X-Real-IP`.
 2. **Per-account throttling (server).** Failures are counted per login and per login plus client address in the
    `sign_in_throttle` table (hashed keys, atomic upserts on the database clock). From the threshold on the account is locked
    for `BASE_LOCK` seconds, doubling with each further failure up to `MAX_LOCK`; there is no permanent lock, and nothing is
