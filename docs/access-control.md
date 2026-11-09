@@ -31,6 +31,37 @@ wrong layer — move it.
 
 ---
 
+## Sign-in through an external provider (#338)
+
+Staff can sign in through an OpenID Connect provider (setup: `docs/deployment.md`). Only the identity check is external;
+everything after it is ours.
+
+- **Validation.** `state` and `nonce` are random, single use (the state is stored as a hash and claimed by one atomic
+  update, so a replayed or concurrent second callback gets nothing) and expire after 10 minutes. The ID token must have a
+  valid signature from the provider key set, `iss`, `aud`, `exp` and the request's `nonce`. The code exchange sends the PKCE
+  verifier.
+- **Linking.** A first sign-in matches an active (not soft-deleted) Administrator by e-mail, case-insensitive, and the e-mail
+  claim must be present. Exactly one match stores the provider `sub` in an `ExternalAuthenticationMethod` (strategy `oidc`,
+  `externalIdentifier` = `sub`). Every later sign-in matches by `sub` only, so a changed e-mail neither blocks nor
+  hijacks. The e-mail is trusted without `email_verified` because the provider does not let users edit it. The read and the
+  write run under the advisory lock `oidc-link`; partial unique indexes allow one `sub` per administrator and one
+  administrator per `sub`.
+- **Refusals.** No match, several matches, a missing e-mail, a `sub` linked to another account, a second `sub` for an already
+  linked administrator, a deactivated administrator (by e-mail or by `sub`), the superadmin, a replayed state, a bad token:
+  all answered like a wrong password, without a hint; the reason goes to the server log only.
+- **No auto-provisioning.** Administrators are created by a person (#119 model); the provider never creates one.
+- **Our controls stay.** A failed link counts towards the sign-in throttle (scope `oidc`, subject `sub`); the session cap,
+  daily reset and deactivation work as for any session.
+- **Accepted risk: the second factor is delegated to the provider.** A sign-in through the provider never asks for our
+  TOTP, whatever `TWO_FACTOR_REQUIRED` says and even when the administrator has a factor enrolled; the provider decides
+  its own factors, so its factor policy is the only barrier on this path. Local password sign-in is unchanged and keeps the
+  mandatory second step, so removing the local password path is a separate decision. No session gate exists after
+  sign-in, so nothing else needs skipping; the security settings screen may still show the local factor as not set up.
+- **Scope: the manager portal only.** The button and callback page exist only there. The strategy is registered on the
+  Admin API only (the Vendure Dashboard has no button; it shares that API, so a hand-made call could use it, with the same
+  checks), never on the Shop API; customers never use it.
+- **Local password sign-in stays** for everyone.
+
 ## Session policy (#335)
 
 Layer 1 (who is making the request) is bounded in time and in number, for every account type:

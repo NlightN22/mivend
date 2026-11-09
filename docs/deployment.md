@@ -106,6 +106,31 @@ Language rule: the explicit `languageCode` query parameter of the Shop/Admin API
 
 Password-reset links depend on the recipient. Vendure's reset event carries only a `User`, which belongs either to an `Administrator` (staff) or to a `Customer`. `password-reset-handler.ts` looks up an `Administrator` for that user: found means staff, link `MANAGER_PUBLIC_URL/set-password`; not found means customer, link `STOREFRONT_PUBLIC_URL/set-password`. In production with `smtp` both URLs are required, otherwise boot fails. The URLs are set by hand on purpose: taking the domain from request headers would let anyone request a reset with a forged `Host` and make the victim's mail link to another site. The account-activation mail (`email-verification`) links to `STOREFRONT_PUBLIC_URL/verify` through the `verifyEmailAddressUrl` global template variable.
 
+## Staff sign-in through an OpenID Connect provider (#338)
+
+Managers and administrators can sign in with an external OpenID Connect provider (authorization code with PKCE S256,
+confidential client) next to the local password. Plugin: `packages/plugins/oidc-sign-in`. Storefront customers and the
+superadmin are not affected: the superadmin is always local. The provider's own factors replace our one-time code on this path (docs/access-control.md).
+
+| Variable | Meaning |
+| --- | --- |
+| `OIDC_ISSUER_URL` | Issuer, exactly as the provider publishes it in its discovery document (`<issuer>/.well-known/openid-configuration`). |
+| `OIDC_CLIENT_ID` | Client id of the confidential client. |
+| `OIDC_CLIENT_SECRET` | Client secret (client authentication by HTTP basic). |
+| `OIDC_REDIRECT_URI` | `<MANAGER_PUBLIC_URL>/oidc/callback`, registered at the provider as the only valid redirect. |
+
+All four unset disables the feature and the manager login page shows no button. A partial set fails boot.
+
+Client setup at the provider: a confidential client with the standard flow (authorization code) only, PKCE method `S256`
+required, the redirect URI above, scopes `openid` and `email`, and an `email` claim in the ID token. Users must not be able
+to edit their e-mail at the provider, because the first sign-in links by it (`docs/access-control.md`, "Sign-in through an
+external provider"). Signing algorithms accepted: RS256/384/512, PS256, ES256/384, EdDSA.
+
+Operational notes: the server needs outbound HTTPS to the provider (discovery, token endpoint, key set; 10 s timeout each).
+An unreachable provider only breaks this button; local password sign-in keeps working. Expired sign-in requests are deleted
+by a scheduled task. To move an administrator to another provider account, remove their `authentication_method` row with
+strategy `oidc`; the next sign-in links again by e-mail.
+
 ## Sign-in protection (#278)
 
 Five layers, none of them a single point of failure.

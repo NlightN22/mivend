@@ -5,7 +5,12 @@ export const loggerCtx = 'SignInProtection';
 export const SIGN_IN_PROTECTION_OPTIONS = Symbol('SIGN_IN_PROTECTION_OPTIONS');
 export const CAPTCHA_TOKEN_HEADER = 'x-captcha-token';
 
-export type ThrottleScope = 'password' | 'second-step' | 'password-recheck' | 'recovery-request';
+export type ThrottleScope =
+    | 'password'
+    | 'second-step'
+    | 'password-recheck'
+    | 'recovery-request'
+    | 'oidc';
 
 export interface ThrottleLimits {
     threshold: number;

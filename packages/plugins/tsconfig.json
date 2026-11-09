@@ -32,6 +32,7 @@
         { "path": "./acting-session" },
         { "path": "./sign-in-protection" },
         { "path": "./two-factor" },
+        { "path": "./oidc-sign-in" },
         { "path": "./saved-views" },
         { "path": "./checks" },
         { "path": "./numbering" }

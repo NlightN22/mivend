@@ -8,6 +8,10 @@ Updated: 2026-11-09
 - Lessons: cookie-session writes its cookie through the OutgoingMessage prototype (wrap `res.writeHead`, never `setHeader`); core re-saves a stale User after reset/session creation (clear flags last); e2e order effects (acting group last, shared e2e logins need caps 20 and throttle off); migrations 1791562000000, 1791565000000.
 - Owner decisions open: business time zone for the daily reset, CAPTCHA keys, when to enable `TWO_FACTOR_REQUIRED`. Next: #332 contacts design, #333 ERP document pages, #334 Node 22 in Docker images.
 
+## #338 OIDC sign-in for staff (implemented, awaiting audit)
+- Plugin `packages/plugins/oidc-sign-in`: authorization code + PKCE, link by e-mail then `sub` (`ExternalAuthenticationMethod`, strategy `oidc`), no auto-provisioning, superadmin always local. OIDC sign-in deliberately skips our TOTP (provider's factors; accepted risk in access-control.md); local password keeps it. Manager portal only. Env `OIDC_*` (all or none). Docs: `docs/access-control.md`, `docs/deployment.md`. E2E uses a mock provider started by the e2e stack (`packages/e2e/helpers/mock-oidc-provider.mjs`).
+- Manager GraphQL documents were added to `generated/graphql.ts` by hand, regenerate with `pnpm --filter @mivend/manager codegen` on a running dev server.
+
 ## #279 two-factor authentication (2026-11-08, DONE: audited, on prod 0.0.55 with `TWO_FACTOR_REQUIRED=false`, issue closed)
 - Plugin `packages/plugins/two-factor`: TOTP for every account type (storefront, manager portal, Vendure Dashboard via an overlay in `apps/server/src/dashboard/two-factor-sign-in`). Purpose is binding a person to a personal device, not hardening. Contract and release condition: `docs/two-factor.md`.
 - Obligation is binary (`TWO_FACTOR_REQUIRED`), forced enrolment at next sign-in, no grace, no recovery codes, no trusted devices. Lost device: e-mail link to a reset page. Ops reset: `infrastructure/scripts/two-factor-reset.sh`.

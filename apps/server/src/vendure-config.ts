@@ -52,8 +52,10 @@ import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ActingSessionPlugin } from '@mivend/plugin-acting-session';
 import { SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
+import { OidcSignInPlugin } from '@mivend/plugin-oidc-sign-in';
 import { TwoFactorPlugin } from '@mivend/plugin-two-factor';
 import { signInProtectionOptionsFromEnv } from './sign-in-protection-options';
+import { oidcOptionsFromEnv } from './oidc-options';
 import { twoFactorOptionsFromEnv } from './two-factor-options';
 import {
     AcquiringPlugin,
@@ -647,6 +649,7 @@ export const config: VendureConfig = {
         ActingSessionPlugin.init({ storefrontPublicUrl: process.env.STOREFRONT_PUBLIC_URL ?? '' }),
         SignInProtectionPlugin.init(signInProtectionOptionsFromEnv(process.env)),
         TwoFactorPlugin.init(twoFactorOptionsFromEnv(process.env, cookieSecret)),
+        OidcSignInPlugin.init(oidcOptionsFromEnv(process.env)),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,
