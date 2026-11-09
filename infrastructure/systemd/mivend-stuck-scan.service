@@ -1,0 +1,11 @@
+[Unit]
+Description=Detect busy-but-not-serving processes (detection only)
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/mivend/infrastructure/scripts/stuck-scan.py
+Environment=STUCK_STATUS_FILE=/run/mivend-stuck-processes.json
+Restart=always
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

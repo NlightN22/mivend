@@ -463,6 +463,38 @@ a concurrent restart by another session also kills the first one (`make: Killed`
 (its compile process died mid-respawn). Confirm with a stack sample (`kill -USR1 <pid>`, then
 Debugger.pause over `127.0.0.1:9229`), then `kill -9` that child only — the watcher respawns it.
 
+### Stuck process scanner (#326)
+
+`infrastructure/scripts/stuck-scan.py` is a host-level daemon, independent of any `make` target and of this repo's paths: every
+`STUCK_INTERVAL_SECS` it looks at all processes whose name matches `STUCK_COMM` (node, esbuild, vite, chrome, python by default)
+and reports those that stay above `STUCK_CPU_PCT` CPU for `STUCK_BUSY_SECS` while holding no listening socket. It only
+detects: it writes the status file atomically and never touches a process unless `STUCK_KILL=1`, and then only a suspect inside
+a process group recorded by `dev-run-tracked.sh` (`/tmp/mivend-dev*.pgid`), logging the kill to stderr. Docker containers are
+never touched.
+
+Install (nothing is installed by the repo): copy `infrastructure/systemd/mivend-stuck-scan.service` to `/etc/systemd/system/`,
+fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without systemd,
+`nohup python3 infrastructure/scripts/stuck-scan.py >/dev/null 2>&1 &` (or a `@reboot` cron entry) does the same.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `STUCK_STATUS_FILE` | `/run/mivend-stuck-processes.json` | Status file (scanner, pre-flight and `make dev-health`) |
+| `STUCK_INTERVAL_SECS` | `30` | Scan interval |
+| `STUCK_CPU_PCT` | `60` | CPU percent of one core that counts as busy |
+| `STUCK_BUSY_SECS` | `600` | How long it must stay busy and not listening; a cold server compile plus boot is about 40 s, a legitimately CPU-bound suite process can run longer, hence the generous default |
+| `STUCK_COMM` | `^(node\|esbuild\|vite\|chrome.*\|python3?)$` | Process-name regex to inspect |
+| `STUCK_KILL` | unset | `1` enables the kill of suspects in dev-run-tracked groups |
+| `STUCK_PGID_GLOB` | `/tmp/mivend-dev*.pgid` | Tracked group files `STUCK_KILL` is limited to |
+
+Status file: `{"updated": <epoch>, "interval": <s>, "stuck": [{"pid", "command", "cwd", "cpu_percent", "busy_seconds",
+"listening": false, "last_log_lines": [...]}]}`; `stuck` is an empty list when all is well. `last_log_lines` is filled when the
+process's stdout is a regular file.
+
+`make up` (so `test-int`, `test-access`, `test-changed` and every `e2e-*` target) and `make e2e-integration` run
+`stuck-check.sh` first: it prints the stuck list as a warning and carries on. `STUCK_CHECK=strict` makes a non-empty list fail the
+target. A missing file, or one older than `STUCK_STALE_SECS` (180), is ignored silently. `make dev-health` is the same reader
+in strict, verbose mode (exit 1 if anything is stuck).
+
 ## Auth cookie secret
 
 `COOKIE_SECRET` signs the auth cookie and must be identical for every server/worker process and

@@ -26,6 +26,7 @@ export
 
 # No --build and --no-recreate: compose would recreate the shared containers when run from another worktree (other bind-mount paths), killing every test or contour using them.
 up:
+	@bash infrastructure/scripts/stuck-check.sh
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --no-recreate
 
 # Only after changing infrastructure/docker/postgres — restarts the shared DB for every contour.
@@ -129,6 +130,10 @@ dev-staging-integration:
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central_staging_integration"
 	pnpm build:plugins
 	bash infrastructure/scripts/dev-run-tracked.sh /tmp/mivend-dev-staging-integration.pgid pnpm dev:staging-integration-all
+
+# Reads the host scanner status file (docs/environments.md "Stuck process scanner"); exit 1 if processes are stuck.
+dev-health:
+	@STUCK_CHECK=strict bash infrastructure/scripts/stuck-check.sh --verbose
 
 seed:
 	@echo "Waiting for server on :3000..."
@@ -273,6 +278,7 @@ TEST_LOCK = flock /tmp/mivend-test.lock
 test:
 	$(TEST_LOCK) pnpm test
 	$(TEST_LOCK) bash infrastructure/scripts/tests/dev-kill-lib.test.sh
+	$(TEST_LOCK) bash infrastructure/scripts/tests/stuck-scan.test.sh
 	$(TEST_LOCK) bash infrastructure/scripts/tests/site-identity-envsh.test.sh
 	$(TEST_LOCK) bash infrastructure/scripts/tests/nginx-real-ip.test.sh
 
@@ -447,6 +453,7 @@ e2e-resilience: e2e-stack-build
 # Manual order exchange suite against a running `make dev-staging-integration` (#255); never in CI.
 # May restart that contour. Subset: make e2e-integration E2E_ARGS="01-placement".
 e2e-integration:
+	@bash infrastructure/scripts/stuck-check.sh
 	pnpm --filter @mivend/e2e test:erp-exchange $(E2E_ARGS)
 
 e2e-integration-group:
