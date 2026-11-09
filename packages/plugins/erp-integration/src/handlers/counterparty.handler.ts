@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { ContactPointService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { BranchAssignmentService, UserEnrichmentService } from '@mivend/plugin-access-control';
 
+import { parseContactInfos } from './contact-infos';
 import { optionalErpDetails } from './counterparty-erp-details';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -23,6 +24,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         private readonly counterpartyService: CounterpartyService,
         private readonly userEnrichmentService: UserEnrichmentService,
         private readonly branchAssignment: BranchAssignmentService,
+        private readonly contactPoints: ContactPointService,
     ) {}
 
     async apply(
@@ -67,9 +69,18 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
 
                     ...optionalErpDetails(payload),
                     // notificationPhone: deliberately unread — see this file's own top-of-file field
-                    // accounting comment. contactInfos: deferred, see docs/ai/erp-streams-map.md.
+                    // accounting comment.
                 }),
         );
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        if (name && contactInfos) {
+            await this.contactPoints.replaceErpPointsByErpId(
+                ctx,
+                'counterparty',
+                entityId,
+                contactInfos,
+            );
+        }
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +

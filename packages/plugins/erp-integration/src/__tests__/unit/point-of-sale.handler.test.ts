@@ -13,6 +13,7 @@ function makeHandler(
     markErpDeleted = vi.fn().mockResolvedValue(false),
 ): {
     handler: PointOfSaleStreamHandler;
+    contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
     tradingPointService: {
         findCounterpartyRefByErpId: ReturnType<typeof vi.fn>;
         upsertFromStream: ReturnType<typeof vi.fn>;
@@ -26,12 +27,63 @@ function makeHandler(
         deactivate,
         markErpDeleted,
     };
-    const handler = new PointOfSaleStreamHandler(tradingPointService as never);
-    return { handler, tradingPointService };
+    const contactPoints = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    const handler = new PointOfSaleStreamHandler(
+        tradingPointService as never,
+        contactPoints as never,
+    );
+    return { handler, tradingPointService, contactPoints };
 }
 
 describe('PointOfSaleStreamHandler', () => {
     const ctx = {} as RequestContext;
+
+    describe('contactInfos', () => {
+        const named = { name: 'Point', counterpartyId: 'cp-1', address: 'Street 1, 10' };
+
+        it('replaces the ERP channels of the point from a present list, routing the ERP type names', async () => {
+            const { handler, contactPoints } = makeHandler();
+            await handler.apply(ctx, 'pos-1', {
+                ...named,
+                contactInfos: [
+                    {
+                        type: 'Телефон',
+                        kindName: 'Work',
+                        isPrimary: true,
+                        presentation: '+7 912 345-67-89',
+                    },
+                ],
+            });
+            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
+                ctx,
+                'tradingPoint',
+                'pos-1',
+                [
+                    {
+                        type: 'phone',
+                        value: '+7 912 345-67-89',
+                        label: 'Work',
+                        isPrimary: true,
+                        comment: null,
+                    },
+                ],
+            );
+        });
+
+        it('treats an explicitly empty list as a replace with nothing, and an absent list as no change', async () => {
+            const { handler, contactPoints } = makeHandler();
+            await handler.apply(ctx, 'pos-1', { ...named, contactInfos: [] });
+            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
+                ctx,
+                'tradingPoint',
+                'pos-1',
+                [],
+            );
+            contactPoints.replaceErpPointsByErpId.mockClear();
+            await handler.apply(ctx, 'pos-1', named);
+            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+        });
+    });
 
     // Audit HIGH: a bare `return` here previously left a deleted-in-ERP point permanently active.
     it('deactivates an existing point on a deletion tombstone (no name), without a counterparty lookup', async () => {

@@ -10,7 +10,7 @@ import { SettingStreamHandler } from '../../handlers/setting.handler';
 const ctx = {} as RequestContext;
 
 function setup<T extends { apply: (...a: never[]) => unknown }>(
-    Handler: new (c: never) => T,
+    Handler: new (c: never, p: never, k: never) => T,
     existing: Record<string, unknown> | null,
 ): { handler: T; save: ReturnType<typeof vi.fn> } {
     const save = vi.fn();
@@ -19,7 +19,12 @@ function setup<T extends { apply: (...a: never[]) => unknown }>(
         create: vi.fn((v: unknown) => v),
         save,
     };
-    const handler = new Handler({ getRepository: () => repo } as never);
+    const persons = { upsert: vi.fn().mockResolvedValue(1), deactivate: vi.fn() };
+    const handler = new Handler(
+        { getRepository: () => repo } as never,
+        persons as never,
+        { replaceErpPoints: vi.fn() } as never,
+    );
     return { handler, save };
 }
 

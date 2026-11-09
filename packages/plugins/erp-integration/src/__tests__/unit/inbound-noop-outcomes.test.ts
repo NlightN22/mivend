@@ -26,10 +26,13 @@ describe.each([
     [
         'point-of-sale',
         (m: boolean) =>
-            new PointOfSaleStreamHandler({
-                deactivate: vi.fn().mockResolvedValue(m),
-                markErpDeleted: vi.fn().mockResolvedValue(false),
-            } as never),
+            new PointOfSaleStreamHandler(
+                {
+                    deactivate: vi.fn().mockResolvedValue(m),
+                    markErpDeleted: vi.fn().mockResolvedValue(false),
+                } as never,
+                {} as never,
+            ),
         { isDeleted: true },
     ],
     [
@@ -91,6 +94,7 @@ describe.each([
                         async (_c: unknown, _e: string, write: () => unknown) => write(),
                     ),
                 } as never,
+                {} as never,
             ),
         { isDeleted: true },
     ],

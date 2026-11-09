@@ -11,9 +11,11 @@ function makeHandler(
     handler: CounterpartyStreamHandler;
     counterpartyService: { upsertActiveState: ReturnType<typeof vi.fn> };
     userEnrichmentService: { findManagerLink: ReturnType<typeof vi.fn> };
+    contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
 } {
     const counterpartyService = { upsertActiveState };
     const userEnrichmentService = { findManagerLink };
+    const contactPoints = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,
         userEnrichmentService as never,
@@ -22,12 +24,74 @@ function makeHandler(
                 async (_c: unknown, _e: string, write: () => unknown) => write(),
             ),
         } as never,
+        contactPoints as never,
     );
-    return { handler, counterpartyService, userEnrichmentService };
+    return { handler, counterpartyService, userEnrichmentService, contactPoints };
 }
 
 describe('CounterpartyStreamHandler', () => {
     const ctx = {} as RequestContext;
+
+    describe('contactInfos', () => {
+        it('replaces the ERP channels from a present list and keeps the legacy phone/e-mail written', async () => {
+            const { handler, counterpartyService, contactPoints } = makeHandler();
+            await handler.apply(ctx, 'cp-1', {
+                name: 'Acme',
+                phone: '+7 912 345-67-89',
+                contactInfos: [
+                    {
+                        type: 'АдресЭлектроннойПочты',
+                        kindName: 'Office',
+                        presentation: 'a@example.com',
+                    },
+                    { type: 'Адрес', kindName: 'Post', presentation: 'Street 1' },
+                ],
+            });
+            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
+                ctx,
+                'counterparty',
+                'cp-1',
+                [
+                    {
+                        type: 'email',
+                        value: 'a@example.com',
+                        label: 'Office',
+                        isPrimary: false,
+                        comment: null,
+                    },
+                    {
+                        type: 'address',
+                        value: 'Street 1',
+                        label: 'Post',
+                        isPrimary: false,
+                        comment: null,
+                    },
+                ],
+            );
+            expect(counterpartyService.upsertActiveState.mock.calls[0][2].phone).toBe(
+                '+7 912 345-67-89',
+            );
+        });
+
+        it('does not wipe channels when the list is absent, and clears them on an explicit empty list', async () => {
+            const { handler, contactPoints } = makeHandler();
+            await handler.apply(ctx, 'cp-1', { name: 'Acme' });
+            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+            await handler.apply(ctx, 'cp-1', { name: 'Acme', contactInfos: [] });
+            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
+                ctx,
+                'counterparty',
+                'cp-1',
+                [],
+            );
+        });
+
+        it('ignores the list on a nameless tombstone', async () => {
+            const { handler, contactPoints } = makeHandler();
+            await handler.apply(ctx, 'cp-1', { isDeleted: true, contactInfos: [] });
+            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+        });
+    });
 
     // Deletion tombstones carry no name, same as organization/department.
     // Forward it so a known counterparty can be deactivated; upsertActiveState refuses null-name inserts.

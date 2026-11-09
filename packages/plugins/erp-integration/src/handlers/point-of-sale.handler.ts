@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { TradingPointService } from '@mivend/plugin-counterparty';
+import { ContactPointService, TradingPointService } from '@mivend/plugin-counterparty';
 
+import { parseContactInfos } from './contact-infos';
 import { MissingReferenceError } from '../types';
 import { pointOfSaleExtra } from './point-of-sale-extra';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -13,7 +14,10 @@ const loggerCtx = 'IntegrationPointOfSaleHandler';
 // accounting: docs/ai/erp-streams-map.md's `point-of-sale` row (the fields mivend does not read go to the trading_point_erp mirror).
 @Injectable()
 export class PointOfSaleStreamHandler implements InboundStreamHandler {
-    constructor(private readonly tradingPointService: TradingPointService) {}
+    constructor(
+        private readonly tradingPointService: TradingPointService,
+        private readonly contactPoints: ContactPointService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -61,6 +65,16 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
             contactPhone: text(payload.contactPhone),
             extra: pointOfSaleExtra(payload),
         });
+
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        if (contactInfos) {
+            await this.contactPoints.replaceErpPointsByErpId(
+                ctx,
+                'tradingPoint',
+                entityId,
+                contactInfos,
+            );
+        }
 
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);
         return inboundApplied();
