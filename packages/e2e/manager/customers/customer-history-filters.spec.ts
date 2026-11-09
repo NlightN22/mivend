@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 // E2E only: needs browser popover/event bubbling; History tab has always-enabled select filters.
 test.describe('customer History tab — column filter overlays @on:manager-portal-admin @read-only', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
-        await page.goto('/customers');
+        await page.goto('/customers?search=E2E%20Co');
         const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
         await row.waitFor({ timeout: 15000 });
         await row.click({ position: { x: 20, y: 10 } });

@@ -64,7 +64,7 @@ test('a manager picks a trading point location on the map and it is saved @on:ma
     page,
 }) => {
     await stubGeo(page);
-    await page.goto('/customers');
+    await page.goto('/customers?search=E2E%20Co');
     const customerRow = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
     await customerRow.waitFor({ timeout: 15000 });
     await customerRow.click({ position: { x: 20, y: 10 } });
