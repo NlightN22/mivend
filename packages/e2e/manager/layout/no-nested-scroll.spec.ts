@@ -8,7 +8,6 @@ const LIST_PAGES = [
     '/discounts',
     '/approvals',
     '/team',
-    '/bulk-operations/history',
 ];
 
 async function nestedVerticalScrollers(page: Page): Promise<string[]> {
@@ -37,6 +36,17 @@ for (const path of LIST_PAGES) {
         expect(await nestedVerticalScrollers(page)).toEqual([]);
     });
 }
+
+test('/bulk-operations/history has no nested vertical scrollbar @read-only @on:manager-portal-admin', async ({
+    page,
+}) => {
+    await page.goto('/bulk-operations/history');
+    await expect(page.locator('.mv-advanced-data-table__grid').first()).toBeVisible({
+        timeout: 15000,
+    });
+    await page.waitForLoadState('networkidle');
+    expect(await nestedVerticalScrollers(page)).toEqual([]);
+});
 
 test('a customer card orders tab has no nested vertical scrollbar @read-only', async ({ page }) => {
     await page.goto('/customers?search=E2E%20Co');
