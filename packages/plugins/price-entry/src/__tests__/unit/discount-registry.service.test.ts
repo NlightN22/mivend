@@ -8,6 +8,7 @@ const mockQb = {
     take: vi.fn(),
     skip: vi.fn(),
     getManyAndCount: vi.fn(),
+    getCount: vi.fn(),
 };
 mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
@@ -157,10 +158,11 @@ describe('DiscountRegistryService', () => {
 
     describe('countByStatus', () => {
         it('delegates to findAllPaginated with take:0', async () => {
-            mockQb.getManyAndCount.mockResolvedValue([[], 3]);
+            mockQb.getCount.mockResolvedValue(3);
             const count = await service.countByStatus(mockCtx, 'pending');
             expect(count).toBe(3);
-            expect(mockQb.take).toHaveBeenCalledWith(0);
+            expect(mockQb.getCount).toHaveBeenCalled();
+            expect(mockQb.getManyAndCount).not.toHaveBeenCalled();
         });
     });
 

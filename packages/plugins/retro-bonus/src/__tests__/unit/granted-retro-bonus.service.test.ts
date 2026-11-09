@@ -68,7 +68,12 @@ describe('GrantedRetroBonusService', () => {
 
     it('scopes the list query to the recipient counterparty', async () => {
         const { service, build } = createService(null);
-        build.mockReturnValue({ getManyAndCount: () => Promise.resolve([[{ id: 1 }], 1]) });
+        const qb = {
+            take: () => qb,
+            skip: () => qb,
+            getManyAndCount: () => Promise.resolve([[{ id: 1 }], 1]),
+        };
+        build.mockReturnValue(qb);
         const result = await service.findForRecipient(ctx, 'cp-2', { take: 10 });
         expect(build).toHaveBeenCalledWith(
             expect.anything(),

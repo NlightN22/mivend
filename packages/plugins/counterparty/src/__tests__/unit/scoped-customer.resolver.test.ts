@@ -10,6 +10,8 @@ const customerService = { findAll: vi.fn(), findOne: vi.fn() };
 const listQb = {
     alias: 'customer',
     andWhere: vi.fn(),
+    take: vi.fn(),
+    skip: vi.fn(),
     getManyAndCount: vi.fn(),
     getParameters: (): Record<string, unknown> => ({ arg1: '%x%' }),
 };
@@ -41,6 +43,8 @@ function scope(kind: 'own' | 'department' | 'all'): void {
 beforeEach(() => {
     vi.clearAllMocks();
     listQb.andWhere.mockReturnValue(listQb);
+    listQb.take.mockReturnValue(listQb);
+    listQb.skip.mockReturnValue(listQb);
     listQb.getManyAndCount.mockResolvedValue([[{ id: '4' }], 1]);
     counterpartyService.visibleFilteredQb.mockResolvedValue(visibleQb);
 });
