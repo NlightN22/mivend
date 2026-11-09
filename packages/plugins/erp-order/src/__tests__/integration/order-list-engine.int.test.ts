@@ -42,6 +42,9 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE counterparty_team_member ("counterpartyId" varchar, "administratorId" varchar)`,
     );
+    await dataSource.query(
+        `CREATE TABLE trading_point (id serial primary key, "servicingBranchId" varchar)`,
+    );
     const realScope = new AccessScopeService({} as never, {} as never, {} as never);
     const visibility = new OrderVisibilityService(
         {} as never,
@@ -70,15 +73,16 @@ const cps: Record<string, string> = {};
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE "order", customer, counterparty, counterparty_team_member, order_line, fulfillment RESTART IDENTITY CASCADE',
+        'TRUNCATE "order", customer, counterparty, counterparty_team_member, trading_point, order_line, fulfillment RESTART IDENTITY CASCADE',
     );
     for (const [key, manager] of [
         ['mine', 'm-1'],
         ['other', 'm-2'],
+        ['branchy', 'm-3'],
     ] as const) {
         const [row]: Array<{ id: number }> = await dataSource.query(
-            `INSERT INTO counterparty ("erpId", "assignedManagerId", "shortName") VALUES ($1, $2, $3) RETURNING id`,
-            [`cp-${key}`, manager, `Company ${key}`],
+            `INSERT INTO counterparty ("erpId", "assignedManagerId", "shortName", "branchId") VALUES ($1, $2, $3, $4) RETURNING id`,
+            [`cp-${key}`, manager, `Company ${key}`, key === 'branchy' ? 'b1' : null],
         );
         cps[key] = String(row.id);
     }
@@ -144,6 +148,23 @@ describe('visibleOrders on the shared list engine (real Postgres)', () => {
         expect(await codes({})).toEqual([]);
     });
 
+    it('applies the department branch clause and its managers, then the filter', async () => {
+        await dataSource.getRepository(TestOrder).save([
+            { code: 'T1', createdAt: day(5), counterpartyId: cps.mine, tradingPointId: '1' },
+            { code: 'D1', createdAt: day(6), counterpartyId: cps.branchy },
+        ]);
+        scope = { kind: 'department', branchId: 'b1' } as AccessScope;
+        expect(await codes({})).toEqual(['D1', 'T1']);
+        expect(await codes({ filter: { code: { eq: 'T1' } } })).toEqual(['T1']);
+        expect(await codes({ filter: { code: { eq: 'Z9' } } })).toEqual([]);
+        scope = { kind: 'department', branchId: 'b1', administratorId: 'm-2' } as AccessScope;
+        expect(await codes({})).toEqual(['D1', 'T1', 'Z9']);
+        const counted = await service.findVisible(ctx, { take: 0 });
+        expect(counted).toEqual({ items: [], totalItems: 3 });
+        scope = { kind: 'department', branchId: 'branch-default' } as AccessScope;
+        expect(await codes({})).toEqual(['Z9', 'B1', 'A2', 'A1']);
+    });
+
     it('filters by every whitelisted column', async () => {
         const cases: Array<[string, OrderListInput['filter'], string[]]> = [
             ['code contains', { code: { contains: 'a' } }, ['A2', 'A1']],
@@ -194,6 +215,16 @@ describe('visibleOrders on the shared list engine (real Postgres)', () => {
         ).toEqual(['A1']);
         const byManager = await service.findVisible(ctx, {}, 'm-2');
         expect(byManager.items.map(o => o.code)).toEqual(['Z9']);
+    });
+
+    it('matches % and _ in the search literally and rejects an over-long search', async () => {
+        await dataSource
+            .getRepository(TestOrder)
+            .save({ code: '50%_off', counterpartyId: cps.mine });
+        expect(await codes({}, '%')).toEqual(['50%_off']);
+        expect(await codes({}, '0%_')).toEqual(['50%_off']);
+        expect(await codes({}, '_')).toEqual(['50%_off']);
+        await expect(codes({}, 'x'.repeat(201))).rejects.toThrow(/limited to 200/);
     });
 
     it('answers take: 0 with the filtered total and no rows', async () => {

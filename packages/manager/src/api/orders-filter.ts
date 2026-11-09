@@ -44,3 +44,14 @@ export function conditionsToOrdersFilter(conditions: FilterCondition[]): OrdersS
     if (customerPlaced) filter = mergeFilters(filter, { placedByAdministratorId: customerPlaced });
     return { filter, managerId };
 }
+
+// The server has no regex operator, so a stored starts/ends-with on the number now reads as contains.
+export function upgradeStoredConditions(raw: unknown): unknown {
+    if (!Array.isArray(raw)) return raw;
+    return raw.map(item => {
+        const c = item as Record<string, unknown> | null;
+        const legacy =
+            c?.columnKey === 'code' && (c.operator === 'startsWith' || c.operator === 'endsWith');
+        return legacy ? { ...c, operator: 'contains' } : item;
+    });
+}

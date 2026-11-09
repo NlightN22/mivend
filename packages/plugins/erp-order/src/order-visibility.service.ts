@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { ID, ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
+import {
+    ID,
+    ListQueryBuilder,
+    Order,
+    PaginatedList,
+    RequestContext,
+    UserInputError,
+} from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
-import { documentNumberSearchTerm, getPageAndCount } from 'shared';
+import { getPageAndCount, likeTerm, normalizeDocumentNumber } from 'shared';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { orderBranchClause } from './order-branch-clause';
 import { orderCounterpartyJoinSql } from './order-counterparty-join';
+
+const MAX_SEARCH_LENGTH = 200;
 
 // Must stay in sync with CounterpartyService.findVisible (access-control layer 3).
 @Injectable()
@@ -66,10 +75,13 @@ export class OrderVisibilityService {
             qb.andWhere('customer.id = :filterCustomerId', { filterCustomerId: customerId });
         }
         if (search) {
-            const term = `%${search}%`;
+            if (search.length > MAX_SEARCH_LENGTH) {
+                throw new UserInputError(`Search is limited to ${MAX_SEARCH_LENGTH} characters`);
+            }
+            const term = likeTerm(search);
             // code's own term undoes the display-only dash (docs/identifiers.md) separately —
             // the other fields match the literal search term as-is.
-            const codeTerm = documentNumberSearchTerm(search);
+            const codeTerm = likeTerm(normalizeDocumentNumber(search));
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {
                     bqb.where(`${qb.alias}.code ILIKE :codeTerm`, { codeTerm })

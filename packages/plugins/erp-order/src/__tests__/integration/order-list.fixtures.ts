@@ -50,6 +50,8 @@ export class TestOrder {
     erpStatus!: string | null;
     @Column({ name: 'customFieldsHascheckfindings', type: 'boolean', default: false })
     hasCheckFindings!: boolean;
+    @Column({ name: 'customFieldsTradingpointid', type: 'varchar', nullable: true })
+    tradingPointId!: string | null;
     @Column({ type: 'int', nullable: true }) customerId!: number | null;
     @ManyToOne(() => TestCustomer, { createForeignKeyConstraints: false })
     @JoinColumn({ name: 'customerId' })

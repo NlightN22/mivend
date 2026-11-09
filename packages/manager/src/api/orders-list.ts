@@ -5,7 +5,12 @@ import {
 } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import { adminApi } from './client';
 import { OrdersPageDocument } from './generated/graphql';
-import { ORDERS_FILTER_COLUMNS, conditionsToOrdersFilter, mergeFilters } from './orders-filter';
+import {
+    ORDERS_FILTER_COLUMNS,
+    conditionsToOrdersFilter,
+    mergeFilters,
+    upgradeStoredConditions,
+} from './orders-filter';
 import { ORDER_STATE_BADGE_VARIANT, type OrderListItem, type OrderSortField } from './orders';
 
 export type OrdersView =
@@ -157,6 +162,9 @@ export function restoreOrdersFilters(raw: unknown): OrdersListFilters {
     const r = raw as Record<string, unknown>;
     restored.search = str(r.search) ?? '';
     if (ORDERS_VIEWS.some(v => v.key === r.view)) restored.view = r.view as OrdersView;
-    restored.conditions = sanitizeConditions(r.conditions, ORDERS_FILTER_COLUMNS);
+    restored.conditions = sanitizeConditions(
+        upgradeStoredConditions(r.conditions),
+        ORDERS_FILTER_COLUMNS,
+    );
     return restored;
 }

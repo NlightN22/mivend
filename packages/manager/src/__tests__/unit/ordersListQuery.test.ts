@@ -203,19 +203,20 @@ describe('saved views', () => {
         expect(restoreOrdersFilters(null)).toEqual(BLANK_ORDERS_FILTERS);
     });
 
-    it('drops a stored starts-with condition on the number, keeping the rest', () => {
+    it('reads a stored starts-with or ends-with on the number as contains', () => {
         const restored = restoreOrdersFilters({
             view: 'processing',
             conditions: [
                 { columnKey: 'code', operator: 'startsWith', value: '10' },
-                { columnKey: 'code', operator: 'contains', value: '10' },
+                { columnKey: 'code', operator: 'endsWith', value: '20' },
                 { columnKey: 'state', operator: 'in', value: ['Shipped'] },
             ],
         });
         expect(restored.view).toBe('processing');
-        expect(restored.conditions.map(c => `${c.columnKey}:${c.operator}`)).toEqual([
-            'code:contains',
-            'state:in',
+        expect(restored.conditions).toEqual([
+            { columnKey: 'code', operator: 'contains', value: '10' },
+            { columnKey: 'code', operator: 'contains', value: '20' },
+            { columnKey: 'state', operator: 'in', value: ['Shipped'] },
         ]);
     });
 

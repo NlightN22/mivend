@@ -129,6 +129,17 @@ describe('OrderVisibilityService', () => {
         expect(qb.andWhere).toHaveBeenCalledWith(expect.any(Brackets));
     });
 
+    it('rejects a search longer than 200 characters on the options path', async () => {
+        accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
+
+        await expect(
+            service.findVisible(mockCtx, undefined, undefined, undefined, 'x'.repeat(201)),
+        ).rejects.toThrow(/limited to 200/);
+        await expect(
+            service.findVisible(mockCtx, undefined, undefined, undefined, 'x'.repeat(200)),
+        ).resolves.toBeDefined();
+    });
+
     it('does not add a search filter when search is empty', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
 
