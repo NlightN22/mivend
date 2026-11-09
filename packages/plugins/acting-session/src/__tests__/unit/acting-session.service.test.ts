@@ -23,8 +23,6 @@ function setup(
         ended?: number;
         url?: string;
         nameLookupFails?: boolean;
-        managerCapHit?: boolean;
-        customerCapHit?: boolean;
     } = {},
 ) {
     const save = vi.fn(async (entity: unknown) => entity);
@@ -54,12 +52,8 @@ function setup(
     const liveness = { endDeadSession: vi.fn().mockResolvedValue(over.ended ?? 0) };
     const carts = { deleteForSession: vi.fn() };
     const limits = {
-        assertManagerBelowCap: vi.fn(async () => {
-            if (over.managerCapHit) throw new Error('Too many open acting sessions');
-        }),
-        assertCustomerBelowCap: vi.fn(async () => {
-            if (over.customerCapHit) throw new Error('too many acting sessions open');
-        }),
+        enforceManagerCap: vi.fn().mockResolvedValue(1),
+        enforceCustomerCap: vi.fn().mockResolvedValue(1),
     };
     const service = new ActingSessionService(
         connection as never,
@@ -97,16 +91,18 @@ describe('ActingSessionService', () => {
         expect(tickets.issue).not.toHaveBeenCalled();
     });
 
-    it('refuses to start, and issues no ticket, when the manager is at the open-session cap', async () => {
-        const { service, tickets } = setup({ managerCapHit: true });
-        await expect(service.start(managerCtx, 'cp-1', null)).rejects.toThrow(/Too many/);
-        expect(tickets.issue).not.toHaveBeenCalled();
+    it("ends the manager's oldest open items before issuing the new ticket, which still succeeds", async () => {
+        const { service, tickets, limits } = setup();
+        await service.start(managerCtx, 'cp-1', null);
+        expect(limits.enforceManagerCap).toHaveBeenCalledWith(managerCtx, '7');
+        expect(tickets.issue).toHaveBeenCalled();
     });
 
-    it('refuses the exchange, and saves no session, when the customer is at the open-session cap', async () => {
-        const { service, save } = setup({ customerCapHit: true });
-        await expect(service.exchange({} as never, 'tk')).rejects.toThrow(/too many/);
-        expect(save).not.toHaveBeenCalled();
+    it("ends the customer's oldest acting session before saving the new one", async () => {
+        const { service, save, limits } = setup();
+        await service.exchange({} as never, 'tk');
+        expect(limits.enforceCustomerCap).toHaveBeenCalledWith(expect.anything(), 'u-1');
+        expect(save).toHaveBeenCalled();
     });
 
     it('refuses to start without an administrator behind the session', async () => {

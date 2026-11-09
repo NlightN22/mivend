@@ -71,7 +71,7 @@ export class ActingSessionService {
             ctx,
             `acting-manager:${administratorId}`,
             async txCtx => {
-                await this.limits.assertManagerBelowCap(txCtx, administratorId);
+                await this.limits.enforceManagerCap(txCtx, administratorId);
                 return this.tickets.issue(txCtx, {
                     administratorId,
                     parentSessionId: sessionId,
@@ -106,7 +106,7 @@ export class ActingSessionService {
         const expiresAt = new Date(Date.now() + ttl);
         const token = randomBytes(32).toString('hex');
         await withAggregateLock(this.connection, ctx, `acting-customer:${user.id}`, async txCtx => {
-            await this.limits.assertCustomerBelowCap(txCtx, String(user.id));
+            await this.limits.enforceCustomerCap(txCtx, String(user.id));
             await this.connection.getRepository(txCtx, AuthenticatedSession).save(
                 new AuthenticatedSession({
                     token,
