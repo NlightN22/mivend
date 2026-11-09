@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
     AuthenticatedSession,
     ConfigService,
+    ForbiddenError,
     ID,
     RequestContext,
     Session,
@@ -9,6 +10,7 @@ import {
     UserService,
 } from '@vendure/core';
 
+import { ActingContextService } from './acting-context.service';
 import { labelForUserAgent, SessionSummary } from './session.types';
 
 // A manager's acting session is not the customer's own: it stays out of their list and their bulk sign-out.
@@ -23,7 +25,13 @@ export class SessionManagementService {
         private connection: TransactionalConnection,
         private configService: ConfigService,
         private userService: UserService,
+        private acting: ActingContextService,
     ) {}
+
+    // A manager acting as the customer must not sign the customer out of their own devices.
+    private async refuseActing(ctx: RequestContext): Promise<void> {
+        if (await this.acting.get(ctx)) throw new ForbiddenError();
+    }
 
     async getMySessions(ctx: RequestContext): Promise<SessionSummary[]> {
         const userId = ctx.activeUserId;
@@ -40,6 +48,7 @@ export class SessionManagementService {
     }
 
     async endSession(ctx: RequestContext, sessionId: string): Promise<boolean> {
+        await this.refuseActing(ctx);
         const userId = ctx.activeUserId;
         if (!userId) {
             return false;
@@ -54,6 +63,7 @@ export class SessionManagementService {
     }
 
     async endOtherSessions(ctx: RequestContext): Promise<boolean> {
+        await this.refuseActing(ctx);
         const userId = ctx.activeUserId;
         if (!userId) {
             return false;
@@ -72,6 +82,7 @@ export class SessionManagementService {
     // Intentionally ends the caller's own session too, to match the frontend's
     // "Sign out everywhere" button behaviour.
     async endAllSessions(ctx: RequestContext): Promise<boolean> {
+        await this.refuseActing(ctx);
         const userId = ctx.activeUserId;
         if (!userId) {
             return false;

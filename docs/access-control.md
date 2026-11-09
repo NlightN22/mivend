@@ -776,6 +776,32 @@ The engine (`packages/plugins/approval-workflow`, XState + TypeORM per
 
 ---
 
+## Security review of acting-as-customer sessions (#327)
+
+Chain reviewed: `startActingSession` (Admin API, `CreateOrder` + counterparty write scope) -> single-use ticket
+(256-bit, stored as sha256, 60 s, claimed by one atomic `UPDATE`, carried in the URL fragment and stripped by
+`replaceState` before routing) -> `exchangeActingTicket` (bearer session, never a cookie, 4 h) -> `x-acting-session`
+requests (cookie dropped, `credentials: omit`) -> `finishActingSession`. Cookie flags, fixation and CSRF do not apply:
+the token is never a cookie, a fragment is never sent in `Referer` or logs, the start mutation needs a JSON POST with a
+CORS allow-list (`CORS_ALLOWED_ORIGINS`, no `*`), and the ticket is bound to the manager's own session.
+
+| # | Finding | Severity | Outcome |
+|---|---|---|---|
+| 1 | An acting session could run `endSession`, `endOtherSessions`, `endAllSessions` and so sign the customer out of every real device | High | Fixed: the three refuse an acting session (`ForbiddenError`) |
+| 2 | An acting session could call core `updateCustomerPassword`, `requestUpdateCustomerEmailAddress`, `updateCustomerEmailAddress` (the first two need the customer's password, the third an e-mailed token) | Low | Fixed: refused for acting sessions in `ActingMutationLogInterceptor` (`ACTING_REFUSED_MUTATIONS`) |
+| 3 | No cap on tickets or open acting sessions per manager or per customer | Medium | Fixed: at most 10 open (unused ticket + live session) per manager, 3 live per customer, checked under advisory locks `acting-manager:<id>` / `acting-customer:<userId>`; a refused start or exchange creates nothing. Options `maxPerManager` / `maxPerCustomer` |
+| 4 | Audit trail gaps: ticket log lacked the trading point, nothing logged on finish | Low | Fixed: both logged (never the ticket or token value); mutations were already logged per call |
+| 5 | Token in `sessionStorage` is readable by script on the storefront origin | Accepted | An XSS gains the customer's rights for at most 4 h and only while the manager is signed in; a real session cookie is `HttpOnly` and lives longer. Moving the token out of `sessionStorage` is a design change: separate issue if the owner wants it |
+| 6 | Ticket exchange has no rate limit | Accepted | 256-bit random ticket, 60 s life, single use: guessing is infeasible; the start side is capped (3) |
+| 7 | Manager password change does not end the manager's sessions (and so not their acting sessions) | Accepted | Same behaviour as for every staff session (core); sign-out, deactivation, permission loss and expiry do end acting sessions (`ActingSessionLivenessService`) |
+| 8 | Scope or branch change of the manager is not re-checked while a session is open | Accepted | Eligibility is checked at start and again at exchange for the counterparty/portal access; a role losing `CreateOrder` ends the session. Residual window is the 4 h lifetime |
+| 9 | The customer cannot see that a manager acts as them | Accepted | Deliberate (the acting session is hidden from their list and bulk sign-out, see `docs/vendure-core-divergences.md`); attribution lives on the order (`actingAdministratorId`) and in the log |
+
+Already covered and unchanged: replay and expiry (`ActingTicketService` integration tests), parent-session and
+permission liveness, cookie isolation (middleware unit tests), 2FA and new-device-setting changes refused,
+`logout` refused, customer-side session list hides acting sessions, cart isolation. The change journal (#323) remains
+the long-term mutation trail; until then the `Acting mutation:` log line is the only one.
+
 ## Testing requirements
 
 Access-control code has its own mandatory test categories, in addition to whatever

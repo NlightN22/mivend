@@ -1,12 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const state = vi.hoisted(() => ({ parent: 'Mutation', logged: [] as string[] }));
+const state = vi.hoisted(() => ({
+    parent: 'Mutation',
+    field: 'addItemToOrder',
+    logged: [] as string[],
+}));
 
 vi.mock('@nestjs/graphql', async importOriginal => ({
     ...(await importOriginal<typeof import('@nestjs/graphql')>()),
     GqlExecutionContext: {
         create: () => ({
-            getInfo: () => ({ parentType: { name: state.parent }, fieldName: 'addItemToOrder' }),
+            getInfo: () => ({ parentType: { name: state.parent }, fieldName: state.field }),
             getContext: () => ({ req: {} }),
         }),
     },
@@ -28,6 +32,7 @@ const context = { getType: () => 'graphql' } as never;
 
 beforeEach(() => {
     state.parent = 'Mutation';
+    state.field = 'addItemToOrder';
     state.logged = [];
 });
 
@@ -55,5 +60,20 @@ describe('ActingMutationLogInterceptor', () => {
         await acting.intercept(context, handler as never);
 
         expect(state.logged).toEqual([]);
+    });
+
+    it.each([
+        'updateCustomerPassword',
+        'requestUpdateCustomerEmailAddress',
+        'updateCustomerEmailAddress',
+    ])('refuses %s in an acting session but lets the customer run it', async field => {
+        state.field = field;
+        const acting = new ActingMutationLogInterceptor({
+            get: async () => ({ administratorId: '7', tradingPointId: null }),
+        } as never);
+        const ordinary = new ActingMutationLogInterceptor({ get: async () => null } as never);
+
+        await expect(acting.intercept(context, handler as never)).rejects.toThrow();
+        await expect(ordinary.intercept(context, handler as never)).resolves.toBe('next');
     });
 });

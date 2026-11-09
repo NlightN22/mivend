@@ -23,10 +23,13 @@ function setup(
         ended?: number;
         url?: string;
         nameLookupFails?: boolean;
+        managerCapHit?: boolean;
+        customerCapHit?: boolean;
     } = {},
 ) {
     const save = vi.fn(async (entity: unknown) => entity);
     const connection = {
+        withTransaction: async (ctx: unknown, work: (c: unknown) => unknown) => work(ctx),
         getRepository: (_ctx: unknown, entity: { name: string }) =>
             entity.name === 'User'
                 ? { findOneOrFail: async () => ({ id: 'u-1' }) }
@@ -50,6 +53,14 @@ function setup(
     };
     const liveness = { endDeadSession: vi.fn().mockResolvedValue(over.ended ?? 0) };
     const carts = { deleteForSession: vi.fn() };
+    const limits = {
+        assertManagerBelowCap: vi.fn(async () => {
+            if (over.managerCapHit) throw new Error('Too many open acting sessions');
+        }),
+        assertCustomerBelowCap: vi.fn(async () => {
+            if (over.customerCapHit) throw new Error('too many acting sessions open');
+        }),
+    };
     const service = new ActingSessionService(
         connection as never,
         { authOptions: { sessionCacheStrategy: { delete: cacheDelete } } } as never,
@@ -60,9 +71,10 @@ function setup(
         tickets as never,
         liveness as never,
         carts as never,
+        limits as never,
         { storefrontPublicUrl: over.url ?? 'https://shop.example', sessionTtlMs: 5000 },
     );
-    return { service, save, tickets, eligibility, carts };
+    return { service, save, tickets, eligibility, carts, limits };
 }
 
 const managerCtx = { activeUserId: 'mu-1', session: { id: 10 } } as never;
@@ -83,6 +95,18 @@ describe('ActingSessionService', () => {
             'STOREFRONT_PUBLIC_URL',
         );
         expect(tickets.issue).not.toHaveBeenCalled();
+    });
+
+    it('refuses to start, and issues no ticket, when the manager is at the open-session cap', async () => {
+        const { service, tickets } = setup({ managerCapHit: true });
+        await expect(service.start(managerCtx, 'cp-1', null)).rejects.toThrow(/Too many/);
+        expect(tickets.issue).not.toHaveBeenCalled();
+    });
+
+    it('refuses the exchange, and saves no session, when the customer is at the open-session cap', async () => {
+        const { service, save } = setup({ customerCapHit: true });
+        await expect(service.exchange({} as never, 'tk')).rejects.toThrow(/too many/);
+        expect(save).not.toHaveBeenCalled();
     });
 
     it('refuses to start without an administrator behind the session', async () => {

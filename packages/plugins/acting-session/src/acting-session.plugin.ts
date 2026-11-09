@@ -8,6 +8,7 @@ import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ActingActiveOrderStrategy } from './acting-active-order.strategy';
 import { ActingCartService } from './acting-cart.service';
 import { ActingEligibilityService } from './acting-eligibility.service';
+import { ActingLimitService } from './acting-limit.service';
 import { ActingMutationLogInterceptor } from './acting-mutation-log.interceptor';
 import { createActingSessionCleanupTask } from './acting-session-cleanup.scheduled-task';
 import { ActingSessionLivenessService } from './acting-session-liveness.service';
@@ -39,6 +40,7 @@ const orderField = (config: { name: string }): CustomFieldConfig => ({
         ActingSessionService,
         ActingEligibilityService,
         ActingTicketService,
+        ActingLimitService,
         ActingSessionLivenessService,
         ActingCartService,
         ActingSessionMiddleware,

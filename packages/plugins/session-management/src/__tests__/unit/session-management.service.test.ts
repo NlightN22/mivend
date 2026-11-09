@@ -6,6 +6,7 @@ import type {
     UserService,
 } from '@vendure/core';
 
+import { ActingContextService } from '../../acting-context.service';
 import { SessionManagementService } from '../../session-management.service';
 
 interface FakeSession {
@@ -28,6 +29,8 @@ function makeSession(overrides: Partial<FakeSession>): FakeSession {
         ...overrides,
     };
 }
+
+const actingState = { value: null as null | { administratorId: string } };
 
 describe('SessionManagementService', () => {
     let repo: {
@@ -81,6 +84,7 @@ describe('SessionManagementService', () => {
             connection as unknown as TransactionalConnection,
             configService,
             userService as unknown as UserService,
+            { get: async () => actingState.value } as unknown as ActingContextService,
         );
     });
 
@@ -121,6 +125,26 @@ describe('SessionManagementService', () => {
         expect(deleteFromCache).toHaveBeenCalledTimes(1);
         expect(deleteFromCache).toHaveBeenCalledWith('token-1');
     });
+
+    it.each(['endSession', 'endOtherSessions', 'endAllSessions'] as const)(
+        'refuses %s from an acting session and touches nothing',
+        async method => {
+            actingState.value = { administratorId: '7' };
+            try {
+                await expect(
+                    method === 'endSession'
+                        ? service.endSession(ctxFor('user-1', 'token-9'), 'session-1')
+                        : service[method](ctxFor('user-1', 'token-9')),
+                ).rejects.toThrow();
+            } finally {
+                actingState.value = null;
+            }
+
+            expect(repo.update).not.toHaveBeenCalled();
+            expect(repo.remove).not.toHaveBeenCalled();
+            expect(deleteFromCache).not.toHaveBeenCalled();
+        },
+    );
 
     it('returns an empty list when there is no active user', async () => {
         const result = await service.getMySessions(ctxFor(undefined));

@@ -12,6 +12,7 @@ import {
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
+import { ActingContextService } from '../../acting-context.service';
 import { SessionManagementService } from '../../session-management.service';
 
 // Hand-rolled table: Vendure's Session/AuthenticatedSession need a bootstrap-registered
@@ -89,6 +90,7 @@ beforeAll(async () => {
         connectionShim,
         configService,
         userService as unknown as UserService,
+        { get: async () => null } as unknown as ActingContextService,
     );
 });
 

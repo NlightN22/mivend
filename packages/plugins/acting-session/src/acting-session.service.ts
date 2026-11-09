@@ -12,8 +12,9 @@ import {
     User,
     UserInputError,
 } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 
+import { ActingLimitService } from './acting-limit.service';
 import { ActingCartService } from './acting-cart.service';
 import { ActingEligibilityService } from './acting-eligibility.service';
 import { ActingSessionLivenessService } from './acting-session-liveness.service';
@@ -40,6 +41,7 @@ export class ActingSessionService {
         private tickets: ActingTicketService,
         private liveness: ActingSessionLivenessService,
         private carts: ActingCartService,
+        private limits: ActingLimitService,
         @Inject(ACTING_SESSION_PLUGIN_OPTIONS) private options: ActingSessionPluginOptions,
     ) {}
 
@@ -62,15 +64,25 @@ export class ActingSessionService {
             counterpartyId,
             tradingPointId,
         );
-        const { ticket, expiresAt } = await this.tickets.issue(ctx, {
-            administratorId: String(admin.id),
-            parentSessionId: String(ctx.session.id),
-            counterpartyId: target.counterpartyId,
-            customerId: target.customerId,
-            tradingPointId: target.tradingPointId,
-        });
+        const administratorId = String(admin.id);
+        const sessionId = String(ctx.session.id);
+        const { ticket, expiresAt } = await withAggregateLock(
+            this.connection,
+            ctx,
+            `acting-manager:${administratorId}`,
+            async txCtx => {
+                await this.limits.assertManagerBelowCap(txCtx, administratorId);
+                return this.tickets.issue(txCtx, {
+                    administratorId,
+                    parentSessionId: sessionId,
+                    counterpartyId: target.counterpartyId,
+                    customerId: target.customerId,
+                    tradingPointId: target.tradingPointId,
+                });
+            },
+        );
         Logger.info(
-            `Acting session ticket issued: administrator=${admin.id} counterparty=${target.counterpartyId}`,
+            `Acting session ticket issued: administrator=${admin.id} counterparty=${target.counterpartyId} tradingPoint=${String(target.tradingPointId)}`,
             loggerCtx,
         );
         return { ticket, storefrontUrl: this.options.storefrontPublicUrl, expiresAt };
@@ -93,20 +105,23 @@ export class ActingSessionService {
         const ttl = this.options.sessionTtlMs ?? SESSION_TTL_DEFAULT_MS;
         const expiresAt = new Date(Date.now() + ttl);
         const token = randomBytes(32).toString('hex');
-        await this.connection.getRepository(ctx, AuthenticatedSession).save(
-            new AuthenticatedSession({
-                token,
-                user,
-                authenticationStrategy: ACTING_AUTH_STRATEGY,
-                expires: expiresAt,
-                invalidated: false,
-                customFields: {
-                    actingAdministratorId: binding.administratorId,
-                    actingParentSessionId: binding.parentSessionId,
-                    actingTradingPointId: binding.tradingPointId,
-                },
-            }),
-        );
+        await withAggregateLock(this.connection, ctx, `acting-customer:${user.id}`, async txCtx => {
+            await this.limits.assertCustomerBelowCap(txCtx, String(user.id));
+            await this.connection.getRepository(txCtx, AuthenticatedSession).save(
+                new AuthenticatedSession({
+                    token,
+                    user,
+                    authenticationStrategy: ACTING_AUTH_STRATEGY,
+                    expires: expiresAt,
+                    invalidated: false,
+                    customFields: {
+                        actingAdministratorId: binding.administratorId,
+                        actingParentSessionId: binding.parentSessionId,
+                        actingTradingPointId: binding.tradingPointId,
+                    },
+                }),
+            );
+        });
         const ended = await this.liveness.endDeadSession(ctx, token, ttl);
         if (ended > 0) throw new ForbiddenError();
         const administratorName = await this.administratorName(ctx, binding.administratorId);
@@ -147,6 +162,7 @@ export class ActingSessionService {
         if (rows.length === 0) return false;
         await this.configService.authOptions.sessionCacheStrategy.delete(token);
         await this.carts.deleteForSession(ctx, String(ctx.session?.id));
+        Logger.info(`Acting session finished: user=${String(ctx.activeUserId)}`, loggerCtx);
         return true;
     }
 }
