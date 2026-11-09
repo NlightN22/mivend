@@ -60,6 +60,11 @@ export class ErpUserService {
         return repo.save(user);
     }
 
+    // Only an existing row is updated: every unlinked path of the user stream creates it first.
+    async setContactInfos(ctx: RequestContext, erpId: string, json: string | null): Promise<void> {
+        await this.connection.getRepository(ctx, ErpUser).update({ erpId }, { contactInfos: json });
+    }
+
     // Keep the row on link: counterparty.handler.ts distinguishes unseen erpId (retry) from unlinked
     // and linked erpIds, so upsert first: email-match can link an erpId never seen as a candidate.
     async markLinked(

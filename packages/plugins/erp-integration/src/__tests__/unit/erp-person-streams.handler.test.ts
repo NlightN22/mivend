@@ -86,6 +86,16 @@ describe('IndividualStreamHandler', () => {
         expect(persons.upsert.mock.calls[0][2].counterpartyId).toBeNull();
     });
 
+    it('a live event without any name is a noop, not a tombstone, and deactivates nothing', async () => {
+        const { persons, args } = deps();
+        const outcome = await new IndividualStreamHandler(...args).apply(ctx, 'i-1', {
+            isActive: true,
+        });
+        expect(outcome.kind).toBe('noop');
+        expect(persons.deactivate).not.toHaveBeenCalled();
+        expect(persons.upsert).not.toHaveBeenCalled();
+    });
+
     it('deactivates on a tombstone and reports an unknown person as a no-op', async () => {
         const known = deps();
         expect(

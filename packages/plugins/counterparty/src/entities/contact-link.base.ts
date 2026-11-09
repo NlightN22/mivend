@@ -1,11 +1,12 @@
 import { VendureEntity } from '@vendure/core';
-import { Column, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Index, JoinColumn, ManyToOne } from 'typeorm';
 
 import { ContactPoint } from './contact-point.entity';
 import { ContactRole } from './contact-role.entity';
 
 // Shared columns of every *_contact_point link table; each subclass adds its own owner FK.
 export abstract class ContactPointLink extends VendureEntity {
+    @Index()
     @Column({ type: 'int' })
     contactPointId!: number;
 

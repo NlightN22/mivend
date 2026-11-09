@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    ALL_INBOUND_STREAMS,
     INBOX_BULK_STREAMS,
+    INBOX_CONTACT_STREAMS,
     INBOX_CRITICAL_STREAMS,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_USER_STREAMS,
@@ -29,8 +31,18 @@ describe('inbox lane stream membership', () => {
         }
     });
 
-    it('still leaves other bulk-lane streams (e.g. counterparty, the stream that starved user) in the bulk lane', () => {
-        expect(INBOX_BULK_STREAMS).toContain('counterparty');
+    it('puts the contact-carrying burst streams in their own lane, disjoint from bulk and priority lanes', () => {
+        expect(INBOX_CONTACT_STREAMS).toContain('counterparty');
+        for (const stream of INBOX_CONTACT_STREAMS) {
+            expect(INBOX_BULK_STREAMS).not.toContain(stream);
+            expect(INBOX_CRITICAL_STREAMS).not.toContain(stream);
+        }
+        expect(INBOX_BULK_STREAMS).toContain('order-status');
+    });
+
+    it('every inbound stream is claimed by exactly one lane', () => {
+        const lanes = [...INBOX_CRITICAL_STREAMS, ...INBOX_CONTACT_STREAMS, ...INBOX_BULK_STREAMS];
+        expect([...lanes].sort()).toEqual([...ALL_INBOUND_STREAMS].sort());
     });
 });
 

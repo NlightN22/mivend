@@ -47,4 +47,8 @@ export class ErpUser extends VendureEntity {
     // deleted ERP users while unlinked; must not drive manager resolution (status/administratorId only).
     @Column({ type: 'boolean', nullable: true })
     active!: boolean | null;
+
+    // Last contact list the ERP sent (parsed channels as JSON), kept so it can be applied once an Administrator links.
+    @Column({ type: 'text', nullable: true })
+    contactInfos!: string | null;
 }

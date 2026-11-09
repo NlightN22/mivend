@@ -1,6 +1,7 @@
 import { StockOrganization } from './entities/stock-organization.entity';
 import { StorageLocationAssignment } from './entities/storage-location-assignment.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
+import { IntegrationReapplyCursor } from './entities/integration-reapply-cursor.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
@@ -28,6 +29,7 @@ export const PLUGIN_ENTITIES = [
     StockOrganization,
     IntegrationOutboxEntry,
     IntegrationInboxEvent,
+    IntegrationReapplyCursor,
     KafkaConsumerStatus,
     KafkaConsumerLagEntry,
     ProductTaxCodeFlag,

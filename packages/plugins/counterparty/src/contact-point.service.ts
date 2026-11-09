@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { Administrator, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { FindOptionsWhere, ObjectType } from 'typeorm';
@@ -89,22 +90,39 @@ export class ContactPointService {
             relations: { contactPoint: true },
         });
         const plan = planContactPointReplace(
-            owned.map(l => ({ ...l.contactPoint, id: l.contactPoint.id as number })),
+            owned.map(l => ({
+                ...l.contactPoint,
+                id: l.contactPoint.id as number,
+                linkId: l.id as number,
+                isPrimary: l.isPrimary,
+            })),
             incoming,
         );
 
-        for (const { id, point } of plan.update) await points.update(id, erpFields(point));
-        for (const point of plan.insert) {
-            const saved = await points.save(points.create(erpFields(point)));
-            await links.save(
-                links.create({
-                    contactPointId: saved.id as number,
-                    isPrimary: point.isPrimary,
-                    [column]: ownerId,
-                } as never),
-            );
+        for (const { id, point } of plan.updatePoint) await points.update(id, erpFields(point));
+        for (const { linkId, isPrimary } of plan.updateLink) {
+            await links.update(linkId, { isPrimary } as never);
         }
         if (plan.deleteIds.length > 0) await points.delete({ id: In(plan.deleteIds) });
+        if (plan.insert.length > 0) {
+            const inserted = await points
+                .createQueryBuilder()
+                .insert()
+                .values(plan.insert.map(point => ({ ...erpFields(point), uuid: randomUUID() })))
+                .returning('id')
+                .execute();
+            await links
+                .createQueryBuilder()
+                .insert()
+                .values(
+                    plan.insert.map((point, i) => ({
+                        contactPointId: (inserted.raw as Array<{ id: number }>)[i].id,
+                        isPrimary: point.isPrimary,
+                        [column]: ownerId,
+                    })) as never,
+                )
+                .execute();
+        }
     }
 }
 
@@ -115,7 +133,6 @@ function erpFields(point: ResolvedContactPoint): Partial<ContactPoint> {
         normalizedValue: point.normalizedValue,
         isUsable: point.isUsable,
         label: point.label,
-        isPrimary: point.isPrimary,
         comment: point.comment,
         source: 'erp',
     };

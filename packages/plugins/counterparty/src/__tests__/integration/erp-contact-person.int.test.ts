@@ -140,6 +140,17 @@ describe('ErpContactPersonService (real Postgres)', () => {
         expect((await links()).length).toBeLessThanOrEqual(2);
     });
 
+    it('moves the single owner: links to other counterparties are removed when the ERP owner changes', async () => {
+        await service.upsert(ctx, 'p-1', fields(1));
+        await service.upsert(ctx, 'p-1', fields(2));
+        expect(await links()).toEqual([{ counterpartyId: 2 }]);
+        await dataSource.query(
+            `INSERT INTO counterparty_contact_erp ("erpId", "counterpartyId") VALUES ('p-1', 'cp-1')`,
+        );
+        await service.linkWaitingContacts(ctx, 'cp-1');
+        expect(await links()).toEqual([{ counterpartyId: 1 }]);
+    });
+
     it('a tombstone deactivates a known person and reports an unknown one', async () => {
         await service.upsert(ctx, 'p-1', fields());
         expect(await service.deactivate(ctx, 'p-1')).not.toBeNull();

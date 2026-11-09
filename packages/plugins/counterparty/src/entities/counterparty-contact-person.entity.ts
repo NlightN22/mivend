@@ -21,6 +21,7 @@ export class CounterpartyContactPerson extends VendureEntity {
     @JoinColumn({ name: 'counterpartyId' })
     counterparty!: Counterparty;
 
+    @Index()
     @Column({ type: 'int' })
     contactPersonId!: number;
 

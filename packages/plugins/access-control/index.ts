@@ -22,6 +22,7 @@ export type { WarehouseRecordInput } from './src/warehouse.service';
 export { EmployeeService } from './src/employee.service';
 export type { EmployeeRecordInput } from './src/employee.service';
 export { UserEnrichmentService } from './src/user-enrichment.service';
+export { ErpUserService } from './src/erp-user.service';
 export type { UserEnrichmentInput, ManagerLinkResolution } from './src/user-enrichment.service';
 export { AdministratorLinkedEvent } from './src/administrator-linked.event';
 export { CreditTermLimit } from './src/entities/credit-term-limit.entity';

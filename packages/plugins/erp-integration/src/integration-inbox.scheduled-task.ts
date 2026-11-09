@@ -11,6 +11,7 @@ import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
     INBOX_BULK_TASK_TIMEOUT_MS,
+    INBOX_CONTACT_STREAMS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
@@ -23,7 +24,7 @@ import {
     INBOX_USER_STREAMS,
     loggerCtx,
 } from './types';
-import type { ErpIntegrationPluginOptions } from './types';
+import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 
 // Disjoint stream lanes: a bulk backlog must not starve order-registration-result
 // 'user' has its own lane so its claim query never shares a batch or ORDER BY with other streams
@@ -111,8 +112,37 @@ export function createIntegrationInboxBulkTask(
     });
 }
 
+// Same drain as the bulk lane on its own stream set, so a contact re-seed burst and the bulk backlog never queue behind each other.
+export function createIntegrationInboxContactTask(
+    options: ErpIntegrationPluginOptions,
+): ScheduledTask {
+    let running = false;
+    const everyMs = options.inboxPollIntervalMs ?? INBOX_POLL_INTERVAL_DEFAULT;
+    return new ScheduledTask({
+        id: 'erp-integration-inbox-contacts',
+        description:
+            'Processes pending counterparty, point-of-sale and contact-person inbox records in their own lane (central hub only).',
+        schedule: cronEveryMs(everyMs),
+        timeout: INBOX_BULK_TASK_TIMEOUT_MS,
+        execute: async ({ injector }) => {
+            if (options.instanceType !== 'central') return { skipped: true };
+            if (running) return { skipped: true };
+            running = true;
+            try {
+                return await drainBulkLane(
+                    injector.get(IntegrationInboxProcessorService),
+                    INBOX_CONTACT_STREAMS,
+                );
+            } finally {
+                running = false;
+            }
+        },
+    });
+}
+
 async function drainBulkLane(
     processor: IntegrationInboxProcessorService,
+    streams: readonly InboundStream[] = INBOX_BULK_STREAMS,
 ): Promise<{ processed: number; failed: number }> {
     let totalProcessed = 0;
     let totalFailed = 0;
@@ -123,7 +153,7 @@ async function drainBulkLane(
     // Backlog size only adds ticks; the run never gets stuck or orphaned
     for (;;) {
         const { processed, failed, claimed } = await processor.processPendingBatch(
-            [...INBOX_BULK_STREAMS],
+            [...streams],
             INBOX_BULK_BATCH_SIZE_DEFAULT,
             deadlineMs,
         );

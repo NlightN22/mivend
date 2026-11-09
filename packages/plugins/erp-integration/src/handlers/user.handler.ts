@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { UserEnrichmentService } from '@mivend/plugin-access-control';
+import { ErpUserService, UserEnrichmentService } from '@mivend/plugin-access-control';
 import { ContactPointService } from '@mivend/plugin-counterparty';
 import { parseContactInfos } from './contact-infos';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -15,6 +15,7 @@ export class UserStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly userEnrichmentService: UserEnrichmentService,
         private readonly contactPoints: ContactPointService,
+        private readonly erpUsers: ErpUserService,
     ) {}
 
     async apply(
@@ -45,10 +46,14 @@ export class UserStreamHandler implements InboundStreamHandler {
             fullName,
             isActive,
         });
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        if (contactInfos) {
+            // Kept for an administrator that links later (AdministratorContactsListener).
+            await this.erpUsers.setContactInfos(ctx, entityId, JSON.stringify(contactInfos));
+        }
         if (!admin) {
             return inboundNoop(`user ${entityId}: no linked Administrator (skipped)`);
         }
-        const contactInfos = parseContactInfos(payload.contactInfos);
         if (contactInfos) {
             await this.contactPoints.replaceErpPointsByErpId(
                 ctx,

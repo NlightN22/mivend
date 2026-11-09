@@ -6,7 +6,7 @@ export class ContactPoints1791573000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `CREATE TABLE "contact_point" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "uuid" uuid NOT NULL, "type" character varying NOT NULL, "value" character varying NOT NULL, "normalizedValue" character varying, "isUsable" boolean NOT NULL DEFAULT true, "label" character varying, "isPrimary" boolean NOT NULL DEFAULT false, "comment" character varying, "source" character varying NOT NULL DEFAULT 'manual', "id" SERIAL NOT NULL, CONSTRAINT "PK_a4953bfa453e555c2185e51dd4a" PRIMARY KEY ("id"))`,
+            `CREATE TABLE "contact_point" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "uuid" uuid NOT NULL, "type" character varying NOT NULL, "value" character varying NOT NULL, "normalizedValue" character varying, "isUsable" boolean NOT NULL DEFAULT true, "label" character varying, "comment" character varying, "source" character varying NOT NULL DEFAULT 'manual', "id" SERIAL NOT NULL, CONSTRAINT "PK_a4953bfa453e555c2185e51dd4a" PRIMARY KEY ("id"))`,
         );
         await queryRunner.query(
             `CREATE UNIQUE INDEX "IDX_96be29cb82e367bfaecaa2b894" ON "contact_point" ("uuid")`,
@@ -135,9 +135,55 @@ export class ContactPoints1791573000000 implements MigrationInterface {
         await queryRunner.query(
             `ALTER TABLE "counterparty_contact_person" ADD CONSTRAINT "FK_90384f12d6eef98b59289a34bbf" FOREIGN KEY ("roleId") REFERENCES "contact_role"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
         );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_d04e9cd47509fdb670351e992a" ON "counterparty_contact_point" ("contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_97851240160f6ecb588201abbf" ON "trading_point_contact_point" ("contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_cb19d3d3cc750398c9045707ac" ON "contact_person_contact_point" ("contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_a6cf206362edb770f5ee2ce6e6" ON "administrator_contact_point" ("contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_46151944292ab8870c10382dc5" ON "organization_contact_point" ("contactPointId")`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_04602c03151ed9bf875b729406" ON "counterparty_contact_person" ("contactPersonId")`,
+        );
+        await queryRunner.query(
+            `CREATE TABLE "integration_reapply_cursor" ("stream" character varying NOT NULL, "lastId" bigint NOT NULL DEFAULT '0', "done" boolean NOT NULL DEFAULT false, "applied" integer NOT NULL DEFAULT '0', "skipped" integer NOT NULL DEFAULT '0', "lockedUntil" TIMESTAMP WITH TIME ZONE, "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c5202855e567be677ca5b4d7132" PRIMARY KEY ("stream"))`,
+        );
+        await queryRunner.query(
+            `CREATE INDEX "integration_inbox_event_reapply" ON "integration_inbox_event" ("stream", "id") WHERE "status" = 'processed'`,
+        );
+        await queryRunner.query(`ALTER TABLE "erp_user" ADD "contactInfos" text`);
+        await queryRunner.query(
+            `CREATE FUNCTION contact_point_orphan_cleanup() RETURNS trigger AS $$ BEGIN DELETE FROM contact_point cp WHERE cp.id = OLD."contactPointId" AND NOT EXISTS (SELECT 1 FROM "counterparty_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "trading_point_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "contact_person_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "administrator_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "organization_contact_point" WHERE "contactPointId" = cp.id); RETURN NULL; END $$ LANGUAGE plpgsql`,
+        );
+        await queryRunner.query(
+            `CREATE TRIGGER "counterparty_contact_point_orphan" AFTER DELETE ON "counterparty_contact_point" FOR EACH ROW EXECUTE FUNCTION contact_point_orphan_cleanup()`,
+        );
+        await queryRunner.query(
+            `CREATE TRIGGER "trading_point_contact_point_orphan" AFTER DELETE ON "trading_point_contact_point" FOR EACH ROW EXECUTE FUNCTION contact_point_orphan_cleanup()`,
+        );
+        await queryRunner.query(
+            `CREATE TRIGGER "contact_person_contact_point_orphan" AFTER DELETE ON "contact_person_contact_point" FOR EACH ROW EXECUTE FUNCTION contact_point_orphan_cleanup()`,
+        );
+        await queryRunner.query(
+            `CREATE TRIGGER "administrator_contact_point_orphan" AFTER DELETE ON "administrator_contact_point" FOR EACH ROW EXECUTE FUNCTION contact_point_orphan_cleanup()`,
+        );
+        await queryRunner.query(
+            `CREATE TRIGGER "organization_contact_point_orphan" AFTER DELETE ON "organization_contact_point" FOR EACH ROW EXECUTE FUNCTION contact_point_orphan_cleanup()`,
+        );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP INDEX "integration_inbox_event_reapply"`);
+        await queryRunner.query(`DROP TABLE "integration_reapply_cursor"`);
+        await queryRunner.query(`ALTER TABLE "erp_user" DROP COLUMN "contactInfos"`);
         await queryRunner.query(`DROP TABLE "counterparty_contact_person"`);
         await queryRunner.query(`DROP TABLE "organization_contact_point"`);
         await queryRunner.query(`DROP TABLE "administrator_contact_point"`);
@@ -146,6 +192,7 @@ export class ContactPoints1791573000000 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "counterparty_contact_point"`);
         await queryRunner.query(`DROP TABLE "contact_role"`);
         await queryRunner.query(`DROP TABLE "contact_point"`);
+        await queryRunner.query(`DROP FUNCTION contact_point_orphan_cleanup()`);
         await queryRunner.query(`DROP INDEX "IDX_75fa3445f5fd008cace4cbd25e"`);
         await queryRunner.query(`DROP INDEX "IDX_b251140d371e3597539386e727"`);
         await queryRunner.query(`DELETE FROM "contact_person" WHERE "tradingPointId" IS NULL`);

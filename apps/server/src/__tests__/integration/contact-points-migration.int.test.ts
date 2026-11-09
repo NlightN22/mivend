@@ -25,6 +25,8 @@ beforeAll(async () => {
     await dataSource.query(`
         CREATE TABLE counterparty (id SERIAL PRIMARY KEY);
         CREATE TABLE administrator (id SERIAL PRIMARY KEY);
+        CREATE TABLE erp_user (id SERIAL PRIMARY KEY);
+        CREATE TABLE integration_inbox_event (id BIGSERIAL PRIMARY KEY, stream varchar, status varchar);
         CREATE TABLE organization_requisites (id SERIAL PRIMARY KEY);
         CREATE TABLE trading_point (id SERIAL PRIMARY KEY);
         CREATE TABLE contact_person (
@@ -86,5 +88,28 @@ describe('contact points migration (real Postgres)', () => {
                 `INSERT INTO contact_person (name, "erpId", uuid) VALUES ('Dup', 'e-1', gen_random_uuid())`,
             ),
         ).rejects.toThrow();
+    });
+
+    it('removes a channel when its last owner goes, but keeps one that another owner still has', async () => {
+        await dataSource.query(`
+            INSERT INTO counterparty DEFAULT VALUES; INSERT INTO counterparty DEFAULT VALUES;
+            INSERT INTO contact_point (uuid, type, value) VALUES (gen_random_uuid(), 'phone', '+79120000001'), (gen_random_uuid(), 'phone', '+79120000002');
+            INSERT INTO counterparty_contact_point ("counterpartyId", "contactPointId") VALUES (1, 1), (1, 2), (2, 2);`);
+        await dataSource.query(`DELETE FROM counterparty WHERE id = 1`);
+        const left = await dataSource.query(`SELECT value FROM contact_point ORDER BY id`);
+        expect(left).toEqual([{ value: '+79120000002' }]);
+    });
+
+    it('indexes the channel id of every link table', async () => {
+        const rows = await dataSource.query(
+            `SELECT tablename FROM pg_indexes WHERE schemaname = current_schema() AND indexdef LIKE '%("contactPointId")%'`,
+        );
+        expect(rows.map((r: { tablename: string }) => r.tablename).sort()).toEqual([
+            'administrator_contact_point',
+            'contact_person_contact_point',
+            'counterparty_contact_point',
+            'organization_contact_point',
+            'trading_point_contact_point',
+        ]);
     });
 });

@@ -5,7 +5,7 @@ import { UuidEntity } from 'shared';
 export type ContactPointType = 'phone' | 'email' | 'address' | 'web' | 'other';
 export type ContactSource = 'erp' | 'manual';
 
-// One channel. The owner is whichever *_contact_point link row points at it; no owner column here.
+// One channel. The owner and the primary flag live on the *_contact_point link row that points at it.
 @Entity()
 export class ContactPoint extends UuidEntity {
     constructor(input?: DeepPartial<ContactPoint>) {
@@ -29,9 +29,6 @@ export class ContactPoint extends UuidEntity {
     // The ERP kind name, free text.
     @Column({ type: 'varchar', nullable: true })
     label!: string | null;
-
-    @Column({ type: 'boolean', default: false })
-    isPrimary!: boolean;
 
     @Column({ type: 'varchar', nullable: true })
     comment!: string | null;

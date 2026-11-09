@@ -187,6 +187,8 @@ export interface ErpIntegrationPluginOptions {
     schemaRegistry: SchemaRegistryConfig;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
+    // Explicit opt-in for the one-off contact reapply (INTEGRATION_CONTACT_REAPPLY=true); never on by default.
+    contactReapplyEnabled?: boolean;
     // How often the retention lane sweeps `processed` rows (#147). Defaults to
     // INBOX_RETENTION_INTERVAL_DEFAULT.
     inboxRetentionIntervalMs?: number;
@@ -286,8 +288,18 @@ export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = [
     ...INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     ...INBOX_USER_STREAMS,
 ];
+// Contact-carrying streams re-sent in ERP bursts (tens of thousands of rows): their own lane, so the burst
+// never delays order-status, settlement or catalog rows in the bulk lane (docs/ai/erp-streams-map.md, #332).
+export const INBOX_CONTACT_STREAMS: readonly InboundStream[] = [
+    'counterparty',
+    'point-of-sale',
+    'counterparty-contact',
+    'individual',
+    'contact-person',
+    'personal-contact',
+];
 export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
-    stream => !INBOX_CRITICAL_STREAMS.includes(stream),
+    stream => !INBOX_CRITICAL_STREAMS.includes(stream) && !INBOX_CONTACT_STREAMS.includes(stream),
 );
 
 // Vendure marks a task failed past its 60s timeout, but execute() keeps running regardless, so an

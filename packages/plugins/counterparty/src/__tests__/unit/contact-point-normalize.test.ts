@@ -46,15 +46,25 @@ describe('resolveContactPoints', () => {
 });
 
 describe('planContactPointReplace', () => {
-    const stored = (id: number, source: 'erp' | 'manual', n: string) => ({
+    const stored = (
+        id: number,
+        source: 'erp' | 'manual',
+        n: string,
+        extra: { isPrimary?: boolean; label?: string | null } = {},
+    ) => ({
         id,
+        linkId: id * 10,
         type: 'phone' as const,
         value: n,
         normalizedValue: n,
+        isUsable: true,
+        label: extra.label ?? null,
+        comment: null,
         source,
+        isPrimary: extra.isPrimary ?? false,
     });
 
-    it('inserts new, updates matching (manual becomes erp), deletes vanished ERP rows, never manual', () => {
+    it('inserts new, deletes vanished ERP rows, never touches manual rows, even an equal one', () => {
         const incoming = resolveContactPoints([phone('+79120000001'), phone('+79120000003')]);
         const plan = planContactPointReplace(
             [
@@ -65,9 +75,44 @@ describe('planContactPointReplace', () => {
             ],
             incoming,
         );
-        expect(plan.update.map(u => u.id)).toEqual([1, 3]);
         expect(plan.deleteIds).toEqual([2]);
         expect(plan.insert).toEqual([]);
+        expect(plan.updatePoint).toEqual([]);
+        expect(plan.updateLink).toEqual([]);
+    });
+
+    it('an unchanged list plans no write at all', () => {
+        const plan = planContactPointReplace(
+            [stored(1, 'erp', '+79120000001', { isPrimary: true })],
+            resolveContactPoints([{ ...phone('+79120000001'), isPrimary: true }]),
+        );
+        expect(plan).toEqual({ insert: [], updatePoint: [], updateLink: [], deleteIds: [] });
+    });
+
+    it('moves the primary flag on the link rows only', () => {
+        const plan = planContactPointReplace(
+            [
+                stored(1, 'erp', '+79120000001', { isPrimary: true }),
+                stored(2, 'erp', '+79120000002'),
+            ],
+            resolveContactPoints([
+                phone('+79120000001'),
+                { ...phone('+79120000002'), isPrimary: true },
+            ]),
+        );
+        expect(plan.updateLink).toEqual([
+            { linkId: 10, isPrimary: false },
+            { linkId: 20, isPrimary: true },
+        ]);
+        expect(plan.updatePoint).toEqual([]);
+    });
+
+    it('updates the point only when its own fields changed', () => {
+        const plan = planContactPointReplace(
+            [stored(1, 'erp', '+79120000001')],
+            resolveContactPoints([{ ...phone('+79120000001'), label: 'Office' }]),
+        );
+        expect(plan.updatePoint.map(u => u.id)).toEqual([1]);
     });
 
     it('an empty incoming list deletes every ERP row and keeps manual ones', () => {

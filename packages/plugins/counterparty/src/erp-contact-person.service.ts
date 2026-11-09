@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { In, Not } from 'typeorm';
 import { withAggregateLock } from 'shared';
 
 import { Counterparty } from './entities/counterparty.entity';
@@ -37,6 +38,10 @@ export class ErpContactPersonService {
                 : persons.create({ ...values, erpId, source: 'erp', tradingPoint: null });
             const saved = await persons.save(person);
             if (fields.counterpartyId !== null) {
+                await this.connection.getRepository(txCtx, CounterpartyContactPerson).delete({
+                    contactPersonId: saved.id as number,
+                    counterpartyId: Not(fields.counterpartyId),
+                });
                 await this.connection.getRepository(txCtx, CounterpartyContactPerson).upsert(
                     {
                         counterpartyId: fields.counterpartyId,
@@ -65,6 +70,10 @@ export class ErpContactPersonService {
             })
             .getRawMany<{ id: number }>();
         if (waiting.length === 0) return;
+        await this.connection.getRepository(ctx, CounterpartyContactPerson).delete({
+            contactPersonId: In(waiting.map(w => w.id)),
+            counterpartyId: Not(counterparty.id as number),
+        });
         await this.connection
             .getRepository(ctx, CounterpartyContactPerson)
             .createQueryBuilder()

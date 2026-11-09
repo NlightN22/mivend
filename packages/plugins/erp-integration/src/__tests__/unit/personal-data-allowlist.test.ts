@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { create, toBinary } from '@bufbuild/protobuf';
-import { IndividualChangedSchema } from '@nlightn22/event-contracts';
+import {
+    ContactPersonChangedSchema,
+    IndividualChangedSchema,
+    PersonalContactChangedSchema,
+} from '@nlightn22/event-contracts';
 import type { KafkaMessage } from 'kafkajs';
 
 import { classifyInboundMessage } from '../../kafka-inbound-message';
@@ -52,5 +56,39 @@ describe('personal data never reaches the inbox', () => {
     it('leaves other streams untouched', () => {
         const record = { entityId: 'x', birthDate: 'kept' };
         expect(stripPersonalFields('counterparty', record)).toBe(record);
+    });
+
+    it.each([
+        ['individual', IndividualChangedSchema],
+        ['contact-person', ContactPersonChangedSchema],
+        ['personal-contact', PersonalContactChangedSchema],
+    ] as const)('%s: undecodable and valueless messages store no raw bytes', (stream, schema) => {
+        const bad = { value: Buffer.from([0xff, 0xff, 0xff]), offset: '1' } as KafkaMessage;
+        const undecodable = classifyInboundMessage(stream, schema, bad, 0);
+        const empty = classifyInboundMessage(stream, schema, { offset: '2' } as KafkaMessage, 0);
+        for (const result of [undecodable, empty]) {
+            if (result.kind !== 'rejected') throw new Error('expected rejected');
+            expect(result.rejected.payload.rawBase64 ?? '').toBe('');
+            expect(result.rejected.payload).not.toHaveProperty('birthDate');
+        }
+    });
+
+    it('a decoded record without an entity id is rejected with only the allowed fields', () => {
+        const event = create(IndividualChangedSchema, {
+            eventId: 'e-1',
+            snils: PERSONAL.snils,
+            name: 'A',
+        });
+        const result = classifyInboundMessage(
+            'individual',
+            IndividualChangedSchema,
+            {
+                value: Buffer.from(toBinary(IndividualChangedSchema, event)),
+                offset: '3',
+            } as KafkaMessage,
+            0,
+        );
+        if (result.kind !== 'rejected') throw new Error('expected rejected');
+        expect(JSON.stringify(result.rejected.payload)).not.toContain(PERSONAL.snils);
     });
 });

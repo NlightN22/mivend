@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ContactPointService, ErpContactPersonService } from '@mivend/plugin-counterparty';
 
-import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { activityFlags, optionalText } from './erp-mirror-upsert';
-import { applyErpPerson, personName } from './erp-person';
+import { applyErpPerson, personName, personOutcome } from './erp-person';
 
 // `contact-person` stream: contact person (common catalog, no owner), stored as an ERP-backed contact person with its channels.
 @Injectable()
@@ -21,7 +20,7 @@ export class ContactPersonStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const applied = await applyErpPerson(
+        const result = await applyErpPerson(
             ctx,
             {
                 connection: this.connection,
@@ -38,8 +37,6 @@ export class ContactPersonStreamHandler implements InboundStreamHandler {
                 ...activityFlags(payload),
             },
         );
-        return applied
-            ? inboundApplied()
-            : inboundNoop(`contact-person ${entityId}: tombstone for an unknown person`);
+        return personOutcome(result, 'contact-person', entityId);
     }
 }

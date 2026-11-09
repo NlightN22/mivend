@@ -74,6 +74,7 @@ import { CreditTermService } from './credit-term.service';
 import { EntityVersionScopeRegistrar } from './entity-version-scope.registrar';
 import { CreditTermScopeRegistrar } from './credit-term-scope.registrar';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
+import { AdministratorContactsListener } from './administrator-contacts.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
 import { CounterpartyPortalAccessExecutor } from './counterparty-portal-access.executor';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
@@ -199,6 +200,7 @@ const adminResolvers = [
         CounterpartyManagerAssignmentService,
         CounterpartyBranchOverrideService,
         AdministratorLinkedListener,
+        AdministratorContactsListener,
         EntityVersionScopeRegistrar,
         CreditTermScopeRegistrar,
         CounterpartyPortalAccessService,

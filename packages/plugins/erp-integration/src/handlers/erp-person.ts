@@ -1,4 +1,7 @@
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome } from './inbound-stream-handler';
 import {
     ContactPointService,
     Counterparty,
@@ -19,6 +22,8 @@ export interface ErpPersonInput {
     contactInfos: unknown;
 }
 
+export type ErpPersonResult = 'applied' | 'unknown' | 'nameless';
+
 export interface ErpPersonDeps {
     connection: TransactionalConnection;
     persons: ErpContactPersonService;
@@ -37,17 +42,18 @@ export function personName(payload: Record<string, unknown>): string | null {
     );
 }
 
-// Returns false for a tombstone of a person mivend never stored. A person whose counterparty is not
+// 'unknown': a tombstone of a person mivend never stored. 'nameless': a live event without any name, not a tombstone. A person whose counterparty is not
 // synced yet is retried (MissingReferenceError) unless linkLater: then the link is added when it arrives.
 export async function applyErpPerson(
     ctx: RequestContext,
     deps: ErpPersonDeps,
     erpId: string,
     input: ErpPersonInput,
-): Promise<boolean> {
-    if (input.isDeleted || !input.name) {
-        return (await deps.persons.deactivate(ctx, erpId)) !== null;
+): Promise<ErpPersonResult> {
+    if (input.isDeleted) {
+        return (await deps.persons.deactivate(ctx, erpId)) !== null ? 'applied' : 'unknown';
     }
+    if (!input.name) return 'nameless';
     let counterpartyId: number | null = null;
     if (input.counterpartyErpId) {
         const counterparty = await deps.connection
@@ -70,5 +76,17 @@ export async function applyErpPerson(
     if (contactInfos) {
         await deps.contactPoints.replaceErpPoints(ctx, 'contactPerson', personId, contactInfos);
     }
-    return true;
+    return 'applied';
+}
+
+export function personOutcome(
+    result: ErpPersonResult,
+    stream: string,
+    entityId: string,
+): InboundOutcome {
+    if (result === 'applied') return inboundApplied();
+    const reason =
+        result === 'unknown' ? 'tombstone for an unknown person' : 'live event without a name';
+    Logger.warn(`${stream} ${entityId}: ${reason}`, 'ErpPerson');
+    return inboundNoop(`${stream} ${entityId}: ${reason}`);
 }

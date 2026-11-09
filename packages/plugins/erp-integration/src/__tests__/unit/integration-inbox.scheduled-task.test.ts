@@ -4,11 +4,13 @@ import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
     createIntegrationInboxRetentionTask,
+    createIntegrationInboxContactTask,
     createIntegrationInboxUserTask,
 } from '../../integration-inbox.scheduled-task';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
+    INBOX_CONTACT_STREAMS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
@@ -335,5 +337,24 @@ describe('createIntegrationInboxRetentionTask', () => {
             params: {},
         });
         expect(result).toEqual({ tombstoned: 0, slices: 1, outcome: 'timeout' });
+    });
+});
+
+describe('createIntegrationInboxContactTask', () => {
+    it('claims only the contact streams, and is skipped on a branch', async () => {
+        const processPendingBatch = vi
+            .fn()
+            .mockResolvedValue({ processed: 1, failed: 0, claimed: 1 });
+        const injector = { get: () => ({ processPendingBatch }) } as never;
+        const run = (type: 'central' | 'branch') =>
+            createIntegrationInboxContactTask(makeOptions(type)).options.execute({
+                injector,
+                scheduledContext: {} as never,
+                params: {},
+            });
+        expect(await run('branch')).toEqual({ skipped: true });
+        expect(processPendingBatch).not.toHaveBeenCalled();
+        await run('central');
+        expect(processPendingBatch.mock.calls[0][0]).toEqual([...INBOX_CONTACT_STREAMS]);
     });
 });

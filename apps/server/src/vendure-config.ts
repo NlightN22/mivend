@@ -710,6 +710,7 @@ export const config: VendureConfig = {
                           }
                         : undefined,
             },
+            contactReapplyEnabled: process.env.INTEGRATION_CONTACT_REAPPLY === 'true',
             kafkaConsumer: {
                 brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
                 clientId: requiredKafkaId('INTEGRATION_KAFKA_CONSUMER_CLIENT_ID'),

@@ -23,6 +23,9 @@ export { CounterpartyContactErp } from './src/entities/counterparty-contact-erp.
 export { CounterpartyGroupErp } from './src/entities/counterparty-group-erp.entity';
 export { PointOfSaleTypeErp } from './src/entities/point-of-sale-type-erp.entity';
 export type { ErpPointExtra } from './src/trading-point-erp-extra';
+export { ContactPoint } from './src/entities/contact-point.entity';
+export { CounterpartyContactPoint } from './src/entities/counterparty-contact-point.entity';
+export { CounterpartyContactPerson } from './src/entities/counterparty-contact-person.entity';
 export { ContactPerson } from './src/entities/contact-person.entity';
 export { CounterpartyTeamMember } from './src/entities/counterparty-team-member.entity';
 export type { CounterpartyTeamMemberRole } from './src/entities/counterparty-team-member.entity';

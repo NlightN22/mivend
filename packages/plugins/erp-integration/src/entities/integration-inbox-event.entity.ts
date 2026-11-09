@@ -40,6 +40,8 @@ export type IntegrationInboxEventStatus =
 @Index('integration_inbox_event_retention', ['stream', 'entityId'], {
     where: `"status" = 'processed' AND "payload" <> '{}'::jsonb`,
 })
+// Serves the one-off contact reapply's keyset slices (ContactReapplyService).
+@Index('integration_inbox_event_reapply', ['stream', 'id'], { where: `"status" = 'processed'` })
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;

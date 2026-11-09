@@ -7,6 +7,7 @@ import {
     JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
+    UpdateDateColumn,
 } from 'typeorm';
 import type { TransactionalConnection } from '@vendure/core';
 import {
@@ -40,9 +41,9 @@ class TestContactPoint {
     @Column({ type: 'varchar', nullable: true }) normalizedValue!: string | null;
     @Column({ type: 'boolean', default: true }) isUsable!: boolean;
     @Column({ type: 'varchar', nullable: true }) label!: string | null;
-    @Column({ type: 'boolean', default: false }) isPrimary!: boolean;
     @Column({ type: 'varchar', nullable: true }) comment!: string | null;
     @Column({ type: 'varchar', default: 'manual' }) source!: string;
+    @UpdateDateColumn() updatedAt!: Date;
     @Column({ type: 'uuid', default: () => 'gen_random_uuid()' }) uuid!: string;
 }
 
@@ -131,7 +132,7 @@ describe('ContactPointService (real Postgres)', () => {
         expect(await rows()).toHaveLength(2);
     });
 
-    it('replaces the ERP set, keeps manual rows, and turns a matching manual row into the ERP row', async () => {
+    it('replaces the ERP set and keeps manual rows, an equal manual row staying manual', async () => {
         await service.replaceErpPointsByErpId(ctx, 'counterparty', 'cp-1', [
             phone('+79120000001'),
             phone('+79120000002'),
@@ -150,9 +151,38 @@ describe('ContactPointService (real Postgres)', () => {
 
         expect(await rows()).toEqual([
             { normalizedValue: '+79120000002', source: 'erp', isPrimary: false },
-            { normalizedValue: '+79120000003', source: 'erp', isPrimary: false },
+            { normalizedValue: '+79120000003', source: 'manual', isPrimary: false },
             { normalizedValue: '+79120000009', source: 'manual', isPrimary: false },
         ]);
+    });
+
+    it('moves the primary flag between channels without creating or changing channel rows', async () => {
+        await service.replaceErpPointsByErpId(ctx, 'counterparty', 'cp-1', [
+            phone('+79120000001', true),
+            phone('+79120000002'),
+        ]);
+        const before = await dataSource.query(
+            'SELECT id, "updatedAt" FROM contact_point ORDER BY id',
+        );
+        await service.replaceErpPointsByErpId(ctx, 'counterparty', 'cp-1', [
+            phone('+79120000001'),
+            phone('+79120000002', true),
+        ]);
+        expect(await rows()).toEqual([
+            { normalizedValue: '+79120000001', source: 'erp', isPrimary: false },
+            { normalizedValue: '+79120000002', source: 'erp', isPrimary: true },
+        ]);
+        expect(
+            await dataSource.query('SELECT id, "updatedAt" FROM contact_point ORDER BY id'),
+        ).toEqual(before);
+    });
+
+    it('does not touch updatedAt of an unchanged channel on replay', async () => {
+        const list = [phone('+79120000001', true)];
+        await service.replaceErpPointsByErpId(ctx, 'counterparty', 'cp-1', list);
+        const before = await dataSource.query('SELECT "updatedAt" FROM contact_point');
+        await service.replaceErpPointsByErpId(ctx, 'counterparty', 'cp-1', list);
+        expect(await dataSource.query('SELECT "updatedAt" FROM contact_point')).toEqual(before);
     });
 
     it('an explicitly empty list removes ERP rows only, and another owner is untouched', async () => {
