@@ -325,6 +325,17 @@ describe('useOtpAutoSubmit', () => {
         expect(t.submit).toHaveBeenCalledTimes(2);
     });
 
+    it('submits a code completed during another request once that request ends', async () => {
+        const t = setup();
+        t.loading.value = true;
+        await nextTick();
+        t.code.value = '123456';
+        await nextTick();
+        expect(t.submit).not.toHaveBeenCalled();
+        await t.finish(null);
+        expect(t.submit).toHaveBeenCalledExactlyOnceWith('123456');
+    });
+
     it('keeps the code after a success', async () => {
         const t = setup();
         t.code.value = '123456';

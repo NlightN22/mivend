@@ -26,7 +26,8 @@ export function useOtpAutoSubmit(
     });
 
     watch(state.loading, (now, was) => {
-        if (!was || now || !state.failed() || sent === null) return;
+        if (!was || now) return;
+        if (sent === null || !state.failed()) return trigger();
         code.value = '';
         sent = null;
         onReset();

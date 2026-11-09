@@ -101,18 +101,15 @@ function close(): void {
             </div>
         </form>
 
-        <form
-            v-else
-            class="mv-tf-settings__form"
-            novalidate
-            @submit.prevent="confirmCode"
-        >
+        <form v-else class="mv-tf-settings__form" novalidate @submit.prevent="confirmCode">
             <MvTwoFactorEnrol :enrolment="enrolment" :labels="labels" />
             <MvFormField :label="labels.codeLabel">
                 <MvOtpInput
                     ref="newCodeInput"
                     v-model="newCode"
-                    autofocus :aria-label="labels.codeLabel" />
+                    autofocus
+                    :aria-label="labels.codeLabel"
+                />
             </MvFormField>
             <div class="mv-tf-settings__actions">
                 <MvButton
