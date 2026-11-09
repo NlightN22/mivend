@@ -43,6 +43,9 @@ everything after it is ours.
 - **Browser binding.** The portal keeps the `state` in `sessionStorage` before redirecting and the callback page refuses a
   different or missing one, so a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
   with `email_verified: false` is refused. The provider is called outside any database transaction.
+- **Accepted risk: pending cap.** `startOidcSignIn` is public and at most 500 unexpired requests may be pending, so one
+  unauthenticated caller can block OIDC sign-in for up to 10 minutes (local sign-in is unaffected). The count and the insert
+  are not atomic, so the cap can overshoot slightly. An IP throttle may follow later.
 - **Linking.** A first sign-in matches an active (not soft-deleted) Administrator by e-mail, case-insensitive, and the e-mail
   claim must be present. Exactly one match stores the provider `sub` in an `ExternalAuthenticationMethod` (strategy `oidc`,
   `externalIdentifier` = `sub`). Every later sign-in matches by `sub` only, so a changed e-mail neither blocks nor

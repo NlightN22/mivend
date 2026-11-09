@@ -127,7 +127,8 @@ export class OidcProviderService {
             requiredClaims: ['exp', 'sub'],
         });
         if (payload.nonce !== nonce) throw new Error('nonce mismatch');
-        if (payload.email_verified === false) throw new Error('e-mail not verified');
+        if (String(payload.email_verified).toLowerCase() === 'false')
+            throw new Error('e-mail not verified');
         if (typeof payload.sub !== 'string' || payload.sub === '') throw new Error('no sub');
         const email = typeof payload.email === 'string' ? payload.email.trim() : '';
         return { sub: payload.sub, email: email === '' ? null : email };

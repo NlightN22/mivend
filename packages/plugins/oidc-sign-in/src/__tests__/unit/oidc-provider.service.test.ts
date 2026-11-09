@@ -105,6 +105,10 @@ describe('OidcProviderService', () => {
             'unverified e-mail',
             () => token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: false }),
         ],
+        [
+            'unverified e-mail as a string',
+            () => token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: 'False' }),
+        ],
         ['no sub', () => token({ nonce: 'n1' })],
     ])('refuses a token with %s', async (_name, make) => {
         stubProvider(make);
