@@ -189,4 +189,26 @@ describe('ActingLimitService (real Postgres)', () => {
         expect(await limits(2).enforceManagerCap(testRequestContext, '1')).toBe(0);
         expect(await liveTokens()).toEqual([]);
     });
+
+    it("sweeps only the caller's own dead sessions, never another manager's or customer's", async () => {
+        await insertSession('mine-dead', true, 5);
+        await insertSession('other-dead', true, 6);
+        await dataSource.query(
+            `UPDATE session SET "customFieldsActingparentsessionid" = '99' WHERE token IN ('mine-dead', 'other-dead')`,
+        );
+        await dataSource.query(
+            `UPDATE session SET "customFieldsActingadministratorid" = '2' WHERE token = 'other-dead'`,
+        );
+
+        await limits(10, 3).enforceManagerCap(testRequestContext, '1');
+        expect(await liveTokens()).toEqual(['other-dead']);
+
+        await insertSession('mine-dead-2', true, 5);
+        await dataSource.query(
+            `UPDATE session SET "customFieldsActingparentsessionid" = '99' WHERE token = 'mine-dead-2'`,
+        );
+        await limits(10, 3).enforceCustomerCap(testRequestContext, '5');
+        expect(await liveTokens()).toEqual(['other-dead']);
+        expect(cacheDelete).toHaveBeenCalledWith('mine-dead-2');
+    });
 });

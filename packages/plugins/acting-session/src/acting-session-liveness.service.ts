@@ -34,6 +34,24 @@ export class ActingSessionLivenessService {
         return this.end(ctx, sessionTtlMs, '', []);
     }
 
+    endDeadSessionsOfAdministrator(
+        ctx: RequestContext,
+        sessionTtlMs: number,
+        administratorId: string,
+    ): Promise<number> {
+        return this.end(ctx, sessionTtlMs, 's."customFieldsActingadministratorid" = $3 AND ', [
+            administratorId,
+        ]);
+    }
+
+    endDeadSessionsOfUser(
+        ctx: RequestContext,
+        sessionTtlMs: number,
+        userId: string,
+    ): Promise<number> {
+        return this.end(ctx, sessionTtlMs, 's."userId" = $3 AND ', [userId]);
+    }
+
     private async end(
         ctx: RequestContext,
         sessionTtlMs: number,

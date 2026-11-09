@@ -29,7 +29,7 @@ export class ActingLimitService {
 
     // Unused tickets count too: otherwise a manager could mint tickets without bound.
     async enforceManagerCap(ctx: RequestContext, administratorId: string): Promise<number> {
-        await this.sweepDead(ctx);
+        await this.liveness.endDeadSessionsOfAdministrator(ctx, this.ttl(), administratorId);
         const now = new Date();
         const open = await ctxQuery<OpenItem[]>(
             this.connection,
@@ -52,7 +52,7 @@ export class ActingLimitService {
     }
 
     async enforceCustomerCap(ctx: RequestContext, userId: string): Promise<number> {
-        await this.sweepDead(ctx);
+        await this.liveness.endDeadSessionsOfUser(ctx, this.ttl(), userId);
         const rows = await ctxQuery<Array<{ token: string }>>(
             this.connection,
             ctx,
@@ -67,12 +67,9 @@ export class ActingLimitService {
         return rows.length;
     }
 
-    // Dead sessions (manager signed out, lost the right) must neither fill slots nor push out live ones.
-    private async sweepDead(ctx: RequestContext): Promise<void> {
-        await this.liveness.endDeadSessions(
-            ctx,
-            this.options.sessionTtlMs ?? SESSION_TTL_DEFAULT_MS,
-        );
+    // Dead sessions of the owner (manager signed out, lost the right) must not fill slots or push out live ones.
+    private ttl(): number {
+        return this.options.sessionTtlMs ?? SESSION_TTL_DEFAULT_MS;
     }
 
     private async endTicket(ctx: RequestContext, tokenHash: string, now: Date): Promise<void> {
