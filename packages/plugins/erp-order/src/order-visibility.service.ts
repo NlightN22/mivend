@@ -135,6 +135,8 @@ export class OrderVisibilityService {
             search,
             relations,
         );
+        // take: 0 is a count-only request; getManyAndCount would hydrate every order (take 0 = no limit).
+        if (options?.take === 0) return { items: [], totalItems: await qb.getCount() };
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }
