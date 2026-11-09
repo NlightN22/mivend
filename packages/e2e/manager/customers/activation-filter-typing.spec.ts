@@ -11,12 +11,12 @@ test.describe('bulk activation select step typing @on:manager-portal-admin', () 
         await expect(input).toHaveValue('abcdefghij');
     });
 
-    test('a multi-character value can be typed into the Manager condition of the Filter builder', async ({
+    test('a multi-character value can be typed into the Company name condition of the Filter builder', async ({
         page,
     }) => {
         await page.goto('/bulk-operations/counterparty-portal-access');
         await page.getByTestId('filter-trigger').click();
-        await page.getByTestId('filter-column-manager').click();
+        await page.getByTestId('filter-column-shortName').click();
         const input = page.getByTestId('filter-value');
         await input.click();
         await input.pressSequentially('abcdefghij', { delay: 150 });

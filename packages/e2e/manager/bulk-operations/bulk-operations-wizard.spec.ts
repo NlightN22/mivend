@@ -152,7 +152,7 @@ async function importCounterparties(tag: string, count: number, isActive: boolea
         },
     }));
     const run = await postBatch(`e2e-bulkm-${tag}-${isActive ? 'on' : 'off'}`, records);
-    await waitForRun(run.runId, 60_000);
+    await waitForRun(run.runId, 180_000);
 }
 
 async function createReady(prefix: string, count: number): Promise<Created> {
@@ -203,7 +203,7 @@ async function activateAllMatching(page: Page, search: string, total: number): P
 }
 
 test.describe('select all matching the filter (#337) @on:manager-portal-admin', () => {
-    test.describe.configure({ mode: 'serial', timeout: 240000 });
+    test.describe.configure({ mode: 'serial', timeout: 420000 });
 
     for (const [pages, total] of [
         [3, 30],

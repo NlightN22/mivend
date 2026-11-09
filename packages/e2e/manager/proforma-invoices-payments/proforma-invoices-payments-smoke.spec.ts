@@ -31,7 +31,7 @@ test('proforma invoices page pre-filters to one customer from the counterpartyId
     page,
 }) => {
     // The seeded e2e counterparty is the one every role project can see.
-    await page.goto('/customers');
+    await page.goto('/customers?search=E2E%20Co');
     await page
         .locator('.el-table-v2__row', { hasText: 'E2E Co' })
         .click({ position: { x: 20, y: 10 }, timeout: 15000 });

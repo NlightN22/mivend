@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readE2eOrder } from '../../helpers/e2e-order';
 
 async function openE2eCustomerDetail(page: import('@playwright/test').Page): Promise<void> {
-    await page.goto('/customers');
+    await page.goto('/customers?search=E2E%20Co');
     const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
     await row.waitFor({ timeout: 15000 });
     await row.click({ position: { x: 20, y: 10 } });
