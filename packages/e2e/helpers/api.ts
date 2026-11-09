@@ -24,13 +24,13 @@ export async function postBatch(exchangeId: string, records: unknown[]): Promise
     return res.json() as Promise<RunStatus>;
 }
 
-export async function waitForRun(runId: string, timeoutMs = 30_000): Promise<RunStatus> {
+export async function waitForRun(exchangeId: string, timeoutMs = 30_000): Promise<RunStatus> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-        const res = await fetch(`${SERVER_URL}/erp/import/runs/${runId}`, {
+        const res = await fetch(`${SERVER_URL}/erp/import/runs/${exchangeId}`, {
             headers: { Authorization: `Bearer ${ERP_TOKEN}` },
         });
-        if (!res.ok) throw new Error(`Failed to poll run ${runId}: ${res.status}`);
+        if (!res.ok) throw new Error(`Failed to poll run ${exchangeId}: ${res.status}`);
         const body = (await res.text()).trim();
         if (!body) {
             await new Promise(r => setTimeout(r, 1000));
@@ -39,11 +39,13 @@ export async function waitForRun(runId: string, timeoutMs = 30_000): Promise<Run
         const status = JSON.parse(body) as RunStatus;
         if (status.status === 'done') return status;
         if (status.status === 'failed') {
-            throw new Error(`ERP import run ${runId} failed: ${JSON.stringify(status.errors)}`);
+            throw new Error(
+                `ERP import run ${exchangeId} failed: ${JSON.stringify(status.errors)}`,
+            );
         }
         await new Promise(r => setTimeout(r, 1000));
     }
-    throw new Error(`ERP import run ${runId} timed out after ${timeoutMs}ms`);
+    throw new Error(`ERP import run ${exchangeId} timed out after ${timeoutMs}ms`);
 }
 
 export async function adminGql<T>(

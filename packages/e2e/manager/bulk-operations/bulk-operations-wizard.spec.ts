@@ -151,8 +151,9 @@ async function importCounterparties(tag: string, count: number, isActive: boolea
             departmentId: 'dept-sales',
         },
     }));
-    const run = await postBatch(`e2e-bulkm-${tag}-${isActive ? 'on' : 'off'}`, records);
-    await waitForRun(run.runId, 180_000);
+    const exchangeId = `e2e-bulkm-${tag}-${isActive ? 'on' : 'off'}`;
+    await postBatch(exchangeId, records);
+    await waitForRun(exchangeId, 60_000);
 }
 
 async function createReady(prefix: string, count: number): Promise<Created> {
