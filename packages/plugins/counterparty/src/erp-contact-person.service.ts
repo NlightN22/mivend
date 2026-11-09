@@ -54,34 +54,34 @@ export class ErpContactPersonService {
         });
     }
 
-    // Contacts stored before their counterparty arrived get the link now; existing links are left as they are.
+    // Contacts stored before their counterparty arrived get the link now; a person moved here loses its other links.
     async linkWaitingContacts(ctx: RequestContext, counterpartyErpId: string): Promise<void> {
+        const waiting = await this.connection.getRepository(ctx, CounterpartyContactErp).find({
+            where: { counterpartyId: counterpartyErpId, isDeleted: false },
+            select: { erpId: true },
+        });
+        if (waiting.length === 0) return;
         const counterparty = await this.connection
             .getRepository(ctx, Counterparty)
             .findOne({ where: { erpId: counterpartyErpId }, select: { id: true } });
         if (!counterparty) return;
-        const waiting = await this.connection
-            .getRepository(ctx, ContactPerson)
-            .createQueryBuilder('p')
-            .select('p.id', 'id')
-            .innerJoin(CounterpartyContactErp, 'e', 'e.erpId = p.erpId')
-            .where('e.counterpartyId = :counterpartyErpId AND e.isDeleted = false', {
-                counterpartyErpId,
-            })
-            .getRawMany<{ id: number }>();
-        if (waiting.length === 0) return;
-        await this.connection.getRepository(ctx, CounterpartyContactPerson).delete({
-            contactPersonId: In(waiting.map(w => w.id)),
+        const persons = await this.connection.getRepository(ctx, ContactPerson).find({
+            where: { erpId: In(waiting.map(w => w.erpId)) },
+            select: { id: true },
+        });
+        if (persons.length === 0) return;
+        const links = this.connection.getRepository(ctx, CounterpartyContactPerson);
+        await links.delete({
+            contactPersonId: In(persons.map(p => p.id as number)),
             counterpartyId: Not(counterparty.id as number),
         });
-        await this.connection
-            .getRepository(ctx, CounterpartyContactPerson)
+        await links
             .createQueryBuilder()
             .insert()
             .values(
-                waiting.map(w => ({
+                persons.map(p => ({
                     counterpartyId: counterparty.id as number,
-                    contactPersonId: w.id,
+                    contactPersonId: p.id as number,
                 })),
             )
             .orIgnore()

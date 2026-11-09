@@ -106,12 +106,13 @@ export class ContactReapplyService {
             if (cursor.done) continue;
             if (!(await this.acquire(ctx, stream))) return { ...total, locked: true };
             try {
-                while (Date.now() < deadline) {
+                // At least one slice per tick, so a tight budget still makes progress.
+                do {
                     const slice = await this.runSlice(ctx, stream, sliceSize);
                     total.applied += slice.applied;
                     total.skipped += slice.skipped;
                     if (slice.drained) break;
-                }
+                } while (Date.now() < deadline);
             } finally {
                 await this.release(ctx, stream);
             }

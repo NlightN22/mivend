@@ -11,12 +11,21 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Counterparty } from '@mivend/plugin-counterparty';
+import type { TransactionalConnection } from '@vendure/core';
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { ProductGroupErp } from '../../../entities/product-group-erp.entity';
 import { CounterpartyContactStreamHandler } from '../../../handlers/counterparty-contact.handler';
 import { ProductGroupStreamHandler } from '../../../handlers/product-group.handler';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { makeInboxProcessor } from './inbox-processor-helpers';
+
+@Entity('counterparty')
+class TestCounterparty {
+    @PrimaryGeneratedColumn('increment') id!: number;
+    @Column({ type: 'varchar', nullable: true }) erpId!: string | null;
+}
 
 const { schema, extra } = testSchemaOptions('erp_mirrors');
 let dataSource: DataSource;
@@ -30,7 +39,12 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [IntegrationInboxEvent, CounterpartyContactErp, ProductGroupErp],
+        entities: [
+            IntegrationInboxEvent,
+            CounterpartyContactErp,
+            ProductGroupErp,
+            TestCounterparty,
+        ],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -39,7 +53,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, counterparty_contact_erp, product_group_erp RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, counterparty_contact_erp, product_group_erp, counterparty RESTART IDENTITY`,
     );
 });
 
@@ -53,7 +67,12 @@ async function deliver(
     version: string,
     payload: Record<string, unknown>,
 ): Promise<void> {
-    const connection = createTestConnection(dataSource);
+    const base = createTestConnection(dataSource);
+    const connection = {
+        withTransaction: base.withTransaction.bind(base),
+        getRepository: (c: never, entity: unknown) =>
+            base.getRepository(c, (entity === Counterparty ? TestCounterparty : entity) as never),
+    } as unknown as TransactionalConnection;
     const handler =
         stream === 'product-group'
             ? new ProductGroupStreamHandler(connection)
