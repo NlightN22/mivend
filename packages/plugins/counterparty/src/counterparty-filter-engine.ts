@@ -138,19 +138,28 @@ function stringClause(field: TextField, ops: CounterpartyStringOperators, b: Bui
     return clauses.map(c => `(${c})`);
 }
 
+function isPlainObject(value: unknown): boolean {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function collect(filter: CounterpartyFilterParameter, b: Builder, depth: number): string[] {
     if (depth > 2) throw new UserInputError('Filter is nested too deeply');
+    if (!isPlainObject(filter)) throw new UserInputError('Invalid filter');
     const unknown = Object.keys(filter).filter(k => !FIELDS.includes(k));
     if (unknown.length) throw new UserInputError(`Unknown filter field: ${unknown[0]}`);
     const clauses: string[] = [];
     for (const field of Object.keys(TEXT_COLUMNS) as TextField[]) {
         const ops = filter[field];
+        if (ops != null && !isPlainObject(ops))
+            throw new UserInputError(`Invalid operators for ${field}`);
         if (ops) clauses.push(...stringClause(field, ops, b));
     }
     if (filter.isActive && typeof filter.isActive.eq === 'boolean') {
         b.countCondition();
         clauses.push(`c."isActive" = :${b.bind(filter.isActive.eq)}`);
     }
+    if (filter._and != null && !Array.isArray(filter._and))
+        throw new UserInputError('Invalid _and');
     for (const nested of filter._and ?? []) clauses.push(...collect(nested, b, depth + 1));
     return clauses;
 }

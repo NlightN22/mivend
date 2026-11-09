@@ -216,6 +216,14 @@ describe('counterparty filter engine', () => {
             ).rejects.toThrow(/Unsupported filter operator/);
         });
 
+        it('rejects a malformed filter shape as user input, not an internal error', async () => {
+            for (const bad of [{ _and: {} }, { _and: [null] }, { shortName: 'x' }, { _and: 'x' }]) {
+                await expect(erpIds(bad as unknown as CounterpartyFilterParameter)).rejects.toThrow(
+                    /Invalid/,
+                );
+            }
+        });
+
         it('rejects a field outside the whitelist', async () => {
             await expect(
                 erpIds({ creditLimit: { eq: '1' } } as unknown as CounterpartyFilterParameter),
