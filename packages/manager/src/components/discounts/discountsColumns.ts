@@ -1,0 +1,126 @@
+import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
+import { DISCOUNT_STATUS_OPTIONS } from '../../api/discounts';
+
+const NOT_FILTERED = { type: 'none' } as const;
+const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'] as const;
+
+// Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
+// Filtering is the toolbar Filter builder; the search box covers number, price type, group and customer.
+export const DISCOUNTS_COLUMNS: AdvancedDataTableColumn[] = [
+    {
+        field: 'number',
+        header: 'Discount #',
+        sortField: 'number',
+        width: 150,
+        priority: 10,
+        minWidth: 150,
+        required: true,
+        filterConfig: NOT_FILTERED,
+        filterType: 'string',
+        filterOperators: [...TEXT_OPERATORS],
+        mobile: { primary: true },
+    },
+    {
+        field: 'date',
+        header: 'Date',
+        sortField: 'createdAt',
+        width: 120,
+        priority: 6,
+        minWidth: 120,
+        filterConfig: NOT_FILTERED,
+        filterType: 'date',
+        filterField: 'createdAt',
+    },
+    {
+        field: 'customer',
+        header: 'Customer',
+        sortField: 'customer',
+        width: 190,
+        priority: 9,
+        minWidth: 150,
+        filterConfig: NOT_FILTERED,
+        filterType: 'string',
+        filterOperators: [...TEXT_OPERATORS],
+    },
+    {
+        field: 'priceType',
+        header: 'Price type',
+        sortField: 'priceType',
+        width: 150,
+        priority: 5,
+        minWidth: 130,
+        filterConfig: NOT_FILTERED,
+        // Options are the caller's allowed price types, filled by the table once they load.
+        filterType: 'select',
+        filterOptions: [],
+        filterOperators: ['eq', 'notEq'],
+    },
+    {
+        field: 'productGroup',
+        header: 'Product group',
+        sortField: 'productGroup',
+        width: 150,
+        priority: 4,
+        minWidth: 130,
+        filterConfig: NOT_FILTERED,
+        filterType: 'string',
+        filterOperators: [...TEXT_OPERATORS],
+    },
+    {
+        field: 'percent',
+        header: 'Discount %',
+        sortField: 'percent',
+        width: 110,
+        priority: 8,
+        minWidth: 110,
+        align: 'end',
+        filterConfig: NOT_FILTERED,
+        filterType: 'number',
+    },
+    {
+        field: 'validFrom',
+        header: 'Valid from',
+        sortField: 'validFrom',
+        width: 120,
+        priority: 2,
+        minWidth: 120,
+        filterConfig: NOT_FILTERED,
+        filterType: 'date',
+        mobile: { hidden: true },
+    },
+    {
+        field: 'validTo',
+        header: 'Valid to',
+        sortField: 'validTo',
+        width: 140,
+        priority: 7,
+        minWidth: 140,
+        filterConfig: NOT_FILTERED,
+        filterType: 'date',
+    },
+    {
+        field: 'status',
+        header: 'Status',
+        sortField: 'status',
+        width: 160,
+        priority: 7,
+        minWidth: 160,
+        filterConfig: NOT_FILTERED,
+        filterType: 'select',
+        filterOptions: DISCOUNT_STATUS_OPTIONS.map(o => ({ ...o })),
+        filterOperators: ['eq', 'notEq'],
+        mobile: { badge: true },
+    },
+    {
+        field: 'justification',
+        header: 'Justification',
+        width: 200,
+        priority: 1,
+        minWidth: 160,
+        filterConfig: NOT_FILTERED,
+        mobile: { hidden: true },
+    },
+];
+
+// Not on screen until the person turns them on in the column settings.
+export const DISCOUNTS_HIDDEN_BY_DEFAULT = ['validFrom', 'justification'];

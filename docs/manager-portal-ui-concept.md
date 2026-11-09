@@ -175,7 +175,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | --- | --- | --- |
 | Dashboard | KPI and widgets | exists, redesign deferred |
 | Customers | list, card with tabs: orders, proforma invoices, payments, discounts | exists |
-| Documents (group) | Orders, Proforma invoices, Payments, Discount requests | exists |
+| Documents (group) | Orders, Proforma invoices, Payments, Discounts | exists |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
@@ -253,6 +253,22 @@ proforma invoice and order) are applied on the server: `visiblePayments` takes
 `options { filter sort }` over a fixed field whitelist, inside the caller's visible set (the
 scope of the payment's proforma invoice). The default sort is newest first. Money columns are
 end-aligned (`align: 'end'` on the table column).
+
+## Discounts list
+
+The registry of discount grants at `/discounts` (menu entry "Discounts"), `components/discounts/`: the numeric discount
+number first, then date, customer, price type, product group, discount percent, valid to and status (valid from and the
+justification start hidden). One row is one request through its whole life (pending, rejected, or approved and then
+active, expiring soon or expired); an ERP-pushed rule is a row without a request. The number is taken when the request
+is filed and the grant it becomes keeps it. Status chips with counts (All, Active, Expiring soon, Pending approval,
+Rejected; Expired through the Status filter) follow the search and the Filter builder conditions; the search box matches
+the number, price type, product group and customer names. Views (key `discounts`), URL sync (`search`, `view`,
+`filters`, `sortField`, `sortDir`, `pageSize`, `page`), pagination and the mobile card view are shared with the other
+lists; `?search=<customer>` still works for the link from the customers list. A row click and the number open the
+discount request card (`/approvals/:id`); a row without a request is not clickable. "New discount grant" sits in the
+toolbar and opens the form above the list; "Renew" appears under valid to on an expiring-soon row. `discountRegistryPage`
+takes `options { filter sort search status }` over a fixed field whitelist, inside the caller's allowed price types, and
+`take: 0` returns the count only. The default sort is newest first.
 
 ## Settlements list
 

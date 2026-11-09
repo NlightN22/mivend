@@ -1,56 +1,31 @@
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
     DiscountCounterpartySearchDocument,
     DiscountFacetsDocument,
-    DiscountRegistryPageDocument,
     ExpiringDiscountGrantsDocument,
     PriceTypeCodesDocument,
     RequestDiscountGrantDocument,
 } from './generated/graphql';
 
-export type DiscountRegistryFilterStatus =
-    | 'active'
-    | 'expiring-soon'
-    | 'expired'
-    | 'pending'
-    | 'rejected';
+export type DiscountStatus = 'active' | 'expiring-soon' | 'expired' | 'pending' | 'rejected';
 
-export interface DiscountRegistryListOptions {
-    take?: number;
-    skip?: number;
-    search?: string;
-    priceTypeCode?: string;
-    status?: DiscountRegistryFilterStatus;
-}
+export const DISCOUNT_STATUS_OPTIONS: { value: DiscountStatus; label: string }[] = [
+    { value: 'active', label: 'Active' },
+    { value: 'expiring-soon', label: 'Expiring soon' },
+    { value: 'expired', label: 'Expired' },
+    { value: 'pending', label: 'Pending approval' },
+    { value: 'rejected', label: 'Rejected' },
+];
 
-export interface DiscountRegistryEntryRow {
-    id: string;
-    // Null for DiscountRule rows that were never approval-driven (ERP-pushed) — see
-    // DiscountRegistryEntry's doc comment on the backend.
-    approvalRequestId: string | null;
-    discountRuleId: string | null;
-    status: 'pending' | 'rejected' | 'materialized';
-    priceTypeCode: string;
-    facetCode: string | null;
-    facetValueCode: string | null;
-    percent: number;
-    validFrom: string;
-    validTo: string;
-    justification: string | null;
-    counterpartyIds: string[] | null;
-}
-
-// Single list backed by DiscountRegistryEntry (CQRS read-model projection), not two tables;
-// matches the design's single 'Grant registry' table.
-export async function fetchDiscountRegistryPage(
-    options: DiscountRegistryListOptions,
-): Promise<{ items: DiscountRegistryEntryRow[]; totalItems: number }> {
-    const result = await adminApi(DiscountRegistryPageDocument, { options });
-    return result.discountRegistryPage as {
-        items: DiscountRegistryEntryRow[];
-        totalItems: number;
-    };
-}
+// Single source of truth for the row badges and the chips that stand for the same status.
+export const DISCOUNT_STATUS_BADGE_VARIANT: Record<DiscountStatus, StatusBadgeVariant> = {
+    active: 'success',
+    'expiring-soon': 'warning',
+    expired: 'neutral',
+    pending: 'info',
+    rejected: 'danger',
+};
 
 export interface DiscountGrantInput {
     priceTypeCode: string;
@@ -62,68 +37,6 @@ export interface DiscountGrantInput {
     justification: string;
     supersedesDiscountRuleId?: string | null;
     counterpartyIds?: string[] | null;
-}
-
-export type DiscountRowStatus = DiscountRegistryFilterStatus;
-
-export interface DiscountRow {
-    key: string;
-    customer: string;
-    priceType: string;
-    facet: string;
-    percent: number;
-    validFrom: string;
-    validTo: string;
-    status: DiscountRowStatus;
-    justification: string | null;
-    ruleErpId: string | null;
-    approvalRequestId: string | null;
-}
-
-const ALL_CUSTOMERS_LABEL = 'All customers';
-
-function customerLabel(
-    counterpartyIds: string[] | null | undefined,
-    namesById: Map<string, string>,
-): string {
-    if (!counterpartyIds || counterpartyIds.length === 0) return ALL_CUSTOMERS_LABEL;
-    return counterpartyIds.map(id => namesById.get(id) ?? id).join(', ');
-}
-
-// 14 days is a placeholder; keep in sync by hand with EXPIRING_SOON_DAYS (backend, SQL-side copy).
-// Display-only: the backend does not filter by it when browsing 'All statuses'.
-const EXPIRING_SOON_DAYS = 14;
-
-function materializedStatus(validTo: string): 'active' | 'expiring-soon' | 'expired' {
-    const now = Date.now();
-    const validToMs = new Date(validTo).getTime();
-    if (validToMs < now) return 'expired';
-    if (validToMs - now < EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000) return 'expiring-soon';
-    return 'active';
-}
-
-// Portal rules' erpId is portal-${approvalRequestId} (DiscountGrantService.decideAndApply).
-// ERP-pushed rules lack approvalRequestId, so ruleErpId stays null (not portal-renewable).
-export function buildDiscountRegistryRows(
-    entries: DiscountRegistryEntryRow[],
-    namesById: Map<string, string>,
-): DiscountRow[] {
-    return entries.map(entry => ({
-        key: `entry-${entry.id}`,
-        customer: customerLabel(entry.counterpartyIds, namesById),
-        priceType: entry.priceTypeCode,
-        facet: entry.facetValueCode ?? 'All products',
-        percent: entry.percent,
-        validFrom: entry.validFrom,
-        validTo: entry.validTo,
-        status: entry.status === 'materialized' ? materializedStatus(entry.validTo) : entry.status,
-        justification: entry.justification,
-        ruleErpId:
-            entry.discountRuleId && entry.approvalRequestId
-                ? `portal-${entry.approvalRequestId}`
-                : null,
-        approvalRequestId: entry.approvalRequestId,
-    }));
 }
 
 export async function fetchPriceTypeCodes(): Promise<string[]> {

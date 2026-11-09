@@ -75,13 +75,18 @@ test.describe('05: manager-a (branch A) sees only allowed price types', () => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
             await s.page.goto('/discounts');
-            await s.page.getByRole('heading', { name: 'Grant registry' }).waitFor();
-            const filter = s.page
-                .locator('.mv-filter-field', { hasText: 'Price type' })
-                .locator('select');
-            await expect(filter.locator('option', { hasText: ALLOWED[0] })).toHaveCount(1);
-            const shown = (await filter.locator('option').allInnerTexts()).map(t => t.trim());
-            expect(shown.filter(t => t !== 'All price types')).toEqual([...ALLOWED]);
+            await s.page.getByRole('heading', { name: 'Discounts', exact: true }).waitFor();
+            await s.page
+                .getByRole('button', { name: /Filter/ })
+                .first()
+                .click();
+            await s.page.getByText('Price type', { exact: true }).last().click();
+            const value = s.page.getByTestId('filter-editor').locator('select').nth(1);
+            await expect(value.locator('option', { hasText: ALLOWED[0] })).toHaveCount(1);
+            const offered = (await value
+                .locator('option')
+                .evaluateAll(o => o.map(e => (e as HTMLOptionElement).value))) as string[];
+            expect(offered.filter(Boolean)).toEqual([...ALLOWED]);
         } finally {
             await s.context.close();
         }
@@ -115,9 +120,11 @@ test.describe('07: discount grants of hidden price types', () => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
             await s.page.goto('/discounts');
-            await expect(s.page.getByText(grantJustification('allowed')).first()).toBeVisible({
-                timeout: 15000,
-            });
+            await expect
+                .poll(() => s.bodies.join('\n').includes(grantJustification('allowed')), {
+                    timeout: 15000,
+                })
+                .toBe(true);
             await shot(s.page, 'grant-registry-manager-a');
             await s.page.goto('/approvals');
             await s.page.getByText("All requests I'm involved in").click();

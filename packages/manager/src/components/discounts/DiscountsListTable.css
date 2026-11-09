@@ -1,0 +1,28 @@
+.discounts-list-table__link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.discounts-list-table__link:hover,
+.discounts-list-table__link:focus-visible {
+    text-decoration: underline;
+}
+
+.discounts-list-table__customer {
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.discounts-list-table__negative {
+    color: var(--app-accent-orange-active);
+    font-weight: 700;
+}
+
+.discounts-list-table__justification {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

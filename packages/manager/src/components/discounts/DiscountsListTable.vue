@@ -1,0 +1,264 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import {
+    MvStatusBadge,
+    MvAdvancedDataTable,
+    type AdvancedDataTableColumn,
+    MvButton,
+    MvDateTimeCell,
+    type AdvancedDataTableRowClickPayload,
+    MvErrorState,
+    useDataTableState,
+    formatDocumentNumber,
+} from '@mivend/ui-kit';
+import {
+    BLANK_DISCOUNTS_FILTERS,
+    restoreDiscountsFilters,
+    type DiscountsListFilters,
+    type DiscountsSort,
+} from '../../api/discountsList';
+import { fetchPriceTypeCodes } from '../../api/discounts';
+import { DISCOUNTS_URL_DEFAULTS } from '../../composables/discountsListUrl';
+import { sortFromState, sortToState } from './discountsSort';
+import type { TableViewState } from '../../composables/tableViewState';
+import TableViewsMenu from '../TableViewsMenu.vue';
+import { DISCOUNTS_COLUMNS as COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
+import type { DiscountRow } from './discountsRows';
+
+const props = defineProps<{
+    rows: DiscountRow[];
+    loading: boolean;
+    failed: boolean;
+    totalItems: number;
+    page: number;
+    pageSize: number;
+    filters: DiscountsListFilters;
+    sort: DiscountsSort;
+    administratorId: string;
+}>();
+
+const emit = defineEmits<{
+    'update:filters': [filters: DiscountsListFilters];
+    'update:sort': [sort: DiscountsSort];
+    'update:page': [page: number];
+    'update:page-size': [size: number];
+    'clear-filters': [];
+    retry: [];
+    new: [];
+    renew: [row: DiscountRow];
+}>();
+
+const priceTypeOptions = ref<{ value: string; label: string }[]>([]);
+onMounted(async () => {
+    const codes = await fetchPriceTypeCodes().catch(() => []);
+    priceTypeOptions.value = codes.map(code => ({ value: code, label: code }));
+});
+const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
+    COLUMNS.map(c =>
+        c.field === 'priceType' ? { ...c, filterOptions: priceTypeOptions.value } : c,
+    ),
+);
+
+const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
+    `discounts-list-v1:${props.administratorId}`,
+    {
+        columnOrder: COLUMNS.map(c => c.field),
+        columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
+        hiddenColumns: [...DISCOUNTS_HIDDEN_BY_DEFAULT],
+        sort: sortToState(props.sort, COLUMNS),
+        filters: { search: props.filters.search },
+        pageSize: props.pageSize,
+    },
+    {
+        columns: COLUMNS,
+        allowedFilterKeys: [],
+        // Search and page size come from the URL, never from a previous session.
+        externallyOwned: { pageSize: true, filterKeys: ['search'] },
+    },
+);
+
+tableState.value.sort = sortToState(props.sort, COLUMNS);
+
+// The chips own `view`; the table never emits it, the parent merges it back in.
+watch(
+    () => tableState.value.filters.search,
+    search => {
+        if (search !== props.filters.search) emit('update:filters', { ...props.filters, search });
+    },
+);
+function onConditions(conditions: DiscountsListFilters['conditions']): void {
+    emit('update:filters', { ...props.filters, conditions });
+}
+watch(
+    () => tableState.value.sort,
+    s => emit('update:sort', sortFromState(s, COLUMNS)),
+    { deep: true },
+);
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
+watch(
+    () => props.pageSize,
+    size => {
+        tableState.value.pageSize = size;
+    },
+);
+watch(
+    () => props.filters.search,
+    search => {
+        if (search !== tableState.value.filters.search) tableState.value.filters.search = search;
+    },
+);
+
+const openedWithLink = Object.keys(DISCOUNTS_URL_DEFAULTS).some(k => k in useRoute().query);
+
+const router = useRouter();
+// The request is the discount's card; an ERP-pushed rule has none.
+function requestPath(row: DiscountRow): string | null {
+    return row.approvalRequestId ? `/approvals/${row.approvalRequestId}` : null;
+}
+function onRowClick(event: AdvancedDataTableRowClickPayload<DiscountRow>): void {
+    const target = event.originalEvent.target;
+    if (target instanceof Element && target.closest('a, button')) return;
+    const path = requestPath(event.row);
+    if (!path) return;
+    const href = router.resolve(path).href;
+    const mouse = event.originalEvent as MouseEvent;
+    if (mouse.ctrlKey || mouse.metaKey) window.open(href, '_blank', 'noopener');
+    else void router.push(href);
+}
+
+function captureView(): TableViewState {
+    return {
+        filters: {
+            search: props.filters.search,
+            view: props.filters.view,
+            conditions: props.filters.conditions,
+        },
+        sort: { ...props.sort },
+        columnOrder: [...tableState.value.columnOrder],
+        hiddenColumns: [...tableState.value.hiddenColumns],
+    };
+}
+
+function applyView(state: TableViewState): void {
+    const fields = COLUMNS.map(c => c.field);
+    const order = state.columnOrder.filter(f => fields.includes(f));
+    tableState.value.columnOrder = [...order, ...fields.filter(f => !order.includes(f))];
+    tableState.value.hiddenColumns = state.hiddenColumns.filter(
+        f => fields.includes(f) && !COLUMNS.find(c => c.field === f)?.required,
+    );
+    const sort = sortToState(
+        { field: state.sort.field as DiscountsSort['field'], dir: state.sort.dir },
+        COLUMNS,
+    );
+    tableState.value.sort = sort;
+    emit('update:sort', sortFromState(sort, COLUMNS));
+    emit('update:filters', restoreDiscountsFilters(state.filters));
+}
+
+const dateLabel = (value: string): string => new Date(value).toLocaleDateString('en-US');
+</script>
+
+<template>
+    <MvAdvancedDataTable
+        v-model:table-state="tableState"
+        :columns="resolvedColumns"
+        :rows="rows"
+        :loading="loading"
+        :total-items="totalItems"
+        :page="page"
+        data-key="id"
+        :row-height-px="61"
+        :header-height-px="65"
+        :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :conditions="filters.conditions"
+        :default-filters="{ search: BLANK_DISCOUNTS_FILTERS.search }"
+        empty-message="No discounts match your filters"
+        @update:conditions="onConditions"
+        @update:page="emit('update:page', $event)"
+        @reset-page="emit('update:page', 1)"
+        @clear-filters="emit('clear-filters')"
+        @row-click="onRowClick"
+    >
+        <template #empty>
+            <MvErrorState
+                v-if="failed"
+                title="Could not load discounts"
+                message="Check the connection and try again."
+                @retry="emit('retry')"
+            />
+            <template v-else>{{ loading ? '' : 'No discounts match your filters' }}</template>
+        </template>
+
+        <template #toolbar-start>
+            <slot name="view-chips" />
+        </template>
+
+        <template #toolbar-end>
+            <MvButton size="sm" @click="emit('new')">New discount grant</MvButton>
+            <TableViewsMenu
+                views-key="discounts"
+                :owner-key="administratorId"
+                :capture="captureView"
+                :apply="applyView"
+                :skip-restore="() => openedWithLink"
+            />
+        </template>
+
+        <template #cell-number="{ data }">
+            <RouterLink
+                v-if="requestPath(data as DiscountRow)"
+                class="discounts-list-table__link"
+                :to="requestPath(data as DiscountRow) as string"
+                >{{ formatDocumentNumber((data as DiscountRow).number) }}</RouterLink
+            >
+            <template v-else>{{ formatDocumentNumber((data as DiscountRow).number) }}</template>
+        </template>
+
+        <template #cell-date="{ data }">
+            <MvDateTimeCell :value="(data as DiscountRow).createdAt" />
+        </template>
+
+        <template #cell-customer="{ data }">
+            <div class="discounts-list-table__customer">{{ (data as DiscountRow).customer }}</div>
+        </template>
+
+        <template #cell-percent="{ data }">
+            <span :class="{ 'discounts-list-table__negative': (data as DiscountRow).percent < 0 }"
+                >{{ (data as DiscountRow).percent }}%</span
+            >
+        </template>
+
+        <template #cell-validFrom="{ data }">{{
+            dateLabel((data as DiscountRow).validFrom)
+        }}</template>
+
+        <template #cell-validTo="{ data }">
+            {{ dateLabel((data as DiscountRow).validTo) }}
+            <MvButton
+                v-if="(data as DiscountRow).status === 'expiring-soon'"
+                size="sm"
+                variant="ghost"
+                @click="emit('renew', data as DiscountRow)"
+                >Renew</MvButton
+            >
+        </template>
+
+        <template #cell-status="{ data }">
+            <MvStatusBadge :variant="(data as DiscountRow).statusVariant">{{
+                (data as DiscountRow).statusLabel
+            }}</MvStatusBadge>
+        </template>
+
+        <template #cell-justification="{ data }">
+            <span class="discounts-list-table__justification">{{
+                (data as DiscountRow).justification ?? '—'
+            }}</span>
+        </template>
+    </MvAdvancedDataTable>
+</template>
+
+<style scoped src="./DiscountsListTable.css"></style>

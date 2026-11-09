@@ -71,7 +71,7 @@ test('bottom nav "More" tab shows active on a page reached only via the sheet @o
 
     await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
     await expect(
-        page.locator('.mv-mobile-sheet').getByRole('link', { name: 'Discount requests' }),
+        page.locator('.mv-mobile-sheet').getByRole('link', { name: 'Discounts' }),
     ).toHaveClass(/mv-mobile-sheet__item--active/);
 });
 

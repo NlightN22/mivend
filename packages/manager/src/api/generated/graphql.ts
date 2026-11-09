@@ -2456,14 +2456,18 @@ export type DiscountLimitScopeOption = {
 export type DiscountRegistryEntry = {
     approvalRequestId: Maybe<Scalars['ID']['output']>;
     counterpartyIds: Maybe<Array<Scalars['String']['output']>>;
+    createdAt: Scalars['DateTime']['output'];
     discountRuleId: Maybe<Scalars['ID']['output']>;
     facetCode: Maybe<Scalars['String']['output']>;
     facetValueCode: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     justification: Maybe<Scalars['String']['output']>;
+    /** Human-facing business number, taken when the request is filed; the grant it becomes keeps it. */
+    number: Scalars['String']['output'];
     percent: Scalars['Int']['output'];
     priceTypeCode: Scalars['String']['output'];
     status: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
     validFrom: Scalars['DateTime']['output'];
     validTo: Scalars['DateTime']['output'];
 };
@@ -2473,12 +2477,43 @@ export type DiscountRegistryEntryList = {
     totalItems: Scalars['Int']['output'];
 };
 
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
+export type DiscountRegistryFilterParameter = {
+    _and?: InputMaybe<Array<DiscountRegistryFilterParameter>>;
+    _or?: InputMaybe<Array<DiscountRegistryFilterParameter>>;
+    createdAt?: InputMaybe<DateOperators>;
+    customer?: InputMaybe<StringOperators>;
+    number?: InputMaybe<StringOperators>;
+    percent?: InputMaybe<NumberOperators>;
+    priceType?: InputMaybe<StringOperators>;
+    productGroup?: InputMaybe<StringOperators>;
+    /** active | expiring-soon | expired | pending | rejected */
+    status?: InputMaybe<StringOperators>;
+    validFrom?: InputMaybe<DateOperators>;
+    validTo?: InputMaybe<DateOperators>;
+};
+
 export type DiscountRegistryListOptions = {
+    filter?: InputMaybe<DiscountRegistryFilterParameter>;
     priceTypeCode?: InputMaybe<Scalars['String']['input']>;
+    /** Substring match against the number, price type, product group and customer names. */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<DiscountRegistrySortParameter>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type DiscountRegistrySortParameter = {
+    createdAt?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    percent?: InputMaybe<SortOrder>;
+    priceType?: InputMaybe<SortOrder>;
+    productGroup?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+    validFrom?: InputMaybe<SortOrder>;
+    validTo?: InputMaybe<SortOrder>;
 };
 
 export type DiscountRule = {
@@ -12253,6 +12288,24 @@ export type DiscountLimitScopeOptionsQuery = {
     discountLimitScopeOptions: Array<{ ref: string; name: string }>;
 };
 
+export type DiscountRegistryItemFieldsFragment = {
+    id: string;
+    uuid: string;
+    number: string;
+    createdAt: any;
+    approvalRequestId: string | null;
+    discountRuleId: string | null;
+    status: string;
+    priceTypeCode: string;
+    facetCode: string | null;
+    facetValueCode: string | null;
+    percent: number;
+    validFrom: any;
+    validTo: any;
+    justification: string | null;
+    counterpartyIds: Array<string> | null;
+};
+
 export type DiscountRegistryPageQueryVariables = Exact<{
     options?: InputMaybe<DiscountRegistryListOptions>;
 }>;
@@ -12262,6 +12315,9 @@ export type DiscountRegistryPageQuery = {
         totalItems: number;
         items: Array<{
             id: string;
+            uuid: string;
+            number: string;
+            createdAt: any;
             approvalRequestId: string | null;
             discountRuleId: string | null;
             status: string;
@@ -12275,6 +12331,19 @@ export type DiscountRegistryPageQuery = {
             counterpartyIds: Array<string> | null;
         }>;
     };
+};
+
+export type DiscountViewCountsQueryVariables = Exact<{
+    search?: InputMaybe<Scalars['String']['input']>;
+    filter?: InputMaybe<DiscountRegistryFilterParameter>;
+}>;
+
+export type DiscountViewCountsQuery = {
+    all: { totalItems: number };
+    active: { totalItems: number };
+    expiringSoon: { totalItems: number };
+    pending: { totalItems: number };
+    rejected: { totalItems: number };
 };
 
 export type PriceTypeCodesQueryVariables = Exact<{ [key: string]: never }>;
@@ -14449,6 +14518,28 @@ export const DepartmentBranchNodeFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'DepartmentBranchNodeFields' },
 ) as unknown as TypedDocumentString<DepartmentBranchNodeFieldsFragment, unknown>;
+export const DiscountRegistryItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment DiscountRegistryItemFields on DiscountRegistryEntry {
+  id
+  uuid
+  number
+  createdAt
+  approvalRequestId
+  discountRuleId
+  status
+  priceTypeCode
+  facetCode
+  facetValueCode
+  percent
+  validFrom
+  validTo
+  justification
+  counterpartyIds
+}
+    `,
+    { fragmentName: 'DiscountRegistryItemFields' },
+) as unknown as TypedDocumentString<DiscountRegistryItemFieldsFragment, unknown>;
 export const EntityVersionRowFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment EntityVersionRowFields on EntityVersion {
@@ -16147,26 +16238,58 @@ export const DiscountRegistryPageDocument = new TypedDocumentString(`
     query DiscountRegistryPage($options: DiscountRegistryListOptions) {
   discountRegistryPage(options: $options) {
     items {
-      id
-      approvalRequestId
-      discountRuleId
-      status
-      priceTypeCode
-      facetCode
-      facetValueCode
-      percent
-      validFrom
-      validTo
-      justification
-      counterpartyIds
+      ...DiscountRegistryItemFields
     }
     totalItems
   }
 }
-    `) as unknown as TypedDocumentString<
+    fragment DiscountRegistryItemFields on DiscountRegistryEntry {
+  id
+  uuid
+  number
+  createdAt
+  approvalRequestId
+  discountRuleId
+  status
+  priceTypeCode
+  facetCode
+  facetValueCode
+  percent
+  validFrom
+  validTo
+  justification
+  counterpartyIds
+}`) as unknown as TypedDocumentString<
     DiscountRegistryPageQuery,
     DiscountRegistryPageQueryVariables
 >;
+export const DiscountViewCountsDocument = new TypedDocumentString(`
+    query DiscountViewCounts($search: String, $filter: DiscountRegistryFilterParameter) {
+  all: discountRegistryPage(options: {take: 0, search: $search, filter: $filter}) {
+    totalItems
+  }
+  active: discountRegistryPage(
+    options: {take: 0, status: "active", search: $search, filter: $filter}
+  ) {
+    totalItems
+  }
+  expiringSoon: discountRegistryPage(
+    options: {take: 0, status: "expiring-soon", search: $search, filter: $filter}
+  ) {
+    totalItems
+  }
+  pending: discountRegistryPage(
+    options: {take: 0, status: "pending", search: $search, filter: $filter}
+  ) {
+    totalItems
+  }
+  rejected: discountRegistryPage(
+    options: {take: 0, status: "rejected", search: $search, filter: $filter}
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<DiscountViewCountsQuery, DiscountViewCountsQueryVariables>;
 export const PriceTypeCodesDocument = new TypedDocumentString(`
     query PriceTypeCodes {
   priceTypeCodes

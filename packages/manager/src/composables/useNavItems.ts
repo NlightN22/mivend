@@ -15,7 +15,7 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             documents.push({ label: 'Proforma invoices', path: '/proforma-invoices' });
         if (authStore.hasPermission('ReadPayment'))
             documents.push({ label: 'Payments', path: '/payments' });
-        documents.push({ label: 'Discount requests', path: '/discounts' });
+        documents.push({ label: 'Discounts', path: '/discounts' });
         // Settlements are gated like their visibleSettlementDocuments query.
         const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
             ? [{ label: 'Settlements', path: '/settlements' }]
@@ -73,7 +73,7 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             });
         if (authStore.hasPermission('ReadPayment'))
             items.push({ key: 'payments', label: 'Payments', path: '/payments' });
-        items.push({ key: 'discounts', label: 'Discount requests', path: '/discounts' });
+        items.push({ key: 'discounts', label: 'Discounts', path: '/discounts' });
         if (authStore.hasPermission('ReadSettlementDocument'))
             items.push({ key: 'settlements', label: 'Settlements', path: '/settlements' });
         items.push(

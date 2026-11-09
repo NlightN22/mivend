@@ -7,9 +7,9 @@ import {
     requestDiscountGrant,
     searchDiscountCounterparties,
     type CounterpartyOption,
-    type DiscountRow,
     type FacetOption,
 } from '../../api/discounts';
+import type { DiscountRow } from './discountsRows';
 import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
 
 const props = defineProps<{ renewFrom: DiscountRow | null }>();

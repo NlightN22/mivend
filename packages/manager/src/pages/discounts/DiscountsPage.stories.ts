@@ -18,6 +18,9 @@ const now = Date.now();
 const DISCOUNTS = [
     {
         id: '1',
+        uuid: '00000000-0000-4000-8000-000000000001',
+        number: '1000000001',
+        createdAt: new Date(now - 1 * 86400000).toISOString(),
         approvalRequestId: '1',
         discountRuleId: '1',
         status: 'materialized',
@@ -32,6 +35,9 @@ const DISCOUNTS = [
     },
     {
         id: '2',
+        uuid: '00000000-0000-4000-8000-000000000002',
+        number: '1000000002',
+        createdAt: new Date(now - 2 * 86400000).toISOString(),
         approvalRequestId: '2',
         discountRuleId: '2',
         status: 'pending',
@@ -46,6 +52,9 @@ const DISCOUNTS = [
     },
     {
         id: '3',
+        uuid: '00000000-0000-4000-8000-000000000003',
+        number: '1000000003',
+        createdAt: new Date(now - 3 * 86400000).toISOString(),
         approvalRequestId: '3',
         discountRuleId: '3',
         status: 'rejected',
@@ -60,6 +69,9 @@ const DISCOUNTS = [
     },
     {
         id: '4',
+        uuid: '00000000-0000-4000-8000-000000000004',
+        number: '1000000004',
+        createdAt: new Date(now - 4 * 86400000).toISOString(),
         approvalRequestId: null,
         discountRuleId: '4',
         status: 'materialized',
@@ -118,7 +130,6 @@ interface DiscountsPageVariables {
         skip?: number;
         take?: number;
         search?: string;
-        priceTypeCode?: string;
         status?: string;
     };
 }
@@ -127,13 +138,22 @@ function mockDiscountsData(): void {
     registerMock('DiscountRegistryPage', (variables: DiscountsPageVariables) => {
         let filtered = DISCOUNTS;
         const o = variables.options;
-        if (o?.priceTypeCode) filtered = filtered.filter(d => d.priceTypeCode === o.priceTypeCode);
         if (o?.status) filtered = filtered.filter(d => d.status === o.status);
         if (o?.search) {
-            filtered = filtered.filter(d => includesCi(d.justification, o.search!));
+            filtered = filtered.filter(
+                d => includesCi(d.number, o.search!) || includesCi(d.justification, o.search!),
+            );
         }
         return { discountRegistryPage: paginate(filtered, o) };
     });
+    registerMock('DiscountViewCounts', () => ({
+        all: { totalItems: DISCOUNTS.length },
+        active: { totalItems: 1 },
+        expiringSoon: { totalItems: 1 },
+        pending: { totalItems: 1 },
+        rejected: { totalItems: 1 },
+    }));
+    registerMock('TableViews', () => ({ tableViews: [] }));
     registerMock('CounterpartyShortName', () => ({ counterparty: { shortName: 'customer-123' } }));
     registerMock('CustomersPage', () => ({
         counterparties: { items: CUSTOMERS, totalItems: CUSTOMERS.length },
@@ -162,12 +182,14 @@ export const Empty: Story = {
             registerMock('DiscountRegistryPage', () => ({
                 discountRegistryPage: { items: [], totalItems: 0 },
             }));
-            registerMock('CustomersPage', () => ({
-                counterparties: { items: [], totalItems: 0 },
+            registerMock('DiscountViewCounts', () => ({
+                all: { totalItems: 0 },
+                active: { totalItems: 0 },
+                expiringSoon: { totalItems: 0 },
+                pending: { totalItems: 0 },
+                rejected: { totalItems: 0 },
             }));
-            registerMock('PriceTypeCodes', () => ({
-                priceTypeCodes: ['price-type-wholesale', 'price-type-retail'],
-            }));
+            registerMock('TableViews', () => ({ tableViews: [] }));
             await router.push('/discounts');
         },
     ],

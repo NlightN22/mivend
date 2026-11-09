@@ -1,19 +1,52 @@
+fragment DiscountRegistryItemFields on DiscountRegistryEntry {
+    id
+    uuid
+    number
+    createdAt
+    approvalRequestId
+    discountRuleId
+    status
+    priceTypeCode
+    facetCode
+    facetValueCode
+    percent
+    validFrom
+    validTo
+    justification
+    counterpartyIds
+}
+
 query DiscountRegistryPage($options: DiscountRegistryListOptions) {
     discountRegistryPage(options: $options) {
         items {
-            id
-            approvalRequestId
-            discountRuleId
-            status
-            priceTypeCode
-            facetCode
-            facetValueCode
-            percent
-            validFrom
-            validTo
-            justification
-            counterpartyIds
+            ...DiscountRegistryItemFields
         }
+        totalItems
+    }
+}
+
+query DiscountViewCounts($search: String, $filter: DiscountRegistryFilterParameter) {
+    all: discountRegistryPage(options: { take: 0, search: $search, filter: $filter }) {
+        totalItems
+    }
+    active: discountRegistryPage(
+        options: { take: 0, status: "active", search: $search, filter: $filter }
+    ) {
+        totalItems
+    }
+    expiringSoon: discountRegistryPage(
+        options: { take: 0, status: "expiring-soon", search: $search, filter: $filter }
+    ) {
+        totalItems
+    }
+    pending: discountRegistryPage(
+        options: { take: 0, status: "pending", search: $search, filter: $filter }
+    ) {
+        totalItems
+    }
+    rejected: discountRegistryPage(
+        options: { take: 0, status: "rejected", search: $search, filter: $filter }
+    ) {
         totalItems
     }
 }
