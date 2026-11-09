@@ -259,11 +259,20 @@ function handleSubmit(): Promise<void> {
 .login-oidc {
     width: 100%;
     gap: 8px;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+    line-height: 1.3;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .login-oidc__icon {
     width: 20px;
     height: 20px;
+    flex: none;
     object-fit: contain;
 }
 
