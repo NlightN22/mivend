@@ -43,6 +43,8 @@ const INVENTORY: Record<string, string> = {
     'price-entry/src/price-entry.schema.ts::price':
         'value of an entry the caller was allowed to request',
     'price-entry/src/price-entry.schema.ts::priceEntriesForVariants': 'assertCodeAllowed',
+    'price-entry/src/price-entry.schema.ts::priceType':
+        'registry filter/sort by price type code, rows already filtered by allowed codes',
     'price-entry/src/price-entry.schema.ts::priceTypeCode':
         'discount rule/registry/entry types, filtered by allowed codes',
     'price-entry/src/price-entry.schema.ts::priceTypeCodes': 'PriceTypeAccessService.allowedCodes',
