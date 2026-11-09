@@ -163,7 +163,19 @@ portal customer) and `Zzz Picker No Portal` (without one), so the new-order pick
 the old 500-row cap. The `Zz` names sort after every other seed counterparty, so helpers that read the first page of
 `counterparties` keep finding their own records. `global-setup.ts` sends them after the main seed in chunks of 100 (one
 batch exceeds the server body limit) and assigns the two `Zzz Picker` counterparties to the manager account, whose
-own-scope role would otherwise not see them. Cost: about 30-43 s of `global-setup` per run (`e2e picker seed: Ns` line).
+own-scope role would otherwise not see them. Cost: about 30-43 s of `global-setup` per stack (`e2e picker seed: Ns` line).
+Only `manager/acting` uses it, so `e2e-picker-seed.sh` sets `E2E_PICKER_SEED=0` (skipped) when no selected group can run that spec; a batch seeds it if any group may (#336). Unknown or unfiltered args seed it.
+
+## Speed (#336)
+
+Measure on a calm host only (nothing else running; check `uptime` and `free -h`), wall time AND CPU time (`/usr/bin/time -v`: user+sys, max RSS), one change at a time, each timing twice:
+
+1. Baseline: `/usr/bin/time -v make e2e-groups G="manager-orders manager-customers manager-proforma-payments storefront-catalog"`; note the `e2e stack:` and `e2e picker seed:` lines.
+2. Same batch with `E2E_PICKER_SEED=1` forced, to isolate the picker seed gain.
+3. `E2E_PARALLEL_WORKERS=2`, `3`, `4` on the same batch (read-only pass; watch CPU time and load for timeouts).
+4. Per group inside the batch: `make e2e-groups G="<one group>"` repeated, to split stack boot, setup, read-only pass and write pass.
+
+Candidates (analysis in #336): read-only workers vs cores, a combined read-only pass across groups, two stacks, event-based waits replacing `waitForTimeout`.
 
 ## Manager portal role projects
 
