@@ -76,6 +76,7 @@ import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.p
 import { TwoFactorSignInDashboardPlugin } from './two-factor-sign-in-dashboard.plugin';
 import { consistencySourcesFromEnv } from './consistency-sources';
 import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
+import { UTC_SESSION_OPTIONS, useUtcTimestamps } from './pg-utc';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const instanceNumberCode = process.env.INSTANCE_NUMBER_CODE ?? '';
@@ -161,6 +162,8 @@ const emailPlugin = EmailPlugin.init({
     ...emailTransportOptions,
 } as Parameters<typeof EmailPlugin.init>[0]);
 
+useUtcTimestamps();
+
 export const config: VendureConfig = {
     apiOptions: {
         port: parseInt(process.env.PORT ?? '3000'),
@@ -200,6 +203,7 @@ export const config: VendureConfig = {
         subscribers: [OrderUuidSubscriber],
         // An exhausted pool fails the waiting request after the timeout instead of freezing the server (#257).
         extra: {
+            options: UTC_SESSION_OPTIONS,
             max: parseInt(process.env.DB_POOL_SIZE ?? '10'),
             connectionTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT_MS ?? '15000'),
         },

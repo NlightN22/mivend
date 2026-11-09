@@ -1,5 +1,7 @@
 import { Client } from 'pg';
 
+import { UTC_SESSION_OPTIONS } from './pg-utc';
+
 export function createDbClient(): Client {
     return new Client({
         host: process.env.DB_HOST ?? 'localhost',
@@ -7,5 +9,6 @@ export function createDbClient(): Client {
         user: process.env.DB_USERNAME ?? 'postgres',
         password: process.env.DB_PASSWORD ?? 'postgres',
         database: process.env.DB_NAME ?? 'mivend',
+        options: UTC_SESSION_OPTIONS,
     });
 }

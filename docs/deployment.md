@@ -30,7 +30,7 @@ and talks only to central through RabbitMQ sync. Run one compose project per ins
 
 ## Configuration
 
-Time zone: every app container gets `TZ` from `.env` (compose default `UTC`, `.env.production.example` sets `Asia/Krasnoyarsk`). Scheduled work that runs at a wall-clock hour, such as the daily session reset, follows it. The release owner sets the VPS itself to the same zone (`timedatectl set-timezone`) so logs and cron agree; the database boundary is passed as an absolute instant, so the Postgres zone does not matter.
+Time zone: every app container gets `TZ` from `.env` (compose default `UTC`; the release owner sets it, and the host zone, to the business zone). Stored timestamps are zone-independent: the server reads and writes `timestamp` columns as UTC whatever `TZ` is. Only wall-clock scheduling follows `TZ`: the daily session reset and native cron tasks such as `contract-proforma-cleanup`.
 
 Everything is in `infrastructure/docker/.env.production` (copy `.env.production.example`, which
 lists every variable as required or optional). `make prod-up` passes it via `--env-file`.

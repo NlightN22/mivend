@@ -24,13 +24,13 @@ describe('lastDailyInstant', () => {
         );
     });
 
-    it('Asia/Krasnoyarsk (UTC+7): the boundary is 20:00 UTC of the previous day', () => {
-        process.env.TZ = 'Asia/Krasnoyarsk';
+    it('Asia/Tokyo (UTC+9): the boundary is 18:00 UTC of the previous day', () => {
+        process.env.TZ = 'Asia/Tokyo';
         expect(iso(lastDailyInstant(new Date('2026-11-08T10:00:00Z'), 3))).toBe(
-            '2026-11-07T20:00:00.000Z',
+            '2026-11-07T18:00:00.000Z',
         );
-        expect(iso(lastDailyInstant(new Date('2026-11-07T19:59:59Z'), 3))).toBe(
-            '2026-11-06T20:00:00.000Z',
+        expect(iso(lastDailyInstant(new Date('2026-11-07T17:59:59Z'), 3))).toBe(
+            '2026-11-06T18:00:00.000Z',
         );
     });
 

@@ -1,6 +1,9 @@
 import { Client } from 'pg';
 
+import { UTC_SESSION_OPTIONS, useUtcTimestamps } from './pg-utc';
 import { resetTwoFactor } from './two-factor-reset';
+
+useUtcTimestamps();
 
 async function main(): Promise<void> {
     const [identifier, ...reasonWords] = process.argv.slice(2);
@@ -17,6 +20,7 @@ async function main(): Promise<void> {
         user: process.env.DB_USERNAME ?? 'postgres',
         password: process.env.DB_PASSWORD ?? 'postgres',
         database: process.env.DB_NAME ?? 'mivend',
+        options: UTC_SESSION_OPTIONS,
     });
     await client.connect();
     try {
