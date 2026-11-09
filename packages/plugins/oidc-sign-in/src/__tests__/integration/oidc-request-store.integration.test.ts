@@ -13,13 +13,13 @@ beforeEach(() => fx.reset());
 
 describe('request lifecycle', () => {
     it('stores only the hash of the state', async () => {
-        const state = await fx.requests.create(ctx, 'n', 'v');
+        const state = (await fx.requests.create(ctx, 'n', 'v'))!;
         const rows = await fx.dataSource.query('SELECT "stateHash" FROM oidc_auth_request');
         expect(rows).toEqual([{ stateHash: sha256Hex(state) }]);
     });
 
     it('lets one of two concurrent exchanges win and refuses a replay', async () => {
-        const state = await fx.requests.create(ctx, 'n', 'v');
+        const state = (await fx.requests.create(ctx, 'n', 'v'))!;
         const [a, b] = await Promise.all([
             fx.requests.beginExchange(ctx, state),
             fx.requests.beginExchange(ctx, state),
@@ -29,7 +29,7 @@ describe('request lifecycle', () => {
     });
 
     it('refuses an expired or unknown state', async () => {
-        const state = await fx.requests.create(ctx, 'n', 'v');
+        const state = (await fx.requests.create(ctx, 'n', 'v'))!;
         await fx.dataSource.query(
             `UPDATE oidc_auth_request SET "expiresAt" = now() - interval '1 second'`,
         );
@@ -38,7 +38,7 @@ describe('request lifecycle', () => {
     });
 
     it('claims a verified request once, only after verification', async () => {
-        const state = await fx.requests.create(ctx, 'n', 'v');
+        const state = (await fx.requests.create(ctx, 'n', 'v'))!;
         expect(await fx.requests.claimVerified(ctx, state)).toBeNull();
         const row = await fx.requests.beginExchange(ctx, state);
         await fx.requests.markVerified(ctx, row!.id, '7');
