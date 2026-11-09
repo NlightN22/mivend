@@ -469,8 +469,10 @@ Debugger.pause over `127.0.0.1:9229`), then `kill -9` that child only — the wa
 `STUCK_INTERVAL_SECS` it looks at all processes whose name matches `STUCK_COMM` (node, esbuild, vite, chrome, python by default)
 and reports those that stay above `STUCK_CPU_PCT` CPU for `STUCK_BUSY_SECS` while holding no listening socket. It only
 detects: it writes the status file atomically and never touches a process unless `STUCK_KILL=1`, and then only a suspect inside
-a process group recorded by `dev-run-tracked.sh` (`/tmp/mivend-dev*.pgid`), logging the kill to stderr. Docker containers are
-never touched.
+a process group recorded by `dev-run-tracked.sh` (`/tmp/mivend-dev*.pgid`; the file must be owned by root or the suspect's user and
+a member of the group must still run with its cwd inside this repo), whose stdout is a regular file untouched for
+`STUCK_LOG_QUIET_SECS`, logging the kill to stderr. Workers and import children never listen and can run hot for long, so
+`STUCK_KILL` must not be used where the child's output is not a file that keeps growing while it works. Docker containers are never touched.
 
 Install (nothing is installed by the repo): copy `infrastructure/systemd/mivend-stuck-scan.service` to `/etc/systemd/system/`,
 fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without systemd,
@@ -484,11 +486,13 @@ fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without
 | `STUCK_BUSY_SECS` | `600` | How long it must stay busy and not listening; a cold server compile plus boot is about 40 s, a legitimately CPU-bound suite process can run longer, hence the generous default |
 | `STUCK_COMM` | `^(node\|esbuild\|vite\|chrome.*\|python3?)$` | Process-name regex to inspect |
 | `STUCK_KILL` | unset | `1` enables the kill of suspects in dev-run-tracked groups |
+| `STUCK_LOG_QUIET_SECS` | `300` | Kill only when the suspect's stdout file has not changed for this long |
 | `STUCK_PGID_GLOB` | `/tmp/mivend-dev*.pgid` | Tracked group files `STUCK_KILL` is limited to |
 
 Status file: `{"updated": <epoch>, "interval": <s>, "stuck": [{"pid", "command", "cwd", "cpu_percent", "busy_seconds",
 "listening": false, "last_log_lines": [...]}]}`; `stuck` is an empty list when all is well. `last_log_lines` is filled when the
-process's stdout is a regular file.
+process's stdout is a regular file. The file is created with mode 0640 (it holds command lines and log tails). The scanner
+test (`stuck-scan.test.sh`) needs python3, jq, ss and setsid.
 
 `make up` (so `test-int`, `test-access`, `test-changed` and every `e2e-*` target) and `make e2e-integration` run
 `stuck-check.sh` first: it prints the stuck list as a warning and carries on. `STUCK_CHECK=strict` makes a non-empty list fail the

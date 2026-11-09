@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""Host-level scan for busy-but-not-serving processes; detection only unless STUCK_KILL=1.
-
-Project-agnostic: looks at every process whose name matches STUCK_COMM, by CPU time and
-listening sockets from /proc and ss. Writes the suspects as JSON to STUCK_STATUS_FILE atomically.
-STUCK_KILL=1 additionally SIGKILLs a suspect that belongs to a process group recorded by
-dev-run-tracked.sh (the pgid files in STUCK_PGID_GLOB), nothing else.
-"""
+"""Host-level scan for busy-but-not-serving processes; detection only unless STUCK_KILL=1 (docs/environments.md).
+Writes the suspects as JSON to STUCK_STATUS_FILE atomically."""
 import glob
 import json
 import os
@@ -20,6 +15,8 @@ CPU_PCT = int(os.environ.get("STUCK_CPU_PCT", "60"))
 BUSY_SECS = int(os.environ.get("STUCK_BUSY_SECS", "600"))
 COMM = re.compile(os.environ.get("STUCK_COMM", r"^(node|esbuild|vite|chrome.*|python3?)$"))
 KILL = os.environ.get("STUCK_KILL") == "1"
+LOG_QUIET_SECS = int(os.environ.get("STUCK_LOG_QUIET_SECS", "300"))
+REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PGID_GLOB = os.environ.get("STUCK_PGID_GLOB", "/tmp/mivend-dev*.pgid")
 CLK_TCK = os.sysconf("SC_CLK_TCK")
 SELF = os.getpid()
@@ -39,34 +36,59 @@ def read_proc(pid):
 
 
 def listening_pids():
-    out = subprocess.run(["ss", "-Hltnp"], capture_output=True, text=True).stdout
+    try:
+        out = subprocess.run(["ss", "-Hltnp"], capture_output=True, text=True).stdout
+    except OSError:
+        return None
     return {int(p) for p in re.findall(r"pid=(\d+)", out)}
 
 
-def log_tail(pid, lines=20):
+def log_file(pid):
     try:
         path = os.readlink(f"/proc/{pid}/fd/1")
-        if not os.path.isfile(path):
-            return []
-        with open(path, errors="replace") as f:
-            return f.read()[-8000:].splitlines()[-lines:]
+        return path if os.path.isfile(path) else None
+    except OSError:
+        return None
+
+
+def log_tail(path, lines=20):
+    try:
+        with open(path, "rb") as f:
+            f.seek(max(os.fstat(f.fileno()).st_size - 8000, 0))
+            return f.read().decode(errors="replace").splitlines()[-lines:]
     except OSError:
         return []
 
 
-def tracked_pgids():
-    pgids = set()
-    for path in glob.glob(PGID_GLOB):
+def is_tracked(pid, pgid):
+    """The group is recorded by dev-run-tracked.sh, the file is trusted, and a member still runs in this repo."""
+    try:
+        suspect_uid = os.stat(f"/proc/{pid}").st_uid
+    except OSError:
+        return False
+    for path in [p for pattern in PGID_GLOB.split() for p in glob.glob(pattern)]:
         try:
-            pgids.add(int(open(path).read().strip()))
+            if int(open(path).read().strip()) != pgid or os.stat(path).st_uid not in (0, suspect_uid):
+                continue
         except (OSError, ValueError):
-            pass
-    return pgids
+            continue
+        for member in os.listdir("/proc"):
+            if member.isdigit() and read_proc(member) and read_proc(member)[2] == pgid:
+                try:
+                    if os.path.realpath(f"/proc/{member}/cwd").startswith(REPO_ROOT):
+                        return True
+                except OSError:
+                    pass
+    return False
+
+
+def log_quiet(path):
+    return path is not None and time.time() - os.stat(path).st_mtime >= LOG_QUIET_SECS
 
 
 def write_status(suspects):
     tmp = f"{STATUS_FILE}.{SELF}.tmp"
-    with open(tmp, "w") as f:
+    with os.fdopen(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640), "w") as f:
         json.dump({"updated": int(time.time()), "interval": INTERVAL, "stuck": suspects}, f)
     os.replace(tmp, STATUS_FILE)
 
@@ -74,6 +96,8 @@ def write_status(suspects):
 def scan(state):
     now = time.time()
     listening = listening_pids()
+    if listening is None:
+        return []
     suspects, seen = [], set()
     for entry in os.listdir("/proc"):
         if not entry.isdigit() or int(entry) == SELF:
@@ -100,10 +124,14 @@ def scan(state):
             cwd = os.readlink(f"/proc/{pid}/cwd")
         except OSError:
             cwd = ""
+        log = log_file(pid)
         suspects.append({"pid": pid, "command": cmd[:300], "cwd": cwd, "cpu_percent": round(cpu),
-                         "busy_seconds": busy, "listening": False, "last_log_lines": log_tail(pid)})
-        if KILL and pgid in tracked_pgids():
-            os.kill(pid, 9)
+                         "busy_seconds": busy, "listening": False, "last_log_lines": log_tail(log) if log else []})
+        if KILL and log_quiet(log) and is_tracked(pid, pgid):
+            try:
+                os.kill(pid, 9)
+            except ProcessLookupError:
+                continue
             print(f"[stuck-scan] killed tracked pid {pid} (group {pgid}): {round(cpu)}% CPU for {busy}s, not listening: {cmd[:200]}", file=sys.stderr, flush=True)
     for pid in set(state) - seen:
         del state[pid]
