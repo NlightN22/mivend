@@ -72,8 +72,7 @@ export function mockOrdersList(orders = MOCK_ORDERS): void {
         if (variables.search) {
             const term = variables.search;
             filtered = filtered.filter(
-                o =>
-                    includesCi(o.code, term) || includesCi(o.customer.counterparty.shortName, term),
+                o => includesCi(o.code, term) || includesCi(o.counterparty.shortName, term),
             );
         }
         return { visibleOrders: paginate(filtered, variables.options) };
