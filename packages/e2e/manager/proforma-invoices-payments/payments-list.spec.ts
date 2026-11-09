@@ -21,7 +21,9 @@ test('a status chip lives in the URL and filters on the server @on:manager-opera
     await page.getByRole('button', { name: /^Captured \d+$/ }).click();
     await expect(page).toHaveURL(/view=captured/);
     await expect(page.locator('.mv-advanced-data-table__grid tbody tr').first()).toBeVisible();
-    await expect(page.getByText('Failed', { exact: true })).toHaveCount(0);
+    await expect(
+        page.locator('.mv-advanced-data-table__grid tbody').getByText('Failed', { exact: true }),
+    ).toHaveCount(0);
 });
 
 test('the Filter builder and a sortable header narrow and order the list on the server @on:manager-operator @read-only', async ({

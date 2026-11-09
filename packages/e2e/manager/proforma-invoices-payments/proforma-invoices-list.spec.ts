@@ -21,7 +21,11 @@ test('a status chip and the search live in the URL and filter on the server @on:
     await page.getByRole('button', { name: /^Current \d+$/ }).click();
     await expect(page).toHaveURL(/view=current/);
     await expect(page.locator('.mv-advanced-data-table__grid tbody tr').first()).toBeVisible();
-    await expect(page.getByText('Superseded', { exact: true })).toHaveCount(0);
+    await expect(
+        page
+            .locator('.mv-advanced-data-table__grid tbody')
+            .getByText('Superseded', { exact: true }),
+    ).toHaveCount(0);
 });
 
 // The order card's "Proforma invoices" modal links here with the order code.

@@ -167,10 +167,13 @@ export function useTableViews(options: UseTableViewsOptions): TableViews {
         await guarded(async () => void (await setTableViewDefault(id, value)));
     }
 
+    // Filters typed while the views load must not be overwritten by the restored default view.
     async function init(): Promise<void> {
+        const before = JSON.stringify(options.capture().filters);
         await load();
         const remembered = readChoice(choiceKey);
-        if (options.skipRestore?.()) {
+        const touched = JSON.stringify(options.capture().filters) !== before;
+        if (touched || options.skipRestore?.()) {
             if (views.value.some(v => v.id === remembered)) activeId.value = remembered;
             return;
         }

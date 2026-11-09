@@ -41,12 +41,38 @@ test('the seven main columns fit the page width untruncated @read-only', async (
     );
 });
 
-test('status chips wrap on desktop and none is clipped @read-only', async ({ page }) => {
+test('status chips form one scrollable row, the arrows reveal the clipped ones and none overlaps @read-only', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
     const chips = page.locator('.mv-filter-chip');
     await expect(chips.first()).toBeVisible({ timeout: 15000 });
-    for (let i = 0; i < (await chips.count()); i++) await expect(chips.nth(i)).toBeInViewport();
+    const count = await chips.count();
+    expect(count).toBeGreaterThan(0);
+
+    const row = page.locator('.mv-filter-chips').first();
+    const overflowing = await row.evaluate(el => el.scrollWidth > el.clientWidth);
+    if (overflowing) {
+        const next = page.getByRole('button', { name: 'Scroll chips right' });
+        for (let i = 0; i < count && (await next.isEnabled()); i++) {
+            await next.click();
+            await page.waitForTimeout(250);
+        }
+        await expect(next).toBeDisabled();
+        await expect(chips.nth(count - 1)).toBeInViewport();
+    } else {
+        for (let i = 0; i < count; i++) await expect(chips.nth(i)).toBeInViewport();
+    }
+
+    await row.evaluate(el => el.scrollTo({ left: 0 }));
+    const boxes = [];
+    for (let i = 0; i < count; i++) boxes.push(await chips.nth(i).boundingBox());
+    for (let i = 1; i < boxes.length; i++) {
+        const prev = boxes[i - 1];
+        const cur = boxes[i];
+        if (prev && cur) expect(cur.x).toBeGreaterThanOrEqual(prev.x + prev.width - 1);
+    }
 });
 
 test('a table view stores the chip and is recalled from the Views control', async ({ page }) => {
