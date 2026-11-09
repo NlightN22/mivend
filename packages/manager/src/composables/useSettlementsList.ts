@@ -11,6 +11,7 @@ import {
     type SettlementListItem,
     type SettlementTypeCount,
 } from '../api/settlements';
+import { fetchOrganizations } from '../api/organizations';
 import { conditionsToSettlementsFilter } from '../api/settlementsFilter';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import {
@@ -34,6 +35,7 @@ export interface SettlementsListState {
     counts: Ref<SettlementTypeCount[] | null>;
     countsLoading: Ref<boolean>;
     typeOptions: Ref<FilterOption[]>;
+    organizationOptions: Ref<FilterOption[]>;
 }
 
 // Search, type, customer, page and page size live in the URL, so a filtered list is a shareable link.
@@ -113,6 +115,19 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
     };
     watch(counterpartyId, refreshTypeOptions);
 
+    const organizationOptions = ref<FilterOption[]>([]);
+    const refreshOrganizationOptions = (): void => {
+        fetchOrganizations()
+            .then(orgs => {
+                organizationOptions.value = orgs
+                    .map(o => ({ value: o.legalName, label: o.legalName }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            })
+            .catch(e => {
+                console.warn('[settlements] could not load organizations:', e);
+            });
+    };
+
     watch([filters, sort, counterpartyId, pageSize], () => {
         page.value = 1;
     });
@@ -132,6 +147,7 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
         reload();
         refreshCounts();
         refreshTypeOptions();
+        refreshOrganizationOptions();
     });
 
     return {
@@ -148,5 +164,6 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
         counts,
         countsLoading,
         typeOptions,
+        organizationOptions,
     };
 }

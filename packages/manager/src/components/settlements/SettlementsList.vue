@@ -63,6 +63,7 @@ function clearFilters(): void {
         :filters="list.filters.value"
         :sort="list.sort.value"
         :type-options="list.typeOptions.value"
+        :organization-options="list.organizationOptions.value"
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"

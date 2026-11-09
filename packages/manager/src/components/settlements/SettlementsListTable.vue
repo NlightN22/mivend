@@ -34,6 +34,7 @@ const props = defineProps<{
     sort: SettlementsSort;
     administratorId: string;
     typeOptions: FilterOption[];
+    organizationOptions: FilterOption[];
 }>();
 
 const emit = defineEmits<{
@@ -46,7 +47,11 @@ const emit = defineEmits<{
 }>();
 
 const filterColumns = computed(() =>
-    COLUMNS.map(c => (c.field === 'type' ? { ...c, filterOptions: props.typeOptions } : c)),
+    COLUMNS.map(c => {
+        if (c.field === 'type') return { ...c, filterOptions: props.typeOptions };
+        if (c.field === 'organization') return { ...c, filterOptions: props.organizationOptions };
+        return c;
+    }),
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(

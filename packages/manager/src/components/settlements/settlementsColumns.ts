@@ -72,8 +72,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         priority: 2,
         minWidth: 150,
         filterConfig: NOT_FILTERED,
-        filterType: 'string',
-        filterOperators: [...TEXT_OPERATORS],
+        filterType: 'select',
+        filterOptions: [],
+        filterOperators: ['eq', 'notEq'],
         mobile: { hidden: true },
     },
     {
