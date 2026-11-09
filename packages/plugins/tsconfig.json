@@ -35,6 +35,7 @@
         { "path": "./oidc-sign-in" },
         { "path": "./saved-views" },
         { "path": "./checks" },
-        { "path": "./numbering" }
+        { "path": "./numbering" },
+        { "path": "./change-journal" }
     ]
 }

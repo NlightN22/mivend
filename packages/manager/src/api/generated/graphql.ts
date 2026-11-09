@@ -7092,6 +7092,8 @@ export type Permission =
     | 'ReadAsset'
     /** Grants permission to read Products, Facets, Assets, Collections */
     | 'ReadCatalog'
+    /** Read the change journal (who changed which entity, when, before/after values); entity scope still applies */
+    | 'ReadChangeJournal'
     /** Grants permission to read Channel */
     | 'ReadChannel'
     /** Read stored check results and the registered check definitions */

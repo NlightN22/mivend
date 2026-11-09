@@ -65,6 +65,7 @@ import {
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
 import { ChecksPlugin } from '@mivend/plugin-checks';
+import { ChangeJournalPlugin } from '@mivend/plugin-change-journal';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
 import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-alert-dashboard.plugin';
@@ -897,6 +898,8 @@ export const config: VendureConfig = {
         MoqPlugin,
         SavedViewsPlugin,
         BulkOperationsPlugin,
+        // After every plugin that registers a scheduled task: it labels their writes in the journal.
+        ChangeJournalPlugin.init({}),
         CustomFieldWritePolicyPlugin,
     ],
 };

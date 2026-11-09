@@ -89,6 +89,11 @@ export const CustomPermission = {
         description:
             'Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves',
     }),
+    ReadChangeJournal: new PermissionDefinition({
+        name: 'ReadChangeJournal',
+        description:
+            'Read the change journal (who changed which entity, when, before/after values); entity scope still applies',
+    }),
     ConfirmOrder: new PermissionDefinition({
         name: 'ConfirmOrder',
         description:

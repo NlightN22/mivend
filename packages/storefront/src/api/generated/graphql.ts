@@ -3110,6 +3110,8 @@ export enum Permission {
     ReadAsset = 'ReadAsset',
     /** Grants permission to read Products, Facets, Assets, Collections */
     ReadCatalog = 'ReadCatalog',
+    /** Read the change journal (who changed which entity, when, before/after values); entity scope still applies */
+    ReadChangeJournal = 'ReadChangeJournal',
     /** Grants permission to read Channel */
     ReadChannel = 'ReadChannel',
     /** Read stored check results and the registered check definitions */

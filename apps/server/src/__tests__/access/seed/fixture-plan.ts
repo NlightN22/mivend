@@ -251,6 +251,8 @@ export const VISIBLE_GAP_BRANCHES: Record<ActorKey, ('a' | 'b')[]> = {
 // those counterparties' points only; a servicing branch gets no history. Grant history follows the grant list.
 export const HISTORY_READERS: ActorKey[] = ['head-a', 'head-b', 'head-default', 'director'];
 export const GRANT_HISTORY_READERS: ActorKey[] = ['head-a', 'director'];
+// Change journal (#323): ReadChangeJournal goes to the same roles and follows the same per-entity rules.
+export const CHANGE_JOURNAL_READERS: ActorKey[] = HISTORY_READERS;
 
 // Order broadcasts (#263): one per seeded order, shown to the order's viewers, plus one with no order for all.
 export const NOTIFICATION_MARKER = 'Access notice';

@@ -107,6 +107,7 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
             'ReadCheckResults',
             'ManageCheckPolicies',
             'ReadEntityHistory',
+            'ReadChangeJournal',
             'ReadAdministrator',
             'UpdateAdministrator',
         ],

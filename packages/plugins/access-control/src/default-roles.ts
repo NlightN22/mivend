@@ -80,6 +80,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCounterpartyTeam',
             'ManageVisibilityGrants',
             'ReadEntityHistory',
+            'ReadChangeJournal',
             'ManageSharedTableViews',
         ],
         accessScopeConfig: {
@@ -104,6 +105,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadAllCustomerPriceTypes',
             'ApproveDiscountRequest',
             'ReadEntityHistory',
+            'ReadChangeJournal',
             'ManageAccessControl',
             'ManageAdministratorLifecycle',
             'ReadAdministrator',
@@ -153,6 +155,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadAllCustomerPriceTypes',
             'ApproveSecurityLimit',
             'ReadEntityHistory',
+            'ReadChangeJournal',
         ],
         accessScopeConfig: {
             counterparty: 'all',
@@ -188,6 +191,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCounterpartyPortalAccess',
             'ManageVisibilityGrants',
             'ReadEntityHistory',
+            'ReadChangeJournal',
             'ReadAdministrator',
             'UpdateAdministrator',
             'CreateOrder',

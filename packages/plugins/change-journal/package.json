@@ -1,0 +1,34 @@
+{
+    "name": "@mivend/plugin-change-journal",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test:integration": "vitest run --config vitest.integration.config.ts"
+    },
+    "peerDependencies": {
+        "@vendure/core": "^3.7.3"
+    },
+    "dependencies": {
+        "graphql-tag": "^2.12.6",
+        "shared": "workspace:*",
+        "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-session-management": "workspace:*",
+        "@mivend/plugin-versioning": "workspace:*"
+    },
+    "devDependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@nestjs/graphql": "^13.0.0",
+        "@vendure/common": "^3.7.3",
+        "@vendure/core": "^3.7.3",
+        "graphql": "^16.0.0",
+        "rxjs": "^7.8.0",
+        "typeorm": "^0.3.0",
+        "typescript": "^5.4.0",
+        "vitest": "^4.1.9"
+    }
+}
