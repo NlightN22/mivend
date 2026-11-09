@@ -41,7 +41,7 @@ export class CounterpartyContactStreamHandler implements InboundStreamHandler {
             },
             flags,
         );
-        await applyErpPerson(
+        const person = await applyErpPerson(
             ctx,
             {
                 connection: this.connection,
@@ -58,6 +58,6 @@ export class CounterpartyContactStreamHandler implements InboundStreamHandler {
                 ...flags,
             },
         );
-        return inboundApplied();
+        return inboundApplied(undefined, person.failure);
     }
 }

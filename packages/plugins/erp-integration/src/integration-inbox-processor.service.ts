@@ -349,7 +349,8 @@ export class IntegrationInboxProcessorService {
         if (result && result.kind === 'noop') {
             await this.inbox.markProcessed(ctx, row.id, 'noop', result.reason, row.claimToken);
         } else {
-            await this.inbox.markProcessed(ctx, row.id, 'applied', null, row.claimToken);
+            const failure = result?.kind === 'applied' ? (result.contactFailure ?? null) : null;
+            await this.inbox.markProcessed(ctx, row.id, 'applied', failure, row.claimToken);
         }
         return result?.afterCommit ?? [];
     }

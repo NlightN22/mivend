@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { Administrator, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Administrator, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { FindOptionsWhere, ObjectType } from 'typeorm';
 import { In } from 'typeorm';
 import { withAggregateLock } from 'shared';
@@ -44,6 +44,27 @@ const OWNER_ENTITIES: Record<ErpOwnerKind, string | ObjectType<{ id: unknown }>>
 @Injectable()
 export class ContactPointService {
     constructor(private readonly connection: TransactionalConnection) {}
+
+    // Runs a derived contact step inside a savepoint: a failure (even a failed SQL statement) is rolled back alone and
+    // returned as text for the caller to record, so the master write of the same transaction still commits.
+    async guarded(
+        ctx: RequestContext,
+        label: string,
+        work: () => Promise<void>,
+    ): Promise<string | null> {
+        const repo = this.connection.getRepository(ctx, 'Channel');
+        await repo.query('SAVEPOINT contact_step');
+        try {
+            await work();
+            await repo.query('RELEASE SAVEPOINT contact_step');
+            return null;
+        } catch (err) {
+            await repo.query('ROLLBACK TO SAVEPOINT contact_step');
+            const message = err instanceof Error ? err.message : String(err);
+            Logger.warn(`${label}: contact step failed: ${message}`, 'ContactPointService');
+            return `contact step failed: ${message}`;
+        }
+    }
 
     // Replaces the ERP-sourced channels of one owner as a set; manual channels are never touched.
     async replaceErpPoints(

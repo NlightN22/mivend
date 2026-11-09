@@ -22,7 +22,11 @@ export interface ErpPersonInput {
     contactInfos: unknown;
 }
 
-export type ErpPersonResult = 'applied' | 'unknown' | 'nameless';
+export interface ErpPersonResult {
+    status: 'applied' | 'unknown' | 'nameless';
+    // A rolled-back contact step; the person itself is stored.
+    failure: string | null;
+}
 
 export interface ErpPersonDeps {
     connection: TransactionalConnection;
@@ -51,9 +55,10 @@ export async function applyErpPerson(
     input: ErpPersonInput,
 ): Promise<ErpPersonResult> {
     if (input.isDeleted) {
-        return (await deps.persons.deactivate(ctx, erpId)) !== null ? 'applied' : 'unknown';
+        const known = (await deps.persons.deactivate(ctx, erpId)) !== null;
+        return { status: known ? 'applied' : 'unknown', failure: null };
     }
-    if (!input.name) return 'nameless';
+    if (!input.name) return { status: 'nameless', failure: null };
     let counterpartyId: number | null = null;
     if (input.counterpartyErpId) {
         const counterparty = await deps.connection
@@ -73,10 +78,11 @@ export async function applyErpPerson(
         counterpartyId,
     });
     const contactInfos = parseContactInfos(input.contactInfos);
-    if (contactInfos) {
-        await deps.contactPoints.replaceErpPoints(ctx, 'contactPerson', personId, contactInfos);
-    }
-    return 'applied';
+    if (!contactInfos) return { status: 'applied', failure: null };
+    const failure = await deps.contactPoints.guarded(ctx, `person ${erpId}`, () =>
+        deps.contactPoints.replaceErpPoints(ctx, 'contactPerson', personId, contactInfos),
+    );
+    return { status: 'applied', failure };
 }
 
 export function personOutcome(
@@ -84,9 +90,11 @@ export function personOutcome(
     stream: string,
     entityId: string,
 ): InboundOutcome {
-    if (result === 'applied') return inboundApplied();
+    if (result.status === 'applied') return inboundApplied(undefined, result.failure);
     const reason =
-        result === 'unknown' ? 'tombstone for an unknown person' : 'live event without a name';
+        result.status === 'unknown'
+            ? 'tombstone for an unknown person'
+            : 'live event without a name';
     Logger.warn(`${stream} ${entityId}: ${reason}`, 'ErpPerson');
     return inboundNoop(`${stream} ${entityId}: ${reason}`);
 }

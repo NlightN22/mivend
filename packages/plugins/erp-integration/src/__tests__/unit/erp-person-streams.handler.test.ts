@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -21,7 +22,7 @@ function deps(counterparty: { id: number } | null = { id: 3 }, deactivated: numb
         upsert: vi.fn().mockResolvedValue(7),
         deactivate: vi.fn().mockResolvedValue(deactivated),
     };
-    const points = { replaceErpPoints: vi.fn() };
+    const points = { guarded: passthroughGuard, replaceErpPoints: vi.fn() };
     const connection = {
         getRepository: () => ({ findOne: vi.fn().mockResolvedValue(counterparty) }),
     };

@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import type { ManagerLinkResolution } from '@mivend/plugin-access-control';
@@ -16,7 +17,10 @@ function makeHandler(
 } {
     const counterpartyService = { upsertActiveState };
     const userEnrichmentService = { findManagerLink };
-    const contactPoints = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    const contactPoints = {
+        guarded: passthroughGuard,
+        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
+    };
     const persons = { linkWaitingContacts: vi.fn().mockResolvedValue(undefined) };
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,

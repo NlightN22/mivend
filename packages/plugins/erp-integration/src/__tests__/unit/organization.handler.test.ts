@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -6,7 +7,10 @@ import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 const ctx = {} as RequestContext;
 const setup = (stored = true) => {
     const service = { upsertFromEvent: vi.fn().mockResolvedValue(stored) };
-    const points = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    const points = {
+        guarded: passthroughGuard,
+        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
+    };
     return {
         service,
         points,

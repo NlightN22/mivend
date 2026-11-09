@@ -78,15 +78,21 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 }),
         );
         const contactInfos = parseContactInfos(payload.contactInfos);
-        if (name && contactInfos) {
-            await this.contactPoints.replaceErpPointsByErpId(
-                ctx,
-                'counterparty',
-                entityId,
-                contactInfos,
-            );
-        }
-        if (name) await this.persons.linkWaitingContacts(ctx, entityId);
+        const failure = await this.contactPoints.guarded(
+            ctx,
+            `counterparty ${entityId}`,
+            async () => {
+                if (name && contactInfos) {
+                    await this.contactPoints.replaceErpPointsByErpId(
+                        ctx,
+                        'counterparty',
+                        entityId,
+                        contactInfos,
+                    );
+                }
+                if (name) await this.persons.linkWaitingContacts(ctx, entityId);
+            },
+        );
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +
@@ -94,11 +100,13 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 loggerCtx,
             );
             return stored
-                ? inboundApplied()
+                ? inboundApplied(undefined, failure)
                 : inboundNoop(`counterparty ${entityId}: nameless tombstone for an unknown row`);
         }
         Logger.verbose(`Upserted counterparty erpId=${entityId}`, loggerCtx);
-        return unresolvedReason ? inboundNoop(unresolvedReason) : inboundApplied();
+        return unresolvedReason
+            ? inboundNoop(failure ? `${unresolvedReason}; ${failure}` : unresolvedReason)
+            : inboundApplied(undefined, failure);
     }
 
     // Omitted manager keys must never clear an existing manager. A known but unlinked erpId

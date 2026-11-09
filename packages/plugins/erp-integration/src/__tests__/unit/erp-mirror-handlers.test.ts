@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import type { RequestContext } from '@vendure/core';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,7 +24,7 @@ function setup<T extends { apply: (...a: never[]) => unknown }>(
     const handler = new Handler(
         { getRepository: () => repo } as never,
         persons as never,
-        { replaceErpPoints: vi.fn() } as never,
+        { guarded: passthroughGuard, replaceErpPoints: vi.fn() } as never,
     );
     return { handler, save };
 }

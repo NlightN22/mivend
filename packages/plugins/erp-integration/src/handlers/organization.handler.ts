@@ -47,16 +47,22 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
             return inboundNoop(`organization ${entityId}: nameless tombstone for an unknown row`);
         }
         const contactInfos = parseContactInfos(payload.contactInfos);
-        if (contactInfos) {
-            await this.contactPoints.replaceErpPointsByErpId(
-                ctx,
-                'organization',
-                entityId,
-                contactInfos,
-            );
-        }
+        const failure = await this.contactPoints.guarded(
+            ctx,
+            `organization ${entityId}`,
+            async () => {
+                if (contactInfos) {
+                    await this.contactPoints.replaceErpPointsByErpId(
+                        ctx,
+                        'organization',
+                        entityId,
+                        contactInfos,
+                    );
+                }
+            },
+        );
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
-        return inboundApplied();
+        return inboundApplied(undefined, failure);
     }
 }
 

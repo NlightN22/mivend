@@ -16,13 +16,23 @@ export interface InboundStreamHandler {
 // on the integration-health page.
 // afterCommit runs once the inbox transaction committed (job enqueues that must see the rows).
 export type InboundAfterCommit = (ctx: RequestContext) => Promise<void>;
-export type InboundOutcome = ({ kind: 'applied' } | { kind: 'noop'; reason: string }) & {
+// contactFailure: a derived contact step failed and was rolled back alone; the row is recorded with that reason.
+export type InboundOutcome = (
+    | { kind: 'applied'; contactFailure?: string }
+    | { kind: 'noop'; reason: string }
+) & {
     afterCommit?: InboundAfterCommit[];
 };
 
 // apply() must return one of these on every path, so a bare `return` does not compile.
-export const inboundApplied = (afterCommit?: InboundAfterCommit[]): InboundOutcome =>
-    afterCommit ? { kind: 'applied', afterCommit } : { kind: 'applied' };
+export const inboundApplied = (
+    afterCommit?: InboundAfterCommit[],
+    contactFailure?: string | null,
+): InboundOutcome => ({
+    kind: 'applied',
+    ...(afterCommit ? { afterCommit } : {}),
+    ...(contactFailure ? { contactFailure } : {}),
+});
 export const inboundNoop = (reason: string): InboundOutcome => ({ kind: 'noop', reason });
 
 export interface BatchInboundItem {

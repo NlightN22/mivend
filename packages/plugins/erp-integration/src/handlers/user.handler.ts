@@ -47,22 +47,26 @@ export class UserStreamHandler implements InboundStreamHandler {
             isActive,
         });
         const contactInfos = parseContactInfos(payload.contactInfos);
-        if (contactInfos) {
-            // Kept for an administrator that links later (AdministratorContactsListener).
-            await this.erpUsers.setContactInfos(ctx, entityId, JSON.stringify(contactInfos));
-        }
+        const failure = contactInfos
+            ? await this.contactPoints.guarded(ctx, `user ${entityId}`, async () => {
+                  // Kept for an administrator that links later (AdministratorContactsListener).
+                  await this.erpUsers.setContactInfos(ctx, entityId, JSON.stringify(contactInfos));
+                  if (admin) {
+                      await this.contactPoints.replaceErpPointsByErpId(
+                          ctx,
+                          'administrator',
+                          entityId,
+                          contactInfos,
+                      );
+                  }
+              })
+            : null;
         if (!admin) {
-            return inboundNoop(`user ${entityId}: no linked Administrator (skipped)`);
-        }
-        if (contactInfos) {
-            await this.contactPoints.replaceErpPointsByErpId(
-                ctx,
-                'administrator',
-                entityId,
-                contactInfos,
+            return inboundNoop(
+                `user ${entityId}: no linked Administrator (skipped)${failure ? `; ${failure}` : ''}`,
             );
         }
         Logger.verbose(`Enriched administrator erpId=${entityId}`, loggerCtx);
-        return inboundApplied();
+        return inboundApplied(undefined, failure);
     }
 }

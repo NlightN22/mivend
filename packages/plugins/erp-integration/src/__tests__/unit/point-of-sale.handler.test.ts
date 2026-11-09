@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -27,7 +28,10 @@ function makeHandler(
         deactivate,
         markErpDeleted,
     };
-    const contactPoints = { replaceErpPointsByErpId: vi.fn().mockResolvedValue(true) };
+    const contactPoints = {
+        guarded: passthroughGuard,
+        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
+    };
     const handler = new PointOfSaleStreamHandler(
         tradingPointService as never,
         contactPoints as never,

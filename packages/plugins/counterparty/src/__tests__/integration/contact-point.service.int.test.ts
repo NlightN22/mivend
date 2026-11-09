@@ -223,4 +223,36 @@ describe('ContactPointService (real Postgres)', () => {
             { n: 2 },
         ]);
     });
+
+    it('a failed contact step (aborted SQL statement) rolls back alone and the master write commits', async () => {
+        const connection = mapped(createTestConnection(dataSource));
+        const failure = await connection.withTransaction(ctx, async txCtx => {
+            await connection
+                .getRepository(txCtx, Counterparty)
+                .save({ erpId: 'cp-master' } as never);
+            return service.guarded(txCtx, 'counterparty cp-master', async () => {
+                const links = connection.getRepository(txCtx, CounterpartyContactPoint);
+                await dataSource.query(
+                    `INSERT INTO contact_point (type, value, source) VALUES ('phone', '+79120000001', 'erp')`,
+                );
+                await links.insert({ counterpartyId: 1, contactPointId: 1 } as never);
+                await links.insert({ counterpartyId: 1, contactPointId: 1 } as never);
+            });
+        });
+        expect(failure).toMatch(/^contact step failed: /);
+        expect(
+            await dataSource.query(`SELECT "erpId" FROM counterparty WHERE "erpId" = 'cp-master'`),
+        ).toEqual([{ erpId: 'cp-master' }]);
+        expect(
+            await dataSource.query('SELECT count(*)::int AS n FROM counterparty_contact_point'),
+        ).toEqual([{ n: 0 }]);
+    });
+
+    it('reports no failure when the step succeeds', async () => {
+        const connection = mapped(createTestConnection(dataSource));
+        const failure = await connection.withTransaction(ctx, txCtx =>
+            service.guarded(txCtx, 'x', async () => undefined),
+        );
+        expect(failure).toBeNull();
+    });
 });

@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -80,7 +81,7 @@ describe.each([
         (m: boolean) =>
             new OrganizationStreamHandler(
                 { upsertFromEvent: vi.fn().mockResolvedValue(m) } as never,
-                { replaceErpPointsByErpId: vi.fn() } as never,
+                { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             ),
         { isDeleted: true },
     ],
@@ -95,7 +96,7 @@ describe.each([
                         async (_c: unknown, _e: string, write: () => unknown) => write(),
                     ),
                 } as never,
-                {} as never,
+                { guarded: passthroughGuard } as never,
                 {} as never,
             ),
         { isDeleted: true },

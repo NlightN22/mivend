@@ -67,17 +67,23 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
         });
 
         const contactInfos = parseContactInfos(payload.contactInfos);
-        if (contactInfos) {
-            await this.contactPoints.replaceErpPointsByErpId(
-                ctx,
-                'tradingPoint',
-                entityId,
-                contactInfos,
-            );
-        }
+        const failure = await this.contactPoints.guarded(
+            ctx,
+            `point-of-sale ${entityId}`,
+            async () => {
+                if (contactInfos) {
+                    await this.contactPoints.replaceErpPointsByErpId(
+                        ctx,
+                        'tradingPoint',
+                        entityId,
+                        contactInfos,
+                    );
+                }
+            },
+        );
 
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);
-        return inboundApplied();
+        return inboundApplied(undefined, failure);
     }
 }
 

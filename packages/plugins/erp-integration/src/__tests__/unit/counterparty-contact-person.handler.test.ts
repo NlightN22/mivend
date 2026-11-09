@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -12,7 +13,7 @@ function setup(counterparty: { id: number } | null) {
         save: vi.fn(),
     };
     const persons = { upsert: vi.fn().mockResolvedValue(7), deactivate: vi.fn() };
-    const points = { replaceErpPoints: vi.fn() };
+    const points = { guarded: passthroughGuard, replaceErpPoints: vi.fn() };
     const handler = new CounterpartyContactStreamHandler(
         { getRepository: () => repo } as never,
         persons as never,

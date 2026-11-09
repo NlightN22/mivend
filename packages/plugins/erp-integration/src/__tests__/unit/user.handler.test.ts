@@ -1,3 +1,4 @@
+import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -12,7 +13,7 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(
             userEnrichmentService as never,
-            { replaceErpPointsByErpId: vi.fn() } as never,
+            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             { setContactInfos: vi.fn() } as never,
         );
 
@@ -40,7 +41,7 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(
             userEnrichmentService as never,
-            { replaceErpPointsByErpId: vi.fn() } as never,
+            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             { setContactInfos: vi.fn() } as never,
         );
 
@@ -64,7 +65,7 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(
             userEnrichmentService as never,
-            { replaceErpPointsByErpId: vi.fn() } as never,
+            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             { setContactInfos: vi.fn() } as never,
         );
 
@@ -82,7 +83,7 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(
             userEnrichmentService as never,
-            { replaceErpPointsByErpId: vi.fn() } as never,
+            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             { setContactInfos: vi.fn() } as never,
         );
 
@@ -100,7 +101,7 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(
             userEnrichmentService as never,
-            { replaceErpPointsByErpId: vi.fn() } as never,
+            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
             { setContactInfos: vi.fn() } as never,
         );
 
@@ -111,7 +112,7 @@ describe('UserStreamHandler', () => {
     });
 
     it('replaces the linked administrator channels from the list, an explicit empty list included, and skips an absent one', async () => {
-        const points = { replaceErpPointsByErpId: vi.fn() };
+        const points = { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() };
         const handler = new UserStreamHandler(
             { linkAndEnrich: vi.fn().mockResolvedValue({ id: 1 }) } as never,
             points as never,
@@ -130,7 +131,7 @@ describe('UserStreamHandler', () => {
     });
 
     it('stores no channels when no administrator is linked', async () => {
-        const points = { replaceErpPointsByErpId: vi.fn() };
+        const points = { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() };
         const erpUsers = { setContactInfos: vi.fn() };
         const handler = new UserStreamHandler(
             { linkAndEnrich: vi.fn().mockResolvedValue(null) } as never,
