@@ -154,4 +154,21 @@ describe('customer preset on the visible orders list (real Postgres)', () => {
         scope = { kind: 'own', administratorId: 'm-1' } as AccessScope;
         expect(await codes(customerIds.other)).toEqual([]);
     });
+
+    it('answers take: 0 with the scoped total and no rows', async () => {
+        scope = { kind: 'all' } as AccessScope;
+        const all = await visibility.findVisible(ctx, { take: 0 });
+        expect(all).toEqual({ items: [], totalItems: 2 });
+
+        scope = { kind: 'own', administratorId: 'm-1' } as AccessScope;
+        const own = await visibility.findVisible(ctx, { take: 0 });
+        expect(own).toEqual({ items: [], totalItems: 1 });
+        const forCustomer = await visibility.findVisible(
+            ctx,
+            { take: 0 },
+            undefined,
+            String(customerIds.other),
+        );
+        expect(forCustomer).toEqual({ items: [], totalItems: 0 });
+    });
 });
