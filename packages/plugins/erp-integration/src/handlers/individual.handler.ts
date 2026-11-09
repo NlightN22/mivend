@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ContactPointService, ErpContactPersonService } from '@mivend/plugin-counterparty';
 
+import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { activityFlags, optionalText } from './erp-mirror-upsert';
 import { applyErpPerson, personName, personOutcome } from './erp-person';

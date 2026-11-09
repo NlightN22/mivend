@@ -156,9 +156,6 @@ export class ContactPoints1791573000000 implements MigrationInterface {
         await queryRunner.query(
             `CREATE TABLE "integration_reapply_cursor" ("stream" character varying NOT NULL, "lastId" bigint NOT NULL DEFAULT '0', "done" boolean NOT NULL DEFAULT false, "applied" integer NOT NULL DEFAULT '0', "skipped" integer NOT NULL DEFAULT '0', "lockedUntil" TIMESTAMP WITH TIME ZONE, "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c5202855e567be677ca5b4d7132" PRIMARY KEY ("stream"))`,
         );
-        await queryRunner.query(
-            `CREATE INDEX "integration_inbox_event_reapply" ON "integration_inbox_event" ("stream", "id") WHERE "status" = 'processed'`,
-        );
         await queryRunner.query(`ALTER TABLE "erp_user" ADD "contactInfos" text`);
         await queryRunner.query(
             `CREATE FUNCTION contact_point_orphan_cleanup() RETURNS trigger AS $$ BEGIN DELETE FROM contact_point cp WHERE cp.id = OLD."contactPointId" AND NOT EXISTS (SELECT 1 FROM "counterparty_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "trading_point_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "contact_person_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "administrator_contact_point" WHERE "contactPointId" = cp.id) AND NOT EXISTS (SELECT 1 FROM "organization_contact_point" WHERE "contactPointId" = cp.id); RETURN NULL; END $$ LANGUAGE plpgsql`,
@@ -181,7 +178,6 @@ export class ContactPoints1791573000000 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX "integration_inbox_event_reapply"`);
         await queryRunner.query(`DROP TABLE "integration_reapply_cursor"`);
         await queryRunner.query(`ALTER TABLE "erp_user" DROP COLUMN "contactInfos"`);
         await queryRunner.query(`DROP TABLE "counterparty_contact_person"`);

@@ -26,7 +26,6 @@ beforeAll(async () => {
         CREATE TABLE counterparty (id SERIAL PRIMARY KEY);
         CREATE TABLE administrator (id SERIAL PRIMARY KEY);
         CREATE TABLE erp_user (id SERIAL PRIMARY KEY);
-        CREATE TABLE integration_inbox_event (id BIGSERIAL PRIMARY KEY, stream varchar, status varchar);
         CREATE TABLE organization_requisites (id SERIAL PRIMARY KEY);
         CREATE TABLE trading_point (id SERIAL PRIMARY KEY);
         CREATE TABLE contact_person (

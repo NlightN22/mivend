@@ -155,6 +155,12 @@ export class ContactReapplyService {
                 skipped: cursor.skipped + skipped,
             },
         );
+        if (drained) {
+            Logger.info(
+                `Contact reapply ${stream} finished: ${cursor.applied + applied} applied, ${cursor.skipped + skipped} skipped (owner missing or not synced; never retried)`,
+                loggerCtx,
+            );
+        }
         const seconds = Math.max((Date.now() - started) / 1000, 0.001);
         Logger.info(
             `Contact reapply ${stream}: ${applied} applied, ${skipped} skipped in this slice (${(rows.length / seconds).toFixed(0)} rows/s)${drained ? ', stream done' : ''}`,
