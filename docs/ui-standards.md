@@ -89,6 +89,9 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   keeps the previous rows under the overlay on later reloads (phone: skeleton cards each time). It sets
   `aria-busy` and a visually hidden "Loading" status; skeleton cells are `aria-hidden`. A list never builds
   its own spinner or skeleton. Animation stops under `prefers-reduced-motion` (`MvSkeleton`).
+- **Filter typing follows the value set.** A column with a bounded value set (types, statuses, organizations,
+  channels, branches, price types) filters as a `select` with `filterOptions` loaded from data (never hardcoded);
+  only unbounded columns (customer, number, free text) use text operators. Check every new list against this.
 - **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
   request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.

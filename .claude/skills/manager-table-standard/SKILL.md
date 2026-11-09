@@ -62,6 +62,11 @@ tab or a top-level `*Page.vue`.
    in whatever order makes sense for that table. `mobile: { primary: true }` still goes on the
    number column only (point 5 below) — the date column has no special mobile hint by default.
 
+2b. **Filter typing follows the column's value set.** A bounded value set (types, statuses, organizations,
+   channels, branches, price types) is a `filterType: 'select'` (operators `eq`/`notEq`) with `filterOptions` loaded
+   from data, never hardcoded; only unbounded columns (customer, number, free text) use text operators. Check every
+   column of a new list against this.
+
 2a. **Every list filters through the shared Filter builder, never per-column header funnels.**
    The search box (point 1) is the main text filter; every other filterable column declares
    `filterType` (and `filterOptions` for selects; `filterField`, `filterScale`, `filterOperators` when the
