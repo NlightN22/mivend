@@ -36,6 +36,8 @@ Everything is in **English** — code, comments, variable names, configs, docs, 
 
 The only exception: individual files explicitly requested to be in Russian by the developer.
 
+Temporary exception: the manager portal sign-in, two-factor, password and security screens have Russian text; the rest of the manager is English until the manager gets vue-i18n (ru/en) with the #320 redesign.
+
 ---
 
 ## Monorepo structure — principles, not a tree

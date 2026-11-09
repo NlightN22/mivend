@@ -150,7 +150,7 @@ test.describe('Settings > Security page — UI', () => {
             await page.goto('/login');
             await page.locator('input').first().fill(OPERATOR.username);
             await page.locator('input[type="password"]').fill(OPERATOR.password);
-            await page.getByRole('button', { name: 'Sign in' }).click();
+            await page.getByRole('button', { name: 'Войти' }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/settings/security');
@@ -159,7 +159,7 @@ test.describe('Settings > Security page — UI', () => {
             const otherRow = page
                 .locator('.security-page__row')
                 .filter({ hasNot: page.locator('.security-page__current') });
-            await otherRow.getByRole('button', { name: 'End session' }).click();
+            await otherRow.getByRole('button', { name: 'Завершить сеанс' }).click();
             await expect(page.locator('.security-page__row')).toHaveCount(1, { timeout: 15000 });
 
             expect(await isSessionAlive(cookieB)).toBe(false);
@@ -176,7 +176,7 @@ test.describe('Settings > Security page — UI', () => {
         page,
     }) => {
         await page.goto('/settings/security');
-        await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible({
+        await expect(page.getByRole('heading', { name: 'Безопасность' })).toBeVisible({
             timeout: 15000,
         });
         await expect(page.locator('.settings-side-nav a.router-link-active')).toHaveText(
@@ -193,11 +193,11 @@ test.describe('Settings > Security page — UI', () => {
             await page.goto('/login');
             await page.locator('input').first().fill(OPERATOR.username);
             await page.locator('input[type="password"]').fill(OPERATOR.password);
-            await page.getByRole('button', { name: 'Sign in' }).click();
+            await page.getByRole('button', { name: 'Войти' }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/settings/security');
-            await page.getByRole('button', { name: 'Sign out everywhere' }).click();
+            await page.getByRole('button', { name: 'Выйти везде' }).click();
             await page.waitForURL(url => url.pathname.includes('/login'));
             expect(page.url()).toContain('/login');
         } finally {

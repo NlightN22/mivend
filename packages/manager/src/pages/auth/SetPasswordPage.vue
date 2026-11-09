@@ -150,8 +150,8 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                         >
 
                         <p class="set-password-card__rules">
-                            Не короче {{ MIN_PASSWORD_LENGTH }} символов. Пароль должен соответствовать
-                            политике безопасности портала менеджера.
+                            Не короче {{ MIN_PASSWORD_LENGTH }} символов. Пароль должен
+                            соответствовать политике безопасности портала менеджера.
                         </p>
 
                         <MvButton
@@ -173,9 +173,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                 >
                     <div class="set-password-state__icon">✓</div>
                     <h3>Пароль сохранён</h3>
-                    <p>
-                        Пароль успешно задан. Теперь вы можете войти в портал менеджера.
-                    </p>
+                    <p>Пароль успешно задан. Теперь вы можете войти в портал менеджера.</p>
 
                     <div
                         v-if="identity"
@@ -203,7 +201,8 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     <div class="set-password-state__icon">!</div>
                     <h3>Ссылка недействительна или устарела</h3>
                     <p>
-                        Эту ссылку для установки пароля больше нельзя использовать. Запросите новое приглашение у администратора.
+                        Эту ссылку для установки пароля больше нельзя использовать. Запросите новое
+                        приглашение у администратора.
                     </p>
 
                     <div

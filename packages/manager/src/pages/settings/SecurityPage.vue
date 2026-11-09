@@ -131,7 +131,12 @@ async function handleSignOutEverywhere(): Promise<void> {
             </MvNotice>
             <form class="security-page__password-form" @submit.prevent="handleChangePassword">
                 <MvFormField label="Новый пароль" required>
-                    <MvPasswordInput v-model="newPassword" placeholder="Не менее 8 символов" show-label="Показать" hide-label="Скрыть" />
+                    <MvPasswordInput
+                        v-model="newPassword"
+                        placeholder="Не менее 8 символов"
+                        show-label="Показать"
+                        hide-label="Скрыть"
+                    />
                 </MvFormField>
                 <MvFormField label="Повторите новый пароль" required>
                     <MvPasswordInput
@@ -154,9 +159,7 @@ async function handleSignOutEverywhere(): Promise<void> {
         <MvPanel v-if="!loading" title="Выход">
             <div class="security-page__danger">
                 <p>Выйти со всех устройств, включая это.</p>
-                <MvButton variant="danger" @click="handleSignOutEverywhere"
-                    >Выйти везде</MvButton
-                >
+                <MvButton variant="danger" @click="handleSignOutEverywhere">Выйти везде</MvButton>
             </div>
         </MvPanel>
     </div>
