@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     ContactPoint,
@@ -54,6 +62,9 @@ class TestLink {
     @PrimaryGeneratedColumn('increment') id!: number;
     @Column({ type: 'int' }) counterpartyId!: number;
     @Column({ type: 'int' }) contactPointId!: number;
+    @ManyToOne(() => TestPoint)
+    @JoinColumn({ name: 'contactPointId' })
+    contactPoint!: TestPoint;
     @Column({ type: 'boolean' }) isPrimary!: boolean;
 }
 @Entity('contact_person')
@@ -104,11 +115,14 @@ beforeAll(async () => {
     await setup.query(`DROP INDEX integration_inbox_event_reapply`);
     await setup.query(`
         CREATE TABLE counterparty (id SERIAL PRIMARY KEY, "erpId" varchar);
+        CREATE UNIQUE INDEX counterparty_erp_id ON counterparty ("erpId");
         CREATE TABLE administrator (id SERIAL PRIMARY KEY);
         CREATE TABLE trading_point (id SERIAL PRIMARY KEY);
         CREATE TABLE organization_requisites (id SERIAL PRIMARY KEY);
         CREATE TABLE erp_user (id SERIAL PRIMARY KEY);
         CREATE TABLE counterparty_contact_erp (id SERIAL PRIMARY KEY, "erpId" varchar NOT NULL, "counterpartyId" varchar NOT NULL, "isDeleted" boolean NOT NULL DEFAULT false);
+        CREATE UNIQUE INDEX counterparty_contact_erp_erp_id ON counterparty_contact_erp ("erpId");
+        CREATE INDEX counterparty_contact_erp_counterparty ON counterparty_contact_erp ("counterpartyId");
         CREATE TABLE contact_person (
             "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
             id SERIAL PRIMARY KEY, name varchar NOT NULL, phone varchar, email varchar,
@@ -238,6 +252,12 @@ describe('contact path throughput (real Postgres, migrated schema)', () => {
         console.log(
             `contact path ${new Date().toISOString().slice(0, 10)}: ${ROWS} counterparties x ${CHANNELS} channels, first apply ${first.toFixed(0)} rows/s, replay ${replay.toFixed(0)} rows/s`,
         );
+        // The savepoint guard turns a contact step error into this reason instead of failing the row.
+        expect(
+            await dataSource.query(
+                `SELECT outcome_reason FROM integration_inbox_event WHERE outcome_reason IS NOT NULL LIMIT 3`,
+            ),
+        ).toEqual([]);
         expect(afterFirst).toEqual([{ n: ROWS * CHANNELS }]);
         expect(await dataSource.query(`SELECT count(*)::int AS n FROM contact_point`)).toEqual([
             { n: ROWS * CHANNELS },
