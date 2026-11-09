@@ -361,6 +361,31 @@ just one that rarely loses.
 **Exceptions**: none — `sleep` for eventual consistency is forbidden outright (see
 AGENTS.md/testing-strategy "Worker testing").
 
+## Count-only requests must not hydrate
+
+**Applies to**: any GraphQL list that accepts a client `take` (counts, KPI chips, `take: 0`).
+
+**Risk**: TypeORM and Vendure read `take: 0` as "no limit", so a bare `getManyAndCount()` loads every
+row (with its joins) for what the client meant as a count. Several aliased count requests on one page
+multiplied it into a CPU outage.
+
+**Minimum scenarios**: `take: 0` returns empty items and the same `totalItems` as `take > 0`; the
+statements issued are COUNT queries only (no row-hydrating SELECT); a negative take does not fail
+in SQL; `take > 0` is unchanged.
+
+**Preferred level**: unit for the helper (fake query builder), integration on real Postgres for the
+SQL actually issued; one integration case per list only when its scope clauses change the count.
+
+**Required assertions**: no row-hydrating SELECT is logged for the count-only call.
+
+**Common false positive**: asserting only `items: []`, which a hydrate-then-discard path also passes.
+
+**mivend example**: `getPageAndCount()` in `packages/shared/src/paginate-query.ts`. Direct
+`getManyAndCount()`/`findAndCount()` in plugin and server code is an ESLint error
+(`pagination/no-unguarded-page-count`); use the helper or disable with a reason.
+
+**Exceptions**: a bounded internal scan never paged by a client, with the reason in the disable comment.
+
 ## Authorization and visibility
 
 **Applies to**: any query or mutation gated by role/scope.

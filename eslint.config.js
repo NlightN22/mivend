@@ -12,6 +12,7 @@ import maxCommentLines from './eslint-rules/max-comment-lines.js';
 import noSwallowedHandlerError from './eslint-rules/no-swallowed-handler-error.js';
 import noRawAdvisoryLock from './eslint-rules/no-raw-advisory-lock.js';
 import noRawConnection from './eslint-rules/no-raw-connection.js';
+import noUnguardedPageCount from './eslint-rules/no-unguarded-page-count.js';
 
 const pgPaths = ['pg', 'pg-pool'].map(name => ({
     name,
@@ -286,6 +287,13 @@ export default [
         languageOptions: { parser: tsParser },
         plugins: { db: { rules: { 'no-raw-connection': noRawConnection } } },
         rules: { 'db/no-raw-connection': 'error' },
+    },
+    {
+        files: ['packages/plugins/*/src/**/*.ts', 'apps/server/src/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**', '**/migrations/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { pagination: { rules: { 'no-unguarded-page-count': noUnguardedPageCount } } },
+        rules: { 'pagination/no-unguarded-page-count': 'error' },
     },
     // #216: storefront .vue files are parsed only for the i18n guard.
     {

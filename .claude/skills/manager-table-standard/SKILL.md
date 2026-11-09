@@ -110,6 +110,7 @@ request with an alias per chip — see `api/proforma-invoices.ts`'s `fetchProfor
 whatever page happens to be loaded (that's the same "fetch everything, compute in JS"
 antipattern the `backend-plugin-rules` skill's Pagination rule forbids, just applied to a count instead of a
 list).
+A `take: 0` count is only lean if the backend list goes through `getPageAndCount()` (`shared`); a bare `getManyAndCount()` hydrates every row for it.
 **If the status enum has more than ~5-6 values, curate the chip set instead of one chip per
 enum value\** — a chip row isn't a replacement for the column's own status filter dropdown,
 it's a handful of the most operationally relevant shortcuts. `CustomerPaymentsTab.vue` is the
