@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // A registry entry (a discount request through its life) gets a uuid and the human number its grant keeps.
-export class DiscountRegistryIdentity1791566000000 implements MigrationInterface {
-    name = 'DiscountRegistryIdentity1791566000000';
+export class DiscountRegistryIdentity1791567000000 implements MigrationInterface {
+    name = 'DiscountRegistryIdentity1791567000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         const code = process.env.INSTANCE_NUMBER_CODE;
