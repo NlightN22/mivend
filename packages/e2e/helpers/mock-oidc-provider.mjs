@@ -17,6 +17,8 @@ const { publicKey, privateKey } = await generateKeyPair('RS256');
 const jwk = { ...(await exportJWK(publicKey)), kid: 'mock-1', alg: 'RS256', use: 'sig' };
 const codes = new Map();
 let identity = null;
+const endedSessions = [];
+let providerSession = false;
 
 const json = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json' });
@@ -59,6 +61,7 @@ createServer(async (req, res) => {
             authorization_endpoint: `${issuer}/auth`,
             token_endpoint: `${issuer}/token`,
             jwks_uri: `${issuer}/certs`,
+            end_session_endpoint: `${issuer}/logout`,
         });
     }
     if (url.pathname === '/realms/staff/certs') return json(res, 200, { keys: [jwk] });
@@ -66,6 +69,7 @@ createServer(async (req, res) => {
     if (url.pathname === '/realms/staff/auth') {
         const query = url.searchParams;
         if (!identity || query.get('client_id') !== clientId) return json(res, 400, {});
+        providerSession = true;
         const code = randomUUID();
         codes.set(code, {
             identity,
@@ -78,6 +82,19 @@ createServer(async (req, res) => {
         res.writeHead(302, { location: target.toString() });
         return res.end();
     }
+    if (url.pathname === '/realms/staff/logout') {
+        const query = url.searchParams;
+        providerSession = false;
+        endedSessions.push({
+            idTokenHint: query.get('id_token_hint'),
+            clientId: query.get('client_id'),
+        });
+        const target = query.get('post_logout_redirect_uri');
+        if (!target) return json(res, 200, { ok: true });
+        res.writeHead(302, { location: target });
+        return res.end();
+    }
+    if (url.pathname === '/_state') return json(res, 200, { providerSession, endedSessions });
     if (url.pathname === '/_control' && req.method === 'POST') {
         identity = JSON.parse(await readBody(req));
         return json(res, 200, { ok: true });

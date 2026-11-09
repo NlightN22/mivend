@@ -17,10 +17,10 @@ import {
 } from '@mivend/ui-kit';
 import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
 import { rememberOidcState } from '../../composables/oidcBinding';
-import { fetchAuthorizationUrl, fetchOidcEnabled } from '../../api/oidc';
+import { fetchAuthorizationUrl, fetchOidcSignIn } from '../../api/oidc';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
-import { OIDC_LABELS } from './oidcLabels';
+import { OIDC_LABELS, oidcButtonLabel } from './oidcLabels';
 import { RECOVERED_NOTICE, TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
 
 const siteName = readSiteName();
@@ -56,14 +56,15 @@ watch(step, async value => {
     );
 });
 
-const oidcEnabled = ref(false);
+const oidcInfo = ref<{ host: string; iconUrl: string } | null>(null);
+const oidcIconFailed = ref(false);
 const oidcError = ref(false);
 
 onMounted(async () => {
     try {
-        oidcEnabled.value = await fetchOidcEnabled();
+        oidcInfo.value = await fetchOidcSignIn();
     } catch {
-        oidcEnabled.value = false;
+        oidcInfo.value = null;
     }
 });
 
@@ -160,17 +161,30 @@ function handleSubmit(): Promise<void> {
                     <MvNotice v-if="oidcError" variant="error" class="login-card__error">
                         {{ OIDC_LABELS.startFailed }}
                     </MvNotice>
-                    <MvButton
-                        v-if="oidcEnabled"
-                        variant="secondary"
-                        size="lg"
-                        native-type="button"
-                        class="login-form__submit"
-                        data-testid="oidc-sign-in"
-                        @click="startOidc"
-                    >
-                        {{ OIDC_LABELS.button }}
-                    </MvButton>
+                    <template v-if="oidcInfo">
+                        <div class="login-divider" role="separator">
+                            <span>{{ OIDC_LABELS.divider }}</span>
+                        </div>
+                        <MvButton
+                            variant="secondary"
+                            size="lg"
+                            native-type="button"
+                            class="login-oidc"
+                            data-testid="oidc-sign-in"
+                            @click="startOidc"
+                        >
+                            <img
+                                v-if="!oidcIconFailed"
+                                class="login-oidc__icon"
+                                :src="oidcInfo.iconUrl"
+                                alt=""
+                                width="20"
+                                height="20"
+                                @error="oidcIconFailed = true"
+                            />
+                            {{ oidcButtonLabel(oidcInfo.host) }}
+                        </MvButton>
+                    </template>
                 </template>
             </div>
         </div>
@@ -224,6 +238,33 @@ function handleSubmit(): Promise<void> {
     font-weight: 600;
     color: #4b5563;
     cursor: pointer;
+}
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 8px;
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--el-border-color);
+}
+
+.login-oidc {
+    width: 100%;
+    gap: 8px;
+}
+
+.login-oidc__icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
 }
 
 .login-form__submit {

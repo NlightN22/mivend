@@ -9,6 +9,8 @@ import { createOidcCleanupTask } from './oidc-cleanup.scheduled-task';
 import { OidcIdentityService } from './oidc-identity.service';
 import { OidcProviderService } from './oidc-provider.service';
 import { OidcRequestStoreService } from './oidc-request-store.service';
+import { OidcSessionTokenStoreService } from './oidc-session-token-store.service';
+import { OidcSessionToken } from './entities/oidc-session-token.entity';
 import { OidcSignInService } from './oidc-sign-in.service';
 import { OIDC_PLUGIN_OPTIONS } from './oidc.types';
 import type { OidcPluginOptions } from './oidc.types';
@@ -16,11 +18,12 @@ import { OidcAuthenticationStrategy } from './oidc.strategy';
 
 @VendurePlugin({
     imports: [PluginCommonModule, SignInProtectionPlugin],
-    entities: [OidcAuthRequest],
+    entities: [OidcAuthRequest, OidcSessionToken],
     providers: [
         OidcIdentityService,
         OidcProviderService,
         OidcRequestStoreService,
+        OidcSessionTokenStoreService,
         OidcSignInService,
         {
             provide: OIDC_PLUGIN_OPTIONS,

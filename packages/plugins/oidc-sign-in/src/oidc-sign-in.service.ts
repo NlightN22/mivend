@@ -13,6 +13,7 @@ import { randomToken } from './oidc-crypto';
 import { OidcIdentityService } from './oidc-identity.service';
 import { OidcProviderService } from './oidc-provider.service';
 import { OidcRequestStoreService } from './oidc-request-store.service';
+import { OidcSessionTokenStoreService } from './oidc-session-token-store.service';
 import { loggerCtx } from './oidc.types';
 import type { OidcClaims } from './oidc.types';
 
@@ -22,6 +23,7 @@ export class OidcSignInService {
     constructor(
         private provider: OidcProviderService,
         private requests: OidcRequestStoreService,
+        private tokens: OidcSessionTokenStoreService,
         private identity: OidcIdentityService,
         private throttle: SignInThrottleService,
         private users: UserService,
@@ -66,6 +68,7 @@ export class OidcSignInService {
             return false;
         }
         await this.throttle.reset(ctx, 'oidc', claims.sub);
+        await this.tokens.save(ctx, Number(user.id), claims.idToken);
         await this.requests.markVerified(ctx, requestId, String(user.id));
         return true;
     }
@@ -80,5 +83,13 @@ export class OidcSignInService {
 
     private mayUseApi(user: User): boolean {
         return !this.configService.authOptions.requireVerification || user.verified;
+    }
+
+    // The caller's own sign-out: the provider logout URL for a provider-opened session, otherwise null.
+    async providerSignOutUrl(ctx: RequestContext): Promise<string | null> {
+        const sessionToken = ctx.session?.token;
+        if (!ctx.activeUserId || !sessionToken) return null;
+        const taken = await this.tokens.takeForSession(ctx, Number(ctx.activeUserId), sessionToken);
+        return taken ? this.provider.endSessionUrl(taken.idToken) : null;
     }
 }

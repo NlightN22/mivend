@@ -23,7 +23,10 @@ export class OidcIdentityService {
     ) {}
 
     // The lock covers read and link together, so two first sign-ins cannot link one sub to two accounts.
-    resolve(ctx: RequestContext, claims: OidcClaims): Promise<string | null> {
+    resolve(
+        ctx: RequestContext,
+        claims: Pick<OidcClaims, 'sub' | 'email'>,
+    ): Promise<string | null> {
         return withAggregateLock(
             this.connection,
             ctx,
@@ -58,7 +61,10 @@ export class OidcIdentityService {
         return rows[0] ?? null;
     }
 
-    private async linkByEmail(ctx: RequestContext, claims: OidcClaims): Promise<string | null> {
+    private async linkByEmail(
+        ctx: RequestContext,
+        claims: Pick<OidcClaims, 'sub' | 'email'>,
+    ): Promise<string | null> {
         if (!claims.email) return null;
         const matches = await ctxQuery<AdminRow[]>(
             this.connection,

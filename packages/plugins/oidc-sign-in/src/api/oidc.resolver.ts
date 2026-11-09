@@ -13,8 +13,8 @@ export class OidcResolver {
 
     @Query()
     @Allow(Permission.Public)
-    oidcSignInEnabled(): boolean {
-        return this.provider.enabled;
+    oidcSignIn(): { host: string; iconUrl: string } | null {
+        return this.provider.publicInfo;
     }
 
     @Mutation()
@@ -22,6 +22,12 @@ export class OidcResolver {
     async startOidcSignIn(@Ctx() ctx: RequestContext): Promise<{ authorizationUrl: string }> {
         if (!this.provider.enabled) throw new Error('OIDC sign-in is not configured');
         return { authorizationUrl: await this.signIn.start(ctx) };
+    }
+
+    @Mutation()
+    @Allow(Permission.Authenticated)
+    prepareOidcSignOut(@Ctx() ctx: RequestContext): Promise<string | null> {
+        return this.signIn.providerSignOutUrl(ctx);
     }
 
     @Mutation()

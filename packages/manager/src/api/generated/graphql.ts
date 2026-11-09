@@ -13809,9 +13809,9 @@ export type StartTwoFactorSignInMutationVariables = Exact<{
     password: Scalars['String']['input'];
 }>;
 
-export type OidcSignInEnabledQueryVariables = Exact<{ [key: string]: never }>;
+export type OidcSignInQueryVariables = Exact<{ [key: string]: never }>;
 
-export type OidcSignInEnabledQuery = { oidcSignInEnabled: boolean };
+export type OidcSignInQuery = { oidcSignIn: { host: string; iconUrl: string } | null };
 
 export type StartOidcSignInMutationVariables = Exact<{ [key: string]: never }>;
 
@@ -13823,6 +13823,10 @@ export type CompleteOidcSignInMutationVariables = Exact<{
 }>;
 
 export type CompleteOidcSignInMutation = { completeOidcSignIn: boolean };
+
+export type PrepareOidcSignOutMutationVariables = Exact<{ [key: string]: never }>;
+
+export type PrepareOidcSignOutMutation = { prepareOidcSignOut: string | null };
 
 export type AuthenticateOidcMutationVariables = Exact<{
     state: Scalars['String']['input'];
@@ -18081,11 +18085,14 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     UnsortedAdministratorsQueryVariables
 >;
 
-export const OidcSignInEnabledDocument = new TypedDocumentString(`
-    query OidcSignInEnabled {
-  oidcSignInEnabled
+export const OidcSignInDocument = new TypedDocumentString(`
+    query OidcSignIn {
+  oidcSignIn {
+    host
+    iconUrl
+  }
 }
-    `) as unknown as TypedDocumentString<OidcSignInEnabledQuery, OidcSignInEnabledQueryVariables>;
+    `) as unknown as TypedDocumentString<OidcSignInQuery, OidcSignInQueryVariables>;
 export const StartOidcSignInDocument = new TypedDocumentString(`
     mutation StartOidcSignIn {
   startOidcSignIn {
@@ -18093,6 +18100,14 @@ export const StartOidcSignInDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<StartOidcSignInMutation, StartOidcSignInMutationVariables>;
+export const PrepareOidcSignOutDocument = new TypedDocumentString(`
+    mutation PrepareOidcSignOut {
+  prepareOidcSignOut
+}
+    `) as unknown as TypedDocumentString<
+    PrepareOidcSignOutMutation,
+    PrepareOidcSignOutMutationVariables
+>;
 export const CompleteOidcSignInDocument = new TypedDocumentString(`
     mutation CompleteOidcSignIn($code: String!, $state: String!) {
   completeOidcSignIn(code: $code, state: $state)

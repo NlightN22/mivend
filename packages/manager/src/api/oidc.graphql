@@ -1,5 +1,8 @@
-query OidcSignInEnabled {
-    oidcSignInEnabled
+query OidcSignIn {
+    oidcSignIn {
+        host
+        iconUrl
+    }
 }
 
 mutation StartOidcSignIn {
@@ -19,4 +22,8 @@ mutation AuthenticateOidc($state: String!) {
             authenticationError
         }
     }
+}
+
+mutation PrepareOidcSignOut {
+    prepareOidcSignOut
 }

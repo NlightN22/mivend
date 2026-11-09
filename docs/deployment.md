@@ -119,17 +119,21 @@ superadmin are not affected: the superadmin is always local. The provider's own 
 | `OIDC_CLIENT_SECRET` | Client secret (client authentication by HTTP basic). |
 | `OIDC_REDIRECT_URI` | `<MANAGER_PUBLIC_URL>/oidc/callback`, registered at the provider as the only valid redirect. |
 
-All four unset disables the feature and the manager login page shows no button. A partial set fails boot.
+All four unset disables the feature and the manager login page shows no button. The button reads "Войти с помощью <issuer host>" (below an "или" divider) and shows `<issuer origin>/favicon.ico` as a small decorative icon, hidden if it fails to load; nothing to configure for either. A partial set fails boot.
 
 Client setup at the provider: a confidential client with the standard flow (authorization code) only, PKCE method `S256`
-required, the redirect URI above, scopes `openid` and `email`, and an `email` claim in the ID token. Users must not be able
+required, the redirect URI above, scopes `openid` and `email`, an `email` claim in the ID token, and the manager portal login URL
+(`<MANAGER_PUBLIC_URL>/login`) among the valid post logout redirect URIs. Users must not be able
 to edit their e-mail at the provider, because the first sign-in links by it (`docs/access-control.md`, "Sign-in through an
 external provider"). Signing algorithms accepted: RS256/384/512, PS256, ES256/384, EdDSA.
 
 Only the `sub` is stored, without the issuer: changing `OIDC_ISSUER_URL` to another provider later needs every `oidc` link removed first (see below), or a `sub` from the new provider could match an old link.
 
 Operational notes: the server needs outbound HTTPS to the provider (discovery, token endpoint, key set; 10 s timeout each).
-An unreachable provider only breaks this button; local password sign-in keeps working. Expired sign-in requests are deleted
+Signing out of a session opened this way also ends the provider session (RP-initiated logout through the discovery
+document's `end_session_endpoint`, with `id_token_hint` and `post_logout_redirect_uri` = `<origin of OIDC_REDIRECT_URI>/login`),
+so a shared machine does not sign the next person in without a password; a provider without that endpoint, or unreachable,
+only skips the provider step, the local sign-out always happens. An unreachable provider only breaks this button; local password sign-in keeps working. Expired sign-in requests are deleted
 by a scheduled task (an hour after expiry); at most 500 unexpired requests may be pending (`startOidcSignIn` is public), beyond which starting a sign-in is refused. To move an administrator to another provider account, remove their `authentication_method` row with
 strategy `oidc`; the next sign-in links again by e-mail.
 

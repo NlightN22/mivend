@@ -22,6 +22,7 @@ export interface OidcPluginOptions {
 export interface OidcClaims {
     sub: string;
     email: string | null;
+    idToken: string;
 }
 
 export type RequestStatus = 'PENDING' | 'EXCHANGING' | 'VERIFIED' | 'USED';

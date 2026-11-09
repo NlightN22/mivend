@@ -11,6 +11,7 @@ interface Discovery {
     authorization_endpoint: string;
     token_endpoint: string;
     jwks_uri: string;
+    end_session_endpoint?: string;
 }
 
 const DISCOVERY_TTL_MS = 60 * 60_000;
@@ -26,6 +27,13 @@ export class OidcProviderService {
 
     get enabled(): boolean {
         return this.options !== null;
+    }
+
+    // Public login-page data derived from the issuer; carries no secret.
+    get publicInfo(): { host: string; iconUrl: string } | null {
+        if (!this.options) return null;
+        const issuer = new URL(this.options.issuer);
+        return { host: issuer.hostname, iconUrl: `${issuer.origin}/favicon.ico` };
     }
 
     private get config(): OidcPluginOptions {
@@ -65,6 +73,26 @@ export class OidcProviderService {
             code_challenge_method: 'S256',
         }).toString();
         return url.toString();
+    }
+
+    get postLogoutRedirectUri(): string {
+        return `${new URL(this.config.redirectUri).origin}/login`;
+    }
+
+    // Null when the provider offers no end-session endpoint or cannot be reached: the caller signs out locally only.
+    async endSessionUrl(idToken: string): Promise<string | null> {
+        try {
+            const { end_session_endpoint } = await this.discover();
+            if (!end_session_endpoint) return null;
+            const url = new URL(end_session_endpoint);
+            url.searchParams.set('id_token_hint', idToken);
+            url.searchParams.set('client_id', this.config.clientId);
+            url.searchParams.set('post_logout_redirect_uri', this.postLogoutRedirectUri);
+            return url.toString();
+        } catch (error) {
+            Logger.warn(`OIDC provider sign-out skipped: ${(error as Error).message}`, loggerCtx);
+            return null;
+        }
     }
 
     async exchange(code: string, verifier: string, nonce: string): Promise<OidcClaims | null> {
@@ -131,6 +159,6 @@ export class OidcProviderService {
             throw new Error('e-mail not verified');
         if (typeof payload.sub !== 'string' || payload.sub === '') throw new Error('no sub');
         const email = typeof payload.email === 'string' ? payload.email.trim() : '';
-        return { sub: payload.sub, email: email === '' ? null : email };
+        return { sub: payload.sub, email: email === '' ? null : email, idToken };
     }
 }

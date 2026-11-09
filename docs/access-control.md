@@ -941,3 +941,13 @@ only to holders of it.
 Customers (Shop API, guests included) never see a product whose category Collection is private;
 staff on the Admin API see all of them. A hidden category hides its whole subtree: no `visible` override can un-hide a category that has a hidden ancestor. Design, entry points and limits: `docs/category-hierarchy.md`
 "Products of hidden categories". A line added before its category was hidden cannot be raised or checked out by the customer (removal stays allowed). This cart/checkout blocking applies to the shop API only: Admin API orders and staff are never blocked. Tests: `apps/server/src/__tests__/access/category/category-products.test.ts`, `category-cart-lines.test.ts`.
+- **Sign-out.** A session opened through the provider is marked by its authentication strategy (`oidc`). The newest ID
+  token of the administrator is kept in `oidc_session_token` (one row per administrator, never returned by any API except as
+  the `id_token_hint` of that user's own sign-out URL, never logged). `prepareOidcSignOut` (authenticated) returns the
+  provider end-session URL (`id_token_hint`, `client_id`, `post_logout_redirect_uri` = `<origin of OIDC_REDIRECT_URI>/login`)
+  for such a session and drops the token when no other live provider session of the administrator remains; the portal then
+  ends our session as for any sign-out and navigates to that URL. A local session gets `null` and signs out as before. If
+  discovery fails or the provider has no end-session endpoint, the answer is `null` and a warning is logged: local sign-out
+  is never blocked. Sessions ended by other routes (idle, forced, evicted, expired) get no browser redirect; the hourly
+  cleanup removes tokens that no live provider session needs. Accepted limit: with several provider sessions of one
+  administrator the newest token is the hint for all of them.

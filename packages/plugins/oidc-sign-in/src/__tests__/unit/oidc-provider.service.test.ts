@@ -17,6 +17,7 @@ let privateKey: KeyLike;
 let jwk: object;
 let mintToken: () => Promise<string> = async () => '';
 let discoveryIssuer: string | null = null;
+let endSessionEndpoint: string | null = null;
 let tokenRequest: { body: string; authorization: string | undefined } | null = null;
 
 const server = createServer((req, res) => {
@@ -30,6 +31,7 @@ const server = createServer((req, res) => {
             authorization_endpoint: `${ISSUER}/auth`,
             token_endpoint: `${ISSUER}/token`,
             jwks_uri: `${ISSUER}/certs`,
+            ...(endSessionEndpoint ? { end_session_endpoint: endSessionEndpoint } : {}),
         });
     }
     if (req.url?.endsWith('/certs')) return send({ keys: [jwk] });
@@ -52,6 +54,7 @@ beforeAll(async () => {
 afterAll(() => new Promise<void>(done => server.close(() => done())));
 afterEach(() => {
     discoveryIssuer = null;
+    endSessionEndpoint = null;
     tokenRequest = null;
 });
 
@@ -88,7 +91,8 @@ describe('OidcProviderService', () => {
     it('accepts a valid token and sends the verifier with basic client auth', async () => {
         stubProvider(() => token({ sub: 'u1', email: ' A@Example.com ', nonce: 'n1' }));
         const claims = await new OidcProviderService(OPTIONS).exchange('code', 'ver', 'n1');
-        expect(claims).toEqual({ sub: 'u1', email: 'A@Example.com' });
+        expect(claims).toMatchObject({ sub: 'u1', email: 'A@Example.com' });
+        expect(claims?.idToken.split('.')).toHaveLength(3);
         expect(tokenRequest?.body).toContain('code_verifier=ver');
         expect(tokenRequest?.authorization).toMatch(/^Basic /);
     });
@@ -135,9 +139,43 @@ describe('OidcProviderService', () => {
 
     it('gives a null email when the claim is absent', async () => {
         stubProvider(() => token({ sub: 'u1', nonce: 'n1' }));
-        expect(await new OidcProviderService(OPTIONS).exchange('c', 'v', 'n1')).toEqual({
+        expect(await new OidcProviderService(OPTIONS).exchange('c', 'v', 'n1')).toMatchObject({
             sub: 'u1',
             email: null,
         });
+    });
+
+    it('builds the end-session URL with the hint, client and the manager login as return page', async () => {
+        endSessionEndpoint = `${ISSUER}/logout`;
+        const url = new URL(
+            (await new OidcProviderService(OPTIONS).endSessionUrl('the-id-token'))!,
+        );
+        expect(url.pathname).toBe('/logout');
+        expect(url.searchParams.get('id_token_hint')).toBe('the-id-token');
+        expect(url.searchParams.get('client_id')).toBe('client-a');
+        expect(url.searchParams.get('post_logout_redirect_uri')).toBe(
+            'https://manager.example.com/login',
+        );
+    });
+
+    it('derives the login button host and icon from the issuer, and nothing when disabled', () => {
+        const info = new OidcProviderService({
+            ...OPTIONS,
+            issuer: 'https://idp.example.com/realms/staff',
+        }).publicInfo;
+        expect(info).toEqual({
+            host: 'idp.example.com',
+            iconUrl: 'https://idp.example.com/favicon.ico',
+        });
+        expect(new OidcProviderService(null).publicInfo).toBeNull();
+    });
+
+    it('gives no end-session URL when the provider has no endpoint', async () => {
+        expect(await new OidcProviderService(OPTIONS).endSessionUrl('t')).toBeNull();
+    });
+
+    it('gives no end-session URL when discovery fails, without throwing', async () => {
+        discoveryIssuer = 'https://other.example.com';
+        expect(await new OidcProviderService(OPTIONS).endSessionUrl('t')).toBeNull();
     });
 });

@@ -13,6 +13,7 @@ function build(over: {
     verification?: boolean;
     verified?: boolean;
     create?: string | null;
+    taken?: { idToken: string } | null;
 }) {
     const failures: string[] = [];
     const tx = { open: 0, openAtExchange: -1, transactions: 0 };
@@ -34,15 +35,23 @@ function build(over: {
         create: async () => ('create' in over ? over.create : 'state-1'),
         claimVerified: async () => '5',
     };
+    const tokens = {
+        save: vi.fn(),
+        takeForSession: vi.fn(async () => ('taken' in over ? over.taken : { idToken: 'tok' })),
+    };
     const service = new OidcSignInService(
         {
             exchange: async () => {
                 tx.openAtExchange = tx.open;
-                return 'exchange' in over ? over.exchange : { sub: 's', email: 'a@b.c' };
+                return 'exchange' in over
+                    ? over.exchange
+                    : { sub: 's', email: 'a@b.c', idToken: 'tok' };
             },
+            endSessionUrl: async (t: string) => `https://idp.example.com/logout?hint=${t}`,
             authorizationUrl: async (st: string) => `https://idp.example.com/auth?state=${st}`,
         } as never,
         requests as never,
+        tokens as never,
         { resolve: async () => ('resolved' in over ? over.resolved : '5') } as never,
         {
             isLocked: async () => over.locked ?? false,
@@ -53,7 +62,7 @@ function build(over: {
         { authOptions: { requireVerification: over.verification ?? false } } as never,
         connection as never,
     );
-    return { service, requests, failures, tx };
+    return { service, requests, tokens, failures, tx };
 }
 
 describe('OidcSignInService', () => {
@@ -62,6 +71,33 @@ describe('OidcSignInService', () => {
         expect(await service.complete(ctx, 'code', 'state')).toBe(true);
         expect(requests.markVerified).toHaveBeenCalledWith(ctx, 1, '5');
         expect(failures).toEqual(['reset']);
+    });
+
+    it('keeps the ID token for the administrator when the request is verified', async () => {
+        const { service, tokens } = build({});
+        await service.complete(ctx, 'code', 'state');
+        expect(tokens.save).toHaveBeenCalledWith(ctx, 5, 'tok');
+    });
+
+    it('keeps no ID token when the sign-in is refused', async () => {
+        const { service, tokens } = build({ resolved: null });
+        await service.complete(ctx, 'code', 'state');
+        expect(tokens.save).not.toHaveBeenCalled();
+    });
+
+    it('returns the provider logout URL for a provider-opened session', async () => {
+        const { service } = build({});
+        const signedIn = { ...ctx, activeUserId: 5, session: { token: 't1' } } as never;
+        expect(await service.providerSignOutUrl(signedIn)).toBe(
+            'https://idp.example.com/logout?hint=tok',
+        );
+    });
+
+    it('returns no URL for a local session or without a session', async () => {
+        const { service } = build({ taken: null });
+        const signedIn = { ...ctx, activeUserId: 5, session: { token: 't1' } } as never;
+        expect(await service.providerSignOutUrl(signedIn)).toBeNull();
+        expect(await service.providerSignOutUrl(ctx)).toBeNull();
     });
 
     it('calls the provider with no transaction open, between two short transactions', async () => {

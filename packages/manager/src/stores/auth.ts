@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { clearPersonalUiState } from '../composables/clearPersonalUiState';
 import { adminApi } from '../api/client';
+import { fetchProviderSignOutUrl } from '../api/oidc';
 import {
     ActiveAdministratorDocument,
     LoginDocument,
@@ -124,7 +125,16 @@ export const useAuthStore = defineStore('auth', () => {
         await fetchActiveAdministrator();
     }
 
-    async function logout(): Promise<void> {
+    // With `withProvider`, returns the provider logout URL of a corporate-account session so the caller can leave through it.
+    async function logout(withProvider = false): Promise<string | null> {
+        let providerUrl: string | null = null;
+        if (withProvider) {
+            try {
+                providerUrl = (await fetchProviderSignOutUrl()) ?? null;
+            } catch (e) {
+                console.warn('[auth] provider sign-out lookup failed:', e);
+            }
+        }
         try {
             await adminApi(LogoutDocument);
         } catch (e) {
@@ -141,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
         isReconnecting.value = false;
         initPromise = null;
         sessionStorage.setItem(LOGGED_OUT_KEY, '1');
+        return providerUrl;
     }
 
     function stopBackgroundRetry(): void {

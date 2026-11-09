@@ -10,6 +10,7 @@ import {
 
 import { OidcIdentityService } from '../../oidc-identity.service';
 import { OidcRequestStoreService } from '../../oidc-request-store.service';
+import { OidcSessionTokenStoreService } from '../../oidc-session-token-store.service';
 
 const DDL = `
     CREATE TABLE "user" (id serial PRIMARY KEY, identifier varchar NOT NULL, "deletedAt" timestamp);
@@ -23,6 +24,12 @@ const DDL = `
         id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
         uuid uuid NOT NULL UNIQUE, "stateHash" varchar NOT NULL UNIQUE, nonce varchar NOT NULL, "codeVerifier" varchar NOT NULL,
         status varchar NOT NULL, "userId" varchar, "expiresAt" timestamptz NOT NULL);
+    CREATE TABLE oidc_session_token (
+        id serial PRIMARY KEY, "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
+        uuid uuid NOT NULL UNIQUE, "userId" int NOT NULL UNIQUE, "idToken" text NOT NULL);
+    CREATE TABLE session (
+        id serial PRIMARY KEY, token varchar NOT NULL UNIQUE, expires timestamp NOT NULL,
+        invalidated boolean NOT NULL DEFAULT false, "authenticationStrategy" varchar, "userId" int);
 `;
 
 export interface OidcFixture {
@@ -30,6 +37,7 @@ export interface OidcFixture {
     connection: TransactionalConnection;
     identity: OidcIdentityService;
     requests: OidcRequestStoreService;
+    tokens: OidcSessionTokenStoreService;
     addAdmin(email: string, opts?: { identifier?: string; deleted?: boolean }): Promise<string>;
     linkedSubs(): Promise<Array<{ userId: string; sub: string }>>;
     reset(): Promise<void>;
@@ -56,6 +64,7 @@ export async function openOidcFixture(tag: string): Promise<OidcFixture> {
         dataSource,
         connection,
         identity: new OidcIdentityService(connection, config),
+        tokens: new OidcSessionTokenStoreService(connection),
         requests: new OidcRequestStoreService(connection, {
             requestTtlMs: 60_000,
             verifiedTtlMs: 60_000,
@@ -77,7 +86,7 @@ export async function openOidcFixture(tag: string): Promise<OidcFixture> {
             ),
         reset: async () => {
             await dataSource.query(
-                'TRUNCATE "user", administrator, authentication_method, oidc_auth_request RESTART IDENTITY',
+                'TRUNCATE "user", administrator, authentication_method, oidc_auth_request, oidc_session_token, session RESTART IDENTITY',
             );
         },
         close: async () => {

@@ -49,7 +49,11 @@ onMounted(async () => {
 });
 
 async function handleLogout(): Promise<void> {
-    await authStore.logout();
+    const providerUrl = await authStore.logout(true);
+    if (providerUrl) {
+        window.location.href = providerUrl;
+        return;
+    }
     await router.push('/login');
 }
 

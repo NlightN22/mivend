@@ -2,13 +2,14 @@ import { adminApi } from './client';
 import {
     AuthenticateOidcDocument,
     CompleteOidcSignInDocument,
-    OidcSignInEnabledDocument,
+    OidcSignInDocument,
+    PrepareOidcSignOutDocument,
     StartOidcSignInDocument,
 } from './generated/graphql';
 
-export async function fetchOidcEnabled(): Promise<boolean> {
-    const { oidcSignInEnabled } = await adminApi(OidcSignInEnabledDocument);
-    return oidcSignInEnabled;
+export async function fetchOidcSignIn(): Promise<{ host: string; iconUrl: string } | null> {
+    const { oidcSignIn } = await adminApi(OidcSignInDocument);
+    return oidcSignIn;
 }
 
 export async function fetchAuthorizationUrl(): Promise<string> {
@@ -27,4 +28,10 @@ export async function completeOidcSignIn(code: string, state: string): Promise<b
 export async function openOidcSession(state: string): Promise<boolean> {
     const { authenticate } = await adminApi(AuthenticateOidcDocument, { state });
     return authenticate.__typename === 'CurrentUser';
+}
+
+// The provider logout URL for a provider-opened session; null for local sessions or when the provider cannot be reached.
+export async function fetchProviderSignOutUrl(): Promise<string | null> {
+    const { prepareOidcSignOut } = await adminApi(PrepareOidcSignOutDocument);
+    return prepareOidcSignOut ?? null;
 }

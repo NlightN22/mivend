@@ -193,6 +193,34 @@ describe('useAuthStore', () => {
         expect(store.authStatus).toBe('unauthenticated');
     });
 
+    it('signs out locally and returns no URL for a plain logout', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        adminApiMock.mockResolvedValue({ logout: { success: true } });
+        const store = useAuthStore();
+        expect(await store.logout()).toBeNull();
+        expect(adminApiMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the provider URL of a corporate-account session after the local sign-out', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        adminApiMock
+            .mockResolvedValueOnce({ prepareOidcSignOut: 'https://idp.example.com/logout?x=1' })
+            .mockResolvedValueOnce({ logout: { success: true } });
+        const store = useAuthStore();
+        expect(await store.logout(true)).toBe('https://idp.example.com/logout?x=1');
+        expect(store.authStatus).toBe('unauthenticated');
+    });
+
+    it('still signs out locally when the provider lookup fails', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        adminApiMock
+            .mockRejectedValueOnce(new Error('boom'))
+            .mockResolvedValueOnce({ logout: { success: true } });
+        const store = useAuthStore();
+        expect(await store.logout(true)).toBeNull();
+        expect(store.authStatus).toBe('unauthenticated');
+    });
+
     // Real incident (2026-09-12): nothing ever warned that a contour's only administrator was
     // still the built-in superadmin/superadmin account.
     it('flags the built-in superadmin account via isDefaultSuperadminAccount', async () => {

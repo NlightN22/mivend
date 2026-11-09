@@ -9,9 +9,24 @@ async function actAs(request: APIRequestContext, sub: string, email: string | nu
     expect(res.ok()).toBe(true);
 }
 
+interface ProviderState {
+    providerSession: boolean;
+    endedSessions: Array<{ idTokenHint: string | null; clientId: string | null }>;
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Manager sign-in through the corporate account', () => {
+    test('the login page offers the provider host as an outlined button under the form', async ({
+        page,
+    }) => {
+        await page.goto('/login');
+        const button = page.getByRole('button', { name: 'Войти с помощью localhost', exact: true });
+        await expect(button).toBeVisible();
+        await expect(page.getByRole('separator')).toHaveText('или');
+        await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+    });
+
     test('an unknown e-mail is refused with the generic error and no session', async ({
         page,
         request,
@@ -91,5 +106,31 @@ test.describe('Manager sign-in through the corporate account', () => {
         await page.context().clearCookies();
         await page.goto(callback);
         await expect(page.locator('.mv-notice--error')).toBeVisible();
+    });
+
+    test('signing out ends the provider session and returns to the login page', async ({
+        page,
+        request,
+    }) => {
+        await actAs(request, 'sub-operator', OPERATOR_EMAIL);
+        await page.goto('/login');
+        await page.getByTestId('oidc-sign-in').click();
+        await page.waitForURL(
+            url => !url.pathname.includes('/login') && !url.pathname.includes('/oidc'),
+        );
+        await expect(page.getByText('Welcome back,')).toBeVisible();
+        const before = (await (await request.get(`${MOCK_URL}/_state`)).json()) as ProviderState;
+        expect(before.providerSession).toBe(true);
+
+        await page.getByRole('button', { name: 'Log out', exact: true }).first().click();
+        await page.waitForURL(url => url.pathname === '/login');
+
+        const after = (await (await request.get(`${MOCK_URL}/_state`)).json()) as ProviderState;
+        expect(after.providerSession).toBe(false);
+        const ended = after.endedSessions.at(-1);
+        expect(ended?.clientId).toBe('mivend-local');
+        expect(ended?.idTokenHint?.split('.')).toHaveLength(3);
+        await page.goto('/orders');
+        await page.waitForURL(url => url.pathname.includes('/login'));
     });
 });
