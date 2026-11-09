@@ -94,8 +94,9 @@ beforeEach(async () => {
         .save({ customFieldsCounterpartyid: String(saved[1].id), deletedAt: null });
 });
 
-const resolve = (matching: Record<string, unknown>, limit = 100): Promise<string[]> =>
-    resolveCounterpartyIds(service, ctx, parseCounterpartyMatching(matching), limit);
+async function resolve(matching: Record<string, unknown>, limit = 100): Promise<string[]> {
+    return resolveCounterpartyIds(service, ctx, parseCounterpartyMatching(matching), limit);
+}
 
 async function listIds(matching: Record<string, unknown>): Promise<string[]> {
     const m = parseCounterpartyMatching(matching);
