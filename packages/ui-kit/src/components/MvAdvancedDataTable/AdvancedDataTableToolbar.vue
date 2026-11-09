@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Setting } from '@element-plus/icons-vue';
-import MvButton from '../MvButton/MvButton.vue';
 import MvColumnToggle from '../MvColumnToggle/MvColumnToggle.vue';
 import MvColumnFilterText from '../MvColumnFilter/MvColumnFilterText.vue';
 import MvFilterBuilder from '../MvFilterBuilder/MvFilterBuilder.vue';
