@@ -94,4 +94,23 @@ describe('buildStreamHealthRows', () => {
             lastNoopReason: 'missing name/bik',
         });
     });
+
+    it('reports the 24 h contact step failures of a stream and zero for the others', () => {
+        const rows = buildStreamHealthRows(
+            input({
+                consumedStreams: ['counterparty', 'bank'],
+                contactFailureByStream: new Map([
+                    ['counterparty', { count: 2, lastReason: 'contact step failed: boom' }],
+                ]),
+            }),
+        );
+        expect(find(rows, 'counterparty')).toMatchObject({
+            contactFailures24h: 2,
+            lastContactFailure: 'contact step failed: boom',
+        });
+        expect(find(rows, 'bank')).toMatchObject({
+            contactFailures24h: 0,
+            lastContactFailure: null,
+        });
+    });
 });

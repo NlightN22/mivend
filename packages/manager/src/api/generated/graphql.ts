@@ -3504,6 +3504,8 @@ export type IntegrationOutboxProblemSortParameter = {
 
 export type IntegrationStreamHealth = {
     consumed: Scalars['Boolean']['output'];
+    /** Applied messages whose contact step was rolled back in the last 24 h (issue #332); rerun the reapply or wait for the entity's next event. */
+    contactFailures24h: Scalars['Int']['output'];
     /** Rows parked because a referenced entity has not arrived yet; retried automatically, not an alert. */
     dependencyMissing: Scalars['Int']['output'];
     /** NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_STREAM, null when the stream is consistent. */
@@ -3512,6 +3514,7 @@ export type IntegrationStreamHealth = {
     ignoredReason: Maybe<Scalars['String']['output']>;
     inContract: Scalars['Boolean']['output'];
     lag: Maybe<KafkaTopicLag>;
+    lastContactFailure: Maybe<Scalars['String']['output']>;
     lastNoopReason: Maybe<Scalars['String']['output']>;
     /** Messages the handler deliberately did nothing for in the last 24 h (issue #200). */
     noop24h: Scalars['Int']['output'];

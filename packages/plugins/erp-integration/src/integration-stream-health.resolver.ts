@@ -48,10 +48,11 @@ export class IntegrationStreamHealthResolver {
     async integrationStreamHealth(
         @Ctx() ctx: RequestContext,
     ): Promise<IntegrationStreamHealthReport> {
-        const [lagRows, backlog, noops] = await Promise.all([
+        const [lagRows, backlog, noops, contactFailures] = await Promise.all([
             this.connection.getRepository(ctx, KafkaConsumerLagEntry).find(),
             this.inbox.getBacklogByStream(ctx),
             this.inbox.getNoopSummaryByStream(ctx),
+            this.inbox.getContactFailureSummaryByStream(ctx),
         ]);
         const latest = await this.contractVersions.getLatestVersion();
         const topics: Record<string, string> = this.options.kafkaConsumer.topics;
@@ -66,6 +67,7 @@ export class IntegrationStreamHealthResolver {
                 lagByStream: lagByConsumedStream(groupLagRowsByTopic(lagRows), topics),
                 backlogByStream: new Map(backlog.map(b => [b.stream, b])),
                 noopByStream: new Map(noops.map(n => [n.stream, n])),
+                contactFailureByStream: new Map(contactFailures.map(n => [n.stream, n])),
             }),
         };
     }

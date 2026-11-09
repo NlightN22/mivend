@@ -34,6 +34,7 @@ export interface StreamHealthInput {
     lagByStream: ReadonlyMap<string, StreamHealthLag>;
     backlogByStream: ReadonlyMap<string, StreamHealthBacklog>;
     noopByStream: ReadonlyMap<string, StreamHealthNoop>;
+    contactFailureByStream?: ReadonlyMap<string, StreamHealthNoop>;
 }
 
 export interface StreamHealthRow {
@@ -52,6 +53,8 @@ export interface StreamHealthRow {
     oldestPendingAt: Date | null;
     noop24h: number;
     lastNoopReason: string | null;
+    contactFailures24h: number;
+    lastContactFailure: string | null;
 }
 
 // Streams that share a topic (the order streams) all show that topic's lag.
@@ -115,6 +118,8 @@ export function buildStreamHealthRows(input: StreamHealthInput): StreamHealthRow
             oldestPendingAt: backlog?.oldestPendingAt ?? null,
             noop24h: input.noopByStream.get(stream)?.count ?? 0,
             lastNoopReason: input.noopByStream.get(stream)?.lastReason ?? null,
+            contactFailures24h: input.contactFailureByStream?.get(stream)?.count ?? 0,
+            lastContactFailure: input.contactFailureByStream?.get(stream)?.lastReason ?? null,
         };
     });
 }

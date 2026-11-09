@@ -34,6 +34,17 @@ const LINKS: Record<ContactOwnerKind, { entity: ObjectType<ContactPointLink>; co
     organization: { entity: OrganizationContactPoint, column: 'organizationId' },
 };
 
+// Dependency waits (retry or park), cancellations, timeouts and lost connections keep their own handling.
+function keepsOwnPolicy(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+    if (err.name === 'MissingDependencyError' || err.name === 'MissingReferenceError') return true;
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === 'string' && /^(57|08|53|40)/.test(code)) return true;
+    return /ECONNRESET|ECONNREFUSED|Connection terminated|timeout|canceling statement/i.test(
+        err.message,
+    );
+}
+
 const OWNER_ENTITIES: Record<ErpOwnerKind, string | ObjectType<{ id: unknown }>> = {
     counterparty: Counterparty,
     tradingPoint: TradingPoint,
@@ -60,6 +71,8 @@ export class ContactPointService {
             return null;
         } catch (err) {
             await repo.query('ROLLBACK TO SAVEPOINT contact_step');
+            await repo.query('RELEASE SAVEPOINT contact_step');
+            if (keepsOwnPolicy(err)) throw err;
             const message = err instanceof Error ? err.message : String(err);
             Logger.warn(`${label}: contact step failed: ${message}`, 'ContactPointService');
             return `contact step failed: ${message}`;

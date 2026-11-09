@@ -35,6 +35,9 @@ export const healthTypes = `
         "Messages the handler deliberately did nothing for in the last 24 h (issue #200)."
         noop24h: Int!
         lastNoopReason: String
+        "Applied messages whose contact step was rolled back in the last 24 h (issue #332); rerun the reapply or wait for the entity's next event."
+        contactFailures24h: Int!
+        lastContactFailure: String
     }
 
     "Result of rebuilding a skipped outbox row: event queued, still skipped (reason updated) or already sent."

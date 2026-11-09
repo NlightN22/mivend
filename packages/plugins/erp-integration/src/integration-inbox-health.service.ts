@@ -96,4 +96,23 @@ export class IntegrationInboxHealthService {
         `,
         );
     }
+
+    // Applied rows whose derived contact step was rolled back in the last 24 h, per stream (#332).
+    async getContactFailureSummaryByStream(
+        ctx: RequestContext,
+    ): Promise<IntegrationInboxNoopByStream[]> {
+        return ctxQuery<IntegrationInboxNoopByStream[]>(
+            this.connection,
+            ctx,
+            `
+            SELECT stream,
+                   COUNT(*)::int AS count,
+                   (ARRAY_AGG(outcome_reason ORDER BY processed_at DESC))[1] AS "lastReason"
+            FROM integration_inbox_event
+            WHERE outcome = 'applied' AND outcome_reason LIKE 'contact step failed%'
+              AND processed_at > now() - interval '24 hours'
+            GROUP BY stream
+        `,
+        );
+    }
 }
