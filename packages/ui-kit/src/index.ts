@@ -197,8 +197,6 @@ export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
 export { useIsMobileViewport } from './composables/useIsMobileViewport';
 export { useDebouncedCallback } from './composables/useDebouncedCallback';
-export { usePagedScrollHeight } from './composables/usePagedScrollHeight';
-export type { PagedScrollHeightOptions } from './composables/usePagedScrollHeight';
 export { useHorizontalScrollFade } from './composables/useHorizontalScrollFade';
 export type { HorizontalScrollFade } from './composables/useHorizontalScrollFade';
 export { useLatestRequest } from './composables/useLatestRequest';

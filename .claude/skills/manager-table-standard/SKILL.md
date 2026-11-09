@@ -5,6 +5,8 @@ description: Mandatory before adding a new manager-portal list/table, adding or 
 
 # Manager portal table standard
 
+**No nested scrollbars:** the page is the only vertical scroll; a table never gets its own vertical scrollbar (no scroll height or max-height on the grid), horizontal scroll only when columns do not fit. See `docs/ui-standards.md`.
+
 ## Start here
 
 Every table in the manager portal is the standard list, no exceptions: the shared filter engine on the

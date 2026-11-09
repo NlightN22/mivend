@@ -184,9 +184,6 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
 </script>
 
 <template>
-    <!-- row/header height measured directly against the rendered table (all cells here are
-         plain text/badge, no progress bar like Orders' fulfillment column) — see
-         usePagedScrollHeight's own doc comment for why a guessed value here is unsafe. -->
     <MvAdvancedDataTable
         v-model:table-state="tableState"
         :columns="ALL_COLUMNS"

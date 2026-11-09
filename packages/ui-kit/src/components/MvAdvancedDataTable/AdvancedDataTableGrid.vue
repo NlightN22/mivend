@@ -20,7 +20,6 @@ defineProps<{
     totalItems: number;
     rowsPerPageOptions: number[];
     emptyMessage: string;
-    scrollHeight: string;
     remountKey: number;
     tableState: DataTableState;
     selectable: boolean;
@@ -60,7 +59,6 @@ const columnFilters = defineModel<DataTableFilterMeta>('columnFilters', { requir
         :rows-per-page-options="rowsPerPageOptions"
         :total-records="totalItems"
         scrollable
-        :scroll-height="scrollHeight"
         resizable-columns
         column-resize-mode="expand"
         filter-display="menu"

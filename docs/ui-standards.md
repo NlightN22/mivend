@@ -105,6 +105,9 @@ list and the chips are one horizontally scrolling row (`scrollable`).
 
 ## List cell standard
 
+No nested scrollbars: the page is the only vertical scroll. A table never has its own vertical scrollbar and grows with its
+rows (no scroll height or max-height on the grid); horizontal table scroll appears only when the columns do not fit.
+
 One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGrid.css`, sizes in `tokens.css`):
 
 - `mv-cell-id` for identifiers (document numbers): 13px, semibold, nowrap, tabular figures, never truncated.

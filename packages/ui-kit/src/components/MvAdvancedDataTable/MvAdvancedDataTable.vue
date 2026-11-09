@@ -9,7 +9,6 @@ import AdvancedDataTableToolbar from './AdvancedDataTableToolbar.vue';
 import AdvancedDataTableGrid from './AdvancedDataTableGrid.vue';
 import { isSkeletonRow, skeletonRowCount, skeletonRows } from './tableSkeleton';
 import type { DataTableState } from '../../composables/useDataTableState';
-import { usePagedScrollHeight } from '../../composables/usePagedScrollHeight';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import {
     toFilterColumns,
@@ -113,12 +112,6 @@ const { tableWrapper, canScrollLeft, canScrollRight, scrollBy } = useTableScroll
     containerWidth,
     layout.tableRemountKey,
 );
-
-// Measured against the rendered table; see usePagedScrollHeight.
-const dynamicScrollHeight = usePagedScrollHeight(() => tableState.value.pageSize, {
-    rowHeightPx: props.rowHeightPx,
-    headerHeightPx: props.headerHeightPx,
-});
 
 // Same breakpoint as MvTable/MvAppTopbar/MvAppMobileNav; cards are a separate render path.
 const isMobile = useIsMobileViewport(800);
@@ -250,7 +243,6 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
                 :total-items="totalItems"
                 :rows-per-page-options="rowsPerPageOptions"
                 :empty-message="emptyMessage"
-                :scroll-height="dynamicScrollHeight"
                 :remount-key="layout.tableRemountKey.value"
                 :table-state="tableState"
                 :selectable="selectable"

@@ -20,6 +20,8 @@ but the two portals have genuinely different navigation/layout/copy conventions 
 checklist plus a portal-specific branch — do not duplicate this file per portal, extend the
 branch instead if a new project-wide rule is needed.
 
+**No nested scrollbars:** the page is the only vertical scroll; no table, panel or list inside a page gets its own vertical scrollbar. See `docs/ui-standards.md`.
+
 ## Step 0 — is this actually a table/list?
 
 If what you're building is a list of rows a user would filter/sort/paginate/search — **stop, this
