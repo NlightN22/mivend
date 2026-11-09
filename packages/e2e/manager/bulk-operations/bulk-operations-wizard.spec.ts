@@ -179,9 +179,13 @@ async function activateAllMatching(page: Page, search: string, total: number): P
     await page.goto(
         `/bulk-operations/counterparty-portal-access?pageSize=10&search=${encodeURIComponent(search)}`,
     );
-    await expect(
-        page.getByText(`1–10 of ${total}`).or(page.getByText(`1-10 of ${total}`)),
-    ).toBeVisible({ timeout: 20000 });
+    const pages = Math.ceil(total / 10);
+    await expect(page.getByRole('button', { name: `Page ${pages}`, exact: true })).toBeVisible({
+        timeout: 20000,
+    });
+    await expect(page.getByRole('button', { name: `Page ${pages + 1}`, exact: true })).toHaveCount(
+        0,
+    );
     await page.getByRole('checkbox').first().check();
     await expect(page.getByTestId('table-selection-count')).toHaveText(`Selected 10 of ${total}`);
     await page.getByTestId('select-all-matching').click();
