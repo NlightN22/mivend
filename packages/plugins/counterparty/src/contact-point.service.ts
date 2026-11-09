@@ -26,12 +26,35 @@ export type ContactOwnerKind =
     | 'administrator'
     | 'organization';
 
-const LINKS: Record<ContactOwnerKind, { entity: ObjectType<ContactPointLink>; column: string }> = {
-    counterparty: { entity: CounterpartyContactPoint, column: 'counterpartyId' },
-    tradingPoint: { entity: TradingPointContactPoint, column: 'tradingPointId' },
-    contactPerson: { entity: ContactPersonContactPoint, column: 'contactPersonId' },
-    administrator: { entity: AdministratorContactPoint, column: 'administratorId' },
-    organization: { entity: OrganizationContactPoint, column: 'organizationId' },
+const LINKS: Record<
+    ContactOwnerKind,
+    { entity: ObjectType<ContactPointLink>; column: string; table: string }
+> = {
+    counterparty: {
+        entity: CounterpartyContactPoint,
+        column: 'counterpartyId',
+        table: 'counterparty_contact_point',
+    },
+    tradingPoint: {
+        entity: TradingPointContactPoint,
+        column: 'tradingPointId',
+        table: 'trading_point_contact_point',
+    },
+    contactPerson: {
+        entity: ContactPersonContactPoint,
+        column: 'contactPersonId',
+        table: 'contact_person_contact_point',
+    },
+    administrator: {
+        entity: AdministratorContactPoint,
+        column: 'administratorId',
+        table: 'administrator_contact_point',
+    },
+    organization: {
+        entity: OrganizationContactPoint,
+        column: 'organizationId',
+        table: 'organization_contact_point',
+    },
 };
 
 // Dependency waits (retry or park), cancellations, timeouts and lost connections keep their own handling.
@@ -116,7 +139,7 @@ export class ContactPointService {
         ownerId: number,
         incoming: readonly ResolvedContactPoint[],
     ): Promise<void> {
-        const { entity, column } = LINKS[kind];
+        const { entity, column, table } = LINKS[kind];
         const links = this.connection.getRepository(ctx, entity);
         const points = this.connection.getRepository(ctx, ContactPoint);
         const owned = await links.find({
@@ -139,23 +162,25 @@ export class ContactPointService {
         }
         if (plan.deleteIds.length > 0) await points.delete({ id: In(plan.deleteIds) });
         if (plan.insert.length > 0) {
-            const inserted = await points
-                .createQueryBuilder()
-                .insert()
-                .values(plan.insert.map(point => ({ ...erpFields(point), uuid: randomUUID() })))
-                .returning('id')
-                .execute();
-            await links
-                .createQueryBuilder()
-                .insert()
-                .values(
-                    plan.insert.map((point, i) => ({
-                        contactPointId: (inserted.raw as Array<{ id: number }>)[i].id,
-                        isPrimary: point.isPrimary,
-                        [column]: ownerId,
-                    })) as never,
-                )
-                .execute();
+            // One statement: the channels and their owner links; the client-side uuid pairs each channel with its link flags.
+            const rows = plan.insert.map(point => ({
+                ...erpFields(point),
+                uuid: randomUUID(),
+                isPrimary: point.isPrimary,
+            }));
+            await points.query(
+                `WITH src AS (
+                     SELECT * FROM jsonb_to_recordset($1::jsonb) AS s(
+                         uuid uuid, type text, value text, "normalizedValue" text,
+                         "isUsable" boolean, label text, comment text, "isPrimary" boolean)),
+                 ins AS (
+                     INSERT INTO contact_point (uuid, type, value, "normalizedValue", "isUsable", label, comment, source)
+                     SELECT uuid, type, value, "normalizedValue", "isUsable", label, comment, 'erp' FROM src
+                     RETURNING id, uuid)
+                 INSERT INTO "${table}" ("contactPointId", "${column}", "isPrimary")
+                 SELECT ins.id, $2, src."isPrimary" FROM ins JOIN src USING (uuid)`,
+                [JSON.stringify(rows), ownerId],
+            );
         }
     }
 }

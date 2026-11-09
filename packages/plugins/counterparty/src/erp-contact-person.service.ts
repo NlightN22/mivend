@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { In, Not } from 'typeorm';
+import { Not } from 'typeorm';
 import { withAggregateLock } from 'shared';
 
-import { Counterparty } from './entities/counterparty.entity';
-import { CounterpartyContactErp } from './entities/counterparty-contact-erp.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { CounterpartyContactPerson } from './entities/counterparty-contact-person.entity';
 
@@ -55,37 +53,22 @@ export class ErpContactPersonService {
     }
 
     // Contacts stored before their counterparty arrived get the link now; a person moved here loses its other links.
+    // One statement: this runs for every counterparty event, and usually finds nothing waiting.
     async linkWaitingContacts(ctx: RequestContext, counterpartyErpId: string): Promise<void> {
-        const waiting = await this.connection.getRepository(ctx, CounterpartyContactErp).find({
-            where: { counterpartyId: counterpartyErpId, isDeleted: false },
-            select: { erpId: true },
-        });
-        if (waiting.length === 0) return;
-        const counterparty = await this.connection
-            .getRepository(ctx, Counterparty)
-            .findOne({ where: { erpId: counterpartyErpId }, select: { id: true } });
-        if (!counterparty) return;
-        const persons = await this.connection.getRepository(ctx, ContactPerson).find({
-            where: { erpId: In(waiting.map(w => w.erpId)) },
-            select: { id: true },
-        });
-        if (persons.length === 0) return;
-        const links = this.connection.getRepository(ctx, CounterpartyContactPerson);
-        await links.delete({
-            contactPersonId: In(persons.map(p => p.id as number)),
-            counterpartyId: Not(counterparty.id as number),
-        });
-        await links
-            .createQueryBuilder()
-            .insert()
-            .values(
-                persons.map(p => ({
-                    counterpartyId: counterparty.id as number,
-                    contactPersonId: p.id as number,
-                })),
-            )
-            .orIgnore()
-            .execute();
+        await this.connection.getRepository(ctx, CounterpartyContactPerson).query(
+            `WITH waiting AS (
+                 SELECT p.id FROM contact_person p
+                   JOIN counterparty_contact_erp e ON e."erpId" = p."erpId"
+                  WHERE e."counterpartyId" = $1 AND e."isDeleted" = false),
+             owner AS (SELECT id FROM counterparty WHERE "erpId" = $1),
+             moved AS (
+                 DELETE FROM counterparty_contact_person l USING waiting w, owner o
+                  WHERE l."contactPersonId" = w.id AND l."counterpartyId" <> o.id)
+             INSERT INTO counterparty_contact_person ("counterpartyId", "contactPersonId")
+             SELECT o.id, w.id FROM waiting w, owner o
+             ON CONFLICT ("counterpartyId", "contactPersonId") DO NOTHING`,
+            [counterpartyErpId],
+        );
     }
 
     async deactivate(ctx: RequestContext, erpId: string): Promise<number | null> {
