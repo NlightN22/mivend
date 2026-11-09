@@ -1,11 +1,97 @@
 import { test, expect } from '@playwright/test';
-import { adminGql } from '../../helpers/api';
+import { adminGql, postBatch, shopGql, shopLoginCookie, waitForRun } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
 import { formatDocumentNumber } from '../../helpers/e2e-order';
 import { cancelTestOrder, createConfirmedOrder } from '../../helpers/manager-order';
-import { MANAGER_ACCOUNTS } from '../../fixtures/accounts';
+import { MANAGER_ACCOUNTS, SUPERADMIN } from '../../fixtures/accounts';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
-import { ORDER_CP } from '../../fixtures/seed-order-cp';
+import { SEED_LOCATION } from '../../fixtures/seed-location';
+
+const RUN = Date.now();
+const ORDER_CP = {
+    counterpartyErpId: `e2e-cnt-ordercp-${RUN}`,
+    pointErpId: `e2e-tp-ordercp-${RUN}`,
+    shortName: 'Ordercp Own Co',
+    customerEmail: `e2e-ordercp-${RUN}@test.example`,
+    password: 'E2eTest123!',
+};
+
+function counterpartyRecord(isActive: boolean): { type: 'counterparty'; data: object } {
+    return {
+        type: 'counterparty',
+        data: {
+            erpId: ORDER_CP.counterpartyErpId,
+            legalName: 'Ordercp Own Company',
+            shortName: ORDER_CP.shortName,
+            inn: '5100000004',
+            creditLimit: 1000000,
+            creditBalance: 0,
+            paymentDelayDays: 30,
+            priceType: 'WHOLESALE',
+            isActive,
+            departmentId: 'dept-sales',
+        },
+    };
+}
+
+function pointRecord(isActive: boolean): { type: 'tradingPoint'; data: object } {
+    return {
+        type: 'tradingPoint',
+        data: {
+            erpId: ORDER_CP.pointErpId,
+            counterpartyErpId: ORDER_CP.counterpartyErpId,
+            name: 'Ordercp Own Point',
+            address: 'Order Own Street 1',
+            ...SEED_LOCATION,
+            isActive,
+        },
+    };
+}
+
+async function importRecords(tag: string, records: unknown[]): Promise<void> {
+    const exchangeId = `e2e-ordercp-${tag}-${RUN}`;
+    await postBatch(exchangeId, records);
+    await waitForRun(exchangeId);
+}
+
+// erp-import never writes servicingBranchId, which order stock allocation keys on.
+async function prepareCustomer(
+    adminToken: string,
+    counterpartyId: string,
+): Promise<{ pointId: string }> {
+    const branches = await adminGql<{ branches: { id: string; erpId: string }[] }>(
+        `query { branches { id erpId } }`,
+        undefined,
+        adminToken,
+    );
+    const branchId = branches.data.branches.find(b => b.erpId === 'branch-central')?.id;
+    const points = await adminGql<{
+        counterparty: { tradingPoints: { id: string; erpId: string }[] };
+    }>(
+        `query($id: ID!) { counterparty(id: $id) { tradingPoints { id erpId } } }`,
+        { id: counterpartyId },
+        adminToken,
+    );
+    const pointId = points.data.counterparty.tradingPoints.find(
+        tp => tp.erpId === ORDER_CP.pointErpId,
+    )?.id;
+    if (!branchId || !pointId) throw new Error('Runtime order counterparty point is not ready');
+    await adminGql(
+        `mutation($id: ID!, $input: TradingPointDetailsInput!) {
+            updateTradingPointDetails(id: $id, input: $input) { id }
+        }`,
+        { id: pointId, input: { servicingBranchId: branchId, ...SEED_LOCATION } },
+        adminToken,
+    );
+    const cookie = await shopLoginCookie(ORDER_CP.customerEmail, ORDER_CP.password);
+    const preferred = await shopGql<{ setPreferredTradingPoint: boolean }>(
+        `mutation($id: ID!) { setPreferredTradingPoint(tradingPointId: $id) }`,
+        { id: pointId },
+        cookie,
+    );
+    if (!preferred.setPreferredTradingPoint) throw new Error('setPreferredTradingPoint failed');
+    return { pointId };
+}
 
 interface Placed {
     code: string;
@@ -30,6 +116,7 @@ async function customerIdByEmail(token: string, email: string): Promise<string> 
 
 test.describe('order counterparty comes from the order itself @on:manager-operator', () => {
     let operatorToken: string;
+    let superadminToken: string;
     let portalAdminToken: string;
     let own: Placed;
     let fallback: Fallback;
@@ -45,6 +132,27 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
             MANAGER_ACCOUNTS.portalAdmin.username,
             MANAGER_ACCOUNTS.portalAdmin.password,
         );
+        superadminToken = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
+        await importRecords('create', [
+            counterpartyRecord(true),
+            {
+                type: 'customer',
+                data: {
+                    email: ORDER_CP.customerEmail,
+                    firstName: 'E2E',
+                    lastName: 'OrderOwn',
+                    password: ORDER_CP.password,
+                },
+            },
+            {
+                type: 'customerCounterparty',
+                data: {
+                    customerEmail: ORDER_CP.customerEmail,
+                    counterpartyErpId: ORDER_CP.counterpartyErpId,
+                },
+            },
+            pointRecord(true),
+        ]);
         const variants = await adminGql<{ productVariants: { items: { id: string }[] } }>(
             `query { productVariants(options: { filter: { sku: { eq: "E2E-OIL-001" } } }) { items { id } } }`,
             undefined,
@@ -54,8 +162,8 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
         const counterparties = await adminGql<{
             counterparties: { items: { id: string; erpId: string; priceType: string }[] };
         }>(
-            `query { counterparties(options: { take: 200 }) { items { id erpId priceType } } }`,
-            undefined,
+            `query($s: String) { counterparties(options: { search: $s, take: 20 }) { items { id erpId priceType } } }`,
+            { s: ORDER_CP.shortName },
             portalAdminToken,
         );
         const counterparty = counterparties.data.counterparties.items.find(
@@ -72,6 +180,7 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
                 'E2E seed data is missing; seed-erp.mjs or global-setup must provide it',
             );
         }
+        await prepareCustomer(portalAdminToken, counterparty.id);
         await adminGql(
             `mutation($c: ID!, $a: ID!) { reassignCounterpartyManager(counterpartyId: $c, administratorId: $a) { id } }`,
             { c: counterparty.id, a: managerId },
@@ -123,9 +232,10 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
             await adminGql(
                 `mutation($id: ID!) { deleteDraftOrder(orderId: $id) { result } }`,
                 { id },
-                operatorToken,
+                superadminToken,
             );
         }
+        await importRecords('retire', [pointRecord(false), counterpartyRecord(false)]);
     });
 
     test('the list row shows the counterparty short name and its manager @read-only', async ({

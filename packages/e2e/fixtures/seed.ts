@@ -1,6 +1,5 @@
 import { innSeedRecords } from './seed-inn';
 import { markupSeedRecords } from './seed-markup';
-import { orderCpSeedRecords } from './seed-order-cp';
 import { SEED_LOCATION } from './seed-location';
 
 export const E2E_CUSTOMER = {
@@ -376,5 +375,4 @@ export const seedRecords = [
     },
     ...innSeedRecords,
     ...markupSeedRecords,
-    ...orderCpSeedRecords,
 ];

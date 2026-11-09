@@ -15,7 +15,6 @@ import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
 import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages';
 import { prepareMarkupCustomer } from './fixtures/seed-markup';
-import { prepareOrderCpCustomer } from './fixtures/seed-order-cp';
 import { seedDiscountGrants } from './fixtures/discount-grants';
 import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
 import { SEED_LOCATION } from './fixtures/seed-location';
@@ -167,7 +166,6 @@ export default async function globalSetup(): Promise<void> {
         }
     }
     await prepareMarkupCustomer(adminToken, centralBranchId);
-    await prepareOrderCpCustomer(adminToken, centralBranchId);
     const preferredTradingPointId = e2eCounterpartyForBranchFix?.tradingPoints.find(
         tp => tp.erpId === 'e2e-tp-001',
     )?.id;
