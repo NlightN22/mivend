@@ -2,12 +2,14 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 
 import type { ChangeActor } from './change-journal.types';
+import type { SqlRunner } from './change-journal-write';
 
 export interface ChangeJournalScope {
     source: string;
     requestId: string | null;
     sessionId(): string | null;
-    resolveActor(): Promise<ChangeActor>;
+    // Lookups run on the writing transaction's own connection, never a second pool connection.
+    resolveActor(runner: SqlRunner): Promise<ChangeActor>;
 }
 
 export const SYSTEM_ACTOR: ChangeActor = {

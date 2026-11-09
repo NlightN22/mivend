@@ -12,7 +12,10 @@ describe('labelScheduledTasks', () => {
             schedule: '* * * * *',
             execute: async () => {
                 const scope = currentChangeScope();
-                return { source: scope?.source, actor: await scope?.resolveActor() };
+                return {
+                    source: scope?.source,
+                    actor: await scope?.resolveActor({ query: async () => [] }),
+                };
             },
         });
         const [wrapped] = labelScheduledTasks([task]);

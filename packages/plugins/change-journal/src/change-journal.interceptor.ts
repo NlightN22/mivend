@@ -2,12 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import type { GraphQLResolveInfo } from 'graphql';
-import { internal_getRequestContext, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ActingContextService } from '@mivend/plugin-session-management';
-import { ctxQuery } from 'shared';
+import { internal_getRequestContext, RequestContext } from '@vendure/core';
 
 import type { ChangeActor } from './change-journal.types';
-import { resolveRequestActor } from './change-journal-actor';
+import { resolveRequestActor, sqlActorLookups } from './change-journal-actor';
 import { runInChangeScope, SYSTEM_ACTOR } from './change-journal-context';
 import type { ChangeJournalScope } from './change-journal-context';
 
@@ -17,19 +15,32 @@ interface HttpRequest {
     route?: { path?: string };
 }
 
+interface RequestState {
+    requestId: string;
+    actors: Map<string, Promise<ChangeActor>>;
+}
+
+// One id and one actor memo per HTTP request, shared by every resolver call of a batched request.
+const requests = new WeakMap<object, RequestState>();
+
+function stateOf(req: unknown): RequestState {
+    if (!req || typeof req !== 'object') return { requestId: randomUUID(), actors: new Map() };
+    let state = requests.get(req);
+    if (!state) {
+        state = { requestId: randomUUID(), actors: new Map() };
+        requests.set(req, state);
+    }
+    return state;
+}
+
 // Puts the request's actor into async-local scope, where the TypeORM subscriber reads it.
 @Injectable()
 export class ChangeJournalInterceptor implements NestInterceptor {
-    constructor(
-        private connection: TransactionalConnection,
-        private acting: ActingContextService,
-    ) {}
-
     intercept(context: ExecutionContext, next: CallHandler): ReturnType<CallHandler['handle']> {
         const { req, label } = this.describe(context);
         const ctx = req ? this.requestContext(req, context) : undefined;
         const source = ctx ? `${ctx.apiType}-api:${label}` : label;
-        return runInChangeScope(this.scope(ctx, source), () => next.handle());
+        return runInChangeScope(scopeFor(ctx, source, stateOf(req)), () => next.handle());
     }
 
     private describe(context: ExecutionContext): { req: unknown; label: string } {
@@ -50,37 +61,26 @@ export class ChangeJournalInterceptor implements NestInterceptor {
             return undefined;
         }
     }
+}
 
-    private scope(ctx: RequestContext | undefined, source: string): ChangeJournalScope {
-        const memo = new Map<string, Promise<ChangeActor>>();
-        return {
-            source,
-            requestId: randomUUID(),
-            sessionId: () => (ctx?.session?.id != null ? String(ctx.session.id) : null),
-            resolveActor: () => {
-                if (!ctx) return Promise.resolve(SYSTEM_ACTOR);
-                const key = String(ctx.activeUserId ?? '');
-                let pending = memo.get(key);
-                if (!pending) {
-                    pending = resolveRequestActor(ctx, {
-                        actingAdministratorId: async () =>
-                            (await this.acting.get(ctx))?.administratorId ?? null,
-                        administratorIdForUser: userId => this.administratorId(ctx, userId),
-                    });
-                    memo.set(key, pending);
-                }
-                return pending;
-            },
-        };
-    }
-
-    private async administratorId(ctx: RequestContext, userId: string): Promise<string | null> {
-        const rows = await ctxQuery<Array<{ id: number }>>(
-            this.connection,
-            ctx,
-            'SELECT id FROM administrator WHERE "userId" = $1 AND "deletedAt" IS NULL',
-            [userId],
-        );
-        return rows[0] ? String(rows[0].id) : null;
-    }
+export function scopeFor(
+    ctx: RequestContext | undefined,
+    source: string,
+    state: RequestState,
+): ChangeJournalScope {
+    return {
+        source,
+        requestId: state.requestId,
+        sessionId: () => (ctx?.session?.id != null ? String(ctx.session.id) : null),
+        resolveActor: runner => {
+            if (!ctx) return Promise.resolve(SYSTEM_ACTOR);
+            const key = `${String(ctx.activeUserId ?? '')}:${ctx.session?.token ?? ''}`;
+            let pending = state.actors.get(key);
+            if (!pending) {
+                pending = resolveRequestActor(ctx, sqlActorLookups(runner, ctx.session?.token));
+                state.actors.set(key, pending);
+            }
+            return pending;
+        },
+    };
 }

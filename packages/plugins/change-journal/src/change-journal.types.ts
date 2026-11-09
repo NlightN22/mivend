@@ -10,6 +10,7 @@ export const CLEANUP_MAX_BATCHES_PER_RUN = 200;
 export interface ChangeJournalPluginOptions {
     retentionDays?: number;
     cleanupIntervalMs?: number;
+    excludedEntities?: string[];
 }
 
 export type ChangeActorType = 'administrator' | 'customer' | 'acting' | 'system';

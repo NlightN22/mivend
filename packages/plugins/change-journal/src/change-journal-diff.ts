@@ -46,21 +46,52 @@ export function isSecretField(path: string): boolean {
     );
 }
 
-export function normalizeValue(value: unknown): unknown {
+export const NESTED_REDACTED = '[redacted]';
+export const UNSERIALIZABLE = '[unserializable]';
+
+function sanitize(value: unknown, seen: WeakSet<object>): unknown {
     if (value === undefined || value === null) return null;
     if (value instanceof Date) return value.toISOString();
     if (Buffer.isBuffer(value)) return `[binary ${value.length} bytes]`;
     if (typeof value === 'bigint') return value.toString();
-    if (typeof value === 'object') {
+    // Postgres jsonb rejects \u0000; an ERP string carrying it must not fail the save.
+    if (typeof value === 'string') return value.split('\u0000').join('');
+    if (typeof value === 'function' || typeof value === 'symbol') return null;
+    if (typeof value !== 'object') return value;
+    if (seen.has(value)) throw new Error('cycle');
+    seen.add(value);
+    const out = Array.isArray(value)
+        ? value.map(v => sanitize(v, seen))
+        : Object.fromEntries(
+              Object.entries(value).map(([k, v]) => [
+                  k,
+                  isSecretField(k) ? NESTED_REDACTED : sanitize(v, seen),
+              ]),
+          );
+    seen.delete(value);
+    return out;
+}
+
+// Relation objects become their id; nested secret keys are masked; anything unserializable is a marker.
+export function normalizeValue(value: unknown): unknown {
+    if (value && typeof value === 'object' && !Array.isArray(value) && !Buffer.isBuffer(value)) {
         const id = (value as { id?: unknown }).id;
-        if (id !== undefined && !Array.isArray(value)) return normalizeValue(id);
-        const json = JSON.stringify(value);
-        return json.length > MAX_VALUE_CHARS ? `[truncated ${json.length} chars]` : value;
+        if (id !== undefined && !(value instanceof Date)) return normalizeValue(id);
     }
-    if (typeof value === 'string' && value.length > MAX_VALUE_CHARS) {
-        return `${value.slice(0, MAX_VALUE_CHARS)}[truncated ${value.length} chars]`;
+    let clean: unknown;
+    let json: string;
+    try {
+        clean = sanitize(value, new WeakSet());
+        json = JSON.stringify(clean) ?? '';
+    } catch {
+        return UNSERIALIZABLE;
     }
-    return value;
+    if (typeof clean === 'string') {
+        return clean.length > MAX_VALUE_CHARS
+            ? `${clean.slice(0, MAX_VALUE_CHARS)}[truncated ${clean.length} chars]`
+            : clean;
+    }
+    return json.length > MAX_VALUE_CHARS ? `[truncated ${json.length} chars]` : clean;
 }
 
 function fieldChange(path: string, change: FieldChange): FieldChange {

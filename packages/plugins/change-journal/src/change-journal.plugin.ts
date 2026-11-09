@@ -1,7 +1,6 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { RuntimeVendureConfig, Type } from '@vendure/core';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
-import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 
 import { ChangeJournalResolver } from './api/change-journal.resolver';
@@ -12,11 +11,12 @@ import { ChangeJournalService } from './change-journal.service';
 import { ChangeJournalSubscriber } from './change-journal.subscriber';
 import type { ChangeJournalPluginOptions } from './change-journal.types';
 import { ChangeJournalEntry } from './entities/change-journal-entry.entity';
+import { excludeEntities } from './change-journal-scope';
 import { labelScheduledTasks } from './scheduled-task-source';
 
 // Listed after every plugin that registers scheduled tasks, so all of them get a source label.
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, SessionManagementPlugin, VersioningPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, VersioningPlugin],
     entities: [ChangeJournalEntry],
     providers: [
         ChangeJournalService,
@@ -46,6 +46,7 @@ export class ChangeJournalPlugin {
 
     static init(options: ChangeJournalPluginOptions): Type<ChangeJournalPlugin> {
         this.options = options;
+        excludeEntities(options.excludedEntities ?? []);
         return ChangeJournalPlugin;
     }
 }

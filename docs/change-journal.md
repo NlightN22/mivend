@@ -1,5 +1,9 @@
 # Change journal (#323)
 
+**Scope of completeness: the journal records changes made through TypeORM entity operations
+(`save`, `insert`, `upsert`, `remove`, `softRemove`, `recover`). It is not a record of every row
+change: query-builder updates/deletes and raw SQL bypass it (see Known limits).**
+
 One table, `change_journal_entry`, records who changed which entity, when, and what changed.
 Plugin: `packages/plugins/change-journal`.
 
@@ -18,10 +22,12 @@ failing journal write fails the change; nothing is skipped silently.
 | `actorType` | `administrator`, `customer`, `acting`, `system` |
 | `userId`, `administratorId` | the signed-in user; the administrator (for `administrator`) or the acting administrator (for `acting`, where `userId` is the customer) |
 | `source` | `admin-api:<operation>`, `shop-api:<operation>`, `<api>-api:rest:<METHOD> <route>`, `scheduled-task:<task id>` or `background` |
-| `requestId`, `sessionId` | one id per request or task run (groups the entries of one operation); the Vendure session id |
+| `requestId`, `sessionId` | one id per HTTP request (shared by every operation of a batched GraphQL request) or per task run; the Vendure session id |
 | `occurredAt` | `timestamp`, UTC like every other timestamp (`apps/server/src/pg-utc.ts`) |
 
-Values longer than 4000 characters are truncated; binary values are stored as their size.
+Values longer than 4000 characters are truncated; binary values are stored as their size; NUL
+characters are removed (jsonb rejects them); a value that cannot be serialized (a cyclic object)
+is stored as `[unserializable]`, so the journal never fails an otherwise valid save.
 
 ## Actors
 
@@ -31,8 +37,10 @@ The actor is resolved when the first write of the request happens, so a sign-in 
 request is attributed to the signed-in user.
 
 - Admin API with a user: `administrator` (`administrator.userId` lookup).
-- Shop API with a user: `customer`, or `acting` when the session is an acting session
-  (`ActingContextService`, the same source the acting-session plugin uses).
+- Shop API with a user: `customer`, or `acting` when the session row carries an acting
+  administrator (the same columns `ActingContextService` reads).
+- Both lookups run on the writing transaction's own connection (the subscriber's `event.manager`),
+  never on a second pool connection, and are memoized per request.
 - No user (ERP import REST endpoint, sign-in before the session exists): `system`, `source` names
   the route.
 - Every scheduled task (all plugins, Vendure core included) runs inside a `system` scope with
@@ -40,6 +48,29 @@ request is attributed to the signed-in user.
   `scheduled-task:erp-integration-inbox-*`. `ChangeJournalPlugin` must stay after every plugin that
   registers a task in `vendure-config.ts`.
 - Anything else (job-queue jobs, bootstrap provisioning): `system` with `source = background`.
+
+## Volume on ERP streams (estimate, 2026-11-09)
+
+Measured on the staging-integration database (real ERP data; SELECT only): about 54k products,
+54k variants and their translations and prices, 213k price entries, 26k counterparties, 36k
+contracts, 4k trading points; 1.5M inbox events retained; 1.9M stock levels (excluded). Average
+JSON size of one row: price entry ~210 B, translation ~230 B, contract ~640 B, variant ~730 B,
+counterparty ~870 B. With the fixed columns and both indexes an entry costs roughly 0.4-1.2 KB.
+
+- A first full load (every row new) writes about 600k entries, roughly 0.5 GB.
+- A full re-export of unchanged data writes far less: a `save()` that changes nothing writes no
+  entry. Handlers that use `upsert` (storage locations, warehouses, departments, positions,
+  manufacturers, stock organizations, among others) write an `insert` entry per event even when
+  nothing changed; storage locations alone are about 160k events per re-export.
+- The cleanup deletes up to 1M rows per hourly run (200 x 5000), and rows only become eligible
+  365 days after they were written, so a re-export burst is removed in one or two runs a year
+  later. The cleaner keeps up; the cost is table size within the retention window.
+
+Options for the owner (not decided, nothing excluded by default): keep everything (the numbers
+above); exclude ERP-only mirrors such as `ProductVariantPriceEntry`, `StorageLocationAssignment`
+and the `*Erp` records through `ChangeJournalPlugin.init({ excludedEntities: [...] })` (no code
+change, the entity simply stops being journaled); or a shorter retention for `system` entries
+(not built).
 
 ## Exclusions
 
@@ -69,7 +100,9 @@ name in code:
 A column whose name contains one of the tokens `password`, `passwd`, `secret`, `token`, `hash`,
 `salt`, `totp`, `otp`, `recovery`, `credential(s)`, `apiKey`, `privateKey` (camelCase, snake_case
 and custom-field paths are split into tokens) is stored as `{ "redacted": true }`: the entry shows
-that it changed, never a value. This covers password hashes, verification and reset tokens, TOTP
+that it changed, never a value. The same word rule applies to keys nested inside JSON values
+(payment metadata, handler arguments, settings-store values): such a key keeps its place with the
+value `[redacted]`. This covers password hashes, verification and reset tokens, TOTP
 secrets, API key hashes and token hashes. A new secret column must use one of these words.
 
 ## Reading

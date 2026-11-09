@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, inject, it } from 'vitest';
 
-import { DENIED, admin, customerToken, seed, shop, staffToken } from '../harness/actors';
+import { DENIED, admin, customerToken, seed, staffToken } from '../harness/actors';
+import { gql } from '../harness/graphql';
 import {
     CHANGE_JOURNAL_READERS,
     COUNTERPARTIES,
@@ -63,6 +64,34 @@ describe('change journal seed', () => {
     });
 });
 
+const ACTING = { 'x-acting-session': '1' };
+
+// Renames the customer and back; returns the journal entry of the rename.
+async function renameCustomer(token: string, headers: Record<string, string>): Promise<Entry> {
+    const call = <T>(query: string, variables?: Record<string, unknown>) =>
+        gql<T>(inject('accessBaseUrl'), 'shop-api', query, variables, token, headers);
+    const me = await call<{ activeCustomer: { id: string; firstName: string } }>(
+        `query { activeCustomer { id firstName } }`,
+    );
+    expect(me.errors).toEqual([]);
+    const { id, firstName: before } = me.data!.activeCustomer;
+    const after = `${before}-x`;
+    const rename = (f: string) =>
+        call(`mutation($f: String!) { updateCustomer(input: { firstName: $f }) { id } }`, { f });
+    expect((await rename(after)).errors).toEqual([]);
+    try {
+        const got = await forEntity(superadmin, { entityType: 'Customer', entityId: id });
+        const entry = got.items.find(
+            e => e.source === 'shop-api:updateCustomer' && e.changes.firstName?.after === after,
+        );
+        expect(entry).toBeDefined();
+        expect(entry!.changes).toEqual({ firstName: { before, after } });
+        return entry!;
+    } finally {
+        expect((await rename(before)).errors).toEqual([]);
+    }
+}
+
 describe('actors', () => {
     it('an Admin API change is journaled with the administrator', async () => {
         const name = `journal-probe-${Date.now()}`;
@@ -87,26 +116,48 @@ describe('actors', () => {
     });
 
     it('a Shop API change is journaled with the customer and only the changed field', async () => {
-        const token = await customerToken('customer-a');
-        const me = await shop<{ activeCustomer: { id: string; firstName: string } }>(
-            token,
-            `query { activeCustomer { id firstName } }`,
-        );
-        const before = me.data!.activeCustomer.firstName;
-        const after = `${before}-x`;
-        const updated = await shop(
-            token,
-            `mutation($f: String!) { updateCustomer(input: { firstName: $f }) { id } }`,
-            { f: after },
-        );
-        expect(updated.errors).toEqual([]);
-        const got = await forEntity(superadmin, {
-            entityType: 'Customer',
-            entityId: me.data!.activeCustomer.id,
-        });
-        const entry = got.items.find(e => e.source === 'shop-api:updateCustomer');
+        const entry = await renameCustomer(await customerToken('customer-a'), {});
         expect(entry).toMatchObject({ actorType: 'customer', administratorId: null });
-        expect(entry!.changes).toEqual({ firstName: { before, after } });
+    });
+
+    it('a change in an acting session records the customer and the acting administrator', async () => {
+        const me = await admin<{ activeAdministrator: { id: string } }>(
+            superadmin,
+            `query { activeAdministrator { id } }`,
+        );
+        const started = await admin<{ startActingSession: { ticket: string } }>(
+            superadmin,
+            `mutation($c: ID!) { startActingSession(counterpartyId: $c) { ticket } }`,
+            { c: seed().counterparties['a-own'] },
+        );
+        expect(started.errors).toEqual([]);
+        const exchanged = await gql<{ exchangeActingTicket: { token: string } }>(
+            inject('accessBaseUrl'),
+            'shop-api',
+            `mutation($t: String!) { exchangeActingTicket(ticket: $t) { token } }`,
+            { t: started.data!.startActingSession.ticket },
+            undefined,
+            ACTING,
+        );
+        expect(exchanged.errors).toEqual([]);
+        const token = exchanged.data!.exchangeActingTicket.token;
+        try {
+            const entry = await renameCustomer(token, ACTING);
+            expect(entry).toMatchObject({
+                actorType: 'acting',
+                administratorId: me.data!.activeAdministrator.id,
+            });
+            expect(entry.userId).not.toBeNull();
+        } finally {
+            await gql(
+                inject('accessBaseUrl'),
+                'shop-api',
+                `mutation { finishActingSession }`,
+                {},
+                token,
+                ACTING,
+            );
+        }
     });
 });
 

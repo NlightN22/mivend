@@ -1,4 +1,4 @@
-// Same DDL as apps/server's 1791574000000-change-journal migration (the parity test guards that one).
+// Same DDL as apps/server's 1791575000000-change-journal migration (the parity test guards that one).
 export const CHANGE_JOURNAL_DDL = `
     CREATE TABLE "change_journal_entry" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
         "id" SERIAL NOT NULL PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE, "occurredAt" TIMESTAMP NOT NULL,

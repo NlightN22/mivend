@@ -9,7 +9,6 @@
     "references": [
         { "path": "../../shared" },
         { "path": "../access-control" },
-        { "path": "../session-management" },
         { "path": "../versioning" }
     ]
 }

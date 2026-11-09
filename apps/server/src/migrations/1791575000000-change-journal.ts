@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #323: the change journal, one row per insert/update/remove of a journaled entity.
-export class ChangeJournal1791574000000 implements MigrationInterface {
-    name = 'ChangeJournal1791574000000';
+export class ChangeJournal1791575000000 implements MigrationInterface {
+    name = 'ChangeJournal1791575000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

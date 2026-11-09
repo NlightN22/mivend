@@ -210,6 +210,13 @@ export const JOURNALED_ENTITIES: readonly string[] = [
     'SavedTableView',
 ];
 
+const runtimeExclusions = new Set<string>();
+
+// Owner-chosen extra exclusions from ChangeJournalPlugin.init({ excludedEntities }), e.g. a high-volume ERP mirror.
+export function excludeEntities(names: readonly string[]): void {
+    for (const name of names) runtimeExclusions.add(name);
+}
+
 export function isJournaled(entityName: string): boolean {
-    return !(entityName in EXCLUDED_ENTITIES);
+    return !(entityName in EXCLUDED_ENTITIES) && !runtimeExclusions.has(entityName);
 }

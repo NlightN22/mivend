@@ -17,7 +17,6 @@
         "graphql-tag": "^2.12.6",
         "shared": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
-        "@mivend/plugin-session-management": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*"
     },
     "devDependencies": {

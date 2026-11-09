@@ -118,3 +118,49 @@ describe('normalizeValue', () => {
         expect(normalizeValue(undefined)).toBeNull();
     });
 });
+
+describe('normalizeValue on JSON payloads', () => {
+    it('masks secret keys at any depth by the same word rule', () => {
+        const metadata = {
+            public: { receipt: 'r-1' },
+            gateway: { apiKey: 'k-123', nested: [{ accessToken: 't-456', amount: 5 }] },
+            password: 'p-789',
+        };
+        const out = normalizeValue(metadata);
+        expect(out).toEqual({
+            public: { receipt: 'r-1' },
+            gateway: { apiKey: '[redacted]', nested: [{ accessToken: '[redacted]', amount: 5 }] },
+            password: '[redacted]',
+        });
+        expect(JSON.stringify(out)).not.toMatch(/k-123|t-456|p-789/);
+    });
+
+    it('a cyclic object becomes a marker instead of throwing', () => {
+        const a: Record<string, unknown> = { name: 'a' };
+        a.self = a;
+        expect(normalizeValue([a])).toBe('[unserializable]');
+    });
+
+    it('a shared, non-cyclic reference is kept', () => {
+        const shared = { v: 1 };
+        expect(normalizeValue([shared, shared])).toEqual([{ v: 1 }, { v: 1 }]);
+    });
+
+    it('strips NUL characters that jsonb rejects, at any depth', () => {
+        expect(normalizeValue('a\u0000b')).toBe('ab');
+        expect(normalizeValue({ n: ['x\u0000'] })).toEqual({ n: ['x'] });
+    });
+});
+
+describe('snapshotChanges with a JSON column', () => {
+    it('masks nested secrets of an object column such as payment metadata', () => {
+        const changes = snapshotChanges(
+            [column('metadata')],
+            { metadata: { transactionToken: 'tok', status: 'ok' } },
+            'after',
+        );
+        expect(changes).toEqual({
+            metadata: { after: { transactionToken: '[redacted]', status: 'ok' } },
+        });
+    });
+});
