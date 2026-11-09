@@ -1,4 +1,3 @@
-import { UserInputError } from '@vendure/core';
 import type { SelectQueryBuilder } from 'typeorm';
 import {
     applyListFilter as applyFilter,
@@ -55,41 +54,14 @@ const CONFIG: ListQueryConfig = {
     paramPrefix: 'discFilter',
     defaultSql: `${E}."createdAt"`,
     tiebreakerSql: `${E}."id"`,
+    allowOr: false,
+    limits: { maxConditions: 20, maxValues: 100, maxTextLength: 200 },
 };
-
-const MAX_CONDITIONS = 20;
-const MAX_VALUES = 100;
-const MAX_TEXT_LENGTH = 200;
-
-// Interim copy of the engine's limits/allowOr config (counterparty list); switch to it once the engine has it.
-function assertWithinLimits(filter: ListFilter): void {
-    let conditions = 0;
-    let values = 0;
-    const walk = (node: ListFilter): void => {
-        if (node._or) throw new UserInputError('Unsupported filter "_or"');
-        for (const nested of node._and ?? []) walk(nested);
-        for (const [field, operators] of Object.entries(node)) {
-            if (field === '_and' || !operators || typeof operators !== 'object') continue;
-            for (const value of Object.values(operators as Record<string, unknown>)) {
-                conditions++;
-                const list = Array.isArray(value) ? value : [value];
-                values += list.length;
-                if (list.some(v => typeof v === 'string' && v.length > MAX_TEXT_LENGTH))
-                    throw new UserInputError(`A filter value is longer than ${MAX_TEXT_LENGTH}`);
-            }
-        }
-    };
-    walk(filter);
-    if (conditions > MAX_CONDITIONS)
-        throw new UserInputError(`At most ${MAX_CONDITIONS} filter conditions`);
-    if (values > MAX_VALUES) throw new UserInputError(`At most ${MAX_VALUES} filter values`);
-}
 
 export function applyListFilter(
     qb: SelectQueryBuilder<DiscountRegistryEntry>,
     filter: DiscountRegistryFilter | undefined,
 ): void {
-    if (filter) assertWithinLimits(filter);
     applyFilter(CONFIG, qb, filter);
 }
 

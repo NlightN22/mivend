@@ -122,6 +122,16 @@ describe('DiscountRegistryService list (integration, real Postgres)', () => {
         ).rejects.toBeInstanceOf(UserInputError);
     });
 
+    it('refuses malformed filter shapes', async () => {
+        const scope = { allowedPriceTypeCodes: ALLOWED };
+        const bad: unknown[] = [{ _and: {} }, { _and: [null] }, { customer: { in: 'a' } }];
+        for (const filter of bad) {
+            await expect(
+                service.findAllPaginated(ctx, { ...scope, filter: filter as never }),
+            ).rejects.toBeInstanceOf(UserInputError);
+        }
+    });
+
     it('derives active, expiring-soon and expired from validTo and keeps stored statuses', async () => {
         const view = (
             status: 'active' | 'expiring-soon' | 'expired' | 'pending' | 'rejected',
