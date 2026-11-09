@@ -60,9 +60,3 @@
     min-width: 0;
     max-width: 100%;
 }
-
-@media (max-width: 800px) {
-    .mv-advanced-data-table {
-        padding-bottom: var(--mv-bottom-bar-height);
-    }
-}

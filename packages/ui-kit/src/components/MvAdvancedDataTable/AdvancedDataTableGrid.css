@@ -46,9 +46,16 @@
 }
 
 :deep(.mv-cell-more) {
+    display: inline-block;
+    flex: none;
     margin-inline-start: 6px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--app-fill-soft);
     font-size: var(--mv-cell-meta-font-size);
+    line-height: 18px;
     color: var(--el-text-color-secondary);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 

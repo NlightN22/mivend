@@ -237,6 +237,7 @@ const emit = defineEmits<{ select: [key: string] }>();
     flex-wrap: nowrap;
     overflow-x: auto;
     min-width: 0;
+    padding-inline: 16px;
     scrollbar-width: none;
     mask-image: linear-gradient(
         to right,
@@ -248,11 +249,11 @@ const emit = defineEmits<{ select: [key: string] }>();
 }
 
 .mv-filter-chips--fade-start {
-    --mv-fade-start: 24px;
+    --mv-fade-start: 16px;
 }
 
 .mv-filter-chips--fade-end {
-    --mv-fade-end: 24px;
+    --mv-fade-end: 16px;
 }
 
 .mv-filter-chips__arrow {
