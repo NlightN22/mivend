@@ -92,6 +92,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mv-scroll-nav {
+    pointer-events: none;
     position: fixed;
     right: 16px;
     bottom: calc(var(--mv-scroll-nav-offset, 24px) + env(safe-area-inset-bottom));
@@ -102,6 +103,10 @@ onBeforeUnmount(() => {
 }
 
 /* Each arrow has its own fixed slot: showing or hiding one never moves the other. */
+.mv-scroll-nav__slot {
+    pointer-events: auto;
+}
+
 .mv-scroll-nav__slot--hidden {
     visibility: hidden;
     pointer-events: none;
