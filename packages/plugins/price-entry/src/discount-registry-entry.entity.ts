@@ -13,7 +13,7 @@ export class DiscountRegistryEntry extends UuidEntity {
     }
 
     // Allocated when the request is filed; the grant it materializes into takes the same number.
-    @Index()
+    @Index('IDX_discount_registry_entry_number', { unique: true })
     @Column({ type: 'varchar' })
     number!: string;
 

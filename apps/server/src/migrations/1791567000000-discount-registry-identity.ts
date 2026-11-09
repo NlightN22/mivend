@@ -28,7 +28,7 @@ export class DiscountRegistryIdentity1791567000000 implements MigrationInterface
             `CREATE UNIQUE INDEX "IDX_discount_registry_entry_uuid" ON ${table} ("uuid")`,
         );
         await queryRunner.query(
-            `CREATE INDEX "IDX_discount_registry_entry_number" ON ${table} ("number")`,
+            `CREATE UNIQUE INDEX "IDX_discount_registry_entry_number" ON ${table} ("number")`,
         );
     }
 

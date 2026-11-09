@@ -87,15 +87,39 @@ describe('DiscountRegistryService list (integration, real Postgres)', () => {
         expect(await numbers({ allowedPriceTypeCodes: [] })).toEqual([]);
     });
 
-    it('cannot reach a hidden price type through the builder, even with _or', async () => {
-        const filter = { _or: [{ priceType: { eq: HIDDEN } }, { status: { eq: 'active' } }] };
-        expect(await numbers({ allowedPriceTypeCodes: ALLOWED, filter })).toEqual(['1000000001']);
+    it('cannot reach a hidden price type through the builder, and refuses _or', async () => {
         expect(
             await numbers({
                 allowedPriceTypeCodes: ALLOWED,
                 filter: { priceType: { eq: HIDDEN } },
             }),
         ).toEqual([]);
+        await expect(
+            service.findAllPaginated(ctx, {
+                allowedPriceTypeCodes: ALLOWED,
+                filter: { _or: [{ priceType: { eq: HIDDEN } }, { status: { eq: 'active' } }] },
+            }),
+        ).rejects.toBeInstanceOf(UserInputError);
+    });
+
+    it('refuses an oversized filter', async () => {
+        const scope = { allowedPriceTypeCodes: ALLOWED };
+        const many = Array.from({ length: 21 }, () => ({ percent: { gte: 1 } }));
+        await expect(
+            service.findAllPaginated(ctx, { ...scope, filter: { _and: many } }),
+        ).rejects.toBeInstanceOf(UserInputError);
+        await expect(
+            service.findAllPaginated(ctx, {
+                ...scope,
+                filter: { customer: { in: Array.from({ length: 101 }, (_, i) => `c${i}`) } },
+            }),
+        ).rejects.toBeInstanceOf(UserInputError);
+        await expect(
+            service.findAllPaginated(ctx, {
+                ...scope,
+                filter: { customer: { contains: 'x'.repeat(201) } },
+            }),
+        ).rejects.toBeInstanceOf(UserInputError);
     });
 
     it('derives active, expiring-soon and expired from validTo and keeps stored statuses', async () => {
