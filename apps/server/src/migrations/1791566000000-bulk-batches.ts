@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #337: bulk operation batches and their per-record result rows; the human number is the table's own serial.
-export class BulkBatches1791564000000 implements MigrationInterface {
-    name = 'BulkBatches1791564000000';
+export class BulkBatches1791566000000 implements MigrationInterface {
+    name = 'BulkBatches1791566000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
