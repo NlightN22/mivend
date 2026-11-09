@@ -190,7 +190,7 @@ The Catalog item is removed from the portal (see principles).
 sales invoices, returns, corrections, retro bonuses) are one list, so there is no separate Payments entry in the menu and
 no payments tab in the customer card (it shows Settlements instead). The payment page (`/payments/:id`) stays reachable
 from its links (order, proforma invoice, settlement row); whether the payment-attempt list is kept as a Settlements type
-or tab is decided when the settlement document card is built. Until then the Settlements page has an "Online payments" link (with `ReadPayment`) to `/payments`.
+or tab is decided when the settlement document card is built. Until then the Settlements page has an "Online payments" link (with `ReadPayment`) to `/payments`. A custom role with `ReadPayment` but without `ReadSettlementDocument` sees no such link and reaches payments only from the links on order and proforma invoice pages (accepted).
 
 **System settings are not user settings.** The sidebar entry "Settings" becomes "System settings" and holds only
 system-level things (roles, branches, policies and so on). Everything personal (profile, password, two-factor,
@@ -323,8 +323,12 @@ schema only.
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,
-quick article entry, change-of-assignment action, dashboard redesign (a separate step), the user menu
-with user settings and the theme switch, renaming Settings to System settings.
+quick article entry, change-of-assignment action, dashboard redesign (a separate step), the profile, language and theme switch items of the user menu.
+
+Follow-ups:
+
+- Split the customer card page (over 700 lines) into a tab host and per-tab parts together with the customer card redesign.
+- Keyboard navigation of the user menu (focus the first item, arrow keys) in the accessibility pass.
 
 ## Order of work
 
