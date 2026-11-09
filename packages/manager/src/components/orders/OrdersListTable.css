@@ -6,7 +6,7 @@
 
 .orders-list-table__badges {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 4px;
-    white-space: normal;
 }

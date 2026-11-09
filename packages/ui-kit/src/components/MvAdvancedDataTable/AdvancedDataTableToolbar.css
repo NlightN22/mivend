@@ -1,8 +1,8 @@
 .mv-advanced-data-table__toolbar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    flex-wrap: nowrap;
     gap: 8px;
     margin-bottom: 8px;
 }
@@ -19,6 +19,8 @@
 
 .mv-advanced-data-table__toolbar-end {
     display: flex;
+    flex: none;
+    margin-inline-start: auto;
     align-items: center;
     gap: 8px;
 }

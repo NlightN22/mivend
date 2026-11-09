@@ -50,3 +50,19 @@
     min-width: 0;
     overflow-wrap: anywhere;
 }
+
+.mv-advanced-data-table {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.mv-advanced-data-table__scroll-host {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 800px) {
+    .mv-advanced-data-table {
+        padding-bottom: var(--mv-bottom-bar-height);
+    }
+}

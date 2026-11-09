@@ -147,7 +147,7 @@ function applyView(state: TableViewState): void {
         :total-items="totalItems"
         :page="page"
         data-key="id"
-        :row-height-px="61"
+        :row-height-px="64"
         :header-height-px="65"
         :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
         :conditions="filters.conditions"

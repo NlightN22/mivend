@@ -177,7 +177,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
         :total-items="totalItems"
         :page="page"
         data-key="code"
-        :row-height-px="61"
+        :row-height-px="64"
         :header-height-px="65"
         :search="{ filterKey: 'code', placeholder: 'Search orders…' }"
         :conditions="filters.conditions"
@@ -246,14 +246,17 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
 
         <template #cell-state="{ data }">
             <div class="orders-list-table__badges">
-                <MvStatusBadge :variant="(data as OrderListRow).stateVariant">{{
-                    (data as OrderListRow).state
-                }}</MvStatusBadge>
                 <MvStatusBadge
-                    v-for="flag in (data as OrderListRow).flags"
-                    :key="flag.label"
-                    :variant="flag.variant"
-                    >{{ flag.label }}</MvStatusBadge
+                    clamp
+                    :title="(data as OrderListRow).state"
+                    :variant="(data as OrderListRow).stateVariant"
+                    >{{ (data as OrderListRow).state }}</MvStatusBadge
+                >
+                <span
+                    v-if="(data as OrderListRow).flags.length"
+                    class="mv-cell-more"
+                    :title="(data as OrderListRow).flags.map(flag => flag.label).join(', ')"
+                    >+{{ (data as OrderListRow).flags.length }}</span
                 >
             </div>
         </template>

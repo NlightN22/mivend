@@ -21,10 +21,12 @@
     line-clamp: 2;
     overflow: hidden;
     overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 /* One cell scale: size, line height and vertical alignment are the same in every list. */
 :deep(.p-datatable-tbody > tr > td) {
+    height: var(--mv-skeleton-row-height);
     vertical-align: middle;
     font-size: var(--mv-cell-font-size);
     line-height: var(--mv-cell-line-height);
@@ -43,6 +45,13 @@
     font-variant-numeric: tabular-nums;
 }
 
+:deep(.mv-cell-more) {
+    margin-inline-start: 6px;
+    font-size: var(--mv-cell-meta-font-size);
+    color: var(--el-text-color-secondary);
+    white-space: nowrap;
+}
+
 :deep(.mv-cell-id--inline) {
     display: inline-block;
 }
@@ -55,6 +64,7 @@
     line-clamp: 2;
     overflow: hidden;
     overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 :deep(.mv-cell-primary) {

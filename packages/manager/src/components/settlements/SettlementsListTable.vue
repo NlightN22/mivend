@@ -136,7 +136,7 @@ function applyView(state: TableViewState): void {
         :total-items="totalItems"
         :page="page"
         data-key="id"
-        :row-height-px="61"
+        :row-height-px="64"
         :header-height-px="65"
         :search="{ filterKey: 'search', placeholder: 'Number, customer or order…' }"
         :conditions="filters.conditions"
@@ -204,11 +204,15 @@ function applyView(state: TableViewState): void {
         <template #cell-order="{ data }">
             <template v-if="(data as SettlementRow).orderCodes.length">
                 <RouterLink
-                    v-for="code in (data as SettlementRow).orderCodes"
-                    :key="code"
-                    class="mv-cell-id mv-cell-link"
-                    :to="`/orders/${code}`"
-                    >{{ formatDocumentNumber(code) }}</RouterLink
+                    class="mv-cell-id mv-cell-id--inline mv-cell-link"
+                    :to="`/orders/${(data as SettlementRow).orderCodes[0]}`"
+                    >{{ formatDocumentNumber((data as SettlementRow).orderCodes[0]) }}</RouterLink
+                >
+                <span
+                    v-if="(data as SettlementRow).orderCodes.length > 1"
+                    class="mv-cell-more"
+                    :title="(data as SettlementRow).orderCodes.map(formatDocumentNumber).join(', ')"
+                    >+{{ (data as SettlementRow).orderCodes.length - 1 }}</span
                 >
             </template>
             <template v-else>—</template>

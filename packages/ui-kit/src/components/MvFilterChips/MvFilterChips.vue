@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
 import { shouldCollapseChips } from './chipOverflow';
@@ -49,48 +49,114 @@ const props = withDefaults(
     { scrollable: false, maxInline: 6 },
 );
 const collapsed = computed(() => shouldCollapseChips(props.chips.length, props.maxInline));
+
+const row = ref<HTMLElement | null>(null);
+const canPrev = ref(false);
+const canNext = ref(false);
+function measure(): void {
+    const el = row.value;
+    if (!el) return;
+    canPrev.value = el.scrollLeft > 1;
+    canNext.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+}
+function step(direction: 1 | -1): void {
+    row.value?.scrollBy({ left: direction * (row.value.clientWidth * 0.7), behavior: 'smooth' });
+}
+function revealActive(): void {
+    const el = row.value;
+    const chip = el?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!el || !chip) return;
+    if (
+        chip.offsetLeft < el.scrollLeft ||
+        chip.offsetLeft + chip.offsetWidth > el.scrollLeft + el.clientWidth
+    )
+        el.scrollLeft = Math.max(0, chip.offsetLeft - 24);
+}
+let observer: ResizeObserver | undefined;
+onMounted(() => {
+    measure();
+    revealActive();
+    if (typeof ResizeObserver !== 'undefined' && row.value) {
+        observer = new ResizeObserver(measure);
+        observer.observe(row.value);
+    }
+});
+onBeforeUnmount(() => observer?.disconnect());
+watch(
+    () => [props.active, props.chips.length],
+    async () => {
+        await nextTick();
+        revealActive();
+        measure();
+    },
+);
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-    <div
-        class="mv-filter-chips"
-        :class="{
-            'mv-filter-chips--scrollable': scrollable,
-            'mv-filter-chips--collapsed': collapsed,
-        }"
-    >
+    <div class="mv-filter-chips-wrap">
         <button
-            v-for="chip in chips"
-            :key="chip.key"
+            v-if="collapsed && canPrev"
             type="button"
-            class="mv-filter-chip"
-            :class="[
-                chip.variant ? `mv-filter-chip--${chip.variant}` : '',
-                chip.key === active
-                    ? chip.variant
-                        ? 'mv-filter-chip--selected'
-                        : 'mv-filter-chip--active'
-                    : '',
-            ]"
-            @click="emit('select', chip.key)"
+            class="mv-filter-chips__arrow"
+            aria-label="Scroll chips left"
+            @click="step(-1)"
         >
-            <span class="mv-filter-chip__label" :title="chip.label">{{ chip.label }}</span>
-            <span
-                v-if="chip.countLoading"
-                class="mv-filter-chip__count-skeleton"
-                role="status"
-                aria-label="Loading"
-                data-testid="chip-count-skeleton"
-                ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
-            /></span>
-            <span
-                v-else-if="chip.count !== undefined"
-                class="mv-filter-chip__count"
-                :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
-                :title="formatExactCount(chip.count)"
-                >{{ formatCompactCount(chip.count) }}</span
+            ‹
+        </button>
+        <div
+            ref="row"
+            class="mv-filter-chips"
+            :class="{
+                'mv-filter-chips--scrollable': scrollable,
+                'mv-filter-chips--collapsed': collapsed,
+                'mv-filter-chips--fade-start': collapsed && canPrev,
+                'mv-filter-chips--fade-end': collapsed && canNext,
+            }"
+            @scroll.passive="measure"
+        >
+            <button
+                v-for="chip in chips"
+                :key="chip.key"
+                type="button"
+                class="mv-filter-chip"
+                :data-active="chip.key === active"
+                :class="[
+                    chip.variant ? `mv-filter-chip--${chip.variant}` : '',
+                    chip.key === active
+                        ? chip.variant
+                            ? 'mv-filter-chip--selected'
+                            : 'mv-filter-chip--active'
+                        : '',
+                ]"
+                @click="emit('select', chip.key)"
             >
+                <span class="mv-filter-chip__label" :title="chip.label">{{ chip.label }}</span>
+                <span
+                    v-if="chip.countLoading"
+                    class="mv-filter-chip__count-skeleton"
+                    role="status"
+                    aria-label="Loading"
+                    data-testid="chip-count-skeleton"
+                    ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
+                /></span>
+                <span
+                    v-else-if="chip.count !== undefined"
+                    class="mv-filter-chip__count"
+                    :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
+                    :title="formatExactCount(chip.count)"
+                    >{{ formatCompactCount(chip.count) }}</span
+                >
+            </button>
+        </div>
+        <button
+            v-if="collapsed && canNext"
+            type="button"
+            class="mv-filter-chips__arrow"
+            aria-label="Scroll chips right"
+            @click="step(1)"
+        >
+            ›
         </button>
     </div>
 </template>
@@ -156,14 +222,54 @@ const emit = defineEmits<{ select: [key: string] }>();
     color: var(--app-warn-bg);
 }
 
+.mv-filter-chips-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
 .mv-filter-chips--collapsed {
+    --mv-fade-start: 0px;
+    --mv-fade-end: 0px;
+    flex: 1 1 auto;
     flex-wrap: nowrap;
     overflow-x: auto;
     min-width: 0;
-    max-width: 100%;
-    padding-inline-end: 24px;
     scrollbar-width: none;
-    mask-image: linear-gradient(to right, var(--mv-fade-mask-solid) calc(100% - 24px), transparent);
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        var(--mv-fade-mask-solid) var(--mv-fade-start),
+        var(--mv-fade-mask-solid) calc(100% - var(--mv-fade-end)),
+        transparent
+    );
+}
+
+.mv-filter-chips--fade-start {
+    --mv-fade-start: 24px;
+}
+
+.mv-filter-chips--fade-end {
+    --mv-fade-end: 24px;
+}
+
+.mv-filter-chips__arrow {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 999px;
+    background: var(--app-surface);
+    color: var(--el-text-color-regular);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mv-filter-chips__arrow:hover {
+    background: var(--el-fill-color-light);
 }
 
 .mv-filter-chips--collapsed .mv-filter-chip {
