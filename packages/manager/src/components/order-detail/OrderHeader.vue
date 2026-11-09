@@ -23,9 +23,9 @@ const props = defineProps<{
 defineEmits<{ recompute: []; cut: []; changed: [] }>();
 
 const customerName = computed(() => {
-    const customer = props.order.customer;
-    if (!customer) return null;
-    return customer.counterparty?.shortName ?? `${customer.firstName} ${customer.lastName}`;
+    const { customer, counterparty } = props.order;
+    if (counterparty) return counterparty.shortName;
+    return customer ? `${customer.firstName} ${customer.lastName}` : null;
 });
 </script>
 
@@ -65,8 +65,8 @@ const customerName = computed(() => {
                 <IconUser :size="16" />
                 Customer:
                 <RouterLink
-                    v-if="order.customer?.counterparty"
-                    :to="`/customers/${order.customer.counterparty.id}`"
+                    v-if="order.counterparty"
+                    :to="`/customers/${order.counterparty.id}`"
                     class="order-header__link"
                 >
                     {{ customerName }}

@@ -35,7 +35,7 @@ defineEmits<{ changed: [] }>();
                     :shipping-codes="order.shippingLines.map(l => l.shippingMethod?.code ?? '')"
                     :trading-point-id="order.customFields.tradingPointId"
                     :delivery-address="order.customFields.deliveryAddress"
-                    :points="order.customer?.counterparty?.tradingPoints ?? []"
+                    :points="order.counterparty?.tradingPoints ?? []"
                     :can-edit="canEditDelivery"
                     @changed="$emit('changed')"
                 />
@@ -44,7 +44,7 @@ defineEmits<{ changed: [] }>();
         <div class="order-fields__cell">
             <dt>Price type</dt>
             <dd data-testid="order-price-type">
-                {{ order.customer?.counterparty?.priceType ?? '—' }}
+                {{ order.counterparty?.priceType ?? '—' }}
             </dd>
         </div>
         <div class="order-fields__cell">

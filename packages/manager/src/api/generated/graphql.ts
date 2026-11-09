@@ -5822,6 +5822,8 @@ export type Order = Node & {
     channels: Array<Channel>;
     /** A unique code for the Order */
     code: Scalars['String']['output'];
+    /** The order's own counterparty, else its customer's */
+    counterparty: Maybe<Counterparty>;
     /** An array of all coupon codes applied to the Order */
     couponCodes: Array<Scalars['String']['output']>;
     createdAt: Scalars['DateTime']['output'];
@@ -12349,23 +12351,20 @@ export type OrderDetailQuery = {
                     manualPriceReason: string | null;
                 } | null;
             }>;
-            customer: {
-                firstName: string;
-                lastName: string;
-                counterparty: {
+            customer: { firstName: string; lastName: string } | null;
+            counterparty: {
+                id: string;
+                shortName: string;
+                inn: string | null;
+                assignedManagerId: string | null;
+                priceType: string | null;
+                tradingPoints: Array<{
                     id: string;
-                    shortName: string;
-                    inn: string | null;
-                    assignedManagerId: string | null;
-                    priceType: string | null;
-                    tradingPoints: Array<{
-                        id: string;
-                        name: string;
-                        address: string;
-                        isActive: boolean;
-                        customerStatus: string;
-                    }>;
-                } | null;
+                    name: string;
+                    address: string;
+                    isActive: boolean;
+                    customerStatus: string;
+                }>;
             } | null;
         }>;
     };
@@ -12624,16 +12623,13 @@ export type OrderListItemFieldsFragment = {
         hasCheckFindings: boolean | null;
         placedByAdministratorId: string | null;
     } | null;
-    customer: {
-        firstName: string;
-        lastName: string;
-        counterparty: {
-            shortName: string;
-            inn: string | null;
-            priceType: string | null;
-            assignedManagerId: string | null;
-            branchId: string | null;
-        } | null;
+    customer: { firstName: string; lastName: string } | null;
+    counterparty: {
+        shortName: string;
+        inn: string | null;
+        priceType: string | null;
+        assignedManagerId: string | null;
+        branchId: string | null;
     } | null;
 };
 
@@ -12663,16 +12659,13 @@ export type OrdersPageQuery = {
                 hasCheckFindings: boolean | null;
                 placedByAdministratorId: string | null;
             } | null;
-            customer: {
-                firstName: string;
-                lastName: string;
-                counterparty: {
-                    shortName: string;
-                    inn: string | null;
-                    priceType: string | null;
-                    assignedManagerId: string | null;
-                    branchId: string | null;
-                } | null;
+            customer: { firstName: string; lastName: string } | null;
+            counterparty: {
+                shortName: string;
+                inn: string | null;
+                priceType: string | null;
+                assignedManagerId: string | null;
+                branchId: string | null;
             } | null;
         }>;
     };
@@ -14143,13 +14136,13 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
   customer {
     firstName
     lastName
-    counterparty {
-      shortName
-      inn
-      priceType
-      assignedManagerId
-      branchId
-    }
+  }
+  counterparty {
+    shortName
+    inn
+    priceType
+    assignedManagerId
+    branchId
   }
 }
     `,
@@ -16007,19 +16000,19 @@ export const OrderDetailDocument = new TypedDocumentString(`
       customer {
         firstName
         lastName
-        counterparty {
+      }
+      counterparty {
+        id
+        shortName
+        inn
+        assignedManagerId
+        priceType
+        tradingPoints {
           id
-          shortName
-          inn
-          assignedManagerId
-          priceType
-          tradingPoints {
-            id
-            name
-            address
-            isActive
-            customerStatus
-          }
+          name
+          address
+          isActive
+          customerStatus
         }
       }
     }
@@ -16305,13 +16298,13 @@ export const OrdersPageDocument = new TypedDocumentString(`
   customer {
     firstName
     lastName
-    counterparty {
-      shortName
-      inn
-      priceType
-      assignedManagerId
-      branchId
-    }
+  }
+  counterparty {
+    shortName
+    inn
+    priceType
+    assignedManagerId
+    branchId
   }
 }`) as unknown as TypedDocumentString<OrdersPageQuery, OrdersPageQueryVariables>;
 export const OrdersViewCountsDocument = new TypedDocumentString(`

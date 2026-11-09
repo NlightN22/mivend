@@ -24,7 +24,7 @@ export function useOrderDetail(code: () => string) {
     const shortfalls = ref<OrderLineShortfallRow[]>([]);
 
     const managerName = computed(() => {
-        const managerId = order.value?.customer?.counterparty?.assignedManagerId;
+        const managerId = order.value?.counterparty?.assignedManagerId;
         if (!managerId) return null;
         return managers.value.find(m => m.id === managerId)?.name ?? null;
     });
@@ -43,7 +43,7 @@ export function useOrderDetail(code: () => string) {
                 return;
             }
             order.value = detail;
-            const counterpartyId = detail.customer?.counterparty?.id;
+            const counterpartyId = detail.counterparty?.id;
             [
                 adjustmentRequests.value,
                 documents.value,

@@ -44,13 +44,13 @@ function mockOrderDetailData(erpPaidAmount: number | null = null): void {
                     customer: {
                         firstName: 'Ivan',
                         lastName: 'Petrov',
-                        counterparty: {
-                            id: '1',
-                            shortName: 'customer-123',
-                            inn: '7701234567',
-                            assignedManagerId: '1',
-                            priceType: 'price-type-wholesale',
-                        },
+                    },
+                    counterparty: {
+                        id: '1',
+                        shortName: 'customer-123',
+                        inn: '7701234567',
+                        assignedManagerId: '1',
+                        priceType: 'price-type-wholesale',
                     },
                 },
             ],

@@ -77,19 +77,19 @@ query OrderDetail($code: String!) {
             customer {
                 firstName
                 lastName
-                counterparty {
+            }
+            counterparty {
+                id
+                shortName
+                inn
+                assignedManagerId
+                priceType
+                tradingPoints {
                     id
-                    shortName
-                    inn
-                    assignedManagerId
-                    priceType
-                    tradingPoints {
-                        id
-                        name
-                        address
-                        isActive
-                        customerStatus
-                    }
+                    name
+                    address
+                    isActive
+                    customerStatus
                 }
             }
         }

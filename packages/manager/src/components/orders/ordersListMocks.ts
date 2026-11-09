@@ -40,13 +40,13 @@ export const MOCK_ORDERS = Array.from({ length: 24 }, (_, i) => {
         customer: {
             firstName: customer.first,
             lastName: customer.last,
-            counterparty: {
-                shortName: customer.company,
-                inn: '7701234567',
-                priceType: 'price-type-wholesale',
-                assignedManagerId: '1',
-                branchId: i % 2 ? 'branch-a' : 'branch-b',
-            },
+        },
+        counterparty: {
+            shortName: customer.company,
+            inn: '7701234567',
+            priceType: 'price-type-wholesale',
+            assignedManagerId: '1',
+            branchId: i % 2 ? 'branch-a' : 'branch-b',
         },
     };
 });

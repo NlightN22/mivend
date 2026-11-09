@@ -17,13 +17,13 @@ fragment OrderListItemFields on Order {
     customer {
         firstName
         lastName
-        counterparty {
-            shortName
-            inn
-            priceType
-            assignedManagerId
-            branchId
-        }
+    }
+    counterparty {
+        shortName
+        inn
+        priceType
+        assignedManagerId
+        branchId
     }
 }
 

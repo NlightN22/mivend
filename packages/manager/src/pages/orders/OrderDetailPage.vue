@@ -37,7 +37,7 @@ const { consequences } = useFindingConsequences(
     () => canSeeChecks.value,
     () => order.value?.customFields.branchId ?? null,
 );
-const counterpartyId = computed(() => order.value?.customer?.counterparty?.id ?? null);
+const counterpartyId = computed(() => order.value?.counterparty?.id ?? null);
 const kpiData = useCustomerKpiData(counterpartyId);
 
 // Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts; the form's value until the order loads.

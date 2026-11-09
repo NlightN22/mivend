@@ -79,7 +79,7 @@ function attentionFor(order: OrderListItem, ctx: OrderRowContext): string {
 
 export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): OrderListRow[] {
     return items.map(order => {
-        const counterparty = order.customer?.counterparty;
+        const counterparty = order.counterparty;
         const reservationRaw = order.customFields?.reservationState ?? '';
         return {
             id: order.id,

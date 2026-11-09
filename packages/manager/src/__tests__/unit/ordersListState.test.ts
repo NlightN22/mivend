@@ -82,13 +82,13 @@ describe('orders list rows', () => {
         customer: {
             firstName: 'Ann',
             lastName: 'Buyer',
-            counterparty: {
-                shortName: 'customer-123',
-                inn: '1',
-                priceType: 'price-type-wholesale',
-                assignedManagerId: '4',
-                branchId: 'branch-a',
-            },
+        },
+        counterparty: {
+            shortName: 'customer-123',
+            inn: '1',
+            priceType: 'price-type-wholesale',
+            assignedManagerId: '4',
+            branchId: 'branch-a',
         },
     });
     const ctx = {
@@ -100,6 +100,11 @@ describe('orders list rows', () => {
 
     it('resolves who placed the order to a manager name', () => {
         expect(toOrderRows([order('4')], ctx)[0].placedBy).toBe('Pat Manager');
+    });
+
+    it('reads customer and manager from the order counterparty, not the person', () => {
+        const row = toOrderRows([{ ...order(null), customer: null }], ctx)[0];
+        expect(row).toMatchObject({ customer: 'customer-123', manager: 'Pat Manager' });
     });
 
     it('shows the customer for a storefront order', () => {
