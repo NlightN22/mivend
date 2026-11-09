@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, getPageAndCount } from 'shared';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentStatus } from './entities/payment-attempt.entity';
@@ -98,9 +98,7 @@ export class PaymentAttemptQueryService {
                 counterpartyId: Number(counterpartyId),
             })
             .orderBy('payment.createdAt', 'DESC')
-            .addOrderBy('payment.id', 'DESC')
-            .take(take)
-            .skip(skip);
+            .addOrderBy('payment.id', 'DESC');
 
         if (options?.status) {
             qb.andWhere('payment.paymentStatus = :paymentStatus', {
@@ -116,8 +114,7 @@ export class PaymentAttemptQueryService {
             });
         }
 
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 
     // One row per SettlementEntry: target proforma invoice first, then FIFO overflow, then advance last.

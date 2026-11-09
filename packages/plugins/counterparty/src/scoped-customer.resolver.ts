@@ -1,4 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { getPageAndCount } from 'shared';
 import type { CustomerListOptions } from '@vendure/common/lib/generated-types';
 import { Permission } from '@vendure/common/lib/generated-types';
 import { ID } from '@vendure/common/lib/shared-types';
@@ -52,8 +53,11 @@ export class ScopedCustomerResolver {
             customPropertyMap,
         });
         const visible = await this.counterpartyService.visibleFilteredQb(ctx, {});
-        const [items, totalItems] = await applyCustomerScope(qb, visible).getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(
+            applyCustomerScope(qb, visible),
+            args.options?.take,
+            args.options?.skip,
+        );
     }
 
     @Query()

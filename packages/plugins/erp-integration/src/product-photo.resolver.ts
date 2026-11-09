@@ -1,4 +1,5 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { getPageAndCount } from 'shared';
 import {
     Allow,
     Ctx,
@@ -34,8 +35,7 @@ export class ProductPhotoResolver {
         qb.andWhere(`${qb.alias}.status != :ok`, { ok: 'downloaded' }).andWhere(
             `${qb.alias}.isDeleted = false`,
         );
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, args.options?.take, args.options?.skip);
     }
 
     @Mutation()

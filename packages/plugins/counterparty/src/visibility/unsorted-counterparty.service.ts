@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { Counterparty } from '../entities/counterparty.entity';
@@ -25,12 +26,10 @@ export class UnsortedCounterpartyService {
                 { term: `%${options.search.trim()}%` },
             );
         }
-        const [items, totalItems] = await qb
-            .orderBy('c.shortName', 'ASC')
-            .addOrderBy('c.id', 'ASC')
-            .take(Math.min(options?.take ?? 25, MAX_TAKE))
-            .skip(options?.skip ?? 0)
-            .getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(
+            qb.orderBy('c.shortName', 'ASC').addOrderBy('c.id', 'ASC'),
+            Math.min(options?.take ?? 25, MAX_TAKE),
+            options?.skip ?? 0,
+        );
     }
 }

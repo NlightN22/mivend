@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
@@ -110,12 +111,11 @@ export class VisibilityGrantQueryService {
         if (!ctx.userHasPermissions([CustomPermission.ManageAccessControl.Permission])) {
             await this.restrictToCaller(ctx, qb);
         }
-        const [rows, totalItems] = await qb
-            .orderBy('g.createdAt', 'DESC')
-            .addOrderBy('g.id', 'DESC')
-            .take(Math.min(args.take ?? 25, MAX_TAKE))
-            .skip(args.skip ?? 0)
-            .getManyAndCount();
+        const { items: rows, totalItems } = await getPageAndCount(
+            qb.orderBy('g.createdAt', 'DESC').addOrderBy('g.id', 'DESC'),
+            Math.min(args.take ?? 25, MAX_TAKE),
+            args.skip ?? 0,
+        );
         return { totalItems, items: await this.toRows(ctx, rows) };
     }
 

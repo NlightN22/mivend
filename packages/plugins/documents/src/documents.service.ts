@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { ILike, In } from 'typeorm';
-import { ctxQuery, documentNumberSearchTerm } from 'shared';
+import { ctxQuery, documentNumberSearchTerm, getPageAndCount } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
@@ -53,9 +53,7 @@ export class DocumentsService {
             .where('document.counterpartyId = :counterpartyId', {
                 counterpartyId: String(counterpartyId),
             })
-            .orderBy('document.issueDate', 'DESC')
-            .take(take)
-            .skip(skip);
+            .orderBy('document.issueDate', 'DESC');
 
         if (options?.type) {
             qb.andWhere('document.type = :type', { type: options.type });
@@ -66,8 +64,7 @@ export class DocumentsService {
             });
         }
 
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 
     // Document visibility derives entirely from counterparty visibility: reuse the already-scoped
@@ -90,30 +87,30 @@ export class DocumentsService {
         }
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
-        const [items, totalItems] = await this.connection
-            .getRepository(ctx, Document)
-            .findAndCount({
-                where: {
-                    counterpartyId: In(counterpartyIds),
-                    ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
-                    // ILike, not exact: `type` is free-text ERP data with no fixed value set, and the portal
-                    // shows a text box, so an exact match would make partial input like "inv" match nothing.
-                    ...(options?.types?.length
-                        ? { type: In(options.types) }
-                        : options?.type
-                          ? { type: ILike(`%${options.type}%`) }
-                          : {}),
-                    ...(options?.status ? { status: options.status as Document['status'] } : {}),
-                    // Same ILike-on-number search findForCounterparty (the shop-api path) already
-                    // had — this admin-facing path was simply missing it.
-                    ...(options?.search
-                        ? { number: ILike(documentNumberSearchTerm(options.search)) }
-                        : {}),
-                },
-                order: { issueDate: 'DESC' },
-                take,
-                skip,
-            });
+        const repo = this.connection.getRepository(ctx, Document);
+        const where = {
+            counterpartyId: In(counterpartyIds),
+            ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
+            // ILike, not exact: `type` is free-text ERP data with no fixed value set, and the portal
+            // shows a text box, so an exact match would make partial input like "inv" match nothing.
+            ...(options?.types?.length
+                ? { type: In(options.types) }
+                : options?.type
+                  ? { type: ILike(`%${options.type}%`) }
+                  : {}),
+            ...(options?.status ? { status: options.status as Document['status'] } : {}),
+            // Same ILike-on-number search findForCounterparty (the shop-api path) already
+            // had — this admin-facing path was simply missing it.
+            ...(options?.search ? { number: ILike(documentNumberSearchTerm(options.search)) } : {}),
+        };
+        if (take <= 0) return { items: [], totalItems: await repo.count({ where }) };
+        // eslint-disable-next-line pagination/no-unguarded-page-count -- take <= 0 returns above
+        const [items, totalItems] = await repo.findAndCount({
+            where,
+            order: { issueDate: 'DESC' },
+            take,
+            skip,
+        });
         return { items, totalItems };
     }
 

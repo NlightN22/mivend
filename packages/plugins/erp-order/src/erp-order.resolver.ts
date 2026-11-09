@@ -10,7 +10,7 @@ import {
 } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, WhereExpressionBuilder } from 'typeorm';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, getPageAndCount } from 'shared';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
 import { andErpStatusFilter } from './erp-status-filter';
@@ -70,9 +70,7 @@ export class ErpOrderResolver {
             // 'Draft' is admin work-in-progress: customer attached, but the order was never placed.
             // Excluding it here keeps abandoned admin drafts out of the customer's storefront order list.
             .andWhere("order.state NOT IN ('AddingItems', 'Draft')")
-            .orderBy('order.createdAt', 'DESC')
-            .take(take)
-            .skip(skip);
+            .orderBy('order.createdAt', 'DESC');
 
         if (isExternal !== undefined) {
             qb.andWhere('"order"."customFieldsIsexternal" = :isExternal', { isExternal });
@@ -97,7 +95,6 @@ export class ErpOrderResolver {
             );
         }
 
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 }

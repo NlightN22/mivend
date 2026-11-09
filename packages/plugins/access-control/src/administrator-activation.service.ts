@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import type { AdministratorListOptions } from '@vendure/common/lib/generated-types';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
@@ -32,8 +33,7 @@ export class AdministratorActivationService {
     ): Promise<PaginatedList<Administrator>> {
         const qb = this.listQueryBuilder.build(Administrator, options, { ctx });
         qb.withDeleted().andWhere(`${qb.alias}.deletedAt IS NOT NULL`);
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     // AdministratorService.findAll hard-filters deletedAt IS NULL, so a status filter can't use it.
@@ -53,8 +53,7 @@ export class AdministratorActivationService {
         } else if (status === 'inactive') {
             qb.andWhere(`${qb.alias}.deletedAt IS NOT NULL`);
         }
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     // Driven by UserChanged's own isActive/isDeleted — a no-op when no Administrator has ever

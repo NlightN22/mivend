@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import {
     PaginatedList,
     RequestContext,
@@ -176,17 +177,14 @@ export class ReconciliationService {
         const take = Math.min(options?.take ?? 20, OPEN_ISSUES_MAX_TAKE);
         const skip = options?.skip ?? 0;
 
-        const [items, totalItems] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, ErpReconciliationIssue)
             .createQueryBuilder('issue')
             .where('issue.status = :status', { status: 'open' })
             .orderBy('issue.detectedAt', 'DESC')
-            .addOrderBy('issue.id', 'DESC')
-            .take(take)
-            .skip(skip)
-            .getManyAndCount();
+            .addOrderBy('issue.id', 'DESC');
 
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 
     async resolve(

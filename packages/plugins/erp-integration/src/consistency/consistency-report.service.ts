@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, getPageAndCount } from 'shared';
 
 import { ConsistencyReport } from './consistency-report.entity';
 import { ConsistencySourceState } from './consistency-source-state.entity';
@@ -38,15 +38,12 @@ export class ConsistencyReportService {
             .getRepository(ctx, ConsistencyReport)
             .createQueryBuilder('report')
             .orderBy('report.lastDetectedAt', 'DESC')
-            .addOrderBy('report.id', 'DESC')
-            .take(Math.min(options.take ?? 20, MAX_TAKE))
-            .skip(options.skip ?? 0);
+            .addOrderBy('report.id', 'DESC');
         for (const column of FILTER_COLUMNS) {
             const value = options[column];
             if (value) qb.andWhere(`report.${column} = :${column}`, { [column]: value });
         }
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, Math.min(options.take ?? 20, MAX_TAKE), options.skip ?? 0);
     }
 
     async sources(ctx: RequestContext): Promise<ConsistencySourceView[]> {

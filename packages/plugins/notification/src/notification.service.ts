@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, IsNull, Not } from 'typeorm';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -220,14 +221,8 @@ export class NotificationService {
             qb.andWhere('notification.title ILIKE :search', { search: `%${opts.search}%` });
         }
 
-        const [items, totalItems] = await qb
-            .orderBy('notification.createdAt', 'DESC')
-            .addOrderBy('notification.id', 'DESC')
-            .take(take)
-            .skip(skip)
-            .getManyAndCount();
-
-        return { items, totalItems };
+        qb.orderBy('notification.createdAt', 'DESC').addOrderBy('notification.id', 'DESC');
+        return getPageAndCount(qb, take, skip);
     }
 
     async markRead(ctx: RequestContext, id: string): Promise<Notification> {

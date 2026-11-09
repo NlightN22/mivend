@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { SUPER_ADMIN_ROLE_CODE } from '@vendure/common/lib/shared-constants';
 import {
     Administrator,
@@ -28,7 +29,7 @@ export class UnsortedAdministratorService {
             SUPER_ADMIN_ROLE_CODE,
             ...(await this.roleScopeConfig.roleCodesWithScope(ctx, 'counterparty', 'all')),
         ];
-        const [items, totalItems] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, Administrator)
             .createQueryBuilder('a')
             .leftJoinAndSelect('a.user', 'user')
@@ -40,10 +41,7 @@ export class UnsortedAdministratorService {
                  WHERE ur."userId" = a."userId" AND r.code IN (:...unrestricted))`,
                 { unrestricted },
             )
-            .orderBy('a.id', 'ASC')
-            .take(Math.min(options?.take ?? 25, MAX_TAKE))
-            .skip(options?.skip ?? 0)
-            .getManyAndCount();
-        return { items, totalItems };
+            .orderBy('a.id', 'ASC');
+        return getPageAndCount(qb, Math.min(options?.take ?? 25, MAX_TAKE), options?.skip ?? 0);
     }
 }

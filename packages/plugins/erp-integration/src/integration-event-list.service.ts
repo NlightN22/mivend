@@ -154,6 +154,7 @@ export class IntegrationEventListService {
             column: 'e.updatedAt',
             direction: 'DESC',
         });
+        // eslint-disable-next-line pagination/no-unguarded-page-count -- parsePaging clamps take to >= 1
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }
@@ -170,6 +171,7 @@ export class IntegrationEventListService {
             column: 'e.createdAt',
             direction: 'DESC',
         });
+        // eslint-disable-next-line pagination/no-unguarded-page-count -- parsePaging clamps take to >= 1
         const [entries, totalItems] = await qb.getManyAndCount();
         return { items: entries.map(toOutboxProblemRow), totalItems };
     }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     ListQueryBuilder,
@@ -107,8 +108,7 @@ export class ErpUserService {
         qb.andWhere(`${qb.alias}.status = :status`, { status: 'unlinked' }).andWhere(
             `(${qb.alias}.active IS NULL OR ${qb.alias}.active = true)`,
         );
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     async findPositionErpIds(ctx: RequestContext, erpIds: string[]): Promise<Map<string, string>> {

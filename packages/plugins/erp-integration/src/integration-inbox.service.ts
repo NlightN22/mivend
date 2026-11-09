@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { PaginatedList, RequestContext } from '@vendure/core';
 import { Logger, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'crypto';
-import { ctxQuery } from 'shared';
+import { ctxQuery, getPageAndCount } from 'shared';
 import { In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
@@ -257,17 +257,14 @@ export class IntegrationInboxService {
         const take = Math.min(options?.take ?? 20, FAILED_EVENTS_MAX_TAKE);
         const skip = options?.skip ?? 0;
 
-        const [items, totalItems] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('event')
             .where('event.status = :status', { status: 'failed' })
             .orderBy('event.updatedAt', 'DESC')
-            .addOrderBy('event.id', 'DESC')
-            .take(take)
-            .skip(skip)
-            .getManyAndCount();
+            .addOrderBy('event.id', 'DESC');
 
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 
     private isUniqueViolation(err: unknown): boolean {

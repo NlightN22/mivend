@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import {
     ListQueryBuilder,
     ListQueryOptions,
@@ -67,12 +68,10 @@ export class GrantedRetroBonusService {
         recipientCounterpartyErpId: string,
         options?: ListQueryOptions<GrantedRetroBonus>,
     ): Promise<PaginatedList<GrantedRetroBonus>> {
-        return this.listQueryBuilder
-            .build(GrantedRetroBonus, options, {
-                ctx,
-                where: { recipientCounterpartyErpId, isDeleted: false },
-            })
-            .getManyAndCount()
-            .then(([items, totalItems]) => ({ items, totalItems }));
+        const qb = this.listQueryBuilder.build(GrantedRetroBonus, options, {
+            ctx,
+            where: { recipientCounterpartyErpId, isDeleted: false },
+        });
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 }

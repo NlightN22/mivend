@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import {
     Administrator,
     PaginatedList,
@@ -64,7 +65,7 @@ export class TeamDirectoryService {
 
     // Inactive (soft-deleted) rows only for ManageAdministratorLifecycle holders, like Settings > Users.
     // Names outside the caller's department are null unless teamVisibility is 'all'; search never
-    // matches a name the caller cannot see. take: 0 is a lean count (no joins, no rows).
+    // matches a name the caller cannot see.
     async findPage(
         ctx: RequestContext,
         options: TeamDirectoryListOptions = {},
@@ -89,13 +90,16 @@ export class TeamDirectoryService {
         this.applyFilter(qb, options);
         this.applySearch(qb, options.search, nameVisibleToAll, ownDepartmentId);
         const take = Math.min(options.take ?? 20, MAX_TAKE);
-        if (take === 0) return { items: [], totalItems: await qb.getCount() };
-        qb.leftJoinAndSelect('a.user', 'user')
-            .leftJoinAndSelect('user.roles', 'role')
-            .orderBy('a.id', 'ASC')
-            .skip(options.skip ?? 0)
-            .take(take);
-        const [admins, totalItems] = await qb.getManyAndCount();
+        const { items: admins, totalItems } = await getPageAndCount(
+            qb,
+            take,
+            options.skip ?? 0,
+            q =>
+                q
+                    .leftJoinAndSelect('a.user', 'user')
+                    .leftJoinAndSelect('user.roles', 'role')
+                    .orderBy('a.id', 'ASC'),
+        );
         const items = await this.toMembers(ctx, admins, nameVisibleToAll, ownDepartmentId);
         return { items, totalItems };
     }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { SelectQueryBuilder } from 'typeorm';
-import { ctxQuery } from 'shared';
+import { ctxQuery, getPageAndCount } from 'shared';
 
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
@@ -28,15 +28,12 @@ export class TradingPointLocationReportService {
         options: { take?: number; skip?: number } = {},
     ): Promise<{ items: TradingPoint[]; totalItems: number }> {
         const take = Math.min(options.take ?? 50, 200);
-        const [items, totalItems] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, TradingPoint)
             .createQueryBuilder('tp')
             .where(`tp."isActive" = true AND ${noLocationSql('tp.')}`)
-            .orderBy('tp.id', 'ASC')
-            .take(take)
-            .skip(options.skip ?? 0)
-            .getManyAndCount();
-        return { items, totalItems };
+            .orderBy('tp.id', 'ASC');
+        return getPageAndCount(qb, take, options.skip ?? 0);
     }
 
     // Points whose mivend record has moved away from what the ERP last sent (the expected result of a person's edit).
@@ -78,11 +75,10 @@ export class TradingPointLocationReportService {
         qb: SelectQueryBuilder<TradingPoint>,
         options: { take?: number; skip?: number },
     ): Promise<{ items: TradingPoint[]; totalItems: number }> {
-        const [items, totalItems] = await qb
-            .orderBy('tp.id', 'ASC')
-            .take(Math.min(options.take ?? 50, 200))
-            .skip(options.skip ?? 0)
-            .getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(
+            qb.orderBy('tp.id', 'ASC'),
+            Math.min(options.take ?? 50, 200),
+            options.skip ?? 0,
+        );
     }
 }

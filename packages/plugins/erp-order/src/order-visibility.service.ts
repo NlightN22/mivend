@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ID, ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, getPageAndCount } from 'shared';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { orderBranchClause } from './order-branch-clause';
@@ -136,9 +136,6 @@ export class OrderVisibilityService {
             search,
             relations,
         );
-        // take: 0 is a count-only request; getManyAndCount would hydrate every order (take 0 = no limit).
-        if (options?.take === 0) return { items: [], totalItems: await qb.getCount() };
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 }

@@ -1,4 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { getPageAndCount } from 'shared';
 import {
     Allow,
     Ctx,
@@ -63,8 +64,6 @@ export class AdminOrderPaymentViewResolver {
             qb.andWhere(`(${capturedAmount}) >= ${totalWithTax}`);
         }
 
-        if (args.options?.take === 0) return { items: [], totalItems: await qb.getCount() };
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, args.options?.take, args.options?.skip);
     }
 }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
 import { Counterparty } from '@mivend/plugin-counterparty';
@@ -116,13 +117,7 @@ export class PaymentReconciliationIssueService {
             this.proformaInvoiceVisibilityService.applyScope(qb, scope);
         }
 
-        const [items, totalItems] = await qb
-            .orderBy('issue.detectedAt', 'DESC')
-            .addOrderBy('issue.id', 'DESC')
-            .take(take)
-            .skip(skip)
-            .getManyAndCount();
-
-        return { items, totalItems };
+        qb.orderBy('issue.detectedAt', 'DESC').addOrderBy('issue.id', 'DESC');
+        return getPageAndCount(qb, take, skip);
     }
 }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { CounterpartyService } from './counterparty.service';
@@ -49,12 +50,11 @@ export class PriceTypeGapService {
                 { term: `%${options.search.trim().replace(/[\\%_]/g, '\\$&')}%` },
             );
         }
-        const [counterparties, totalItems] = await qb
-            .orderBy('c.shortName', 'ASC')
-            .addOrderBy('c.id', 'ASC')
-            .take(Math.min(Math.max(options?.take ?? 25, 1), MAX_TAKE))
-            .skip(Math.max(options?.skip ?? 0, 0))
-            .getManyAndCount();
+        const { items: counterparties, totalItems } = await getPageAndCount(
+            qb.orderBy('c.shortName', 'ASC').addOrderBy('c.id', 'ASC'),
+            Math.min(options?.take ?? 25, MAX_TAKE),
+            Math.max(options?.skip ?? 0, 0),
+        );
 
         const contractIds = counterparties.flatMap(c =>
             c.mainContractId ? [c.mainContractId] : [],

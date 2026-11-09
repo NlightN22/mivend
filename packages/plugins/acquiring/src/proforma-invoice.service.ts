@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, getPageAndCount } from 'shared';
 
 import { applyStatusFilter } from './proforma-invoice-display';
 import type { ProformaInvoiceFilter, ProformaInvoiceSort } from './proforma-invoice-list-query';
@@ -90,9 +90,7 @@ export class ProformaInvoiceService {
             .orderBy('proformaInvoice.createdAt', 'DESC')
             // Proformas split from one order share createdAt when created in one transaction;
             // without a secondary sort key their order across separate queries is undefined.
-            .addOrderBy('proformaInvoice.id', 'DESC')
-            .take(take)
-            .skip(skip);
+            .addOrderBy('proformaInvoice.id', 'DESC');
 
         if (options?.status) {
             applyStatusFilter(qb, 'proformaInvoice', options.status);
@@ -112,7 +110,6 @@ export class ProformaInvoiceService {
             );
         }
 
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 }

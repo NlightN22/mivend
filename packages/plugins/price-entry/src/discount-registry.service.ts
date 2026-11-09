@@ -3,7 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, In, WhereExpressionBuilder } from 'typeorm';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { withAggregateLock } from 'shared';
+import { getPageAndCount, withAggregateLock } from 'shared';
 
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 
@@ -211,12 +211,9 @@ export class DiscountRegistryService {
             );
         }
 
-        qb.orderBy('entry.validTo', 'DESC')
-            .take(options.take ?? 20)
-            .skip(options.skip ?? 0);
+        qb.orderBy('entry.validTo', 'DESC');
 
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        return getPageAndCount(qb, options.take ?? 20, options.skip ?? 0);
     }
 
     // Counts only — powers the /discounts KPI cards without fetching rows.

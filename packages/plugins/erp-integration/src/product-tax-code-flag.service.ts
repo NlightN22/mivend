@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getPageAndCount } from 'shared';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
@@ -42,15 +43,12 @@ export class ProductTaxCodeFlagService {
         const take = Math.min(options?.take ?? 20, RECENT_FLAGS_MAX_TAKE);
         const skip = options?.skip ?? 0;
 
-        const [items, totalItems] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, ProductTaxCodeFlag)
             .createQueryBuilder('flag')
             .orderBy('flag.detectedAt', 'DESC')
-            .addOrderBy('flag.id', 'DESC')
-            .take(take)
-            .skip(skip)
-            .getManyAndCount();
+            .addOrderBy('flag.id', 'DESC');
 
-        return { items, totalItems };
+        return getPageAndCount(qb, take, skip);
     }
 }
