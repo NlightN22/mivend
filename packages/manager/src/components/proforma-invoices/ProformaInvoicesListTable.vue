@@ -20,7 +20,7 @@ import { PROFORMA_INVOICES_URL_DEFAULTS } from '../../composables/proformaInvoic
 import { sortFromState, sortToState } from './proformaInvoicesSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { PROFORMA_INVOICES_COLUMNS as COLUMNS } from './proformaInvoicesColumns';
+import { PROFORMA_INVOICES_COLUMNS } from './proformaInvoicesColumns';
 import type { ProformaInvoiceRow } from './proformaInvoicesRows';
 
 const props = defineProps<{
@@ -33,7 +33,14 @@ const props = defineProps<{
     filters: ProformaInvoicesListFilters;
     sort: ProformaInvoicesSort;
     administratorId: string;
+    nested?: boolean;
+    urlPrefix?: string;
 }>();
+
+// Nested under a customer, the customer column and filter are redundant.
+const COLUMNS = props.nested
+    ? PROFORMA_INVOICES_COLUMNS.filter(c => c.field !== 'customer')
+    : PROFORMA_INVOICES_COLUMNS;
 
 const emit = defineEmits<{
     'update:filters': [filters: ProformaInvoicesListFilters];
@@ -45,7 +52,7 @@ const emit = defineEmits<{
 }>();
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
-    `proforma-invoices-list-v2:${props.administratorId}`,
+    `proforma-invoices-list-v2:${props.nested ? 'nested:' : ''}${props.administratorId}`,
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
@@ -96,7 +103,9 @@ watch(
     },
 );
 
-const openedWithLink = Object.keys(PROFORMA_INVOICES_URL_DEFAULTS).some(k => k in useRoute().query);
+const openedWithLink = Object.keys(PROFORMA_INVOICES_URL_DEFAULTS).some(
+    k => (props.urlPrefix ?? '') + k in useRoute().query,
+);
 
 function captureView(): TableViewState {
     return {

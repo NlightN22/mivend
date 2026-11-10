@@ -88,6 +88,7 @@ export interface DiscountsPage {
 
 export async function fetchDiscountsList(
     filters: DiscountsListFilters,
+    counterpartyId: string,
     page: number,
     pageSize: number,
     sort: DiscountsSort,
@@ -98,6 +99,7 @@ export async function fetchDiscountsList(
             take: pageSize,
             status: filters.view === 'all' ? undefined : filters.view,
             search: filters.search || undefined,
+            counterpartyId: counterpartyId || undefined,
             filter: conditionsToDiscountsFilter(filters.conditions),
             sort: { [sort.field]: sort.dir },
         },
@@ -113,10 +115,12 @@ export type DiscountsViewCounts = Record<DiscountsView, number>;
 export async function fetchDiscountViewCounts(
     search: string,
     filter?: DiscountRegistryFilterParameter,
+    counterpartyId = '',
 ): Promise<DiscountsViewCounts> {
     const result = await adminApi(DiscountViewCountsDocument, {
         search: search || undefined,
         filter,
+        counterpartyId: counterpartyId || undefined,
     });
     return {
         all: result.all.totalItems,

@@ -33,8 +33,9 @@ export interface DiscountsListState {
 }
 
 // Search, view, builder conditions, sort, page and page size live in the URL, so a filtered list is a link.
-export function useDiscountsList(): DiscountsListState {
-    const { fromQuery, toQuery } = useUrlSyncedState(DISCOUNTS_URL_DEFAULTS);
+// A fixed customer (an embedded list) is never in the URL; urlPrefix namespaces the keys.
+export function useDiscountsList(counterpartyId = '', urlPrefix = ''): DiscountsListState {
+    const { fromQuery, toQuery } = useUrlSyncedState(DISCOUNTS_URL_DEFAULTS, urlPrefix);
     const urlState: DiscountsUrlState = { ...DISCOUNTS_URL_DEFAULTS };
     const page = ref(1);
     fromQuery(urlState, page);
@@ -53,6 +54,7 @@ export function useDiscountsList(): DiscountsListState {
             try {
                 return await fetchDiscountsList(
                     filters.value,
+                    counterpartyId,
                     page.value,
                     pageSize.value,
                     sort.value,
@@ -78,6 +80,7 @@ export function useDiscountsList(): DiscountsListState {
             fetchDiscountViewCounts(
                 filters.value.search,
                 conditionsToDiscountsFilter(filters.value.conditions),
+                counterpartyId,
             ),
         result => {
             counts.value = result;

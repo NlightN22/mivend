@@ -12,11 +12,16 @@ import {
 import DiscountsListTable from './DiscountsListTable.vue';
 import { toDiscountRows, type DiscountRow } from './discountsRows';
 
+// A set counterpartyId fixes the list to one customer, e.g. when embedded in the customer card.
+const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: string }>(), {
+    counterpartyId: '',
+    urlPrefix: '',
+});
 defineEmits<{ new: []; renew: [row: DiscountRow] }>();
 defineExpose({ reload: () => list.reload() });
 
 const authStore = useAuthStore();
-const list = useDiscountsList();
+const list = useDiscountsList(props.counterpartyId, props.urlPrefix);
 const rows = computed(() => toDiscountRows(list.items.value, list.names.value));
 
 const chips = computed<FilterChip[]>(() =>
@@ -48,6 +53,8 @@ function clearFilters(): void {
         :filters="list.filters.value"
         :sort="list.sort.value"
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+        :nested="Boolean(props.counterpartyId)"
+        :url-prefix="props.urlPrefix"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"
         @update:page="list.page.value = $event"

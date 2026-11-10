@@ -35,8 +35,12 @@ export interface ProformaInvoicesListState {
 }
 
 // Search, status, customer, page and page size live in the URL, so a filtered list is a shareable link.
-export function useProformaInvoicesList(): ProformaInvoicesListState {
-    const { fromQuery, toQuery } = useUrlSyncedState(PROFORMA_INVOICES_URL_DEFAULTS);
+// A fixed customer (an embedded list) wins over the URL and is never written to it; urlPrefix namespaces the keys.
+export function useProformaInvoicesList(
+    fixedCounterpartyId = '',
+    urlPrefix = '',
+): ProformaInvoicesListState {
+    const { fromQuery, toQuery } = useUrlSyncedState(PROFORMA_INVOICES_URL_DEFAULTS, urlPrefix);
     const urlState: ProformaInvoicesUrlState = { ...PROFORMA_INVOICES_URL_DEFAULTS };
     const page = ref(1);
     fromQuery(urlState, page);
@@ -44,7 +48,7 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
 
     const filters = shallowRef<ProformaInvoicesListFilters>(initial.filters);
     const sort = ref<ProformaInvoicesSort>(initial.sort);
-    const counterpartyId = ref(initial.counterpartyId);
+    const counterpartyId = ref(fixedCounterpartyId || initial.counterpartyId);
     const pageSize = ref(initial.pageSize);
     const items = ref<ProformaInvoiceListItem[]>([]);
     const totalItems = ref(0);
@@ -101,7 +105,7 @@ export function useProformaInvoicesList(): ProformaInvoicesListState {
         toQuery(
             toProformaInvoicesUrlState(
                 filters.value,
-                counterpartyId.value,
+                fixedCounterpartyId ? '' : counterpartyId.value,
                 sort.value,
                 pageSize.value,
             ),

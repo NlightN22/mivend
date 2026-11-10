@@ -39,10 +39,10 @@ import {
     IconListDetails,
 } from '@tabler/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
-import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
+import OrdersList from '../../components/orders/OrdersList.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
-import CustomerProformaInvoicesTab from '../../components/customers/CustomerProformaInvoicesTab.vue';
+import ProformaInvoicesList from '../../components/proforma-invoices/ProformaInvoicesList.vue';
 import SettlementsList from '../../components/settlements/SettlementsList.vue';
 import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
@@ -241,9 +241,7 @@ async function load(): Promise<void> {
             ? await fetchOrdersForCustomer(vendureCustomerId.value)
             : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
-        // CustomerProformaInvoicesTab/CustomerDiscountsTab now own their own
-        // fetching/pagination (same shape as CustomerOrdersTab) — this page only still needs
-        // outstandingBalance for its own KPI card.
+        // The list tabs own their fetching; this page only needs outstandingBalance for its KPI card.
         outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
 
         if (canViewHistory.value) {
@@ -470,20 +468,23 @@ function initials(name: string | null): string {
                 :managers="managers"
                 @changed="load"
             />
-            <CustomerOrdersTab
+            <OrdersList
                 v-else-if="activeTab === 'orders' && vendureCustomerId"
                 :customer-id="vendureCustomerId"
+                url-prefix="orders."
             />
             <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">
                 No orders yet
             </p>
-            <CustomerProformaInvoicesTab
+            <ProformaInvoicesList
                 v-else-if="activeTab === 'proformaInvoices'"
                 :counterparty-id="customer.id"
+                url-prefix="proformaInvoices."
             />
             <SettlementsList
                 v-else-if="activeTab === 'settlements'"
                 :counterparty-id="customer.id"
+                url-prefix="settlements."
             />
             <CustomerDiscountsTab
                 v-else-if="activeTab === 'discounts'"

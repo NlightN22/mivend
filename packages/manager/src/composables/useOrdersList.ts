@@ -33,9 +33,10 @@ export interface OrdersListState {
 }
 
 // Filters, sort, page and page size live in the URL, so a filtered list is a shareable link.
-export function useOrdersList(preset: OrdersListPreset): OrdersListState {
+// urlPrefix namespaces the keys of a list embedded in a tab.
+export function useOrdersList(preset: OrdersListPreset, urlPrefix = ''): OrdersListState {
     const statuses = useOrderStatusesStore();
-    const { fromQuery, toQuery } = useUrlSyncedState(ORDERS_URL_DEFAULTS);
+    const { fromQuery, toQuery } = useUrlSyncedState(ORDERS_URL_DEFAULTS, urlPrefix);
 
     const items = ref<OrderListItem[]>([]);
     const totalItems = ref(0);

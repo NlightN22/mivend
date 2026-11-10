@@ -15,12 +15,14 @@ import CustomersListTable from './CustomersListTable.vue';
 import { toCustomerRows } from './customersRows';
 
 // A set fixedFilter narrows the list beside the user's own filters, e.g. a nested list in the customer card.
-const props = defineProps<{ fixedFilter?: CounterpartyFilterParameter }>();
+// A nested list (fixedFilter) keeps its state under its own URL keys unless the caller names a prefix.
+const props = defineProps<{ fixedFilter?: CounterpartyFilterParameter; urlPrefix?: string }>();
+const urlPrefix = props.urlPrefix ?? (props.fixedFilter ? 'nested.' : '');
 
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
 const withManagerFilter = authStore.roleCode !== 'manager';
-const list = useCustomersList(() => props.fixedFilter, withManagerFilter);
+const list = useCustomersList(() => props.fixedFilter, withManagerFilter, urlPrefix);
 
 function managerName(id: string | null): string {
     if (!id) return '—';
@@ -96,6 +98,7 @@ function exportCsv(): void {
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
         :manager-options="withManagerFilter ? list.managerOptions.value : undefined"
         :branch-options="list.branchOptions.value"
+        :url-prefix="urlPrefix"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"
         @update:page="list.page.value = $event"

@@ -22,7 +22,7 @@ import { sortFromState, sortToState } from './settlementsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
-import { SETTLEMENTS_COLUMNS as COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
+import { SETTLEMENTS_COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
 
 const props = defineProps<{
@@ -37,7 +37,14 @@ const props = defineProps<{
     administratorId: string;
     typeOptions: FilterOption[];
     organizationOptions: FilterOption[];
+    nested?: boolean;
+    urlPrefix?: string;
 }>();
+
+// Nested under a customer, the customer column and filter are redundant.
+const COLUMNS = props.nested
+    ? SETTLEMENTS_COLUMNS.filter(c => c.field !== 'customer')
+    : SETTLEMENTS_COLUMNS;
 
 const emit = defineEmits<{
     'update:filters': [filters: SettlementsListFilters];
@@ -86,7 +93,7 @@ watch(
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
-    `settlements-list-v1:${props.administratorId}`,
+    `settlements-list-v1:${props.nested ? 'nested:' : ''}${props.administratorId}`,
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
@@ -138,7 +145,9 @@ watch(
     },
 );
 
-const openedWithLink = Object.keys(SETTLEMENTS_URL_DEFAULTS).some(k => k in useRoute().query);
+const openedWithLink = Object.keys(SETTLEMENTS_URL_DEFAULTS).some(
+    k => (props.urlPrefix ?? '') + k in useRoute().query,
+);
 
 function captureView(): TableViewState {
     return {

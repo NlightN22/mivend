@@ -25,7 +25,7 @@ import { DISCOUNTS_URL_DEFAULTS } from '../../composables/discountsListUrl';
 import { sortFromState, sortToState } from './discountsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { DISCOUNTS_COLUMNS as COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
+import { DISCOUNTS_COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
 import type { DiscountRow } from './discountsRows';
 
 const props = defineProps<{
@@ -38,7 +38,14 @@ const props = defineProps<{
     filters: DiscountsListFilters;
     sort: DiscountsSort;
     administratorId: string;
+    nested?: boolean;
+    urlPrefix?: string;
 }>();
+
+// Nested under a customer, the customer column and filter are redundant.
+const COLUMNS = props.nested
+    ? DISCOUNTS_COLUMNS.filter(c => c.field !== 'customer')
+    : DISCOUNTS_COLUMNS;
 
 const emit = defineEmits<{
     'update:filters': [filters: DiscountsListFilters];
@@ -99,7 +106,7 @@ watch(
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
-    `discounts-list-v1:${props.administratorId}`,
+    `discounts-list-v1:${props.nested ? 'nested:' : ''}${props.administratorId}`,
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
@@ -151,7 +158,9 @@ watch(
     },
 );
 
-const openedWithLink = Object.keys(DISCOUNTS_URL_DEFAULTS).some(k => k in useRoute().query);
+const openedWithLink = Object.keys(DISCOUNTS_URL_DEFAULTS).some(
+    k => (props.urlPrefix ?? '') + k in useRoute().query,
+);
 
 const router = useRouter();
 // The request is the discount's card; an ERP-pushed rule has none.

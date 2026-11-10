@@ -37,6 +37,7 @@ const props = defineProps<{
     // Undefined hides the Manager filter (a manager's own book has nothing to choose).
     managerOptions: FilterOption[] | undefined;
     branchOptions: FilterOption[];
+    urlPrefix?: string;
 }>();
 
 const emit = defineEmits<{
@@ -103,7 +104,9 @@ watch(
     },
 );
 
-const openedWithLink = Object.keys(CUSTOMERS_URL_DEFAULTS).some(k => k in useRoute().query);
+const openedWithLink = Object.keys(CUSTOMERS_URL_DEFAULTS).some(
+    k => (props.urlPrefix ?? '') + k in useRoute().query,
+);
 
 const router = useRouter();
 function onRowClick(event: AdvancedDataTableRowClickPayload<CustomerRow>): void {
@@ -181,7 +184,9 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-end>
-            <MvButton size="sm" variant="secondary" @click="emit('export')">Export page (CSV)</MvButton>
+            <MvButton size="sm" variant="secondary" @click="emit('export')"
+                >Export page (CSV)</MvButton
+            >
             <TableViewsMenu
                 views-key="customers"
                 :owner-key="administratorId"

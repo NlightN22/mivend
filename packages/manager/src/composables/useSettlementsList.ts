@@ -39,9 +39,9 @@ export interface SettlementsListState {
 }
 
 // Search, type, customer, page and page size live in the URL, so a filtered list is a shareable link.
-// A fixed customer (an embedded list) wins over the URL.
-export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListState {
-    const { fromQuery, toQuery } = useUrlSyncedState(SETTLEMENTS_URL_DEFAULTS);
+// A fixed customer (an embedded list) wins over the URL and is never written to it; urlPrefix namespaces the keys.
+export function useSettlementsList(fixedCounterpartyId = '', urlPrefix = ''): SettlementsListState {
+    const { fromQuery, toQuery } = useUrlSyncedState(SETTLEMENTS_URL_DEFAULTS, urlPrefix);
     const urlState: SettlementsUrlState = { ...SETTLEMENTS_URL_DEFAULTS };
     const page = ref(1);
     fromQuery(urlState, page);
@@ -134,7 +134,12 @@ export function useSettlementsList(fixedCounterpartyId = ''): SettlementsListSta
     watch([filters, sort, counterpartyId, pageSize, page], () => {
         reload();
         toQuery(
-            toSettlementsUrlState(filters.value, counterpartyId.value, sort.value, pageSize.value),
+            toSettlementsUrlState(
+                filters.value,
+                fixedCounterpartyId ? '' : counterpartyId.value,
+                sort.value,
+                pageSize.value,
+            ),
             page,
         );
     });

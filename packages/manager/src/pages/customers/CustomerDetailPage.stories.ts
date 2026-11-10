@@ -6,18 +6,6 @@ import CustomerDetailPage from './CustomerDetailPage.vue';
 import type { CustomerOrderItem } from '../../api/customers';
 import type { ProformaInvoiceListItem } from '../../api/proforma-invoices';
 
-type PaymentBucket = 'unpaid' | 'partial' | 'paid';
-function paymentBucket(index: number): PaymentBucket {
-    const cycle = index % 3;
-    return cycle === 0 ? 'unpaid' : cycle === 1 ? 'partial' : 'paid';
-}
-interface PageVariables {
-    options?: { skip?: number; take?: number; filter?: { state?: { eq?: string } } };
-}
-interface PaymentViewVariables extends PageVariables {
-    paymentView: PaymentBucket;
-}
-
 const ORDER_STATES = [
     'ArrangingPayment',
     'PaymentAuthorized',
@@ -29,7 +17,7 @@ const ORDER_STATES = [
 const FULFILLMENT_STATES = ['Pending', 'Shipped', 'Delivered'];
 const RESERVATION_STATES = ['AWAITING_CONFIRMATION', 'RESERVED', 'EXPIRED', 'RELEASED', 'FAILED'];
 
-// 27 rows, more than CustomerOrdersTab's PAGE_SIZE (20), so the table actually paginates
+// Feeds the Overview KPI strip (the latest 20 orders).
 const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) => ({
     id: String(200 + i),
     code: `ORD-202607-${(2000 + i).toString(16).toUpperCase()}`,
@@ -40,8 +28,7 @@ const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) =
     createdAt: new Date(Date.now() - i * 86400000).toISOString(),
     totalQuantity: 2 + (i % 10),
     customer: { firstName: 'Ivan', lastName: 'Petrov' },
-    // Every 3rd order has no placedByAdministratorId — placed by the storefront customer
-    // directly (see placedByLabel() in CustomerOrdersTab.vue).
+    // Every 3rd order has no placedByAdministratorId: placed by the storefront customer directly.
     customFields: {
         latestFulfillmentState:
             i % 4 === 0 ? null : FULFILLMENT_STATES[i % FULFILLMENT_STATES.length],
@@ -118,49 +105,8 @@ function mockCustomerDetailData(): void {
     registerMock('CustomerOrders', () => ({
         visibleOrders: { items: CUSTOMER_ORDERS.slice(0, 20) },
     }));
-    // Pages independently of the CustomerOrders KPI fetch; see fetchOrdersPageForCustomer in api/customers.ts
-    registerMock('CustomerOrdersPage', (variables: PageVariables) => {
-        const filtered =
-            variables.options?.filter?.state?.eq === 'Cancelled'
-                ? CUSTOMER_ORDERS.filter(o => o.state === 'Cancelled')
-                : CUSTOMER_ORDERS;
-        return { visibleOrders: paginate(filtered, variables.options) };
-    });
-    registerMock('CustomerOrdersByPaymentView', (rawVariables: Record<string, unknown>) => {
-        const variables = rawVariables as unknown as PaymentViewVariables;
-        const filtered = CUSTOMER_ORDERS.filter(
-            (_, i) => paymentBucket(i) === variables.paymentView,
-        );
-        return { customerOrdersByPaymentView: paginate(filtered, variables.options) };
-    });
-    registerMock('CustomerOrderViewCounts', () => ({
-        all: { totalItems: CUSTOMER_ORDERS.length },
-        cancelled: { totalItems: CUSTOMER_ORDERS.filter(o => o.state === 'Cancelled').length },
-        unpaid: {
-            totalItems: CUSTOMER_ORDERS.filter((_, i) => paymentBucket(i) === 'unpaid').length,
-        },
-        partial: {
-            totalItems: CUSTOMER_ORDERS.filter((_, i) => paymentBucket(i) === 'partial').length,
-        },
-    }));
-    // Same pattern as capturedAmountFor in CustomerOrdersTab.stories.ts, keep the two in step
-    registerMock('OrderPaymentSummaries', () => ({
-        orderPaymentSummaries: CUSTOMER_ORDERS.map((order, i) => ({
-            orderId: order.id,
-            capturedAmount:
-                i % 3 === 0
-                    ? 0
-                    : i % 3 === 1
-                      ? Math.round(order.totalWithTax / 2)
-                      : order.totalWithTax,
-        })),
-    }));
-    registerMock('CustomerDiscountGrantsPage', () => ({
-        discountGrantsForCounterparty: { totalItems: 0, items: [] },
-    }));
     registerMock('CustomerDocumentsPage', () => ({ documents: { totalItems: 0, items: [] } }));
-    // Feeds CustomerProformaInvoicesTab (the "ProformaInvoices" tab) — same shape as the standalone
-    // ProformaInvoicesPage.vue, filtered by status server-side per view chip.
+    // Feeds the nested ProformaInvoicesList of the "ProformaInvoices" tab, filtered by status server-side per view chip.
     registerMock('ProformaInvoicesPage', (rawVariables: Record<string, unknown>) => {
         const variables = rawVariables as unknown as {
             options?: { skip?: number; take?: number; status?: string };
@@ -202,6 +148,16 @@ export const Default: Story = {
         components: { CustomerDetailPage },
         template: '<CustomerDetailPage />',
     }),
+};
+
+export const ProformaInvoicesTab: Story = {
+    ...Default,
+    loaders: [
+        async () => {
+            mockCustomerDetailData();
+            await router.push('/customers/1?tab=proformaInvoices');
+        },
+    ],
 };
 
 // Pinned to mobile viewport so the "3 tabs + More" overflow shows without the viewport dropdown

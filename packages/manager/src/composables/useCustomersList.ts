@@ -40,12 +40,13 @@ export interface CustomersListState {
 }
 
 // Search, view, builder conditions, sort, page and page size live in the URL, so a filtered list is a link.
-// `fixedFilter` narrows the scope beside them (a customer card's nested list) and is never in the URL.
+// `fixedFilter` narrows the scope beside them (a nested list) and is never in the URL; urlPrefix namespaces the keys.
 export function useCustomersList(
     fixedFilter: () => CounterpartyFilterParameter | undefined,
     withManagerFilter: boolean,
+    urlPrefix = '',
 ): CustomersListState {
-    const { fromQuery, toQuery } = useUrlSyncedState(CUSTOMERS_URL_DEFAULTS);
+    const { fromQuery, toQuery } = useUrlSyncedState(CUSTOMERS_URL_DEFAULTS, urlPrefix);
     const urlState: CustomersUrlState = { ...CUSTOMERS_URL_DEFAULTS };
     const page = ref(1);
     fromQuery(urlState, page);

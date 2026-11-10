@@ -12,8 +12,14 @@ import {
 import ProformaInvoicesListTable from './ProformaInvoicesListTable.vue';
 import { toProformaInvoiceRows } from './proformaInvoicesRows';
 
+// A set counterpartyId fixes the list to one customer, e.g. when embedded in the customer card.
+const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: string }>(), {
+    counterpartyId: '',
+    urlPrefix: '',
+});
+
 const authStore = useAuthStore();
-const list = useProformaInvoicesList();
+const list = useProformaInvoicesList(props.counterpartyId, props.urlPrefix);
 const rows = computed(() => toProformaInvoiceRows(list.items.value));
 
 const chips = computed<FilterChip[]>(() =>
@@ -36,7 +42,7 @@ function clearFilters(): void {
 
 <template>
     <MvWarningBanner
-        v-if="list.counterpartyId.value"
+        v-if="!props.counterpartyId && list.counterpartyId.value"
         action-text="Show all customers"
         @action="list.counterpartyId.value = ''"
     >
@@ -52,6 +58,8 @@ function clearFilters(): void {
         :filters="list.filters.value"
         :sort="list.sort.value"
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+        :nested="Boolean(props.counterpartyId)"
+        :url-prefix="props.urlPrefix"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"
         @update:page="list.page.value = $event"

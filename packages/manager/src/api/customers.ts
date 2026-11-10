@@ -8,20 +8,14 @@ import {
     CreditForCounterpartyDocument,
     CreditLimitExceededCounterpartyIdsDocument,
     CustomerByIdDocument,
-    CustomerDiscountGrantsPageDocument,
     CustomerDocumentsPageDocument,
     CustomerDocumentTypesDocument,
     CustomerIdForCounterpartyDocument,
-    CustomerOrdersByPaymentViewDocument,
-    CustomerOrderViewCountsDocument,
     CustomerOrdersDocument,
-    CustomerOrdersPageDocument,
     CustomersPageDocument,
     CustomersSummaryDocument,
-    DiscountGrantViewCountsDocument,
     HighUsageCustomersDocument,
     LastOrderDatesDocument,
-    OrderPaymentSummariesDocument,
     PendingTradingPointChangesDocument,
     ReassignCounterpartyManagerDocument,
     RejectTradingPointChangeDocument,
@@ -227,165 +221,8 @@ export async function fetchOrdersForCustomer(
     return result.visibleOrders.items.map(normalizeOrderItem);
 }
 
-// Payment-status views live in plugin-acquiring: the reverse edge would be a circular dependency
-// Chips must filter and paginate in the DB; client-side filtering made counts change across pages
-export type CustomerOrdersView = 'all' | 'unpaid' | 'partial' | 'cancelled';
-
 // Can't be a real admin id: placedByAdministratorId is null for storefront-placed orders
-// Must match the value in CustomerOrdersDataTable.vue
 export const PLACED_BY_CUSTOMER_VALUE = '__customer__';
-
-export interface CustomerOrdersExtraFilters {
-    // Independent of `view`; ignored when view === 'cancelled', which already pins state
-    // Multi-select: eq for one value, in for several
-    state?: string[];
-    // plugin-reservation's customFields.reservationState — same field OrdersFilterBar's
-    // "Reservation" filter uses on the main Orders page.
-    reservationState?: string;
-    // Inclusive on both ends; either bound may be open-ended
-    dateFrom?: string;
-    dateTo?: string;
-    // Order.code contains — real StringOperators filter, no denormalization needed.
-    code?: string;
-    // customFields.latestFulfillmentState — see vendure-config.ts's doc comment. Multi-select,
-    // same reasoning as `state` above.
-    fulfillmentState?: string[];
-    // customFields.placedByAdministratorId — see vendure-config.ts's doc comment.
-    placedByAdministratorId?: string;
-    // Order.totalWithTax range, in minor currency units — real NumberOperators filter.
-    totalMin?: number;
-    totalMax?: number;
-}
-
-export async function fetchOrdersPageForCustomer(
-    customerId: string,
-    page: number,
-    pageSize: number,
-    view: CustomerOrdersView,
-    // Object insertion order = ORDER BY clause order (Vendure's OrderSortParameter supports
-    // multiple keys) — see api/orders.ts's identical OrderSortField doc comment.
-    sort: Partial<
-        Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>
-    > = {
-        createdAt: 'DESC',
-    },
-    extraFilters: CustomerOrdersExtraFilters = {},
-): Promise<{ items: CustomerOrderItem[]; totalItems: number }> {
-    const filter: Record<string, unknown> = {};
-    if (view === 'cancelled') filter.state = { eq: 'Cancelled' };
-    else if (extraFilters.state?.length) {
-        filter.state =
-            extraFilters.state.length === 1
-                ? { eq: extraFilters.state[0] }
-                : { in: extraFilters.state };
-    }
-    if (extraFilters.code) filter.code = { contains: extraFilters.code };
-    if (extraFilters.dateFrom || extraFilters.dateTo) {
-        // Filters on createdAt, not orderPlacedAt: unplaced orders (abandoned carts) must still show
-        // `before` is the day after dateTo, so a range ending today includes all of today's orders
-        const createdAt: Record<string, string> = {};
-        if (extraFilters.dateFrom)
-            createdAt.after = new Date(`${extraFilters.dateFrom}T00:00:00`).toISOString();
-        if (extraFilters.dateTo) {
-            const start = new Date(`${extraFilters.dateTo}T00:00:00`);
-            createdAt.before = new Date(start.getTime() + 24 * 60 * 60 * 1000).toISOString();
-        }
-        filter.createdAt = createdAt;
-    }
-    if (extraFilters.totalMin !== undefined || extraFilters.totalMax !== undefined) {
-        filter.totalWithTax = {
-            ...(extraFilters.totalMin !== undefined ? { gte: extraFilters.totalMin } : {}),
-            ...(extraFilters.totalMax !== undefined ? { lte: extraFilters.totalMax } : {}),
-        };
-    }
-    // Custom fields in Shop/Admin API filters are flat, not nested under a customFields key
-    // Nested form fails GraphQL validation (OrderFilterParameter), breaking the whole table
-    if (extraFilters.reservationState)
-        filter.reservationState = { eq: extraFilters.reservationState };
-    if (extraFilters.fulfillmentState?.length) {
-        // 'Not started' is a synthetic label for a null customField, so it needs isNull, not eq/in
-        // Mixing it with real values needs an _or across isNull and in; one `in` can't express that
-        const hasNotStarted = extraFilters.fulfillmentState.includes('Not started');
-        const realValues = extraFilters.fulfillmentState.filter(v => v !== 'Not started');
-        if (hasNotStarted && realValues.length) {
-            filter._or = [
-                { latestFulfillmentState: { isNull: true } },
-                {
-                    latestFulfillmentState:
-                        realValues.length === 1 ? { eq: realValues[0] } : { in: realValues },
-                },
-            ];
-        } else if (hasNotStarted) {
-            filter.latestFulfillmentState = { isNull: true };
-        } else {
-            filter.latestFulfillmentState =
-                realValues.length === 1 ? { eq: realValues[0] } : { in: realValues };
-        }
-    }
-    if (extraFilters.placedByAdministratorId) {
-        filter.placedByAdministratorId =
-            extraFilters.placedByAdministratorId === PLACED_BY_CUSTOMER_VALUE
-                ? { isNull: true }
-                : { eq: extraFilters.placedByAdministratorId };
-    }
-
-    const options = {
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        sort,
-        ...(Object.keys(filter).length ? { filter } : {}),
-    };
-
-    if (view === 'unpaid' || view === 'partial') {
-        const result = await adminApi(CustomerOrdersByPaymentViewDocument, {
-            customerId,
-            paymentView: view,
-            options,
-        });
-        return {
-            items: result.customerOrdersByPaymentView.items.map(normalizeOrderItem),
-            totalItems: result.customerOrdersByPaymentView.totalItems,
-        };
-    }
-
-    const result = await adminApi(CustomerOrdersPageDocument, { customerId, options });
-    return {
-        items: result.visibleOrders.items.map(normalizeOrderItem),
-        totalItems: result.visibleOrders.totalItems,
-    };
-}
-
-export interface CustomerOrderViewCounts {
-    all: number;
-    unpaid: number;
-    partial: number;
-    cancelled: number;
-}
-
-// take: 0 returns totalItems as a COUNT without row data; aliases batch all chips in one request
-export async function fetchCustomerOrderViewCounts(
-    customerId: string,
-): Promise<CustomerOrderViewCounts> {
-    const result = await adminApi(CustomerOrderViewCountsDocument, { customerId });
-    return {
-        all: result.all.totalItems,
-        cancelled: result.cancelled.totalItems,
-        unpaid: result.unpaid.totalItems,
-        partial: result.partial.totalItems,
-    };
-}
-
-// Source of truth is PaymentAttempt, not Vendure's Order.payments
-// Batched by order id: one query per table page, not one per row
-export async function fetchOrderPaymentSummaries(orderIds: string[]): Promise<Map<string, number>> {
-    const map = new Map<string, number>();
-    if (!orderIds.length) return map;
-    const result = await adminApi(OrderPaymentSummariesDocument, { orderIds });
-    for (const summary of result.orderPaymentSummaries) {
-        map.set(summary.orderId, summary.capturedAmount);
-    }
-    return map;
-}
 
 export interface CustomerDocument {
     id: string;
@@ -510,85 +347,6 @@ export async function fetchActiveDiscountCountsByCustomer(
     if (ids.length === 0) return new Map();
     const result = await adminApi(ActiveDiscountCountsDocument, { counterpartyIds: ids });
     return new Map(result.activeDiscountCounts.map(row => [row.counterpartyId, row.count]));
-}
-
-export type DiscountGrantStatus = 'active' | 'expiring-soon' | 'expired';
-
-export interface DiscountRuleItem {
-    id: string;
-    number: string;
-    createdAt: string;
-    percent: number;
-    facetValueCode: string | null;
-    validTo: string;
-    status: DiscountGrantStatus;
-}
-
-export interface DiscountGrantFilters {
-    [key: string]: string;
-    search: string;
-    status: string;
-}
-
-export const DEFAULT_DISCOUNT_GRANT_FILTERS: DiscountGrantFilters = { search: '', status: '' };
-
-export const DISCOUNT_GRANT_STATUS_OPTIONS = [
-    { value: '', label: 'All statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'expiring-soon', label: 'Expiring soon' },
-    { value: 'expired', label: 'Expired' },
-] as const;
-
-// Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
-// PAYMENT_STATUS_BADGE_VARIANT/PROFORMA_INVOICE_STATUS_BADGE_VARIANT.
-export const DISCOUNT_GRANT_STATUS_BADGE_VARIANT: Record<DiscountGrantStatus, StatusBadgeVariant> =
-    {
-        active: 'success',
-        'expiring-soon': 'warning',
-        expired: 'neutral',
-    };
-
-export interface DiscountGrantViewCounts {
-    all: number;
-    active: number;
-    expiringSoon: number;
-    expired: number;
-}
-
-// Aliased expiringSoon: GraphQL alias names can't contain the hyphen of 'expiring-soon'
-export async function fetchDiscountGrantViewCounts(
-    counterpartyId: string,
-): Promise<DiscountGrantViewCounts> {
-    const result = await adminApi(DiscountGrantViewCountsDocument, { counterpartyId });
-    return {
-        all: result.all.totalItems,
-        active: result.active.totalItems,
-        expiringSoon: result.expiringSoon.totalItems,
-        expired: result.expired.totalItems,
-    };
-}
-
-// Not discountRules(priceTypeCode): it leaks grants scoped to other customers on that price type
-// Unbounded: one row per approved renewal over the customer's lifetime, so paginate
-export async function fetchDiscountGrantsPage(
-    counterpartyId: string,
-    filters: DiscountGrantFilters,
-    page: number,
-    pageSize: number,
-): Promise<{ items: DiscountRuleItem[]; totalItems: number }> {
-    const result = await adminApi(CustomerDiscountGrantsPageDocument, {
-        counterpartyId,
-        options: {
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-            search: filters.search || undefined,
-            status: filters.status || undefined,
-        },
-    });
-    return result.discountGrantsForCounterparty as {
-        items: DiscountRuleItem[];
-        totalItems: number;
-    };
 }
 
 export async function fetchLastOrderDatesByCounterpartyId(

@@ -42,6 +42,7 @@ const props = defineProps<{
     showManagerColumn: boolean;
     // A fixed customer: its own column is redundant, and the filter is never offered.
     customerPreset: boolean;
+    urlPrefix?: string;
 }>();
 
 const emit = defineEmits<{
@@ -126,7 +127,9 @@ watch(
 );
 
 const viewsKey = props.customerPreset ? 'customer-orders' : 'orders';
-const openedWithLink = Object.keys(ORDERS_URL_DEFAULTS).some(k => k in useRoute().query);
+const openedWithLink = Object.keys(ORDERS_URL_DEFAULTS).some(
+    k => (props.urlPrefix ?? '') + k in useRoute().query,
+);
 
 function captureView(): TableViewState {
     return {

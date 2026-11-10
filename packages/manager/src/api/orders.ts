@@ -60,7 +60,7 @@ export const ORDER_STATE_OPTIONS = [
 // (e.g. 'total' -> totalWithTax), so callers map through this before building sort.
 export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt';
 
-// Shared between OrdersTable.vue and CustomerOrdersTab.vue — the same Order.state values must
+// Shared by every order list and the customer KPI strip — the same Order.state values must
 // read the same everywhere in the manager portal.
 export const ORDER_STATE_LABEL: Record<string, string> = {
     AddingItems: 'Draft (storefront cart)',

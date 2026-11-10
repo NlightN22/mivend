@@ -8,10 +8,13 @@ import SettlementsListTable from './SettlementsListTable.vue';
 import { toSettlementRows } from './settlementsRows';
 
 // A set counterpartyId fixes the list to one customer, e.g. when embedded in the customer card.
-const props = withDefaults(defineProps<{ counterpartyId?: string }>(), { counterpartyId: '' });
+const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: string }>(), {
+    counterpartyId: '',
+    urlPrefix: '',
+});
 
 const authStore = useAuthStore();
-const list = useSettlementsList(props.counterpartyId);
+const list = useSettlementsList(props.counterpartyId, props.urlPrefix);
 const rows = computed(() => toSettlementRows(list.items.value));
 
 // One chip per document type present for the current search and filter, after the total.
@@ -64,6 +67,8 @@ function clearFilters(): void {
         :sort="list.sort.value"
         :type-options="list.typeOptions.value"
         :organization-options="list.organizationOptions.value"
+        :nested="Boolean(props.counterpartyId)"
+        :url-prefix="props.urlPrefix"
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"

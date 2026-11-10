@@ -17,13 +17,13 @@ import { toOrderRows } from './ordersListRows';
 
 // `customerId` is a preset: it narrows the list, is never shown as a filter, and the server
 // scopes the result exactly as it does the unfiltered list.
-const props = defineProps<{ customerId?: string }>();
+const props = defineProps<{ customerId?: string; urlPrefix?: string }>();
 
 const authStore = useAuthStore();
 const statuses = useOrderStatusesStore();
 void statuses.load();
 
-const list = useOrdersList({ customerId: props.customerId });
+const list = useOrdersList({ customerId: props.customerId }, props.urlPrefix);
 const viewCounts = useOrdersViewCounts(props.customerId, list.filters);
 
 // Manager sees only their own customers, so a manager column and filter would be redundant.
@@ -75,6 +75,7 @@ defineExpose({ filters: list.filters, applyFilters });
         :administrator-id="authStore.administrator?.id ?? 'anonymous'"
         :show-manager-column="showManagerColumn"
         :customer-preset="Boolean(customerId)"
+        :url-prefix="props.urlPrefix"
         @update:filters="list.filters.value = $event"
         @update:sort="list.sort.value = $event"
         @update:page="list.page.value = $event"
