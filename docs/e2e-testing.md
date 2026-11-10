@@ -175,6 +175,18 @@ Measure on a calm host only (nothing else running; check `uptime` and `free -h`)
 3. `E2E_PARALLEL_WORKERS=2`, `3`, `4` on the same batch (read-only pass; watch CPU time and load for timeouts).
 4. Per group inside the batch: `make e2e-groups G="<one group>"` repeated, to split stack boot, setup, read-only pass and write pass.
 
+Measured on a quiet 8-core host (batch: manager-orders, manager-customers, manager-proforma-payments, storefront-catalog; one run each):
+
+| Config | Wall | user+sys CPU | Result |
+| --- | --- | --- | --- |
+| baseline, 3 read-only workers | 20:16 | 1627 s | all passed |
+| 4 read-only workers | 20:38 | 1695 s | 1 failure in manager-orders (list filter survives a reload), load peaked at 12 |
+| 2 read-only workers | 21:10 | 1617 s | all passed |
+
+Per group (read-only pass + write pass, baseline): manager-orders 5.2m + 2.6m, manager-customers 1.0m + 2.5m, manager-proforma-payments 1.0m (no write pass), storefront-catalog 5.2m. Stack boot is 111 s of the wall (server 42 s, seed 69 s). The average CPU use is about 1.3 cores of 8, so the batch is bound by serial waits, not by cores: the worker count does not matter between 2 and 4 and 4 only adds flakiness. Do not raise `E2E_PARALLEL_WORKERS`.
+
+Not measured: the forced picker seed (`E2E_PICKER_SEED=1`, expected gain is the 30-45 s seed) and repeated single groups. Next lever is the wait time inside the slow specs (storefront-catalog read-only pass, manager-orders both passes), not parallelism.
+
 Candidates (analysis in #336): read-only workers vs cores, a combined read-only pass across groups, two stacks, event-based waits replacing `waitForTimeout`.
 
 ## Manager portal role projects

@@ -6,7 +6,7 @@ snap=$(mktemp)
 trap 'rm -f "$snap" "$snap.diff"' EXIT
 failed=""
 # global-setup runs once, in the first group, so the picker seed is decided for the whole batch up front.
-E2E_PICKER_SEED=0
+E2E_PICKER_SEED=${E2E_PICKER_SEED:-0}
 for g in "$@"; do
     # shellcheck disable=SC2046
     [ "$(bash "$here/e2e-picker-seed.sh" $(bash "$here/e2e-group.sh" dev "$g"))" = 1 ] && E2E_PICKER_SEED=1
