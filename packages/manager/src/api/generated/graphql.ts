@@ -10117,6 +10117,7 @@ export type TaxRateSortParameter = {
 export type TeamDirectoryFilter = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     departmentId?: InputMaybe<Scalars['String']['input']>;
+    roleCode?: InputMaybe<Scalars['String']['input']>;
     status?: InputMaybe<TeamDirectoryStatus>;
 };
 

@@ -8,6 +8,7 @@ export const teamDirectorySdl = `
     input TeamDirectoryFilter {
         departmentId: String
         branchId: String
+        roleCode: String
         status: TeamDirectoryStatus
     }
 

@@ -12,6 +12,7 @@ import {
     fetchDepartments,
     fetchTeamDirectoryPage,
     fetchTeamViewCounts,
+    fetchRoleFilterOptions,
     type BranchOption,
     type DepartmentOption,
     type TeamDirectoryMember,
@@ -28,6 +29,7 @@ const members = ref<TeamDirectoryMember[]>([]);
 const totalItems = ref(0);
 const departments = ref<DepartmentOption[]>([]);
 const branches = ref<BranchOption[]>([]);
+const roleOptions = ref<{ value: string; label: string }[]>([]);
 const error = ref('');
 const counts = ref<TeamViewCounts>({ all: 0, active: 0, inactive: 0, unassigned: 0 });
 
@@ -86,7 +88,14 @@ function onFilters(next: typeof DEFAULT_TEAM_FILTERS): void {
 }
 
 watch(
-    () => [filters.search, filters.departmentId, filters.branchId, filters.status, pageSize.value],
+    () => [
+        filters.search,
+        filters.departmentId,
+        filters.branchId,
+        filters.roleCode,
+        filters.status,
+        pageSize.value,
+    ],
     () => {
         page.value = 1;
     },
@@ -96,6 +105,7 @@ watch(
         filters.search,
         filters.departmentId,
         filters.branchId,
+        filters.roleCode,
         filters.status,
         pageSize.value,
         page.value,
@@ -113,6 +123,7 @@ onMounted(async () => {
             fetchDepartments(),
             fetchBranchOptions(),
         ]);
+        roleOptions.value = await fetchRoleFilterOptions().catch(() => []);
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'Could not load departments and branches';
     }
@@ -132,6 +143,7 @@ onMounted(async () => {
             :members="members"
             :departments="departments"
             :branches="branches"
+            :role-options="roleOptions"
             :loading="loading"
             :total-items="totalItems"
             :page="page"

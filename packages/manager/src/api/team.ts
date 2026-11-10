@@ -1,4 +1,5 @@
 import { adminApi } from './client';
+import { fetchRoles } from './settings';
 import { fetchBranchOptions, type BranchOption } from './orders';
 import {
     DepartmentsDocument,
@@ -34,6 +35,7 @@ export interface TeamFilters {
     search: string;
     departmentId: string;
     branchId: string;
+    roleCode: string;
     status: string;
 }
 
@@ -41,6 +43,7 @@ export const DEFAULT_TEAM_FILTERS: TeamFilters = {
     search: '',
     departmentId: '',
     branchId: '',
+    roleCode: '',
     status: 'active',
 };
 
@@ -76,9 +79,9 @@ function toOptions(filters: TeamFilters, status: string): TeamDirectoryListOptio
         filter: {
             departmentId: filters.departmentId || undefined,
             branchId: filters.branchId || undefined,
+            roleCode: filters.roleCode || undefined,
             status: (status === 'all' || !status ? undefined : status) as
-                | TeamMemberStatus
-                | undefined,
+                TeamMemberStatus | undefined,
         },
     };
 }
@@ -118,4 +121,9 @@ export async function fetchTeamViewCounts(filters: TeamFilters): Promise<TeamVie
         inactive: result.inactive.totalItems,
         unassigned: result.unassigned.totalItems,
     };
+}
+
+export async function fetchRoleFilterOptions(): Promise<{ value: string; label: string }[]> {
+    const roles = await fetchRoles();
+    return roles.map(r => ({ value: r.code, label: r.description || r.code }));
 }

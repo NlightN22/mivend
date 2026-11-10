@@ -18,12 +18,13 @@ import {
 } from '../../api/team';
 
 // Server-side paginated + filtered (manager-table-standard). No sortField: the directory has one
-// stable order and a name sort would leak the order of masked names. Position and role have no
+// stable order and a name sort would leak the order of masked names. Position has no
 // server filter, hence no filter UI.
 const props = defineProps<{
     members: TeamDirectoryMember[];
     departments: DepartmentOption[];
     branches: BranchOption[];
+    roleOptions: { value: string; label: string }[];
     loading: boolean;
     totalItems: number;
     page: number;
@@ -76,7 +77,12 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
             options: props.branches.map(b => ({ value: b.id, label: b.name })),
         },
     },
-    { field: 'roles', header: 'Role', width: 200, filterConfig: { type: 'none' } },
+    {
+        field: 'roles',
+        header: 'Role',
+        width: 200,
+        filterConfig: { type: 'select', placeholder: 'All roles', options: props.roleOptions },
+    },
     { field: 'erpId', header: 'ERP id', width: 140, filterConfig: { type: 'none' } },
     {
         field: 'status',
@@ -100,16 +106,24 @@ interface TeamFilterState {
     name: string;
     department: string;
     branch: string;
+    roles: string;
     status: string;
 }
-const BLANK_FILTERS: TeamFilterState = { name: '', department: '', branch: '', status: '' };
-const FILTER_KEYS = ['name', 'department', 'branch', 'status'];
+const BLANK_FILTERS: TeamFilterState = {
+    name: '',
+    department: '',
+    branch: '',
+    roles: '',
+    status: '',
+};
+const FILTER_KEYS = ['name', 'department', 'branch', 'roles', 'status'];
 
 function fromProps(filters: TeamFilters): TeamFilterState {
     return {
         name: filters.search,
         department: filters.departmentId,
         branch: filters.branchId,
+        roles: filters.roleCode,
         status: filters.status === 'all' ? '' : filters.status,
     };
 }
@@ -142,6 +156,7 @@ watch(
             search: f.name,
             departmentId: f.department,
             branchId: f.branch,
+            roleCode: f.roles,
             status: f.status || 'all',
         };
         if (filtersChanged(next)) {

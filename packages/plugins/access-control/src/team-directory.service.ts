@@ -25,6 +25,7 @@ export interface TeamDirectoryListOptions {
     filter?: {
         departmentId?: string | null;
         branchId?: string | null;
+        roleCode?: string | null;
         status?: TeamDirectoryStatus | null;
     } | null;
 }
@@ -108,9 +109,16 @@ export class TeamDirectoryService {
         qb: SelectQueryBuilder<Administrator>,
         options: TeamDirectoryListOptions,
     ): void {
-        const { departmentId, branchId, status } = options.filter ?? {};
+        const { departmentId, branchId, roleCode, status } = options.filter ?? {};
         if (departmentId) qb.andWhere(`${DEPARTMENT} = :departmentId`, { departmentId });
         if (branchId) qb.andWhere('a.customFields.branchId = :branchId', { branchId });
+        if (roleCode) {
+            qb.andWhere(
+                'EXISTS (SELECT 1 FROM user_roles_role ur INNER JOIN role r ON r.id = ur."roleId" ' +
+                    'WHERE ur."userId" = "a"."userId" AND r.code = :roleCode)',
+                { roleCode },
+            );
+        }
         if (status === 'inactive') qb.andWhere('a.deletedAt IS NOT NULL');
         if (status === 'active' || status === 'unassigned') qb.andWhere('a.deletedAt IS NULL');
         if (status === 'active') qb.andWhere(`${DEPARTMENT} IS NOT NULL`);

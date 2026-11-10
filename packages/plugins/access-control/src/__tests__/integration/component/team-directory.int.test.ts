@@ -251,6 +251,16 @@ describe('TeamDirectoryService.findPage', () => {
         expect([first.items[0].erpId, second.items[0].erpId]).toEqual(['e-1', 'e-2']);
     });
 
+    it('filters by role code while rows keep all their roles', async () => {
+        resolveCounterpartyScope.mockResolvedValue(branchA);
+
+        const result = await service.findPage(ctx, { filter: { roleCode: 'manager' } });
+
+        expect(result.items.map(i => i.erpId).sort()).toEqual(['e-2', 'e-4']);
+        expect(result.totalItems).toBe(2);
+        expect(result.items.every(i => i.roleCodes.includes('manager'))).toBe(true);
+    });
+
     it('a caller without a branch sees nobody', async () => {
         resolveCounterpartyScope.mockResolvedValue({ kind: 'department', administratorId: 1 });
 
