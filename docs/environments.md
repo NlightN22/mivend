@@ -286,6 +286,12 @@ a customer that no e2e spec uses: `balance-demo@test.example` / `BalanceDemo123!
 `cnt-balance-demo`, contract `ctr-balance-demo`). It has one paid, one partly paid and overdue, and one not yet
 due sales invoice; dates are relative to the seed time, so every `make seed` re-applies them.
 
+**Statement kinds demo (local only, #342).** `make seed` also creates `statement-kinds@test.example` /
+`StatementKinds123!` (counterparty `cnt-statement-kinds`, contract `ctr-statement-kinds`) with one settlement
+document of every ERP kind, signed by the entry, in each accounting-flag case (`reflectedInAccounting` true,
+false, no accounting block), including kinds missing from the type reference and the supplier/payroll kinds
+that stay hidden. Source: `infrastructure/scripts/seed-statement-kinds.mjs`.
+
 **Order-edit and held-send states (local only).** `make seed-order-edit-states` (after `make seed-all`,
 server running, idempotent) creates, for the demo customer `credit-limited@buyer.example`: an unsent
 order with three lines whose middle line is short on its own organization's stock (exercises "Cut lines to

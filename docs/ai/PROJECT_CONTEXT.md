@@ -59,6 +59,10 @@ Updated: 2026-11-10
 - `EMAIL_TRANSPORT=file|smtp`; with smtp in production `MANAGER_PUBLIC_URL`, `STOREFRONT_PUBLIC_URL`, `SITE_NAME` are mandatory (never taken from Host/Origin). Every mail ships in ru and en (guard test, skill `email-templates`); language: request `languageCode` -> `SITE_DEFAULT_LANGUAGE` -> en. Site identity env `SITE_NAME`, `SITE_FAVICON_URL`, `EMAIL_FOOTER_TEXT`. Docs: `docs/deployment.md`.
 - Gaps (no issue): frontends do not send `languageCode`; storefront "forgot password" link is `#`; address-change mail has no confirmation page.
 
+## #342 customer statement kinds (branch issue-342-statement-kinds, not pushed)
+- Statement visibility is one SQL predicate, `customerVisibleSql` (settlement-visibility.ts): hidden only when `accounting.reflectedInAccounting` is explicitly false or the type category is supplier/payroll; absent key and types missing from the reference are shown (category `other`, label from the document). `customerVisible` is no longer read by the statement or suggest queries (admin list never read it).
+- Icons/variants per ERP documentType live in ui-kit `erpDocumentTypeStyles.ts` (category fallback, ASCII `labelKey` for storefront `settlements.documentType.*` labels); demo data: `seed-statement-kinds.mjs` (docs/environments.md).
+
 ## #303 data-drift consumer + reconciliation/widgets/settlement statement (2026-11-02..04, DONE, prod since 0.0.27; full text: `.backup/PROJECT_CONTEXT-2026-11-06-303-reconciliation-full.md`)
 - Dashboard "Data drift reports" (per-source card, tabs Entity counts / Stock defects / Not checked); #303 stays open until the owner says "закрывай". Home widgets hide private-category and organization-less products; settlement statement hides internal document categories, balances unfiltered; contacts have no consumer by design. Prod checks are read-only and I run them myself.
 
