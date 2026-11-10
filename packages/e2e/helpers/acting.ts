@@ -38,7 +38,7 @@ export const actingHeaders = (token: string): Record<string, string> => ({
 
 export async function counterpartyIdByErpId(token: string, erpId: string): Promise<string> {
     const found = await adminGql<{ counterparties: { items: { id: string; erpId: string }[] } }>(
-        `query($erpId: String!) { counterparties(options: { take: 1, filter: { erpId: { eq: $erpId } } }) { items { id erpId } } }`,
+        `query($erpId: String!) { counterparties(options: { take: 1, erpIds: [$erpId] }) { items { id erpId } } }`,
         { erpId },
         token,
     );

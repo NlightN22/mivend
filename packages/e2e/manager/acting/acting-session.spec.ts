@@ -149,7 +149,7 @@ test.describe('acting session @on:manager-operator', () => {
                 items: { erpId: string; tradingPoints: { id: string; erpId: string }[] }[];
             };
         }>(
-            `query($erpId: String!) { counterparties(options: { take: 1, filter: { erpId: { eq: $erpId } } }) { items { erpId tradingPoints { id erpId } } } }`,
+            `query($erpId: String!) { counterparties(options: { take: 1, erpIds: [$erpId] }) { items { erpId tradingPoints { id erpId } } } }`,
             { erpId: E2E_COUNTERPARTY_ID },
             superadmin,
         );
