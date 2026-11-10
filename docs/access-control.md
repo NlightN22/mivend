@@ -42,7 +42,7 @@ everything after it is ours.
   verifier.
 - **Browser binding.** The portal keeps the `state` in `localStorage` (per browser, valid 10 minutes, one entry per started sign-in) before
   redirecting and the callback page refuses a different, expired or missing one. Per browser rather than per tab, so a
-  provider link opened in a new tab (e-mail verification) still completes. So a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
+  provider link opened in a new tab (e-mail verification) still completes. A link opened in another browser (a mail client's built-in viewer) has no binding and is refused; a second attempt in the original browser works. So a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
   with `email_verified: false` is refused. The provider is called outside any database transaction.
 - **Accepted risk: pending cap.** `startOidcSignIn` is public and at most 500 unexpired requests may be pending, so one
   unauthenticated caller can block OIDC sign-in for up to 10 minutes (local sign-in is unaffected). The count and the insert
