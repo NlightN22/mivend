@@ -60,7 +60,7 @@ const menuOpen = ref(false);
                     </span>
                 </button>
             </template>
-            <div role="menu" @keydown.esc="menuOpen = false" @click="menuOpen = false">
+            <div role="menu" @click="menuOpen = false">
                 <slot name="user-menu" />
             </div>
         </MvPopover>

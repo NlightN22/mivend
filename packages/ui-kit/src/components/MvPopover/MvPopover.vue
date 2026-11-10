@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, watch } from 'vue';
 import { ElPopover } from 'element-plus';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 
@@ -11,6 +12,16 @@ withDefaults(
 );
 const open = defineModel<boolean>('open', { default: false });
 const isMobile = useIsMobileViewport(640);
+
+// Focus stays on the trigger outside the teleported content, so Escape is caught on the document.
+const closeOnEscape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') open.value = false;
+};
+watch(open, isOpen => {
+    if (isOpen) document.addEventListener('keydown', closeOnEscape);
+    else document.removeEventListener('keydown', closeOnEscape);
+});
+onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
 </script>
 
 <template>
