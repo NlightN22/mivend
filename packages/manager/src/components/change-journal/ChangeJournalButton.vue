@@ -12,8 +12,9 @@ const props = withDefaults(
         entityId: string;
         title: string;
         managers?: ManagerOption[];
+        emptyText?: string;
     }>(),
-    { managers: () => [] },
+    { managers: () => [], emptyText: undefined },
 );
 
 const authStore = useAuthStore();
@@ -30,6 +31,7 @@ const modalTitle = computed(() => `${L.tab}: ${props.title}`);
                 :entity-type="entityType"
                 :entity-id="entityId"
                 :managers="managers"
+                :empty-text="emptyText"
             />
         </MvModal>
     </template>

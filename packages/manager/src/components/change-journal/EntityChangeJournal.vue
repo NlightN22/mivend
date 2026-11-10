@@ -6,8 +6,13 @@ import { useChangeJournal } from '../../composables/useChangeJournal';
 import ChangeJournalList from './ChangeJournalList.vue';
 
 const props = withDefaults(
-    defineProps<{ entityType: string; entityId: string; managers?: ManagerOption[] }>(),
-    { managers: () => [] },
+    defineProps<{
+        entityType: string;
+        entityId: string;
+        managers?: ManagerOption[];
+        emptyText?: string;
+    }>(),
+    { managers: () => [], emptyText: undefined },
 );
 
 const journal = useChangeJournal(request =>
@@ -31,6 +36,7 @@ watch(
         :loading="loading"
         :error="error"
         :managers="managers"
+        :empty-text="emptyText"
         @update:page="load"
         @retry="load()"
     />

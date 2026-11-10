@@ -37,7 +37,7 @@ async function openE2eCustomerDetail(page: Page): Promise<void> {
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
-test('a trading point edit shows up in its История and in the journal page @on:manager-portal-admin', async ({
+test('a trading point edit shows up in its Журнал изменений and in the journal page @on:manager-portal-admin', async ({
     page,
 }) => {
     await page.goto('/');
@@ -49,7 +49,7 @@ test('a trading point edit shows up in its История and in the journal pag
         await openE2eCustomerDetail(page);
         await page
             .locator('li', { hasText: 'E2E Trading Point' })
-            .getByRole('button', { name: 'История' })
+            .getByRole('button', { name: 'Журнал изменений' })
             .click();
         const modal = page.getByRole('dialog');
         const latest = modal.getByTestId('change-journal').getByRole('listitem').first();
@@ -68,12 +68,12 @@ test('a trading point edit shows up in its История and in the journal pag
     }
 });
 
-test('История and the journal page are hidden without ReadChangeJournal (negative) @on:manager-operator @read-only', async ({
+test('Журнал изменений and the journal page are hidden without ReadChangeJournal (negative) @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'История' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Журнал изменений' })).toHaveCount(0);
 
     await page.goto('/settings/change-journal');
     await expect(page).not.toHaveURL(/change-journal/);

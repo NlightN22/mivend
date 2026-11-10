@@ -71,7 +71,8 @@ watch(
 onMounted(async () => {
     readUrl();
     void load();
-    managers.value = await fetchManagerOptions();
+    // Names are a convenience: without them the list falls back to administrator ids.
+    managers.value = await fetchManagerOptions().catch(() => []);
 });
 </script>
 

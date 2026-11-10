@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import {
     MvDateTimeCell,
     MvErrorState,
@@ -43,6 +44,10 @@ const ACTION_VARIANT: Record<string, 'success' | 'info' | 'danger' | 'neutral'> 
     recover: 'success',
 };
 
+const rows = computed(() =>
+    props.entries.map(entry => ({ entry, lines: changeLines(entry.changes) })),
+);
+
 function adminName(id: string): string | null {
     return props.managers.find(m => m.id === id)?.name ?? null;
 }
@@ -64,7 +69,7 @@ function adminName(id: string): string | null {
         <p v-else-if="!entries.length" class="change-journal__empty">{{ emptyText }}</p>
         <template v-else>
             <ul class="change-journal__list" :aria-busy="loading">
-                <li v-for="entry in entries" :key="entry.id" class="change-journal__entry">
+                <li v-for="{ entry, lines } in rows" :key="entry.id" class="change-journal__entry">
                     <div class="change-journal__head">
                         <MvDateTimeCell :value="entry.occurredAt" />
                         <MvStatusBadge :variant="ACTION_VARIANT[entry.action] ?? 'neutral'">
@@ -78,7 +83,7 @@ function adminName(id: string): string | null {
                         }}</span>
                         <span class="change-journal__source">{{ formatSource(entry.source) }}</span>
                     </div>
-                    <div v-if="changeLines(entry.changes).length" class="change-journal__scroll">
+                    <div v-if="lines.length" class="change-journal__scroll">
                         <table class="change-journal__changes">
                             <thead>
                                 <tr>
@@ -88,7 +93,7 @@ function adminName(id: string): string | null {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="line in changeLines(entry.changes)" :key="line.field">
+                                <tr v-for="line in lines" :key="line.field">
                                     <td>{{ line.field }}</td>
                                     <td
                                         v-if="line.redacted"
