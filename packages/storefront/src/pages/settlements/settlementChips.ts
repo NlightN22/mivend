@@ -1,7 +1,15 @@
 import type { FilterChip } from '@mivend/ui-kit';
 import { i18n } from '../../i18n';
 
-const TYPE_CHIP_KEYS = ['all', 'sale', 'payment', 'return', 'correction', 'bonus'] as const;
+const TYPE_CHIP_KEYS = [
+    'all',
+    'sale',
+    'payment',
+    'return',
+    'correction',
+    'bonus',
+    'other',
+] as const;
 
 export const PERIOD_PRESET_KEYS = [
     'all',

@@ -9,6 +9,7 @@ import {
     IconGift,
     IconShoppingCart,
 } from '@tabler/icons-vue';
+import { ERP_DOCUMENT_TYPE_STYLES } from './erpDocumentTypeStyles';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Document.type is free-text ERP data: this map is presentation-only, never gates logic.
@@ -17,6 +18,8 @@ export interface DocumentTypeStyle {
     icon: typeof IconFileText;
     variant: StatusBadgeVariant;
     label?: string;
+    // ASCII id of the document type, for translated labels in a portal catalogue.
+    labelKey?: string;
 }
 
 const STYLES: Record<string, DocumentTypeStyle> = {
@@ -37,6 +40,12 @@ export const DEFAULT_DOCUMENT_TYPE_STYLE: DocumentTypeStyle = {
     variant: 'neutral',
 };
 
-export function resolveDocumentTypeStyle(type: string): DocumentTypeStyle {
-    return STYLES[type.trim().toLowerCase()] ?? DEFAULT_DOCUMENT_TYPE_STYLE;
+export function resolveDocumentTypeStyle(type: string, category?: string): DocumentTypeStyle {
+    const key = type.trim();
+    return (
+        ERP_DOCUMENT_TYPE_STYLES[key] ??
+        STYLES[key.toLowerCase()] ??
+        STYLES[(category ?? '').toLowerCase()] ??
+        DEFAULT_DOCUMENT_TYPE_STYLE
+    );
 }

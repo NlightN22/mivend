@@ -9,7 +9,7 @@ import {
 } from '@mivend/ui-kit';
 import {
     PAYMENT_STATUS_VARIANT,
-    categoryLabel,
+    documentTypeLabel,
     paymentStatusLabel,
     toMajor,
     type SettlementRow,
@@ -42,10 +42,10 @@ const formatDate = (value: string | null | undefined): string =>
                 <tr v-for="row in rows" :key="row.id">
                     <td>
                         <MvDocumentTypeChip
-                            :type="row.category"
-                            :label="categoryLabel(row.category)"
+                            :type="row.documentType"
+                            :category="row.category"
+                            :label="documentTypeLabel(row.documentType, row.documentTypeLabel)"
                         />
-                        <div class="sub">{{ row.documentTypeLabel }}</div>
                     </td>
                     <td class="strong">{{ row.number }}</td>
                     <td>{{ formatDate(row.date) }}</td>
@@ -135,12 +135,6 @@ tr:last-child td {
 
 .strong {
     font-weight: 800;
-}
-
-.sub {
-    margin-top: 4px;
-    color: var(--app-nav-label);
-    font-size: 12px;
 }
 
 .debit {

@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { resolveDocumentTypeStyle } from '@mivend/ui-kit';
 import { i18n } from '../../i18n';
 import { shopApi } from '../../api/client';
 import {
@@ -35,9 +36,10 @@ export function paymentStatusLabel(status: string): string {
     return i18n.global.te(key) ? i18n.global.t(key) : status;
 }
 
-export function categoryLabel(category: string): string | undefined {
-    const key = `settlements.category.${category}`;
-    return i18n.global.te(key) ? i18n.global.t(key) : undefined;
+export function documentTypeLabel(documentType: string, erpLabel: string): string {
+    const labelKey = resolveDocumentTypeStyle(documentType).labelKey;
+    const key = `settlements.documentType.${labelKey}`;
+    return labelKey && i18n.global.te(key) ? i18n.global.t(key) : erpLabel;
 }
 
 export const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> =
