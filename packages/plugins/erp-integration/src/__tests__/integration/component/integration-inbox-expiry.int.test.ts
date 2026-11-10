@@ -1,14 +1,17 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
     createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
+import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { makeInboxProcessor } from './inbox-processor-helpers';
 import { IntegrationInboxExpiryService } from '../../../integration-inbox-expiry.service';
 import { INBOX_EXPIRY_SLICE_SIZE } from '../../../types';
 import { testRequestContextService } from '../../test-request-context-service';
@@ -58,7 +61,7 @@ async function insert(
 ): Promise<void> {
     await dataSource.query(
         `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, created_at)
-         VALUES ('price', $1, $2, $3, $4::jsonb, $5, now() - make_interval(days => $6::int))`,
+         VALUES ('stock', $1, $2, $3, $4::jsonb, $5, now() - make_interval(days => $6::int))`,
         [entityId, version, eventId, payload, status, ageDays],
     );
 }
@@ -97,15 +100,65 @@ describe('IntegrationInboxExpiryService (integration, real Postgres)', () => {
         ]);
     });
 
+    it('keeps an old tombstone whose entity has no full-payload processed row', async () => {
+        await insert('orphan-tomb', 'processed', '{}', 30, 'e-orphan');
+        await insert('pending-only', 'pending', '{"real":1}', 30, 'e-orphan', '2');
+
+        expect(await drain()).toBe(0);
+
+        expect(await remaining()).toEqual(['orphan-tomb', 'pending-only']);
+    });
+
+    it('runs a full pass at most once per interval', async () => {
+        await drain();
+        await insert('old-tomb', 'processed', '{}', 30);
+        await insert('old-newest', 'processed', '{"real":1}', 30, 'e1', '2');
+
+        expect(await expiry.deleteExpiredTombstones(30_000)).toEqual({
+            deleted: 0,
+            finished: true,
+            outcome: 'skipped',
+        });
+    });
+
+    it('settles a redelivery of a deleted event as superseded without calling the handler', async () => {
+        await insert('evt-old', 'processed', '{}', 30, 'e1', '2');
+        await insert('evt-new', 'processed', '{"real":1}', 30, 'e1', '5');
+        expect(await drain()).toBe(1);
+        const connection = createTestConnection(dataSource);
+        const inbox = new IntegrationInboxService(connection);
+        await inbox.enqueue(testRequestContext, {
+            stream: 'stock',
+            entityId: 'e1',
+            version: '2',
+            sourceEventId: 'evt-old',
+            payload: { stale: true },
+        });
+        const apply = vi.fn();
+
+        const { processed } = await makeInboxProcessor(
+            dataSource,
+            inbox,
+            apply,
+        ).processPendingBatch();
+
+        expect(processed).toBe(1);
+        expect(apply).not.toHaveBeenCalled();
+        const [row]: Array<{ outcome: string }> = await dataSource.query(
+            `SELECT outcome FROM integration_inbox_event WHERE source_event_id = 'evt-old'`,
+        );
+        expect(row.outcome).toBe('superseded');
+    });
+
     it('drains a backlog larger than one slice over several bounded ticks and is a no-op afterwards', async () => {
         const total = INBOX_EXPIRY_SLICE_SIZE + 700;
         await dataSource.query(
             `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, created_at)
-             SELECT 'price', 'e' || g, '1', 'evt-' || g, '{}'::jsonb, 'processed', now() - interval '30 days'
+             SELECT 'stock', 'e1', g::text, 'evt-' || g, '{}'::jsonb, 'processed', now() - interval '30 days'
                FROM generate_series(1, $1) g`,
             [total],
         );
-        await insert('keep', 'processed', '{"real":1}', 30, 'e-keep');
+        await insert('keep', 'processed', '{"real":1}', 30, 'e1', '999999');
 
         const first = await expiry.deleteExpiredTombstones(30_000);
         expect(first.finished).toBe(false);
@@ -136,6 +189,7 @@ describe('IntegrationInboxExpiryService (integration, real Postgres)', () => {
 
     it('treats a statement timeout as a skipped tick and recovers afterwards', async () => {
         await insert('old-tomb', 'processed', '{}', 30);
+        await insert('old-newest', 'processed', '{"real":1}', 30, 'e1', '2');
         const blocker = dataSource.createQueryRunner();
         await blocker.startTransaction();
         await blocker.query('LOCK TABLE integration_inbox_event IN ACCESS EXCLUSIVE MODE');

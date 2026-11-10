@@ -369,6 +369,8 @@ export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 30_000;
 // version check against the newest processed row, not by dedup (docs/integration-health.md).
 export const INBOX_DEDUP_HORIZON_DAYS = 7;
 export const INBOX_EXPIRY_SLICE_SIZE = 5000;
+// A full pass reads every row older than the horizon (~80 s on 4.4M rows), so it runs hourly, not every tick.
+export const INBOX_EXPIRY_PASS_INTERVAL_MS = 60 * 60_000;
 // A slice is not started with less budget left than this: it would only be cancelled mid-way.
 export const RETENTION_MIN_SLICE_BUDGET_MS = 2_000;
 // Larger than the critical lane's batch for throughput, but kept small so the SELECT ... FOR UPDATE

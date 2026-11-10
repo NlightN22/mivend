@@ -2,19 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { RequestContextService, TransactionalConnection } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
-import { INBOX_DEDUP_HORIZON_DAYS, INBOX_EXPIRY_SLICE_SIZE } from './types';
+import {
+    INBOX_DEDUP_HORIZON_DAYS,
+    INBOX_EXPIRY_PASS_INTERVAL_MS,
+    INBOX_EXPIRY_SLICE_SIZE,
+} from './types';
 
 const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
-// Ids grow with created_at, so one id-ordered slice is bounded and `reachedHorizon` ends the pass.
+// Ids grow with created_at, so one id-ordered slice is bounded and `reached_horizon` ends the pass.
+// The EXISTS guard keeps a row whose entity has no full-payload processed row (the version reference).
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
        SELECT id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
      ), del AS (
        DELETE FROM integration_inbox_event
-        WHERE id IN (SELECT id FROM slice
-                      WHERE status = 'processed' AND payload = '{}'::jsonb
-                        AND created_at < now() - make_interval(days => $3::int))
+        WHERE id IN (SELECT s.id FROM slice s JOIN integration_inbox_event t ON t.id = s.id
+                      WHERE s.status = 'processed' AND s.payload = '{}'::jsonb
+                        AND s.created_at < now() - make_interval(days => $3::int)
+                        AND EXISTS (SELECT 1 FROM integration_inbox_event n
+                                     WHERE n.stream = t.stream AND n.entity_id = t.entity_id
+                                       AND n.status = 'processed' AND n.payload <> '{}'::jsonb))
        RETURNING id
      )
      SELECT (SELECT count(*) FROM del)::int AS deleted,
@@ -40,6 +48,8 @@ interface ExpirySliceRow {
 @Injectable()
 export class IntegrationInboxExpiryService {
     private cursor = '0';
+    // A finished pass re-reads every old row, so the next one waits for the interval.
+    private nextPassAt = 0;
 
     constructor(
         private readonly connection: TransactionalConnection,
@@ -47,6 +57,7 @@ export class IntegrationInboxExpiryService {
     ) {}
 
     async deleteExpiredTombstones(statementTimeoutMs: number): Promise<ExpirySliceResult> {
+        if (Date.now() < this.nextPassAt) return { deleted: 0, finished: true, outcome: 'skipped' };
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         try {
             return await this.connection.withTransaction(ctx, async txCtx => {
@@ -71,6 +82,7 @@ export class IntegrationInboxExpiryService {
                     [this.cursor, INBOX_EXPIRY_SLICE_SIZE, INBOX_DEDUP_HORIZON_DAYS],
                 );
                 const finished = row.scanned < INBOX_EXPIRY_SLICE_SIZE || row.reached_horizon;
+                if (finished) this.nextPassAt = Date.now() + INBOX_EXPIRY_PASS_INTERVAL_MS;
                 this.cursor = finished || row.last_id === null ? '0' : row.last_id;
                 return { deleted: row.deleted, finished, outcome: 'swept' as const };
             });

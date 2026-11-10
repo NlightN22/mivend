@@ -104,10 +104,14 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   horizon (`INBOX_DEDUP_HORIZON_DAYS`, 7) is then deleted by the same task (`IntegrationInboxExpiryService`, #343).
   The newest processed row per entity is never tombstoned, so it stays as the dedup key and a redelivered older
   event is enqueued again but ends `superseded` by the version check. Table size stays bounded by
-  entities + 7 days of events.
+  entities + 7 days of events. The delete also requires a full-payload processed row of the same entity, so a
+  tombstone that lost its version reference is never removed. A full pass reads every row older than the horizon
+  (about 80 s on 4.4M rows), so the pass runs at most once an hour per process (decision, #343); a part-way pass
+  resumes on the next tick. A partial index on tombstones would make it proportional to the tombstones; not added.
 - One-time reclaim after the first purge (#343): the file keeps its size until rewritten. In a maintenance window
-  with the workers stopped: `VACUUM FULL integration_inbox_event;` (needs free disk of about the table plus its
-  indexes and locks the table), then watch `pg_total_relation_size('integration_inbox_event')`.
+  with the workers stopped, after a fresh `make prod-backup` and a `df` check (new table file plus WAL needs about
+  the table plus its indexes free): `VACUUM FULL integration_inbox_event;` (ACCESS EXCLUSIVE lock: the server's
+  health queries wait too, not only the workers), then watch `pg_total_relation_size('integration_inbox_event')`.
 - Any stream with a `failed` row raises a red alert on the Inbound tab, highlights the stream row, and opens a
   `failed-inbox-rows` issue in the reconciliation list (nightly run, #305); it clears when no failed row remains.
 - Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
