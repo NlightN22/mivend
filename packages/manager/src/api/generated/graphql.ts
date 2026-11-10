@@ -12353,10 +12353,13 @@ export type PriceTypeCodesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PriceTypeCodesQuery = { priceTypeCodes: Array<string> };
 
-export type DiscountFacetsQueryVariables = Exact<{ [key: string]: never }>;
+export type DiscountFacetsQueryVariables = Exact<{
+    skip: Scalars['Int']['input'];
+}>;
 
 export type DiscountFacetsQuery = {
     facets: {
+        totalItems: number;
         items: Array<{ code: string; name: string; values: Array<{ code: string; name: string }> }>;
     };
 };
@@ -16299,8 +16302,9 @@ export const PriceTypeCodesDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<PriceTypeCodesQuery, PriceTypeCodesQueryVariables>;
 export const DiscountFacetsDocument = new TypedDocumentString(`
-    query DiscountFacets {
-  facets(options: {take: 50}) {
+    query DiscountFacets($skip: Int!) {
+  facets(options: {skip: $skip, take: 50}) {
+    totalItems
     items {
       code
       name

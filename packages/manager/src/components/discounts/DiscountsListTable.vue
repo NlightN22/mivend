@@ -9,6 +9,7 @@ import {
     MvDateTimeCell,
     type AdvancedDataTableRowClickPayload,
     MvErrorState,
+    MvNotice,
     useDataTableState,
     formatDocumentNumber,
 } from '@mivend/ui-kit';
@@ -23,11 +24,7 @@ import { DISCOUNTS_URL_DEFAULTS } from '../../composables/discountsListUrl';
 import { sortFromState, sortToState } from './discountsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import {
-    DISCOUNTS_COLUMNS as COLUMNS,
-    DISCOUNTS_HIDDEN_BY_DEFAULT,
-    TEXT_OPERATORS,
-} from './discountsColumns';
+import { DISCOUNTS_COLUMNS as COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
 import type { DiscountRow } from './discountsRows';
 
 const props = defineProps<{
@@ -55,19 +52,45 @@ const emit = defineEmits<{
 
 const groupOptions = ref<{ value: string; label: string }[]>([]);
 const priceTypeOptions = ref<{ value: string; label: string }[]>([]);
+const droppedGroupFilter = ref(false);
 onMounted(async () => {
-    const codes = await fetchPriceTypeCodes().catch(() => []);
-    priceTypeOptions.value = codes.map(code => ({ value: code, label: code }));
-    const facets = await fetchFacets().catch(() => []);
-    groupOptions.value = facets.flatMap(f => f.values).map(v => ({ value: v.code, label: v.code }));
+    const [codes, facets] = await Promise.allSettled([fetchPriceTypeCodes(), fetchFacets()]);
+    if (codes.status === 'fulfilled') {
+        priceTypeOptions.value = codes.value.map(code => ({ value: code, label: code }));
+    }
+    if (facets.status === 'fulfilled') {
+        const byCode = new Map<string, string>();
+        for (const v of facets.value.flatMap(f => f.values)) byCode.set(v.code, v.name);
+        groupOptions.value = [...byCode]
+            .map(([value, label]) => ({ value, label }))
+            .sort((x, y) => x.label.localeCompare(y.label));
+    }
 });
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
     COLUMNS.map(c => {
         if (c.field === 'priceType') return { ...c, filterOptions: priceTypeOptions.value };
-        if (c.field !== 'productGroup') return c;
-        if (groupOptions.value.length) return { ...c, filterOptions: groupOptions.value };
-        return { ...c, filterType: 'string' as const, filterOperators: [...TEXT_OPERATORS] };
+        if (c.field !== 'productGroup' || !groupOptions.value.length) return c;
+        return {
+            ...c,
+            filterType: 'select' as const,
+            filterOptions: groupOptions.value,
+            filterOperators: ['eq', 'notEq'] as ('eq' | 'notEq')[],
+        };
     }),
+);
+
+// Once the group select is live, text-operator conditions restored from a link or view cannot apply.
+watch(
+    () => [groupOptions.value, props.filters.conditions] as const,
+    ([options, conditions]) => {
+        if (!options.length) return;
+        const kept = conditions.filter(
+            c => c.columnKey !== 'productGroup' || c.operator === 'eq' || c.operator === 'notEq',
+        );
+        if (kept.length === conditions.length) return;
+        droppedGroupFilter.value = true;
+        emit('update:filters', { ...props.filters, conditions: kept });
+    },
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
@@ -205,6 +228,9 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
 
         <template #toolbar-start>
             <slot name="view-chips" />
+            <MvNotice v-if="droppedGroupFilter" variant="warning">
+                A product group filter that no longer applies was removed.
+            </MvNotice>
         </template>
 
         <template #toolbar-end>

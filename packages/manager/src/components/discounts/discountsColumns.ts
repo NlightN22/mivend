@@ -2,14 +2,7 @@ import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 import { DISCOUNT_STATUS_OPTIONS } from '../../api/discounts';
 
 const NOT_FILTERED = { type: 'none' } as const;
-export const TEXT_OPERATORS = [
-    'contains',
-    'notContains',
-    'eq',
-    'notEq',
-    'isNull',
-    'notNull',
-] as const;
+const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'] as const;
 
 // Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
 // Filtering is the toolbar Filter builder; the search box covers number, price type, group and customer.
@@ -70,10 +63,9 @@ export const DISCOUNTS_COLUMNS: AdvancedDataTableColumn[] = [
         priority: 4,
         minWidth: 130,
         filterConfig: NOT_FILTERED,
-        // Options are the catalog facet value codes; the table falls back to text when none load.
-        filterType: 'select',
-        filterOptions: [],
-        filterOperators: ['eq', 'notEq'],
+        // Text until the table loads the facet values and turns it into a select.
+        filterType: 'string',
+        filterOperators: [...TEXT_OPERATORS],
     },
     {
         field: 'percent',

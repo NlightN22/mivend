@@ -55,8 +55,9 @@ query PriceTypeCodes {
     priceTypeCodes
 }
 
-query DiscountFacets {
-    facets(options: { take: 50 }) {
+query DiscountFacets($skip: Int!) {
+    facets(options: { skip: $skip, take: 50 }) {
+        totalItems
         items {
             code
             name
