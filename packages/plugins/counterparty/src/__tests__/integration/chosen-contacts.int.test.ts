@@ -65,14 +65,26 @@ async function channel(
 }
 
 describe('ContactPointService.chosenContacts', () => {
-    it('prefers the primary usable channel, manual and ERP equally', async () => {
+    it('prefers a usable ERP channel over a manual one, primary first', async () => {
         await dataSource.query(`INSERT INTO counterparty VALUES (1, '+1000', 'old@example.test')`);
         await channel(1, 'email', 'first@example.test');
-        await channel(1, 'email', 'primary@example.test', { primary: true, source: 'manual' });
+        await channel(1, 'email', 'primary@example.test', { primary: true });
+        await channel(1, 'email', 'manual@example.test', { primary: true, source: 'manual' });
         await channel(1, 'email', null, { usable: false, primary: true });
         await channel(1, 'phone', '+2000');
         const chosen = (await service.chosenContacts(ctx, [1])).get('1');
         expect(chosen).toEqual({ email: 'primary@example.test', phone: '+2000' });
+    });
+
+    it('uses a manual channel only when no usable ERP channel of that type exists', async () => {
+        await dataSource.query(`INSERT INTO counterparty VALUES (1, NULL, NULL)`);
+        await channel(1, 'email', 'manual@example.test', { source: 'manual' });
+        await channel(1, 'email', null, { usable: false });
+        await channel(1, 'phone', '+3000', { source: 'manual', primary: true });
+        expect((await service.chosenContacts(ctx, [1])).get('1')).toEqual({
+            email: 'manual@example.test',
+            phone: '+3000',
+        });
     });
 
     it('falls back to the legacy columns only when the counterparty has no channel of that type', async () => {

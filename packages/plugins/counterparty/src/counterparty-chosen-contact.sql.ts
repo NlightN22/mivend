@@ -15,9 +15,9 @@ export function hasChosenChannelSql(type: ChosenChannel): string {
         OR (NOT EXISTS (SELECT 1 ${CHANNELS(type, false)}) AND coalesce(${LEGACY_COLUMN[type]}, '') <> ''))`;
 }
 
-// Primary usable channel first, then the oldest link; ERP and manual channels rank equally.
+// A manual channel is chosen only when no usable ERP channel of that type exists; then primary first, oldest link next.
 export function chosenChannelValueSql(type: ChosenChannel): string {
     return `coalesce(
-        (SELECT cp."normalizedValue" ${CHANNELS(type, true)} ORDER BY l."isPrimary" DESC, l.id LIMIT 1),
+        (SELECT cp."normalizedValue" ${CHANNELS(type, true)} ORDER BY (cp.source = 'erp') DESC, l."isPrimary" DESC, l.id LIMIT 1),
         CASE WHEN NOT EXISTS (SELECT 1 ${CHANNELS(type, false)}) THEN NULLIF(${LEGACY_COLUMN[type]}, '') END)`;
 }

@@ -255,4 +255,24 @@ describe('ContactPointService (real Postgres)', () => {
         );
         expect(failure).toBeNull();
     });
+
+    it('a reader of the chosen e-mail during concurrent ERP replaces always sees one whole set', async () => {
+        const email = (value: string): ContactPointInput => ({
+            type: 'email',
+            value,
+            isPrimary: true,
+        });
+        await service.replaceErpPoints(ctx, 'counterparty', 1, [email('a@example.test')]);
+        const writes = ['b', 'c', 'd', 'e'].map(n =>
+            service.replaceErpPoints(ctx, 'counterparty', 1, [email(`${n}@example.test`)]),
+        );
+        const reads = Array.from({ length: 8 }, () => service.chosenContacts(ctx, [1]));
+        const seen = await Promise.all(reads);
+        await Promise.all(writes);
+        for (const m of seen) expect(m.get('1')?.email).toMatch(/^[a-e]@example\.test$/);
+        const rows = await dataSource.query(
+            `SELECT count(*)::int AS n FROM counterparty_contact_point WHERE "counterpartyId" = 1`,
+        );
+        expect(rows[0].n).toBe(1);
+    });
 });

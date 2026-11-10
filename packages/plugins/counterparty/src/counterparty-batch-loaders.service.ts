@@ -9,6 +9,8 @@ import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 
+const isRowId = (key: string): boolean => /^\d+$/.test(key);
+
 // Per-request batches for the nested Counterparty/Customer fields that list rows resolve one by one.
 @Injectable()
 export class CounterpartyBatchLoaders {
@@ -19,7 +21,7 @@ export class CounterpartyBatchLoaders {
     );
 
     private chosen = new CtxLoader<ChosenContact>(async (ctx, keys) => {
-        const found = await this.contactPoints.chosenContacts(ctx, keys);
+        const found = await this.contactPoints.chosenContacts(ctx, keys.filter(isRowId));
         return keys.map(key => found.get(key) ?? { email: null, phone: null });
     });
 
@@ -30,6 +32,7 @@ export class CounterpartyBatchLoaders {
     ) {}
 
     chosenContact(ctx: RequestContext, counterpartyId: string | number): Promise<ChosenContact> {
+        if (!isRowId(String(counterpartyId))) return Promise.resolve({ email: null, phone: null });
         return this.chosen.load(ctx, counterpartyId);
     }
 

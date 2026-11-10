@@ -399,3 +399,15 @@ Today the flags are only stored (`SettlementDocument.accounting`, `Order` custom
 `erpLinkedDocuments`, and the correction documents' own records). No customer-facing query filters on an accounting
 flag (the customer's document list is filtered by the document type's `customerVisible` and category) and no stock
 or reserve logic reads the management flag.
+
+## Chosen contact for activation and readiness (#332)
+
+Portal activation, the bulk activation review, the readiness filter and the `phone`/`officialEmail` fields of
+`Counterparty` read the chosen channel from contact storage: a usable ERP-sourced channel first (primary, then oldest
+link); a manual channel only when no usable ERP channel of that type exists, so staff-entered channels cannot redirect
+activation while the ERP has one. The legacy `phone`/`officialEmail` columns count only when the counterparty has no
+channel of that type at all. SQL: `counterparty-chosen-contact.sql.ts`.
+
+Still on the legacy columns (follow-up): list filter, sort and search on phone/officialEmail
+(`counterparty-list-query.ts`, `counterparty-sort.ts`, GraphQL filter inputs) and the proforma invoice HTML builder
+(`documents/src/pdf/proforma-invoice-html.builder.ts`).
