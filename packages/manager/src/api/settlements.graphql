@@ -38,3 +38,7 @@ query SettlementsPage($options: SettlementListOptions, $counterpartyId: ID) {
         }
     }
 }
+
+query SettlementFilterSuggestions($field: String!, $prefix: String!) {
+    settlementFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
+}

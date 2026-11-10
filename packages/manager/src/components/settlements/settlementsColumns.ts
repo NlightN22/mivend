@@ -1,4 +1,5 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
+import { settlementSuggest } from '../../api/settlementsSuggest';
 
 const NOT_FILTERED = { type: 'none' } as const;
 export const TEXT_OPERATORS = [
@@ -23,6 +24,7 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         required: true,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterSuggest: settlementSuggest('number'),
         filterOperators: [...TEXT_OPERATORS],
         mobile: { primary: true },
     },
@@ -58,6 +60,7 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         minWidth: 150,
         filterConfig: NOT_FILTERED,
         filterType: 'string',
+        filterSuggest: settlementSuggest('customer'),
         filterOperators: [...TEXT_OPERATORS],
     },
     {

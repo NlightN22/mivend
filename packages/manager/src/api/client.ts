@@ -28,20 +28,30 @@ function sleep(ms: number): Promise<void> {
 
 // Retry only when fetch() itself throws (including our timeout abort), never on any HTTP response.
 // An error response proves the server was reachable, so retrying would be pointless.
-async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+async function fetchWithRetry(
+    url: string,
+    init: RequestInit,
+    callerSignal?: AbortSignal,
+): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const abort = (): void => controller.abort();
+        callerSignal?.addEventListener('abort', abort, { once: true });
+        if (callerSignal?.aborted) abort();
         try {
             return await fetch(url, { ...init, signal: controller.signal });
         } catch (err) {
+            // A caller-side abort is final, never retried.
+            if (callerSignal?.aborted) throw err;
             lastError = err;
             if (attempt < RETRY_ATTEMPTS) {
                 await sleep(RETRY_BASE_DELAY_MS * 2 ** attempt);
             }
         } finally {
             clearTimeout(timeoutId);
+            callerSignal?.removeEventListener('abort', abort);
         }
     }
     throw new ApiNetworkError(lastError instanceof Error ? lastError.message : 'Network error');
@@ -62,14 +72,19 @@ export async function adminApi<
 >(
     document: TypedDocumentLike<TResult, TVariables> | string,
     variables?: TVariables,
+    options?: { signal?: AbortSignal },
 ): Promise<TResult> {
     const query = typeof document === 'string' ? document : document.toString();
-    const response = await fetchWithRetry(signInUrl(ADMIN_API_URL, query), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...signInHeaders(query) },
-        credentials: 'include',
-        body: JSON.stringify({ query, variables }),
-    });
+    const response = await fetchWithRetry(
+        signInUrl(ADMIN_API_URL, query),
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...signInHeaders(query) },
+            credentials: 'include',
+            body: JSON.stringify({ query, variables }),
+        },
+        options?.signal,
+    );
 
     const authToken = response.headers?.get(AUTH_TOKEN_HEADER);
     if (authToken) {
