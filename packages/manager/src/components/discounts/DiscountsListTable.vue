@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDroppedFilterNotice } from '@/composables/useDroppedFilterNotice';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -52,7 +53,11 @@ const emit = defineEmits<{
 
 const groupOptions = ref<{ value: string; label: string }[]>([]);
 const priceTypeOptions = ref<{ value: string; label: string }[]>([]);
-const droppedGroupFilter = ref(false);
+const {
+    dropped: droppedGroupFilter,
+    markDropped,
+    reset: resetDropped,
+} = useDroppedFilterNotice(() => props.filters.view);
 onMounted(async () => {
     const [codes, facets] = await Promise.allSettled([fetchPriceTypeCodes(), fetchFacets()]);
     if (codes.status === 'fulfilled') {
@@ -88,7 +93,7 @@ watch(
             c => c.columnKey !== 'productGroup' || c.operator === 'eq' || c.operator === 'notEq',
         );
         if (kept.length === conditions.length) return;
-        droppedGroupFilter.value = true;
+        markDropped();
         emit('update:filters', { ...props.filters, conditions: kept });
     },
 );
@@ -121,6 +126,7 @@ watch(
     },
 );
 function onConditions(conditions: DiscountsListFilters['conditions']): void {
+    resetDropped();
     emit('update:filters', { ...props.filters, conditions });
 }
 watch(

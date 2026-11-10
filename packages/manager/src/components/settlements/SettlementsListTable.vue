@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDroppedFilterNotice } from '@/composables/useDroppedFilterNotice';
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
@@ -66,7 +67,11 @@ const filterColumns = computed(() =>
 );
 
 // Columns stay text-typed until their options load, so restored conditions survive; then text ones are dropped.
-const droppedFilter = ref(false);
+const {
+    dropped: droppedFilter,
+    markDropped,
+    reset: resetDropped,
+} = useDroppedFilterNotice(() => props.filters.view);
 watch(
     () => [props.typeOptions, props.organizationOptions, props.filters.conditions] as const,
     () => {
@@ -75,7 +80,7 @@ watch(
             return !key || !props[key].length || c.operator === 'eq' || c.operator === 'notEq';
         });
         if (kept.length === props.filters.conditions.length) return;
-        droppedFilter.value = true;
+        markDropped();
         emit('update:filters', { ...props.filters, conditions: kept });
     },
 );
@@ -108,6 +113,7 @@ watch(
     },
 );
 function onConditions(conditions: SettlementsListFilters['conditions']): void {
+    resetDropped();
     emit('update:filters', { ...props.filters, conditions });
 }
 watch(
