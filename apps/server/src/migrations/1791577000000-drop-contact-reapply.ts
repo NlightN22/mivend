@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #332: the one-off contact reapply was dropped; its cursor table and keyset index go.
-export class DropContactReapply1791575000000 implements MigrationInterface {
-    name = 'DropContactReapply1791575000000';
+export class DropContactReapply1791577000000 implements MigrationInterface {
+    name = 'DropContactReapply1791577000000';
     // CONCURRENTLY cannot run in a transaction; Vendure runs migrations with transaction 'each'.
     transaction = false;
 
