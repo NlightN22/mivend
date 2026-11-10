@@ -40,8 +40,9 @@ everything after it is ours.
   update, so a replayed or concurrent second callback gets nothing) and expire after 10 minutes. The ID token must have a
   valid signature from the provider key set, `iss`, `aud`, `exp` and the request's `nonce`. The code exchange sends the PKCE
   verifier.
-- **Browser binding.** The portal keeps the `state` in `sessionStorage` before redirecting and the callback page refuses a
-  different or missing one, so a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
+- **Browser binding.** The portal keeps the `state` in `localStorage` (per browser, valid 10 minutes, one entry per started sign-in) before
+  redirecting and the callback page refuses a different, expired or missing one. Per browser rather than per tab, so a
+  provider link opened in a new tab (e-mail verification) still completes. So a callback link made elsewhere cannot sign this browser in (login CSRF). A token claim
   with `email_verified: false` is refused. The provider is called outside any database transaction.
 - **Accepted risk: pending cap.** `startOidcSignIn` is public and at most 500 unexpired requests may be pending, so one
   unauthenticated caller can block OIDC sign-in for up to 10 minutes (local sign-in is unaffected). The count and the insert
