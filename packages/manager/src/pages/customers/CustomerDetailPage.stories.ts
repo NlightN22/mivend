@@ -5,7 +5,6 @@ import { paginate } from '../../../.storybook/mock-list-utils';
 import CustomerDetailPage from './CustomerDetailPage.vue';
 import type { CustomerOrderItem } from '../../api/customers';
 import type { ProformaInvoiceListItem } from '../../api/proforma-invoices';
-import type { PaymentListItem } from '../../api/payments';
 
 type PaymentBucket = 'unpaid' | 'partial' | 'paid';
 function paymentBucket(index: number): PaymentBucket {
@@ -69,24 +68,6 @@ const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ lengt
     dueDate: new Date(2026, 6, 4 + i).toISOString(),
     branchId: 'branch-a',
     order: { code: `ORD-${200 + i}` },
-}));
-
-const PAYMENT_STATUSES = ['pending', 'authorized', 'captured', 'failed', 'canceled'];
-// 5 payments cycling through a handful of statuses — enough to exercise several badge variants.
-const CUSTOMER_PAYMENTS: PaymentListItem[] = Array.from({ length: 5 }, (_, i) => ({
-    id: `PAY-${1000 + i}`,
-    number: `PAY-202607-${900000 + i}`,
-    createdAt: new Date(2026, 6, 1 + i).toISOString(),
-    providerPaymentId: `RRN-${900000 + i}`,
-    channel: i % 2 === 0 ? 'online-acquiring' : 'branch-kassa',
-    paymentStatus: PAYMENT_STATUSES[i % PAYMENT_STATUSES.length],
-    amount: 45000 + i * 8760,
-    currencyCode: 'RUB',
-    proformaInvoiceId: `INV-${1000 + i}`,
-    counterpartyId: '1',
-    counterpartyShortName: null,
-    proformaInvoiceNumber: null,
-    orderCode: null,
 }));
 
 const meta: Meta<typeof CustomerDetailPage> = {
@@ -205,19 +186,6 @@ function mockCustomerDetailData(): void {
                 .length,
         },
     }));
-    // Feeds CustomerPaymentsTab (the "Payments" tab) — same shape as the standalone
-    // PaymentsPage.vue, filtered by status/channel server-side via PaymentsFilterBar.
-    registerMock('PaymentsPage', (rawVariables: Record<string, unknown>) => {
-        const variables = rawVariables as unknown as {
-            options?: { skip?: number; take?: number; status?: string; channel?: string };
-        };
-        const status = variables.options?.status;
-        const channel = variables.options?.channel;
-        const filtered = CUSTOMER_PAYMENTS.filter(
-            p => (!status || p.paymentStatus === status) && (!channel || p.channel === channel),
-        );
-        return { visiblePayments: paginate(filtered, variables.options) };
-    });
     registerMock('CustomerIdForCounterparty', () => ({
         customers: { items: [{ id: '1' }] },
     }));
