@@ -192,24 +192,38 @@ describe.each(STAFF.map(s => s.key))('change journal for %s', (actor: ActorKey) 
         for (const c of COUNTERPARTIES) {
             for (const ref of refs().filter(r => r.entityId === seed().points[c.key])) {
                 const got = await forEntity(token, ref);
-                if (!reads) {
+                if (!reads || !visible.includes(c.key)) {
                     expect(got.errors.join(' '), key(ref)).toMatch(DENIED);
+                    expect(got.items, key(ref)).toEqual([]);
                     continue;
                 }
                 expect(got.errors).toEqual([]);
-                expect(got.items.length > 0, key(ref)).toBe(visible.includes(c.key));
+                expect(got.items.length, key(ref)).toBeGreaterThan(0);
             }
         }
     });
 
     it('the cross-entity list needs scope all', async () => {
         const r = await admin<{ changeJournal: { totalItems: number } }>(token, LIST);
-        if (!reads) {
+        const all = STAFF.find(s => s.key === actor)!.scope === 'all';
+        if (!reads || !all) {
             expect(r.errors.join(' ')).toMatch(DENIED);
             return;
         }
         expect(r.errors).toEqual([]);
+        expect(r.data!.changeJournal.totalItems).toBeGreaterThan(0);
+    });
+
+    it('an unregistered type and a missing entity get the same refusal as a hidden one', async () => {
+        if (!reads) return;
         const all = STAFF.find(s => s.key === actor)!.scope === 'all';
-        expect(r.data!.changeJournal.totalItems > 0).toBe(all);
+        const customer = await forEntity(token, { entityType: 'Customer', entityId: '1' });
+        const missing = await forEntity(token, { entityType: 'TradingPoint', entityId: '999999' });
+        if (all) {
+            expect(customer.errors).toEqual([]);
+        } else {
+            expect(customer.errors.join(' ')).toMatch(DENIED);
+            expect(missing.errors).toEqual(customer.errors);
+        }
     });
 });

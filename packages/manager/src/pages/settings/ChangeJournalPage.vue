@@ -99,7 +99,6 @@ onMounted(async () => {
             :loading="loading"
             :error="error"
             :managers="managers"
-            :empty-text="L.emptyJournal"
             show-entity
             @update:page="onPage"
             @retry="load()"

@@ -1,4 +1,4 @@
-import { PERMISSIONS_METADATA_KEY } from '@vendure/core';
+import { ForbiddenError, PERMISSIONS_METADATA_KEY } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
@@ -50,22 +50,24 @@ describe('ChangeJournalResolver', () => {
         expect(journal.findForEntity).toHaveBeenCalledWith(ctx, 'TradingPoint', '5', args);
     });
 
-    it('a hidden entity yields nothing and never reaches the journal', async () => {
-        const { resolver, journal } = build(false, 'all');
-        expect(
-            await resolver.changeJournalForEntity(ctx, { entityType: 'Order', entityId: '1' }),
-        ).toEqual({
-            items: [],
-            totalItems: 0,
-        });
-        expect(journal.findForEntity).not.toHaveBeenCalled();
-    });
+    it.each(['own', 'department', 'all'] as const)(
+        'a hidden entity is refused for scope %s and never reaches the journal',
+        async scope => {
+            const { resolver, journal } = build(false, scope);
+            const call = resolver.changeJournalForEntity(ctx, {
+                entityType: 'Order',
+                entityId: '1',
+            });
+            await expect(call).rejects.toBeInstanceOf(ForbiddenError);
+            expect(journal.findForEntity).not.toHaveBeenCalled();
+        },
+    );
 
     it.each(['own', 'department'] as const)(
-        'the cross-entity list is empty for scope %s',
+        'the cross-entity list is refused for scope %s',
         async scope => {
             const { resolver, journal } = build(true, scope);
-            expect(await resolver.changeJournal(ctx, {})).toEqual({ items: [], totalItems: 0 });
+            await expect(resolver.changeJournal(ctx, {})).rejects.toBeInstanceOf(ForbiddenError);
             expect(journal.findFiltered).not.toHaveBeenCalled();
         },
     );

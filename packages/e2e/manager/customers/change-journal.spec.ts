@@ -79,15 +79,10 @@ test('Журнал изменений and the journal page are hidden without Re
     await expect(page).not.toHaveURL(/change-journal/);
 });
 
-test('the journal page explains the empty list to a role without access to all customers @on:manager-department-head @read-only', async ({
+test('the journal page shows an access error to a role without access to all customers @on:manager-department-head @read-only', async ({
     page,
 }) => {
     await page.goto('/settings/change-journal');
-    await expect(
-        page.getByText('Полный журнал доступен только при доступе ко всем клиентам', {
-            exact: false,
-        }),
-    ).toBeVisible({
-        timeout: 15000,
-    });
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('Нет прав на эту историю', { timeout: 15000 });
 });

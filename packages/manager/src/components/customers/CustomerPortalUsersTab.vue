@@ -14,7 +14,6 @@ import {
     type CounterpartyPortalUser,
 } from '../../api/counterpartyPortalAccess';
 import ChangeJournalButton from '../change-journal/ChangeJournalButton.vue';
-import { CHANGE_JOURNAL_LABELS } from '../change-journal/changeJournalLabels';
 
 // Issue #120, Decision 5 — read-only list of Customer logins linked to this Counterparty, plus
 // Deactivate (native Customer soft-delete). No create/invite UI here (Decision 4 — self-service
@@ -215,7 +214,6 @@ async function handleDeactivate(): Promise<void> {
                         entity-type="Customer"
                         :entity-id="(data as Row).id"
                         :title="(data as Row).name"
-                        :empty-text="CHANGE_JOURNAL_LABELS.emptyCustomer"
                     />
                 </div>
             </template>

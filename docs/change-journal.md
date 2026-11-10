@@ -129,21 +129,20 @@ portal-admin; superadmin implicitly):
   scope rule is the one of entity history (`EntityVersionScopeRegistry`, `docs/access-control.md`
   "Scope guards on permission-only reads"): `Counterparty`, `TradingPoint` and `VisibilityGrant`
   follow their registered rules, every other entity type is visible only with counterparty scope
-  `all`. A hidden entity returns an empty page, like a missing one.
+  `all`. A hidden entity is refused with `ForbiddenError`, the same refusal as for a missing one, so
+  the answer never reveals whether the entity exists (#340).
 - `changeJournal(filter, skip, take)`: entity type, actor type, user, administrator and time range,
   newest first. Rows of many entity types cannot be scoped in SQL, so this list is served only to
-  counterparty scope `all`; everyone else gets an empty page.
+  counterparty scope `all`; everyone else gets `ForbiddenError` (#340).
 
 Indexes: `(entityType, entityId, occurredAt)` for the per-entity history, `occurredAt` for the
 list and the cleanup.
 
 Manager portal (#339), shown only with `ReadChangeJournal`: a "Журнал изменений" tab on the counterparty
 page, a "Журнал изменений" button per trading point (Overview tab) and per portal user (`Customer`), and
-the page `/settings/change-journal` with the filters above. The API answers an out-of-scope request
-with an empty page, not an error, so the page's empty state says that the full list needs scope
-`all`. `Customer` entries are visible only to scope `all` (no registered rule). Its empty state says so,
-because the API cannot tell "no changes" from "out of scope" and the viewer's scope is not exposed
-to the portal. The older "History" tab shows `EntityVersion` rows (curated per-service snapshots
+the page `/settings/change-journal` with the filters above. An empty list means no changes; a
+refusal shows "Нет прав на эту историю" (`Customer` entries need scope `all`, no registered rule).
+The older "History" tab shows `EntityVersion` rows (curated per-service snapshots
 with a comment, `ReadEntityHistory`); this tab shows every TypeORM-level change with its actor
 and source.
 

@@ -19,7 +19,7 @@ export interface PageRequest {
     take: number;
 }
 
-// Requires ReadChangeJournal; the backend returns an empty page for an entity outside the viewer's scope.
+// Requires ReadChangeJournal; an entity outside the viewer's scope is refused with ForbiddenError.
 export async function fetchChangeJournalForEntity(
     entityType: string,
     entityId: string,
@@ -33,7 +33,7 @@ export async function fetchChangeJournalForEntity(
     return result.changeJournalForEntity;
 }
 
-// Served only to counterparty scope 'all'; any other scope gets an empty page.
+// Served only to counterparty scope 'all'; any other scope is refused with ForbiddenError.
 export async function fetchChangeJournal(
     filter: ChangeJournalFilter,
     page: PageRequest,
