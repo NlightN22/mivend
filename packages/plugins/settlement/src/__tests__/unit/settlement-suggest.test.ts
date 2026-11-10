@@ -18,7 +18,10 @@ function setup(visible: { sql: string; params: Record<string, unknown> } | null,
         getRawMany: vi.fn(async () => rows),
     };
     const connection = {
-        getRepository: vi.fn(() => ({ createQueryBuilder: () => qb })),
+        getRepository: vi.fn(() => ({
+            createQueryBuilder: () => qb,
+            manager: { createQueryBuilder: () => ({ from: () => qb }) },
+        })),
     };
     const counterparties = { visibleErpIdsSql: vi.fn(async () => visible) };
     const service = new SettlementSuggestService(connection as never, counterparties as never);
@@ -34,14 +37,19 @@ describe('settlement filter suggestions', () => {
 
     it('refuses a field that has no suggestions', async () => {
         const { service } = setup(null, []);
-        await expect(service.suggest(ctx, 'counterpartyId', 'ab')).rejects.toThrow('No suggestions');
+        await expect(service.suggest(ctx, 'counterpartyId', 'ab')).rejects.toThrow(
+            'No suggestions',
+        );
         await expect(service.suggest(ctx, 'organization', 'ab')).rejects.toThrow('No suggestions');
     });
 
     it.each(['customer', 'number'])(
         'narrows %s by the caller visible counterparties, not by anything the client sends',
         async field => {
-            const { service, where } = setup({ sql: 'SELECT 1', params: { scopeBranch: 'b-1' } }, []);
+            const { service, where } = setup(
+                { sql: 'SELECT 1', params: { scopeBranch: 'b-1' } },
+                [],
+            );
             await service.suggest(ctx, field, 'ab');
             const scope = where.find(([sql]) => sql.includes('IN (SELECT 1)'));
             expect(scope?.[1]).toEqual({ scopeBranch: 'b-1' });

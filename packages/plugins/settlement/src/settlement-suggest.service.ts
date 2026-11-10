@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { applySuggest, clampSuggestLimit, dedupeSuggestions } from 'shared';
-import { Counterparty, CounterpartyService } from '@mivend/plugin-counterparty';
+import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocumentType } from './entities/settlement-document-type.entity';
@@ -42,7 +42,10 @@ export class SettlementSuggestService {
         visible: Visible,
     ): SelectQueryBuilder<ObjectLiteral> {
         if (field === 'customer') {
-            const qb = this.connection.getRepository(ctx, Counterparty).createQueryBuilder('cp');
+            const qb = this.connection
+                .getRepository(ctx, SettlementDocument)
+                .manager.createQueryBuilder()
+                .from('counterparty', 'cp');
             return this.scoped(qb, '"cp"."erpId"', visible);
         }
         const qb = this.connection
