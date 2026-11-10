@@ -18,7 +18,9 @@ export function reasonLabel(code: string): string {
     return REASON_LABELS[code] ?? code;
 }
 
-function cell(value: string): string {
+// A cell starting with = + - @ (or a control character) would run as a formula in a spreadsheet.
+function cell(raw: string): string {
+    const value = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
     return /[",\n;]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 

@@ -76,6 +76,11 @@ describe('batch report', () => {
         expect(csv[3]).toBe('7,3,,pending,,');
     });
 
+    it('prefixes a name that a spreadsheet would run as a formula', () => {
+        const csv = batchReportCsv(batch, [item({ label: '=HYPERLINK("x")' })]).split('\n');
+        expect(csv[1]).toBe('7,1,"\'=HYPERLINK(""x"")",applied,,');
+    });
+
     it('falls back to the raw reason code', () => {
         expect(reasonLabel('something_new')).toBe('something_new');
     });
