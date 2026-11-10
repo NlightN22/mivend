@@ -28,10 +28,10 @@ with a real-Postgres test incl. hostile input / a screenshot of desktop and phon
 
 
 This is the single canonical checklist for what a "done" manager-portal list/table looks like in
-this project. Reference implementations: `CustomerOrdersTab.vue` +
-`CustomerOrdersDataTable.vue` (packages/manager/src/components/customers/) — the fullest-featured
-example — and `CustomerProformaInvoicesTab.vue`/`CustomerPaymentsTab.vue` + their `*DataTable.vue` for a
-simpler shape. Read one of these before implementing a new table if you haven't already.
+this project. Reference implementations: `OrdersList.vue` + `OrdersListTable.vue`
+(packages/manager/src/components/orders/) — the fullest-featured example — and
+`ProformaInvoicesList.vue` + `ProformaInvoicesListTable.vue` for a simpler shape. A customer card tab
+is that same list with a fixed counterparty and its own `urlPrefix`, never a copy. Read one of these before implementing a new table if you haven't already.
 
 Apply this checklist any time you: add a brand-new table, add/change a column on an existing
 `MvAdvancedDataTable`-based table, or migrate an older `MvTable`-based table to
@@ -49,8 +49,8 @@ tab or a top-level `*Page.vue`.
     - has a real `filterConfig` (usually `{ type: 'text', placeholder: '... contains…' }`),
     - is wired as the table's `:search="{ filterKey: '<field>', placeholder: 'Search …' }"` prop on
       `MvAdvancedDataTable`, giving a toolbar search box in addition to the column's own funnel
-      filter (see `CustomerProformaInvoicesDataTable.vue`'s `number` column for the minimal example, or
-      `CustomerOrdersDataTable.vue`'s `code` column).
+      filter (see `ProformaInvoicesListTable.vue`'s `number` column for the minimal example, or
+      `OrdersListTable.vue`'s `code` column).
 
 2. **Base column order: identifying number first, creation date second**, before any other
    column. If the entity has no exposed creation date yet, add one (`createdAt: DateTime!` on the
@@ -89,7 +89,7 @@ tab or a top-level `*Page.vue`.
     - a unit test per the `test-design` skill) — don't ship a filter icon that silently does
       nothing, and don't skip the filter just because backend work is required.
       A `filterConfig: { type: 'none' }` is only correct for a column the backend genuinely cannot
-      filter by (state that clearly, in a code comment, same as `CustomerProformaInvoicesDataTable.vue`'s
+      filter by (state that clearly, in a code comment, same as `ProformaInvoicesListTable.vue`'s
       `amount`/`order` columns) — not as a default for "haven't checked yet."
 
 4. **A status/enum-shaped column gets a `status`-type filter with real badge variants**, driven by
@@ -98,17 +98,17 @@ tab or a top-level `*Page.vue`.
    in the cells.
 
 4a. **A quick-filter "view chip" row above the table (the segmented All/Unpaid/Partially paid/…
-pills — see `CustomerOrdersTab.vue`'s `#view-chips` slot) that represents the same states as a
+pills — see `OrdersList.vue`'s `#view-chips` slot) that represents the same states as a
 colored row badge must reuse `@mivend/ui-kit`'s `MvFilterChips` with each chip's `variant` set
 from that same `*_BADGE_VARIANT` map from point 4 — never a bespoke `<button>` + scoped CSS in
 the page/tab component (that's both a duplicate of `MvFilterChips` and a `frontend-rules`
 ui-kit rule violation), and never a chip row that's always green-when-active regardless of what it
-represents. Real incident this fixes: `CustomerOrdersTab.vue`'s and
-`CustomerProformaInvoicesTab.vue`'s view chips each had their own bespoke button styling that only
+represents. Real incident this fixes: the former customer card orders and
+proforma invoices tabs' view chips each had their own bespoke button styling that only
 ever went green on selection, while the row badge one column over for that exact same status
 could be neutral/warning/danger — "Unpaid" and "Cancelled" looked identical in the chip row
 despite being different colors in the table. See `MvFilterChips.vue`'s own doc comment and
-`CustomerOrdersTab.vue`/`CustomerProformaInvoicesTab.vue`'s `VIEWS`/`viewChips` for the reference
+`OrdersList.vue`/`ProformaInvoicesList.vue`'s `chips` for the reference
 shape. A chip with no corresponding status color (e.g. "All") just omits `variant`.
 Each chip's count comes from a real lean server COUNT (`options: { take: 0 }`, one GraphQL
 request with an alias per chip — see `api/proforma-invoices.ts`'s `fetchProformaInvoiceViewCounts`,
@@ -168,7 +168,7 @@ bottom margin shifts the visible content off-center within it.
     - everything else renders as a normal label/value pair on the card by default — that's fine,
       but it should be a conscious choice, not an oversight. See
       `MvAdvancedMobileCardList.vue`/`advancedDataTableTypes.ts` in `@mivend/ui-kit` for the hint
-      shape, and `CustomerOrdersDataTable.vue`'s `ALL_COLUMNS` for a full worked example with all
+      shape, and `OrdersListTable.vue`'s `ALL_COLUMNS` for a full worked example with all
       three hints in use.
 
 6. **Server-side pagination unless the list is genuinely, structurally bounded** — see the

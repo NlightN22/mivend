@@ -174,7 +174,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Item | Content | Status |
 | --- | --- | --- |
 | Dashboard | KPI and widgets | exists, redesign deferred |
-| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list in the standard shape (`CustomersList`: filter builder, All/Active/Inactive chips with counts, URL state, saved views, uniform rows, page scroll); the card has a Settlements tab (the standard list fixed to the customer, shown with `ReadSettlementDocument`). `CustomersList` takes an optional `fixedFilter` so the card tabs can become nested variants (not built yet) |
+| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list in the standard shape (`CustomersList`: filter builder, All/Active/Inactive chips with counts, URL state, saved views, uniform rows, page scroll). The Orders, Proforma invoices, Settlements and Discounts tabs are the standard lists nested with a fixed counterparty (see "Customer card tabs"); `CustomersList` takes an optional `fixedFilter` for the same purpose |
 | Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; the Payments entry is removed (sidebar and More sheet) |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
@@ -330,6 +330,25 @@ Follow-ups:
 - Split the customer card page (over 700 lines) into a tab host and per-tab parts together with the customer card redesign.
 - Keyboard navigation of the user menu (focus the first item, arrow keys) in the accessibility pass.
 
+## Customer card tabs
+
+Each list tab is the standard list of its entity (same component, columns, filter builder, chips,
+views) with a fixed parent; there is no per-tab copy. The fixed parent is a server-side filter that
+is ANDed with the user's own filter, never shown as a column or chip, and never put in the URL.
+
+| Tab | List component | Fixed parent | URL keys |
+| --- | --- | --- | --- |
+| Orders | `OrdersList` | `customerId` (the order's customer) | `orders.*` |
+| Proforma invoices | `ProformaInvoicesList` | `counterpartyId` | `proformaInvoices.*` |
+| Settlements | `SettlementsList` | `counterpartyId` | `settlements.*` |
+| Discounts | `DiscountsList` (in `CustomerDiscountsTab`, with the grant form) | `counterpartyId`: the customer's own entries plus company-wide ones | `discounts.*` |
+| Documents, Team, Portal users, History, Journal | own panels, not yet standard lists | | |
+
+A nested list keeps its state under a per-tab key prefix (`<tab>.search`, `<tab>.page`, ...) beside
+the card's own `tab` key, so switching tabs never carries another tab's search, page or filters and
+a reload restores only that tab's keys (#341). `CustomersList` with a `fixedFilter` uses the
+`nested.` prefix unless the caller names one.
+
 ## Order of work
 
 1. Entity lists in the standard shape, each with a preset-filter variant for its parent card.
@@ -352,9 +371,9 @@ portal API layer only and not re-checked on the server.
 | Settlements | Shared engine | Conforms |
 | Customers (counterparties) | Shared engine (field whitelist in `counterparty-list-query.ts`: name, INN, phone, email, manager, branch, group, INN status, active); the legacy list args stay only for the search, the All/Active/Inactive chips and the bulk operations; sort is still `counterparty-sort.ts` (whitelist of five columns) | Filter conforms; sort follow-up. Follow-ups: a suggest endpoint for name and INN (`FieldSpec.suggest`), a portal-readiness filter (the activation list has it), credit and last-order filters and sorts |
 | Customer activation list (bulk) | Same counterparty filter plus search and readiness chip | Conforms |
-| Orders | Shared engine (field whitelist in `order-list-query.ts`, `visibleOrders(list: OrderListInput)`); the Vendure `options` argument stays for the dashboard and other server callers; the customer card Orders tab still uses `options` | Conforms for the list; card tab follow-up |
+| Orders | Shared engine (field whitelist in `order-list-query.ts`, `visibleOrders(list: OrderListInput)`); the Vendure `options` argument stays for the dashboard and other server callers | Conforms |
 | Approvals inbox | Bespoke query service (`approval-request-query.service.ts`) with its own filter args | Deviates |
-| Discounts | Bespoke registry list args (verify) | Deviates |
+| Discounts | Shared engine for the filter and sort (whitelist in `discount-registry-list-query.ts`); the search, status chips and the `counterpartyId` card scope are registry list args | Filter conforms |
 | Team / users | Native Vendure administrator list options (verify) | Deviates |
 | Bulk history | Bespoke `BulkBatchFilter` input (fixed fields, own SQL) | Deviates |
 | Entity history panel | Bespoke `EntityVersionListOptions` (typed columns) | Deviates |

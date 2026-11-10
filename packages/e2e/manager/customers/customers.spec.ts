@@ -99,6 +99,24 @@ test('customer detail Orders tab shows the seeded e2e order @read-only', async (
     });
 });
 
+test('customer card tabs keep their list state apart and out of the page keys (#341) @read-only', async ({
+    page,
+}) => {
+    await openE2eCustomerDetail(page);
+
+    await page.getByRole('button', { name: 'Orders' }).click();
+    await page.getByPlaceholder('Search orders…').fill('no-such-order');
+    await expect(page).toHaveURL(/orders\.search=no-such-order/);
+    expect(new URL(page.url()).searchParams.has('search')).toBe(false);
+
+    await page.getByRole('button', { name: 'Discounts' }).click();
+    await expect(page).toHaveURL(/tab=discounts/);
+    expect(page.url()).not.toContain('no-such-order');
+
+    await page.getByRole('button', { name: 'Orders' }).click();
+    await expect(page.getByPlaceholder('Search orders…')).toHaveValue('');
+});
+
 test('customer detail Discounts tab shows a grant scoped to this customer (positive) @on:manager-operator @read-only', async ({
     page,
 }) => {

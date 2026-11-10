@@ -12,7 +12,9 @@ over anything below that overlaps with it.
 
 1. **URL query-string sync for filters/sort/page is mandatory** - see "URL state for list pages" in
    `frontend-rules` (shared with the storefront). Manager-only: existing pages are retrofitted
-   page by page; a one-way mount-time read of a single param is not compliant.
+   page by page; a one-way mount-time read of a single param is not compliant. A list nested in a
+   card tab (a standard list with a fixed parent) passes `urlPrefix` (`orders.`, `settlements.`, ...) so
+   it reads and writes only its own keys beside `tab`; the fixed parent is never in the URL (#341).
 
 2. **A tab bar must never be a plain unwrapped flex/scroll row once it holds more than ~4-5
    tabs on a mobile viewport.** Industry consensus (Material Design 3, Apple HIG, and general
