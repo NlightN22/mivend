@@ -12,12 +12,9 @@
 
     <mj-body>
         <mj-section background-color="#f0f0f0">
-            {{#if logoUrl}}
-            <mj-column width="15%" vertical-align="middle">
-                <mj-image src="{{ logoUrl }}" alt="{{ siteName }}" width="40px" padding="0" />
-            </mj-column>
-            {{/if}}
-            <mj-column width="85%" vertical-align="middle">
-                <mj-text>{{ siteName }}</mj-text>
+            <mj-column>
+                <mj-text>
+                    {{#if logoUrl}}<img src="{{ logoUrl }}" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 12px;" />{{/if}}<span style="vertical-align: middle;">{{ siteName }}</span>
+                </mj-text>
             </mj-column>
         </mj-section>
