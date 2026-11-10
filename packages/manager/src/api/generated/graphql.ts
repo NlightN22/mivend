@@ -2525,6 +2525,8 @@ export type DiscountRegistryFilterParameter = {
 };
 
 export type DiscountRegistryListOptions = {
+    /** Narrows to entries that apply to this customer: its own and the company-wide ones. */
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     filter?: InputMaybe<DiscountRegistryFilterParameter>;
     priceTypeCode?: InputMaybe<Scalars['String']['input']>;
     /** Substring match against the number, price type, product group and customer names. */
@@ -12510,6 +12512,7 @@ export type DiscountRegistryPageQuery = {
 export type DiscountViewCountsQueryVariables = Exact<{
     search?: InputMaybe<Scalars['String']['input']>;
     filter?: InputMaybe<DiscountRegistryFilterParameter>;
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 export type DiscountViewCountsQuery = {
@@ -16521,27 +16524,29 @@ export const DiscountRegistryPageDocument = new TypedDocumentString(`
     DiscountRegistryPageQueryVariables
 >;
 export const DiscountViewCountsDocument = new TypedDocumentString(`
-    query DiscountViewCounts($search: String, $filter: DiscountRegistryFilterParameter) {
-  all: discountRegistryPage(options: {take: 0, search: $search, filter: $filter}) {
+    query DiscountViewCounts($search: String, $filter: DiscountRegistryFilterParameter, $counterpartyId: ID) {
+  all: discountRegistryPage(
+    options: {take: 0, search: $search, filter: $filter, counterpartyId: $counterpartyId}
+  ) {
     totalItems
   }
   active: discountRegistryPage(
-    options: {take: 0, status: "active", search: $search, filter: $filter}
+    options: {take: 0, status: "active", search: $search, filter: $filter, counterpartyId: $counterpartyId}
   ) {
     totalItems
   }
   expiringSoon: discountRegistryPage(
-    options: {take: 0, status: "expiring-soon", search: $search, filter: $filter}
+    options: {take: 0, status: "expiring-soon", search: $search, filter: $filter, counterpartyId: $counterpartyId}
   ) {
     totalItems
   }
   pending: discountRegistryPage(
-    options: {take: 0, status: "pending", search: $search, filter: $filter}
+    options: {take: 0, status: "pending", search: $search, filter: $filter, counterpartyId: $counterpartyId}
   ) {
     totalItems
   }
   rejected: discountRegistryPage(
-    options: {take: 0, status: "rejected", search: $search, filter: $filter}
+    options: {take: 0, status: "rejected", search: $search, filter: $filter, counterpartyId: $counterpartyId}
   ) {
     totalItems
   }

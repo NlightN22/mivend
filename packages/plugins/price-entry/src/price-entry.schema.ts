@@ -196,6 +196,8 @@ export const adminApiSchema: DocumentNode = gql`
         status: String
         "Substring match against the number, price type, product group and customer names."
         search: String
+        "Narrows to entries that apply to this customer: its own and the company-wide ones."
+        counterpartyId: ID
         filter: DiscountRegistryFilterParameter
         sort: DiscountRegistrySortParameter
     }

@@ -30,6 +30,7 @@ async function seed(
     validTo: Date,
     percent: number,
     customer: string | null,
+    counterpartyIds: string[] | null = null,
 ): Promise<void> {
     await dataSource.getRepository(TestRegistryEntry).save({
         number,
@@ -40,6 +41,7 @@ async function seed(
         percent,
         facetValueCode: 'group-a',
         customerNamesForSearch: customer,
+        counterpartyIds,
         justification: 'reason',
     });
 }
@@ -64,12 +66,15 @@ beforeAll(async () => {
         mapEntity(createTestConnection(dataSource)),
         sequentialNumbering(),
     );
-    await seed('1000000001', WHOLESALE, 'materialized', days(90), 5, 'Customer One');
-    await seed('1000000002', WHOLESALE, 'materialized', days(5), 10, 'Customer Two');
+    await seed('1000000001', WHOLESALE, 'materialized', days(90), 5, 'Customer One', ['cust-1']);
+    await seed('1000000002', WHOLESALE, 'materialized', days(5), 10, 'Customer Two', ['cust-2']);
     await seed('1000000003', RETAIL, 'materialized', days(-3), 15, null);
-    await seed('1000000004', WHOLESALE, 'pending', days(30), 20, 'Customer One');
-    await seed('1000000005', RETAIL, 'rejected', days(30), 25, 'Customer Two');
-    await seed('1000000006', HIDDEN, 'materialized', days(90), 30, 'Customer One');
+    await seed('1000000004', WHOLESALE, 'pending', days(30), 20, 'Customer One', [
+        'cust-1',
+        'cust-2',
+    ]);
+    await seed('1000000005', RETAIL, 'rejected', days(30), 25, 'Customer Two', ['cust-2']);
+    await seed('1000000006', HIDDEN, 'materialized', days(90), 30, 'Customer One', ['cust-1']);
 });
 
 afterAll(async () => {
@@ -100,6 +105,36 @@ describe('DiscountRegistryService list (integration, real Postgres)', () => {
                 filter: { _or: [{ priceType: { eq: HIDDEN } }, { status: { eq: 'active' } }] },
             }),
         ).rejects.toBeInstanceOf(UserInputError);
+    });
+
+    it("narrows to the customer's own and the company-wide entries, inside the visible set", async () => {
+        const scoped = (counterpartyId: string, extra = {}): Promise<string[]> =>
+            numbers({ allowedPriceTypeCodes: ALLOWED, counterpartyId, ...extra });
+        expect(await scoped('cust-1')).toEqual(['1000000001', '1000000003', '1000000004']);
+        expect(await scoped('cust-2')).toEqual([
+            '1000000002',
+            '1000000003',
+            '1000000004',
+            '1000000005',
+        ]);
+        expect(await scoped('cust-2', { status: 'pending' })).toEqual(['1000000004']);
+        expect(
+            (
+                await service.findAllPaginated(ctx, {
+                    allowedPriceTypeCodes: ALLOWED,
+                    counterpartyId: 'cust-1',
+                    take: 0,
+                })
+            ).totalItems,
+        ).toBe(3);
+    });
+
+    it('treats the customer id as a bound value, never as SQL or a JSON fragment', async () => {
+        const hostile = `cust-1"] OR 1=1 --`;
+        expect(await numbers({ allowedPriceTypeCodes: ALLOWED, counterpartyId: hostile })).toEqual([
+            '1000000003',
+        ]);
+        expect(await numbers({ allowedPriceTypeCodes: ALLOWED })).toHaveLength(5);
     });
 
     it('refuses an oversized filter', async () => {

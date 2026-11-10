@@ -37,6 +37,7 @@ export interface DiscountRegistryListOptions {
     skip?: number;
     search?: string;
     priceTypeCode?: string;
+    counterpartyId?: string;
     // Set by the resolver from PriceTypeAccessService; never a client argument.
     allowedPriceTypeCodes?: string[];
     status?: DiscountRegistryFilterStatus;
@@ -212,6 +213,13 @@ export class DiscountRegistryService {
             qb.andWhere('entry.priceTypeCode = :priceTypeCode', {
                 priceTypeCode: options.priceTypeCode,
             });
+        }
+        if (options.counterpartyId) {
+            qb.andWhere(
+                `("entry"."counterpartyIds" IS NULL OR "entry"."counterpartyIds" = '[]'
+                    OR CAST("entry"."counterpartyIds" AS jsonb) @> jsonb_build_array(CAST(:counterpartyId AS text)))`,
+                { counterpartyId: String(options.counterpartyId) },
+            );
         }
         if (options.status) {
             qb.andWhere(`${REGISTRY_STATUS_SQL} = :statusView`, { statusView: options.status });

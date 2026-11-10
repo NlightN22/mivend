@@ -25,27 +25,57 @@ query DiscountRegistryPage($options: DiscountRegistryListOptions) {
     }
 }
 
-query DiscountViewCounts($search: String, $filter: DiscountRegistryFilterParameter) {
-    all: discountRegistryPage(options: { take: 0, search: $search, filter: $filter }) {
+query DiscountViewCounts(
+    $search: String
+    $filter: DiscountRegistryFilterParameter
+    $counterpartyId: ID
+) {
+    all: discountRegistryPage(
+        options: { take: 0, search: $search, filter: $filter, counterpartyId: $counterpartyId }
+    ) {
         totalItems
     }
     active: discountRegistryPage(
-        options: { take: 0, status: "active", search: $search, filter: $filter }
+        options: {
+            take: 0
+            status: "active"
+            search: $search
+            filter: $filter
+            counterpartyId: $counterpartyId
+        }
     ) {
         totalItems
     }
     expiringSoon: discountRegistryPage(
-        options: { take: 0, status: "expiring-soon", search: $search, filter: $filter }
+        options: {
+            take: 0
+            status: "expiring-soon"
+            search: $search
+            filter: $filter
+            counterpartyId: $counterpartyId
+        }
     ) {
         totalItems
     }
     pending: discountRegistryPage(
-        options: { take: 0, status: "pending", search: $search, filter: $filter }
+        options: {
+            take: 0
+            status: "pending"
+            search: $search
+            filter: $filter
+            counterpartyId: $counterpartyId
+        }
     ) {
         totalItems
     }
     rejected: discountRegistryPage(
-        options: { take: 0, status: "rejected", search: $search, filter: $filter }
+        options: {
+            take: 0
+            status: "rejected"
+            search: $search
+            filter: $filter
+            counterpartyId: $counterpartyId
+        }
     ) {
         totalItems
     }
