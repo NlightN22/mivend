@@ -54,11 +54,9 @@ test('a customer card orders tab has no nested vertical scrollbar @read-only', a
     await row.waitFor({ timeout: 15000 });
     await row.click({ position: { x: 20, y: 10 } });
     await expect(page).toHaveURL(/\/customers\/.+/);
-    await page.getByRole('tab', { name: /Orders/ }).click();
-    await expect(page.getByRole('tab', { name: /Orders/ })).toHaveAttribute(
-        'aria-selected',
-        'true',
-    );
+    const ordersTab = page.getByRole('button', { name: /^Orders/ });
+    await ordersTab.click();
+    await expect(ordersTab).toHaveClass(/active/);
     await page.waitForLoadState('networkidle');
     expect(await nestedVerticalScrollers(page)).toEqual([]);
 });
