@@ -49,16 +49,18 @@ test('a trading point edit shows up in its Журнал изменений and i
         await openE2eCustomerDetail(page);
         await page
             .locator('li', { hasText: 'E2E Trading Point' })
-            .getByRole('button', { name: 'Журнал изменений' })
+            .getByRole('button', { name: 'Edit' })
             .click();
         const modal = page.getByRole('dialog');
+        await expect(modal.getByRole('heading', { name: 'Журнал изменений' })).toBeVisible();
         const latest = modal.getByTestId('change-journal').getByRole('listitem').first();
         await expect(latest).toContainText('Изменение', { timeout: 15000 });
         await expect(latest).toContainText('Администратор:');
         await expect(latest.getByRole('row', { name: /latitude/ })).toContainText(/10\.50*/);
         await modal.getByRole('button', { name: 'Close' }).click();
+        await expect(page.getByRole('link', { name: 'Журнал изменений' })).toBeVisible();
 
-        await page.goto('/settings/change-journal?entityType=TradingPoint');
+        await page.goto('/change-journal?entityType=TradingPoint');
         await expect(page.getByRole('heading', { name: 'Журнал изменений' })).toBeVisible();
         await expect(
             page.getByTestId('change-journal').getByRole('listitem').first(),
@@ -68,21 +70,27 @@ test('a trading point edit shows up in its Журнал изменений and i
     }
 });
 
-test('Журнал изменений and the journal page are hidden without ReadChangeJournal (negative) @on:manager-operator @read-only', async ({
+test('the journal in the trading point card, the menu item and the page are hidden without ReadChangeJournal (negative) @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Журнал изменений' })).toHaveCount(0);
+    await page
+        .locator('li', { hasText: 'E2E Trading Point' })
+        .getByRole('button', { name: 'Edit' })
+        .click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Журнал изменений' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Журнал изменений' })).toHaveCount(0);
 
-    await page.goto('/settings/change-journal');
+    await page.goto('/change-journal');
     await expect(page).not.toHaveURL(/change-journal/);
 });
 
 test('the journal page shows an access error to a role without access to all customers @on:manager-department-head @read-only', async ({
     page,
 }) => {
-    await page.goto('/settings/change-journal');
+    await page.goto('/change-journal');
     const alert = page.getByRole('alert');
     await expect(alert).toContainText('Нет прав на эту историю', { timeout: 15000 });
 });

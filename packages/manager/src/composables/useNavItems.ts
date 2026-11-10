@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
+import { CHANGE_JOURNAL_LABELS } from '../components/change-journal/changeJournalLabels';
 import { canOpenBulkOperations } from '../components/bulk-operations/operationUi';
 
 // Navigation entries of the default layout, gated by the same permissions as the pages they open.
@@ -32,6 +33,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             items.push({ label: 'Bulk operations', path: '/bulk-operations' });
         }
         items.push({ label: 'Analytics', path: '/analytics' });
+        if (authStore.hasPermission('ReadChangeJournal'))
+            items.push({ label: CHANGE_JOURNAL_LABELS.pageTitle, path: '/change-journal' });
         // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
         // itself checks — not a role-code allowlist, so granting/revoking this via the native
         // Vendure admin UI (any role) is enough, no manager-portal code change needed.
@@ -80,6 +83,12 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             { key: 'team', label: 'Team', path: '/team' },
             { key: 'analytics', label: 'Analytics', path: '/analytics' },
         );
+        if (authStore.hasPermission('ReadChangeJournal'))
+            items.push({
+                key: 'changeJournal',
+                label: CHANGE_JOURNAL_LABELS.pageTitle,
+                path: '/change-journal',
+            });
         if (authStore.hasPermission('ManageAccessControl')) {
             items.push({ key: 'settings', label: 'Settings', path: '/settings' });
         } else if (authStore.hasPermission('ManageVisibilityGrants')) {

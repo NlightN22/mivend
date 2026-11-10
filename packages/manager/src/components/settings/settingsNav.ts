@@ -1,5 +1,3 @@
-import { CHANGE_JOURNAL_LABELS } from '../change-journal/changeJournalLabels';
-
 export interface SettingsNavItem {
     label: string;
     to: string;
@@ -59,11 +57,6 @@ const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
                 label: 'Controls and policies',
                 to: '/settings/check-policies',
                 visible: has => has('ManageCheckPolicies'),
-            },
-            {
-                label: CHANGE_JOURNAL_LABELS.pageTitle,
-                to: '/settings/change-journal',
-                visible: has => has('ReadChangeJournal'),
             },
             {
                 label: 'System health',

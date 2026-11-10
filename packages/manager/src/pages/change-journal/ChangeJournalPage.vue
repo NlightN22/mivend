@@ -78,7 +78,7 @@ onMounted(async () => {
 
 <template>
     <div class="change-journal-page">
-        <div class="change-journal-page__breadcrumb">Workspace / Settings</div>
+        <div class="change-journal-page__breadcrumb">Workspace</div>
         <h1 class="change-journal-page__title">{{ L.pageTitle }}</h1>
         <p class="change-journal-page__subtitle">{{ L.pageSubtitle }}</p>
 

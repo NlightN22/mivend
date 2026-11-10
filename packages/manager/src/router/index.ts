@@ -208,15 +208,6 @@ export const router = createRouter({
                             meta: { requiresAuth: true },
                         },
                         {
-                            path: 'change-journal',
-                            name: 'settings-change-journal',
-                            component: () => import('../pages/settings/ChangeJournalPage.vue'),
-                            meta: {
-                                requiresAuth: true,
-                                requiresAnyPermission: ['ReadChangeJournal'],
-                            },
-                        },
-                        {
                             path: 'check-policies',
                             name: 'settings-check-policies',
                             component: () => import('../pages/settings/CheckPoliciesPage.vue'),
@@ -229,6 +220,16 @@ export const router = createRouter({
                     name: 'team',
                     component: () => import('../pages/team/TeamPage.vue'),
                     meta: { requiresAuth: true, title: 'Team' },
+                },
+                {
+                    path: 'change-journal',
+                    name: 'change-journal',
+                    component: () => import('../pages/change-journal/ChangeJournalPage.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        requiresAnyPermission: ['ReadChangeJournal'],
+                        title: 'Журнал изменений',
+                    },
                 },
                 {
                     path: 'bulk-operations',

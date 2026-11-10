@@ -139,8 +139,8 @@ Indexes: `(entityType, entityId, occurredAt)` for the per-entity history, `occur
 list and the cleanup.
 
 Manager portal (#339), shown only with `ReadChangeJournal`: a "Журнал изменений" tab on the counterparty
-page, a "Журнал изменений" button per trading point (Overview tab) and per portal user (`Customer`), and
-the page `/settings/change-journal` with the filters above. An empty list means no changes; a
+page, a "Журнал изменений" section in the trading point edit card, a top-level menu item, and
+the page `/change-journal` with the filters above. An empty list means no changes; a
 refusal shows "Нет прав на эту историю" (`Customer` entries need scope `all`, no registered rule).
 The older "History" tab shows `EntityVersion` rows (curated per-service snapshots
 with a comment, `ReadEntityHistory`); this tab shows every TypeORM-level change with its actor

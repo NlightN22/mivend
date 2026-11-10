@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { MvStatusBadge, MvModal } from '@mivend/ui-kit';
 import {
     setTradingPointActive,
@@ -10,8 +10,10 @@ import {
 import { useCurrency } from '../../composables/useCurrency';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 import TradingPointPendingChange from './TradingPointPendingChange.vue';
-import ChangeJournalButton from '../change-journal/ChangeJournalButton.vue';
+import EntityChangeJournal from '../change-journal/EntityChangeJournal.vue';
 import type { ManagerOption } from '../../api/orders';
+import { CHANGE_JOURNAL_LABELS } from '../change-journal/changeJournalLabels';
+import { useAuthStore } from '../../stores/auth';
 import { usePendingTradingPointChanges } from '../../composables/usePendingTradingPointChanges';
 
 const props = withDefaults(
@@ -25,6 +27,7 @@ const props = withDefaults(
 const emit = defineEmits<{ changed: [] }>();
 
 const editingTradingPoint = ref<TradingPointInfo | null>(null);
+const canReadJournal = computed(() => useAuthStore().hasPermission('ReadChangeJournal'));
 const reactivating = ref<string | null>(null);
 
 const { formatWhole } = useCurrency();
@@ -130,12 +133,6 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                         >
                             Edit
                         </button>
-                        <ChangeJournalButton
-                            entity-type="TradingPoint"
-                            :entity-id="tp.id"
-                            :title="tp.name"
-                            :managers="managers"
-                        />
                     </div>
                     <TradingPointPendingChange
                         v-if="pending.byPoint.value.get(tp.id)"
@@ -165,11 +162,30 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                 @submitted="handleEdited"
                 @cancel="editingTradingPoint = null"
             />
+            <section v-if="canReadJournal" class="overview-tab__journal">
+                <h3 class="overview-tab__journal-title">{{ CHANGE_JOURNAL_LABELS.tab }}</h3>
+                <EntityChangeJournal
+                    entity-type="TradingPoint"
+                    :entity-id="editingTradingPoint.id"
+                    :managers="managers"
+                />
+            </section>
         </MvModal>
     </div>
 </template>
 
 <style scoped>
+.overview-tab__journal {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.overview-tab__journal-title {
+    margin: 0 0 12px;
+    font-size: 16px;
+}
+
 .overview-tab__no-location {
     color: var(--el-color-warning-dark-2, var(--el-color-warning));
     font-weight: 700;
