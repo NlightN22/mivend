@@ -30,6 +30,9 @@ integration when it is (`change-journal-sources.ts`):
 - a REST route under `/erp/` (ERP import, ERP callbacks, ERP order status, Kafka status);
 - a RabbitMQ message handled by the sync plugin (`runAsIntegration` around its consumer).
 
+Job-queue jobs and other scheduled tasks (for example `settlement-reconcile-pending`) stay journaled
+as `background` or `scheduled-task:<id>`: they are our own changes.
+
 A staff action in the Admin API that touches ERP-owned data (for example a manual inbox replay)
 is still journaled, because the request is ours. No ERP mirror entity is excluded by name: with
 the source rule they get no ERP entries anyway, and a staff edit of them stays visible. A new
