@@ -124,11 +124,11 @@ onMounted(async () => {
             />
         </MvKpiCarousel>
 
+        <CustomersList />
+
         <MvPanel title="Needs attention">
             <NeedsAttentionPanel :items="attentionItems" />
         </MvPanel>
-
-        <CustomersList />
     </div>
 </template>
 
