@@ -235,6 +235,7 @@ export {
 
 export { default as MvFilterBuilder } from './components/MvFilterBuilder/MvFilterBuilder.vue';
 export * from './components/MvFilterBuilder/filterLogic';
+export type { FilterSuggest } from './components/MvFilterBuilder/filterBuilderTypes';
 export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export { default as MvActiveFilters } from './components/MvActiveFilters/MvActiveFilters.vue';

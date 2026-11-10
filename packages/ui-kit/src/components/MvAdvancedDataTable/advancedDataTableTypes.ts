@@ -3,6 +3,7 @@ import type {
     FilterColumn,
     FilterOperator,
     FilterOption,
+    FilterSuggest,
     FilterType,
 } from '../MvFilterBuilder/filterBuilderTypes';
 
@@ -32,6 +33,7 @@ export interface AdvancedDataTableColumn {
     filterOperators?: FilterOperator[];
     filterField?: string;
     filterScale?: number;
+    filterSuggest?: FilterSuggest;
     // Mirrors MvMobileColumnMeta minus `actions`/`highlight`; add them here if a consumer needs them.
     mobile?: {
         // Card title — at most one column should set this.
@@ -67,6 +69,7 @@ export function toFilterColumns(columns: AdvancedDataTableColumn[]): FilterColum
                       operators: c.filterOperators,
                       serverField: c.filterField,
                       scale: c.filterScale,
+                      suggest: c.filterSuggest,
                   },
               ]
             : [],

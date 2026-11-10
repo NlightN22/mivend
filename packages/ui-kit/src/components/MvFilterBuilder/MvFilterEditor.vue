@@ -4,6 +4,7 @@ import MvButton from '../MvButton/MvButton.vue';
 import MvDateField from '../MvDateField/MvDateField.vue';
 import MvInput from '../MvInput/MvInput.vue';
 import MvMultiSelect from '../MvMultiSelect/MvMultiSelect.vue';
+import MvSuggestInput from './MvSuggestInput.vue';
 import MvSelect from '../MvSelect/MvSelect.vue';
 import type {
     FilterColumn,
@@ -22,6 +23,16 @@ import {
 // "Filter by <column>": operator select, a value input of the column's kind, and Apply.
 const props = defineProps<{ column: FilterColumn; initial?: FilterCondition }>();
 const emit = defineEmits<{ apply: [condition: FilterCondition]; back: [] }>();
+
+// Operators whose value is a text the user types; typeahead only helps those.
+const SUGGEST_OPERATORS: FilterOperator[] = [
+    'contains',
+    'notContains',
+    'startsWith',
+    'endsWith',
+    'eq',
+    'notEq',
+];
 
 const operators = computed(() => operatorsFor(props.column));
 const operator = ref<FilterOperator>(props.initial?.operator ?? operators.value[0]!);
@@ -89,6 +100,14 @@ function apply(): void {
                 :model-value="value as string"
                 :options="selectOptions"
                 data-testid="filter-value"
+                @update:model-value="value = $event"
+            />
+            <MvSuggestInput
+                v-else-if="column.suggest && SUGGEST_OPERATORS.includes(operator)"
+                :model-value="value as string"
+                :suggest="column.suggest"
+                placeholder="Value"
+                testid="filter-value"
                 @update:model-value="value = $event"
             />
             <MvInput

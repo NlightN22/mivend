@@ -30,6 +30,9 @@ export interface FilterCondition {
     value: FilterValue;
 }
 
+// Resolves up to 10 matching values for a typed prefix (2+ characters); aborts when `signal` fires.
+export type FilterSuggest = (prefix: string, signal: AbortSignal) => Promise<string[]>;
+
 export interface FilterOption {
     value: string;
     label: string;
@@ -47,4 +50,6 @@ export interface FilterColumn {
     serverField?: string;
     // Number columns: multiplier from the typed value to the stored one (major to minor units).
     scale?: number;
+    // String columns: typeahead for the value input; free text stays allowed.
+    suggest?: FilterSuggest;
 }
