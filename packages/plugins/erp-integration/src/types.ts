@@ -187,8 +187,6 @@ export interface ErpIntegrationPluginOptions {
     schemaRegistry: SchemaRegistryConfig;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
-    // Explicit opt-in for the one-off contact reapply (INTEGRATION_CONTACT_REAPPLY=true); never on by default.
-    contactReapplyEnabled?: boolean;
     // How often the retention lane sweeps `processed` rows (#147). Defaults to
     // INBOX_RETENTION_INTERVAL_DEFAULT.
     inboxRetentionIntervalMs?: number;

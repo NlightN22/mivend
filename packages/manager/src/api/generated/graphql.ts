@@ -3504,7 +3504,7 @@ export type IntegrationOutboxProblemSortParameter = {
 
 export type IntegrationStreamHealth = {
     consumed: Scalars['Boolean']['output'];
-    /** Applied messages whose contact step was rolled back in the last 24 h (issue #332); rerun the reapply or wait for the entity's next event. */
+    /** Applied messages whose contact step was rolled back in the last 24 h (issue #332); re-seed or resume the stream from the ERP side, or wait for the entity's next event. */
     contactFailures24h: Scalars['Int']['output'];
     /** Rows parked because a referenced entity has not arrived yet; retried automatically, not an alert. */
     dependencyMissing: Scalars['Int']['output'];

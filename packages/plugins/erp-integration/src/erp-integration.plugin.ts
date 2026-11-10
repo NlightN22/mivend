@@ -72,8 +72,6 @@ import { CategoryOverrideRecomputeListener } from './category-override-recompute
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { PLUGIN_ENTITIES } from './plugin-entities';
-import { ContactReapplyService } from './contact-reapply.service';
-import { createContactReapplyTask } from './contact-reapply.scheduled-task';
 import { STREAM_HANDLERS } from './plugin-stream-handlers';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
@@ -159,7 +157,6 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         IntegrationInboxRetentionService,
         IntegrationInboxHealthService,
         IntegrationInboxProcessorService,
-        ContactReapplyService,
         KafkaConsumerService,
         KafkaConsumerBootstrapService,
         ...STREAM_HANDLERS,
@@ -252,7 +249,6 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxContactTask(ErpIntegrationPlugin.options),
-                createContactReapplyTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxReplaySweepTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),

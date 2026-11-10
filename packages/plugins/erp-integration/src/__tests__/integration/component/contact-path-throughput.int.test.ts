@@ -113,7 +113,6 @@ beforeAll(async () => {
         synchronize: true,
     });
     await setup.initialize();
-    await setup.query(`DROP INDEX integration_inbox_event_reapply`);
     await setup.query(`
         CREATE TABLE counterparty (id SERIAL PRIMARY KEY, "erpId" varchar);
         CREATE UNIQUE INDEX counterparty_erp_id ON counterparty ("erpId");
