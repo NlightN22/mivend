@@ -496,6 +496,7 @@ export type AssignStockLocationsToChannelInput = {
 
 export type AuthenticationInput = {
     native?: InputMaybe<NativeAuthInput>;
+    oidc?: InputMaybe<OidcAuthInput>;
     twoFactor?: InputMaybe<TwoFactorAuthInput>;
 };
 
@@ -691,10 +692,10 @@ export type Cancellation = Node &
     };
 
 export type ChangeJournalEntry = {
-    /** administrator, customer, acting (a manager acting as the customer) or system */
-    actorType: Scalars['String']['output'];
     /** insert, update, soft-remove, recover or remove */
     action: Scalars['String']['output'];
+    /** administrator, customer, acting (a manager acting as the customer) or system */
+    actorType: Scalars['String']['output'];
     administratorId: Maybe<Scalars['ID']['output']>;
     /** Field path to { before, after }; a secret field carries only { redacted: true } */
     changes: Scalars['JSON']['output'];
@@ -1197,12 +1198,9 @@ export type CounterpartyFilterParameter = {
     legalName?: InputMaybe<StringOperators>;
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId?: InputMaybe<IdOperators>;
-    /** Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
     managerErpId?: InputMaybe<StringOperators>;
-    /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
     officialEmail?: InputMaybe<StringOperators>;
     paymentDelayDays?: InputMaybe<NumberOperators>;
-    /** Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation. */
     phone?: InputMaybe<StringOperators>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<StringOperators>;
@@ -4213,6 +4211,7 @@ export type Mutation = {
     /** Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment. */
     changeOrderLineQuantity: Scalars['Boolean']['output'];
     clearDepartmentBranch: Scalars['Boolean']['output'];
+    completeOidcSignIn: Scalars['Boolean']['output'];
     completeTwoFactorRecovery: CompleteTwoFactorRecoveryResult;
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
@@ -4409,6 +4408,7 @@ export type Mutation = {
     modifyOrder: ModifyOrderResult;
     /** Move a Collection to a different parent or index */
     moveCollection: Collection;
+    prepareOidcSignOut: Maybe<Scalars['String']['output']>;
     previewBulkBatch: BulkBatch;
     reassignCounterpartyManager: Counterparty;
     reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
@@ -4539,6 +4539,7 @@ export type Mutation = {
     /** Cuts the short lines to what stock covers and records the rest as shortfall. */
     splitOrderLinesByStock: Array<OrderLineSplitOutcome>;
     startActingSession: ActingTicketStart;
+    startOidcSignIn: OidcSignInStart;
     startTwoFactorEnrolment: StartTwoFactorEnrolmentResult;
     startTwoFactorSignIn: StartTwoFactorSignInResult;
     transitionFulfillmentToState: TransitionFulfillmentToStateResult;
@@ -4788,6 +4789,11 @@ export type MutationChangeOrderLineQuantityArgs = {
 
 export type MutationClearDepartmentBranchArgs = {
     departmentErpId: Scalars['String']['input'];
+};
+
+export type MutationCompleteOidcSignInArgs = {
+    code: Scalars['String']['input'];
+    state: Scalars['String']['input'];
 };
 
 export type MutationCompleteTwoFactorRecoveryArgs = {
@@ -5966,6 +5972,19 @@ export type NumberOperators = {
 export type NumberRange = {
     end: Scalars['Float']['input'];
     start: Scalars['Float']['input'];
+};
+
+export type OidcAuthInput = {
+    state: Scalars['String']['input'];
+};
+
+export type OidcSignInInfo = {
+    host: Scalars['String']['output'];
+    iconUrl: Scalars['String']['output'];
+};
+
+export type OidcSignInStart = {
+    authorizationUrl: Scalars['String']['output'];
 };
 
 export type OpenErpReconciliationIssueListOptions = {
@@ -8207,6 +8226,7 @@ export type Query = {
     mySignInSettings: SignInSettings;
     /** The calling administrator's own notifications plus visible broadcast notifications, newest first, server-paginated (issue #87). */
     notifications: NotificationList;
+    oidcSignIn: Maybe<OidcSignInInfo>;
     /** Open entity-completeness discrepancies against Integration Service's reconciliation summary (issue #84), newest first. */
     openErpReconciliationIssues: ErpReconciliationIssueList;
     /** Open payment reconciliation issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
@@ -8310,6 +8330,7 @@ export type Query = {
     shippingEligibilityCheckers: Array<ConfigurableOperationDefinition>;
     shippingMethod: Maybe<ShippingMethod>;
     shippingMethods: ShippingMethodList;
+    signInCaptchaRequirement: SignInCaptchaRequirement;
     /** Generate slug for entity */
     slugForEntity: Scalars['String']['output'];
     stockLocation: Maybe<StockLocation>;
@@ -8333,7 +8354,6 @@ export type Query = {
     tradingPointsNotConfirmedByErp: TradingPointList;
     /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
     tradingPointsWithoutLocation: TradingPointList;
-    signInCaptchaRequirement: SignInCaptchaRequirement;
     twoFactorRequired: Scalars['Boolean']['output'];
     twoFactorStatus: TwoFactorStatus;
     unassignedCounterpartyCount: Scalars['Int']['output'];
@@ -8914,6 +8934,10 @@ export type QueryShippingMethodArgs = {
 
 export type QueryShippingMethodsArgs = {
     options?: InputMaybe<ShippingMethodListOptions>;
+};
+
+export type QuerySignInCaptchaRequirementArgs = {
+    login: Scalars['String']['input'];
 };
 
 export type QuerySlugForEntityArgs = {
@@ -9791,6 +9815,13 @@ export type ShippingMethodTranslationInput = {
     id?: InputMaybe<Scalars['ID']['input']>;
     languageCode: LanguageCode;
     name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SignInCaptchaRequirement = {
+    required: Scalars['Boolean']['output'];
+    scriptUrl: Maybe<Scalars['String']['output']>;
+    siteKey: Maybe<Scalars['String']['output']>;
+    widgetGlobal: Maybe<Scalars['String']['output']>;
 };
 
 export type SignInSettings = {
@@ -10802,21 +10833,6 @@ export type UpdateZoneInput = {
     name?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type SignInCaptchaRequirement = {
-    required: Scalars['Boolean']['output'];
-    scriptUrl: Maybe<Scalars['String']['output']>;
-    siteKey: Maybe<Scalars['String']['output']>;
-    widgetGlobal: Maybe<Scalars['String']['output']>;
-};
-
-export type UserCustomFields = {
-    passwordChangeRequired: Maybe<Scalars['Boolean']['output']>;
-};
-
-export type QuerySignInCaptchaRequirementArgs = {
-    login: Scalars['String']['input'];
-};
-
 export type User = Node & {
     authenticationMethods: Array<AuthenticationMethod>;
     createdAt: Scalars['DateTime']['output'];
@@ -10827,6 +10843,10 @@ export type User = Node & {
     roles: Array<Role>;
     updatedAt: Scalars['DateTime']['output'];
     verified: Scalars['Boolean']['output'];
+};
+
+export type UserCustomFields = {
+    passwordChangeRequired: Maybe<Scalars['Boolean']['output']>;
 };
 
 export type VariantOrganizationHealth = {
@@ -11263,19 +11283,6 @@ export type ActiveAdministratorQuery = {
     } | null;
 };
 
-export type SignInCaptchaRequirementQueryVariables = Exact<{
-    login: Scalars['String']['input'];
-}>;
-
-export type SignInCaptchaRequirementQuery = {
-    signInCaptchaRequirement: {
-        required: boolean;
-        siteKey: string | null;
-        scriptUrl: string | null;
-        widgetGlobal: string | null;
-    };
-};
-
 export type LoginMutationVariables = Exact<{
     username: Scalars['String']['input'];
     password: Scalars['String']['input'];
@@ -11642,6 +11649,68 @@ export type SetCategoryVisibilityOverrideMutation = {
         isPrivate: boolean;
         breadcrumbs: Array<{ id: string; name: string }>;
         customFields: { visibilityOverride: string | null } | null;
+    };
+};
+
+export type ChangeJournalEntryFieldsFragment = {
+    id: string;
+    occurredAt: any;
+    actorType: string;
+    userId: string | null;
+    administratorId: string | null;
+    source: string;
+    entityType: string;
+    entityId: string;
+    action: string;
+    changes: any;
+};
+
+export type ChangeJournalForEntityQueryVariables = Exact<{
+    entityType: Scalars['String']['input'];
+    entityId: Scalars['ID']['input'];
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ChangeJournalForEntityQuery = {
+    changeJournalForEntity: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            occurredAt: any;
+            actorType: string;
+            userId: string | null;
+            administratorId: string | null;
+            source: string;
+            entityType: string;
+            entityId: string;
+            action: string;
+            changes: any;
+        }>;
+    };
+};
+
+export type ChangeJournalQueryVariables = Exact<{
+    filter?: InputMaybe<ChangeJournalFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ChangeJournalQuery = {
+    changeJournal: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            occurredAt: any;
+            actorType: string;
+            userId: string | null;
+            administratorId: string | null;
+            source: string;
+            entityType: string;
+            entityId: string;
+            action: string;
+            changes: any;
+        }>;
     };
 };
 
@@ -12512,68 +12581,6 @@ export type ReverseGeocodeQueryVariables = Exact<{
 
 export type ReverseGeocodeQuery = { reverseGeocode: string | null };
 
-export type ChangeJournalEntryFieldsFragment = {
-    id: string;
-    occurredAt: any;
-    actorType: string;
-    userId: string | null;
-    administratorId: string | null;
-    source: string;
-    entityType: string;
-    entityId: string;
-    action: string;
-    changes: any;
-};
-
-export type ChangeJournalForEntityQueryVariables = Exact<{
-    entityType: Scalars['String']['input'];
-    entityId: Scalars['ID']['input'];
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-export type ChangeJournalForEntityQuery = {
-    changeJournalForEntity: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            occurredAt: any;
-            actorType: string;
-            userId: string | null;
-            administratorId: string | null;
-            source: string;
-            entityType: string;
-            entityId: string;
-            action: string;
-            changes: any;
-        }>;
-    };
-};
-
-export type ChangeJournalQueryVariables = Exact<{
-    filter?: InputMaybe<ChangeJournalFilter>;
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-export type ChangeJournalQuery = {
-    changeJournal: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            occurredAt: any;
-            actorType: string;
-            userId: string | null;
-            administratorId: string | null;
-            source: string;
-            entityType: string;
-            entityId: string;
-            action: string;
-            changes: any;
-        }>;
-    };
-};
-
 export type EntityVersionRowFieldsFragment = {
     id: string;
     entityName: string;
@@ -12753,6 +12760,35 @@ export type ResolveNotificationMutation = {
         createdAt: any;
     };
 };
+
+export type OidcSignInQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OidcSignInQuery = { oidcSignIn: { host: string; iconUrl: string } | null };
+
+export type StartOidcSignInMutationVariables = Exact<{ [key: string]: never }>;
+
+export type StartOidcSignInMutation = { startOidcSignIn: { authorizationUrl: string } };
+
+export type CompleteOidcSignInMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+    state: Scalars['String']['input'];
+}>;
+
+export type CompleteOidcSignInMutation = { completeOidcSignIn: boolean };
+
+export type AuthenticateOidcMutationVariables = Exact<{
+    state: Scalars['String']['input'];
+}>;
+
+export type AuthenticateOidcMutation = {
+    authenticate:
+        | { __typename: 'CurrentUser' }
+        | { __typename: 'InvalidCredentialsError'; authenticationError: string };
+};
+
+export type PrepareOidcSignOutMutationVariables = Exact<{ [key: string]: never }>;
+
+export type PrepareOidcSignOutMutation = { prepareOidcSignOut: string | null };
 
 export type CancelOrderAsStaffMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
@@ -13895,6 +13931,19 @@ export type SettlementFilterSuggestionsQueryVariables = Exact<{
 
 export type SettlementFilterSuggestionsQuery = { settlementFilterSuggestions: Array<string> };
 
+export type SignInCaptchaRequirementQueryVariables = Exact<{
+    login: Scalars['String']['input'];
+}>;
+
+export type SignInCaptchaRequirementQuery = {
+    signInCaptchaRequirement: {
+        required: boolean;
+        siteKey: string | null;
+        scriptUrl: string | null;
+        widgetGlobal: string | null;
+    };
+};
+
 export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SystemHealthChecklistQuery = {
@@ -14043,36 +14092,6 @@ export type StartTwoFactorSignInMutationVariables = Exact<{
     username: Scalars['String']['input'];
     password: Scalars['String']['input'];
 }>;
-
-export type OidcSignInQueryVariables = Exact<{ [key: string]: never }>;
-
-export type OidcSignInQuery = { oidcSignIn: { host: string; iconUrl: string } | null };
-
-export type StartOidcSignInMutationVariables = Exact<{ [key: string]: never }>;
-
-export type StartOidcSignInMutation = { startOidcSignIn: { authorizationUrl: string } };
-
-export type CompleteOidcSignInMutationVariables = Exact<{
-    code: Scalars['String']['input'];
-    state: Scalars['String']['input'];
-}>;
-
-export type CompleteOidcSignInMutation = { completeOidcSignIn: boolean };
-
-export type PrepareOidcSignOutMutationVariables = Exact<{ [key: string]: never }>;
-
-export type PrepareOidcSignOutMutation = { prepareOidcSignOut: string | null };
-
-export type AuthenticateOidcMutationVariables = Exact<{
-    state: Scalars['String']['input'];
-}>;
-
-export type AuthenticateOidcMutation = {
-    authenticate:
-        | { __typename: 'CurrentUser' }
-        | { __typename: 'InvalidCredentialsError'; authenticationError: string }
-        | { __typename: 'NotVerifiedError' };
-};
 
 export type StartTwoFactorSignInMutation = {
     startTwoFactorSignIn:
@@ -14549,7 +14568,6 @@ export const BulkBatchFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'BulkBatchFields' },
 ) as unknown as TypedDocumentString<BulkBatchFieldsFragment, unknown>;
-
 export const BulkBatchItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment BulkBatchItemFields on BulkBatchItem {
@@ -14564,7 +14582,6 @@ export const BulkBatchItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'BulkBatchItemFields' },
 ) as unknown as TypedDocumentString<BulkBatchItemFieldsFragment, unknown>;
-
 export const CategoryCollectionFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment CategoryCollectionFields on Collection {
@@ -14583,6 +14600,23 @@ export const CategoryCollectionFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CategoryCollectionFields' },
 ) as unknown as TypedDocumentString<CategoryCollectionFieldsFragment, unknown>;
+export const ChangeJournalEntryFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment ChangeJournalEntryFields on ChangeJournalEntry {
+  id
+  occurredAt
+  actorType
+  userId
+  administratorId
+  source
+  entityType
+  entityId
+  action
+  changes
+}
+    `,
+    { fragmentName: 'ChangeJournalEntryFields' },
+) as unknown as TypedDocumentString<ChangeJournalEntryFieldsFragment, unknown>;
 export const CounterpartyTeamMemberFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
@@ -15228,19 +15262,6 @@ export const ActiveAdministratorDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<ActiveAdministratorQuery, ActiveAdministratorQueryVariables>;
-export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
-    query SignInCaptchaRequirement($login: String!) {
-  signInCaptchaRequirement(login: $login) {
-    required
-    siteKey
-    scriptUrl
-    widgetGlobal
-  }
-}
-    `) as unknown as TypedDocumentString<
-    SignInCaptchaRequirementQuery,
-    SignInCaptchaRequirementQueryVariables
->;
 export const LoginDocument = new TypedDocumentString(`
     mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
   login(username: $username, password: $password, rememberMe: $rememberMe) {
@@ -15379,7 +15400,6 @@ export const BulkOperationCatalogDocument = new TypedDocumentString(`
     BulkOperationCatalogQuery,
     BulkOperationCatalogQueryVariables
 >;
-
 export const BulkBatchesDocument = new TypedDocumentString(`
     query BulkBatches($options: BulkBatchListOptions) {
   bulkBatches(options: $options) {
@@ -15408,7 +15428,6 @@ export const BulkBatchesDocument = new TypedDocumentString(`
   errorMessage
   undoable
 }`) as unknown as TypedDocumentString<BulkBatchesQuery, BulkBatchesQueryVariables>;
-
 export const BulkBatchDocument = new TypedDocumentString(`
     query BulkBatch($uuid: String!) {
   bulkBatch(uuid: $uuid) {
@@ -15434,7 +15453,6 @@ export const BulkBatchDocument = new TypedDocumentString(`
   errorMessage
   undoable
 }`) as unknown as TypedDocumentString<BulkBatchQuery, BulkBatchQueryVariables>;
-
 export const BulkBatchItemsDocument = new TypedDocumentString(`
     query BulkBatchItems($uuid: String!, $options: BulkBatchItemListOptions) {
   bulkBatchItems(uuid: $uuid, options: $options) {
@@ -15453,7 +15471,6 @@ export const BulkBatchItemsDocument = new TypedDocumentString(`
   reasonCode
   message
 }`) as unknown as TypedDocumentString<BulkBatchItemsQuery, BulkBatchItemsQueryVariables>;
-
 export const PreviewBulkBatchDocument = new TypedDocumentString(`
     mutation PreviewBulkBatch($type: String!, $parameters: JSON, $selection: BulkSelectionInput!) {
   previewBulkBatch(type: $type, parameters: $parameters, selection: $selection) {
@@ -15479,7 +15496,6 @@ export const PreviewBulkBatchDocument = new TypedDocumentString(`
   errorMessage
   undoable
 }`) as unknown as TypedDocumentString<PreviewBulkBatchMutation, PreviewBulkBatchMutationVariables>;
-
 export const RunBulkBatchDocument = new TypedDocumentString(`
     mutation RunBulkBatch($uuid: String!) {
   runBulkBatch(uuid: $uuid) {
@@ -15505,7 +15521,6 @@ export const RunBulkBatchDocument = new TypedDocumentString(`
   errorMessage
   undoable
 }`) as unknown as TypedDocumentString<RunBulkBatchMutation, RunBulkBatchMutationVariables>;
-
 export const UndoBulkBatchDocument = new TypedDocumentString(`
     mutation UndoBulkBatch($uuid: String!) {
   undoBulkBatch(uuid: $uuid) {
@@ -15531,7 +15546,6 @@ export const UndoBulkBatchDocument = new TypedDocumentString(`
   errorMessage
   undoable
 }`) as unknown as TypedDocumentString<UndoBulkBatchMutation, UndoBulkBatchMutationVariables>;
-
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
     query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
   collections(
@@ -15583,6 +15597,56 @@ export const SetCategoryVisibilityOverrideDocument = new TypedDocumentString(`
     SetCategoryVisibilityOverrideMutation,
     SetCategoryVisibilityOverrideMutationVariables
 >;
+export const ChangeJournalForEntityDocument = new TypedDocumentString(`
+    query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
+  changeJournalForEntity(
+    entityType: $entityType
+    entityId: $entityId
+    skip: $skip
+    take: $take
+  ) {
+    items {
+      ...ChangeJournalEntryFields
+    }
+    totalItems
+  }
+}
+    fragment ChangeJournalEntryFields on ChangeJournalEntry {
+  id
+  occurredAt
+  actorType
+  userId
+  administratorId
+  source
+  entityType
+  entityId
+  action
+  changes
+}`) as unknown as TypedDocumentString<
+    ChangeJournalForEntityQuery,
+    ChangeJournalForEntityQueryVariables
+>;
+export const ChangeJournalDocument = new TypedDocumentString(`
+    query ChangeJournal($filter: ChangeJournalFilter, $skip: Int, $take: Int) {
+  changeJournal(filter: $filter, skip: $skip, take: $take) {
+    items {
+      ...ChangeJournalEntryFields
+    }
+    totalItems
+  }
+}
+    fragment ChangeJournalEntryFields on ChangeJournalEntry {
+  id
+  occurredAt
+  actorType
+  userId
+  administratorId
+  source
+  entityType
+  entityId
+  action
+  changes
+}`) as unknown as TypedDocumentString<ChangeJournalQuery, ChangeJournalQueryVariables>;
 export const DefaultCurrencyDocument = new TypedDocumentString(`
     query DefaultCurrency {
   activeChannel {
@@ -16548,56 +16612,6 @@ export const ReverseGeocodeDocument = new TypedDocumentString(`
   reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
 }
     `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
-export const ChangeJournalForEntityDocument = new TypedDocumentString(`
-    query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
-  changeJournalForEntity(
-    entityType: $entityType
-    entityId: $entityId
-    skip: $skip
-    take: $take
-  ) {
-    items {
-      ...ChangeJournalEntryFields
-    }
-    totalItems
-  }
-}
-    fragment ChangeJournalEntryFields on ChangeJournalEntry {
-  id
-  occurredAt
-  actorType
-  userId
-  administratorId
-  source
-  entityType
-  entityId
-  action
-  changes
-}`) as unknown as TypedDocumentString<
-    ChangeJournalForEntityQuery,
-    ChangeJournalForEntityQueryVariables
->;
-export const ChangeJournalDocument = new TypedDocumentString(`
-    query ChangeJournal($filter: ChangeJournalFilter, $skip: Int, $take: Int) {
-  changeJournal(filter: $filter, skip: $skip, take: $take) {
-    items {
-      ...ChangeJournalEntryFields
-    }
-    totalItems
-  }
-}
-    fragment ChangeJournalEntryFields on ChangeJournalEntry {
-  id
-  occurredAt
-  actorType
-  userId
-  administratorId
-  source
-  entityType
-  entityId
-  action
-  changes
-}`) as unknown as TypedDocumentString<ChangeJournalQuery, ChangeJournalQueryVariables>;
 export const EntityVersionsDocument = new TypedDocumentString(`
     query EntityVersions($entityName: String!, $entityId: ID!) {
   entityVersions(entityName: $entityName, entityId: $entityId) {
@@ -16762,6 +16776,50 @@ export const ResolveNotificationDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     ResolveNotificationMutation,
     ResolveNotificationMutationVariables
+>;
+export const OidcSignInDocument = new TypedDocumentString(`
+    query OidcSignIn {
+  oidcSignIn {
+    host
+    iconUrl
+  }
+}
+    `) as unknown as TypedDocumentString<OidcSignInQuery, OidcSignInQueryVariables>;
+export const StartOidcSignInDocument = new TypedDocumentString(`
+    mutation StartOidcSignIn {
+  startOidcSignIn {
+    authorizationUrl
+  }
+}
+    `) as unknown as TypedDocumentString<StartOidcSignInMutation, StartOidcSignInMutationVariables>;
+export const CompleteOidcSignInDocument = new TypedDocumentString(`
+    mutation CompleteOidcSignIn($code: String!, $state: String!) {
+  completeOidcSignIn(code: $code, state: $state)
+}
+    `) as unknown as TypedDocumentString<
+    CompleteOidcSignInMutation,
+    CompleteOidcSignInMutationVariables
+>;
+export const AuthenticateOidcDocument = new TypedDocumentString(`
+    mutation AuthenticateOidc($state: String!) {
+  authenticate(input: {oidc: {state: $state}}) {
+    __typename
+    ... on InvalidCredentialsError {
+      authenticationError
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AuthenticateOidcMutation,
+    AuthenticateOidcMutationVariables
+>;
+export const PrepareOidcSignOutDocument = new TypedDocumentString(`
+    mutation PrepareOidcSignOut {
+  prepareOidcSignOut
+}
+    `) as unknown as TypedDocumentString<
+    PrepareOidcSignOutMutation,
+    PrepareOidcSignOutMutationVariables
 >;
 export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     mutation CancelOrderAsStaff($orderId: ID!) {
@@ -17944,6 +18002,27 @@ export const SettlementsPageDocument = new TypedDocumentString(`
   orderCodes
   proformaInvoiceNumber
 }`) as unknown as TypedDocumentString<SettlementsPageQuery, SettlementsPageQueryVariables>;
+export const SettlementFilterSuggestionsDocument = new TypedDocumentString(`
+    query SettlementFilterSuggestions($field: String!, $prefix: String!) {
+  settlementFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
+}
+    `) as unknown as TypedDocumentString<
+    SettlementFilterSuggestionsQuery,
+    SettlementFilterSuggestionsQueryVariables
+>;
+export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
+    query SignInCaptchaRequirement($login: String!) {
+  signInCaptchaRequirement(login: $login) {
+    required
+    siteKey
+    scriptUrl
+    widgetGlobal
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SignInCaptchaRequirementQuery,
+    SignInCaptchaRequirementQueryVariables
+>;
 export const SystemHealthChecklistDocument = new TypedDocumentString(`
     query SystemHealthChecklist {
   systemHealthChecklist {
@@ -17956,15 +18035,6 @@ export const SystemHealthChecklistDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SystemHealthChecklistQuery,
     SystemHealthChecklistQueryVariables
->;
-
-export const SettlementFilterSuggestionsDocument = new TypedDocumentString(`
-    query SettlementFilterSuggestions($field: String!, $prefix: String!) {
-  settlementFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
-}
-    `) as unknown as TypedDocumentString<
-    SettlementFilterSuggestionsQuery,
-    SettlementFilterSuggestionsQueryVariables
 >;
 export const TableViewsDocument = new TypedDocumentString(`
     query TableViews($pageKey: String!) {
@@ -18432,49 +18502,4 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UnsortedAdministratorsQuery,
     UnsortedAdministratorsQueryVariables
->;
-
-export const OidcSignInDocument = new TypedDocumentString(`
-    query OidcSignIn {
-  oidcSignIn {
-    host
-    iconUrl
-  }
-}
-    `) as unknown as TypedDocumentString<OidcSignInQuery, OidcSignInQueryVariables>;
-export const StartOidcSignInDocument = new TypedDocumentString(`
-    mutation StartOidcSignIn {
-  startOidcSignIn {
-    authorizationUrl
-  }
-}
-    `) as unknown as TypedDocumentString<StartOidcSignInMutation, StartOidcSignInMutationVariables>;
-export const PrepareOidcSignOutDocument = new TypedDocumentString(`
-    mutation PrepareOidcSignOut {
-  prepareOidcSignOut
-}
-    `) as unknown as TypedDocumentString<
-    PrepareOidcSignOutMutation,
-    PrepareOidcSignOutMutationVariables
->;
-export const CompleteOidcSignInDocument = new TypedDocumentString(`
-    mutation CompleteOidcSignIn($code: String!, $state: String!) {
-  completeOidcSignIn(code: $code, state: $state)
-}
-    `) as unknown as TypedDocumentString<
-    CompleteOidcSignInMutation,
-    CompleteOidcSignInMutationVariables
->;
-export const AuthenticateOidcDocument = new TypedDocumentString(`
-    mutation AuthenticateOidc($state: String!) {
-  authenticate(input: {oidc: {state: $state}}) {
-    __typename
-    ... on InvalidCredentialsError {
-      authenticationError
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    AuthenticateOidcMutation,
-    AuthenticateOidcMutationVariables
 >;
