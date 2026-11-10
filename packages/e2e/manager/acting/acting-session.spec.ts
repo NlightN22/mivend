@@ -149,8 +149,8 @@ test.describe('acting session @on:manager-operator', () => {
                 items: { erpId: string; tradingPoints: { id: string; erpId: string }[] }[];
             };
         }>(
-            `query { counterparties(options: { take: 1000 }) { items { erpId tradingPoints { id erpId } } } }`,
-            undefined,
+            `query($erpId: String!) { counterparties(options: { take: 1, filter: { erpId: { eq: $erpId } } }) { items { erpId tradingPoints { id erpId } } } }`,
+            { erpId: E2E_COUNTERPARTY_ID },
             superadmin,
         );
         const point = pointsFound.data.counterparties.items

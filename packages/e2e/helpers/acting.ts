@@ -38,8 +38,8 @@ export const actingHeaders = (token: string): Record<string, string> => ({
 
 export async function counterpartyIdByErpId(token: string, erpId: string): Promise<string> {
     const found = await adminGql<{ counterparties: { items: { id: string; erpId: string }[] } }>(
-        `query { counterparties(options: { take: 1000 }) { items { id erpId } } }`,
-        undefined,
+        `query($erpId: String!) { counterparties(options: { take: 1, filter: { erpId: { eq: $erpId } } }) { items { id erpId } } }`,
+        { erpId },
         token,
     );
     const id = found.data.counterparties.items.find(c => c.erpId === erpId)?.id;
