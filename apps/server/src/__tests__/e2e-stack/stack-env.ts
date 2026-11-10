@@ -9,6 +9,16 @@ export const E2E_LOCK_FILE = '/tmp/mivend-e2e.lock';
 export const E2E_AUTH_DIR = resolve(REPO_ROOT, 'packages/e2e/.auth');
 // Clear of make dev (3000, 5173/5174) and staging-integration (3010, 5183-5185).
 export const E2E_PORTS = { server: 3020, storefront: 5193, manager: 5194, oidc: 3995 };
+export const E2E_PORTAL_INSTANCES = Number(process.env.E2E_PORTAL_INSTANCES ?? 3);
+
+export function portalBackendPorts(port: number): number[] {
+    return Array.from({ length: E2E_PORTAL_INSTANCES }, (_, i) => port + 100 * (i + 1));
+}
+
+const instanceUrls = (port: number): string =>
+    portalBackendPorts(port)
+        .map(p => `http://localhost:${p}`)
+        .join(',');
 
 function parseEnvFile(path: string): Record<string, string> {
     const env: Record<string, string> = {};
@@ -55,6 +65,8 @@ export function testRunEnv(base: Record<string, string>, name: string): Record<s
         SERVER_URL: `http://localhost:${E2E_PORTS.server}`,
         STOREFRONT_URL: `http://localhost:${E2E_PORTS.storefront}`,
         MANAGER_URL: `http://localhost:${E2E_PORTS.manager}`,
+        STOREFRONT_INSTANCE_URLS: instanceUrls(E2E_PORTS.storefront),
+        MANAGER_INSTANCE_URLS: instanceUrls(E2E_PORTS.manager),
         ERP_IMPORT_TOKEN: base.ERP_IMPORT_TOKEN,
         ERP_CALLBACK_API_KEY: base.ERP_CALLBACK_API_KEY,
         SUPERADMIN_USERNAME: base.SUPERADMIN_USERNAME,

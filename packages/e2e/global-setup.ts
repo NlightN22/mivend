@@ -1,4 +1,4 @@
-import { chromium, type Page } from '@playwright/test';
+import { chromium } from '@playwright/test';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9,6 +9,7 @@ import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
+import { portalInstances, warmInstances } from './helpers/warm-portals';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
@@ -22,18 +23,9 @@ import { seedPicker } from './fixtures/seed-picker-run';
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
 const MANAGER_URL = process.env.MANAGER_URL ?? 'http://localhost:5174';
-
-// Cold Vite transforms and first widget queries otherwise leave the home widgets on "Loading" past a spec's timeout.
-async function warmStorefront(page: Page): Promise<void> {
-    for (const route of ['/', '/catalog']) {
-        await page.goto(route);
-        await page.waitForLoadState('networkidle');
-        await page
-            .locator('.mv-product-card, .mv-product-row')
-            .first()
-            .waitFor({ timeout: 60_000 });
-    }
-}
+const STOREFRONT_INSTANCES = portalInstances(process.env.STOREFRONT_INSTANCE_URLS, STOREFRONT_URL);
+const MANAGER_INSTANCES = portalInstances(process.env.MANAGER_INSTANCE_URLS, MANAGER_URL);
+const STOREFRONT_READY = '.mv-product-card, .mv-product-row';
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -284,6 +276,10 @@ export default async function globalSetup(): Promise<void> {
     await reindexSearch(adminToken);
 
     const browser = await chromium.launch();
+    await Promise.all([
+        warmInstances(browser, STOREFRONT_INSTANCES, ['/login'], 'input[type="email"]'),
+        warmInstances(browser, MANAGER_INSTANCES, ['/login'], 'input[type="text"]'),
+    ]);
     const context = await browser.newContext({
         baseURL: STOREFRONT_URL,
         userAgent: E2E_BROWSER_USER_AGENT,
@@ -292,8 +288,14 @@ export default async function globalSetup(): Promise<void> {
 
     await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
     await context.storageState({ path: path.join(AUTH_DIR, 'storefront-user.json') });
-    await warmStorefront(page);
     await context.close();
+    await warmInstances(
+        browser,
+        STOREFRONT_INSTANCES,
+        ['/', '/catalog'],
+        STOREFRONT_READY,
+        path.join(AUTH_DIR, 'storefront-user.json'),
+    );
 
     for (const [key, account] of Object.entries(MANAGER_ACCOUNTS)) {
         const managerContext = await browser.newContext({
@@ -306,6 +308,13 @@ export default async function globalSetup(): Promise<void> {
         await managerContext.close();
     }
 
+    await warmInstances(
+        browser,
+        MANAGER_INSTANCES,
+        ['/orders'],
+        'th, [role="columnheader"]',
+        path.join(AUTH_DIR, 'manager-operator.json'),
+    );
     await browser.close();
     if (stackName) fs.writeFileSync(doneMarker, stackName);
     const leakBaseline = process.env.E2E_LEAK_SNAPSHOT;

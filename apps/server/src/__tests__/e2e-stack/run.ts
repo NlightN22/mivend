@@ -77,7 +77,7 @@ async function bootAndSeed(): Promise<void> {
         spawnPortal('storefront', E2E_PORTS.storefront),
         spawnPortal('manager', E2E_PORTS.manager),
     ];
-    track(mockOidc, ...backend, ...portals);
+    track(mockOidc, ...backend, ...portals.flat());
     await waitForMockOidcProvider(mockOidc);
     await waitForServer(backend[0]);
     console.log(`e2e stack: server up on :${E2E_PORTS.server} after ${elapsed(started)}`);
