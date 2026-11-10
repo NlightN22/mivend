@@ -197,7 +197,7 @@ describe('visible settlement documents (real Postgres)', () => {
             { documentType: 'Pay', label: 'Pay label', count: 1 },
         ]);
         const searched = await service.typeCounts(ctx, { search: 'Alpha' });
-        expect(searched.map(c => `${c.documentType}:${c.count}`)).toEqual(['Sale:1', 'Pay:1']);
+        expect(searched.map(c => `${c.documentType}:${c.count}`)).toEqual(['Pay:1', 'Sale:1']);
         const narrowed = await service.typeCounts(ctx, { filter: { amount: { lt: 0 } } });
         expect(narrowed.map(c => c.documentType)).toEqual(['Pay']);
         expect(await numbers({ documentType: 'Sale' })).toEqual(['201', '101']);
