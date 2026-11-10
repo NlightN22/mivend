@@ -31,6 +31,8 @@ import type { ContactPointInput } from '../../contact-point-normalize';
 class TestCounterparty {
     @PrimaryGeneratedColumn('increment') id!: number;
     @Column({ type: 'varchar', nullable: true }) erpId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) phone!: string | null;
+    @Column({ type: 'varchar', nullable: true }) officialEmail!: string | null;
 }
 
 @Entity('contact_point')
@@ -267,8 +269,7 @@ describe('ContactPointService (real Postgres)', () => {
             service.replaceErpPoints(ctx, 'counterparty', 1, [email(`${n}@example.test`)]),
         );
         const reads = Array.from({ length: 8 }, () => service.chosenContacts(ctx, [1]));
-        const seen = await Promise.all(reads);
-        await Promise.all(writes);
+        const [seen] = await Promise.all([Promise.all(reads), Promise.all(writes)]);
         for (const m of seen) expect(m.get('1')?.email).toMatch(/^[a-e]@example\.test$/);
         const rows = await dataSource.query(
             `SELECT count(*)::int AS n FROM counterparty_contact_point WHERE "counterpartyId" = 1`,

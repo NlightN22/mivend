@@ -9,6 +9,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { createContactTables } from './contact-tables.fixture';
+
 import { CounterpartyService } from '../../counterparty.service';
 import type { CounterpartyFilterParameter } from '../../counterparty-list-query';
 
@@ -66,6 +68,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await createContactTables(dataSource, 'uuid');
     const connectionShim = {
         getRepository: () => dataSource.getRepository(TestCounterparty),
     } as unknown as TransactionalConnection;

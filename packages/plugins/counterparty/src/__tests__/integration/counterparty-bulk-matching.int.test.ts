@@ -9,6 +9,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { createContactTables } from './contact-tables.fixture';
+
 import {
     parseCounterpartyMatching,
     resolveCounterpartyIds,
@@ -53,6 +55,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await createContactTables(dataSource, 'int');
     const connection = {
         getRepository: () => dataSource.getRepository(TestCounterparty),
     } as unknown as TransactionalConnection;
