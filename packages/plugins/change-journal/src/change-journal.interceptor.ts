@@ -7,6 +7,7 @@ import { internal_getRequestContext, RequestContext } from '@vendure/core';
 import type { ChangeActor } from './change-journal.types';
 import { resolveRequestActor, sqlActorLookups } from './change-journal-actor';
 import { runInChangeScope, SYSTEM_ACTOR } from './change-journal-context';
+import { isIntegrationRoute } from './change-journal-sources';
 import type { ChangeJournalScope } from './change-journal-context';
 
 interface HttpRequest {
@@ -37,20 +38,22 @@ function stateOf(req: unknown): RequestState {
 @Injectable()
 export class ChangeJournalInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): ReturnType<CallHandler['handle']> {
-        const { req, label } = this.describe(context);
+        const { req, label, route } = this.describe(context);
         const ctx = req ? this.requestContext(req, context) : undefined;
         const source = ctx ? `${ctx.apiType}-api:${label}` : label;
-        return runInChangeScope(scopeFor(ctx, source, stateOf(req)), () => next.handle());
+        const scope = scopeFor(ctx, source, stateOf(req), !isIntegrationRoute(route));
+        return runInChangeScope(scope, () => next.handle());
     }
 
-    private describe(context: ExecutionContext): { req: unknown; label: string } {
+    private describe(context: ExecutionContext): { req: unknown; label: string; route?: string } {
         if (context.getType<string>() === 'graphql') {
             const gql = GqlExecutionContext.create(context);
             const info = gql.getInfo<GraphQLResolveInfo>();
             return { req: gql.getContext<{ req?: unknown }>().req, label: info.fieldName };
         }
         const req = context.switchToHttp().getRequest<HttpRequest | undefined>();
-        return { req, label: `rest:${req?.method ?? ''} ${req?.route?.path ?? req?.path ?? ''}` };
+        const route = req?.route?.path ?? req?.path;
+        return { req, label: `rest:${req?.method ?? ''} ${route ?? ''}`, route };
     }
 
     private requestContext(req: unknown, context: ExecutionContext): RequestContext | undefined {
@@ -67,9 +70,11 @@ export function scopeFor(
     ctx: RequestContext | undefined,
     source: string,
     state: RequestState,
+    journaled = true,
 ): ChangeJournalScope {
     return {
         source,
+        journaled,
         requestId: state.requestId,
         sessionId: () => (ctx?.session?.id != null ? String(ctx.session.id) : null),
         resolveActor: runner => {

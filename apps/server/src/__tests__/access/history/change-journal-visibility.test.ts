@@ -32,11 +32,12 @@ interface Ref {
 
 const key = (r: Ref): string => `${r.entityType}:${r.entityId}`;
 
+// Points carry the staff edit of the history seed; ERP-imported rows have no entries (owner decision 2026-11-10).
 function refs(): Ref[] {
-    return COUNTERPARTIES.flatMap(c => [
-        { entityType: 'Counterparty', entityId: seed().counterparties[c.key] },
-        { entityType: 'TradingPoint', entityId: seed().points[c.key] },
-    ]);
+    return COUNTERPARTIES.map(c => ({
+        entityType: 'TradingPoint',
+        entityId: seed().points[c.key],
+    }));
 }
 
 async function forEntity(token: string, ref: Ref): Promise<{ items: Entry[]; errors: string[] }> {
@@ -54,12 +55,29 @@ beforeAll(async () => {
 });
 
 describe('change journal seed', () => {
-    it('the creation of every seeded counterparty and point is journaled', async () => {
-        for (const ref of refs()) {
-            const got = await forEntity(superadmin, ref);
-            expect(got.errors).toEqual([]);
-            const insert = got.items.find(e => e.action === 'insert');
-            expect(insert, key(ref)).toBeDefined();
+    it('the ERP import writes no entry; the staff edit of every point is journaled', async () => {
+        for (const c of COUNTERPARTIES) {
+            const cp = await forEntity(superadmin, {
+                entityType: 'Counterparty',
+                entityId: seed().counterparties[c.key],
+            });
+            expect(cp.errors).toEqual([]);
+            expect(
+                cp.items.filter(e => e.source.includes('/erp/')),
+                c.key,
+            ).toEqual([]);
+            const point = await forEntity(superadmin, {
+                entityType: 'TradingPoint',
+                entityId: seed().points[c.key],
+            });
+            expect(
+                point.items.filter(e => e.source.includes('/erp/')),
+                c.key,
+            ).toEqual([]);
+            expect(
+                point.items.map(e => [e.actorType, e.source]),
+                c.key,
+            ).toContainEqual(['administrator', 'admin-api:updateTradingPointDetails']);
         }
     });
 });
@@ -169,14 +187,10 @@ describe.each(STAFF.map(s => s.key))('change journal for %s', (actor: ActorKey) 
         token = await staffToken(actor);
     });
 
-    it('entries by entity follow the counterparty visibility', async () => {
+    it('entries of a point follow its counterparty visibility', async () => {
         const visible = VISIBLE_COUNTERPARTIES[actor];
         for (const c of COUNTERPARTIES) {
-            for (const ref of refs().filter(
-                r =>
-                    r.entityId === seed().counterparties[c.key] ||
-                    r.entityId === seed().points[c.key],
-            )) {
+            for (const ref of refs().filter(r => r.entityId === seed().points[c.key])) {
                 const got = await forEntity(token, ref);
                 if (!reads) {
                     expect(got.errors.join(' '), key(ref)).toMatch(DENIED);

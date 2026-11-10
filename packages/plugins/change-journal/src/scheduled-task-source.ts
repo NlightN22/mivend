@@ -1,15 +1,19 @@
 import { ScheduledTask } from '@vendure/core';
 
-import { runAsSystem } from './change-journal-context';
+import { runAsIntegration, runAsSystem } from './change-journal-context';
+import { isIntegrationTask } from './change-journal-sources';
 
-// Writes made by a scheduled task (the ERP inbox lanes included) are journaled as system with the task id.
+// Task writes are journaled as system with the task id; ERP integration tasks are not journaled.
 export function labelScheduledTasks(tasks: ScheduledTask[]): ScheduledTask[] {
     return tasks.map(
         task =>
             new ScheduledTask({
                 ...task.options,
                 execute: args =>
-                    runAsSystem(`scheduled-task:${task.id}`, () => task.options.execute(args)),
+                    (isIntegrationTask(task.id) ? runAsIntegration : runAsSystem)(
+                        `scheduled-task:${task.id}`,
+                        () => task.options.execute(args),
+                    ),
             }),
     );
 }

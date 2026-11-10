@@ -1,5 +1,6 @@
 import * as amqplib from 'amqplib';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
+import { runAsIntegration } from '@mivend/plugin-change-journal';
 
 import {
     DLX,
@@ -91,7 +92,7 @@ export class RabbitMQService implements OnModuleDestroy {
 
             const retryKey = this.retryKeyFor(raw);
             try {
-                await handler(raw);
+                await runAsIntegration(`sync-rabbitmq:${queueName}`, () => handler(raw));
                 ch.ack(msg);
                 if (retryKey) this.retryCounts.delete(retryKey);
             } catch (err) {

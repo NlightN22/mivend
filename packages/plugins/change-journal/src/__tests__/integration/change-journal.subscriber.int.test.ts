@@ -15,7 +15,7 @@ import {
 } from 'shared';
 
 import type { ChangeActor } from '../../change-journal.types';
-import { runAsSystem, runInChangeScope } from '../../change-journal-context';
+import { runAsIntegration, runAsSystem, runInChangeScope } from '../../change-journal-context';
 import { ChangeJournalSubscriber } from '../../change-journal.subscriber';
 import { CHANGE_JOURNAL_DDL } from './change-journal-ddl';
 
@@ -60,6 +60,7 @@ function asActor<T>(actor: ChangeActor, source: string, work: () => Promise<T>):
     return runInChangeScope(
         {
             source,
+            journaled: true,
             requestId: 'req-1',
             sessionId: () => 's-1',
             resolveActor: () => Promise.resolve(actor),
@@ -187,7 +188,7 @@ describe('change journal subscriber (real Postgres)', () => {
     });
 
     it('a write in a labelled task is a system entry with that source', async () => {
-        await runAsSystem('scheduled-task:erp-integration-inbox-bulk', () =>
+        await runAsSystem('scheduled-task:reservation-expiry', () =>
             ds.getRepository(JournalProbe).save({ name: 'erp' } as JournalProbe),
         );
         const [row] = await entries();
@@ -195,8 +196,26 @@ describe('change journal subscriber (real Postgres)', () => {
             actorType: 'system',
             userId: null,
             administratorId: null,
-            source: 'scheduled-task:erp-integration-inbox-bulk',
+            source: 'scheduled-task:reservation-expiry',
         });
+    });
+
+    it('a write from the ERP integration writes no entry; the same write by an administrator does', async () => {
+        const repo = ds.getRepository(JournalProbe);
+        await runAsIntegration('scheduled-task:erp-integration-inbox-bulk', async () => {
+            const probe = await repo.save(repo.create({ name: 'erp' }));
+            probe.name = 'erp-2';
+            await repo.save(probe);
+        });
+        expect(await entries()).toEqual([]);
+        await asActor(
+            { actorType: 'administrator', userId: '3', administratorId: '5' },
+            'admin-api:updateX',
+            () => repo.save(repo.create({ name: 'staff' })),
+        );
+        expect((await entries()).map(r => [r.actorType, r.action])).toEqual([
+            ['administrator', 'insert'],
+        ]);
     });
 
     it('a write outside any scope is still recorded, as a background system entry', async () => {

@@ -25,6 +25,7 @@ function scope(apiType: string, activeUserId: number, token?: string) {
     const ctx = { apiType, activeUserId };
     return {
         source: `${apiType}-api:test`,
+        journaled: true,
         requestId: 'r',
         sessionId: () => null,
         resolveActor: (runner: { query(sql: string, p?: unknown[]): Promise<unknown> }) =>

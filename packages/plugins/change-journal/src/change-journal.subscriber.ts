@@ -50,6 +50,7 @@ async function record(
     const diff = changes();
     if (action === 'update' && Object.keys(diff).length === 0) return;
     const scope = currentChangeScope();
+    if (scope && !scope.journaled) return;
     const actor = scope ? await scope.resolveActor(manager) : SYSTEM_ACTOR;
     await insertJournalEntry(manager, {
         ...actor,

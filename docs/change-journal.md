@@ -2,7 +2,8 @@
 
 **Scope of completeness: the journal records changes made through TypeORM entity operations
 (`save`, `insert`, `upsert`, `remove`, `softRemove`, `recover`). It is not a record of every row
-change: query-builder updates/deletes and raw SQL bypass it (see Known limits).**
+change: query-builder updates/deletes and raw SQL bypass it (see Known limits), and changes
+from the ERP integration are skipped by design (see below).**
 
 One table, `change_journal_entry`, records who changed which entity, when, and what changed.
 Plugin: `packages/plugins/change-journal`.
@@ -12,7 +13,28 @@ Plugin: `packages/plugins/change-journal`.
 `ChangeJournalSubscriber` is a TypeORM subscriber on every entity. For each `insert`, `update`,
 `soft-remove`, `recover` and `remove` of a journaled entity it writes one row with the change's own
 `EntityManager`, so the entry commits and rolls back with the change (`docs/concurrency.md`). A
-failing journal write fails the change; nothing is skipped silently.
+failing journal write fails the change.
+
+## Changes from the ERP integration are not journaled (owner decision 2026-11-10)
+
+The journal records our own changes: staff, customers, acting sessions and our own background
+tasks. Changes that arrive from the ERP integration are skipped on purpose; this replaces the
+earlier issue wording "ERP stream recorded as a system actor". The skip is decided by the source
+of the change, not by the entity, so an entity edited by both the ERP and our staff (product,
+trading point, counterparty) keeps the staff edits and drops the ERP ones. The source counts as
+integration when it is (`change-journal-sources.ts`):
+
+- a scheduled task whose id starts with `erp-integration-` (every inbox lane, reconciliation,
+  recomputes, outbox) or `sync-` (`sync-erp-poll`, `sync-outbox`), or
+  `external-order-counterparty-reconcile`;
+- a REST route under `/erp/` (ERP import, ERP callbacks, ERP order status, Kafka status);
+- a RabbitMQ message handled by the sync plugin (`runAsIntegration` around its consumer).
+
+A staff action in the Admin API that touches ERP-owned data (for example a manual inbox replay)
+is still journaled, because the request is ours. No ERP mirror entity is excluded by name: with
+the source rule they get no ERP entries anyway, and a staff edit of them stays visible. A new
+integration entry point must call `runAsIntegration` (or use one of the prefixes above), otherwise
+its writes show up as `background`.
 
 | Field | Meaning |
 | --- | --- |
@@ -41,36 +63,26 @@ request is attributed to the signed-in user.
   administrator (the same columns `ActingContextService` reads).
 - Both lookups run on the writing transaction's own connection (the subscriber's `event.manager`),
   never on a second pool connection, and are memoized per request.
-- No user (ERP import REST endpoint, sign-in before the session exists): `system`, `source` names
+- No user (sign-in before the session exists, a non-ERP REST route): `system`, `source` names
   the route.
 - Every scheduled task (all plugins, Vendure core included) runs inside a `system` scope with
-  `source = scheduled-task:<id>`. The ERP inbox lanes therefore show as
-  `scheduled-task:erp-integration-inbox-*`. `ChangeJournalPlugin` must stay after every plugin that
-  registers a task in `vendure-config.ts`.
+  `source = scheduled-task:<id>`; integration tasks run in a scope that is not journaled.
+  `ChangeJournalPlugin` must stay after every plugin that registers a task in `vendure-config.ts`.
 - Anything else (job-queue jobs, bootstrap provisioning): `system` with `source = background`.
 
-## Volume on ERP streams (estimate, 2026-11-09)
+## Volume (estimate, 2026-11-10)
 
 Measured on the staging-integration database (real ERP data; SELECT only): about 54k products,
-54k variants and their translations and prices, 213k price entries, 26k counterparties, 36k
-contracts, 4k trading points; 1.5M inbox events retained; 1.9M stock levels (excluded). Average
-JSON size of one row: price entry ~210 B, translation ~230 B, contract ~640 B, variant ~730 B,
-counterparty ~870 B. With the fixed columns and both indexes an entry costs roughly 0.4-1.2 KB.
+54k variants, 213k price entries, 26k counterparties, 36k contracts, 4k trading points, 1.5M
+retained inbox events. With the ERP skip, a first full load and every re-export write no entries.
+What remains is human and our own background activity: carts and orders (each cart change saves
+`Order`/`OrderLine`), staff edits, sign-ins (`User.lastLogin`), reservations, settlements and
+cleanup tasks. One entry costs roughly 0.4-1.2 KB (row JSON 200-900 B plus the fixed columns and
+two indexes), so even 100k entries a day stay near 40 GB a year at the high end and usually far
+less. The cleanup removes up to 1M rows per hourly run (200 x 5000), far above that rate.
 
-- A first full load (every row new) writes about 600k entries, roughly 0.5 GB.
-- A full re-export of unchanged data writes far less: a `save()` that changes nothing writes no
-  entry. Handlers that use `upsert` (storage locations, warehouses, departments, positions,
-  manufacturers, stock organizations, among others) write an `insert` entry per event even when
-  nothing changed; storage locations alone are about 160k events per re-export.
-- The cleanup deletes up to 1M rows per hourly run (200 x 5000), and rows only become eligible
-  365 days after they were written, so a re-export burst is removed in one or two runs a year
-  later. The cleaner keeps up; the cost is table size within the retention window.
-
-Options for the owner (not decided, nothing excluded by default): keep everything (the numbers
-above); exclude ERP-only mirrors such as `ProductVariantPriceEntry`, `StorageLocationAssignment`
-and the `*Erp` records through `ChangeJournalPlugin.init({ excludedEntities: [...] })` (no code
-change, the entity simply stops being journaled); or a shorter retention for `system` entries
-(not built).
+Further reduction if it is ever needed: `ChangeJournalPlugin.init({ excludedEntities: [...] })`
+drops whole entity types (no code change), or a shorter retention (a code constant).
 
 ## Exclusions
 
@@ -140,15 +152,15 @@ backlog takes more runs. It is idempotent and only ever touches rows past the cu
   preferred trading point self-heal, many reservation and settlement updates), so the journal is
   complete for entity saves only, not for every row change. The subscriber integration test pins
   this gap.
-- `repository.insert()` and `repository.upsert()` fire an insert event: an upsert (used by several
-  ERP stream handlers) is recorded as `insert` with the written values, also when it updated an
-  existing row, and carries no before values.
+- `repository.insert()` and `repository.upsert()` fire an insert event: an upsert is recorded as
+  `insert` with the written values, also when it updated an existing row, and carries no before
+  values.
 - Before values need the loaded row: `save()` loads it, so updates through `save` carry both
   sides; an update event without it records `after` only.
 - Field-level redaction (`requiresPermission` custom fields, e.g. purchase or floor prices) is not
   applied to `changes`: a `ReadChangeJournal` holder with counterparty scope `all` reads those values
   in product/variant entries. The permission is given only to leadership roles for that reason.
 - `ManyToMany` join tables are not journaled (no entity events).
-- Volume: every journaled ERP stream save (products, prices, points) writes one extra row in the
-  same transaction. Retention bounds the table; `StockLevel` is excluded for this reason.
+- Volume: every journaled save writes one extra row in the same transaction; ERP stream saves are
+  skipped by source (above).
 - The manager-portal "History" tab is not built yet (follow-up); the API above is what it will use.

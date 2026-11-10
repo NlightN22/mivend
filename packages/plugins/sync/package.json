@@ -17,6 +17,7 @@
         "amqplib": "^0.10.4",
         "graphql-tag": "^2.12.6",
         "shared": "workspace:*",
+        "@mivend/plugin-change-journal": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
         "@nestjs/swagger": "^11.0.0"

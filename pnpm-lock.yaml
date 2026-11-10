@@ -1872,6 +1872,9 @@ importers:
 
   packages/plugins/sync:
     dependencies:
+      '@mivend/plugin-change-journal':
+        specifier: workspace:*
+        version: link:../change-journal
       '@mivend/plugin-erp-order':
         specifier: workspace:*
         version: link:../erp-order
