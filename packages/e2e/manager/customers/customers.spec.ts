@@ -3,9 +3,9 @@ import { readE2eOrder } from '../../helpers/e2e-order';
 
 async function openE2eCustomerDetail(page: import('@playwright/test').Page): Promise<void> {
     await page.goto('/customers?search=E2E%20Co');
-    const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
+    const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
     await row.waitFor({ timeout: 15000 });
-    await row.click({ position: { x: 20, y: 10 } });
+    await row.getByRole('link', { name: /E2E Co/ }).click();
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
@@ -42,15 +42,12 @@ async function forceInactiveTradingPoint(page: import('@playwright/test').Page):
     );
 }
 
-test('customers page shows the client list with company meta and KPIs @read-only', async ({
-    page,
-}) => {
+test('customers page shows the client list and KPIs @read-only', async ({ page }) => {
     await page.goto('/customers?search=E2E%20Co');
-    await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Active clients')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
+    await expect(page.getByText('Active clients')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Needs attention')).toBeVisible();
 
-    const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
+    const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
     await expect(row).toBeVisible();
 });
 
@@ -58,7 +55,7 @@ test('customers page CSV export downloads a file @on:manager-operator @read-only
     page,
 }) => {
     await page.goto('/customers');
-    await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
 
     const [download] = await Promise.all([
         page.waitForEvent('download'),
@@ -67,7 +64,7 @@ test('customers page CSV export downloads a file @on:manager-operator @read-only
     expect(download.suggestedFilename()).toBe('customers.csv');
 });
 
-test('clicking a customer row navigates to the customer detail page @on:manager-operator @read-only', async ({
+test('opening a customer from the list navigates to the customer detail page @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);

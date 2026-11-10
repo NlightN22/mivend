@@ -147,6 +147,11 @@ function mockCustomersData(): void {
         }
         return { counterparties: paginate(filtered, o) };
     });
+    registerMock('CustomersViewCounts', () => ({
+        all: { totalItems: CUSTOMERS.length },
+        active: { totalItems: CUSTOMERS.filter(c => c.isActive).length },
+        inactive: { totalItems: CUSTOMERS.filter(c => !c.isActive).length },
+    }));
     registerMock('CustomersSummary', () => ({
         counterpartySummary: {
             totalCount: CUSTOMERS.length,
@@ -196,6 +201,11 @@ export const Empty: Story = {
                     totalCreditBalance: 0,
                     highUsageCount: 0,
                 },
+            }));
+            registerMock('CustomersViewCounts', () => ({
+                all: { totalItems: 0 },
+                active: { totalItems: 0 },
+                inactive: { totalItems: 0 },
             }));
             registerMock('Branches', () => ({ branches: [] }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));

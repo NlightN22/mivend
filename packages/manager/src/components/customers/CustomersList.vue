@@ -1,0 +1,116 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
+import { useCustomersList } from '../../composables/useCustomersList';
+import {
+    BLANK_CUSTOMERS_FILTERS,
+    CUSTOMERS_VIEWS,
+    type CustomersView,
+} from '../../api/customersList';
+import type { CounterpartyFilterParameter } from '../../api/generated/graphql';
+import { downloadCsv } from '../../utils/csv';
+import CustomersListTable from './CustomersListTable.vue';
+import { toCustomerRows } from './customersRows';
+
+// A set fixedFilter narrows the list beside the user's own filters, e.g. a nested list in the customer card.
+const props = defineProps<{ fixedFilter?: CounterpartyFilterParameter }>();
+
+const authStore = useAuthStore();
+const { formatWhole } = useCurrency();
+const withManagerFilter = authStore.roleCode !== 'manager';
+const list = useCustomersList(() => props.fixedFilter, withManagerFilter);
+
+function managerName(id: string | null): string {
+    if (!id) return '—';
+    return list.managers.value.find(m => m.id === id)?.name ?? '—';
+}
+function branchName(id: string | null): string {
+    if (!id) return '';
+    return list.branches.value.find(b => b.id === id)?.name ?? '';
+}
+
+const rows = computed(() =>
+    toCustomerRows(list.result.value?.items ?? [], {
+        credit: list.result.value?.credit ?? new Map(),
+        discountCounts: list.result.value?.discountCounts ?? new Map(),
+        lastOrderDates: list.result.value?.lastOrderDates ?? new Map(),
+        managerName,
+        branchName,
+        formatMoney: formatWhole,
+    }),
+);
+
+const chips = computed<FilterChip[]>(() =>
+    CUSTOMERS_VIEWS.map(v => ({
+        key: v.key,
+        label: v.label,
+        count: list.counts.value?.[v.key],
+        countLoading: list.countsLoading.value,
+    })),
+);
+
+function selectView(view: string): void {
+    list.filters.value = { ...list.filters.value, view: view as CustomersView };
+}
+function clearFilters(): void {
+    list.filters.value = { ...BLANK_CUSTOMERS_FILTERS };
+}
+
+function exportCsv(): void {
+    downloadCsv(
+        'customers.csv',
+        [
+            'Company name',
+            'INN',
+            'Credit limit',
+            'Credit balance',
+            'Active discounts',
+            'Last order',
+            'Status',
+        ],
+        rows.value.map(r => [
+            r.shortName,
+            r.inn,
+            r.creditLimit,
+            r.creditBalance,
+            r.discounts,
+            r.lastOrder,
+            r.isActive ? 'Active' : 'Inactive',
+        ]),
+    );
+}
+</script>
+
+<template>
+    <CustomersListTable
+        :rows="rows"
+        :loading="list.loading.value"
+        :failed="list.failed.value"
+        :total-items="list.totalItems.value"
+        :page="list.page.value"
+        :page-size="list.pageSize.value"
+        :filters="list.filters.value"
+        :sort="list.sort.value"
+        :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+        :manager-options="withManagerFilter ? list.managerOptions.value : undefined"
+        :branch-options="list.branchOptions.value"
+        @update:filters="list.filters.value = $event"
+        @update:sort="list.sort.value = $event"
+        @update:page="list.page.value = $event"
+        @update:page-size="list.pageSize.value = $event"
+        @clear-filters="clearFilters"
+        @retry="list.reload"
+        @export="exportCsv"
+    >
+        <template #view-chips>
+            <MvFilterChips
+                scrollable
+                :chips="chips"
+                :active="list.filters.value.view"
+                @select="selectView"
+            />
+        </template>
+    </CustomersListTable>
+</template>

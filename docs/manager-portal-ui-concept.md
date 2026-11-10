@@ -174,7 +174,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Item | Content | Status |
 | --- | --- | --- |
 | Dashboard | KPI and widgets | exists, redesign deferred |
-| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list exists; the card has a Settlements tab (the standard list fixed to the customer, shown with `ReadSettlementDocument`) |
+| Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list in the standard shape (`CustomersList`: filter builder, All/Active/Inactive chips with counts, URL state, saved views, uniform rows, page scroll); the card has a Settlements tab (the standard list fixed to the customer, shown with `ReadSettlementDocument`). `CustomersList` takes an optional `fixedFilter` so the card tabs can become nested variants (not built yet) |
 | Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; the Payments entry is removed (sidebar and More sheet) |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
@@ -350,7 +350,7 @@ portal API layer only and not re-checked on the server.
 | Proforma invoices | Shared engine | Conforms |
 | Payments | Shared engine | Conforms |
 | Settlements | Shared engine | Conforms |
-| Customers (counterparties) | Shared engine (field whitelist in `counterparty-list-query.ts`), legacy list args beside it; sort is still `counterparty-sort.ts` | Filter conforms; sort follow-up |
+| Customers (counterparties) | Shared engine (field whitelist in `counterparty-list-query.ts`: name, INN, phone, email, manager, branch, group, INN status, active); the legacy list args stay only for the search, the All/Active/Inactive chips and the bulk operations; sort is still `counterparty-sort.ts` (whitelist of five columns) | Filter conforms; sort follow-up. Follow-ups: a suggest endpoint for name and INN (`FieldSpec.suggest`), a portal-readiness filter (the activation list has it), credit and last-order filters and sorts |
 | Customer activation list (bulk) | Same counterparty filter plus search and readiness chip | Conforms |
 | Orders | Shared engine (field whitelist in `order-list-query.ts`, `visibleOrders(list: OrderListInput)`); the Vendure `options` argument stays for the dashboard and other server callers; the customer card Orders tab still uses `options` | Conforms for the list; card tab follow-up |
 | Approvals inbox | Bespoke query service (`approval-request-query.service.ts`) with its own filter args | Deviates |

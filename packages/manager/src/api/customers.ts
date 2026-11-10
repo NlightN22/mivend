@@ -28,6 +28,8 @@ import {
     SetTradingPointActiveDocument,
     UnassignedCounterpartyCountDocument,
     UpdateTradingPointDetailsDocument,
+    type CounterpartyFilterParameter,
+    type CounterpartySortParameter,
     type CustomerListItemFieldsFragment,
     type CustomerOrderItemFieldsFragment,
     type PendingTradingPointChangeFieldsFragment,
@@ -55,6 +57,8 @@ export interface CustomersListOptions {
     // Overrides managerId — see CounterpartyService.findVisiblePage's doc comment.
     unassignedOnly?: boolean;
     innStatus?: 'missing' | 'duplicate';
+    filter?: CounterpartyFilterParameter;
+    sort?: CounterpartySortParameter;
 }
 
 // Server-side paginated (see issue #39) — search/status/manager/branch/group/unassigned are all

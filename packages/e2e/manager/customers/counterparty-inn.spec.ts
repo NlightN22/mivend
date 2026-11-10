@@ -33,13 +33,13 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
     test('the customer list filters counterparties with a duplicate or a missing inn', async ({
         page,
     }) => {
-        await page.goto('/customers?innStatus=duplicate&search=E2E INN');
+        await page.goto('/customers?filters=innStatus:eq:duplicate&search=E2E INN');
         await expect(page.getByText(INN_TWIN_A.shortName).first()).toBeVisible({ timeout: 15000 });
         await expect(page.getByText(INN_TWIN_B.shortName).first()).toBeVisible();
         await expect(page.getByText(INN_UNIQUE.shortName)).toHaveCount(0);
         await expect(page.getByText(INN_MISSING.shortName)).toHaveCount(0);
 
-        await page.goto('/customers?innStatus=missing&search=E2E INN');
+        await page.goto('/customers?filters=innStatus:eq:missing&search=E2E INN');
         await expect(page.getByText(INN_MISSING.shortName).first()).toBeVisible({ timeout: 15000 });
         await expect(page.getByText(INN_TWIN_B.shortName)).toHaveCount(0);
         await expect(page.getByText(INN_UNIQUE.shortName)).toHaveCount(0);
@@ -54,9 +54,9 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
             page,
         }) => {
             await page.goto(`/customers?search=${encodeURIComponent(who.shortName)}`);
-            const listRow = page.locator('.el-table-v2__row', { hasText: who.shortName });
+            const listRow = page.getByRole('row').filter({ hasText: who.shortName }).first();
             await listRow.waitFor({ timeout: 15000 });
-            await listRow.click({ position: { x: 20, y: 10 } });
+            await listRow.getByRole('link', { name: who.shortName }).click();
             await expect(page).toHaveURL(/\/customers\/.+/);
             await expect(page.getByRole('heading', { name: who.shortName })).toBeVisible();
             const notice = page.getByText(/INN (duplicate \(ERP\)|missing) —/);

@@ -1,169 +1,43 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
+import { computed, onMounted, ref } from 'vue';
+import { MvPanel, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import {
-    MvPanel,
-    MvFilterBar,
-    MvFilterField,
-    MvInput,
-    MvSelect,
-    MvKpiCard,
-    MvKpiCarousel,
-    MvButton,
-    MvPagination,
-} from '@mivend/ui-kit';
-import { useAuthStore } from '../../stores/auth';
-import {
-    fetchCustomersPage,
     fetchCustomersSummary,
     fetchHighUsageCustomers,
     fetchCounterpartyNames,
     fetchCreditLimitExceededCounterpartyIds,
-    fetchCreditByCounterpartyId,
-    fetchActiveDiscountCountsByCustomer,
-    fetchLastOrderDatesByCounterpartyId,
-    type CustomerListItem,
-    type CustomerCredit,
     type CustomersSummary,
     type HighUsageCustomer,
 } from '../../api/customers';
-import {
-    fetchBranchOptions,
-    fetchManagerOptions,
-    type BranchOption,
-    type ManagerOption,
-} from '../../api/orders';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
-import { downloadCsv } from '../../utils/csv';
-import CustomersTable from '../../components/customers/CustomersTable.vue';
+import CustomersList from '../../components/customers/CustomersList.vue';
 import NeedsAttentionPanel, {
     type AttentionEntry,
 } from '../../components/customers/NeedsAttentionPanel.vue';
 
 const authStore = useAuthStore();
 // "My Clients" only makes sense for Manager, whose list is their own assigned book — every
-// other role sees a department/company-wide list, so the generic title fits better there (see
-// docs/ai/manager-portal-pages/04-customers-list.md).
+// other role sees a department/company-wide list, so the generic title fits better there.
 const title = computed(() => (authStore.roleCode === 'manager' ? 'My Clients' : 'Customers'));
 
 const { formatWhole } = useCurrency();
-const PAGE_SIZE = 20;
 
-// `customers` now holds only the current page (see issue #39 — server-side pagination via
-// fetchCustomersPage/CounterpartyService.findVisiblePage). KPIs and "Needs attention" no longer
-// derive from this — they come from dedicated summary/top-N backend queries below, since they
-// must reflect the FULL visible set, not just the page on screen.
-const customers = ref<CustomerListItem[]>([]);
-const totalItems = ref(0);
-const page = ref(1);
-const credit = ref<Map<string, CustomerCredit>>(new Map());
-const discountCounts = ref<Map<string, number>>(new Map());
-const lastOrderDates = ref<Map<string, string>>(new Map());
-const branches = ref<BranchOption[]>([]);
-const managers = ref<ManagerOption[]>([]);
+// KPIs and "Needs attention" come from dedicated summary/top-N backend queries: they must
+// reflect the FULL visible set, not the list's current page or filter.
 const expiringGrantsByCustomerId = ref<Map<string, string>>(new Map());
+const expiringNames = ref<Map<string, string>>(new Map());
 const summary = ref<CustomersSummary | null>(null);
 const highUsageCustomers = ref<HighUsageCustomer[]>([]);
 const creditExceededCustomers = ref<Map<string, string>>(new Map());
-const loading = ref(true);
 
-// Same window used by the dashboard's discount banner (docs/ai/manager-portal-concept.md §8.2 —
-// no exact threshold has been decided).
+// Same window used by the dashboard's discount banner.
 const EXPIRING_SOON_DAYS = 14;
 const ATTENTION_TOP_N = 5;
 
-// Sentinel value for the Manager select's "Unassigned" option — distinct from '' (no filter) and
-// from any real manager id. See CounterpartyService.findVisiblePage's `unassignedOnly` doc
-// comment for why this is a dedicated flag, not `managerId: null`.
-const UNASSIGNED_SENTINEL = '__unassigned__';
-
-interface CustomerFiltersState extends Record<string, string> {
-    search: string;
-    status: string;
-    managerId: string;
-    branchId: string;
-    groupLabel: string;
-    innStatus: string;
-}
-const DEFAULT_FILTERS: CustomerFiltersState = {
-    search: '',
-    status: '',
-    managerId: '',
-    branchId: '',
-    groupLabel: '',
-    innStatus: '',
-};
-const filters = reactive<CustomerFiltersState>({ ...DEFAULT_FILTERS });
-
-// Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable URL.
-const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);
-fromQuery(filters, page);
-
-const search = computed({
-    get: () => filters.search,
-    set: (value: string) => {
-        filters.search = value;
-    },
-});
-const statusFilter = computed({
-    get: () => filters.status as '' | 'active' | 'inactive',
-    set: (value: '' | 'active' | 'inactive') => {
-        filters.status = value;
-    },
-});
-const managerFilter = computed({
-    get: () => filters.managerId,
-    set: (value: string) => {
-        filters.managerId = value;
-    },
-});
-const branchFilter = computed({
-    get: () => filters.branchId,
-    set: (value: string) => {
-        filters.branchId = value;
-    },
-});
-const groupFilter = computed({
-    get: () => filters.groupLabel,
-    set: (value: string) => {
-        filters.groupLabel = value;
-    },
-});
-const innFilter = computed({
-    get: () => filters.innStatus,
-    set: (value: string) => {
-        filters.innStatus = value;
-    },
-});
-const INN_OPTIONS = [
-    { value: '', label: 'Any INN' },
-    { value: 'missing', label: 'INN missing' },
-    { value: 'duplicate', label: 'INN duplicate (ERP)' },
-];
-const STATUS_OPTIONS = [
-    { value: '', label: 'All statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-];
-const managerOptions = computed(() => [
-    { value: '', label: 'All managers' },
-    { value: UNASSIGNED_SENTINEL, label: 'Unassigned' },
-    ...managers.value.map(m => ({ value: m.id, label: m.name })),
-]);
-// `branchId` value sent as CounterpartyListOptions.branchId, which compares against a real
-// mivend Branch.id — never Branch.erpId, see BranchOption's own doc comment (real, live bug this
-// fixes: selecting a branch here always sent the wrong value space and could never match a real
-// counterparty).
-const branchOptions = computed(() => [
-    { value: '', label: 'All branches' },
-    ...branches.value.map(b => ({ value: b.id, label: b.name })),
-]);
-
 const activeClientsCount = computed(() => summary.value?.activeCount ?? 0);
-// Null (not 0) means "no ReadCounterpartyCredit" — see CounterpartyResolver.counterpartySummary.
-// Distinguished from a real zero so the KPI card can be hidden rather than showing a misleading
-// "$0.00 used".
+// Null (not 0) means "no ReadCounterpartyCredit": hide the card rather than show a misleading zero.
 const canReadCredit = computed(() => summary.value?.totalCreditBalance != null);
 const totalCreditBalance = computed(() => summary.value?.totalCreditBalance ?? 0);
 const highUsageCount = computed(() => summary.value?.highUsageCount ?? 0);
@@ -184,15 +58,15 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         .slice(0, ATTENTION_TOP_N)
         .map(([customerId, validTo]) => ({
             customerId,
-            title: customers.value.find(c => c.id === customerId)?.shortName ?? '—',
+            title: expiringNames.value.get(customerId) ?? '—',
             meta: `Discount grant expires ${new Date(validTo).toLocaleDateString('en-US')}.`,
             tag: 'Discounts',
             variant: 'warning',
         }));
     const exceeded: AttentionEntry[] = [...creditExceededCustomers.value.entries()].map(
-        ([customerId, title]) => ({
+        ([customerId, name]) => ({
             customerId,
-            title,
+            title: name,
             meta: 'Open order exceeds the credit limit and needs confirmation.',
             tag: 'Credit',
             variant: 'danger',
@@ -201,98 +75,13 @@ const attentionItems = computed<AttentionEntry[]>(() => {
     return [...exceeded, ...highUsage, ...expiring];
 });
 
-function resetFilters(): void {
-    Object.assign(filters, DEFAULT_FILTERS);
-    page.value = 1;
-}
-
-function exportCsv(): void {
-    downloadCsv(
-        'customers.csv',
-        [
-            'Company name',
-            'INN',
-            'Credit limit',
-            'Credit balance',
-            'Active discounts',
-            'Last order',
-            'Status',
-        ],
-        customers.value.map(c => {
-            const row = credit.value.get(c.id);
-            const lastOrder = lastOrderDates.value.get(c.id);
-            return [
-                c.shortName,
-                c.inn ?? '',
-                row?.creditLimit ?? '',
-                row?.creditBalance ?? '',
-                discountCounts.value.get(c.id) ?? 0,
-                lastOrder ? new Date(lastOrder).toLocaleDateString('en-US') : '',
-                c.isActive ? 'Active' : 'Inactive',
-            ];
-        }),
-    );
-}
-
-async function loadPage(): Promise<void> {
-    loading.value = true;
-    try {
-        const isUnassignedFilter = managerFilter.value === UNASSIGNED_SENTINEL;
-        const listOptions = {
-            take: PAGE_SIZE,
-            skip: (page.value - 1) * PAGE_SIZE,
-            search: search.value.trim() || undefined,
-            status: statusFilter.value || undefined,
-            managerId: !isUnassignedFilter && managerFilter.value ? managerFilter.value : undefined,
-            branchId: branchFilter.value || undefined,
-            groupLabel: groupFilter.value.trim() || undefined,
-            unassignedOnly: isUnassignedFilter || undefined,
-            innStatus: (innFilter.value || undefined) as 'missing' | 'duplicate' | undefined,
-        };
-        const [pageResult, creditMap] = await Promise.all([
-            fetchCustomersPage(listOptions),
-            fetchCreditByCounterpartyId(listOptions),
-        ]);
-        customers.value = pageResult.items;
-        totalItems.value = pageResult.totalItems;
-        credit.value = creditMap;
-        const pageIds = pageResult.items.map(c => c.id);
-        [discountCounts.value, lastOrderDates.value] = await Promise.all([
-            fetchActiveDiscountCountsByCustomer(pageIds),
-            fetchLastOrderDatesByCounterpartyId(pageIds),
-        ]);
-    } finally {
-        loading.value = false;
-    }
-}
-
-watch([search, statusFilter, managerFilter, branchFilter, groupFilter, innFilter, page], () => {
-    toQuery(filters, page);
-    void loadPage();
-});
-watch([search, statusFilter, managerFilter, branchFilter, groupFilter, innFilter], () => {
-    page.value = 1;
-});
-
 onMounted(async () => {
-    await loadPage();
-    const [
-        branchOptionsResult,
-        managerOptionsResult,
-        expiringGrants,
-        summaryResult,
-        highUsage,
-        exceededIds,
-    ] = await Promise.all([
-        fetchBranchOptions(),
-        fetchManagerOptions(),
+    const [expiringGrants, summaryResult, highUsage, exceededIds] = await Promise.all([
         fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
         fetchCustomersSummary(),
         fetchHighUsageCustomers(ATTENTION_TOP_N),
         fetchCreditLimitExceededCounterpartyIds(),
     ]);
-    branches.value = branchOptionsResult;
-    managers.value = managerOptionsResult;
     summary.value = summaryResult;
     highUsageCustomers.value = highUsage;
     creditExceededCustomers.value = await fetchCounterpartyNames(
@@ -305,16 +94,17 @@ onMounted(async () => {
         }
     }
     expiringGrantsByCustomerId.value = grantsMap;
+    expiringNames.value = await fetchCounterpartyNames(
+        [...grantsMap.keys()].slice(0, ATTENTION_TOP_N),
+    );
 });
 </script>
 
 <template>
     <div class="customers-page">
         <div class="customers-page__header">
-            <div>
-                <div class="customers-page__breadcrumb">Customers</div>
-                <h1 class="customers-page__title">{{ title }}</h1>
-            </div>
+            <div class="customers-page__breadcrumb">Customers</div>
+            <h1 class="customers-page__title">{{ title }}</h1>
         </div>
 
         <MvKpiCarousel v-if="summary" class="customers-page__kpis">
@@ -334,88 +124,11 @@ onMounted(async () => {
             />
         </MvKpiCarousel>
 
-        <div class="customers-page__grid">
-            <MvPanel title="Client list">
-                <template #header-actions>
-                    <MvButton size="sm" variant="secondary" @click="exportCsv">Export CSV</MvButton>
-                </template>
-                <MvFilterBar @reset="resetFilters">
-                    <MvFilterField label="Search">
-                        <MvInput
-                            size="sm"
-                            :model-value="search"
-                            placeholder="Company name or INN..."
-                            @update:model-value="search = $event"
-                        />
-                    </MvFilterField>
-                    <MvFilterField label="Status">
-                        <MvSelect
-                            :model-value="statusFilter"
-                            :options="STATUS_OPTIONS"
-                            @update:model-value="statusFilter = $event as typeof statusFilter"
-                        />
-                    </MvFilterField>
-                    <MvFilterField v-if="authStore.roleCode !== 'manager'" label="Manager">
-                        <MvSelect
-                            :model-value="managerFilter"
-                            :options="managerOptions"
-                            @update:model-value="managerFilter = $event as string"
-                        />
-                    </MvFilterField>
-                    <MvFilterField label="Branch">
-                        <MvSelect
-                            :model-value="branchFilter"
-                            :options="branchOptions"
-                            @update:model-value="branchFilter = $event as string"
-                        />
-                    </MvFilterField>
-                    <MvFilterField label="INN">
-                        <MvSelect
-                            :model-value="innFilter"
-                            :options="INN_OPTIONS"
-                            @update:model-value="innFilter = $event as string"
-                        />
-                    </MvFilterField>
-                    <MvFilterField label="Group">
-                        <MvInput
-                            size="sm"
-                            :model-value="groupFilter"
-                            placeholder="ERP group label..."
-                            @update:model-value="groupFilter = $event"
-                        />
-                    </MvFilterField>
-                </MvFilterBar>
+        <MvPanel title="Needs attention">
+            <NeedsAttentionPanel :items="attentionItems" />
+        </MvPanel>
 
-                <MvPagination
-                    :page="page"
-                    :page-size="PAGE_SIZE"
-                    :total="totalItems"
-                    @update:page="page = $event"
-                />
-                <CustomersTable
-                    :customers="customers"
-                    :credit="credit"
-                    :discount-counts="discountCounts"
-                    :last-order-dates="lastOrderDates"
-                    :branches="branches"
-                    :managers="managers"
-                    :loading="loading"
-                    :page-size="PAGE_SIZE"
-                />
-                <MvPagination
-                    :page="page"
-                    :page-size="PAGE_SIZE"
-                    :total="totalItems"
-                    @update:page="page = $event"
-                />
-            </MvPanel>
-
-            <aside class="customers-page__right-stack">
-                <MvPanel title="Needs attention">
-                    <NeedsAttentionPanel :items="attentionItems" />
-                </MvPanel>
-            </aside>
-        </div>
+        <CustomersList />
     </div>
 </template>
 
@@ -427,7 +140,7 @@ onMounted(async () => {
 }
 
 .customers-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     font-size: 13px;
     margin-bottom: 6px;
 }
@@ -438,21 +151,13 @@ onMounted(async () => {
     letter-spacing: -0.03em;
 }
 
-.customers-page__grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 18px;
-    align-items: start;
-}
+@media (max-width: 800px) {
+    .customers-page__breadcrumb {
+        display: none;
+    }
 
-.customers-page__right-stack {
-    display: grid;
-    gap: 18px;
-}
-
-@media (max-width: 1200px) {
-    .customers-page__grid {
-        grid-template-columns: 1fr;
+    .customers-page__title {
+        font-size: 22px;
     }
 }
 </style>

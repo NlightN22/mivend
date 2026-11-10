@@ -36,6 +36,22 @@ query CustomersPage($options: CounterpartyListOptions) {
     }
 }
 
+query CustomersViewCounts(
+    $all: CounterpartyListOptions
+    $active: CounterpartyListOptions
+    $inactive: CounterpartyListOptions
+) {
+    all: counterparties(options: $all) {
+        totalItems
+    }
+    active: counterparties(options: $active) {
+        totalItems
+    }
+    inactive: counterparties(options: $inactive) {
+        totalItems
+    }
+}
+
 query UnassignedCounterpartyCount {
     unassignedCounterpartyCount
 }

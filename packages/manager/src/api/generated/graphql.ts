@@ -1183,14 +1183,13 @@ export type CounterpartyFilterParameter = {
     creditLimit?: InputMaybe<NumberOperators>;
     creditTermOverrideExtraDays?: InputMaybe<NumberOperators>;
     departmentId?: InputMaybe<StringOperators>;
-    /** Free-text group/segment label from the ERP — display and filtering only. */
     erpGroupLabel?: InputMaybe<StringOperators>;
     erpId?: InputMaybe<StringOperators>;
     /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     inn?: InputMaybe<StringOperators>;
-    /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
+    /** ok | missing | duplicate, the same value as Counterparty.innStatus */
     innStatus?: InputMaybe<StringOperators>;
     isActive?: InputMaybe<BooleanOperators>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
@@ -11933,6 +11932,18 @@ export type CustomersPageQuery = {
     };
 };
 
+export type CustomersViewCountsQueryVariables = Exact<{
+    all?: InputMaybe<CounterpartyListOptions>;
+    active?: InputMaybe<CounterpartyListOptions>;
+    inactive?: InputMaybe<CounterpartyListOptions>;
+}>;
+
+export type CustomersViewCountsQuery = {
+    all: { totalItems: number };
+    active: { totalItems: number };
+    inactive: { totalItems: number };
+};
+
 export type UnassignedCounterpartyCountQueryVariables = Exact<{ [key: string]: never }>;
 
 export type UnassignedCounterpartyCountQuery = { unassignedCounterpartyCount: number };
@@ -15850,6 +15861,22 @@ export const CustomersPageDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<CustomersPageQuery, CustomersPageQueryVariables>;
+export const CustomersViewCountsDocument = new TypedDocumentString(`
+    query CustomersViewCounts($all: CounterpartyListOptions, $active: CounterpartyListOptions, $inactive: CounterpartyListOptions) {
+  all: counterparties(options: $all) {
+    totalItems
+  }
+  active: counterparties(options: $active) {
+    totalItems
+  }
+  inactive: counterparties(options: $inactive) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CustomersViewCountsQuery,
+    CustomersViewCountsQueryVariables
+>;
 export const UnassignedCounterpartyCountDocument = new TypedDocumentString(`
     query UnassignedCounterpartyCount {
   unassignedCounterpartyCount
