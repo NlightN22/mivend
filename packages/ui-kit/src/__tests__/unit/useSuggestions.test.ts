@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, ref } from 'vue';
 import { useSuggestions } from '../../components/MvFilterBuilder/useSuggestions';
