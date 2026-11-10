@@ -10,22 +10,23 @@ export interface UrlSyncedState<F extends Record<string, string>> {
     pushQuery: (filters: F, page: Ref<number>) => void;
 }
 
-// Syncs a flat Record<string, string> of filters plus a `page` number with the URL query.
-// Only the owned keys are touched; foreign keys (e.g. a parent's `tab`) are preserved.
+// Syncs flat string filters plus `page` with the URL query; foreign keys (a parent's `tab`) are kept.
+// A `prefix` namespaces every owned key and `page`, so a list embedded in a tab has its own keys.
 export function useUrlSyncedState<F extends Record<string, string>>(
     defaults: F,
+    prefix = '',
 ): UrlSyncedState<F> {
     const route = useRoute();
     const router = useRouter();
 
     function fromQuery(filters: F, page: Ref<number>): void {
         for (const key of Object.keys(defaults) as (keyof F)[]) {
-            const value = route.query[key as string];
+            const value = route.query[prefix + (key as string)];
             if (typeof value === 'string') {
                 filters[key] = value as F[typeof key];
             }
         }
-        const pageParam = route.query.page;
+        const pageParam = route.query[`${prefix}page`];
         const parsedPage = typeof pageParam === 'string' ? Number(pageParam) : NaN;
         if (Number.isInteger(parsedPage) && parsedPage > 0) {
             page.value = parsedPage;
@@ -40,15 +41,15 @@ export function useUrlSyncedState<F extends Record<string, string>>(
         for (const key of Object.keys(defaults) as (keyof F)[]) {
             const value = filters[key];
             if (value && value !== defaults[key]) {
-                query[key as string] = value;
+                query[prefix + (key as string)] = value;
             } else {
-                delete query[key as string];
+                delete query[prefix + (key as string)];
             }
         }
         if (page.value > 1) {
-            query.page = String(page.value);
+            query[`${prefix}page`] = String(page.value);
         } else {
-            delete query.page;
+            delete query[`${prefix}page`];
         }
         return query;
     }

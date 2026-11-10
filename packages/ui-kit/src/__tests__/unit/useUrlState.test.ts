@@ -79,4 +79,25 @@ describe('useUrlSyncedState', () => {
         expect(replace).toHaveBeenCalledTimes(1);
         expect(push).toHaveBeenCalledTimes(1);
     });
+
+    it('a prefix reads and writes only its own keys and page', async () => {
+        const { run, router } = await setup(
+            '/list?tab=x&q=page-level&page=4&orders.q=abc&orders.page=2',
+        );
+        const sync = run(() => useUrlSyncedState(defaults, 'orders.'));
+        const filters = { ...defaults };
+        const page = { value: 1 };
+        sync.fromQuery(filters, page as never);
+        expect(filters).toEqual({ status: 'all', q: 'abc' });
+        expect(page.value).toBe(2);
+        sync.toQuery({ status: 'paid', q: '' }, { value: 1 } as never);
+        await vi.waitFor(() =>
+            expect(router.currentRoute.value.query).toEqual({
+                tab: 'x',
+                q: 'page-level',
+                page: '4',
+                'orders.status': 'paid',
+            }),
+        );
+    });
 });
