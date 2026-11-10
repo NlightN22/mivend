@@ -1,0 +1,30 @@
+fragment ChangeJournalEntryFields on ChangeJournalEntry {
+    id
+    occurredAt
+    actorType
+    userId
+    administratorId
+    source
+    entityType
+    entityId
+    action
+    changes
+}
+
+query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
+    changeJournalForEntity(entityType: $entityType, entityId: $entityId, skip: $skip, take: $take) {
+        items {
+            ...ChangeJournalEntryFields
+        }
+        totalItems
+    }
+}
+
+query ChangeJournal($filter: ChangeJournalFilter, $skip: Int, $take: Int) {
+    changeJournal(filter: $filter, skip: $skip, take: $take) {
+        items {
+            ...ChangeJournalEntryFields
+        }
+        totalItems
+    }
+}

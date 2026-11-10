@@ -10,9 +10,18 @@ import {
 import { useCurrency } from '../../composables/useCurrency';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 import TradingPointPendingChange from './TradingPointPendingChange.vue';
+import ChangeJournalButton from '../change-journal/ChangeJournalButton.vue';
+import type { ManagerOption } from '../../api/orders';
 import { usePendingTradingPointChanges } from '../../composables/usePendingTradingPointChanges';
 
-const props = defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
+const props = withDefaults(
+    defineProps<{
+        customer: CustomerListItem;
+        credit: CustomerCredit | null;
+        managers?: ManagerOption[];
+    }>(),
+    { managers: () => [] },
+);
 const emit = defineEmits<{ changed: [] }>();
 
 const editingTradingPoint = ref<TradingPointInfo | null>(null);
@@ -121,6 +130,12 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                         >
                             Edit
                         </button>
+                        <ChangeJournalButton
+                            entity-type="TradingPoint"
+                            :entity-id="tp.id"
+                            :title="tp.name"
+                            :managers="managers"
+                        />
                     </div>
                     <TradingPointPendingChange
                         v-if="pending.byPoint.value.get(tp.id)"

@@ -137,6 +137,12 @@ portal-admin; superadmin implicitly):
 Indexes: `(entityType, entityId, occurredAt)` for the per-entity history, `occurredAt` for the
 list and the cleanup.
 
+Manager portal (#339), shown only with `ReadChangeJournal`: an "История" tab on the counterparty
+page, an "История" button per trading point (Overview tab) and per portal user (`Customer`), and
+the page `/settings/change-journal` with the filters above. The API answers an out-of-scope request
+with an empty page, not an error, so the page's empty state says that the full list needs scope
+`all`. `Customer` entries are visible only to scope `all` (no registered rule).
+
 ## Retention
 
 Scheduled task `change-journal-cleanup` (hourly) deletes entries older than 365 days

@@ -208,6 +208,15 @@ export const router = createRouter({
                             meta: { requiresAuth: true },
                         },
                         {
+                            path: 'change-journal',
+                            name: 'settings-change-journal',
+                            component: () => import('../pages/settings/ChangeJournalPage.vue'),
+                            meta: {
+                                requiresAuth: true,
+                                requiresAnyPermission: ['ReadChangeJournal'],
+                            },
+                        },
+                        {
                             path: 'check-policies',
                             name: 'settings-check-policies',
                             component: () => import('../pages/settings/CheckPoliciesPage.vue'),

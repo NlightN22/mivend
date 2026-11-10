@@ -9,7 +9,7 @@ describe('buildSettingsNav', () => {
     it('shows every section to a holder of all permissions, in three groups', () => {
         const groups = buildSettingsNav(() => true);
         expect(groups.map(g => g.label)).toEqual(['Access', 'Organization', 'System']);
-        expect(groups.flatMap(g => g.items)).toHaveLength(12);
+        expect(groups.flatMap(g => g.items)).toHaveLength(13);
     });
 
     it('hides permission-gated sections and drops groups left empty', () => {
@@ -20,6 +20,11 @@ describe('buildSettingsNav', () => {
     it('shows System health to ManageAccessControl and to ManageErpIntegration alone', () => {
         expect(labels(p => p === 'ManageAccessControl')).toContain('System health');
         expect(labels(p => p === 'ManageErpIntegration')).toContain('System health');
+    });
+
+    it('shows the change journal only to ReadChangeJournal', () => {
+        expect(labels(p => p === 'ReadChangeJournal')).toContain('Журнал изменений');
+        expect(labels(() => false)).not.toContain('Журнал изменений');
     });
 
     it('gives each section a unique route', () => {

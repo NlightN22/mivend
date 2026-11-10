@@ -36,6 +36,7 @@ import {
     IconUsers,
     IconHistory,
     IconKey,
+    IconListDetails,
 } from '@tabler/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
@@ -47,6 +48,8 @@ import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
 import ActAsCustomerButton from '../../components/acting/ActAsCustomerButton.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
+import EntityChangeJournal from '../../components/change-journal/EntityChangeJournal.vue';
+import { CHANGE_JOURNAL_LABELS } from '../../components/change-journal/changeJournalLabels';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
 // versions need an entry; anything else falls back to its raw entityName.
@@ -76,6 +79,7 @@ const notFound = ref(false);
 // this header (info-only now, see the info-row's own doc comment) — that edit belongs on a
 // future Team tab, gated to specific roles, not here.
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
+const canViewChangeJournal = computed(() => authStore.hasPermission('ReadChangeJournal'));
 const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
 // Issue #120, Decision 5 — same permission gates both this tab's visibility and its Deactivate
 // action (one permission, two surfaces, per the carried-over decision).
@@ -92,7 +96,8 @@ type CustomerDetailTab =
     | 'documents'
     | 'team'
     | 'portalUsers'
-    | 'history';
+    | 'history'
+    | 'changeJournal';
 const TABS: CustomerDetailTab[] = [
     'overview',
     'orders',
@@ -103,6 +108,7 @@ const TABS: CustomerDetailTab[] = [
     'team',
     'portalUsers',
     'history',
+    'changeJournal',
 ];
 const TAB_LABELS: Record<CustomerDetailTab, string> = {
     overview: 'Overview',
@@ -114,6 +120,7 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
     team: 'Team',
     portalUsers: 'Portal Users',
     history: 'History',
+    changeJournal: CHANGE_JOURNAL_LABELS.tab,
 };
 const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     overview: IconHome2,
@@ -125,6 +132,7 @@ const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     team: IconUsers,
     portalUsers: IconKey,
     history: IconHistory,
+    changeJournal: IconListDetails,
 };
 
 // Tab-switch/URL-sync logic lives in useTabSync.ts (unit-tested there) — see its own doc comment
@@ -145,9 +153,9 @@ function handleMobileQueryChange(e: MediaQueryListEvent): void {
 
 const PRIMARY_TAB_COUNT = 3;
 const visibleTabs = computed(() =>
-    TABS.filter(t => t !== 'history' || canViewHistory.value).filter(
-        t => t !== 'portalUsers' || canManagePortalAccess.value,
-    ),
+    TABS.filter(t => t !== 'history' || canViewHistory.value)
+        .filter(t => t !== 'changeJournal' || canViewChangeJournal.value)
+        .filter(t => t !== 'portalUsers' || canManagePortalAccess.value),
 );
 const primaryTabs = computed(() =>
     isMobile.value ? visibleTabs.value.slice(0, PRIMARY_TAB_COUNT) : visibleTabs.value,
@@ -450,6 +458,7 @@ function initials(name: string | null): string {
                 v-if="activeTab === 'overview'"
                 :customer="customer"
                 :credit="credit"
+                :managers="managers"
                 @changed="load"
             />
             <CustomerOrdersTab
@@ -488,6 +497,12 @@ function initials(name: string | null): string {
                 v-else-if="activeTab === 'portalUsers'"
                 :counterparty-id="customer.id"
                 :can-manage="canManagePortalAccess"
+            />
+            <EntityChangeJournal
+                v-else-if="activeTab === 'changeJournal'"
+                entity-type="Counterparty"
+                :entity-id="customer.id"
+                :managers="managers"
             />
             <EntityHistoryPanel
                 v-else

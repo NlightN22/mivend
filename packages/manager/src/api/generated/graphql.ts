@@ -690,6 +690,40 @@ export type Cancellation = Node &
         updatedAt: Scalars['DateTime']['output'];
     };
 
+export type ChangeJournalEntry = {
+    /** administrator, customer, acting (a manager acting as the customer) or system */
+    actorType: Scalars['String']['output'];
+    /** insert, update, soft-remove, recover or remove */
+    action: Scalars['String']['output'];
+    administratorId: Maybe<Scalars['ID']['output']>;
+    /** Field path to { before, after }; a secret field carries only { redacted: true } */
+    changes: Scalars['JSON']['output'];
+    entityId: Scalars['String']['output'];
+    entityType: Scalars['String']['output'];
+    entityUuid: Maybe<Scalars['String']['output']>;
+    id: Scalars['ID']['output'];
+    occurredAt: Scalars['DateTime']['output'];
+    requestId: Maybe<Scalars['String']['output']>;
+    sessionId: Maybe<Scalars['String']['output']>;
+    /** API operation, REST route or scheduled task that made the change */
+    source: Scalars['String']['output'];
+    userId: Maybe<Scalars['ID']['output']>;
+};
+
+export type ChangeJournalFilter = {
+    actorType?: InputMaybe<Scalars['String']['input']>;
+    administratorId?: InputMaybe<Scalars['ID']['input']>;
+    entityType?: InputMaybe<Scalars['String']['input']>;
+    occurredAfter?: InputMaybe<Scalars['DateTime']['input']>;
+    occurredBefore?: InputMaybe<Scalars['DateTime']['input']>;
+    userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ChangeJournalPage = {
+    items: Array<ChangeJournalEntry>;
+    totalItems: Scalars['Int']['output'];
+};
+
 export type Channel = Node & {
     availableCurrencyCodes: Array<CurrencyCode>;
     availableLanguageCodes: Maybe<Array<LanguageCode>>;
@@ -8081,6 +8115,8 @@ export type Query = {
     bulkOperationCatalog: Array<BulkOperation>;
     /** Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs). */
     capturedOnlinePayments: Array<PaymentAttempt>;
+    changeJournal: ChangeJournalPage;
+    changeJournalForEntity: ChangeJournalPage;
     channel: Maybe<Channel>;
     channels: ChannelList;
     checkDefinitions: Array<CheckDefinition>;
@@ -8392,6 +8428,19 @@ export type QueryBulkBatchesArgs = {
 };
 
 export type QueryCapturedOnlinePaymentsArgs = {
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryChangeJournalArgs = {
+    filter?: InputMaybe<ChangeJournalFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryChangeJournalForEntityArgs = {
+    entityId: Scalars['ID']['input'];
+    entityType: Scalars['String']['input'];
+    skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -12463,6 +12512,68 @@ export type ReverseGeocodeQueryVariables = Exact<{
 
 export type ReverseGeocodeQuery = { reverseGeocode: string | null };
 
+export type ChangeJournalEntryFieldsFragment = {
+    id: string;
+    occurredAt: any;
+    actorType: string;
+    userId: string | null;
+    administratorId: string | null;
+    source: string;
+    entityType: string;
+    entityId: string;
+    action: string;
+    changes: any;
+};
+
+export type ChangeJournalForEntityQueryVariables = Exact<{
+    entityType: Scalars['String']['input'];
+    entityId: Scalars['ID']['input'];
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ChangeJournalForEntityQuery = {
+    changeJournalForEntity: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            occurredAt: any;
+            actorType: string;
+            userId: string | null;
+            administratorId: string | null;
+            source: string;
+            entityType: string;
+            entityId: string;
+            action: string;
+            changes: any;
+        }>;
+    };
+};
+
+export type ChangeJournalQueryVariables = Exact<{
+    filter?: InputMaybe<ChangeJournalFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ChangeJournalQuery = {
+    changeJournal: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            occurredAt: any;
+            actorType: string;
+            userId: string | null;
+            administratorId: string | null;
+            source: string;
+            entityType: string;
+            entityId: string;
+            action: string;
+            changes: any;
+        }>;
+    };
+};
+
 export type EntityVersionRowFieldsFragment = {
     id: string;
     entityName: string;
@@ -16437,6 +16548,56 @@ export const ReverseGeocodeDocument = new TypedDocumentString(`
   reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
 }
     `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
+export const ChangeJournalForEntityDocument = new TypedDocumentString(`
+    query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
+  changeJournalForEntity(
+    entityType: $entityType
+    entityId: $entityId
+    skip: $skip
+    take: $take
+  ) {
+    items {
+      ...ChangeJournalEntryFields
+    }
+    totalItems
+  }
+}
+    fragment ChangeJournalEntryFields on ChangeJournalEntry {
+  id
+  occurredAt
+  actorType
+  userId
+  administratorId
+  source
+  entityType
+  entityId
+  action
+  changes
+}`) as unknown as TypedDocumentString<
+    ChangeJournalForEntityQuery,
+    ChangeJournalForEntityQueryVariables
+>;
+export const ChangeJournalDocument = new TypedDocumentString(`
+    query ChangeJournal($filter: ChangeJournalFilter, $skip: Int, $take: Int) {
+  changeJournal(filter: $filter, skip: $skip, take: $take) {
+    items {
+      ...ChangeJournalEntryFields
+    }
+    totalItems
+  }
+}
+    fragment ChangeJournalEntryFields on ChangeJournalEntry {
+  id
+  occurredAt
+  actorType
+  userId
+  administratorId
+  source
+  entityType
+  entityId
+  action
+  changes
+}`) as unknown as TypedDocumentString<ChangeJournalQuery, ChangeJournalQueryVariables>;
 export const EntityVersionsDocument = new TypedDocumentString(`
     query EntityVersions($entityName: String!, $entityId: ID!) {
   entityVersions(entityName: $entityName, entityId: $entityId) {

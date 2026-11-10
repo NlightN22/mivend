@@ -13,6 +13,7 @@ import {
     fetchCounterpartyPortalUsers,
     type CounterpartyPortalUser,
 } from '../../api/counterpartyPortalAccess';
+import ChangeJournalButton from '../change-journal/ChangeJournalButton.vue';
 
 // Issue #120, Decision 5 — read-only list of Customer logins linked to this Counterparty, plus
 // Deactivate (native Customer soft-delete). No create/invite UI here (Decision 4 — self-service
@@ -84,7 +85,7 @@ const COLUMNS: AdvancedDataTableColumn[] = [
         sortField: 'createdAt',
         filterConfig: { type: 'none' },
     },
-    { field: 'actions', header: 'Actions', width: 150, filterConfig: { type: 'none' } },
+    { field: 'actions', header: 'Actions', width: 230, filterConfig: { type: 'none' } },
 ];
 
 // No real filters (exempt table, see the pagination comment above) — useDataTableState is
@@ -194,18 +195,27 @@ async function handleDeactivate(): Promise<void> {
                 </MvStatusBadge>
             </template>
             <template #cell-actions="{ data }">
-                <MvButton
-                    v-if="canManage && (data as Row).active"
-                    size="sm"
-                    variant="danger"
-                    :loading="deactivatingId === (data as Row).id"
-                    @click="openConfirm(data as Row)"
-                >
-                    Deactivate
-                </MvButton>
-                <span v-else-if="!(data as Row).active" class="customer-portal-users__deactivated"
-                    >Deactivated</span
-                >
+                <div class="customer-portal-users__actions">
+                    <MvButton
+                        v-if="canManage && (data as Row).active"
+                        size="sm"
+                        variant="danger"
+                        :loading="deactivatingId === (data as Row).id"
+                        @click="openConfirm(data as Row)"
+                    >
+                        Deactivate
+                    </MvButton>
+                    <span
+                        v-else-if="!(data as Row).active"
+                        class="customer-portal-users__deactivated"
+                        >Deactivated</span
+                    >
+                    <ChangeJournalButton
+                        entity-type="Customer"
+                        :entity-id="(data as Row).id"
+                        :title="(data as Row).name"
+                    />
+                </div>
             </template>
         </MvAdvancedDataTable>
         <p v-if="error" class="customer-portal-users__error">{{ error }}</p>
@@ -233,6 +243,13 @@ async function handleDeactivate(): Promise<void> {
 .customer-portal-users {
     display: flex;
     flex-direction: column;
+    gap: 8px;
+}
+
+.customer-portal-users__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
 }
 
