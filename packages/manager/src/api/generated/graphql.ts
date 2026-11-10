@@ -8236,6 +8236,8 @@ export type Query = {
     sellers: SellerList;
     /** Returns all registered settings store field definitions with their current values */
     settingsStoreFieldDefinitions: Array<SettingsStoreFieldDefinition>;
+    /** Typeahead values (up to limit, at most 20) for a filter field that starts with the prefix (2+ characters), from the documents the caller may list; field is one of customer, number. */
+    settlementFilterSuggestions: Array<Scalars['String']['output']>;
     shippingCalculators: Array<ConfigurableOperationDefinition>;
     shippingEligibilityCheckers: Array<ConfigurableOperationDefinition>;
     shippingMethod: Maybe<ShippingMethod>;
@@ -8817,6 +8819,12 @@ export type QuerySellerArgs = {
 
 export type QuerySellersArgs = {
     options?: InputMaybe<SellerListOptions>;
+};
+
+export type QuerySettlementFilterSuggestionsArgs = {
+    field: Scalars['String']['input'];
+    limit?: InputMaybe<Scalars['Int']['input']>;
+    prefix: Scalars['String']['input'];
 };
 
 export type QueryShippingMethodArgs = {
@@ -13736,6 +13744,13 @@ export type SettlementsPageQuery = {
     };
 };
 
+export type SettlementFilterSuggestionsQueryVariables = Exact<{
+    field: Scalars['String']['input'];
+    prefix: Scalars['String']['input'];
+}>;
+
+export type SettlementFilterSuggestionsQuery = { settlementFilterSuggestions: Array<string> };
+
 export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SystemHealthChecklistQuery = {
@@ -17747,6 +17762,15 @@ export const SystemHealthChecklistDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SystemHealthChecklistQuery,
     SystemHealthChecklistQueryVariables
+>;
+
+export const SettlementFilterSuggestionsDocument = new TypedDocumentString(`
+    query SettlementFilterSuggestions($field: String!, $prefix: String!) {
+  settlementFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
+}
+    `) as unknown as TypedDocumentString<
+    SettlementFilterSuggestionsQuery,
+    SettlementFilterSuggestionsQueryVariables
 >;
 export const TableViewsDocument = new TypedDocumentString(`
     query TableViews($pageKey: String!) {
