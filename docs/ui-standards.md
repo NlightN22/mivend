@@ -106,6 +106,51 @@ Layout: the table takes the full page width; at a 1360px viewport the identifyin
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
 list and the chips are one horizontally scrolling row (`scrollable`).
 
+## Filter value suggestions
+
+A text column with a large value set (customer, number) can offer typeahead in the Filter builder
+(`FilterColumn.suggest`, from the column's `filterSuggest`): from 2 characters, 300 ms debounce, up to 10
+values, a stale request is aborted, arrows/Enter/Escape work, free text stays allowed. Server side it is an
+opt-in `FieldSpec.suggest` in the list engine (`packages/shared/src/list-suggest.ts`): fixed SQL, prefix
+match on `lower(value) COLLATE "C"` (a btree on that expression serves the range and the order, so
+`LIMIT` stops early), a bound escaped prefix, limit clamped to 1..20, prefix clamped to the engine's
+`maxTextLength`, and the same counterparty visibility scope as the list plus a "has a listable document"
+check, so a suggestion never shows a value the caller cannot list. Pilot: settlements, query
+`settlementFilterSuggestions(field, prefix, limit)` (customer, number), index migration `1791574000000`
+(plain `CREATE INDEX`, the tables are small).
+
+Rules learned while measuring: do not reuse the list's joined query (it scans and hashes every entry,
+50 ms to 4 s); do not `GROUP BY`/`DISTINCT` the matches (it defeats the early stop, dedupe in code
+instead); write the existence check as `(SELECT 1 ... LIMIT 1) IS NOT NULL`, not `EXISTS` (the planner
+flattens `EXISTS` into a hash join over every entry); a btree needs the `COLLATE "C"` or `text_pattern_ops`
+form to serve `LIKE 'x%'`, and only the `COLLATE "C"` form also serves `ORDER BY`.
+
+Measured on a local synthetic database (PostgreSQL 16, shared_buffers 128 MB, warm cache, 20 runs each,
+`EXPLAIN (ANALYZE, BUFFERS)` execution time, p50 / p95 in ms): 25,000 counterparties across 8 branches,
+50,000 contracts, 300,000 documents with one entry each. Scope "all" is an unrestricted caller, "branch"
+a branch of about 3,000 counterparties, "small" 15 counterparties. Prefixes: customer `al`/`alp`/`alpha`
+(837, 837, 287 matches of 25,000), contract `co`/`con`/`contr`, number `si`/`si0`/`si000`.
+
+| Field | Prefix | all | branch | small |
+| --- | --- | --- | --- | --- |
+| customer | 2 | 2.8 / 4.7 | 21 / 29 | 0.9 / 3.1 |
+| customer | 3 | 2.8 / 3.5 | 21 / 31 | 0.9 / 2.1 |
+| customer | 5 | 3.2 / 3.8 | 21 / 29 | 1.0 / 1.9 |
+| number | 2 | 1.6 / 2.7 | 9.1 / 12.6 | 11.5 / 25.7 |
+| number | 3 | 1.3 / 1.9 | 10.1 / 13.8 | 11.7 / 26.0 |
+| number | 5 | 1.5 / 2.5 | 9.0 / 13.7 | 11.8 / 20.8 |
+| contract (off) | 2 | 3.1 / 7.6 | 28 / 49 | 81 / 153 |
+| contract (off) | 3 | 2.8 / 3.9 | 25 / 41 | 80 / 138 |
+| contract (off) | 5 | 2.9 / 4.6 | 25 / 40 | 62 / 87 |
+
+For comparison, reusing the list's own joined query with a prefix filter took 50 to 450 ms for customer and
+contract and 160 to 690 ms for number (4 s for number in a branch scope with the other index set).
+Contract suggestions are not enabled: a caller with a small scope and a common prefix walks the whole
+prefix range (about 50,000 rows, 60 to 150 ms) because the scope is only a filter on that walk; a scope-driven
+plan fixes the small scope but costs 230 ms for a branch, and the planner cannot choose between the two.
+Revisit with a covering/partial structure or a two-step plan before turning it on. The customer
+branch case is bound by the per-candidate existence check (about 0.15 ms each, 130 candidates per 20 hits).
+
 ## List cell standard
 
 No nested scrollbars: the page is the only vertical scroll. A table never has its own vertical scrollbar and grows with its

@@ -6,9 +6,13 @@ import {
     type ListFilter,
     type ListQueryConfig,
     type ListSort,
+    type SuggestSpec,
+    normalizeSuggestPrefix,
+    suggestSpecFor,
 } from 'shared';
 
 import type { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
+import { SUGGEST_CUSTOMER, SUGGEST_NUMBER } from './settlement-suggest.sql';
 
 export type SettlementListFilter = ListFilter;
 export type SettlementListSort = ListSort;
@@ -29,10 +33,10 @@ export const PROFORMA_NUMBER_SQL = `(SELECT p."number" FROM "proforma_invoice" p
 const FIELDS: Record<string, FieldSpec> = {
     documentType: { kind: 'string', sql: `${D}."documentType"` },
     typeLabel: { kind: 'string', sql: TYPE_LABEL_SQL },
-    number: { kind: 'string', sql: `${D}."number"` },
+    number: { kind: 'string', sql: `${D}."number"`, suggest: SUGGEST_NUMBER },
     date: { kind: 'date', sql: `${D}."date"` },
     amount: { kind: 'number', sql: `${E}."amountMinor"` },
-    customer: { kind: 'string', sql: '"counterparty"."shortName"' },
+    customer: { kind: 'string', sql: '"counterparty"."shortName"', suggest: SUGGEST_CUSTOMER },
     customerInn: { kind: 'string', sql: '"counterparty"."inn"' },
     counterpartyId: { kind: 'id', sql: '"counterparty"."id"' },
     contract: { kind: 'string', sql: '"contract"."name"' },
@@ -50,6 +54,14 @@ const CONFIG: ListQueryConfig = {
     defaultSql: `${D}."date"`,
     tiebreakerSql: `${E}."id"`,
 };
+
+export function settlementSuggestSpec(field: string): SuggestSpec {
+    return suggestSpecFor(CONFIG, field);
+}
+
+export function settlementSuggestPrefix(prefix: string): string | null {
+    return normalizeSuggestPrefix(CONFIG, prefix);
+}
 
 export function applyListFilter(
     qb: SelectQueryBuilder<SettlementDocumentEntry>,

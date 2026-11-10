@@ -4,6 +4,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { SettlementAdminListService } from './settlement-admin-list.service';
+import { SettlementSuggestService } from './settlement-suggest.service';
 import { SettlementShopService } from './settlement-shop.service';
 import type {
     SettlementListOptions,
@@ -20,6 +21,7 @@ export class SettlementAdminResolver {
         private readonly shopService: SettlementShopService,
         private readonly counterparties: CounterpartyService,
         private readonly listService: SettlementAdminListService,
+        private readonly suggestService: SettlementSuggestService,
     ) {}
 
     // A finance figure, so it needs the credit right; an invisible counterparty answers like a missing one.
@@ -49,5 +51,14 @@ export class SettlementAdminResolver {
         @Args() args: { options?: SettlementListOptions; counterpartyId?: string },
     ): Promise<SettlementTypeCount[]> {
         return this.listService.typeCounts(ctx, args.options, args.counterpartyId);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ReadSettlementDocument.Permission)
+    settlementFilterSuggestions(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { field: string; prefix: string; limit?: number },
+    ): Promise<string[]> {
+        return this.suggestService.suggest(ctx, args.field, args.prefix, args.limit);
     }
 }

@@ -30,6 +30,17 @@ export interface FieldSpec {
     operators?: readonly string[];
     // Extra fixed SQL matched by contains/notContains alongside `sql` (e.g. a related name).
     containsAlsoSql?: string;
+    // Typeahead whitelist: absent means the field offers no suggestions.
+    suggest?: SuggestSpec;
+}
+
+// Fixed SQL for one suggestable value; the caller supplies the FROM, joins and scope.
+export interface SuggestSpec {
+    valueSql: string;
+    // Extra fixed condition (e.g. "has a listable document"); keeps suggestions inside what the list shows.
+    whereSql?: string;
+    // True when many rows share a value (document numbers, contract names): fetches 2x rows to dedupe.
+    repeats?: boolean;
 }
 
 // Optional caps for lists that take untrusted nested filters; absent means no cap.

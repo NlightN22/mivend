@@ -20,6 +20,7 @@ import { SettlementReferenceResolver } from './settlement-reference-resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { SettlementAdminListService } from './settlement-admin-list.service';
+import { SettlementSuggestService } from './settlement-suggest.service';
 import { SettlementAdminResolver } from './settlement-admin.resolver';
 import { createSettlementReconcileTask } from './settlement-reconcile.scheduled-task';
 import { SettlementReconcileService } from './settlement-reconcile.service';
@@ -51,6 +52,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementCounterpartyListener,
         SettlementShopService,
         SettlementAdminListService,
+        SettlementSuggestService,
     ],
     exports: [
         SettlementDocumentService,

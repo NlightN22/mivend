@@ -6,6 +6,7 @@ export * from './testing/query-counting-logger';
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';
 export * from './list-filter-engine';
+export * from './list-suggest';
 export * from './paginate-query';
 export {
     FREIGHT_SHIPPING_METHOD_CODE,

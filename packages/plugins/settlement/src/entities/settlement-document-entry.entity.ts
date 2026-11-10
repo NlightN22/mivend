@@ -16,6 +16,7 @@ import type { SettlementOrderLink } from './settlement-order-link.entity';
 // minor units, positive increases the customer's debt. Local ids stay null until imported.
 @Entity('settlement_document_entry')
 @Index('IDX_settlement_entry_document', ['documentId'])
+@Index('IDX_settlement_entry_counterparty_erp', ['counterpartyErpId'])
 @Index('IDX_settlement_entry_scope', ['counterpartyId', 'contractId'])
 @Index('IDX_settlement_entry_pending_counterparty', ['counterpartyErpId'], {
     where: `"counterpartyId" IS NULL`,
