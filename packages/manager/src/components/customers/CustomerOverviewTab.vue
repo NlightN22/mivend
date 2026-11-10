@@ -27,7 +27,8 @@ const props = withDefaults(
 const emit = defineEmits<{ changed: [] }>();
 
 const editingTradingPoint = ref<TradingPointInfo | null>(null);
-const canReadJournal = computed(() => useAuthStore().hasPermission('ReadChangeJournal'));
+const authStore = useAuthStore();
+const canReadJournal = computed(() => authStore.hasPermission('ReadChangeJournal'));
 const reactivating = ref<string | null>(null);
 
 const { formatWhole } = useCurrency();
