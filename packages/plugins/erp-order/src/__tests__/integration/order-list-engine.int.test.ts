@@ -149,6 +149,7 @@ describe('visibleOrders on the shared list engine (real Postgres)', () => {
     });
 
     it('applies the department branch clause and its managers, then the filter', async () => {
+        await dataSource.query(`INSERT INTO trading_point ("servicingBranchId") VALUES ('b1')`);
         await dataSource.getRepository(TestOrder).save([
             { code: 'T1', createdAt: day(5), counterpartyId: cps.mine, tradingPointId: '1' },
             { code: 'D1', createdAt: day(6), counterpartyId: cps.branchy },
