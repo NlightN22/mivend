@@ -59,7 +59,7 @@ test('customers page CSV export downloads a file @on:manager-operator @read-only
 
     const [download] = await Promise.all([
         page.waitForEvent('download'),
-        page.getByRole('button', { name: 'Export CSV' }).click(),
+        page.getByRole('button', { name: 'Export page (CSV)' }).click(),
     ]);
     expect(download.suggestedFilename()).toBe('customers.csv');
 });

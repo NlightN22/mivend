@@ -91,7 +91,7 @@ for (const actor of ACTORS) {
                     await expect(row).toHaveCount(shown ? 1 : 0);
                     const [download] = await Promise.all([
                         s.page.waitForEvent('download'),
-                        s.page.getByRole('button', { name: 'Export CSV' }).click(),
+                        s.page.getByRole('button', { name: 'Export page (CSV)' }).click(),
                     ]);
                     const csv = testInfo.outputPath(`${actor.key}-${c.key}.csv`);
                     await download.saveAs(csv);

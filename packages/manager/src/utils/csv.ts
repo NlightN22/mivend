@@ -1,6 +1,8 @@
 // Minimal client-side CSV export — no server round-trip, the page already has the data loaded.
+// A text cell starting with = + - @ (or a control character) would run as a formula in a spreadsheet.
 function escapeCell(value: unknown): string {
-    const text = String(value ?? '');
+    const raw = String(value ?? '');
+    const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
     if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
     return text;
 }

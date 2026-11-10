@@ -181,7 +181,7 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-end>
-            <MvButton size="sm" variant="secondary" @click="emit('export')">Export CSV</MvButton>
+            <MvButton size="sm" variant="secondary" @click="emit('export')">Export page (CSV)</MvButton>
             <TableViewsMenu
                 views-key="customers"
                 :owner-key="administratorId"
