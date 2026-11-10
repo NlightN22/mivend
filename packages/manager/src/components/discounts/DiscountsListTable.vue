@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useDroppedFilterNotice } from '@/composables/useDroppedFilterNotice';
+import { useDroppedFilterNotice } from '../../composables/useDroppedFilterNotice';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {

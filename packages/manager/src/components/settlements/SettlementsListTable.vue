@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useDroppedFilterNotice } from '@/composables/useDroppedFilterNotice';
-import { computed, ref, watch } from 'vue';
+import { useDroppedFilterNotice } from '../../composables/useDroppedFilterNotice';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
     MvStatusBadge,
