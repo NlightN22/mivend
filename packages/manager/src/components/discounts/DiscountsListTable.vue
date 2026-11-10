@@ -18,12 +18,16 @@ import {
     type DiscountsListFilters,
     type DiscountsSort,
 } from '../../api/discountsList';
-import { fetchPriceTypeCodes } from '../../api/discounts';
+import { fetchFacets, fetchPriceTypeCodes } from '../../api/discounts';
 import { DISCOUNTS_URL_DEFAULTS } from '../../composables/discountsListUrl';
 import { sortFromState, sortToState } from './discountsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { DISCOUNTS_COLUMNS as COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
+import {
+    DISCOUNTS_COLUMNS as COLUMNS,
+    DISCOUNTS_HIDDEN_BY_DEFAULT,
+    TEXT_OPERATORS,
+} from './discountsColumns';
 import type { DiscountRow } from './discountsRows';
 
 const props = defineProps<{
@@ -49,15 +53,21 @@ const emit = defineEmits<{
     renew: [row: DiscountRow];
 }>();
 
+const groupOptions = ref<{ value: string; label: string }[]>([]);
 const priceTypeOptions = ref<{ value: string; label: string }[]>([]);
 onMounted(async () => {
     const codes = await fetchPriceTypeCodes().catch(() => []);
     priceTypeOptions.value = codes.map(code => ({ value: code, label: code }));
+    const facets = await fetchFacets().catch(() => []);
+    groupOptions.value = facets.flatMap(f => f.values).map(v => ({ value: v.code, label: v.code }));
 });
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
-    COLUMNS.map(c =>
-        c.field === 'priceType' ? { ...c, filterOptions: priceTypeOptions.value } : c,
-    ),
+    COLUMNS.map(c => {
+        if (c.field === 'priceType') return { ...c, filterOptions: priceTypeOptions.value };
+        if (c.field !== 'productGroup') return c;
+        if (groupOptions.value.length) return { ...c, filterOptions: groupOptions.value };
+        return { ...c, filterType: 'string' as const, filterOperators: [...TEXT_OPERATORS] };
+    }),
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
