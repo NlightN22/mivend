@@ -24,7 +24,7 @@ import {
 const props = defineProps<{ column: FilterColumn; initial?: FilterCondition }>();
 const emit = defineEmits<{ apply: [condition: FilterCondition]; back: [] }>();
 
-// Operators whose value is a text the user types; typeahead only helps those.
+// Operators whose value is a text the user types; the suggestions are labelled as prefix matches.
 const SUGGEST_OPERATORS: FilterOperator[] = [
     'contains',
     'notContains',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { admin, seed, staffToken } from '../harness/actors';
+import { DENIED, admin, customerToken, seed, staffToken } from '../harness/actors';
 import {
     CUSTOMERS,
     SETTLEMENT_NUMBERS,
@@ -13,6 +13,8 @@ const LIST = `query($o: SettlementListOptions, $cp: ID) { visibleSettlementDocum
     counterpartyId: $cp) { totalItems items { number counterpartyId } } }`;
 const COUNTS = `query($o: SettlementListOptions) { visibleSettlementTypeCounts(options: $o) {
     documentType count } }`;
+const SUGGEST = `query($field: String!, $prefix: String!) {
+    settlementFilterSuggestions(field: $field, prefix: $prefix) }`;
 type Page = { visibleSettlementDocuments: { totalItems: number; items: { number: string }[] } };
 
 const allNumbers = CUSTOMERS.flatMap(c => Object.values(SETTLEMENT_NUMBERS[c.key])).sort();
@@ -80,5 +82,29 @@ describe('staff settlement documents', () => {
                 expect(numbersOf(foreign.data!), `${c.key} hidden`).toEqual([]);
             }
         });
+    });
+
+    describe.each(STAFF.map(s => s.key))('filter suggestions for staff %s', (key: ActorKey) => {
+        it('offers the numbers of the visible customers only', async () => {
+            const token = await staffToken(key);
+            const visible = new Set(VISIBLE_COUNTERPARTIES[key]);
+            const expected = CUSTOMERS.filter(c => visible.has(c.counterparty))
+                .flatMap(c => Object.values(SETTLEMENT_NUMBERS[c.key]))
+                .sort();
+            const res = await admin<{ settlementFilterSuggestions: string[] }>(token, SUGGEST, {
+                field: 'number',
+                prefix: '95',
+            });
+            expect(res.errors).toEqual([]);
+            expect([...res.data!.settlementFilterSuggestions].sort()).toEqual(expected);
+        });
+    });
+
+    it('refuses a caller without the settlement documents right', async () => {
+        const res = await admin(await customerToken('customer-a'), SUGGEST, {
+            field: 'number',
+            prefix: '95',
+        });
+        expect(JSON.stringify(res.errors)).toMatch(DENIED);
     });
 });

@@ -88,17 +88,18 @@ beforeEach(async () => {
         ['ct-2', 2],
         ['ct-3', 3],
         ['ct-4', 4],
+        ['ct-5', 5],
     ] as const)
         h.contracts.set(erpId, id);
     await h.dataSource.query(
         `INSERT INTO counterparty (id, "erpId", "shortName") VALUES
          (1, 'cp-1', 'Alpha'), (2, 'cp-2', 'Alpine'), (3, 'cp-3', 'Alder supplier only'),
-         (4, 'cp-4', 'Algae no customer contract')`,
+         (4, 'cp-4', 'Algae no customer contract'), (5, 'cp-5', 'Alfa pending')`,
     );
     await h.dataSource.query(
         `INSERT INTO contract ("erpId", name, "counterpartyId", "isCustomerContract") VALUES
          ('ct-1', 'Main', '1', true), ('ct-2', 'Second', '2', true),
-         ('ct-3', 'Third', '3', true), ('ct-4', 'Fourth', '4', NULL)`,
+         ('ct-3', 'Third', '3', true), ('ct-4', 'Fourth', '4', NULL), ('ct-5', 'Fifth', '5', true)`,
     );
     await doc('d1', '101', 'Sale');
     await doc('d2', '201', 'Sale', [entry({ counterpartyErpId: 'cp-2', contractErpId: 'ct-2' })]);
@@ -106,6 +107,7 @@ beforeEach(async () => {
         entry({ counterpartyErpId: 'cp-3', contractErpId: 'ct-3' }),
     ]);
     await doc('d4', '401', 'Sale', [entry({ counterpartyErpId: 'cp-4', contractErpId: 'ct-4' })]);
+    await doc('d6', '501', 'Sale', [entry({ counterpartyErpId: 'cp-5', contractErpId: 'ct-5' })]);
     await doc('d5', '109', 'Sale');
     await h.documents.apply(
         ctx,
@@ -123,6 +125,11 @@ describe('settlement filter suggestions (real Postgres)', () => {
         const names = await service.suggest(ctx, 'customer', 'al');
         expect(names).not.toContain('Alder supplier only');
         expect(names).not.toContain('Algae no customer contract');
+    });
+
+    it('does not suggest an entry whose counterparty is not yet resolved locally (listable, by decision)', async () => {
+        expect(await service.suggest(ctx, 'customer', 'alf')).toEqual([]);
+        expect(await service.suggest(ctx, 'number', '50')).toEqual([]);
     });
 
     it('never suggests the number of a deleted, supplier or non-customer-contract document', async () => {

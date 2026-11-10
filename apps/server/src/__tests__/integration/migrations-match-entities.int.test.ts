@@ -26,6 +26,8 @@ const MIGRATION_ONLY_INDEXES = [
     'IDX_order_acting_session',
     'UQ_authentication_method_oidc_subject',
     'UQ_authentication_method_oidc_user',
+    'IDX_counterparty_short_name_prefix',
+    'IDX_settlement_document_number_prefix',
 ];
 
 async function onMaintenanceDb(sql: string): Promise<void> {

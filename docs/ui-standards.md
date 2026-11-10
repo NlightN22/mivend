@@ -116,8 +116,27 @@ match on `lower(value) COLLATE "C"` (a btree on that expression serves the range
 `LIMIT` stops early), a bound escaped prefix, limit clamped to 1..20, prefix clamped to the engine's
 `maxTextLength`, and the same counterparty visibility scope as the list plus a "has a listable document"
 check, so a suggestion never shows a value the caller cannot list. Pilot: settlements, query
-`settlementFilterSuggestions(field, prefix, limit)` (customer, number), index migration `1791574000000`
+`settlementFilterSuggestions(field, prefix, limit)` (customer, number), index migration `1791576000000`
 (plain `CREATE INDEX`, the tables are small).
+
+Suggestions are stricter than the list on purpose: they need the entry's local `counterpartyId` and the
+contract's `counterpartyId` to match, while the list joins the counterparty by ERP id. An entry whose local
+counterparty id is still null (not imported yet) is listable but never suggested; it is covered by an
+integration test. Suggestions are prefix-only whatever the operator, so the list is labelled "Starting with"
+(restricting the operators would have left the default "contains" without suggestions).
+
+After the migration on staging or production, run `EXPLAIN` of each suggestion query once to confirm the
+index is used (`Index Scan using "IDX_counterparty_short_name_prefix"` /
+`"IDX_settlement_document_number_prefix"` with an `Index Cond` range on `lower(..)`, no `Sort` node above
+it). Run the migration with the workers stopped, like the other index migrations.
+Plan excerpt as measured (contract query, same shape; the index walk stops at the limit):
+
+```
+Limit  (actual time=18.576..202.122 rows=20)
+  ->  Index Scan using "IDX_contract_name_prefix" on contract k
+        Index Cond: ((lower((name)::text) >= 'co') AND (lower((name)::text) < 'cp'))
+        Filter: (... AND ((SubPlan 1) IS NOT NULL))
+```
 
 Rules learned while measuring: do not reuse the list's joined query (it scans and hashes every entry,
 50 ms to 4 s); do not `GROUP BY`/`DISTINCT` the matches (it defeats the early stop, dedupe in code

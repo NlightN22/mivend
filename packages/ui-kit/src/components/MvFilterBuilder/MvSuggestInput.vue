@@ -39,7 +39,14 @@ function onInput(text: string): void {
             @keydown="onKey($event, v => emit('update:modelValue', v))"
             @blur="close"
         />
-        <ul v-if="open" :id="listId" class="mv-suggest__list" role="listbox">
+        <ul
+            v-if="open"
+            :id="listId"
+            class="mv-suggest__list"
+            role="listbox"
+            aria-label="Starting with"
+        >
+            <li class="mv-suggest__hint" role="presentation">Starting with</li>
             <li
                 v-for="(item, index) in items"
                 :id="`${listId}-${index}`"
@@ -70,6 +77,12 @@ function onInput(text: string): void {
     border: 1px solid var(--el-border-color);
     border-radius: 12px;
     background: var(--app-surface);
+}
+
+.mv-suggest__hint {
+    padding: 2px 10px 4px;
+    font-size: 11px;
+    color: var(--el-text-color-secondary);
 }
 
 .mv-suggest__option {
