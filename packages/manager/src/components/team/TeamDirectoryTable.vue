@@ -81,7 +81,9 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
         field: 'roles',
         header: 'Role',
         width: 200,
-        filterConfig: { type: 'select', placeholder: 'All roles', options: props.roleOptions },
+        filterConfig: props.roleOptions.length
+            ? { type: 'select', placeholder: 'All roles', options: props.roleOptions }
+            : { type: 'none' },
     },
     { field: 'erpId', header: 'ERP id', width: 140, filterConfig: { type: 'none' } },
     {
