@@ -115,6 +115,9 @@ export const adminApiSchema = gql`
         officialEmail: StringOperators
         managerErpId: StringOperators
         branchId: StringOperators
+        erpGroupLabel: StringOperators
+        "ok | missing | duplicate, the same value as Counterparty.innStatus"
+        innStatus: StringOperators
         isActive: BooleanOperators
         _and: [CounterpartyFilterParameter!]
     }

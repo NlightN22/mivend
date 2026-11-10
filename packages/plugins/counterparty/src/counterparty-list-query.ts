@@ -1,6 +1,7 @@
 import type { SelectQueryBuilder } from 'typeorm';
 import { applyListFilter, type FieldSpec, type ListFilter, type ListQueryConfig } from 'shared';
 
+import { INN_DIGITS_SQL } from './counterparty-inn-guard';
 import type { Counterparty } from './entities/counterparty.entity';
 
 export type CounterpartyFilterParameter = ListFilter;
@@ -18,6 +19,12 @@ const text = (column: string): FieldSpec => ({
 const MANAGER_NAME_SQL = `lower((SELECT eu."fullName" FROM erp_user eu
     WHERE eu."erpId" = c."managerErpId" LIMIT 1))`;
 
+// Same rule as getInnStatus: no digits is missing; an active holder shared with another active one is a duplicate.
+const INN_STATUS_SQL = `CASE WHEN ${INN_DIGITS_SQL} = '' THEN 'missing'
+    WHEN c."isActive" AND EXISTS (SELECT 1 FROM counterparty d WHERE d.id <> c.id
+        AND d."isActive" AND regexp_replace(coalesce(d.inn, ''), '\\D', '', 'g') = ${INN_DIGITS_SQL})
+    THEN 'duplicate' ELSE 'ok' END`;
+
 // The only fields a client may filter by; the key is the GraphQL field name.
 const FIELDS: Record<string, FieldSpec> = {
     shortName: text('c."shortName"'),
@@ -28,6 +35,12 @@ const FIELDS: Record<string, FieldSpec> = {
     branchId: {
         kind: 'string',
         sql: `NULLIF(c."branchId", '')`,
+        operators: ['eq', 'notEq', 'in', 'notIn'],
+    },
+    erpGroupLabel: text('c."erpGroupLabel"'),
+    innStatus: {
+        kind: 'string',
+        sql: INN_STATUS_SQL,
         operators: ['eq', 'notEq', 'in', 'notIn'],
     },
     isActive: { kind: 'boolean', sql: 'c."isActive"', operators: ['eq'] },

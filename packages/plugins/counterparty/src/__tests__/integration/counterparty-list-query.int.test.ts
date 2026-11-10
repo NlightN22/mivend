@@ -29,6 +29,7 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) managerErpId!: string | null;
     @Column({ type: 'boolean', default: true }) isActive!: boolean;
     @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpGroupLabel!: string | null;
 }
 
 @Entity('erp_user')
@@ -100,6 +101,7 @@ beforeEach(async () => {
             inn: '111',
             branchId: 'branch-a',
             managerErpId: 'm-1',
+            erpGroupLabel: 'Wholesale',
         },
         {
             ...base,
@@ -126,6 +128,33 @@ async function erpIds(filter: CounterpartyFilterParameter): Promise<string[]> {
     const page = await service.findVisiblePage(mockCtx, { filter, take: 50 });
     return page.items.map(c => c.erpId).sort();
 }
+
+describe('counterparty list filter: group label and INN status', () => {
+    beforeEach(async () => {
+        const base = { legalName: 'L', phone: '+10000000', officialEmail: 'a@example.test' };
+        await dataSource.getRepository(TestCounterparty).save([
+            { ...base, erpId: 'e', shortName: 'Epsilon', inn: '1-11', erpGroupLabel: 'Retail' },
+            { ...base, erpId: 'f', shortName: 'Zeta', inn: '111', isActive: false },
+        ]);
+    });
+
+    it('matches the group label case-insensitively and by exact value', async () => {
+        expect(await erpIds({ erpGroupLabel: { eq: 'wholesale' } })).toEqual(['a']);
+        expect(await erpIds({ erpGroupLabel: { contains: 'ret' } })).toEqual(['e']);
+        expect(await erpIds({ erpGroupLabel: { isNull: true } })).toEqual(['b', 'c', 'd', 'f']);
+    });
+
+    it('derives the INN status like the list field: blank is missing, active twins are duplicates', async () => {
+        expect(await erpIds({ innStatus: { eq: 'missing' } })).toEqual(['c']);
+        expect(await erpIds({ innStatus: { eq: 'duplicate' } })).toEqual(['a', 'e']);
+        expect(await erpIds({ innStatus: { in: ['ok'] } })).toEqual(['b', 'd', 'f']);
+        expect(await erpIds({ innStatus: { notEq: 'ok' } })).toEqual(['a', 'c', 'e']);
+    });
+
+    it('rejects an operator the INN status does not offer', async () => {
+        await expect(erpIds({ innStatus: { contains: 'dup' } })).rejects.toThrow(/Unsupported/);
+    });
+});
 
 describe('counterparty list filter (shared engine)', () => {
     it('contains is case-insensitive and treats % and _ as literal characters', async () => {
