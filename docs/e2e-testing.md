@@ -190,9 +190,14 @@ Measured on a quiet 8-core host (batch: manager-orders, manager-customers, manag
 
 Per group (read-only pass + write pass, baseline): manager-orders 5.2m + 2.6m, manager-customers 1.0m + 2.5m, manager-proforma-payments 1.0m (no write pass), storefront-catalog 5.2m. Stack boot is 111 s of the wall (server 42 s, seed 69 s). The average CPU use is about 1.3 cores of 8, so the batch is bound by serial waits, not by cores: the worker count does not matter between 2 and 4 and 4 only adds flakiness. Do not raise `E2E_PARALLEL_WORKERS`.
 
-Not measured: the forced picker seed (`E2E_PICKER_SEED=1`, expected gain is the 30-45 s seed) and repeated single groups. Next lever is the wait time inside the slow specs (storefront-catalog read-only pass, manager-orders both passes), not parallelism.
+Round 2 findings (#336), batch storefront-catalog + manager-orders + manager-customers, 3 workers, noisy shared host:
 
-Candidates (analysis in #336): read-only workers vs cores, a combined read-only pass across groups, two stacks, event-based waits replacing `waitForTimeout`.
+- Baseline wall 20.7 min and 20.0 min (stack ready 107-137 s; catalog 5.3/4.9 min, orders 3.2/3.1 + 3.0/2.6, customers 1.3/1.2 + 2.6/2.4).
+- storefront-catalog has no `@read-only` tests: its 52 tests run on one worker. Tagging 47 of them (all but `product-card` and `category-tree`) and running them on 3 workers gave 6.2 min, not less than the serial 5.3.
+- One Vite dev server serialises page loads (1 / 3 / 6 parallel loads of one manager page: 3.3 / 7.3 / 13 s; a production build: 1.6 / 2.6 / 3.4 s), but 3 Vite instances behind a worker-sticky TCP balancer changed the batch by under 10 %, so it was dropped. The bottleneck beyond Vite is the host (load average 9-23 from other sessions) and the single-threaded server.
+- A combined read-only pass over all groups ran 6.9-7.5 min against 4.5 min for the same tests per group, so it was dropped.
+- The seed (about 81 s) is dominated by categories 30 s, customers 17 s and products 14 s of server work; starting the customer batch early did not shorten it. Server boot is 46-62 s.
+- A production build of the portals would halve page loads but changes DEV-only behaviour under test; not done.
 
 ## Manager portal role projects
 
