@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
     MvStatusBadge,
     MvAdvancedDataTable,
     MvDateTimeCell,
     MvErrorState,
+    MvNotice,
     useDataTableState,
     formatDocumentNumber,
 } from '@mivend/ui-kit';
@@ -20,11 +21,7 @@ import { sortFromState, sortToState } from './settlementsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
-import {
-    SETTLEMENTS_COLUMNS as COLUMNS,
-    SETTLEMENTS_DEFAULT_HIDDEN,
-    TEXT_OPERATORS,
-} from './settlementsColumns';
+import { SETTLEMENTS_COLUMNS as COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
 
 const props = defineProps<{
@@ -50,18 +47,37 @@ const emit = defineEmits<{
     retry: [];
 }>();
 
+const SELECT_FIELDS: Record<string, 'typeOptions' | 'organizationOptions'> = {
+    type: 'typeOptions',
+    organization: 'organizationOptions',
+};
 const filterColumns = computed(() =>
     COLUMNS.map(c => {
-        const options =
-            c.field === 'type'
-                ? props.typeOptions
-                : c.field === 'organization'
-                  ? props.organizationOptions
-                  : null;
-        if (options === null) return c;
-        if (options.length) return { ...c, filterOptions: options };
-        return { ...c, filterType: 'string' as const, filterOperators: [...TEXT_OPERATORS] };
+        const key = SELECT_FIELDS[c.field];
+        const options = key ? props[key] : [];
+        if (!options.length) return c;
+        return {
+            ...c,
+            filterType: 'select' as const,
+            filterOptions: options,
+            filterOperators: ['eq', 'notEq'] as ('eq' | 'notEq')[],
+        };
     }),
+);
+
+// Columns stay text-typed until their options load, so restored conditions survive; then text ones are dropped.
+const droppedFilter = ref(false);
+watch(
+    () => [props.typeOptions, props.organizationOptions, props.filters.conditions] as const,
+    () => {
+        const kept = props.filters.conditions.filter(c => {
+            const key = SELECT_FIELDS[c.columnKey];
+            return !key || !props[key].length || c.operator === 'eq' || c.operator === 'notEq';
+        });
+        if (kept.length === props.filters.conditions.length) return;
+        droppedFilter.value = true;
+        emit('update:filters', { ...props.filters, conditions: kept });
+    },
 );
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
@@ -182,6 +198,9 @@ function applyView(state: TableViewState): void {
 
         <template #toolbar-start>
             <slot name="view-chips" />
+            <MvNotice v-if="droppedFilter" variant="warning">
+                A filter that no longer applies was removed.
+            </MvNotice>
         </template>
 
         <template #toolbar-end>
