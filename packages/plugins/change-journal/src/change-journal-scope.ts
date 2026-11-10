@@ -20,8 +20,6 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     SyncProcessedEvent: TRANSPORT,
     IntegrationOutboxEntry: TRANSPORT,
     IntegrationInboxEvent: TRANSPORT,
-    IntegrationReapplyCursor:
-        'progress bookkeeping of the one-off contact reapply, one row per stream',
     IncomingPaymentEvent: TRANSPORT,
     IdempotencyKey: 'idempotency bookkeeping of payment calls',
     KafkaConsumerStatus: 'consumer status mirror, rewritten continuously',
