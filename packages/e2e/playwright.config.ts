@@ -1,5 +1,5 @@
 import { defineConfig, devices, type PlaywrightTestOptions, type Project } from '@playwright/test';
-import { E2E_INSTANCE_TAG, E2E_USER_AGENT_MARK } from './helpers/user-agent';
+import { E2E_USER_AGENT_MARK } from './helpers/user-agent';
 import { roleProjectGrep } from './helpers/role-projects';
 
 function markSessions(
@@ -7,10 +7,7 @@ function markSessions(
 ): Project<PlaywrightTestOptions>[] {
     return projects.map(p => ({
         ...p,
-        use: {
-            ...p.use,
-            userAgent: `${p.use?.userAgent ?? ''} ${E2E_USER_AGENT_MARK} ${E2E_INSTANCE_TAG}`,
-        },
+        use: { ...p.use, userAgent: `${p.use?.userAgent ?? ''} ${E2E_USER_AGENT_MARK}` },
     }));
 }
 

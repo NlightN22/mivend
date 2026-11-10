@@ -3,7 +3,7 @@ import { connect } from 'net';
 import { resolve } from 'path';
 
 import { spawnCommandGroup, spawnGroup, waitForUrl } from '../access/harness/server-process';
-import { E2E_PORTS, REPO_ROOT, STACK_DIR, portalBackendPorts } from './stack-env';
+import { E2E_PORTS, REPO_ROOT, STACK_DIR } from './stack-env';
 
 const log = (name: string): string => resolve(STACK_DIR, `${name}.log`);
 
@@ -19,12 +19,7 @@ function portInUse(port: number): Promise<boolean> {
 }
 
 export async function assertPortsFree(): Promise<void> {
-    const ports = [
-        ...Object.values(E2E_PORTS),
-        ...portalBackendPorts(E2E_PORTS.storefront),
-        ...portalBackendPorts(E2E_PORTS.manager),
-    ];
-    for (const port of ports)
+    for (const port of Object.values(E2E_PORTS))
         if (await portInUse(port))
             throw new Error(`Port ${port} is taken; another e2e stack or service is running`);
 }
@@ -42,30 +37,17 @@ export function waitForServer(server: ChildProcess): Promise<void> {
     return waitForUrl(`http://127.0.0.1:${E2E_PORTS.server}/health`, server, log('server'));
 }
 
-// One Vite dev server serves every module request on a single thread, so parallel workers queue on it.
-// Several instances sit behind a TCP balancer on the portal port.
-export function spawnPortal(pkg: 'storefront' | 'manager', port: number): ChildProcess[] {
-    const backends = portalBackendPorts(port);
-    const instances = backends.map((backendPort, i) =>
-        spawnCommandGroup({
-            command: 'pnpm',
-            args: ['--filter', `@mivend/${pkg}`, 'exec', 'vite', '--strictPort'],
-            cwd: REPO_ROOT,
-            env: {
-                VITE_API_TARGET: `http://localhost:${E2E_PORTS.server}`,
-                VITE_PORT: String(backendPort),
-            },
-            logPath: log(`${pkg}-${i}`),
-        }),
-    );
-    const balancer = spawnCommandGroup({
-        command: 'node',
-        args: ['infrastructure/scripts/e2e-tcp-balance.mjs', String(port), ...backends.map(String)],
+export function spawnPortal(pkg: 'storefront' | 'manager', port: number): ChildProcess {
+    return spawnCommandGroup({
+        command: 'pnpm',
+        args: ['--filter', `@mivend/${pkg}`, 'exec', 'vite', '--strictPort'],
         cwd: REPO_ROOT,
-        env: {},
-        logPath: log(`${pkg}-balancer`),
+        env: {
+            VITE_API_TARGET: `http://localhost:${E2E_PORTS.server}`,
+            VITE_PORT: String(port),
+        },
+        logPath: log(pkg),
     });
-    return [...instances, balancer];
 }
 
 export function spawnMockOidcProvider(): ChildProcess {
@@ -86,15 +68,8 @@ export function waitForMockOidcProvider(child: ChildProcess): Promise<void> {
     );
 }
 
-export async function waitForPortal(
-    processes: ChildProcess[],
-    pkg: string,
-    port: number,
-): Promise<void> {
-    const ports = [...portalBackendPorts(port), port];
-    await Promise.all(
-        ports.map((p, i) => waitForUrl(`http://localhost:${p}`, processes[i], log(`${pkg}-${i}`))),
-    );
+export function waitForPortal(child: ChildProcess, pkg: string, port: number): Promise<void> {
+    return waitForUrl(`http://localhost:${port}`, child, log(pkg));
 }
 
 export function runForeground(
