@@ -64,9 +64,13 @@
     min-width: 0;
 }
 
-/* Two chip rows (2 x 30px + 8px gap); the rest is hidden until "More". */
+.mv-filter-chips {
+    --mv-chips-clamp: 68px;
+}
+
+/* Two chip rows (2 x 30px + 8px gap); the rest is hidden until "More" or until a chip gets focus. */
 .mv-filter-chips--clamped {
-    max-height: 68px;
+    max-height: var(--mv-chips-clamp);
     overflow: hidden;
 }
 

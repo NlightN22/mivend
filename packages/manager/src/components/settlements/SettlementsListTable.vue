@@ -20,7 +20,11 @@ import { sortFromState, sortToState } from './settlementsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
-import { SETTLEMENTS_COLUMNS as COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
+import {
+    SETTLEMENTS_COLUMNS as COLUMNS,
+    SETTLEMENTS_DEFAULT_HIDDEN,
+    TEXT_OPERATORS,
+} from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
 
 const props = defineProps<{
@@ -48,9 +52,15 @@ const emit = defineEmits<{
 
 const filterColumns = computed(() =>
     COLUMNS.map(c => {
-        if (c.field === 'type') return { ...c, filterOptions: props.typeOptions };
-        if (c.field === 'organization') return { ...c, filterOptions: props.organizationOptions };
-        return c;
+        const options =
+            c.field === 'type'
+                ? props.typeOptions
+                : c.field === 'organization'
+                  ? props.organizationOptions
+                  : null;
+        if (options === null) return c;
+        if (options.length) return { ...c, filterOptions: options };
+        return { ...c, filterType: 'string' as const, filterOperators: [...TEXT_OPERATORS] };
     }),
 );
 

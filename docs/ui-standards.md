@@ -133,7 +133,7 @@ One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGri
   parent, and the default visible columns must fit about 1090px of table width.
 - On a phone the table container reserves the bottom tab bar height.
 - The `+N` pill is `role="note"` with an `aria-label` and title listing the hidden items; the order card/detail shows the
-  same items. The `More`/`Collapse` button has `aria-expanded`; the selected chip has `aria-pressed`.
+  same items. The `More`/`Collapse` button has `aria-expanded`; focusing a clipped chip or selecting one in a hidden row expands the row; on a phone the chips stay one horizontal row without the button; chip order follows the counts (largest first, then label), so chips may reorder when filters change; the selected chip has `aria-pressed`.
 - Cells with buttons, inputs, selects or switches keep the table's 13px/18px defaults; wrap content in `mv-cell-raw` to
   reset the clamp, line height and font size where a control needs its own box.
 - A column that is empty for most rows (e.g. organization, proforma invoice on settlements) starts hidden.

@@ -1,7 +1,14 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 
 const NOT_FILTERED = { type: 'none' } as const;
-const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'] as const;
+export const TEXT_OPERATORS = [
+    'contains',
+    'notContains',
+    'eq',
+    'notEq',
+    'isNull',
+    'notNull',
+] as const;
 
 // Organization and Proforma invoice start hidden (SETTLEMENTS_DEFAULT_HIDDEN). Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
 // Filtering is the toolbar Filter builder; the search box covers number, customer, INN and orders.

@@ -62,6 +62,9 @@ test('status chips wrap to two rows, More reveals the rest and none overlaps @re
     }
 
     const count = await chips.count();
+    if (await toggle.isVisible()) await toggle.click();
+    await chips.nth(count - 1).click();
+    await expect(page.locator('.mv-filter-chip[data-active="true"]')).toBeInViewport();
     const boxes = [];
     for (let i = 0; i < count; i++) boxes.push(await chips.nth(i).boundingBox());
     for (let i = 1; i < boxes.length; i++) {

@@ -18,20 +18,32 @@ export interface FilterChip {
 }
 
 // Chips wrap to at most two rows; "More" expands to all rows when they overflow.
-const props = withDefaults(defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(), {
-    scrollable: false,
-});
-const TWO_ROWS_PX = 68;
+const props = withDefaults(
+    defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(),
+    {
+        scrollable: false,
+    },
+);
 const row = ref<HTMLElement | null>(null);
 const expanded = ref(false);
 const overflows = ref(false);
 
+function clampPx(): number {
+    return row.value
+        ? parseFloat(getComputedStyle(row.value).getPropertyValue('--mv-chips-clamp'))
+        : 0;
+}
 function measure(): void {
-    if (row.value) overflows.value = row.value.scrollHeight > TWO_ROWS_PX + 1;
+    if (row.value) overflows.value = row.value.scrollHeight > clampPx() + 1;
+}
+function revealActive(): void {
+    const chip = row.value?.querySelector<HTMLElement>('[data-active="true"]');
+    if (chip && chip.offsetTop + chip.offsetHeight > clampPx() + 1) expanded.value = true;
 }
 let observer: ResizeObserver | undefined;
 onMounted(() => {
     measure();
+    revealActive();
     if (typeof ResizeObserver !== 'undefined' && row.value) {
         observer = new ResizeObserver(measure);
         observer.observe(row.value);
@@ -39,10 +51,11 @@ onMounted(() => {
 });
 onBeforeUnmount(() => observer?.disconnect());
 watch(
-    () => props.chips.length,
+    () => [props.chips.length, props.active],
     async () => {
         await nextTick();
         measure();
+        revealActive();
     },
 );
 const emit = defineEmits<{ select: [key: string] }>();
@@ -57,6 +70,7 @@ const emit = defineEmits<{ select: [key: string] }>();
                 'mv-filter-chips--scrollable': scrollable,
                 'mv-filter-chips--clamped': !expanded,
             }"
+            @focusin="expanded = true"
         >
             <button
                 v-for="chip in chips"
