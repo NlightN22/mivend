@@ -21,12 +21,18 @@ export class TestCustomer {
 export class TestLine {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) orderId!: number;
+    @ManyToOne(() => TestOrder, { createForeignKeyConstraints: false })
+    @JoinColumn({ name: 'orderId' })
+    order!: TestOrder;
 }
 
 @Entity('fulfillment')
 export class TestFulfillment {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) orderId!: number;
+    @ManyToOne(() => TestOrder, { createForeignKeyConstraints: false })
+    @JoinColumn({ name: 'orderId' })
+    order!: TestOrder;
 }
 
 @Entity('order')
@@ -56,8 +62,8 @@ export class TestOrder {
     @ManyToOne(() => TestCustomer, { createForeignKeyConstraints: false })
     @JoinColumn({ name: 'customerId' })
     customer!: TestCustomer | null;
-    @OneToMany(() => TestLine, l => l.orderId) lines!: TestLine[];
-    @OneToMany(() => TestFulfillment, f => f.orderId) fulfillments!: TestFulfillment[];
+    @OneToMany(() => TestLine, l => l.order) lines!: TestLine[];
+    @OneToMany(() => TestFulfillment, f => f.order) fulfillments!: TestFulfillment[];
 }
 
 export const counterpartySchema = new EntitySchema({
