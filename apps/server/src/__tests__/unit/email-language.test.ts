@@ -185,6 +185,7 @@ describe.each(MAIL_TYPES)('%s mail', type => {
         const mail = await render(type, ctxWith(language), 'en');
         expect(mail.subject).toBe(SUBJECTS[type][language]);
         expect(mail.body).toContain('Site A');
+        expect(mail.body).toContain('https://shop.example.org/email-logo.png');
         expect(mail.body).toContain(DEFAULT_FOOTER[language]);
         expect(mail.body).toContain(LINKS[type]);
         expect(mail.body).not.toMatch(/\[company header\]|\[footer text\]/);

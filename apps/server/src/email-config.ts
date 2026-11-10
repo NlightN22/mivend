@@ -47,6 +47,7 @@ export function emailGlobalTemplateVars(
         fromAddress,
         verifyEmailAddressUrl: `${storefrontPublicUrl}/verify`,
         siteName: siteName(env),
+        logoUrl: storefrontPublicUrl ? `${storefrontPublicUrl}/email-logo.png` : '',
         footerText: emailFooterText(env),
     };
 }
