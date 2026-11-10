@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { KNOWN_CATEGORIES, normalizeCategory } from '../../settlement-visibility';
+import {
+    KNOWN_CATEGORIES,
+    customerVisibleSql,
+    normalizeCategory,
+} from '../../settlement-visibility';
 
 describe('normalizeCategory', () => {
     it('keeps every known category', () => {
@@ -14,5 +18,20 @@ describe('normalizeCategory', () => {
         expect(normalizeCategory('')).toBe('other');
         expect(normalizeCategory(null)).toBe('other');
         expect(normalizeCategory(undefined)).toBe('other');
+    });
+});
+
+describe('customerVisibleSql', () => {
+    const sql = customerVisibleSql('d', 't');
+
+    it('hides only an explicit false flag and ignores the type reference visibility', () => {
+        expect(sql).toContain(
+            `COALESCE("d"."accounting"->>'reflectedInAccounting', 'true') <> 'false'`,
+        );
+        expect(sql).not.toContain('customerVisible');
+    });
+
+    it('keeps purchase and payroll categories internal', () => {
+        expect(sql).toContain(`NOT IN ('supplier', 'payroll')`);
     });
 });

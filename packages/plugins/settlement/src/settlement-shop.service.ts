@@ -12,7 +12,7 @@ import type {
     SettlementDocumentRow,
     SettlementOrderRef,
 } from './settlement-shop.types';
-import { CATEGORY_SQL, INTERNAL_CATEGORIES, normalizeCategory } from './settlement-visibility';
+import { CATEGORY_SQL, customerVisibleSql, normalizeCategory } from './settlement-visibility';
 import { toAlphaCurrency } from './currency-code';
 
 const MAX_PAGE = 100;
@@ -91,8 +91,7 @@ export class SettlementShopService {
             'NOT d."isDeleted"',
             'e."contractId" IS NOT NULL',
             'c."isCustomerContract" IS TRUE',
-            't."customerVisible"',
-            `t.category NOT IN (${INTERNAL_CATEGORIES.map(c => `'${c}'`).join(', ')})`,
+            customerVisibleSql('d', 't'),
         ];
         if (filter.contractId) where.push(`e."contractId" = ${bind(filter.contractId)}`);
         if (filter.organizationId) {
@@ -117,7 +116,7 @@ export class SettlementShopService {
         if (filter.unpaidOnly) where.push('aged.open > 0');
         const from = `FROM settlement_document_entry e
             JOIN settlement_document d ON d.id = e."documentId"
-            JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
+            LEFT JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
             JOIN contract c ON c.id::text = e."contractId"
             LEFT JOIN organization_requisites org ON org."erpId" = e."organizationErpId"
             LEFT JOIN bal ON bal.org = e."organizationErpId"

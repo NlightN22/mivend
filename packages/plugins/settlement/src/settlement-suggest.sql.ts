@@ -1,9 +1,7 @@
 import type { SuggestSpec } from 'shared';
 
-import { INTERNAL_CATEGORIES } from './settlement-visibility';
+import { customerVisibleSql } from './settlement-visibility';
 
-const INTERNAL = INTERNAL_CATEGORIES.map(c => `'${c}'`).join(', ');
-const LISTABLE_CATEGORY = `COALESCE("st"."category", 'other') NOT IN (${INTERNAL})`;
 const CUSTOMER_CONTRACT_OF = (entry: string): string => `${entry}."contractId" IN (
     SELECT "sk"."id"::text FROM "contract" "sk"
     WHERE "sk"."counterpartyId" = ${entry}."counterpartyId" AND "sk"."isCustomerContract" IS TRUE)`;
@@ -14,7 +12,7 @@ const DOCUMENT_JOINS = `JOIN "settlement_document" "sd" ON "sd"."id" = "se"."doc
 const HAS_LISTABLE_ENTRY = (
     entryMatch: string,
 ): string => `(SELECT 1 FROM "settlement_document_entry" "se"
-    ${DOCUMENT_JOINS} WHERE ${entryMatch} AND ${LISTABLE_CATEGORY} LIMIT 1) IS NOT NULL`;
+    ${DOCUMENT_JOINS} WHERE ${entryMatch} AND ${customerVisibleSql('sd', 'st')} LIMIT 1) IS NOT NULL`;
 
 // Outer aliases: "cp" counterparty, "d" document (joined to its entry "e" and type "st").
 export const SUGGEST_CUSTOMER: SuggestSpec = {
@@ -26,5 +24,5 @@ export const SUGGEST_CUSTOMER: SuggestSpec = {
 export const SUGGEST_NUMBER: SuggestSpec = {
     valueSql: '"d"."number"',
     repeats: true,
-    whereSql: `NOT "d"."isDeleted" AND ${LISTABLE_CATEGORY} AND ${CUSTOMER_CONTRACT_OF('"e"')}`,
+    whereSql: `NOT "d"."isDeleted" AND ${customerVisibleSql('d', 'st')} AND ${CUSTOMER_CONTRACT_OF('"e"')}`,
 };

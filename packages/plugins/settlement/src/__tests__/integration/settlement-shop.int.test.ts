@@ -357,7 +357,7 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(cards.find(c => c.currency === 'USD')).toMatchObject({ currentBalance: 2000 });
     });
 
-    it('hides a type that is invisible, missing from the reference, or deleted there', async () => {
+    it('shows a type whatever the reference says: invisible, missing or deleted there', async () => {
         await typeRef('Hidden', 'sale', false);
         await doc('d-hidden', { number: '1', documentType: 'Hidden', entries: [entry()] });
         await doc('d-unknown', { number: '2', documentType: 'NoReference', entries: [entry()] });
@@ -372,7 +372,7 @@ describe('settlement shop queries (real Postgres)', () => {
             customerVisible: true,
             sortOrder: null,
         });
-        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(3);
     });
 
     it('hides supplier and payroll categories even when the reference marks them visible', async () => {
@@ -420,5 +420,83 @@ describe('settlement shop queries (real Postgres)', () => {
         await doc('d-1', { number: '1', entries: [entry()] });
         expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
         expect(await shop.balanceCards(ctx, '1')).toEqual([]);
+    });
+
+    describe('accounting visibility', () => {
+        const numbers = async (): Promise<string[]> =>
+            (await shop.documents(ctx, '1', {}, 0, 50)).items.map(i => i.number).sort();
+
+        it('hides only a document explicitly not posted in accounting', async () => {
+            await doc('d-1', {
+                number: '1',
+                accounting: { reflectedInAccounting: true },
+                entries: [entry()],
+            });
+            await doc('d-2', {
+                number: '2',
+                accounting: { reflectedInAccounting: false },
+                entries: [entry()],
+            });
+            expect(await numbers()).toEqual(['1']);
+        });
+
+        it('ignores the reference visibility but keeps internal categories hidden', async () => {
+            await typeRef('Hidden', 'sale', false);
+            await typeRef('Purchase', 'supplier', true);
+            const posted = { reflectedInAccounting: true };
+            await doc('d-1', {
+                number: '1',
+                documentType: 'Hidden',
+                accounting: posted,
+                entries: [entry()],
+            });
+            await doc('d-2', {
+                number: '2',
+                documentType: 'Purchase',
+                accounting: posted,
+                entries: [entry()],
+            });
+            await doc('d-3', {
+                number: '3',
+                documentType: 'Hidden',
+                accounting: null,
+                entries: [entry()],
+            });
+            await doc('d-4', {
+                number: '4',
+                accounting: { reflectedInTaxAccounting: true },
+                entries: [entry()],
+            });
+            expect(await numbers()).toEqual(['1', '3', '4']);
+        });
+
+        it('keeps a document of an unknown type under other with its own label', async () => {
+            await doc('d-1', {
+                number: '1',
+                documentType: 'NewKind',
+                documentTypeLabel: 'New kind',
+                accounting: { reflectedInAccounting: true },
+                entries: [entry({ amount: -40 })],
+            });
+            await doc('d-2', { number: '2', documentType: 'NewKind', entries: [entry()] });
+            const page = await shop.documents(ctx, '1', { category: 'other' }, 0, 20);
+            expect(
+                page.items.map(i => [i.number, i.category, i.documentTypeLabel, i.amount]).sort(),
+            ).toEqual([
+                ['1', 'other', 'New kind', -4000],
+                ['2', 'other', 'NewKind', 10000],
+            ]);
+        });
+
+        it('leaves the balance independent of document visibility', async () => {
+            await balance('cp-1', 'ct-1', 0, 100);
+            await doc('d-1', {
+                number: '1',
+                accounting: { reflectedInAccounting: false },
+                entries: [entry()],
+            });
+            expect(await numbers()).toEqual([]);
+            expect((await shop.balanceCards(ctx, '1'))[0].currentBalance).toBe(10000);
+        });
     });
 });

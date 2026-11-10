@@ -21,3 +21,10 @@ export const CATEGORY_SQL = `(CASE WHEN t.category IN (${KNOWN_CATEGORIES.map(c 
 
 // Purchases and payroll are not customer-facing whatever the reference's visibility flag says.
 export const INTERNAL_CATEGORIES = ['supplier', 'payroll'] as const;
+
+const INTERNAL_LIST = INTERNAL_CATEGORIES.map(c => `'${c}'`).join(', ');
+
+// Customer rule: hidden only when explicitly not posted in accounting or in an internal category.
+export const customerVisibleSql = (doc: string, type: string): string => `(
+    COALESCE("${type}"."category", 'other') NOT IN (${INTERNAL_LIST})
+    AND COALESCE("${doc}"."accounting"->>'reflectedInAccounting', 'true') <> 'false')`;
