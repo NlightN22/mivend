@@ -258,12 +258,40 @@ describe('createIntegrationInboxBulkTask', () => {
 
 // #147: a separate lane, independent of the three claim lanes above — it only calls
 // purgeSupersededProcessedRows, never processPendingBatch.
+const deleteExpiredTombstones = vi.fn(async () => ({
+    deleted: 0,
+    finished: true,
+    outcome: 'swept' as const,
+}));
+
 describe('createIntegrationInboxRetentionTask', () => {
+    it('reports rows deleted by the expiry pass after the tombstone pass (#343)', async () => {
+        const purgeSupersededProcessedRows = vi
+            .fn()
+            .mockResolvedValue({ tombstoned: 0, finished: true, outcome: 'swept' });
+        const expire = vi
+            .fn()
+            .mockResolvedValueOnce({ deleted: 5000, finished: false, outcome: 'swept' })
+            .mockResolvedValueOnce({ deleted: 12, finished: true, outcome: 'swept' });
+        const task = createIntegrationInboxRetentionTask(makeOptions('central'));
+        const result = await task.options.execute({
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones: expire }),
+            } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(expire).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({ tombstoned: 0, deleted: 5012, slices: 1, outcome: 'swept' });
+    });
+
     it('skips on a branch instance', async () => {
         const purgeSupersededProcessedRows = vi.fn();
         const task = createIntegrationInboxRetentionTask(makeOptions('branch'));
         const result = await task.options.execute({
-            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones }),
+            } as never,
             scheduledContext: {} as never,
             params: {},
         });
@@ -278,12 +306,14 @@ describe('createIntegrationInboxRetentionTask', () => {
             .mockResolvedValueOnce({ tombstoned: 0, finished: true, outcome: 'swept' });
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
         const result = await task.options.execute({
-            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones }),
+            } as never,
             scheduledContext: {} as never,
             params: {},
         });
         expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(2);
-        expect(result).toEqual({ tombstoned: 3, slices: 2, outcome: 'swept' });
+        expect(result).toEqual({ tombstoned: 3, deleted: 0, slices: 2, outcome: 'swept' });
     });
 
     // mirrors createIntegrationInboxBulkTask's own wall-clock-budget test — a resync-sized
@@ -298,13 +328,15 @@ describe('createIntegrationInboxRetentionTask', () => {
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
 
         const result = await task.options.execute({
-            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones }),
+            } as never,
             scheduledContext: {} as never,
             params: {},
         });
 
         expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ tombstoned: 5, slices: 1, outcome: 'swept' });
+        expect(result).toEqual({ tombstoned: 5, deleted: 0, slices: 1, outcome: 'swept' });
     });
 
     it('caps each slice statement timeout to the remaining budget and reports a timeout outcome', async () => {
@@ -317,7 +349,9 @@ describe('createIntegrationInboxRetentionTask', () => {
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
 
         await task.options.execute({
-            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones }),
+            } as never,
             scheduledContext: {} as never,
             params: {},
         });
@@ -332,11 +366,13 @@ describe('createIntegrationInboxRetentionTask', () => {
             .mockReset()
             .mockResolvedValue({ tombstoned: 0, finished: true, outcome: 'timeout' });
         const result = await task.options.execute({
-            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            injector: {
+                get: () => ({ purgeSupersededProcessedRows, deleteExpiredTombstones }),
+            } as never,
             scheduledContext: {} as never,
             params: {},
         });
-        expect(result).toEqual({ tombstoned: 0, slices: 1, outcome: 'timeout' });
+        expect(result).toEqual({ tombstoned: 0, deleted: 0, slices: 1, outcome: 'timeout' });
     });
 });
 

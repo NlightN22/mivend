@@ -365,6 +365,10 @@ export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 50_000;
 // The DB cancels a retention slice itself; the Node task timeout cannot cancel a running query.
 export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 30_000;
+// Tombstoned processed rows older than this are deleted; a redelivery later than this is caught by the
+// version check against the newest processed row, not by dedup (docs/integration-health.md).
+export const INBOX_DEDUP_HORIZON_DAYS = 7;
+export const INBOX_EXPIRY_SLICE_SIZE = 5000;
 // A slice is not started with less budget left than this: it would only be cancelled mid-way.
 export const RETENTION_MIN_SLICE_BUDGET_MS = 2_000;
 // Larger than the critical lane's batch for throughput, but kept small so the SELECT ... FOR UPDATE

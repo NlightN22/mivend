@@ -30,6 +30,7 @@ import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
+import { IntegrationInboxExpiryService } from './integration-inbox-expiry.service';
 import { IntegrationInboxRetentionService } from './integration-inbox-retention.service';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
@@ -155,6 +156,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         IntegrationOutboxProcessorService,
         IntegrationInboxService,
         IntegrationInboxRetentionService,
+        IntegrationInboxExpiryService,
         IntegrationInboxHealthService,
         IntegrationInboxProcessorService,
         KafkaConsumerService,

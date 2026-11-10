@@ -3,6 +3,7 @@ import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
+import { IntegrationInboxExpiryService } from './integration-inbox-expiry.service';
 import {
     IntegrationInboxRetentionService,
     type RetentionSliceResult,
@@ -180,7 +181,7 @@ export function createIntegrationInboxRetentionTask(
     return new ScheduledTask({
         id: 'erp-integration-inbox-retention',
         description:
-            'Tombstones superseded processed inbox rows, keeping only the latest version per (stream, entityId) (central hub only).',
+            'Tombstones superseded processed inbox rows (keeping the latest version per entity) and deletes tombstones past the dedup horizon (central hub only).',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
@@ -202,13 +203,30 @@ export function createIntegrationInboxRetentionTask(
                 outcome = slice.outcome;
                 if (slice.finished) break;
             }
+            let totalDeleted = 0;
+            const expiry = injector.get(IntegrationInboxExpiryService);
+            for (;;) {
+                const remainingMs = INBOX_RETENTION_WALL_CLOCK_BUDGET_MS - (Date.now() - startedAt);
+                if (remainingMs < RETENTION_MIN_SLICE_BUDGET_MS) break;
+                const slice = await expiry.deleteExpiredTombstones(
+                    Math.min(INBOX_RETENTION_STATEMENT_TIMEOUT_MS, remainingMs),
+                );
+                totalDeleted += slice.deleted;
+                if (slice.finished) break;
+            }
+            if (totalDeleted > 0) {
+                Logger.verbose(
+                    `Integration inbox retention sweep: deleted ${totalDeleted} expired tombstoned row(s)`,
+                    loggerCtx,
+                );
+            }
             if (totalTombstoned > 0) {
                 Logger.verbose(
                     `Integration inbox retention sweep: tombstoned ${totalTombstoned} superseded processed row(s)`,
                     loggerCtx,
                 );
             }
-            return { tombstoned: totalTombstoned, slices, outcome };
+            return { tombstoned: totalTombstoned, deleted: totalDeleted, slices, outcome };
         },
     });
 }

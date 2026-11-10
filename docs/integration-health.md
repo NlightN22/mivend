@@ -100,7 +100,14 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   Inbound tab shows its count per stream as a muted badge under Failed, and **Inbox issues** lists it with the
   status filter `dependency missing`. Replay and the issue resolver work only for `failed` rows; a parked row waits for its timer. Only references to other synced entities are parked; config problems and the order streams (plain `MissingDependencyError`) still fail and alert. Upstream counts these as unresolved rows, which reconciliation subtracts.
 - A `failed` row is never retried automatically and is never purged: it stays until someone acts.
-  Only superseded `processed` rows are tombstoned by retention.
+  Only superseded `processed` rows are tombstoned by retention (payload `{}`), and a tombstone older than the dedup
+  horizon (`INBOX_DEDUP_HORIZON_DAYS`, 7) is then deleted by the same task (`IntegrationInboxExpiryService`, #343).
+  The newest processed row per entity is never tombstoned, so it stays as the dedup key and a redelivered older
+  event is enqueued again but ends `superseded` by the version check. Table size stays bounded by
+  entities + 7 days of events.
+- One-time reclaim after the first purge (#343): the file keeps its size until rewritten. In a maintenance window
+  with the workers stopped: `VACUUM FULL integration_inbox_event;` (needs free disk of about the table plus its
+  indexes and locks the table), then watch `pg_total_relation_size('integration_inbox_event')`.
 - Any stream with a `failed` row raises a red alert on the Inbound tab, highlights the stream row, and opens a
   `failed-inbox-rows` issue in the reconciliation list (nightly run, #305); it clears when no failed row remains.
 - Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
