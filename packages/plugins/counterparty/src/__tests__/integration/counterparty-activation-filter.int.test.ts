@@ -37,6 +37,22 @@ class TestCustomer {
     @Column({ type: 'timestamp', nullable: true }) deletedAt!: Date | null;
 }
 
+@Entity('contact_point')
+class TestContactPoint {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) type!: string;
+    @Column({ type: 'varchar', nullable: true }) normalizedValue!: string | null;
+    @Column({ type: 'boolean', default: true }) isUsable!: boolean;
+}
+
+@Entity('counterparty_contact_point')
+class TestCounterpartyContactPoint {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'int' }) contactPointId!: number;
+    @Column({ type: 'uuid' }) counterpartyId!: string;
+    @Column({ type: 'boolean', default: false }) isPrimary!: boolean;
+}
+
 let dataSource: DataSource;
 let service: CounterpartyService;
 const mockCtx = {} as RequestContext;
@@ -54,7 +70,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestCounterparty, TestCustomer],
+        entities: [TestCounterparty, TestCustomer, TestContactPoint, TestCounterpartyContactPoint],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -76,7 +92,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.getRepository(TestCustomer).clear();
+    await dataSource.query(
+        'TRUNCATE counterparty_contact_point, contact_point, customer RESTART IDENTITY',
+    );
     await dataSource.getRepository(TestCounterparty).clear();
 });
 
@@ -123,7 +141,33 @@ async function erpIds(
     return page.items.map(c => c.erpId).sort();
 }
 
+async function addChannel(
+    erpId: string,
+    type: string,
+    usable: boolean,
+    isPrimary = false,
+): Promise<void> {
+    const owner = await dataSource.getRepository(TestCounterparty).findOneByOrFail({ erpId });
+    const point = await dataSource
+        .getRepository(TestContactPoint)
+        .save({ type, normalizedValue: usable ? `${type}-${erpId}` : null, isUsable: usable });
+    await dataSource
+        .getRepository(TestCounterpartyContactPoint)
+        .save({ contactPointId: point.id, counterpartyId: owner.id, isPrimary });
+}
+
 describe('counterparty list filter for portal activation', () => {
+    it('readiness reads the contact channels, the legacy columns only when no channel exists', async () => {
+        await seed();
+        // missing-phone gets usable channels of both types: ready now.
+        await addChannel('missing-phone', 'phone', true);
+        await addChannel('missing-phone', 'email', true);
+        // ready-a has a phone channel that is unusable: the legacy phone no longer counts.
+        await addChannel('ready-a', 'phone', false);
+        expect(await erpIds({ readiness: 'ready' })).toEqual(['missing-phone', 'ready-none']);
+        expect(await erpIds({ readiness: 'missing-data' })).toEqual(['ready-a']);
+    });
+
     it('branchId narrows to the branch', async () => {
         await seed();
         expect(await erpIds({ branchId: 'branch-a' })).toEqual(['inactive', 'ready-a']);

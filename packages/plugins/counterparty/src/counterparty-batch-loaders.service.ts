@@ -4,6 +4,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CtxLoader, ctxQuery } from 'shared';
 import { In } from 'typeorm';
 
+import { ContactPointService, type ChosenContact } from './contact-point.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
@@ -17,10 +18,20 @@ export class CounterpartyBatchLoaders {
         this.loadByCustomer(ctx, keys),
     );
 
+    private chosen = new CtxLoader<ChosenContact>(async (ctx, keys) => {
+        const found = await this.contactPoints.chosenContacts(ctx, keys);
+        return keys.map(key => found.get(key) ?? { email: null, phone: null });
+    });
+
     constructor(
         private connection: TransactionalConnection,
         private accessScopeService: AccessScopeService,
+        private contactPoints: ContactPointService,
     ) {}
+
+    chosenContact(ctx: RequestContext, counterpartyId: string | number): Promise<ChosenContact> {
+        return this.chosen.load(ctx, counterpartyId);
+    }
 
     isHidden(ctx: RequestContext, counterpartyId: string | number): Promise<boolean> {
         return this.hidden.load(ctx, counterpartyId);

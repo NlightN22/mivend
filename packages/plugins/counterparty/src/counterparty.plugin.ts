@@ -45,6 +45,7 @@ import {
     CounterpartyResolver,
     CounterpartyCreditResolver,
     CounterpartyPriceTypeResolver,
+    CounterpartyChosenContactResolver,
     CounterpartyCustomerLinkResolver,
 } from './counterparty.resolver';
 import {
@@ -118,6 +119,7 @@ const adminResolvers = [
     TradingPointResolver,
     CounterpartyResolver,
     CounterpartyCreditResolver,
+    CounterpartyChosenContactResolver,
     CounterpartyCustomerLinkResolver,
     TradingPointAdminResolver,
     TradingPointChangeAdminResolver,

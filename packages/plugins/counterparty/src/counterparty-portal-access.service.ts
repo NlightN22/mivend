@@ -14,6 +14,7 @@ import { Counterparty } from './entities/counterparty.entity';
 import { loggerCtx } from './types';
 import { ctxQuery, withAggregateLock } from 'shared';
 import { withInnBindingGuard } from './counterparty-inn-guard';
+import { ContactPointService } from './contact-point.service';
 import { PortalAccessPreconditionError } from './portal-access-precondition';
 
 export { PortalAccessPreconditionError };
@@ -32,14 +33,14 @@ export interface PortalAccessChangeResult {
     customerId: ID | null;
 }
 
-// phone/officialEmail are sourced from the ERP (CounterpartyChanged), never entered here.
-// Read-only here: they only gate activation, and nothing in this code writes them.
+// The e-mail and phone come from the contact storage (legacy columns only as fallback), never entered here.
 @Injectable()
 export class CounterpartyPortalAccessService {
     constructor(
         private connection: TransactionalConnection,
         private customerService: CustomerService,
         private accessScopeService: AccessScopeService,
+        private contactPoints: ContactPointService,
     ) {}
 
     async findPortalUsers(ctx: RequestContext, counterpartyId: ID): Promise<Customer[]> {
@@ -190,10 +191,13 @@ export class CounterpartyPortalAccessService {
                 `Counterparty ${counterparty.id} is inactive in the ERP — portal access cannot be activated`,
             );
         }
-        if (!counterparty.phone || !counterparty.officialEmail) {
+        const chosen = (await this.contactPoints.chosenContacts(ctx, [counterparty.id])).get(
+            String(counterparty.id),
+        );
+        if (!chosen?.phone || !chosen.email) {
             throw new PortalAccessPreconditionError(
                 'no_contact',
-                `Counterparty ${counterparty.id} is missing phone and/or officialEmail — both are required before portal access can be activated`,
+                `Counterparty ${counterparty.id} is missing a usable phone and/or e-mail — both are required before portal access can be activated`,
             );
         }
         const existingCustomerId = await this.getLinkedCustomerId(ctx, counterparty.id);
@@ -203,7 +207,7 @@ export class CounterpartyPortalAccessService {
                 `Counterparty ${counterparty.id} already has a linked portal Customer (id=${existingCustomerId})`,
             );
         }
-        return { email: counterparty.officialEmail, phone: counterparty.phone };
+        return { email: chosen.email, phone: chosen.phone };
     }
 
     private async createLinkedCustomer(

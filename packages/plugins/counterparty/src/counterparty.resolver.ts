@@ -103,6 +103,28 @@ export class CounterpartyCustomerLinkResolver {
     }
 }
 
+// phone and officialEmail show the chosen contact channels; the legacy columns are only a fallback.
+@Resolver('Counterparty')
+export class CounterpartyChosenContactResolver {
+    constructor(private loaders: CounterpartyBatchLoaders) {}
+
+    @ResolveField()
+    async phone(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string | null> {
+        return (await this.loaders.chosenContact(ctx, counterparty.id)).phone;
+    }
+
+    @ResolveField()
+    async officialEmail(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string | null> {
+        return (await this.loaders.chosenContact(ctx, counterparty.id)).email;
+    }
+}
+
 @Resolver('Counterparty')
 export class CounterpartyResolver {
     constructor(

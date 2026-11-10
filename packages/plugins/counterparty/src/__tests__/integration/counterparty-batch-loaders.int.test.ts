@@ -126,7 +126,7 @@ beforeAll(async () => {
         } as unknown as RoleScopeConfigService,
         { activeManagerIds: async () => [] } as unknown as VisibilityGrantReader,
     );
-    loaders = new CounterpartyBatchLoaders(connection, accessScope);
+    loaders = new CounterpartyBatchLoaders(connection, accessScope, {} as never);
     counterparties = new CounterpartyService(
         connection,
         {} as never,

@@ -20,6 +20,12 @@ const portalAccess = {
     activate: vi.fn(),
     revoke: vi.fn(),
 };
+const chosen = { email: 'a@example.test' as string | null, phone: '+1' as string | null };
+const contactPoints = {
+    chosenContacts: vi.fn(
+        async (_ctx: unknown, ids: readonly string[]) => new Map([[ids[0], chosen]]),
+    ),
+};
 const ctx = {} as never;
 
 const executor = new CounterpartyPortalAccessExecutor(
@@ -28,10 +34,13 @@ const executor = new CounterpartyPortalAccessExecutor(
     accessScope as never,
     portalAccess as never,
     {} as never,
+    contactPoints as never,
 );
 
 beforeEach(() => {
     vi.clearAllMocks();
+    chosen.email = 'a@example.test';
+    chosen.phone = '+1';
     repo.findOne.mockResolvedValue(counterparty);
     repo.query.mockResolvedValue([]);
     accessScope.assertCounterpartyWritable.mockResolvedValue(undefined);
@@ -70,8 +79,9 @@ describe('CounterpartyPortalAccessExecutor', () => {
     it.each([
         ['no row', null, 'not_found'],
         ['inactive', { ...counterparty, isActive: false }, 'inactive'],
-        ['no e-mail', { ...counterparty, officialEmail: null }, 'no_contact'],
-    ])('review skips a grant for %s', async (_name, row, code) => {
+        ['no e-mail', counterparty, 'no_contact'],
+    ])('review skips a grant for %s', async (name, row, code) => {
+        if (name === 'no e-mail') chosen.email = null;
         repo.findOne.mockResolvedValue(row);
         const verdict = await executor.inspect(ctx, '5', { action: 'activate' });
         expect(verdict).toMatchObject({ outcome: 'skipped', reasonCode: code });

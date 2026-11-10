@@ -1,11 +1,13 @@
 import { UserInputError } from '@vendure/core';
 
+import { hasChosenChannelSql } from './counterparty-chosen-contact.sql';
+
 export const PORTAL_READINESS = ['ready', 'missing-data', 'erp-inactive', 'activated'] as const;
 export type PortalReadiness = (typeof PORTAL_READINESS)[number];
 
 const LINKED = `EXISTS (SELECT 1 FROM customer cu
     WHERE cu."customFieldsCounterpartyid"::text = c.id::text AND cu."deletedAt" IS NULL)`;
-const HAS_CONTACTS = `coalesce(c.phone, '') <> '' AND coalesce(c."officialEmail", '') <> ''`;
+const HAS_CONTACTS = `${hasChosenChannelSql('phone')} AND ${hasChosenChannelSql('email')}`;
 
 // Same precedence as the manager portal's activationReadiness: activated, ERP inactive, missing data.
 export function portalReadinessSql(readiness: string): string {

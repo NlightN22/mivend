@@ -33,6 +33,16 @@ const mockAccessScopeService = {
     assertCounterpartyWritable: vi.fn(async () => undefined),
 } as unknown as AccessScopeService;
 
+const chosen: { email: string | null; phone: string | null } = { email: null, phone: null };
+const mockContactPoints = {
+    chosenContacts: vi.fn(async (_ctx: unknown, ids: readonly string[]) => {
+        const missingData = ids.includes('cp-missing-data');
+        return new Map(
+            ids.map(id => [String(id), missingData ? { ...chosen, phone: null } : chosen]),
+        );
+    }),
+};
+
 const mockCtx = {} as RequestContext;
 
 function counterparty(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -57,10 +67,13 @@ describe('CounterpartyPortalAccessService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         rawQuery.mockResolvedValue([]);
+        chosen.email = 'office@example.ru';
+        chosen.phone = '+7 391 000-00-00';
         service = new CounterpartyPortalAccessService(
             mockConnection as never,
             mockCustomerService as never,
             mockAccessScopeService,
+            mockContactPoints as never,
         );
     });
 
@@ -90,7 +103,8 @@ describe('CounterpartyPortalAccessService', () => {
         });
 
         it('rejects when phone or officialEmail is missing', async () => {
-            mockCounterpartyRepo.findOne.mockResolvedValue(counterparty({ officialEmail: null }));
+            chosen.email = null;
+            mockCounterpartyRepo.findOne.mockResolvedValue(counterparty());
 
             await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(UserInputError);
             expect(mockCustomerService.create).not.toHaveBeenCalled();

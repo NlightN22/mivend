@@ -17,6 +17,12 @@ import { TradingPointContactPoint } from './entities/trading-point-contact-point
 import { resolveContactPoints } from './contact-point-normalize';
 import type { ContactPointInput, ResolvedContactPoint } from './contact-point-normalize';
 import { planContactPointReplace } from './contact-point-replace-plan';
+import { chosenChannelValueSql } from './counterparty-chosen-contact.sql';
+
+export interface ChosenContact {
+    email: string | null;
+    phone: string | null;
+}
 
 type ErpOwnerKind = 'counterparty' | 'tradingPoint' | 'organization' | 'administrator';
 export type ContactOwnerKind =
@@ -100,6 +106,22 @@ export class ContactPointService {
             Logger.warn(`${label}: contact step failed: ${message}`, 'ContactPointService');
             return `contact step failed: ${message}`;
         }
+    }
+
+    // The e-mail and phone that activation and readiness use, keyed by counterparty id.
+    async chosenContacts(
+        ctx: RequestContext,
+        counterpartyIds: readonly (number | string)[],
+    ): Promise<Map<string, ChosenContact>> {
+        const rows: Array<{ id: number } & ChosenContact> = await this.connection
+            .getRepository(ctx, Counterparty)
+            .query(
+                `SELECT c.id, ${chosenChannelValueSql('email')} AS email,
+                        ${chosenChannelValueSql('phone')} AS phone
+                 FROM counterparty c WHERE c.id = ANY($1::int[])`,
+                [counterpartyIds.map(Number)],
+            );
+        return new Map(rows.map(r => [String(r.id), { email: r.email, phone: r.phone }]));
     }
 
     // Replaces the ERP-sourced channels of one owner as a set; manual channels are never touched.

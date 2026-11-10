@@ -17,6 +17,7 @@ import {
 import { Counterparty } from './entities/counterparty.entity';
 import { findLinkedInnDuplicate, normalizeInn } from './counterparty-inn-guard';
 import { parseCounterpartyMatching, resolveCounterpartyIds } from './counterparty-bulk-matching';
+import { ContactPointService } from './contact-point.service';
 import { CounterpartyService } from './counterparty.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import {
@@ -57,6 +58,7 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         private accessScope: AccessScopeService,
         private portalAccess: CounterpartyPortalAccessService,
         private counterparties: CounterpartyService,
+        private contactPoints: ContactPointService,
     ) {}
 
     onModuleInit(): void {
@@ -110,7 +112,10 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         }
         // Same order as the service's checks, so the review and the run give the same reason.
         if (!counterparty.isActive) return skip('inactive', 'Inactive in the ERP', label);
-        if (!counterparty.phone || !counterparty.officialEmail) {
+        const chosen = (await this.contactPoints.chosenContacts(ctx, [counterparty.id])).get(
+            String(counterparty.id),
+        );
+        if (!chosen?.phone || !chosen.email) {
             return skip('no_contact', 'Phone or e-mail is missing', label);
         }
         if (linked) return skip('already_active', 'Portal access already granted', label);

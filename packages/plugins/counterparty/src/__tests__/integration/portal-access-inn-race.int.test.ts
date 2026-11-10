@@ -85,6 +85,12 @@ beforeAll(async () => {
         {
             assertCounterpartyWritable: async () => undefined,
         } as never,
+        {
+            chosenContacts: async (_c: unknown, ids: string[]) =>
+                new Map(
+                    ids.map(id => [id, { email: rows[id].officialEmail, phone: rows[id].phone }]),
+                ),
+        } as never,
     );
 });
 

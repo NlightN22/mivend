@@ -62,6 +62,15 @@ beforeAll(async () => {
         {
             assertCounterpartyWritable: async () => undefined,
         } as never,
+        {
+            chosenContacts: async () =>
+                new Map([
+                    [
+                        counterparty.id,
+                        { email: counterparty.officialEmail, phone: counterparty.phone },
+                    ],
+                ]),
+        } as never,
     );
 });
 
