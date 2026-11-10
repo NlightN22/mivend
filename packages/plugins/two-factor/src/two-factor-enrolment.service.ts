@@ -15,6 +15,7 @@ import {
     twoFactorError,
 } from './two-factor.types';
 import type {
+    TwoFactorApi,
     TwoFactorEnrolmentResult,
     TwoFactorErrorResult,
     TwoFactorPluginOptions,
@@ -89,6 +90,8 @@ export class TwoFactorEnrolmentService {
         userId: string,
     ): Promise<TwoFactorEnrolmentResult> {
         const user = await this.requireUser(ctx, userId);
+        const issuer =
+            this.options.issuerByApi?.[ctx.apiType as TwoFactorApi] ?? this.options.issuer;
         const method = this.methods.get(METHOD);
         const secret = method.createSecret();
         const uuid = this.factors.newUuid();
@@ -101,7 +104,7 @@ export class TwoFactorEnrolmentService {
         });
         return {
             __typename: 'TwoFactorEnrolment',
-            otpauthUri: method.enrolmentUri(secret, user.identifier, this.options.issuer),
+            otpauthUri: method.enrolmentUri(secret, user.identifier, issuer),
             secret,
             expiresAt,
         };

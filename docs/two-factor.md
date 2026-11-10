@@ -139,7 +139,7 @@ The second step itself is core's `authenticate` mutation. Its error is `InvalidC
 
 1. Sign in as above; the challenge has `stage: ENROL`.
 2. `startTwoFactorEnrolment(challenge: <challenge>)` returns `{ otpauthUri, secret, expiresAt }`. Show the QR code of
-   `otpauthUri`, the `secret` as the manual key, and links to a few well-known authenticator apps for Android and iOS
+   `otpauthUri` (its issuer label is the portal's domain, from `STOREFRONT_PUBLIC_URL` for the shop API and `MANAGER_PUBLIC_URL` for the admin API, so the two entries differ in the app; `SITE_NAME` when the URL is unset), the `secret` as the manual key, and links to a few well-known authenticator apps for Android and iOS
    (one data file in the frontend). Calling it again replaces the pending secret; there is one pending secret per account
    and it expires after 10 minutes. The secret is returned only here; it is never readable afterwards.
 3. `authenticate(input: { twoFactor: { challenge, code } })` with the code from the app. A valid code activates the

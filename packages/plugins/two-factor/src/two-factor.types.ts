@@ -15,6 +15,7 @@ export interface TwoFactorPluginOptions {
     required: boolean;
     encryptionKey: Buffer;
     issuer: string;
+    issuerByApi?: Partial<Record<TwoFactorApi, string>>;
     challengeTtlMs?: number;
     pendingTtlMs?: number;
     recoveryTtlMs?: number;

@@ -12,5 +12,19 @@ export function twoFactorOptionsFromEnv(env: Env, cookieSecret: string): TwoFact
         required: flag === 'true',
         encryptionKey: resolveEncryptionKey(env, cookieSecret),
         issuer: siteName(env),
+        issuerByApi: {
+            shop: hostOf(env.STOREFRONT_PUBLIC_URL),
+            admin: hostOf(env.MANAGER_PUBLIC_URL),
+        },
     };
+}
+
+// The authenticator entry is named by the portal's domain, so the shop and manager entries cannot be mixed up.
+function hostOf(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    try {
+        return new URL(url).hostname || undefined;
+    } catch {
+        return undefined;
+    }
 }
