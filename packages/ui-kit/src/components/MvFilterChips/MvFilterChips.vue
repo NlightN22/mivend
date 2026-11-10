@@ -38,7 +38,9 @@ function measure(): void {
 }
 function revealActive(): void {
     const chip = row.value?.querySelector<HTMLElement>('[data-active="true"]');
-    if (chip && chip.offsetTop + chip.offsetHeight > clampPx() + 1) expanded.value = true;
+    if (!chip || !row.value) return;
+    const bottom = chip.getBoundingClientRect().bottom - row.value.getBoundingClientRect().top;
+    if (bottom > clampPx() + 1) expanded.value = true;
 }
 let observer: ResizeObserver | undefined;
 onMounted(() => {
