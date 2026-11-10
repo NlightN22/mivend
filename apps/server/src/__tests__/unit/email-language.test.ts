@@ -313,6 +313,12 @@ describe('mail tables', () => {
     });
 });
 
+describe('mail logo', () => {
+    it('is an empty variable, which hides the image, when the storefront public URL is unset', () => {
+        expect(emailGlobalTemplateVars('a@example.org', '', {}).logoUrl).toBe('');
+    });
+});
+
 describe('registered mail types', () => {
     const registered = createEmailHandlers(
         { staff: '', customer: '' },
