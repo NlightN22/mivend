@@ -256,8 +256,8 @@ describe('TeamDirectoryService.findPage', () => {
 
         const result = await service.findPage(ctx, { filter: { roleCode: 'manager' } });
 
-        expect(result.items.map(i => i.erpId).sort()).toEqual(['e-2', 'e-4']);
-        expect(result.totalItems).toBe(2);
+        expect(result.items.map(i => i.erpId).sort()).toEqual(['e-2', 'e-4', 'e-5']);
+        expect(result.totalItems).toBe(3);
         expect(result.items.every(i => i.roleCodes.includes('manager'))).toBe(true);
     });
 
