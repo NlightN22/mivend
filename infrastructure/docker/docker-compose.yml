@@ -263,6 +263,38 @@ services:
             POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
             # Issue #140: the locale is fixed at initdb time and has no default, see docs/environments.md.
             POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
+        # Docker's default /dev/shm is 64 MB; parallel queries allocate dynamic shared memory there.
+        shm_size: ${POSTGRES_SHM_SIZE:-1g}
+        command:
+            - postgres
+            - -c
+            - shared_buffers=${POSTGRES_SHARED_BUFFERS:-512MB}
+            - -c
+            - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-1536MB}
+            - -c
+            - work_mem=${POSTGRES_WORK_MEM:-8MB}
+            - -c
+            - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-128MB}
+            - -c
+            - max_wal_size=${POSTGRES_MAX_WAL_SIZE:-2GB}
+            - -c
+            - wal_buffers=16MB
+            - -c
+            - checkpoint_completion_target=0.9
+            - -c
+            - random_page_cost=1.1
+            - -c
+            - effective_io_concurrency=200
+            - -c
+            - track_io_timing=on
+            - -c
+            - log_min_duration_statement=1000
+            - -c
+            - jit_above_cost=1000000
+            - -c
+            - jit_inline_above_cost=5000000
+            - -c
+            - jit_optimize_above_cost=5000000
         volumes:
             - postgres-data:/var/lib/postgresql/data
         healthcheck:
