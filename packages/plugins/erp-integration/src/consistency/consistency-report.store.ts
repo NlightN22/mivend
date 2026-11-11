@@ -104,6 +104,7 @@ export class ConsistencyReportStore {
     }
 
     async getState(ctx: RequestContext, source: string): Promise<StoredSourceState | null> {
+        // unbounded-ok: one state row per consistency source
         const rows = await ctxQuery<
             Array<{
                 health: ConsistencyHealth;

@@ -55,6 +55,7 @@ export class SettlementDocumentTypeService {
     // The distinct types are walked through the documentType index, so the cost does not grow with the table.
     async listAll(ctx: RequestContext): Promise<SettlementDocumentTypeInfo[]> {
         const rows: Array<{ documentType: string; label: string; category: string | null }> =
+            // unbounded-ok: one row per document type from a loose index scan
             await this.connection.getRepository(ctx, SettlementDocumentType).query(`
                 WITH RECURSIVE seen("documentType") AS (
                     (SELECT "documentType" FROM "settlement_document" WHERE NOT "isDeleted"

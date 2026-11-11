@@ -49,6 +49,7 @@ export class CounterpartyPortalAccessService {
 
         // Raw SQL: the link lives in a JSONB custom-field column, not a TypeORM-mapped relation.
         // QueryBuilder dot-path filters can't traverse it.
+        // unbounded-ok: portal customers of one counterparty, a handful of logins
         const rows = await ctxQuery<Array<{ id: ID }>>(
             this.connection,
             ctx,
@@ -252,6 +253,7 @@ export class CounterpartyPortalAccessService {
     }
 
     private async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
+        // unbounded-ok: portal customers of one counterparty, only the first is used
         const result = await ctxQuery<Array<{ id: ID }>>(
             this.connection,
             ctx,

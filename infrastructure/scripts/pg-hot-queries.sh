@@ -6,10 +6,10 @@ set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ -z "${PSQL:-}" ]; then
-    set -a
-    . "$here/../docker/.env.production"
-    set +a
-    PSQL="docker compose --env-file $here/../docker/.env.production -f $here/../docker/docker-compose.yml exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB"
+    env_file="$here/../docker/.env.production"
+    POSTGRES_USER="$(grep -m1 '^POSTGRES_USER=' "$env_file" | cut -d= -f2-)"
+    POSTGRES_DB="$(grep -m1 '^POSTGRES_DB=' "$env_file" | cut -d= -f2-)"
+    PSQL="docker compose --env-file $env_file -f $here/../docker/docker-compose.yml exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB"
 fi
 
 # shellcheck disable=SC2086

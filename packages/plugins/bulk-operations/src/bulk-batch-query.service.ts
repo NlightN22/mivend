@@ -136,6 +136,7 @@ export class BulkBatchQueryService {
     }
 
     private async allTargets(ctx: RequestContext, batchId: number): Promise<string[]> {
+        // unbounded-ok: items of one batch, a batch holds at most MAX_SELECTION (2000) targets
         const rows = await ctxQuery<Array<{ targetId: string }>>(
             this.connection,
             ctx,
@@ -151,6 +152,7 @@ export class BulkBatchQueryService {
         rows: Array<BulkBatchRow & Extras>,
     ): Promise<ScopedBatch[]> {
         if (rows.length === 0) return [];
+        // unbounded-ok: items of the listed batches, each at most MAX_SELECTION (2000) targets and a page of batches
         const items = await ctxQuery<
             Array<{ batchId: number; targetId: string; outcome: string | null }>
         >(

@@ -48,6 +48,7 @@ export class OidcIdentityService {
         ctx: RequestContext,
         sub: string,
     ): Promise<(AdminRow & { active: boolean }) | null> {
+        // unbounded-ok: one external identity per strategy and subject, only the first is used
         const rows = await ctxQuery<Array<AdminRow & { active: boolean }>>(
             this.connection,
             ctx,

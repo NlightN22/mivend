@@ -12,6 +12,10 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
     rule,
     {
         valid: [
+            'await ctxQuery(conn, ctx, "SELECT COALESCE(MAX(v), 0) + 1 AS v FROM t WHERE a = $1");',
+            'await ctxQuery(conn, ctx, `SELECT id FROM t ${clause} ORDER BY id LIMIT $${n + 1} OFFSET $${n + 2}`);',
+            'await ctxQuery(conn, ctx, "SELECT id FROM product p WHERE p.\\"customFieldsExternalid\\" = $1", [x]);',
+            'await ctxQuery(conn, ctx, "SELECT id FROM product WHERE id = ANY($1::int[])", [ids]);',
             'await ctxQuery(conn, ctx, "SELECT id FROM t ORDER BY id LIMIT 10");',
             'await ctxQuery(conn, ctx, "SELECT id FROM t LIMIT $1;", [n]);',
             'await ctxQuery(conn, ctx, `SELECT id FROM t LIMIT ${n}`);',

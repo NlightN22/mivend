@@ -28,6 +28,7 @@ async function newestProcessedVersions(
     stream: InboundStream,
     entityIds: string[],
 ): Promise<Map<string, string>> {
+    // unbounded-ok: processed versions of the entity ids of one inbox batch
     const rows = await ctxQuery<Array<{ entity_id: string; version: string }>>(
         connection,
         ctx,

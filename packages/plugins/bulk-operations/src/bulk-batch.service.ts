@@ -160,6 +160,7 @@ export class BulkBatchService {
         executor: BulkExecutor,
         batchId: number,
     ): Promise<string[]> {
+        // unbounded-ok: applied items of one batch, at most MAX_SELECTION (2000) targets
         const rows = await ctxQuery<Array<{ targetId: string }>>(
             this.connection,
             ctx,

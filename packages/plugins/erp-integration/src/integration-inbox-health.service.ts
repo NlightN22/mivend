@@ -84,6 +84,7 @@ export class IntegrationInboxHealthService {
 
     // Processed rows whose handler recorded a no-op in the last 24 h, per stream (#200).
     async getNoopSummaryByStream(ctx: RequestContext): Promise<IntegrationInboxNoopByStream[]> {
+        // unbounded-ok: grouped by stream, one row per stream
         return ctxQuery<IntegrationInboxNoopByStream[]>(
             this.connection,
             ctx,
@@ -102,6 +103,7 @@ export class IntegrationInboxHealthService {
     async getContactFailureSummaryByStream(
         ctx: RequestContext,
     ): Promise<IntegrationInboxNoopByStream[]> {
+        // unbounded-ok: grouped by stream, one row per stream
         return ctxQuery<IntegrationInboxNoopByStream[]>(
             this.connection,
             ctx,

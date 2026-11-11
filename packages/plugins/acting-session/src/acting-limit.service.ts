@@ -31,6 +31,7 @@ export class ActingLimitService {
     async enforceManagerCap(ctx: RequestContext, administratorId: string): Promise<number> {
         await this.liveness.endDeadSessionsOfAdministrator(ctx, this.ttl(), administratorId);
         const now = new Date();
+        // unbounded-ok: open acting tickets and sessions of one administrator
         const open = await ctxQuery<OpenItem[]>(
             this.connection,
             ctx,
@@ -53,6 +54,7 @@ export class ActingLimitService {
 
     async enforceCustomerCap(ctx: RequestContext, userId: string): Promise<number> {
         await this.liveness.endDeadSessionsOfUser(ctx, this.ttl(), userId);
+        // unbounded-ok: sessions of one customer user beyond the per-customer cap
         const rows = await ctxQuery<Array<{ token: string }>>(
             this.connection,
             ctx,

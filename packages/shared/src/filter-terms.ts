@@ -44,6 +44,7 @@ export async function loadFilterTerms(
 ): Promise<Map<number, FilterTerm[]>> {
     const byOwner = new Map<number, FilterTerm[]>();
     if (ownerIds.length === 0) return byOwner;
+    // unbounded-ok: filter terms of the owner ids passed in
     const rows = await ctxQuery<Array<FilterTerm & { ownerId: number }>>(
         connection,
         ctx,

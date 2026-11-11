@@ -112,6 +112,7 @@ export class OutboundGateway {
     // Statuses of the order's confirmed events that still count: published ones were sent, pending
     // and failed ones never reached the broker.
     async confirmedStatusesForOrder(ctx: RequestContext, orderId: string): Promise<string[]> {
+        // unbounded-ok: DISTINCT outbox status of one order, at most three rows
         const rows = await ctxQuery<Array<{ status: string }>>(
             this.connection,
             ctx,

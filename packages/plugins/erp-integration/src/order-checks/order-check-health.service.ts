@@ -19,6 +19,7 @@ export class OrderCheckHealthService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async getHealth(ctx: RequestContext): Promise<OrderCheckHealthRow[]> {
+        // unbounded-ok: grouped by check code and reason, tens of rows
         const rows = await ctxQuery<OrderCheckHealthRow[]>(
             this.connection,
             ctx,
@@ -40,6 +41,7 @@ export class OrderCheckHealthService {
 
     // Orders whose check run errored recently and was skipped (fail-open): "a check did not run".
     private getRunFailures(ctx: RequestContext): Promise<OrderCheckHealthRow[]> {
+        // unbounded-ok: grouped by stage, a handful of rows
         return ctxQuery<OrderCheckHealthRow[]>(
             this.connection,
             ctx,

@@ -61,6 +61,7 @@ export class PaymentCardLoader {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<CardRefund[][]> {
+        // unbounded-ok: capped per payment by the window rn <= $2
         const rows = await ctxQuery<
             Array<Omit<CardRefund, 'id'> & { id: number; paymentId: number }>
         >(

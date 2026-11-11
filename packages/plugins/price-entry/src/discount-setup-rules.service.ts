@@ -123,6 +123,7 @@ export class DiscountSetupRulesService {
         priceTypeCode: string | null,
         now: Date,
     ): Promise<LoadedDiscountSetup[]> {
+        // unbounded-ok: TRACKED #350 active discount setups on the pricing path are filtered, not bounded
         const rows = await ctxQuery<SetupRow[]>(
             this.connection,
             ctx,
@@ -154,6 +155,7 @@ export class DiscountSetupRulesService {
         const members = new Map<number, Set<string>>();
         const percents = new Map<number, Map<string, number>>();
         if (listRules.length === 0 || productErpIds.length === 0) return { members, percents };
+        // unbounded-ok: setup members for the setup and product lists passed in
         const rows = await ctxQuery<
             Array<{ setupId: number; productErpId: string; percent: number | null }>
         >(

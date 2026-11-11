@@ -134,6 +134,7 @@ export class DepartmentBranchMappingService {
         table: 'erp_user' | 'counterparty',
         column: 'departmentId',
     ): Promise<Map<string, number>> {
+        // unbounded-ok: grouped by department, one row per department
         const rows = await ctxQuery<Array<{ department: string; total: string }>>(
             this.connection,
             ctx,

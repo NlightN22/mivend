@@ -130,6 +130,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         ctx: RequestContext,
         requestEntityId: string,
     ): Promise<string | null> {
+        // unbounded-ok: outbox row selected by its unique event id
         const [row] = await ctxQuery<Array<{ orderId: string | null }>>(
             this.connection,
             ctx,

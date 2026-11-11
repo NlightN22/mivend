@@ -51,6 +51,7 @@ export class ConsistencyReportService {
         const states = await this.connection
             .getRepository(ctx, ConsistencySourceState)
             .find({ order: { source: 'ASC' } });
+        // unbounded-ok: grouped by source, type and severity, tens of rows
         const counts = await ctxQuery<
             Array<{ source: string; type: string; severity: string; n: number }>
         >(

@@ -32,6 +32,7 @@ export class RejectedOrderReleaseService {
 
     async releaseDue(): Promise<number> {
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        // unbounded-ok: order status dictionary codes, tens of rows
         const rejectedCodes = (
             await ctxQuery<Array<{ code: string }>>(
                 this.connection,

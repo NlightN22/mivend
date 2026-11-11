@@ -47,7 +47,7 @@ export async function findUndoOf(
     const rows = await ctxQuery<BulkBatchRow[]>(
         db,
         ctx,
-        `SELECT ${BATCH_COLUMNS} FROM bulk_batch b WHERE b."undoOfBatchId" = $1 AND b.status <> 'draft'`,
+        `SELECT ${BATCH_COLUMNS} FROM bulk_batch b WHERE b."undoOfBatchId" = $1 AND b.status <> 'draft' LIMIT 1`,
         [batchId],
     );
     return rows[0] ?? null;
@@ -63,7 +63,7 @@ export async function findDraftByHash(
         db,
         ctx,
         `SELECT ${BATCH_COLUMNS} FROM bulk_batch b
-         WHERE b."createdById" = $1 AND b."selectionHash" = $2 AND b.status = 'draft'`,
+         WHERE b."createdById" = $1 AND b."selectionHash" = $2 AND b.status = 'draft' LIMIT 1`,
         [createdById, selectionHash],
     );
     return rows[0] ?? null;

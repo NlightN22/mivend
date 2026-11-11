@@ -27,6 +27,7 @@ export class HiddenCategoryOrderProcess implements OrderProcess<OrderState> {
             fromState === 'ArrangingPayment' &&
             (toState === 'PaymentAuthorized' || toState === 'PaymentSettled');
         if (ctx.apiType !== 'shop' || (!placement && !payment)) return undefined;
+        // unbounded-ok: distinct products of the lines of one order
         const rows = await ctxQuery<Array<{ productId: number }>>(
             this.connection,
             ctx,

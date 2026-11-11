@@ -40,6 +40,7 @@ export class HiddenCategoryProductsService {
     }
 
     private async readHiddenCategoryErpIds(ctx: RequestContext): Promise<string[]> {
+        // unbounded-ok: private categories only, a few category nodes
         const rows = await ctxQuery<HiddenCategoryRow[]>(
             this.connection,
             ctx,

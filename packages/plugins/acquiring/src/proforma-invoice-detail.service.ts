@@ -38,6 +38,7 @@ export class ProformaInvoiceDetailService {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<PaymentAttempt[][]> {
+        // unbounded-ok: capped per proforma invoice by the window rn <= $2
         const rows = await ctxQuery<Array<{ id: number }>>(
             this.connection,
             ctx,

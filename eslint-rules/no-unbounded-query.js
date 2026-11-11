@@ -22,6 +22,8 @@ const QB_HINTS = new Set([
     'innerJoinAndSelect',
     'orderBy',
 ]);
+const UNIQUE_SQL_KEY =
+    /\bwhere\s+(?:\w+\.)?"?(?:id|erpId|uuid|externalId|customFieldsExternalid|customFieldsWarehouseerpid|customFieldsSourceorderid|customFieldsSourceadministratorid|token)"?(?:::text)?\s*=\s*(?:\$\d|any\s*\(\s*\$\d)/i;
 const REPO_NAME = /repo|repository|manager|connection|\bem\b/i;
 const PLACEHOLDERS =
     /^(todo|fixme|tbd|ok|n\/a|na|none|because|fine|needed|required|legacy|temp|wip|skip|ignore|\.+|-+)$/i;
@@ -119,7 +121,7 @@ export default {
             if (!arg) return '';
             if (arg.type === 'Literal' && typeof arg.value === 'string') return arg.value;
             if (arg.type === 'TemplateLiteral')
-                return arg.quasis.map(q => q.value.cooked).join(' __x__ ');
+                return arg.quasis.map(q => q.value.cooked).join('__x__');
             if (arg.type !== 'Identifier') return '';
             let scope = sourceCode.getScope(arg);
             while (scope) {
@@ -148,10 +150,13 @@ export default {
             )
                 return;
             if (/[\w)"']\s+__x__$/i.test(tail)) return;
-            if (/\b(insert\s+into|update\s+\S+\s+set|delete\s+from)\b/i.test(text)) return;
-            if (!/\bfrom\b/i.test(text) || /\bwhere\s+"?id"?\s*=\s*\$\d/i.test(text)) return;
+            if (/\b(insert\s+into|update\s+\S+(\s+\S+)?\s+set|delete\s+from)\b/i.test(text)) return;
+            if (!/\bfrom\b/i.test(text)) return;
+            if (UNIQUE_SQL_KEY.test(text)) return;
             if (
-                /^\s*select\s+(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(text) &&
+                /^\s*select\s+[(\s]*(?:select\s+)?(?:coalesce\(\s*)?(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(
+                    text,
+                ) &&
                 !/group\s+by/i.test(text)
             )
                 return;

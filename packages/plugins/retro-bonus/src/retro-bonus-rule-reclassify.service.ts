@@ -40,6 +40,7 @@ export class RetroBonusRuleReclassifyService implements OnApplicationBootstrap {
     }
 
     async reclassifyLegacy(ctx: RequestContext): Promise<number> {
+        // unbounded-ok: one-off reclassification of legacy rules, each processed under its own lock
         const legacy = await ctxQuery<Array<{ erpId: string }>>(
             this.connection,
             ctx,

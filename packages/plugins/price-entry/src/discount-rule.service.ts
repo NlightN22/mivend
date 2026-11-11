@@ -149,7 +149,7 @@ export class DiscountRuleService {
         memo?: LookupMemo,
     ): Promise<DiscountRule[]> {
         return memoized(memo, `dr:${priceTypeCode}`, () =>
-            // unbounded-ok: rules active now for one price type
+            // unbounded-ok: TRACKED #350 rules active now for one price type are filtered, not bounded
             this.connection
                 .getRepository(ctx, DiscountRule)
                 .createQueryBuilder('dr')

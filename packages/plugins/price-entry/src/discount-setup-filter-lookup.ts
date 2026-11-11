@@ -22,6 +22,7 @@ export async function resolveRefs(
     const categories = new Set<string>();
     const products = new Set<string>();
     if (refs.length === 0) return { manufacturers, categories, products };
+    // unbounded-ok: one row per reference passed in
     const rows = await ctxQuery<
         Array<{ ref: string; manufacturer: boolean; category: boolean; product: boolean }>
     >(

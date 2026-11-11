@@ -12,6 +12,7 @@ export class IntegrationOutboxHealthService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async getHealthByEventType(ctx: RequestContext): Promise<OutboxHealthByEventType[]> {
+        // unbounded-ok: grouped by event type, one row per event type
         const rows = await ctxQuery<OutboxHealthByEventType[]>(
             this.connection,
             ctx,
