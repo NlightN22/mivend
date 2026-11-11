@@ -37,6 +37,7 @@ export class OrderLineShortfallService {
         const order = await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId }).getOne();
         if (!order) throw new UserInputError('Order not found');
 
+        // unbounded-ok: shortfall rows of one order
         const rows = await this.connection
             .getRepository(ctx, OrderLineShortfall)
             .find({ where: { orderId: String(orderId) }, order: { createdAt: 'ASC', id: 'ASC' } });

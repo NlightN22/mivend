@@ -46,6 +46,7 @@ export class ReservationExpiryService {
     private async sweepDue(
         ctx: RequestContext,
     ): Promise<{ flagged: number; nonPrepaidDue: Reservation[] }> {
+        // unbounded-ok: TRACKED #350 sweep loads every due reservation
         const dueRows = await this.connection
             .getRepository(ctx, Reservation)
             .createQueryBuilder('reservation')

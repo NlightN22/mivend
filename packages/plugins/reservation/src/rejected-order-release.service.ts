@@ -106,6 +106,7 @@ export class RejectedOrderReleaseService {
         }
 
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
+        // unbounded-ok: active reservations of one order, locked for release
         const active = await reservationRepo
             .createQueryBuilder('reservation')
             .setLock('pessimistic_write')

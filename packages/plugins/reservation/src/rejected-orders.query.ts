@@ -9,6 +9,7 @@ export async function findRejectedOrderIdsWithActiveReserve(
     rejectedCodes: string[],
     cutoff: Date,
 ): Promise<string[]> {
+    // unbounded-ok: background sweep over rejected orders still holding an active reserve, drained by each pass
     const orders = await connection
         .getRepository(ctx, Order)
         .createQueryBuilder('o')

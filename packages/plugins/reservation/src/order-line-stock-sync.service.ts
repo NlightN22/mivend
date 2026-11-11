@@ -83,6 +83,7 @@ export class OrderLineStockSyncService {
 
     private async allocationOf(ctx: RequestContext, lineId: unknown): Promise<LineAllocation> {
         const rows: Array<{ type: string; total: string; locations: string }> =
+            // unbounded-ok: grouped by movement type, at most three rows
             await this.connection.getRepository(ctx, OrderLine).query(
                 `SELECT type, COALESCE(SUM(quantity), 0) AS total,
                         COUNT(DISTINCT "stockLocationId") AS locations FROM stock_movement

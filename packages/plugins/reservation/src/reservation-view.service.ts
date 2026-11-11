@@ -120,6 +120,7 @@ export class ReservationViewService {
     private async visibleIds(ctx: RequestContext, ids: string[]): Promise<Set<string>> {
         if (ids.length === 0) return new Set();
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
+        // unbounded-ok: visible subset of the reservation ids passed in, ids only
         const rows = await qb
             .andWhere(`${qb.alias}.id IN (:...ids)`, { ids })
             .select(`${qb.alias}.id`)

@@ -58,12 +58,37 @@ describe('ReservationAvailabilityService', () => {
                 | undefined;
             return typeof v === 'object' ? v.value[0] : (v ?? 'variant-1');
         };
+        // Mirrors the grouped SUM query: fixture rows belong to the single variant asked for.
         const reservationRepo = {
-            find: vi.fn(async ({ where }: { where: Where | Where[] }) => {
-                const ids = locationIds(where);
-                return reservations
-                    .filter(r => ids.has(r.stockLocationId))
-                    .map(r => ({ ...r, productVariantId: variantOf(where) }));
+            createQueryBuilder: vi.fn(() => {
+                const params: { variantIds?: string[]; locationIds?: string[] } = {};
+                const qb = {
+                    select: () => qb,
+                    addSelect: () => qb,
+                    groupBy: () => qb,
+                    addGroupBy: () => qb,
+                    where: () => qb,
+                    andWhere: (_sql: string, p: typeof params) => {
+                        Object.assign(params, p);
+                        return qb;
+                    },
+                    getRawMany: async () => {
+                        const ids = new Set(params.locationIds);
+                        const totals = new Map<string, number>();
+                        for (const r of reservations.filter(r => ids.has(r.stockLocationId))) {
+                            totals.set(
+                                r.stockLocationId,
+                                (totals.get(r.stockLocationId) ?? 0) + r.quantity,
+                            );
+                        }
+                        return [...totals].map(([stockLocationId, total]) => ({
+                            productVariantId: params.variantIds?.[0] ?? 'variant-1',
+                            stockLocationId,
+                            total: String(total),
+                        }));
+                    },
+                };
+                return qb;
             }),
         };
         const stockLevelRepo = {

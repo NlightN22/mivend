@@ -124,6 +124,7 @@ export class OrderDeliveryEditService {
         if (rate !== undefined && Number(rate) !== 0) {
             throw new UserInputError(`Shipping method ${code} must be free but has a rate`);
         }
+        // unbounded-ok: shipping lines of one order
         const lines = await this.connection
             .getRepository(ctx, ShippingLine)
             .find({ where: { order: { id: order.id } } });

@@ -247,6 +247,7 @@ export class ReservationWriteOffSyncService {
         warehouseOrderExists = false,
     ): Promise<void> {
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
+        // unbounded-ok: held reservations of one order
         const held = await reservationRepo.find({
             where: { orderId, status: In(['active', 'released']) },
         });

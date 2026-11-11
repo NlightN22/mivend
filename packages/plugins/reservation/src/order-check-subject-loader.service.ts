@@ -51,6 +51,7 @@ export class OrderCheckSubjectLoader {
 
     // Active reservations say where the stock actually sits; before them, the best candidate per line.
     private async resolveWarehouse(ctx: RequestContext, order: Order): Promise<string | null> {
+        // unbounded-ok: active reservations of one order
         const reservations = await this.connection
             .getRepository(ctx, Reservation)
             .find({ where: { orderId: String(order.id), status: 'active' } });

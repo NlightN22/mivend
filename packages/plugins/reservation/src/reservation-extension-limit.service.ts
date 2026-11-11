@@ -23,6 +23,7 @@ export class ReservationExtensionLimitService {
         roleCodes: string[],
     ): Promise<ReservationExtensionLimit | null> {
         if (roleCodes.length === 0) return null;
+        // unbounded-ok: one limit row per role, a handful of roles
         const rows = await this.connection
             .getRepository(ctx, ReservationExtensionLimit)
             .find({ where: { roleCode: In(roleCodes) } });

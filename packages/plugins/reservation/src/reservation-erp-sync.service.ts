@@ -32,6 +32,7 @@ export class ReservationErpSyncService {
         const dictionary = await this.statuses.dictionary(ctx);
         if (dictionary.has(status, 'reservationConfirmed')) {
             const repo = this.connection.getRepository(ctx, Reservation);
+            // unbounded-ok: active reservations of one order
             const active = await repo.find({
                 where: { orderId: String(order.id), status: 'active' },
             });

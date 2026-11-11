@@ -80,6 +80,7 @@ export class ReservationService {
                 async txCtx => {
                     const reservationRepo = this.connection.getRepository(txCtx, Reservation);
 
+                    // unbounded-ok: active reservations of one order
                     const existingActive = await reservationRepo.find({
                         where: { orderId: String(orderId), status: 'active' },
                     });
@@ -244,6 +245,7 @@ export class ReservationService {
     }
 
     async findForOrder(ctx: RequestContext, orderId: ID): Promise<Reservation[]> {
+        // unbounded-ok: reservations of one order
         return this.connection
             .getRepository(ctx, Reservation)
             .find({ where: { orderId: String(orderId) }, order: { reservedAt: 'DESC' } });

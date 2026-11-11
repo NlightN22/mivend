@@ -136,6 +136,7 @@ export class ReservationPaymentService {
     }
 
     private async loadPayments(ctx: RequestContext, order: Order): Promise<Payment[]> {
+        // unbounded-ok: payments of one order
         return this.connection
             .getRepository(ctx, Payment)
             .find({ where: { order: { id: order.id } } });

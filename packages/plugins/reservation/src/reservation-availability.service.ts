@@ -10,7 +10,7 @@ import {
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
-import { Reservation } from './entities/reservation.entity';
+import { sumActiveReservations } from './active-reservation-sums';
 import { freeQuantity } from './free-stock';
 
 // ATP (available-to-promise) read queries — split out of ReservationService to keep that file
@@ -70,24 +70,19 @@ export class ReservationAvailabilityService {
     ): Promise<Map<string, Map<string, number>>> {
         const result = new Map<string, Map<string, number>>();
         if (variantIds.length === 0 || stockLocationIds.length === 0) return result;
+        // unbounded-ok: stock levels of the variants and locations passed in, bounded by those lists
         const stockLevels = await this.connection.getRepository(ctx, StockLevel).find({
             where: {
                 productVariantId: In(variantIds),
                 stockLocationId: In(stockLocationIds),
             },
         });
-        const reserved = await this.connection.getRepository(ctx, Reservation).find({
-            where: {
-                productVariantId: In(variantIds),
-                stockLocationId: In(stockLocationIds),
-                status: 'active' as const,
-            },
-        });
-        const reservedByKey = new Map<string, number>();
-        for (const row of reserved) {
-            const key = `${row.productVariantId}:${row.stockLocationId}`;
-            reservedByKey.set(key, (reservedByKey.get(key) ?? 0) + row.quantity);
-        }
+        const reservedByKey = await sumActiveReservations(
+            this.connection,
+            ctx,
+            variantIds,
+            stockLocationIds,
+        );
         for (const level of stockLevels) {
             const variantId = String(level.productVariantId);
             const locations = result.get(variantId) ?? new Map<string, number>();
@@ -123,6 +118,7 @@ export class ReservationAvailabilityService {
         );
         if (warehouses.length === 0) return [];
         const warehouseErpIds = new Set(warehouses.map(w => w.erpId));
+        // unbounded-ok: stock location registry, tens of rows
         const allLocations = await this.connection.getRepository(ctx, StockLocation).find();
         return allLocations
             .filter(l => warehouseErpIds.has(l.customFields?.warehouseErpId ?? ''))
@@ -149,19 +145,16 @@ export class ReservationAvailabilityService {
         productVariantId: ID,
         stockLocationIds: string[],
     ): Promise<Map<string, number>> {
-        const rows = await this.connection.getRepository(ctx, Reservation).find({
-            where: stockLocationIds.map(stockLocationId => ({
-                productVariantId: String(productVariantId),
-                stockLocationId,
-                status: 'active' as const,
-            })),
-        });
+        const sums = await sumActiveReservations(
+            this.connection,
+            ctx,
+            [String(productVariantId)],
+            stockLocationIds,
+        );
         const byLocation = new Map<string, number>();
-        for (const row of rows) {
-            byLocation.set(
-                row.stockLocationId,
-                (byLocation.get(row.stockLocationId) ?? 0) + row.quantity,
-            );
+        for (const stockLocationId of stockLocationIds) {
+            const total = sums.get(`${productVariantId}:${stockLocationId}`);
+            if (total !== undefined) byLocation.set(stockLocationId, total);
         }
         return byLocation;
     }

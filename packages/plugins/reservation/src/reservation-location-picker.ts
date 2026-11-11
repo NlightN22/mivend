@@ -1,7 +1,7 @@
 import { ID, RequestContext, StockLevel, TransactionalConnection } from '@vendure/core';
 
 import { freeQuantity } from './free-stock';
-import { Reservation } from './entities/reservation.entity';
+import { sumActiveReservations } from './active-reservation-sums';
 
 // Locks every StockLevel of the given variants and locations in ascending id order, so two orders with the
 // same variants in a different line order cannot deadlock; the per-line picks below then re-lock held rows.
@@ -12,6 +12,7 @@ export async function lockStockLevelsInOrder(
     locationIds: string[],
 ): Promise<void> {
     if (productVariantIds.length === 0 || locationIds.length === 0) return;
+    // unbounded-ok: stock levels of the variants and locations passed in, locked in id order
     await connection
         .getRepository(ctx, StockLevel)
         .createQueryBuilder('stockLevel')
@@ -41,17 +42,17 @@ export async function pickLocationWithMostFreeStock(
                 stockLocationId: locationId,
             })
             .getOne();
-        const reserved = await connection.getRepository(ctx, Reservation).find({
-            where: {
-                productVariantId: String(productVariantId),
-                stockLocationId: locationId,
-                status: 'active',
-            },
-        });
+        const reserved = await sumActiveReservations(
+            connection,
+            ctx,
+            [String(productVariantId)],
+            [locationId],
+        );
         const available = freeQuantity(
             stockLevel?.stockOnHand ?? 0,
             stockLevel?.stockAllocated ?? 0,
-            reserved.reduce((sum, r) => sum + r.quantity, 0) + (options.held?.get(locationId) ?? 0),
+            (reserved.get(`${productVariantId}:${locationId}`) ?? 0) +
+                (options.held?.get(locationId) ?? 0),
             stockLevel?.customFields?.erpAvailableQuantity,
         );
         if (available > best.available) best = { stockLocationId: locationId, available };

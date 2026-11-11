@@ -60,6 +60,7 @@ export class ErpOrderReserveService {
     }
 
     findForOrder(ctx: RequestContext, orderId: ID): Promise<ErpOrderReserve[]> {
+        // unbounded-ok: erp reserve rows of one order
         return this.connection
             .getRepository(ctx, ErpOrderReserve)
             .find({ where: { orderId: String(orderId) } });

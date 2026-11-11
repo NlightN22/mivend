@@ -36,6 +36,7 @@ export class OrderCheckSubjectRegistrar implements OnModuleInit {
         const numeric = ids.filter(id => /^\d+$/.test(id));
         if (numeric.length === 0) return new Set();
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
+        // unbounded-ok: visible subset of the order ids passed in, ids only
         const rows = await qb
             .andWhere(`${qb.alias}.id IN (:...ids)`, { ids: numeric })
             .select(`${qb.alias}.id`)

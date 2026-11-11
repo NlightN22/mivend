@@ -98,6 +98,7 @@ export class OrderCancellationService {
     async cancelLocally(ctx: RequestContext, order: Order, reason: string): Promise<void> {
         await this.reservationService.releaseReservations(ctx, order.id);
 
+        // unbounded-ok: payments of one order
         const payments = await this.connection
             .getRepository(ctx, Payment)
             .find({ where: { order: { id: order.id } } });
@@ -163,6 +164,7 @@ export class OrderCancellationService {
         order: Order,
         requestRegistered: boolean,
     ): Promise<CancelDecision> {
+        // unbounded-ok: payments of one order
         const payments = await this.connection
             .getRepository(ctx, Payment)
             .find({ where: { order: { id: order.id } } });
