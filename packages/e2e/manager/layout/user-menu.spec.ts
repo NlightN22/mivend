@@ -147,8 +147,9 @@ test('the desktop header search: Ctrl K, arrows, Enter opens, Escape closes @on:
 }) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
-    await page.keyboard.press('Control+k');
     const box = page.locator('input.search-box__input');
+    await expect(box).toBeVisible();
+    await page.keyboard.press('Control+k');
     await expect(box).toBeFocused();
     await box.fill('E2E');
     await expect(page.getByRole('listbox')).toBeVisible();
