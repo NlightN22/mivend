@@ -65,6 +65,7 @@ export class ApprovalRequestQueryService {
             .where('request.requestType = :type', { type: 'priceAdjustmentApproval' })
             .andWhere('request.status = :pending', { pending: 'pending' });
         await this.scope.apply(ctx, qb);
+        // unbounded-ok: pending price-adjustment requests, drained by the approvers and ids-only
         const rows = await qb.getRawMany<{ orderId: string | null }>();
         return [...new Set(rows.map(r => r.orderId).filter((id): id is string => !!id))];
     }
@@ -81,6 +82,7 @@ export class ApprovalRequestQueryService {
             .andWhere(`${payloadField('orderId')} = :forOrderId`, { forOrderId: String(orderId) })
             .orderBy('request.createdAt', 'DESC');
         await this.scope.apply(ctx, qb);
+        // unbounded-ok: approval requests referencing one order
         return qb.getMany();
     }
 

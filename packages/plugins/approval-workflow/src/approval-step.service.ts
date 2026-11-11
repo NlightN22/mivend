@@ -16,6 +16,7 @@ export class ApprovalStepService {
     }
 
     async findSteps(ctx: RequestContext, approvalRequestId: ID): Promise<ApprovalStep[]> {
+        // unbounded-ok: steps of one approval request, a few by workflow definition
         return this.connection.getRepository(ctx, ApprovalStep).find({
             where: { approvalRequestId: String(approvalRequestId) },
             order: { stepIndex: 'ASC' },
