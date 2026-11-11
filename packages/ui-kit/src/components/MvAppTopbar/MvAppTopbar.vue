@@ -15,10 +15,12 @@ withDefaults(
         userInitials: string;
         brandTo?: string;
         searchPlaceholder?: string;
+        phoneSearchPlaceholder?: string;
     }>(),
     {
         brandTo: '/',
         searchPlaceholder: 'Search…',
+        phoneSearchPlaceholder: 'Search…',
         userRoleLabel: null,
     },
 );
@@ -65,10 +67,14 @@ function submitSearch(value: string): void {
         <MvAppTopbarPhoneSearch
             v-if="searching"
             class="mv-app-topbar__phone-search"
-            :placeholder="searchPlaceholder"
+            :placeholder="phoneSearchPlaceholder"
             @search="submitSearch"
             @close="closeSearch"
         />
+
+        <div v-if="searching && $slots['search-panel']" class="mv-app-topbar__panel">
+            <slot name="search-panel" :close="closeSearch" />
+        </div>
 
         <div class="mv-app-topbar__actions">
             <button
@@ -84,7 +90,12 @@ function submitSearch(value: string): void {
             <slot name="actions" />
         </div>
 
-        <MvPopover v-model:open="menuOpen" :width="260" placement="bottom-end">
+        <MvPopover
+            v-model:open="menuOpen"
+            :width="isPhone ? 340 : 260"
+            :sheet="false"
+            placement="bottom-end"
+        >
             <template #trigger>
                 <button
                     class="mv-app-topbar__user"
@@ -218,7 +229,8 @@ function submitSearch(value: string): void {
     cursor: pointer;
 }
 
-.mv-app-topbar .mv-app-topbar__phone-search {
+.mv-app-topbar .mv-app-topbar__phone-search,
+.mv-app-topbar__panel {
     display: none;
 }
 
@@ -252,6 +264,14 @@ function submitSearch(value: string): void {
 
     .mv-app-topbar .mv-app-topbar__phone-search {
         display: flex;
+    }
+
+    .mv-app-topbar__panel {
+        display: block;
+        position: fixed;
+        inset: 58px 0 0;
+        overflow-y: auto;
+        background: var(--el-bg-color-page);
     }
 
     .mv-app-topbar--searching .mv-app-topbar__brand,

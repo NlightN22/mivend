@@ -1,17 +1,28 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { ElPopover } from 'element-plus';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 
-withDefaults(
-    defineProps<{ width?: number; placement?: 'bottom' | 'bottom-end' | 'bottom-start' }>(),
+const props = withDefaults(
+    defineProps<{
+        width?: number;
+        placement?: 'bottom' | 'bottom-end' | 'bottom-start';
+        sheet?: boolean;
+    }>(),
     {
         width: 260,
         placement: 'bottom-end',
+        sheet: true,
     },
 );
 const open = defineModel<boolean>('open', { default: false });
 const isMobile = useIsMobileViewport(640);
+const asSheet = computed(() => isMobile.value && props.sheet);
+// A card on a phone keeps 16px gutters and dims the page behind it.
+const cardWidth = computed(() =>
+    isMobile.value ? Math.min(props.width, window.innerWidth - 32) : props.width,
+);
+const cardOptions = { modifiers: [{ name: 'preventOverflow', options: { padding: 16 } }] };
 
 // Focus stays on the trigger outside the teleported content, so Escape is caught on the document.
 const closeOnEscape = (event: KeyboardEvent): void => {
@@ -37,7 +48,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
 </script>
 
 <template>
-    <template v-if="isMobile">
+    <template v-if="asSheet">
         <span class="mv-popover__ref" @click="open = !open"><slot name="trigger" /></span>
         <Teleport to="body">
             <div v-if="open" class="mv-popover__backdrop" @click="open = false" />
@@ -46,12 +57,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
             </div>
         </Teleport>
     </template>
+    <Teleport v-if="isMobile && !sheet" to="body">
+        <div v-if="open" class="mv-popover__backdrop" @click="open = false" />
+    </Teleport>
     <ElPopover
-        v-else
+        v-if="!asSheet"
         v-model:visible="open"
         trigger="click"
-        :width="width"
+        :width="cardWidth"
         :placement="placement"
+        :popper-options="cardOptions"
         popper-class="mv-popover__popper"
     >
         <template #reference><slot name="trigger" /></template>
