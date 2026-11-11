@@ -123,6 +123,7 @@ async function planTree(
     const facetValues = await deps.facetValueService.findByFacetId(ctx, facet.id);
     const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
 
+    // unbounded-ok: the whole category tree is the unit of recompute, run from a background job
     const collections = await deps.connection
         .getRepository(ctx, Collection)
         .find({ relations: ['translations'] });
