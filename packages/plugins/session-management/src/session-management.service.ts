@@ -39,6 +39,7 @@ export class SessionManagementService {
             return [];
         }
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
+        // unbounded-ok: active sessions of one user
         const sessions = await repo.find({
             where: { user: { id: userId }, invalidated: false },
             order: { createdAt: 'DESC' },
@@ -70,6 +71,7 @@ export class SessionManagementService {
         }
         const currentToken = ctx.session?.token;
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
+        // unbounded-ok: active sessions of one user
         const sessions = await repo.find({ where: { user: { id: userId }, invalidated: false } });
         for (const session of sessions.filter(isOwn)) {
             if (session.token !== currentToken) {
@@ -98,6 +100,7 @@ export class SessionManagementService {
     // Core's deleteSessionsByUser also removes the acting sessions, which share the customer's user.
     async deleteOwnSessions(ctx: RequestContext, userId: ID): Promise<void> {
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
+        // unbounded-ok: sessions of one user
         const own = (await repo.find({ where: { user: { id: userId } } })).filter(isOwn);
         await repo.remove(own);
         for (const session of own) {
