@@ -30,6 +30,7 @@ export class CustomerPricingService {
     ) {}
 
     async findAllPriceTypes(ctx: RequestContext): Promise<PriceType[]> {
+        // unbounded-ok: active price type registry, a handful of rows
         return this.connection.getRepository(ctx, PriceType).find({
             where: { isActive: true },
             order: { name: 'ASC' },
