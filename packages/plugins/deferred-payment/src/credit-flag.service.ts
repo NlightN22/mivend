@@ -25,6 +25,7 @@ export class CreditFlagService {
     }
 
     private async loadFlagged(ctx: RequestContext, keys: readonly string[]): Promise<boolean[]> {
+        // unbounded-ok: grouped by order id of the batch keys passed in
         const rows = await this.connection
             .getRepository(ctx, Payment)
             .createQueryBuilder('p')
@@ -43,6 +44,7 @@ export class CreditFlagService {
             take: MAX_SCANNED_ORDERS,
         });
         const alias = `"${qb.alias}"`;
+        // unbounded-ok: order scan is capped at MAX_SCANNED_ORDERS by the visible orders query
         const orders: Order[] = await qb
             .andWhere(`${alias}.state <> 'Cancelled'`)
             .andWhere(`${alias}."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})`)
