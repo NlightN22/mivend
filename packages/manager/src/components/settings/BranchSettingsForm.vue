@@ -202,13 +202,13 @@ function onSave(): void {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .branch-settings-form__hint {
     margin: 4px 0 0;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .branch-settings-form__actions {

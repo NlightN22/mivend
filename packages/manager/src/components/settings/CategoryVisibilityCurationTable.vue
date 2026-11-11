@@ -221,7 +221,7 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
     padding: 0;
     border: 0;
     background: none;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 </style>

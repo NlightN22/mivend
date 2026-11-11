@@ -277,7 +277,7 @@ async function save(): Promise<void> {
 }
 
 .role-detail__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -293,7 +293,7 @@ async function save(): Promise<void> {
 
 .role-detail__description {
     margin: 0;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 14px;
 }
 
@@ -316,7 +316,7 @@ async function save(): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .role-detail__permission-row {
@@ -325,7 +325,7 @@ async function save(): Promise<void> {
 
 .role-detail__permission-desc {
     font-weight: 400;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .role-detail__save-results {
@@ -337,6 +337,6 @@ async function save(): Promise<void> {
 .role-detail__not-authorized {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

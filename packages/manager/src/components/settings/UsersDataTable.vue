@@ -253,7 +253,7 @@ function confirmDeactivate(): void {
 .users-table__confirm-text {
     margin: 0 0 18px;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     line-height: 1.5;
 }
 

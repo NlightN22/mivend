@@ -185,11 +185,11 @@ async function submit(): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .tp-edit-form__comment textarea {
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
     padding: 10px 12px;
     font-family: inherit;
@@ -214,13 +214,13 @@ async function submit(): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .tp-edit-form__add {
     background: none;
     border: none;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -236,7 +236,7 @@ async function submit(): Promise<void> {
 .tp-edit-form__remove {
     background: none;
     border: none;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -244,7 +244,7 @@ async function submit(): Promise<void> {
 }
 
 .tp-edit-form__empty {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     margin: 0;
 }
@@ -258,7 +258,7 @@ async function submit(): Promise<void> {
 .tp-edit-form__cancel {
     background: none;
     border: none;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     cursor: pointer;
 }

@@ -86,7 +86,7 @@ const canManageVisibility =
 .settings-sub-nav {
     display: flex;
     gap: 8px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     margin-top: 4px;
 }
 
@@ -97,11 +97,11 @@ const canManageVisibility =
     padding: 10px 4px;
     font-size: 14px;
     font-weight: 700;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .settings-sub-nav a.active {
-    color: var(--el-color-primary-dark-2, #008a70);
-    border-bottom-color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary-dark-2);
+    border-bottom-color: var(--el-color-primary);
 }
 </style>

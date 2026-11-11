@@ -57,14 +57,14 @@ onMounted(async () => {
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--el-border-color-light);
     border-radius: 6px;
     font-size: 14px;
 }
 
 .check-health__reason,
 .check-health__empty {
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 

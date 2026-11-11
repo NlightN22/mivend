@@ -77,12 +77,12 @@ async function handleRunNow(): Promise<void> {
 }
 
 .erp-reconciliation__summary {
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 
 .erp-reconciliation__error {
-    color: #b91c1c;
+    color: var(--app-danger-fg);
     font-size: 12px;
 }
 
@@ -101,7 +101,7 @@ async function handleRunNow(): Promise<void> {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--el-border-color-light);
     border-radius: 6px;
     font-size: 13px;
 }
@@ -114,18 +114,18 @@ async function handleRunNow(): Promise<void> {
 }
 
 .erp-reconciliation__title {
-    color: #111827;
+    color: var(--el-text-color-primary);
     font-weight: 600;
     text-transform: capitalize;
 }
 
 .erp-reconciliation__detail {
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 
 .erp-reconciliation__empty {
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     padding: 10px 12px;
 }

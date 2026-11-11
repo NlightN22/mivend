@@ -235,7 +235,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: #f3f4f6;
+    background: var(--el-bg-color-page);
 }
 
 .set-password-wrap {
@@ -246,8 +246,8 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 }
 
 .set-password-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color-light);
     border-radius: 8px;
     padding: 32px;
     width: 360px;
@@ -260,7 +260,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 
 .set-password-card__desc {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     margin: 0 0 20px;
 }
 
@@ -273,8 +273,8 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
     align-items: center;
     gap: 14px;
     padding: 14px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-light);
     border-radius: 12px;
     margin-bottom: 20px;
     text-align: left;
@@ -293,7 +293,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 
 .set-password-card__identity-mail {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     word-break: break-all;
 }
 
@@ -307,11 +307,11 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
     margin: -4px 0 0;
     padding: 12px 13px;
     border-radius: 10px;
-    background: #fbfcfd;
-    border: 1px solid #e5e7eb;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-light);
     font-size: 11px;
     line-height: 1.55;
-    color: #738196;
+    color: var(--app-text-grey);
 }
 
 .set-password-form__submit {
@@ -336,13 +336,13 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 }
 
 .set-password-state--success .set-password-state__icon {
-    background: #dff8ed;
-    color: #0b8b61;
+    background: var(--app-ok-bg);
+    color: var(--app-ok-fg);
 }
 
 .set-password-state--error .set-password-state__icon {
-    background: #fff0f0;
-    color: #c64c4c;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-fg);
 }
 
 .set-password-state h3 {
@@ -355,6 +355,6 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
     max-width: 300px;
     font-size: 13px;
     line-height: 1.55;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

@@ -167,7 +167,7 @@ async function handleSignOutEverywhere(): Promise<void> {
 
 <style scoped>
 .security-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     margin-bottom: 4px;
 }
@@ -200,17 +200,17 @@ async function handleSignOutEverywhere(): Promise<void> {
 
 .security-page__meta {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .security-page__current {
     font-size: 12px;
     font-weight: 700;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
 }
 
 .security-page__empty {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .security-page__danger {

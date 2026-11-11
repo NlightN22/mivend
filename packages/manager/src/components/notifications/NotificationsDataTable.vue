@@ -259,7 +259,7 @@ function confirmResolve(id: string): void {
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .notifications-data-table__actions {
@@ -274,7 +274,7 @@ function confirmResolve(id: string): void {
     cursor: pointer;
     font-size: 12px;
     font-weight: 700;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
 }
 
 .notifications-data-table__link:disabled {

@@ -237,7 +237,7 @@ async function submit(): Promise<void> {
 }
 
 .discount-grant-form__history {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     border-radius: var(--app-radius-md, 12px);
     padding: 10px 14px;
 }
@@ -247,7 +247,7 @@ async function submit(): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin: 0 0 6px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .discount-grant-form__history-row {
@@ -272,18 +272,18 @@ async function submit(): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .discount-grant-form__hint {
     font-size: 11px;
     text-transform: none;
     font-weight: 400;
-    color: var(--el-text-color-secondary, #9ca3af);
+    color: var(--el-text-color-secondary);
 }
 
 .discount-grant-form__justification textarea {
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
     padding: 10px 12px;
     font-family: inherit;
@@ -303,7 +303,7 @@ async function submit(): Promise<void> {
 .discount-grant-form__cancel {
     background: none;
     border: none;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     cursor: pointer;
 }

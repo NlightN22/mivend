@@ -82,22 +82,22 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
 
 .policies th {
     text-align: left;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 8px 10px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
 }
 
 .policies td {
     padding: 10px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     vertical-align: middle;
 }
 
 .policies__desc {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
     margin-top: 2px;
 }

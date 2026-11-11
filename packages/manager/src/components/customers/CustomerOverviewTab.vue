@@ -201,7 +201,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__contacts h3 {
     font-size: 13px;
     margin: 0 0 10px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -218,7 +218,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__primary {
     margin-left: 8px;
     font-size: 11px;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
     text-transform: uppercase;
     font-weight: 800;
 }
@@ -227,11 +227,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
     display: flex;
     gap: 12px;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .overview-tab__empty {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -247,7 +247,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .overview-tab__facts dd {
@@ -262,7 +262,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__trading-points h3 {
     font-size: 13px;
     margin: 0 0 10px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -283,7 +283,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 12px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 12px;
 }
 
@@ -296,7 +296,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__tp-btn {
     background: none;
     border: none;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;

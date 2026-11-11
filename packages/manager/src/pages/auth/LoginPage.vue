@@ -197,7 +197,7 @@ function handleSubmit(): Promise<void> {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: #f3f4f6;
+    background: var(--el-bg-color-page);
 }
 
 .login-wrap {
@@ -208,8 +208,8 @@ function handleSubmit(): Promise<void> {
 }
 
 .login-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color-light);
     border-radius: 8px;
     padding: 32px;
     width: 340px;
@@ -236,7 +236,7 @@ function handleSubmit(): Promise<void> {
     gap: 8px;
     font-size: 13px;
     font-weight: 600;
-    color: #4b5563;
+    color: var(--el-text-color-regular);
     cursor: pointer;
 }
 

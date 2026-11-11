@@ -223,7 +223,7 @@ onMounted(load);
 }
 
 .dashboard__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     margin-bottom: 6px;
 }
@@ -236,7 +236,7 @@ onMounted(load);
 
 .dashboard__subtitle {
     margin: 8px 0 0;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .dashboard__context {

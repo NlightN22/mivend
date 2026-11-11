@@ -53,7 +53,10 @@ app.use(ElementPlus, { zIndex: layers.popover });
 // PrimeVue is scoped to the Orders desktop table only; element-plus/ui-kit remain the rest of the app.
 // mivendPrimeVuePreset maps it to tokens.css so it doesn't show PrimeVue's default Aura theme.
 app.use(PrimeVue, {
-    theme: { preset: mivendPrimeVuePreset, options: { darkModeSelector: '.mv-never-dark' } },
+    theme: {
+        preset: mivendPrimeVuePreset,
+        options: { darkModeSelector: "html[data-theme='dark']" },
+    },
     zIndex: {
         modal: layers.modal,
         overlay: layers.popover,

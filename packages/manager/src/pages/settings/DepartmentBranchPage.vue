@@ -72,11 +72,11 @@ onMounted(() => {
 .department-branch__lead {
     margin: 0;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .department-branch__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -89,6 +89,6 @@ onMounted(() => {
 .department-branch__denied {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

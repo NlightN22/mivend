@@ -253,17 +253,17 @@ async function handleDeactivate(): Promise<void> {
 
 .customer-portal-users__email {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .customer-portal-users__deactivated {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 
 .customer-portal-users__error {
     margin: 0;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
     font-size: 13px;
 }
 

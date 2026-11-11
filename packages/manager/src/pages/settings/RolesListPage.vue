@@ -65,7 +65,7 @@ onMounted(load);
 }
 
 .roles-list__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -89,24 +89,24 @@ onMounted(load);
     flex-direction: column;
     gap: 3px;
     padding: 12px 14px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 12px;
     text-decoration: none;
     color: inherit;
 }
 
 .roles-list__row:hover {
-    border-color: var(--el-color-primary, #00b894);
+    border-color: var(--el-color-primary);
 }
 
 .roles-list__description {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .roles-list__not-authorized {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

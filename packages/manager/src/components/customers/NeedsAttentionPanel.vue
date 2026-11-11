@@ -50,7 +50,7 @@ const router = useRouter();
     justify-content: space-between;
     gap: 12px;
     padding: 13px 0;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     cursor: pointer;
 }
 
@@ -71,13 +71,13 @@ const router = useRouter();
 }
 
 .needs-attention__meta {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
     line-height: 1.35;
 }
 
 .needs-attention__empty {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

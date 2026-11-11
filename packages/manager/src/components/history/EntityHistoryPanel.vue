@@ -430,7 +430,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
 }
 
 .entity-history__detail-meta dt {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-weight: 700;
 }
 
@@ -449,14 +449,14 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     padding: 6px 8px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
 }
 
 .entity-history__diff-table td {
     padding: 8px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     vertical-align: top;
 }
 
@@ -464,6 +464,6 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
 .entity-history__comment {
     margin: 0;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

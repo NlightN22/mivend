@@ -273,17 +273,17 @@ onMounted(loadAll);
 .branch-settings-page__description {
     margin: 0;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .branch-settings-page__divider {
     height: 1px;
     margin: 14px 0;
-    background: var(--el-border-color, #e4e7ec);
+    background: var(--el-border-color);
 }
 
 .branch-settings-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -296,6 +296,6 @@ onMounted(loadAll);
 .branch-settings-page__not-authorized {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

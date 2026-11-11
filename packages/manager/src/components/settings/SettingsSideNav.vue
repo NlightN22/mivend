@@ -60,7 +60,7 @@ const currentSection = computed(
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .settings-side-nav a {
@@ -70,16 +70,16 @@ const currentSection = computed(
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
-    color: var(--el-text-color-regular, #374151);
+    color: var(--el-text-color-regular);
 }
 
 .settings-side-nav a:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .settings-side-nav a.router-link-active {
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
 }
 
 @media (max-width: 800px) {

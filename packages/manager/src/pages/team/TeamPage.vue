@@ -175,7 +175,7 @@ onMounted(async () => {
 }
 
 .team-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     margin-bottom: 6px;
 }

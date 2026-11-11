@@ -50,8 +50,8 @@ function timeAgo(at: string): string {
     height: 8px;
     margin-top: 5px;
     border-radius: 50%;
-    background: var(--el-color-primary, #00b894);
-    box-shadow: 0 0 0 4px var(--el-color-primary-light-9, #f0fffa);
+    background: var(--el-color-primary);
+    box-shadow: 0 0 0 4px var(--el-color-primary-light-9);
 }
 
 .activity-feed__body {
@@ -63,12 +63,12 @@ function timeAgo(at: string): string {
 }
 
 .activity-feed__time {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 
 .activity-feed__empty {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 </style>

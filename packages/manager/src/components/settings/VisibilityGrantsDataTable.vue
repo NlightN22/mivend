@@ -184,7 +184,7 @@ const revocable = (row: Row): boolean => row.status === 'active' || row.status =
 .visibility-grants__confirm {
     margin: 0 0 14px;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     line-height: 1.5;
 }
 

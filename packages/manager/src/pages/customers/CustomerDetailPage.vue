@@ -532,7 +532,7 @@ function initials(name: string | null): string {
 }
 
 .customer-detail__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -552,7 +552,7 @@ function initials(name: string | null): string {
 
 .customer-detail__subtitle {
     margin: 0;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -562,16 +562,16 @@ function initials(name: string | null): string {
     flex-wrap: wrap;
     gap: 24px;
     padding: 20px 24px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-lg, 16px);
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
 }
 
 .customer-detail__info-divider {
     width: 1px;
     align-self: stretch;
-    background: var(--el-border-color, #e4e7ec);
+    background: var(--el-border-color);
 }
 
 .customer-detail__info-item {
@@ -583,7 +583,7 @@ function initials(name: string | null): string {
 .customer-detail__info-icon {
     width: 18px;
     height: 18px;
-    color: var(--el-text-color-secondary, #98a2b3);
+    color: var(--el-text-color-secondary);
     flex-shrink: 0;
 }
 
@@ -594,8 +594,8 @@ function initials(name: string | null): string {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: var(--el-color-primary-light-9, #e6faf4);
-    color: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
     font-size: 13px;
     font-weight: 700;
     flex-shrink: 0;
@@ -609,13 +609,13 @@ function initials(name: string | null): string {
 
 .customer-detail__info-label {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .customer-detail__info-value {
     font-size: 14px;
     font-weight: 600;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .customer-detail__kpis {
@@ -639,7 +639,7 @@ function initials(name: string | null): string {
     display: flex;
     gap: 20px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     margin-top: 8px;
 }
 
@@ -647,7 +647,7 @@ function initials(name: string | null): string {
     display: flex;
     align-items: center;
     gap: 8px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     margin-top: 8px;
     position: relative;
 }
@@ -663,15 +663,15 @@ function initials(name: string | null): string {
     padding: 10px 4px;
     font-size: 14px;
     font-weight: 700;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
     white-space: nowrap;
 }
 
 .customer-detail__tabs > button.active,
 .customer-detail__tabs-more-trigger.active {
-    color: var(--el-color-primary-dark-2, #008a70);
-    border-bottom-color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary-dark-2);
+    border-bottom-color: var(--el-color-primary);
 }
 
 .customer-detail__tab-icon {
@@ -693,10 +693,10 @@ function initials(name: string | null): string {
     flex-direction: column;
     min-width: 160px;
     padding: 6px;
-    background: var(--app-surface, #fff);
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(20, 42, 65, 0.12);
+    box-shadow: var(--app-shadow-md);
 }
 
 .customer-detail__tabs-more-menu button {
@@ -710,28 +710,28 @@ function initials(name: string | null): string {
     font-size: 14px;
     font-weight: 700;
     text-align: left;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 
 .customer-detail__tabs-more-menu button:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .customer-detail__tabs-more-menu button.active {
-    color: var(--el-color-primary-dark-2, #008a70);
-    background: var(--el-color-primary-light-9, #f0fffa);
+    color: var(--el-color-primary-dark-2);
+    background: var(--el-color-primary-light-9);
 }
 
 .customer-detail__not-found {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .customer-detail__no-orders {
     margin: 0;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 </style>

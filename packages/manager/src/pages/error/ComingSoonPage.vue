@@ -14,11 +14,11 @@ const route = useRoute();
 <style scoped>
 .coming-soon {
     padding: 40px 0;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .coming-soon h1 {
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     font-size: 22px;
     margin: 0 0 8px;
 }

@@ -225,7 +225,7 @@ const rows = computed<TeamRow[]>(() => {
 
 .customer-team__error {
     margin: 0;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger);
     font-size: 13px;
 }
 
@@ -238,9 +238,9 @@ const rows = computed<TeamRow[]>(() => {
     flex-direction: column;
     gap: 10px;
     padding: 16px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-lg, 12px);
-    background: #fff;
+    background: var(--app-surface);
 }
 
 .customer-team__panel-title {
@@ -252,7 +252,7 @@ const rows = computed<TeamRow[]>(() => {
 .customer-team__panel-subtitle {
     margin: 0;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .customer-team__notifications {

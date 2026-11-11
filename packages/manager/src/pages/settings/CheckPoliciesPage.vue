@@ -96,7 +96,7 @@ onMounted(() => {
 }
 
 .check-policies__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -108,13 +108,13 @@ onMounted(() => {
 
 .check-policies__lead {
     margin: 0 0 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
 .check-policies__denied {
     padding: 40px;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

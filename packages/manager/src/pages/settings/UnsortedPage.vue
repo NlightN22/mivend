@@ -81,7 +81,7 @@ onMounted(() => {
 }
 
 .unsorted-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
 }
 
@@ -94,6 +94,6 @@ onMounted(() => {
 .unsorted-page__denied {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 </style>

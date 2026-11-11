@@ -66,23 +66,23 @@ function statusText(approval: SubmittedApproval): string {
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--el-border-color-light);
     border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
 }
 
 .approval-list__item:hover {
-    background: #fafaff;
-    border-color: #c7d2fe;
+    background: var(--el-fill-color-light);
+    border-color: var(--el-border-color);
 }
 
 .approval-list__title {
-    color: #111827;
+    color: var(--el-text-color-primary);
 }
 
 .approval-list__empty {
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     padding: 10px 12px;
 }

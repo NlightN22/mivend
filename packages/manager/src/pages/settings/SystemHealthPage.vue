@@ -125,7 +125,7 @@ onMounted(() => {
 }
 
 .system-health-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     margin-bottom: 6px;
 }
@@ -147,7 +147,7 @@ onMounted(() => {
 
 .system-health-page__row {
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--el-border-color-light);
     border-radius: 6px;
 }
 
@@ -156,26 +156,26 @@ onMounted(() => {
     align-items: center;
     gap: 10px;
     font-size: 14px;
-    color: #111827;
+    color: var(--el-text-color-primary);
 }
 
 .system-health-page__icon--ok {
-    color: #059669;
+    color: var(--app-ok-fg);
 }
 
 .system-health-page__icon--missing {
-    color: #dc2626;
+    color: var(--app-danger-fg);
 }
 
 .system-health-page__detail {
     margin: 6px 0 0 30px;
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-size: 12px;
 }
 
 .system-health-page__not-authorized {
     padding: 40px;
     text-align: center;
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
 }
 </style>

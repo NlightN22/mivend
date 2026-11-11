@@ -10,6 +10,6 @@
 .not-found {
     text-align: center;
     padding: 60px 0;
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
 }
 </style>
