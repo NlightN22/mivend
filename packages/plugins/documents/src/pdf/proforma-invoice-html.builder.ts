@@ -8,6 +8,7 @@ import { ProformaInvoiceService } from '@mivend/plugin-acquiring';
 import { loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
+import { LegalNameAbbreviationService } from '../legal-name-abbreviation.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
 import {
     contractPaymentPurpose,
@@ -26,6 +27,7 @@ export class ProformaInvoiceHtmlBuilder {
         private connection: TransactionalConnection,
         private documentsService: DocumentsService,
         private proformaInvoiceService: ProformaInvoiceService,
+        private legalNameAbbreviations: LegalNameAbbreviationService,
     ) {}
 
     async build(
@@ -128,7 +130,12 @@ export class ProformaInvoiceHtmlBuilder {
         }
 
         const buyer = await this.buyer(ctx, document.counterpartyId);
-        const data = buildProformaInvoiceTemplateData(source, requisites, buyer);
+        const data = buildProformaInvoiceTemplateData(
+            source,
+            requisites,
+            buyer,
+            await this.legalNameAbbreviations.findRules(ctx),
+        );
         if (data.paymentQr.problems.length > 0) {
             Logger.warn(
                 `Document ${document.number}: payment QR not printed (${data.paymentQr.problems.join('; ')})`,

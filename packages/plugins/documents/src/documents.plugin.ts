@@ -29,6 +29,9 @@ import { DocumentPdfAccessService } from './document-pdf-access.service';
 import { DocumentPdfStorageService } from './pdf/document-pdf-storage.service';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
+import { LegalNameAbbreviation } from './entities/legal-name-abbreviation.entity';
+import { LegalNameAbbreviationService } from './legal-name-abbreviation.service';
+import { LegalNameAbbreviationAdminResolver } from './legal-name-abbreviation.resolver';
 import { DocumentsService } from './documents.service';
 import { ProformaInvoiceHtmlBuilder } from './pdf/proforma-invoice-html.builder';
 import { SupersededProformaRerenderService } from './superseded-proforma-rerender.service';
@@ -60,7 +63,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 
 @VendurePlugin({
     imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin, AcquiringPlugin],
-    entities: [Document, OrganizationRequisites],
+    entities: [Document, OrganizationRequisites, LegalNameAbbreviation],
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [DocumentsResolver, DocumentFieldResolver, ProformaInvoiceDocumentFieldResolver],
@@ -69,6 +72,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
         schema: adminApiExtensions,
         resolvers: [
             DocumentsAdminResolver,
+            LegalNameAbbreviationAdminResolver,
             DocumentFieldResolver,
             OrganizationFieldResolver,
             ProformaInvoiceDocumentFieldResolver,
@@ -90,6 +94,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
         DocumentPdfAccessService,
         DocumentPdfStorageService,
         DocumentsService,
+        LegalNameAbbreviationService,
         SupersededProformaRerenderService,
         PdfBrowserService,
         PdfGeneratorService,

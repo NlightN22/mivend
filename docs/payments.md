@@ -487,6 +487,14 @@ cells and only rows may break across pages (totals and signatures stay together)
   KPP is sent only when the organization has one. Any missing or invalid value leaves the box empty (a superseded version still prints its QR: it stays payable) (a warning lists the fields) and the PDF still generates. The image is
   an SVG drawn from the `qrcode` package's module matrix (error correction M). Own small module instead
   of a GOST library: the format is a fixed string, and the existing packages are unmaintained.
+  The 300-character cap drops the QR for sellers with a long legal name, and the ERP carries no short
+  name. So the QR `Name` (never the printed document) has its legal-form phrase shortened through
+  `LegalNameAbbreviation` rows (phrase to abbreviation, phrase unique case-insensitively, immutable `uuid`):
+  case-insensitive whole-phrase match, longest phrase first (`abbreviateLegalName`), loaded once per render.
+  Defaults (full forms of the common legal forms and the sole-proprietor form) are seeded at server start only
+  into an empty table, so staff edits are never overwritten; a table staff emptied is seeded again. Edit under
+  Dashboard > Settings > "Legal name abbreviations" (`ReadSettings` to list, `UpdateSettings` to change). A
+  payload still over 300 after shortening keeps the old behaviour: no QR and a warning.
 
 `OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities
 (the seller side — requisites/bank details for document rendering), sourced from the ERP. Today

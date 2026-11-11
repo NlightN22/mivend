@@ -2,6 +2,10 @@ import { CompleteOrganizationRequisites } from '../entities/organization-requisi
 import { lineDiscountTotal, lineNetAmount } from '@mivend/plugin-acquiring';
 import { summarizeVat, type VatSourceLine, type VatTotal } from './proforma-invoice-vat';
 import { buildProformaPaymentQr, type ProformaPaymentQr } from '../qr-payment/proforma-payment-qr';
+import {
+    abbreviateLegalName,
+    type LegalNameAbbreviationRule,
+} from '../qr-payment/legal-name-abbreviation';
 import { dateInWords, formatMoneyRu, rublesInWords } from './russian-words';
 
 export const PAYMENT_NOTICE = 'Оплата данного счета означает согласие с условиями поставки товара.';
@@ -154,6 +158,7 @@ export function buildProformaInvoiceTemplateData(
     source: ProformaInvoiceSource,
     requisites: CompleteOrganizationRequisites,
     buyer: PartyInput,
+    qrNameAbbreviations: LegalNameAbbreviationRule[] = [],
 ): ProformaInvoiceTemplateData {
     const supplier = sellerParty(requisites);
     // A markup (negative discount) is printed as the final price only: no discount or markup column value.
@@ -220,7 +225,7 @@ export function buildProformaInvoiceTemplateData(
             issueDate: source.issueDate,
             amountKopecks: source.totalAmount,
             vatKopecks: vat.kind === 'amount' ? vat.amount : null,
-            recipientName: requisites.legalName,
+            recipientName: abbreviateLegalName(requisites.legalName, qrNameAbbreviations),
             account: requisites.bankAccount,
             bankName: requisites.bankName,
             bik: requisites.bankBik,

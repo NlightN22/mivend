@@ -60,7 +60,28 @@ export const adminApiExtensions = gql`
         document: Document
     }
 
+    "Shortens a legal-form phrase in the payment QR recipient name only; the printed name stays full."
+    type LegalNameAbbreviation implements Node {
+        id: ID!
+        createdAt: DateTime!
+        updatedAt: DateTime!
+        uuid: String!
+        phrase: String!
+        abbreviation: String!
+    }
+
+    type LegalNameAbbreviationList implements PaginatedList {
+        items: [LegalNameAbbreviation!]!
+        totalItems: Int!
+    }
+
+    input LegalNameAbbreviationInput {
+        phrase: String!
+        abbreviation: String!
+    }
+
     extend type Query {
+        legalNameAbbreviations: LegalNameAbbreviationList!
         # Visibility inherits counterparty visibility — no dedicated permission, filtered by
         # the same counterpartyId (see docs/ai/manager-portal-concept.md §3.3 "/documents").
         # counterpartyId/orderId narrow server-side (still intersected with the caller's
@@ -78,6 +99,12 @@ export const adminApiExtensions = gql`
     }
 
     extend type Mutation {
+        createLegalNameAbbreviation(input: LegalNameAbbreviationInput!): LegalNameAbbreviation!
+        updateLegalNameAbbreviation(
+            id: ID!
+            input: LegalNameAbbreviationInput!
+        ): LegalNameAbbreviation!
+        deleteLegalNameAbbreviation(id: ID!): Boolean!
         generateContract(counterpartyId: ID!): Boolean!
         # Logo is set here, never pushed via erp-import — see
         # OrganizationRequisites.logoAssetId for why. Upload the logo as a

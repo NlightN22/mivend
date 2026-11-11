@@ -9,3 +9,4 @@ export { OrganizationEventService, REQUISITE_FIELDS } from './src/organization-e
 export type { OrganizationEventInput, RequisiteFields } from './src/organization-event.service';
 export type { OrganizationSignatory } from './src/entities/organization-requisites.entity';
 export { ProformaRequeueService } from './src/proforma-requeue.service';
+export { LegalNameAbbreviation } from './src/entities/legal-name-abbreviation.entity';
