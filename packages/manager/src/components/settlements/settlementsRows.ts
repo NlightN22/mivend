@@ -27,7 +27,10 @@ export function formatSettlementAmount(minor: number, currency: string): string 
     return `${value} ${currency}`;
 }
 
-export function toSettlementRows(items: SettlementListItem[]): SettlementRow[] {
+export function toSettlementRows(
+    items: SettlementListItem[],
+    typeCodes: string[] = [],
+): SettlementRow[] {
     return items.map(item => ({
         id: item.id,
         number: item.number,
@@ -35,7 +38,7 @@ export function toSettlementRows(items: SettlementListItem[]): SettlementRow[] {
         counterpartyId: item.counterpartyId ?? '',
         customer: item.counterpartyShortName ?? '—',
         type: item.documentTypeLabel,
-        typeVariant: documentTypeVariant(item.documentType),
+        typeVariant: documentTypeVariant(item.documentType, typeCodes),
         contract: item.contractName ?? '—',
         organization: item.organizationName ?? '—',
         orderCodes: item.orderCodes,

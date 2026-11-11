@@ -32,6 +32,7 @@ export interface SettlementsListState {
     counterpartyId: Ref<string>;
     page: Ref<number>;
     pageSize: Ref<number>;
+    typeCodes: Ref<string[]>;
     counts: Ref<SettlementTypeCount[] | null>;
     countsLoading: Ref<boolean>;
     typeOptions: Ref<FilterOption[]>;
@@ -100,9 +101,11 @@ export function useSettlementsList(fixedCounterpartyId = '', urlPrefix = ''): Se
 
     // The Filter builder's Type choices: every type of the customer scope, unaffected by search and filters.
     const typeOptions = ref<FilterOption[]>([]);
+    const typeCodes = ref<string[]>([]);
     const { run: runTypeOptions } = useLatestRequest(
         () => fetchSettlementTypeCounts(counterpartyId.value),
         result => {
+            typeCodes.value = result.map(c => c.documentType).sort();
             typeOptions.value = result
                 .map(c => ({ value: c.label, label: c.label }))
                 .sort((a, b) => a.label.localeCompare(b.label));
@@ -166,6 +169,7 @@ export function useSettlementsList(fixedCounterpartyId = '', urlPrefix = ''): Se
         counterpartyId,
         page,
         pageSize,
+        typeCodes,
         counts,
         countsLoading,
         typeOptions,

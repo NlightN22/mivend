@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: st
 
 const authStore = useAuthStore();
 const list = useSettlementsList(props.counterpartyId, props.urlPrefix);
-const rows = computed(() => toSettlementRows(list.items.value));
+const rows = computed(() => toSettlementRows(list.items.value, list.typeCodes.value));
 
 // One chip per document type present for the current search and filter, after the total.
 const chips = computed<FilterChip[]>(() => {
@@ -34,7 +34,7 @@ const chips = computed<FilterChip[]>(() => {
         ...(counts ?? []).map(c => ({
             key: c.documentType,
             label: c.label,
-            variant: documentTypeVariant(c.documentType),
+            variant: documentTypeVariant(c.documentType, list.typeCodes.value),
             count: c.count,
             countLoading: loading,
         })),

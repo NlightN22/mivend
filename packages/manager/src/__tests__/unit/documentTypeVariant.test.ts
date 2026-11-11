@@ -14,4 +14,15 @@ describe('documentTypeVariant', () => {
         );
         expect(used.size).toBeGreaterThanOrEqual(6);
     });
+
+    it('gives the first 8 sorted codes distinct colours, independent of anything else', () => {
+        const codes = Array.from({ length: 12 }, (_, i) => `type-${String(i).padStart(2, '0')}`);
+        const first = codes.slice(0, 8).map(c => documentTypeVariant(c, codes));
+        expect(new Set(first).size).toBe(8);
+        expect(documentTypeVariant(codes[9], codes)).toBe(documentTypeVariant(codes[9], codes));
+    });
+
+    it('falls back to the hash for a code outside the list', () => {
+        expect(documentTypeVariant('unknown', ['a'])).toBe(documentTypeVariant('unknown'));
+    });
 });
