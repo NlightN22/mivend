@@ -92,7 +92,7 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
 - **Filter typing follows the value set.** A column with a bounded value set (types, statuses, organizations,
   channels, branches, price types) filters as a `select` with `filterOptions` loaded from data (never hardcoded);
   only unbounded columns (customer, number, free text) use text operators. Check every new list against this.
-- **Categorical colours** (`cat-1`..`cat-8`, role tokens `--app-cat-N-bg/fg/bd`, light and dark) colour sets owned by external data, such as ERP document types: `MvStatusBadge` and `MvFilterChips` share the variant, and `documentTypeVariant(code)` (manager `utils`) hashes the type code, so a type has one colour in its chip, its badge and every list. Semantic variants keep their meaning (success, warning, ...).
+- **Categorical colours** (`cat-1`..`cat-8`, role tokens `--app-cat-N-bg/fg`, light and dark) colour sets owned by external data, such as ERP document types: `MvStatusBadge` and `MvFilterChips` share the variant, and `documentTypeVariant(code, sortedCodes)` (manager `utils`) takes the position of the type in the global sorted type list (`useDocumentTypeCodes`, loaded once per session, not per customer), so a type has one colour in its chip, its badge and every screen; it shifts only when a brand-new type enters the system. A code outside the list falls back to a hash. Semantic variants keep their meaning (success, warning, ...).
 - **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
   request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
   while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.

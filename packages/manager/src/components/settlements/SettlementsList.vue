@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useDocumentTypeCodes } from '../../composables/useDocumentTypeCodes';
 import { documentTypeVariant } from '../../utils/documentTypeVariant';
 import { MvFilterChips, MvWarningBanner, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -16,7 +17,9 @@ const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: st
 
 const authStore = useAuthStore();
 const list = useSettlementsList(props.counterpartyId, props.urlPrefix);
-const rows = computed(() => toSettlementRows(list.items.value, list.typeCodes.value));
+const { codes: typeCodes, ensureLoaded } = useDocumentTypeCodes();
+ensureLoaded();
+const rows = computed(() => toSettlementRows(list.items.value, typeCodes.value));
 
 // One chip per document type present for the current search and filter, after the total.
 const chips = computed<FilterChip[]>(() => {
@@ -34,7 +37,7 @@ const chips = computed<FilterChip[]>(() => {
         ...(counts ?? []).map(c => ({
             key: c.documentType,
             label: c.label,
-            variant: documentTypeVariant(c.documentType, list.typeCodes.value),
+            variant: documentTypeVariant(c.documentType, typeCodes.value),
             count: c.count,
             countLoading: loading,
         })),

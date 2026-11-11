@@ -135,26 +135,18 @@
 
     --app-cat-1-bg: var(--palette-teal-100);
     --app-cat-1-fg: var(--palette-teal-800);
-    --app-cat-1-bd: var(--palette-teal-300);
     --app-cat-2-bg: var(--palette-indigo-100);
     --app-cat-2-fg: var(--palette-indigo-800);
-    --app-cat-2-bd: var(--palette-indigo-300);
     --app-cat-3-bg: var(--palette-rose-100);
     --app-cat-3-fg: var(--palette-rose-800);
-    --app-cat-3-bd: var(--palette-rose-300);
     --app-cat-4-bg: var(--palette-orange-100);
     --app-cat-4-fg: var(--palette-orange-800);
-    --app-cat-4-bd: var(--palette-orange-300);
     --app-cat-5-bg: var(--palette-cyan-100);
     --app-cat-5-fg: var(--palette-cyan-800);
-    --app-cat-5-bd: var(--palette-cyan-300);
     --app-cat-6-bg: var(--palette-fuchsia-100);
     --app-cat-6-fg: var(--palette-fuchsia-800);
-    --app-cat-6-bd: var(--palette-fuchsia-300);
     --app-cat-7-bg: var(--palette-olive-100);
     --app-cat-7-fg: var(--palette-olive-800);
-    --app-cat-7-bd: var(--palette-olive-300);
     --app-cat-8-bg: var(--palette-stone-100);
     --app-cat-8-fg: var(--palette-stone-800);
-    --app-cat-8-bd: var(--palette-stone-300);
 }
