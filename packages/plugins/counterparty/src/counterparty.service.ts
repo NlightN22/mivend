@@ -14,7 +14,6 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { clampSkip, clampTake, withAggregateLock, ctxQuery } from 'shared';
 
-import { getPortalReadiness, PortalReadiness } from './counterparty-readiness-filter';
 import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn-guard';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
@@ -300,10 +299,6 @@ export class CounterpartyService {
 
     getInnStatus(ctx: RequestContext, counterparty: Counterparty): Promise<InnStatus> {
         return getInnStatus(this.connection, ctx, counterparty);
-    }
-
-    getPortalReadiness(ctx: RequestContext, counterpartyId: ID): Promise<PortalReadiness> {
-        return getPortalReadiness(this.connection, ctx, counterpartyId);
     }
 
     async setCustomerCounterparty(

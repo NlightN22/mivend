@@ -201,7 +201,7 @@ through `BulkExecutorRegistry` (the resolvers carry only `@Allow(Authenticated)`
 `ManageCounterpartyPortalAccess`. Scope is checked per record, never per batch: at review and again at run time under
 the row lock, a record outside the actor's scope is skipped with `out_of_scope` and never changed. A draft belongs to
 its creator (only the creator reads or runs it); the history shows the batches of the operation types the viewer holds,
-and counters and per-record rows are recounted over the records the viewer's scope covers. Tests: the access matrix
+and counters and per-record rows are recounted over the records the viewer's scope covers. The portal readiness status (`inn-duplicate`) can reveal that another, possibly out-of-scope, counterparty with a live portal customer shares the INN; this is accepted. Tests: the access matrix
 rows in `apps/server/src/__tests__/access/bulk`, and the plugin's real-Postgres scope tests.
 
 ### Check results and policies (#237)

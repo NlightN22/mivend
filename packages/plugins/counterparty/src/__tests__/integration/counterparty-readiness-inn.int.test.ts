@@ -10,12 +10,12 @@ import {
 } from 'shared';
 
 import { CounterpartyService } from '../../counterparty.service';
-import { PORTAL_READINESS } from '../../counterparty-readiness-filter';
+import { loadPortalReadiness, PORTAL_READINESS } from '../../counterparty-readiness-filter';
 
 // Vendure's VendureEntity needs bootstrap(), so hand-rolled tables stand in for the real entities.
 @Entity('counterparty')
 class TestCounterparty {
-    @PrimaryGeneratedColumn('uuid') id!: string;
+    @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar' }) erpId!: string;
     @Column({ type: 'varchar' }) legalName!: string;
     @Column({ type: 'varchar' }) shortName!: string;
@@ -44,12 +44,13 @@ class TestContactPoint {
 class TestCounterpartyContactPoint {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) contactPointId!: number;
-    @Column({ type: 'uuid' }) counterpartyId!: string;
+    @Column({ type: 'int' }) counterpartyId!: number;
     @Column({ type: 'boolean', default: false }) isPrimary!: boolean;
 }
 
 let dataSource: DataSource;
 let service: CounterpartyService;
+let connection: TransactionalConnection;
 const mockCtx = {} as RequestContext;
 const { schema, extra } = testSchemaOptions('counterparty_readiness_inn');
 
@@ -64,8 +65,11 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    connection = {
+        getRepository: () => dataSource.getRepository(TestCounterparty),
+    } as unknown as TransactionalConnection;
     service = new CounterpartyService(
-        { getRepository: () => dataSource.getRepository(TestCounterparty) } as unknown as TransactionalConnection,
+        connection,
         { update: vi.fn() } as never,
         { assignCustomerPriceTypeByCode: vi.fn() } as never,
         {
@@ -118,7 +122,8 @@ async function byReadiness(readiness: string): Promise<string[]> {
 
 async function ownStatus(erpId: string): Promise<string> {
     const row = await dataSource.getRepository(TestCounterparty).findOneByOrFail({ erpId });
-    return service.getPortalReadiness(mockCtx, row.id);
+    const found = await loadPortalReadiness(connection, mockCtx, [String(row.id)]);
+    return found.get(String(row.id)) ?? 'missing';
 }
 
 describe('portal readiness covers INN like the activation executor', () => {

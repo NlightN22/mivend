@@ -107,7 +107,7 @@ export class CounterpartyCustomerLinkResolver {
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<string> {
-        return this.counterpartyService.getPortalReadiness(ctx, counterparty.id);
+        return this.loaders.portalReadiness(ctx, counterparty.id);
     }
 }
 

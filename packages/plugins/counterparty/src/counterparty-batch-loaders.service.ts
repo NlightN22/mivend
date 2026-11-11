@@ -4,6 +4,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CtxLoader, ctxQuery } from 'shared';
 import { In } from 'typeorm';
 
+import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
 import { ContactPointService, type ChosenContact } from './contact-point.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { Counterparty } from './entities/counterparty.entity';
@@ -20,6 +21,11 @@ export class CounterpartyBatchLoaders {
         this.loadByCustomer(ctx, keys),
     );
 
+    private readiness = new CtxLoader<PortalReadiness>(async (ctx, keys) => {
+        const found = await loadPortalReadiness(this.connection, ctx, keys.filter(isRowId));
+        return keys.map(key => found.get(key) ?? 'missing-data');
+    });
+
     private chosen = new CtxLoader<ChosenContact>(async (ctx, keys) => {
         const found = await this.contactPoints.chosenContacts(ctx, keys.filter(isRowId));
         return keys.map(key => found.get(key) ?? { email: null, phone: null });
@@ -34,6 +40,10 @@ export class CounterpartyBatchLoaders {
     chosenContact(ctx: RequestContext, counterpartyId: string | number): Promise<ChosenContact> {
         if (!isRowId(String(counterpartyId))) return Promise.resolve({ email: null, phone: null });
         return this.chosen.load(ctx, counterpartyId);
+    }
+
+    portalReadiness(ctx: RequestContext, counterpartyId: string | number): Promise<PortalReadiness> {
+        return this.readiness.load(ctx, counterpartyId);
     }
 
     isHidden(ctx: RequestContext, counterpartyId: string | number): Promise<boolean> {

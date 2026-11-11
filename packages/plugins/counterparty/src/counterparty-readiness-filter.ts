@@ -24,7 +24,7 @@ const INN_DUPLICATE = `EXISTS (SELECT 1 FROM counterparty d WHERE d.id <> c.id A
 
 const BINDABLE = `NOT ${LINKED} AND c."isActive" = true`;
 
-// Precedence mirrors the activation executor: linked, ERP inactive, contacts, INN, duplicate INN.
+// Linked is tested first; for unlinked rows the order (inactive, contacts, INN, duplicate) is the executor's.
 const FRAGMENTS: Record<PortalReadiness, string> = {
     activated: LINKED,
     'erp-inactive': `NOT ${LINKED} AND c."isActive" = false`,
@@ -42,16 +42,17 @@ export function portalReadinessSql(readiness: string): string {
 
 const READINESS_CASE_SQL = `CASE ${PORTAL_READINESS.map(r => `WHEN ${FRAGMENTS[r]} THEN '${r}'`).join(' ')} END`;
 
-export async function getPortalReadiness(
+export async function loadPortalReadiness(
     connection: Pick<TransactionalConnection, 'getRepository'>,
     ctx: RequestContext,
-    counterpartyId: string | number,
-): Promise<PortalReadiness> {
-    const rows = await ctxQuery<Array<{ readiness: PortalReadiness }>>(
+    counterpartyIds: readonly string[],
+): Promise<Map<string, PortalReadiness>> {
+    const rows = await ctxQuery<Array<{ id: string; readiness: PortalReadiness }>>(
         connection,
         ctx,
-        `SELECT ${READINESS_CASE_SQL} AS readiness FROM counterparty c WHERE c.id::text = $1`,
-        [String(counterpartyId)],
+        `SELECT c.id::text AS id, ${READINESS_CASE_SQL} AS readiness FROM counterparty c
+         WHERE c.id = ANY($1::int[])`,
+        [counterpartyIds.map(Number)],
     );
-    return rows[0].readiness;
+    return new Map(rows.map(r => [r.id, r.readiness]));
 }
