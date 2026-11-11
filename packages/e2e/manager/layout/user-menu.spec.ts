@@ -99,3 +99,15 @@ test('submitting the phone search opens the customers list with the text @on:man
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/customers\?.*search=alpha/);
 });
+
+test('searching from the phone header while already on the customers list updates the list @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/customers');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('searchbox').fill('alpha');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/customers\?.*search=alpha/);
+    await expect(page.getByPlaceholder(/Company name/)).toHaveValue('alpha');
+});
