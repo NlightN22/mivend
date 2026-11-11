@@ -1,14 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { useNotifications } from '../../composables/useNotifications';
-import { useToast } from '../../composables/useToast';
+import { popups } from '../../composables/notificationPopups';
+import { notify } from '../../composables/notify';
 import type {
     NotificationFetchOptions,
     NotificationItem,
     NotificationPage,
     NotificationTransport,
 } from '../../composables/notificationTypes';
-
-const { toasts } = useToast();
 
 function makeItem(overrides: Partial<NotificationItem> = {}): NotificationItem {
     return {
@@ -45,6 +44,12 @@ function makeTransport(
             }
             return { items: initial, totalItems: initial.length };
         }),
+        create: vi.fn(
+            async (input: { kind: NotificationItem['kind']; title: string; message: string }) => {
+                unreadTotal += 1;
+                return makeItem({ id: 'created', sourceType: 'client', ...input });
+            },
+        ),
         subscribe: vi.fn((cb: (n: NotificationItem) => void) => {
             onReceived = cb;
             return () => {
@@ -95,18 +100,81 @@ describe('useNotifications', () => {
         expect(unreadCount.value).toBe(73);
     });
 
-    it('appends a new item delivered via subscribe and fires a toast', async () => {
+    it('appends a new backend item delivered via subscribe and shows it as a popup bound for the bell', async () => {
         const transport = makeTransport([]);
         const { notifications } = useNotifications(transport);
         await flush();
 
-        const before = toasts.value.length;
+        const before = popups.value.length;
         transport.emit(makeItem({ id: 'new', title: 'New', message: 'Arrived' }));
 
         expect(notifications.value).toHaveLength(1);
         expect(notifications.value[0].id).toBe('new');
-        expect(toasts.value.length).toBe(before + 1);
-        expect(toasts.value[toasts.value.length - 1].message).toBe('New: Arrived');
+        expect(popups.value.length).toBe(before + 1);
+        expect(popups.value[popups.value.length - 1]).toMatchObject({
+            title: 'New',
+            message: 'Arrived',
+            persisted: true,
+        });
+    });
+
+    it('adds a client-origin item to the list without a second popup', async () => {
+        const transport = makeTransport([]);
+        const { notifications } = useNotifications(transport);
+        await flush();
+
+        const before = popups.value.length;
+        transport.emit(makeItem({ id: 'mine', sourceType: 'client' }));
+
+        expect(notifications.value).toHaveLength(1);
+        expect(popups.value.length).toBe(before);
+    });
+
+    it('notify() stores the popup through the transport, lists it and refreshes the unread count', async () => {
+        const transport = makeTransport([]);
+        const { notifications, unreadCount } = useNotifications(transport);
+        await flush();
+
+        notify('Could not save', 'error', { title: 'Profile' });
+        await flush();
+
+        expect(transport.create).toHaveBeenCalledWith({
+            kind: 'error',
+            title: 'Profile',
+            message: 'Could not save',
+        });
+        expect(notifications.value.map(n => n.id)).toEqual(['created']);
+        expect(unreadCount.value).toBe(1);
+    });
+
+    it('notify() with ephemeral shows the popup and stores nothing', async () => {
+        const transport = makeTransport([]);
+        useNotifications(transport);
+        await flush();
+
+        const before = popups.value.length;
+        notify('Copied', 'success', { ephemeral: true });
+        await flush();
+
+        expect(popups.value.length).toBe(before + 1);
+        expect(popups.value[popups.value.length - 1].persisted).toBe(false);
+        expect(transport.create).not.toHaveBeenCalled();
+    });
+
+    it('logs a failed store, keeps the popup and does not throw into the caller', async () => {
+        const transport = makeTransport([]);
+        vi.mocked(transport.create).mockRejectedValueOnce(new Error('offline'));
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        useNotifications(transport);
+        await flush();
+
+        const before = popups.value.length;
+        expect(() => notify('Could not save', 'error')).not.toThrow();
+        await flush();
+
+        expect(popups.value.length).toBe(before + 1);
+        expect(error).toHaveBeenCalledWith('Could not store the notification', expect.any(Error));
+        error.mockRestore();
     });
 
     it('replaces (dedupes) an item whose id already exists instead of duplicating it', async () => {

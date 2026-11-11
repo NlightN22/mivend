@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import { UpdateCustomerPasswordForSettingsDocument } from '../../api/generated/graphql';
 import { shopErrorMessage } from '../../utils/shopErrorMessage';
@@ -39,7 +39,7 @@ export function usePasswordChange(onChanged: () => void): {
                 return;
             }
             form.value = { current: '', next: '', confirm: '' };
-            toast(t('settings.security.passwordChanged'), 'success');
+            notify(t('settings.security.passwordChanged'), 'success');
             onChanged();
         } catch {
             error.value = t('settings.security.passwordFailed');

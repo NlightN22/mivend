@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 
-vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('@mivend/ui-kit', () => ({ notify: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 vi.mock('../../composables/usePackagesOnly', () => ({
     usePackagesOnly: () => ({ packagesOnly: { value: true }, load: async () => undefined }),
 }));
 
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import { setLocale } from '../../i18n';
 import { useCartStore } from '../../stores/cart';
@@ -30,9 +30,9 @@ function failWith(doc: unknown, field: string, quantityAvailable: number): void 
 
 async function addMessage(quantityAvailable: number, unit: typeof pack | null): Promise<string> {
     failWith(AddToCartDocument, 'addItemToOrder', quantityAvailable);
-    vi.mocked(toast).mockClear();
+    vi.mocked(notify).mockClear();
     await useCartStore().addItem('v1', 50, unit);
-    return vi.mocked(toast).mock.calls[0][0] as string;
+    return vi.mocked(notify).mock.calls[0][0] as string;
 }
 
 describe('insufficient stock message', () => {
@@ -83,11 +83,11 @@ describe('insufficient stock message', () => {
             ],
         } as never;
         failWith(AdjustCartLineDocument, 'adjustOrderLine', 50);
-        vi.mocked(toast).mockClear();
+        vi.mocked(notify).mockClear();
         const done = store.adjustItem('l1', 100);
         await vi.advanceTimersByTimeAsync(400);
         await done;
         vi.useRealTimers();
-        expect(vi.mocked(toast).mock.calls[0][0]).toBe('Only 1 pack available');
+        expect(vi.mocked(notify).mock.calls[0][0]).toBe('Only 1 pack available');
     });
 });

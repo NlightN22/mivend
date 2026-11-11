@@ -51,7 +51,7 @@ test.describe('Add-to-cart toast reflects the real applied discount', () => {
         await addButton.click();
         await added;
 
-        const toast = page.locator('.mv-toast');
+        const toast = page.locator('.mv-notification-popup');
         await expect(toast).toBeVisible({ timeout: 10000 });
         await expect(toast).toContainText('25%');
         await expect(toast).not.toContainText('10%');

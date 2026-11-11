@@ -32,7 +32,15 @@ export interface NotificationPage {
     totalItems: number;
 }
 
+export interface NewNotification {
+    kind: NotificationKind;
+    title: string;
+    message: string;
+}
+
 export interface NotificationTransport {
+    // Stores a popup the user just saw; the backend collapses an identical one sent within a minute.
+    create(input: NewNotification): Promise<NotificationItem>;
     fetch(opts?: NotificationFetchOptions): Promise<NotificationPage>;
     subscribe(onReceived: (n: NotificationItem) => void): () => void;
     markRead(id: string): Promise<NotificationItem>;

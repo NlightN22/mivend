@@ -1,6 +1,6 @@
 import { i18n } from '../i18n';
 
-// Server ErrorResult messages are English-only, so the toast is keyed by errorCode instead.
+// Server ErrorResult messages are English-only, so the notification is keyed by errorCode instead.
 export function shopErrorMessage(
     result: { errorCode?: string | null } | null | undefined,
     fallbackKey: string,

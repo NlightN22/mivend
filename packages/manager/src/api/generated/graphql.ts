@@ -4401,6 +4401,7 @@ export type Mutation = {
      */
     login: NativeAuthenticationResult;
     logout: Success;
+    createClientNotification: Notification;
     markNotificationRead: Notification;
     /**
      * Allows an Order to be modified after it has been completed by the Customer. The Order must first
@@ -5223,6 +5224,10 @@ export type MutationLoginArgs = {
     username: Scalars['String']['input'];
 };
 
+export type MutationCreateClientNotificationArgs = {
+    input: ClientNotificationInput;
+};
+
 export type MutationMarkNotificationReadArgs = {
     id: Scalars['ID']['input'];
 };
@@ -5944,8 +5949,17 @@ export type NotificationList = {
     totalItems: Scalars['Int']['output'];
 };
 
+/** A notification a portal shows as a popup and keeps in the bell (#348). The owner is always the caller. */
+export type ClientNotificationInput = {
+    kind: NotificationKind;
+    /** Up to 1000 characters. */
+    message: Scalars['String']['input'];
+    /** Up to 120 characters, may be empty. */
+    title?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type NotificationListOptions = {
-    /** Case-insensitive contains match against title (issue #92 — the full notifications page's search box). */
+    /** Case-insensitive contains match against title or message (issue #92 — the full notifications page's search box). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<NotificationStatus>;
@@ -12742,6 +12756,26 @@ export type NotificationReceivedSubscription = {
     };
 };
 
+export type CreateClientNotificationMutationVariables = Exact<{
+    input: ClientNotificationInput;
+}>;
+
+export type CreateClientNotificationMutation = {
+    createClientNotification: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt: any | null;
+        resolvedAt: any | null;
+        resolution: string | null;
+        createdAt: any;
+    };
+};
+
 export type MarkNotificationReadMutationVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
@@ -16778,6 +16812,28 @@ export const NotificationReceivedDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     NotificationReceivedSubscription,
     NotificationReceivedSubscriptionVariables
+>;
+export const CreateClientNotificationDocument = new TypedDocumentString(`
+    mutation CreateClientNotification($input: ClientNotificationInput!) {
+  createClientNotification(input: $input) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    CreateClientNotificationMutation,
+    CreateClientNotificationMutationVariables
 >;
 export const MarkNotificationReadDocument = new TypedDocumentString(`
     mutation MarkNotificationRead($id: ID!) {

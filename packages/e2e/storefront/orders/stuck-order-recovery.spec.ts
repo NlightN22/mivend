@@ -39,7 +39,9 @@ test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
         await page.goto('/catalog');
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
-        const errorToast = page.locator('.mv-toast', { hasText: 'Could not add item to cart' });
+        const errorToast = page.locator('.mv-notification-popup', {
+            hasText: 'Could not add item to cart',
+        });
         await page.getByRole('button', { name: '+ Add' }).first().click();
 
         // The click only starts the add; poll until the recovery has moved the order back,

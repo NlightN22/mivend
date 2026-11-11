@@ -12,7 +12,7 @@ vi.mock('../../composables/useMultiplicityEnforced', () => ({
         load: vi.fn().mockResolvedValue(undefined),
     }),
 }));
-vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('@mivend/ui-kit', () => ({ notify: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 
 import { useCartStore } from '../../stores/cart';

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { MvToastContainer, MvConnectionBar } from '@mivend/ui-kit';
+import { MvNotificationPopups, MvConnectionBar } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
 import { useActingStore } from './stores/acting';
 import { useCartStore } from './stores/cart';
@@ -48,5 +48,5 @@ const handleRelogin = useLogout();
         logged-out
         @relogin="handleRelogin"
     />
-    <MvToastContainer />
+    <MvNotificationPopups />
 </template>

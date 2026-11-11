@@ -1,5 +1,6 @@
 import type {
     NotificationFetchOptions,
+    NewNotification,
     NotificationItem,
     NotificationPage,
     NotificationTransport,
@@ -7,12 +8,14 @@ import type {
 import { shopApi } from './client';
 import { getNotificationsWsClient } from './notificationsWsClient';
 import {
+    CreateClientNotificationDocument,
     MarkNotificationReadDocument,
     NotificationReceivedDocument,
     NotificationsDocument,
     ResolveNotificationDocument,
     type NotificationFieldsFragment,
     type NotificationReceivedSubscription,
+    NotificationKind as GeneratedNotificationKind,
     NotificationStatus as GeneratedNotificationStatus,
 } from './generated/graphql';
 
@@ -66,6 +69,13 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
+async function createNotification(input: NewNotification): Promise<NotificationItem> {
+    const result = await shopApi(CreateClientNotificationDocument, {
+        input: { ...input, kind: input.kind as unknown as GeneratedNotificationKind },
+    });
+    return toNotificationItem(result.createClientNotification);
+}
+
 export async function markNotificationRead(id: string): Promise<NotificationItem> {
     const result = await shopApi(MarkNotificationReadDocument, { id });
     return toNotificationItem(result.markNotificationRead);
@@ -78,6 +88,7 @@ async function resolveNotification(id: string, resolution: string): Promise<Noti
 
 export const notificationTransport: NotificationTransport = {
     fetch: fetchNotifications,
+    create: createNotification,
     subscribe: subscribeToNotifications,
     markRead: markNotificationRead,
     resolve: resolveNotification,

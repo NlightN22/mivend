@@ -1,7 +1,9 @@
 import { computed, getCurrentInstance, onBeforeUnmount, ref } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import { useToast } from './useToast';
-import type { NotificationItem, NotificationTransport } from './notificationTypes';
+import { clearNotificationPersister, setNotificationPersister } from './notify';
+import { showPopup } from './notificationPopups';
+import { defaultTtlMs, isClientOrigin } from './notifyRules';
+import type { NewNotification, NotificationItem, NotificationTransport } from './notificationTypes';
 
 // Dropdown shows only a few recent items; the full filterable list lives on each portal's page.
 // Small size also bounds panel growth from live WebSocket pushes (see upsert()).
@@ -22,7 +24,6 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
     const notifications = ref<NotificationItem[]>([]);
     const unreadTotal = ref(0);
     const loading = ref(false);
-    const { toast } = useToast();
 
     const unreadCount = computed(() => unreadTotal.value);
 
@@ -65,11 +66,27 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
         await refreshUnreadTotal();
     }
 
-    const unsubscribe = transport.subscribe(item => {
+    async function record(input: NewNotification): Promise<void> {
+        upsert(await transport.create(input));
+        await refreshUnreadTotal();
+    }
+
+    const unsubscribeLive = transport.subscribe(item => {
         upsert(item);
-        toast(`${item.title}: ${item.message}`, item.kind);
+        if (!isClientOrigin(item)) {
+            showPopup(
+                { title: item.title, message: item.message, kind: item.kind, persisted: true },
+                defaultTtlMs(item.kind),
+            );
+        }
         void refreshUnreadTotal();
     });
+    setNotificationPersister(record);
+
+    function unsubscribe(): void {
+        unsubscribeLive();
+        clearNotificationPersister(record);
+    }
 
     if (getCurrentInstance()) {
         onBeforeUnmount(unsubscribe);

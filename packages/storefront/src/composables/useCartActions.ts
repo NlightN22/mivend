@@ -1,4 +1,4 @@
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../stores/cart';
 import { discountAddToCartHint } from '../utils/discountMessages';
 import { resolveAddQty, type QuantityVariant } from './productQuantity';
@@ -52,7 +52,9 @@ export function useCartActions(): {
         // The mutation response carries the discount: the catalog price is wrong once an add crosses a tier.
         const discount = await addToCart(variantId, variant, baseQty);
         if (discount) {
-            toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
+            notify(discountAddToCartHint(discount.percent, discount.brand), 'success', {
+                ephemeral: true,
+            });
         }
     }
 

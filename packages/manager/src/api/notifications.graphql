@@ -38,3 +38,9 @@ mutation ResolveNotification($id: ID!, $resolution: String!) {
         ...NotificationFields
     }
 }
+
+mutation CreateClientNotification($input: ClientNotificationInput!) {
+    createClientNotification(input: $input) {
+        ...NotificationFields
+    }
+}

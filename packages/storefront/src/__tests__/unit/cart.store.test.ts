@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 
-vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('@mivend/ui-kit', () => ({ notify: vi.fn() }));
 vi.mock('../../composables/usePackagesOnly', () => ({
     usePackagesOnly: () => ({ packagesOnly: { value: false }, load: async () => undefined }),
 }));

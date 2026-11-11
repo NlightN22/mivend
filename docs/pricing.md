@@ -334,7 +334,7 @@ currency unit in `discount-rule.handler.ts`. Verified end-to-end via
 
 **Built — UX.** No live "buy N more kg for a better price" calculator, as agreed — just:
 
-- A toast on add-to-cart, reusing catalog-level `compareAtPrice`/`customerPrice`
+- A popup on add-to-cart, reusing catalog-level `compareAtPrice`/`customerPrice`
   already fetched by `ProductListView.vue`/`ProductPage.vue` (no backend change — this
   only ever reflects the _flat_ facet+period discount, never a tier, since the catalog
   has no order-quantity context). Wired through
@@ -346,12 +346,12 @@ currency unit in `discount-rule.handler.ts`. Verified end-to-end via
   (`OrderLineDiscountResolver` in `price-entry.resolver.ts`): the price before every discount, from the
   same `PriceResolutionService.resolve(ctx, variantId, { order, quantity })` call the promotion uses —
   zero new pricing logic, just a read-only view of it.
-- The toast itself (`MvToast`/`MvToastContainer`/`useToast`) lives in `ui-kit` as a
-  general-purpose primitive (queue-based, module-level state, no Pinia dependency) —
-  not discount-specific. Mounted once in `App.vue`.
+- The popup itself (`MvNotificationPopup`/`MvNotificationPopups`, emitted with `notify()`, #348) lives in
+  `ui-kit` as a general-purpose primitive (queue-based, module-level state, no Pinia dependency) —
+  not discount-specific. This hint is ephemeral (shown, not kept in the bell). Mounted once in `App.vue`.
 - **Known gap, not fixed here:** `ProductScrollRow.vue`/home-page widgets
   (`useWidgetProducts.ts`) still don't fetch `compareAtPrice` at all (pre-existing,
-  noted when `ProductPage.vue` was wired) — the toast won't fire from home-page
+  noted when `ProductPage.vue` was wired) — the popup won't fire from home-page
   "Add to cart" clicks. Low priority; fix by mirroring the same field addition already
   done for `useProductList.ts`.
 

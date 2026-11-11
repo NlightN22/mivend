@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
 import { SHIPPING_CODE_BY_DELIVERY } from '../utils/deliveryMethods';
@@ -179,7 +179,7 @@ export const useCartStore = defineStore('cart', () => {
                 }
                 if (result.addItemToOrder.__typename !== 'Order') {
                     // Optimistic line gets discarded below by fetchCart() — surface why.
-                    toast(
+                    notify(
                         mutationErrorMessage(
                             result.addItemToOrder,
                             i18n.global.t('cartErrors.addFailed'),
@@ -299,7 +299,7 @@ export const useCartStore = defineStore('cart', () => {
             if (result.adjustOrderLine.__typename !== 'Order') {
                 // fetchCart() re-syncs to whatever quantity the server actually applied
                 // (InsufficientStockError can be a partial success).
-                toast(
+                notify(
                     mutationErrorMessage(
                         result.adjustOrderLine,
                         i18n.global.t('cartErrors.updateFailed'),
@@ -355,21 +355,21 @@ export const useCartStore = defineStore('cart', () => {
         if (order.value?.state === 'ArrangingPayment') await shopApi(ResumeAddingItemsDocument);
         const checkout = useCheckoutStore();
         if (checkout.deliveryBlocker) {
-            toast(checkout.deliveryBlocker, 'error');
+            notify(checkout.deliveryBlocker, 'error');
             return false;
         }
         const eligible = await shopApi(EligibleShippingMethodsForCheckoutDocument);
         const wantedCode = SHIPPING_CODE_BY_DELIVERY[checkout.selectedDelivery];
         const methodId = eligible.eligibleShippingMethods.find(m => m.code === wantedCode)?.id;
         if (!methodId) {
-            toast(i18n.global.t('cartErrors.deliveryUnavailable'), 'error');
+            notify(i18n.global.t('cartErrors.deliveryUnavailable'), 'error');
             return false;
         }
         const setMethodResult = await shopApi(SetOrderShippingMethodForCheckoutDocument, {
             id: [methodId],
         });
         if (setMethodResult.setOrderShippingMethod.__typename !== 'Order') {
-            toast(
+            notify(
                 shopErrorMessage(
                     setMethodResult.setOrderShippingMethod,
                     'cartErrors.shippingFailed',
@@ -381,7 +381,7 @@ export const useCartStore = defineStore('cart', () => {
         const transitionResult = await shopApi(TransitionToArrangingPaymentDocument);
         const transition = transitionResult.transitionOrderToState;
         if (!transition || transition.__typename !== 'Order') {
-            toast(shopErrorMessage(transition, 'cartErrors.paymentFailed'), 'error');
+            notify(shopErrorMessage(transition, 'cartErrors.paymentFailed'), 'error');
             return false;
         }
         return true;

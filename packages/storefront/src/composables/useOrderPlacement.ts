@@ -1,5 +1,5 @@
 import { useRouter } from 'vue-router';
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import type { PaymentForm } from 'shared';
 import { shopApi } from '../api/client';
 import {
@@ -66,7 +66,7 @@ export function useOrderPlacement(): { place: () => Promise<void> } {
         await cartStore.fetchCart();
         const payment = result.addPaymentToOrder;
         if (payment.__typename !== 'Order') {
-            toast(shopErrorMessage(payment, 'checkout.placeFailed'), 'error');
+            notify(shopErrorMessage(payment, 'checkout.placeFailed'), 'error');
             return;
         }
         // Popup blockers may drop these tabs; the order-created page lists the same links.

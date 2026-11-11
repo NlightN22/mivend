@@ -128,7 +128,9 @@ function formatRelativeTime(value: string): string {
                 />
                 <div class="mv-notification-panel__body">
                     <div class="mv-notification-panel__row-header">
-                        <span class="mv-notification-panel__row-title">{{ item.title }}</span>
+                        <span v-if="item.title" class="mv-notification-panel__row-title">{{
+                            item.title
+                        }}</span>
                         <span class="mv-notification-panel__row-time">
                             {{ formatRelativeTime(item.createdAt) }}
                         </span>
@@ -292,6 +294,7 @@ function formatRelativeTime(value: string): string {
 
 .mv-notification-panel__row-time {
     flex-shrink: 0;
+    margin-left: auto;
     font-size: 11px;
     color: var(--el-text-color-secondary, var(--app-text-faint));
 }

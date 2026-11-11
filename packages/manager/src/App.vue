@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { MvToastContainer } from '@mivend/ui-kit';
+import { MvNotificationPopups } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
 
 const authStore = useAuthStore();
@@ -12,5 +12,5 @@ onMounted(async () => {
 
 <template>
     <RouterView />
-    <MvToastContainer />
+    <MvNotificationPopups />
 </template>

@@ -13,6 +13,7 @@ defineEmits<{ click: [] }>();
     <button
         type="button"
         class="mv-notification-bell"
+        data-notification-bell
         :aria-label="ariaLabel"
         @click="$emit('click')"
     >

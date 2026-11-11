@@ -1,6 +1,6 @@
 import { onMounted, ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import {
     MyTradingPointsForDeliverySelectorDocument,
@@ -50,7 +50,7 @@ export function useSettingsProfile(): {
             const preferred = authStore.customer?.customFields?.preferredTradingPointId ?? '';
             pointId.value = points.value.some(p => p.id === preferred) ? preferred : '';
         } catch {
-            toast(t('settings.profile.loadFailed'), 'error');
+            notify(t('settings.profile.loadFailed'), 'error');
         } finally {
             loading.value = false;
         }
@@ -69,9 +69,9 @@ export function useSettingsProfile(): {
                 });
             }
             await authStore.fetchCurrentCustomer();
-            toast(t('settings.profile.saved'), 'success');
+            notify(t('settings.profile.saved'), 'success');
         } catch {
-            toast(t('settings.profile.saveFailed'), 'error');
+            notify(t('settings.profile.saveFailed'), 'error');
         } finally {
             saving.value = false;
         }

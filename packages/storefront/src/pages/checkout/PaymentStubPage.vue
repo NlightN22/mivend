@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { formatMoney } from '../../i18n/format';
-import { MvNotImplemented, formatDocumentNumber, toast } from '@mivend/ui-kit';
+import { MvNotImplemented, formatDocumentNumber, notify } from '@mivend/ui-kit';
 import { IconAlertTriangle, IconCheck, IconHourglass, IconLock, IconX } from '@tabler/icons-vue';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore } from '../../stores/checkout';
@@ -34,7 +34,7 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
     if (!code) return;
     const outcome = await cartStore.completeOnlinePayment(status);
     if (outcome === 'amount-changed') {
-        toast(t('paymentStub.amountChanged'), 'error');
+        notify(t('paymentStub.amountChanged'), 'error');
         router.push('/checkout');
         return;
     }

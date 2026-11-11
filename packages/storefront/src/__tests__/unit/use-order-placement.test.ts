@@ -5,7 +5,7 @@ const push = vi.fn();
 vi.mock('vue-router', () => ({
     useRouter: () => ({ push, resolve: (l: { path: string }) => ({ href: l.path }) }),
 }));
-vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('@mivend/ui-kit', () => ({ notify: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 vi.mock('../../api/generated/graphql', () => ({
     CompleteOrderPaymentDocument: 'pay',

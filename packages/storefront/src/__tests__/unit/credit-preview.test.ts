@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { effectScope, nextTick } from 'vue';
 
 vi.mock('@mivend/ui-kit', async () => ({
-    toast: vi.fn(),
+    notify: vi.fn(),
     useDebouncedCallback: (await import('../../../../ui-kit/src/composables/useDebouncedCallback'))
         .useDebouncedCallback,
     useLatestRequest: (await import('../../../../ui-kit/src/composables/useLatestRequest'))

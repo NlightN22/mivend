@@ -2,7 +2,7 @@
 import { formatMoney } from '../../i18n/format';
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
 import { useOrderPlacement } from '../../composables/useOrderPlacement';
@@ -76,7 +76,7 @@ async function handlePrimary(): Promise<void> {
         await place();
     } catch (err) {
         console.error('Checkout failed', err);
-        toast(t('checkout.summary.placeFailedRetry'), 'error');
+        notify(t('checkout.summary.placeFailedRetry'), 'error');
     } finally {
         submitting.value = false;
     }

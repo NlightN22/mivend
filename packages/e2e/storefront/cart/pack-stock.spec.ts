@@ -32,11 +32,17 @@ test.describe('Packs-only stock (#300)', () => {
             await row.getByRole('button', { name: /Добавить/ }).click();
             await expect(row.locator('.mv-qty-stepper__val')).toHaveValue('1');
             await row.locator('.mv-qty-stepper__btn:last-child').click();
-            await expect(page.locator('.mv-toast')).toContainText(
+            await expect(page.locator('.mv-notification-popup')).toContainText(
                 `Доступно только 1 ${PACK_STOCK_UNIT}`,
                 {
                     timeout: 10000,
                 },
+            );
+            // The refusal is a persisted notification: still reachable from the bell after the popup.
+            await page.getByRole('button', { name: 'Уведомления' }).click();
+            await expect(page.locator('.mv-notification-panel')).toContainText(
+                `Доступно только 1 ${PACK_STOCK_UNIT}`,
+                { timeout: 10000 },
             );
         } finally {
             await clearCart(page);

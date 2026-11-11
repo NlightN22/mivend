@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 
-vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('@mivend/ui-kit', () => ({ notify: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 
-import { toast } from '@mivend/ui-kit';
+import { notify } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import { setLocale } from '../../i18n';
 import { usePackagesOnly } from '../../composables/usePackagesOnly';
@@ -56,6 +56,6 @@ describe('cart store reads the shared packages-only flag outside a component', (
         vi.useRealTimers();
         vi.unstubAllGlobals();
 
-        expect(vi.mocked(toast).mock.calls[0][0]).toBe('Only 1 pack available');
+        expect(vi.mocked(notify).mock.calls[0][0]).toBe('Only 1 pack available');
     });
 });

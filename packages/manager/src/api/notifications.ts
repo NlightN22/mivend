@@ -1,6 +1,7 @@
 import { createClient } from 'graphql-ws';
 import type { Client } from 'graphql-ws';
 import type {
+    NewNotification,
     NotificationFetchOptions,
     NotificationItem,
     NotificationPage,
@@ -10,6 +11,7 @@ import type {
 import type { SelectOption, StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi, getCapturedAuthToken } from './client';
 import {
+    CreateClientNotificationDocument,
     MarkNotificationReadDocument,
     NotificationReceivedDocument,
     NotificationsDocument,
@@ -104,6 +106,11 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
+async function createNotification(input: NewNotification): Promise<NotificationItem> {
+    const result = await adminApi(CreateClientNotificationDocument, { input });
+    return result.createClientNotification as NotificationItem;
+}
+
 export async function markNotificationRead(id: string): Promise<NotificationItem> {
     const result = await adminApi(MarkNotificationReadDocument, { id });
     return result.markNotificationRead as NotificationItem;
@@ -119,6 +126,7 @@ export async function resolveNotification(
 
 export const notificationTransport: NotificationTransport = {
     fetch: fetchNotifications,
+    create: createNotification,
     subscribe: subscribeToNotifications,
     markRead: markNotificationRead,
     resolve: resolveNotification,

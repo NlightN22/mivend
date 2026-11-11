@@ -75,10 +75,10 @@ export type { NoticeVariant } from './components/MvNotice/MvNotice.vue';
 
 export { default as MvConnectionBar } from './components/MvConnectionBar/MvConnectionBar.vue';
 
-export { default as MvToast } from './components/MvToast/MvToast.vue';
-export { default as MvToastContainer } from './components/MvToast/MvToastContainer.vue';
-export { useToast, toast, dismissToast } from './composables/useToast';
-export type { ToastItem } from './composables/useToast';
+export { default as MvNotificationPopup } from './components/MvNotificationPopup/MvNotificationPopup.vue';
+export { default as MvNotificationPopups } from './components/MvNotificationPopup/MvNotificationPopups.vue';
+export { notify } from './composables/notify';
+export type { NotifyOptions } from './composables/notifyRules';
 
 export { default as MvNotificationBell } from './components/MvNotificationBell/MvNotificationBell.vue';
 export { default as MvNotificationPanel } from './components/MvNotificationPanel/MvNotificationPanel.vue';
@@ -87,6 +87,7 @@ export type { UseNotifications } from './composables/useNotifications';
 export type {
     NotificationFetchOptions,
     NotificationItem,
+    NewNotification,
     NotificationKind,
     NotificationPage,
     NotificationStatus,

@@ -38,3 +38,9 @@ subscription NotificationReceived {
         ...NotificationFields
     }
 }
+
+mutation CreateClientNotification($input: ClientNotificationInput!) {
+    createClientNotification(input: $input) {
+        ...NotificationFields
+    }
+}
