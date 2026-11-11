@@ -216,6 +216,8 @@ export const JOURNALED_ENTITIES: readonly string[] = [
     'ErpOrderReserve',
     'OrderLineShortfall',
     'SavedTableView',
+    'LegalNameAbbreviation',
+    'NotificationRetentionRule',
 ];
 
 const runtimeExclusions = new Set<string>();
