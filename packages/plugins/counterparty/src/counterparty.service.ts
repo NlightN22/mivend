@@ -166,13 +166,6 @@ export class CounterpartyService {
         return this.connection.getRepository(ctx, Counterparty).findOne({ where: { erpId } });
     }
 
-    async findAll(ctx: RequestContext): Promise<Counterparty[]> {
-        // unbounded-ok: ERP-owned counterparty master list, no list-path callers
-        return this.connection
-            .getRepository(ctx, Counterparty)
-            .find({ order: { shortName: 'ASC' } });
-    }
-
     /** @deprecated Loads every visible row; use visibleIdsSql() as a subquery or findVisiblePage(). */
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
         // unbounded-ok: deprecated, scoped by visibility; list paths use findVisiblePage()
