@@ -235,6 +235,7 @@ defineExpose({ closeSearch });
 
     .mv-app-topbar__search-button {
         display: grid;
+        place-items: center;
     }
 
     .mv-app-topbar .mv-app-topbar__phone-search {
