@@ -53,10 +53,10 @@
 
     --palette-orange-50: #fff5df;
     --palette-orange-100: #fff3e6;
-    --palette-orange-300: #fdba74;
     --palette-orange-400: #fb9b3a;
     --palette-orange-500: #ff8a00;
     --palette-orange-600: #e67c00;
+    --palette-orange-700: #cc6e00;
     --palette-orange-800: #9a4b00;
     --palette-orange-950: #3d2a14;
     --palette-orange-d1: #b4600d;
@@ -129,10 +129,7 @@
     --palette-rose-300: #fda4af;
     --palette-rose-800: #9f1239;
     --palette-rose-950: #3f1520;
-    --palette-orange-100: #ffedd5;
     --palette-orange-300: #fdba74;
-    --palette-orange-800: #9a3412;
-    --palette-orange-950: #3b2010;
     --palette-cyan-100: #cffafe;
     --palette-cyan-300: #67e8f9;
     --palette-cyan-800: #155e75;

@@ -16,6 +16,15 @@
     --el-border-color: var(--palette-ink-150);
     --el-border-color-light: var(--palette-ink-100);
     --el-fill-color-light: var(--palette-ink-75);
+    --el-fill-color-blank: var(--palette-ink-0);
+    --el-fill-color: var(--palette-ink-100);
+    --el-fill-color-lighter: var(--palette-ink-50);
+    --el-border-color-lighter: var(--palette-ink-75);
+    --el-text-color-placeholder: var(--palette-ink-400);
+    --el-text-color-disabled: var(--palette-ink-300);
+    --el-color-danger-light-9: var(--palette-red-50);
+    --el-color-warning-light-9: var(--palette-amber-50);
+    --el-color-success-light-9: var(--palette-brand-50);
     --app-accent-lime: var(--palette-lime-500);
     --app-accent-orange: var(--palette-orange-500);
     --app-accent-orange-hover: var(--palette-orange-600);
