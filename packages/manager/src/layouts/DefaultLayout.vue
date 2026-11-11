@@ -17,6 +17,8 @@ import {
 import { useAuthStore } from '../stores/auth';
 import { fetchPendingApprovalsBadgeCount } from '../api/approvals';
 import { useNavItems } from '../composables/useNavItems';
+import { useHeaderSearch } from '../composables/useHeaderSearch';
+import SearchPanel from '../components/layout/SearchPanel.vue';
 import { useNotificationsStore } from '../stores/notifications';
 
 const notificationsStore = useNotificationsStore();
@@ -40,6 +42,7 @@ const initials = computed(() => {
 const approvalsBadgeCount = ref(0);
 
 const { menuItems, mobileNavItems, moreSheetItems } = useNavItems(approvalsBadgeCount);
+const search = useHeaderSearch(menuItems);
 
 onMounted(async () => {
     try {
@@ -48,10 +51,6 @@ onMounted(async () => {
         approvalsBadgeCount.value = 0;
     }
 });
-
-function searchCustomers(search: string): void {
-    void router.push({ path: '/customers', query: { search } });
-}
 
 async function handleLogout(): Promise<void> {
     const providerUrl = await authStore.logout(true);
@@ -99,12 +98,29 @@ function handleRelogin(): void {
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"
             search-placeholder="Search customers, orders, documents, products, VIN, OEM, phone…"
-            @search="searchCustomers"
+            phone-search-placeholder="Search customers…"
+            @search="search.run"
         >
             <template #actions>
                 <MvNotificationBell
                     :unread-count="unreadCount"
                     @click="notificationPanelOpen = !notificationPanelOpen"
+                />
+            </template>
+            <template #search-panel="{ close }">
+                <SearchPanel
+                    :recent="search.recent.value"
+                    :shortcuts="search.shortcuts.value"
+                    @run="
+                        search.run($event);
+                        close();
+                    "
+                    @remove="search.remove"
+                    @clear="search.clear"
+                    @open="
+                        search.open($event);
+                        close();
+                    "
                 />
             </template>
             <template #user-menu>
