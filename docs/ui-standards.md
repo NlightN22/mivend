@@ -64,6 +64,19 @@ Colors written outside the template, each approved by the user after the two-ste
 | File | Value | Reason |
 | ---- | ----- | ------ |
 
+## Notifications and popups (#348)
+
+One system: a popup and a bell entry are the same notification. Decisions:
+
+- **One emitter.** `notify(message, kind, { title?, ephemeral?, ttlMs? })` from `@mivend/ui-kit` replaces the old `toast()`/`useToast()`; there is no compat shim. Kinds are `info | success | warning | error` everywhere (popup, bell, backend).
+- **Persisted by default, ephemeral is the explicit opt-out.** Errors, warnings and results of actions are kept in the bell; pass `ephemeral: true` only for trivial UI feedback ("copied", "added to favorites", the add-to-cart discount hint). A forgotten flag keeps a message rather than losing it.
+- **Stored on the backend**, in the existing `Notification` table, by the authenticated mutation `createClientNotification` (Shop API for the storefront, Admin API for the manager portal). Rows carry `sourceType = 'client'` as the origin marker, no schema change. The owner is always the caller (never a client-supplied id). Title is up to 120 characters (may be empty), message up to 1000; the client clips, the server rejects longer. An identical kind+title+message from the same user within 60 seconds returns the existing row instead of a new one; more than 20 stored popups per user per minute are refused. Both checks run under a per-user advisory lock, so concurrent identical calls store one row.
+- **Failure never breaks the action.** The popup shows first; if the mutation fails (offline, rate limit, expired session) the error is logged to the console and nothing else happens. Without a signed-in notification store (guests) a popup is not stored.
+- **Backend-pushed notifications appear as the same popup** when the subscription delivers them. A `client` row delivered back through the subscription is only added to the list: the tab that created it already showed the popup (other tabs update the bell without a popup).
+- **Retention is data, not config.** Table `notification_retention_rule` (Dashboard: Settings > Notification retention, native `ReadSettings`/`UpdateSettings`) holds read/resolved days and unread days per `sourceType`, plus a default row (key `*`) for types without their own days; null days inherit the default. Seeded once with `*` = 90/365 and `client` = 7/30 (existing rows, edited or not, are never overwritten). There is no list of business types in code: the hourly `notification-cleanup` task inserts a row for any `sourceType` it finds in `notification` (so a new type shows up in the Dashboard within an hour, inheriting the default), then reads the effective days from the table on every run and deletes in batches of 1000, at most 20 per run. Days are whole numbers 1 to 3650; unread shorter than read is allowed (the unread row just expires first). No environment variables. The unread badge is a database count (`status: 'unread', take: 0`), so a deletion cannot make it disagree with the list; an open page refreshes it on its next fetch.
+- **Look.** Popups sit top-right (the bell is in the top bar, so a kept popup has a short flight; the old bottom-right idea from #87 was dropped for that reason) and span the width with a 12px gutter on phones. A kept popup collapses toward the bell when it expires or is dismissed; an ephemeral one slides out; with `prefers-reduced-motion` both only fade. Colors come from ui-kit tokens only. `.mv-notification-popup` is the e2e selector.
+- Open question for the owner: popups raised in an acting-as-customer tab are stored under the customer being acted as (the tab's session user), so that customer sees staff-raised errors in their bell.
+
 ## Manager list tables
 
 Every manager list (orders, proforma invoices, payments, discounts, customers, approvals) is an
