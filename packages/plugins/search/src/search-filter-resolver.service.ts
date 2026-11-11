@@ -84,6 +84,7 @@ export class SearchFilterResolver {
         const slugs = [input.collectionSlug, ...(input.collectionSlugs ?? [])];
         const ids = [input.collectionId, ...(input.collectionIds ?? [])].filter(Boolean);
         if (ids.length > 0) {
+            // unbounded-ok: collections matched by the ids of one search input
             const collections = await this.connection
                 .getRepository(ctx, Collection)
                 .createQueryBuilder('collection')
@@ -104,6 +105,7 @@ export class SearchFilterResolver {
 
     private async loadFacetValues(ctx: RequestContext, ids: ID[]): Promise<FacetValue[]> {
         if (ids.length === 0) return [];
+        // unbounded-ok: facet values matched by the ids of one search input
         return this.connection
             .getRepository(ctx, FacetValue)
             .createQueryBuilder('fv')

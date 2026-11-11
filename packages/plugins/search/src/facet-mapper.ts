@@ -31,6 +31,7 @@ async function mapManufacturers(
     const manufacturers = facets?.manufacturer ?? [];
     if (manufacturers.length === 0) return [];
 
+    // unbounded-ok: facet values matched by the codes of one search response
     const values = await connection
         .getRepository(ctx, FacetValue)
         .createQueryBuilder('fv')
@@ -61,6 +62,7 @@ async function mapCharacteristics(
     const entries = (facets?.characteristics ?? []).filter(e => e.count > 0);
     if (entries.length === 0) return [];
 
+    // unbounded-ok: facet values matched by the codes of one search response
     const values = await connection
         .getRepository(ctx, FacetValue)
         .createQueryBuilder('fv')

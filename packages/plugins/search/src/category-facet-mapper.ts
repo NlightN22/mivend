@@ -19,6 +19,7 @@ export async function mapFacetsToCollections(
     const categories = (facets?.category ?? []).filter(c => c.count > 0);
     if (categories.length === 0) return [];
 
+    // unbounded-ok: collections matched by the slugs of one search response
     const collections = await connection
         .getRepository(ctx, Collection)
         .createQueryBuilder('collection')
