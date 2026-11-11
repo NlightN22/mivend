@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Pages still on MvPagination must keep the scroll position on Next/Previous.
-// Table-paginator lists (orders, approvals, proforma invoices, payments, discounts) have their own specs.
+// Customers is a table-paginator list; orders has its own spec for the same regression.
 const PAGES = ['/customers'];
 
 for (const path of PAGES) {
@@ -12,8 +11,8 @@ for (const path of PAGES) {
         await page.goto(path);
 
         // global-setup seeds a second page on every list; a disabled Next means that seed is missing.
-        const nextButton = page.getByRole('button', { name: 'Next' }).last();
-        await expect(page.getByText(/Page 1 of ([2-9]|\d{2,})/).first()).toBeVisible({
+        const nextButton = page.getByRole('button', { name: 'Next Page' });
+        await expect(page.locator('.p-paginator-page[aria-current="page"]')).toBeVisible({
             timeout: 15000,
         });
         await expect(nextButton).toBeEnabled();

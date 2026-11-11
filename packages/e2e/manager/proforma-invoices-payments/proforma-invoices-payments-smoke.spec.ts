@@ -33,8 +33,11 @@ test('proforma invoices page pre-filters to one customer from the counterpartyId
     // The seeded e2e counterparty is the one every role project can see.
     await page.goto('/customers?search=E2E%20Co');
     await page
-        .locator('.el-table-v2__row', { hasText: 'E2E Co' })
-        .click({ position: { x: 20, y: 10 }, timeout: 15000 });
+        .getByRole('row')
+        .filter({ hasText: 'E2E Co' })
+        .first()
+        .getByRole('link', { name: /E2E Co/ })
+        .click({ timeout: 15000 });
     await expect(page).toHaveURL(/\/customers\/\d+/);
     const counterpartyId = new URL(page.url()).pathname.split('/').pop();
 

@@ -29,11 +29,9 @@ test.beforeAll(async () => {
 });
 
 async function listCount(page: Page): Promise<number> {
-    const text = await page
-        .getByText(/\d+–\d+ of \d+|0–0 of 0/)
-        .first()
-        .innerText();
-    return Number(/of (\d+)/.exec(text)?.[1] ?? -1);
+    const text = await page.locator('.mv-filter-chip').first().innerText();
+    const digits = text.replace(/\D/g, '');
+    return digits ? Number(digits) : -1;
 }
 
 async function activeKpi(page: Page): Promise<number> {
@@ -45,7 +43,7 @@ async function search(page: Page, text: string): Promise<void> {
     const answered = page.waitForResponse(
         r => r.url().includes('/admin-api') && (r.request().postData() ?? '').includes(text),
     );
-    await page.getByPlaceholder('Company name or INN...').fill(text);
+    await page.getByPlaceholder('Company name or INN…').fill(text);
     await answered;
 }
 
@@ -59,7 +57,9 @@ for (const actor of ACTORS) {
             const s = await openManagerAs(browser, actor.key);
             try {
                 await s.page.goto('/customers');
-                await expect(s.page.getByText('Client list')).toBeVisible({ timeout: 15000 });
+                await expect(s.page.locator('.mv-filter-chip').first()).toBeVisible({
+                    timeout: 15000,
+                });
                 await expect
                     .poll(() => listCount(s.page), { timeout: 15000 })
                     .toBe(all ? total.all : visible.size);
@@ -80,14 +80,16 @@ for (const actor of ACTORS) {
             const s = await openManagerAs(browser, actor.key);
             try {
                 await s.page.goto('/customers');
-                await expect(s.page.getByText('Client list')).toBeVisible({ timeout: 15000 });
+                await expect(s.page.locator('.mv-filter-chip').first()).toBeVisible({
+                    timeout: 15000,
+                });
                 for (const c of CLIENTS) {
                     const shown = visible.has(c.key);
                     await search(s.page, clientName(c.key));
                     await expect
                         .poll(() => listCount(s.page), { timeout: 15000 })
                         .toBe(shown ? 1 : 0);
-                    const row = s.page.locator('.el-table-v2__row', { hasText: clientName(c.key) });
+                    const row = s.page.getByRole('row').filter({ hasText: clientName(c.key) });
                     await expect(row).toHaveCount(shown ? 1 : 0);
                     const [download] = await Promise.all([
                         s.page.waitForEvent('download'),
