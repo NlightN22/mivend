@@ -286,7 +286,27 @@ services:
             - -c
             - track_io_timing=on
             - -c
-            - log_min_duration_statement=1000
+            - log_min_duration_statement=200
+            - -c
+            - shared_preload_libraries=pg_stat_statements,auto_explain
+            - -c
+            - pg_stat_statements.track=all
+            - -c
+            - pg_stat_statements.max=5000
+            - -c
+            - auto_explain.log_min_duration=1000
+            - -c
+            - auto_explain.log_analyze=on
+            - -c
+            - auto_explain.log_timing=off
+            - -c
+            - log_lock_waits=on
+            - -c
+            - log_temp_files=10240
+            - -c
+            - track_activity_query_size=4096
+            - -c
+            - log_line_prefix=%m [%p] %a 
             - -c
             - jit_above_cost=1000000
             - -c
