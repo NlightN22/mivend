@@ -200,9 +200,11 @@ export class BranchAssignmentService {
     private async loadTree(
         ctx: RequestContext,
     ): Promise<{ parentOf: Map<string, string | null>; mapping: Map<string, number> }> {
+        // unbounded-ok: department tree of the ERP org structure, tens of rows
         const departments = await this.connection
             .getRepository(ctx, Department)
             .find({ select: ['erpId', 'parentErpId'] });
+        // unbounded-ok: department-to-branch mapping, one row per department
         const rows = await this.connection.getRepository(ctx, DepartmentBranchMapping).find();
         return {
             parentOf: new Map(departments.map(d => [d.erpId, d.parentErpId])),
@@ -217,6 +219,7 @@ export class BranchAssignmentService {
         filter: { ids?: string[]; departments: Set<string> | null },
     ): Promise<string[]> {
         const repo = this.connection.getRepository(ctx, Administrator);
+        // unbounded-ok: administrators of staff accounts, a few tens, ids only
         const candidates = await repo.find({
             where: filter.ids ? { id: In(filter.ids) } : {},
             select: ['id'],

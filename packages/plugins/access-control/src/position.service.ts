@@ -49,6 +49,7 @@ export class PositionService {
     }
 
     async findAll(ctx: RequestContext): Promise<ErpPosition[]> {
+        // unbounded-ok: position registry of the org structure, tens of rows
         return this.connection.getRepository(ctx, ErpPosition).find({ order: { name: 'ASC' } });
     }
 }

@@ -16,6 +16,7 @@ export class HiddenCategoryFacetValuesService {
         const refs = rows.map(r => ({ id: r.id, code: r.code, facetCode: r.facet.code }));
         const slugs = categorySlugsOf(refs);
         if (slugs.length === 0) return new Set();
+        // unbounded-ok: hidden private collections, a few category nodes
         const hidden = await this.connection
             .getRepository(ctx, Collection)
             .createQueryBuilder('collection')

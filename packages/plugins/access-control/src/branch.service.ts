@@ -31,6 +31,7 @@ export class BranchService {
     }
 
     async findAll(ctx: RequestContext): Promise<Branch[]> {
+        // unbounded-ok: branch registry, a handful of rows
         return this.connection.getRepository(ctx, Branch).find({ order: { name: 'ASC' } });
     }
 

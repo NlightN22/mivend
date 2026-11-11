@@ -61,6 +61,7 @@ export class WarehouseService {
     }
 
     async findAll(ctx: RequestContext): Promise<Warehouse[]> {
+        // unbounded-ok: warehouse registry, tens of rows
         return this.connection.getRepository(ctx, Warehouse).find({ order: { name: 'ASC' } });
     }
 

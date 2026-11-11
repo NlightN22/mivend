@@ -60,6 +60,7 @@ export class DepartmentService {
     }
 
     async findAll(ctx: RequestContext): Promise<Department[]> {
+        // unbounded-ok: department registry of the org structure, tens of rows
         return this.connection.getRepository(ctx, Department).find({ order: { name: 'ASC' } });
     }
 }

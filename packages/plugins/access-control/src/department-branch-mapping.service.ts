@@ -99,9 +99,11 @@ export class DepartmentBranchMappingService {
     }
 
     async overview(ctx: RequestContext): Promise<DepartmentBranchNode[]> {
+        // unbounded-ok: department registry of the org structure, tens of rows
         const departments = await this.connection
             .getRepository(ctx, Department)
             .find({ order: { name: 'ASC' } });
+        // unbounded-ok: department-to-branch mapping, one row per department
         const rows = await this.connection.getRepository(ctx, DepartmentBranchMapping).find();
         const mapping = new Map(rows.map(r => [r.departmentErpId, r.branchId]));
         const parentOf = new Map(departments.map(d => [d.erpId, d.parentErpId]));

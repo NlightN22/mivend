@@ -96,6 +96,7 @@ export class PriceTypeAccessService {
     }
 
     private async loadBase(ctx: RequestContext): Promise<PriceTypeBase> {
+        // unbounded-ok: price type registry, a handful of rows
         const found = await this.connection
             .getRepository(ctx, PriceType)
             .find({ select: ['id', 'code', 'externalId', 'visibility'], order: { code: 'ASC' } });

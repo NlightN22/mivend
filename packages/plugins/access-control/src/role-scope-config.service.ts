@@ -40,6 +40,7 @@ export class RoleScopeConfigService {
         resource: string,
     ): Promise<AccessScopeKind> {
         if (roles.length === 0) return 'own';
+        // unbounded-ok: scope rows of the caller roles, one per role
         const rows = await this.connection.getRepository(ctx, RoleAccessScope).find({
             where: { roleCode: In(roles.map(role => role.code)) },
         });
@@ -59,6 +60,7 @@ export class RoleScopeConfigService {
         resource: string,
         kind: AccessScopeKind,
     ): Promise<string[]> {
+        // unbounded-ok: one scope row per role, a handful of roles
         const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
         return rows
             .filter(row => parseAccessScopeConfig(row)?.[resource] === kind)
@@ -78,6 +80,7 @@ export class RoleScopeConfigService {
     async getProvisioningStatus(
         ctx: RequestContext,
     ): Promise<Array<{ roleCode: string; missing: boolean }>> {
+        // unbounded-ok: one scope row per role, a handful of roles
         const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
         const rowByCode = new Map(rows.map(row => [row.roleCode, row]));
         return DEFAULT_ROLES.map(definition => {

@@ -15,6 +15,7 @@ export class VisibilityGrantReader {
         granteeAdministratorId: string,
         now: Date = new Date(),
     ): Promise<string[]> {
+        // unbounded-ok: distinct staff subject refs holding grants, bounded by the staff count
         const rows = await this.connection
             .getRepository(ctx, VisibilityGrant)
             .createQueryBuilder('g')
