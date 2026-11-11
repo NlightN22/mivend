@@ -62,6 +62,34 @@ describe('confirmation matrix at placement (real Postgres)', () => {
         expect((await placeCase(c)).decision.route).toBe('erp-now');
     });
 
+    it('lets a branch policy override the global one on placement', async () => {
+        const c = PLACEMENT_CASES[0];
+        await h.setCasePolicy(c.code, 'warn');
+        await h.setCasePolicy(c.code, 'hold', true, 'branch-a');
+        const branchOrder = async (branchId: string) => {
+            const buyer = await h.addBuyer(1_000_000, 0, c.terms === 'deferred' ? 14 : 0);
+            await h.addShippingLine(ORDER_ID, 'pickup');
+            const order = h.orderOf(buyer, 1_000, ORDER_ID);
+            (order as unknown as { customFields: object }).customFields = { branchId };
+            return h.placement.place(h.ctx, order, c.form, {});
+        };
+        expect((await branchOrder('branch-a')).decision.route).toBe('manager-confirmation');
+        await h.run(
+            `TRUNCATE shipping_line, shipping_method, customer, counterparty RESTART IDENTITY`,
+        );
+        expect((await branchOrder('branch-b')).decision.route).toBe('erp-now');
+    });
+
+    it('records the matrix case and the hold in the placement metadata', async () => {
+        const c = PLACEMENT_CASES[0];
+        await h.setCasePolicy(c.code, 'hold');
+        const { metadata } = await placeCase(c);
+        expect(metadata.placement).toMatchObject({
+            confirmationCase: c.code,
+            confirmationHold: true,
+        });
+    });
+
     it('lets the credit limit decide before the matrix when it is exceeded', async () => {
         const c = PLACEMENT_CASES[0];
         await h.setCasePolicy(c.code, 'hold');

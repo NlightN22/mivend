@@ -57,12 +57,22 @@ describe('checkout policy helpers', () => {
         expect(held.steps).toContain('The manager confirms the order.');
     });
 
-    it('keeps the bank and card texts independent of the manager route', () => {
-        expect(describeOrderCreated('1', 'offline-terms', true).steps).toEqual(
-            describeOrderCreated('1', 'offline-terms', false).steps,
+    it('tells a held bank transfer and a held default order that a manager confirms first', () => {
+        const bank = describeOrderCreated('1', 'offline-terms', true);
+        expect(bank.status).toMatch(/A manager will confirm the order first/);
+        expect(bank.steps[0]).toBe('The manager confirms the order.');
+        expect(bank.steps).toContain('Print the proforma invoices and send them to your bank.');
+        expect(describeOrderCreated('1', 'online-stub', true).status).toMatch(
+            /A manager will confirm the order/,
         );
-        expect(describeOrderCreated('1', 'online-stub', false).status).toBe(
-            describeOrderCreated('1', 'online-stub', true).status,
+    });
+
+    it('keeps the unheld bank and default texts free of the manager step', () => {
+        const bank = describeOrderCreated('1', 'offline-terms', false);
+        expect(bank.status).toMatch(/Pay each proforma invoice/);
+        expect(bank.steps).not.toContain('The manager confirms the order.');
+        expect(describeOrderCreated('1', 'online-stub', false).steps).not.toContain(
+            'The manager confirms the order.',
         );
     });
 

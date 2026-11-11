@@ -287,6 +287,7 @@ export function useCreditPlacementHarness(schemaName: string) {
         addOrderRow,
         addPayment,
         place,
+        orderOf,
         setCasePolicy,
         addShippingLine,
         connection,

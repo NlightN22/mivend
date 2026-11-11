@@ -44,14 +44,35 @@ export function describeOrderCreated(
             ],
         };
     }
+    const confirm = awaitingManager ? [t('orderCreated.steps.managerConfirm')] : [];
     if (methodCode === 'offline-terms') {
         return {
-            status: t('orderCreated.status.offlineTerms', { created }),
-            steps: [t('orderCreated.steps.bankPrint'), t('orderCreated.steps.bankMatch'), notify],
+            status: t(
+                awaitingManager
+                    ? 'orderCreated.status.offlineTermsAwaitingManager'
+                    : 'orderCreated.status.offlineTerms',
+                { created },
+            ),
+            steps: [
+                ...confirm,
+                t('orderCreated.steps.bankPrint'),
+                t('orderCreated.steps.bankMatch'),
+                notify,
+            ],
         };
     }
     return {
-        status: t('orderCreated.status.default', { created }),
-        steps: [t('orderCreated.steps.queued'), t('orderCreated.steps.reserved'), notify],
+        status: t(
+            awaitingManager
+                ? 'orderCreated.status.defaultAwaitingManager'
+                : 'orderCreated.status.default',
+            { created },
+        ),
+        steps: [
+            ...confirm,
+            t('orderCreated.steps.queued'),
+            t('orderCreated.steps.reserved'),
+            notify,
+        ],
     };
 }

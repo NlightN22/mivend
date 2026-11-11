@@ -28,7 +28,7 @@ import {
     DeferredCreditAssessment,
     DeferredCreditAssessmentService,
 } from './deferred-credit-assessment.service';
-import { PLACEMENT_CHECK_STAGE, type PlacementCaseKey } from './placement-cases';
+import { PLACEMENT_CHECK_STAGE, placementCaseCode, type PlacementCaseKey } from './placement-cases';
 import { decidePlacement, payableAmountKopecks, type PlacementDecision } from './placement-policy';
 
 export const CARD_AMOUNT_CHANGED_MESSAGE = `${CARD_AMOUNT_CHANGED_CODE}: the amount to pay changed, confirm it again`;
@@ -81,7 +81,8 @@ export class CreditPlacementService {
             : null;
         const evaluate = async (txCtx: RequestContext): Promise<PlacementResult> => {
             const assessment = (await this.assessmentService.assess(txCtx, order)) ?? NO_LIMIT;
-            const confirmationHold = await this.confirmationHold(txCtx, order, form, assessment);
+            const matrix = await this.matrixCase(txCtx, order, form, assessment);
+            const confirmationHold = matrix?.hold === true;
             const decision = decidePlacement({
                 form,
                 limitControlled: assessment.limitControlled,
@@ -107,6 +108,10 @@ export class CreditPlacementService {
                         route: decision.route,
                         countsAgainstLimit: decision.countsAgainstLimit,
                         reserveDays,
+                        ...(matrix && {
+                            confirmationCase: matrix.code,
+                            confirmationHold: matrix.hold,
+                        }),
                     } satisfies PlacementMetadata,
                 },
             };
@@ -121,16 +126,17 @@ export class CreditPlacementService {
     }
 
     // Layer 2: only when the limit does not decide; the case's policy (hold) sends the order to a manager.
-    private async confirmationHold(
+    private async matrixCase(
         ctx: RequestContext,
         order: Order,
         form: PaymentForm,
         assessment: DeferredCreditAssessment,
-    ): Promise<boolean> {
-        if (form === 'card' || assessment.exceeded) return false;
+    ): Promise<{ code: string; hold: boolean } | null> {
+        if (form === 'card' || assessment.exceeded) return null;
         const methods = await ctxQuery<Array<{ code: string }>>(
             this.connection,
             ctx,
+            // unbounded-ok: the shipping lines of one order
             `SELECT sm.code FROM shipping_line sl
              INNER JOIN shipping_method sm ON sm.id = sl."shippingMethodId"
              WHERE sl."orderId" = $1`,
@@ -153,7 +159,7 @@ export class CreditPlacementService {
             PLACEMENT_CHECK_STAGE,
             key,
         );
-        return result.strongestConsequence === 'hold';
+        return { code: placementCaseCode(key), hold: result.strongestConsequence === 'hold' };
     }
 
     async preview(ctx: RequestContext, order: Order): Promise<PlacementPreview> {

@@ -20,6 +20,9 @@ export interface PlacementMetadata {
     route: PlacementRoute;
     countsAgainstLimit: boolean;
     reserveDays: number | null;
+    // The matrix case the order fell into (cash/bank transfer, limit not exceeded) and whether it held the order.
+    confirmationCase?: string;
+    confirmationHold?: boolean;
 }
 
 // Vendure PaymentMethod code per customer-facing form; the codes are fixed by the registered handlers.

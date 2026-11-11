@@ -12,6 +12,7 @@ query OrderDetail($code: String!) {
                 id
                 method
                 state
+                metadata
             }
             currencyCode
             packagesOnlySales

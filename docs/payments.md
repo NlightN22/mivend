@@ -880,7 +880,9 @@ registered from one data table (`placement-cases.ts`) and evaluated at the order
 - The payment form is passed into `CreditPlacementService.place` (it is known only at `addPaymentToOrder`); the case is passed to
   `ChecksService.evaluateWithInput` and the case policy of the order's branch (else global) is read. `hold` = route
   `manager-confirmation` (the order waits for a manager, public flag `awaitingManagerConfirmation`, `creditLimitExceeded` stays false);
-  `warn`/`info` or a disabled check = `erp-now`. Nothing is stored; the placement runs under `credit-exposure:<counterparty>`.
+  `warn`/`info` or a disabled check = `erp-now`. No check result is stored; the reason is kept in `Payment.metadata.placement`
+  (`confirmationCase` = the case code, `confirmationHold`) and the manager order page shows "Held by policy <code>"; the customer sees only a generic
+  text. The placement runs under `credit-exposure:<counterparty>`.
 
 | Form | Fulfillment | Deferred terms | Check code | Default |
 | --- | --- | --- | --- | --- |

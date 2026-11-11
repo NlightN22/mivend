@@ -77,7 +77,11 @@ export default {
             cashAwaitingManager: '{created}. A manager will confirm the order before it goes on.',
             offlineTerms:
                 '{created}. Pay each proforma invoice via your bank; the order is paid once the payment is received.',
+            offlineTermsAwaitingManager:
+                '{created}. A manager will confirm the order first; then pay each proforma invoice via your bank.',
             default: '{created}.',
+            defaultAwaitingManager:
+                '{created}. A manager will confirm the order before it goes on.',
         },
         steps: {
             notify: "You'll get a notification when the order is ready.",

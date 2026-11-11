@@ -8,6 +8,7 @@ import type { OrderHeaderCommands } from '../../composables/useOrderHeaderComman
 import type { useReservationActions } from '../../composables/useReservationActions';
 import OrderHeaderActions from './OrderHeaderActions.vue';
 import OrderHeaderFields from './OrderHeaderFields.vue';
+import { heldConfirmationCase } from '../../utils/confirmationHold';
 import PaymentReceivedPanel from './PaymentReceivedPanel.vue';
 
 const props = defineProps<{
@@ -21,6 +22,8 @@ const props = defineProps<{
     canEditDelivery: boolean;
 }>();
 defineEmits<{ recompute: []; cut: []; changed: [] }>();
+
+const heldCase = computed(() => heldConfirmationCase(props.order.payments ?? []));
 
 const customerName = computed(() => {
     const { customer, counterparty } = props.order;
@@ -42,6 +45,9 @@ const customerName = computed(() => {
                 </MvStatusBadge>
                 <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning">
                     Credit limit exceeded
+                </MvStatusBadge>
+                <MvStatusBadge v-if="heldCase" variant="warning">
+                    Held by policy {{ heldCase }}
                 </MvStatusBadge>
                 <PaymentReceivedPanel
                     :order-id="order.id"

@@ -13005,7 +13005,7 @@ export type OrderDetailQuery = {
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
-            payments: Array<{ id: string; method: string; state: string }> | null;
+            payments: Array<{ id: string; method: string; state: string; metadata: any }> | null;
             customFields: {
                 reservationDays: number | null;
                 branchId: string | null;
@@ -17097,6 +17097,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
         id
         method
         state
+        metadata
       }
       currencyCode
       packagesOnlySales
