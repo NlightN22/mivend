@@ -12,7 +12,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, getPageAndCount } from 'shared';
 
 import { NotificationRetentionRule } from './entities/notification-retention-rule.entity';
 import {
@@ -85,10 +85,11 @@ export class NotificationRetentionRuleService implements OnApplicationBootstrap 
         ctx: RequestContext,
         options?: ListQueryOptions<NotificationRetentionRule>,
     ): Promise<PaginatedList<NotificationRetentionRule>> {
-        return this.listQueryBuilder
-            .build(NotificationRetentionRule, options, { ctx, orderBy: { sourceType: 'ASC' } })
-            .getManyAndCount()
-            .then(([items, totalItems]) => ({ items, totalItems }));
+        const qb = this.listQueryBuilder.build(NotificationRetentionRule, options, {
+            ctx,
+            orderBy: { sourceType: 'ASC' },
+        });
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     async update(

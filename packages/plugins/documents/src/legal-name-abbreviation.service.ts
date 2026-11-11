@@ -12,7 +12,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { getPageAndCount, withAggregateLock } from 'shared';
 import { QueryFailedError } from 'typeorm';
 
 import { loggerCtx } from './constants';
@@ -73,10 +73,11 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
         ctx: RequestContext,
         options?: ListQueryOptions<LegalNameAbbreviation>,
     ): Promise<PaginatedList<LegalNameAbbreviation>> {
-        return this.listQueryBuilder
-            .build(LegalNameAbbreviation, options, { ctx, orderBy: { phrase: 'ASC' } })
-            .getManyAndCount()
-            .then(([items, totalItems]) => ({ items, totalItems }));
+        const qb = this.listQueryBuilder.build(LegalNameAbbreviation, options, {
+            ctx,
+            orderBy: { phrase: 'ASC' },
+        });
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     // unbounded-ok: a few dozen staff-edited rows, loaded once per render
@@ -117,14 +118,21 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
     }
 
     async delete(ctx: RequestContext, id: ID): Promise<void> {
-        await withAggregateLock(this.connection, ctx, 'legal-name-abbreviation:delete', async txCtx => {
-            const repo = this.connection.getRepository(txCtx, LegalNameAbbreviation);
-            if (!(await repo.findOne({ where: { id } })))
-                throw new EntityNotFoundError('LegalNameAbbreviation', id);
-            if ((await repo.count()) <= 1)
-                throw new UserInputError('The last abbreviation cannot be deleted; edit it instead');
-            await repo.delete(id);
-        });
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            'legal-name-abbreviation:delete',
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, LegalNameAbbreviation);
+                if (!(await repo.findOne({ where: { id } })))
+                    throw new EntityNotFoundError('LegalNameAbbreviation', id);
+                if ((await repo.count()) <= 1)
+                    throw new UserInputError(
+                        'The last abbreviation cannot be deleted; edit it instead',
+                    );
+                await repo.delete(id);
+            },
+        );
     }
 
     private clean(input: LegalNameAbbreviationInput): LegalNameAbbreviationInput {

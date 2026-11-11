@@ -124,7 +124,8 @@ describe('ClientNotificationService.record (component, real Postgres)', () => {
         const row = await service.record(ctx, alice, popup);
 
         expect(row).toMatchObject({ ...popup, sourceType: 'client', status: 'unread' });
-        expect(row.recipientId).toBe('alice');
+        expect(row).not.toBeNull();
+        expect(row?.recipientId).toBe('alice');
         expect(published).toHaveLength(1);
     });
 
@@ -149,7 +150,8 @@ describe('ClientNotificationService.record (component, real Postgres)', () => {
         await service.record(ctx, alice, { ...popup, kind: 'warning' });
         await service.record(ctx, bob, popup);
 
-        expect(again.id).toBe(first.id);
+        expect(first).not.toBeNull();
+        expect(again?.id).toBe(first?.id);
         const rows = await dataSource.query('SELECT "recipientId" FROM notification');
         expect(rows).toHaveLength(4);
         expect(published).toHaveLength(4);
@@ -171,7 +173,7 @@ describe('ClientNotificationService.record (component, real Postgres)', () => {
             Array.from({ length: 8 }, () => service.record(ctx, alice, popup)),
         );
 
-        expect(new Set(results.map(r => r.id)).size).toBe(1);
+        expect(new Set(results.map(r => r?.id)).size).toBe(1);
         expect(await dataSource.query('SELECT 1 FROM notification')).toHaveLength(1);
     });
 
