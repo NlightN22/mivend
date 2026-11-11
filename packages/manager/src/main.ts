@@ -7,6 +7,7 @@ import 'element-plus/dist/index.css';
 import 'element-plus/theme-chalk/dark/css-vars.css';
 import '@mivend/ui-kit/src/styles/tokens.css';
 import { mivendPrimeVuePreset } from './primevue-preset';
+import { syncPrimeDarkClass } from './utils/sync-prime-dark-class';
 
 import {
     MvButton,
@@ -29,6 +30,7 @@ import { router } from './router';
 
 reloadOnStaleChunk();
 initTheme();
+syncPrimeDarkClass();
 
 const app = createApp(App);
 
@@ -55,7 +57,7 @@ app.use(ElementPlus, { zIndex: layers.popover });
 app.use(PrimeVue, {
     theme: {
         preset: mivendPrimeVuePreset,
-        options: { darkModeSelector: "html[data-theme='dark']" },
+        options: { darkModeSelector: '.p-dark' },
     },
     zIndex: {
         modal: layers.modal,

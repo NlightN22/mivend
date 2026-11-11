@@ -18,6 +18,15 @@ html[data-theme='dark'] {
     --el-border-color: var(--palette-night-700);
     --el-border-color-light: var(--palette-night-800);
     --el-fill-color-light: var(--palette-night-850);
+    --el-fill-color-blank: var(--palette-night-900);
+    --el-fill-color: var(--palette-night-800);
+    --el-fill-color-lighter: var(--palette-night-850);
+    --el-border-color-lighter: var(--palette-night-800);
+    --el-text-color-placeholder: var(--palette-night-500);
+    --el-text-color-disabled: var(--palette-night-600);
+    --el-color-danger-light-9: var(--palette-red-950);
+    --el-color-warning-light-9: var(--palette-amber-950);
+    --el-color-success-light-9: var(--palette-brand-950);
     --app-accent-lime: var(--palette-lime-500);
     --app-accent-orange: var(--palette-orange-d1);
     --app-accent-orange-hover: var(--palette-orange-d2);
