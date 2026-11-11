@@ -258,6 +258,7 @@ export class NotificationService {
         resolution: string,
     ): Promise<Notification[]> {
         const repo = this.connection.getRepository(ctx, Notification);
+        // unbounded-ok: open notifications of one source
         const open = await repo.find({
             where: {
                 sourceType: source.sourceType,
