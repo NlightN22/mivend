@@ -15,6 +15,8 @@ describe('placement matrix on real data', () => {
                 route: 'erp-now',
                 countsAgainstLimit: true,
                 reserveDays: 5,
+                confirmationCase: `payment.confirmation.${form}.pickup.no-terms`,
+                confirmationHold: false,
             });
         }
     });
