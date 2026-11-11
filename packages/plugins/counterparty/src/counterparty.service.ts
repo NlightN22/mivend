@@ -172,7 +172,7 @@ export class CounterpartyService {
             .find({ order: { shortName: 'ASC' } });
     }
 
-    // Unbounded visible set, only for scoping another query (e.g. an IN filter); display uses findVisiblePage().
+    /** @deprecated Loads every visible row; use visibleIdsSql() as a subquery or findVisiblePage(). */
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
@@ -212,6 +212,16 @@ export class CounterpartyService {
         if ((await this.accessScopeService.resolveCounterpartyScope(ctx)).kind === 'all')
             return null;
         const qb = (await this.visibleFilteredQb(ctx, {})).select('c.erpId').orderBy();
+        return { sql: qb.getQuery(), params: qb.getParameters() };
+    }
+
+    // The caller's visible ids (as text, matching varchar foreign keys) as a subquery; null for scope 'all'.
+    async visibleIdsSql(
+        ctx: RequestContext,
+    ): Promise<{ sql: string; params: Record<string, unknown> } | null> {
+        if ((await this.accessScopeService.resolveCounterpartyScope(ctx)).kind === 'all')
+            return null;
+        const qb = (await this.visibleFilteredQb(ctx, {})).select('CAST(c.id AS text)').orderBy();
         return { sql: qb.getQuery(), params: qb.getParameters() };
     }
 

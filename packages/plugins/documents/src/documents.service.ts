@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { ILike, In } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import { ctxQuery, documentNumberSearchTerm, getPageAndCount } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
@@ -67,70 +67,58 @@ export class DocumentsService {
         return getPageAndCount(qb, take, skip);
     }
 
-    // Document visibility derives entirely from counterparty visibility: reuse the already-scoped
-    // CounterpartyService.findVisible() result instead of duplicating scope resolution here.
+    // Visibility derives from counterparty visibility, embedded as a subquery (never a materialized id list).
+    private async visibleDocumentsQb(
+        ctx: RequestContext,
+        counterpartyId?: ID,
+    ): Promise<SelectQueryBuilder<Document>> {
+        const qb = this.connection.getRepository(ctx, Document).createQueryBuilder('document');
+        const visible = await this.counterpartyService.visibleIdsSql(ctx);
+        if (visible) {
+            qb.where(`document.counterpartyId IN (${visible.sql})`, visible.params);
+        }
+        if (counterpartyId !== undefined) {
+            // Intersect, never replace, the visibility scope: an id outside it yields an empty result.
+            qb.andWhere('document.counterpartyId = :requestedCounterpartyId', {
+                requestedCounterpartyId: String(counterpartyId),
+            });
+        }
+        return qb;
+    }
+
     async findVisible(
         ctx: RequestContext,
         options?: DocumentListOptions,
         counterpartyId?: ID,
         orderId?: ID,
     ): Promise<PaginatedList<Document>> {
-        const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
-        let counterpartyIds = visibleCounterparties.map(c => String(c.id));
-        if (counterpartyId !== undefined) {
-            // Intersect, never replace, the visibility scope — a caller-supplied counterpartyId
-            // outside the caller's visible set must yield an empty result, not bypass scoping.
-            counterpartyIds = counterpartyIds.filter(id => id === String(counterpartyId));
+        const qb = await this.visibleDocumentsQb(ctx, counterpartyId);
+        if (orderId !== undefined) {
+            qb.andWhere('document.orderId = :orderId', { orderId: String(orderId) });
         }
-        if (counterpartyIds.length === 0) {
-            return { items: [], totalItems: 0 };
+        // ILIKE, not exact: `type` is free-text ERP data and the portal shows a text box.
+        if (options?.types?.length) {
+            qb.andWhere('document.type IN (:...types)', { types: options.types });
+        } else if (options?.type) {
+            qb.andWhere('document.type ILIKE :type', { type: `%${options.type}%` });
         }
-        const take = options?.take ?? 50;
-        const skip = options?.skip ?? 0;
-        const repo = this.connection.getRepository(ctx, Document);
-        const where = {
-            counterpartyId: In(counterpartyIds),
-            ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
-            // ILike, not exact: `type` is free-text ERP data with no fixed value set, and the portal
-            // shows a text box, so an exact match would make partial input like "inv" match nothing.
-            ...(options?.types?.length
-                ? { type: In(options.types) }
-                : options?.type
-                  ? { type: ILike(`%${options.type}%`) }
-                  : {}),
-            ...(options?.status ? { status: options.status as Document['status'] } : {}),
-            // Same ILike-on-number search findForCounterparty (the shop-api path) already
-            // had — this admin-facing path was simply missing it.
-            ...(options?.search ? { number: ILike(documentNumberSearchTerm(options.search)) } : {}),
-        };
-        if (take <= 0) return { items: [], totalItems: await repo.count({ where }) };
-        // eslint-disable-next-line pagination/no-unguarded-page-count -- take <= 0 returns above
-        const [items, totalItems] = await repo.findAndCount({
-            where,
-            order: { issueDate: 'DESC' },
-            take,
-            skip,
-        });
-        return { items, totalItems };
+        if (options?.status) {
+            qb.andWhere('document.status = :status', { status: options.status });
+        }
+        if (options?.search) {
+            qb.andWhere('document.number ILIKE :term', {
+                term: documentNumberSearchTerm(options.search),
+            });
+        }
+        qb.orderBy('document.issueDate', 'DESC');
+        return getPageAndCount(qb, options?.take ?? 50, options?.skip ?? 0);
     }
 
-    // Bounded server-side DISTINCT over the already-scoped rows (not fetch-all and dedupe in JS);
-    // visibility reuses CounterpartyService.findVisible() scoping, as in findVisible above.
+    // Bounded server-side DISTINCT over the scoped rows (not fetch-all and dedupe in JS).
     async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {
-        const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
-        let counterpartyIds = visibleCounterparties.map(c => String(c.id));
-        if (counterpartyId !== undefined) {
-            counterpartyIds = counterpartyIds.filter(id => id === String(counterpartyId));
-        }
-        if (counterpartyIds.length === 0) {
-            return [];
-        }
-        const rows = await this.connection
-            .getRepository(ctx, Document)
-            .createQueryBuilder('document')
+        const rows = await (await this.visibleDocumentsQb(ctx, counterpartyId))
             .select('document.type', 'type')
             .distinct(true)
-            .where('document.counterpartyId IN (:...counterpartyIds)', { counterpartyIds })
             .orderBy('document.type', 'ASC')
             .getRawMany<{ type: string }>();
         return rows.map(r => r.type);

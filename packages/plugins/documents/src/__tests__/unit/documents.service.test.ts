@@ -38,6 +38,7 @@ const mockConnection = {
 const mockCounterpartyService = {
     findByErpId: vi.fn(),
     findVisible: vi.fn(),
+    visibleIdsSql: vi.fn(),
 };
 
 const mockCtx = {} as unknown as RequestContext;
@@ -291,132 +292,87 @@ describe('DocumentsService', () => {
     });
 
     describe('findVisible', () => {
-        it('returns no rows without querying documents when no counterparty is visible', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([]);
-            const result = await service.findVisible(mockCtx);
-            expect(result).toEqual({ items: [], totalItems: 0 });
-            expect(mockRepo.findAndCount).not.toHaveBeenCalled();
+        beforeEach(() => {
+            mockCounterpartyService.visibleIdsSql.mockResolvedValue({
+                sql: 'SELECT CAST(c.id AS text) FROM counterparty c',
+                params: { scopeBranch: 'branch-a' },
+            });
+            mockQb.getManyAndCount.mockResolvedValue([[{ id: 'doc-1' }], 1]);
         });
 
-        it('filters documents by exactly the counterparty ids CounterpartyService.findVisible returned', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }, { id: '2' }]);
-            mockRepo.findAndCount.mockResolvedValue([[{ id: 'doc-1' }], 1]);
-
+        it('embeds the visible-id subquery and never loads the visible counterparties', async () => {
             const result = await service.findVisible(mockCtx);
 
-            expect(mockRepo.findAndCount).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: expect.objectContaining({ counterpartyId: expect.anything() }),
-                }),
+            expect(mockCounterpartyService.findVisible).not.toHaveBeenCalled();
+            expect(mockQb.where).toHaveBeenCalledWith(
+                'document.counterpartyId IN (SELECT CAST(c.id AS text) FROM counterparty c)',
+                { scopeBranch: 'branch-a' },
             );
             expect(result).toEqual({ items: [{ id: 'doc-1' }], totalItems: 1 });
         });
 
-        it("intersects the type/status filter with the caller's visible-counterparty scope, not either alone", async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
-
-            await service.findVisible(mockCtx, { type: 'contract', status: 'ready' });
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where.counterpartyId).toBeDefined();
-            // ILIKE, not an exact-equals FindOperator — see the `type` filter's own doc comment.
-            expect(where.type).toMatchObject({ _type: 'ilike', _value: '%contract%' });
-            expect(where.status).toBe('ready');
+        it('adds no visibility condition for scope all', async () => {
+            mockCounterpartyService.visibleIdsSql.mockResolvedValue(null);
+            await service.findVisible(mockCtx);
+            expect(mockQb.where).not.toHaveBeenCalled();
         });
 
-        it('filters by an exact-match `types` list (checklist filter) instead of ILIKE when provided', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+        it('intersects a caller counterpartyId with the scope instead of replacing it', async () => {
+            await service.findVisible(mockCtx, undefined, '7');
+            expect(mockQb.where).toHaveBeenCalled();
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'document.counterpartyId = :requestedCounterpartyId',
+                { requestedCounterpartyId: '7' },
+            );
+        });
 
-            await service.findVisible(mockCtx, { types: ['proforma-invoice', 'waybill'] });
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where.type).toMatchObject({
-                _type: 'in',
-                _value: ['proforma-invoice', 'waybill'],
+        it('applies type ILIKE, status, number search and orderId with bound parameters', async () => {
+            await service.findVisible(
+                mockCtx,
+                { type: 'contract', status: 'ready', search: '42' },
+                undefined,
+                'order-1',
+            );
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.orderId = :orderId', {
+                orderId: 'order-1',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.type ILIKE :type', {
+                type: '%contract%',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.status = :status', {
+                status: 'ready',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.number ILIKE :term', {
+                term: '%42%',
             });
         });
 
-        it('prefers `types` over `type` when both are given', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
-
-            await service.findVisible(mockCtx, { type: 'contract', types: ['proforma-invoice'] });
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where.type).toMatchObject({ _type: 'in', _value: ['proforma-invoice'] });
-        });
-
-        it('omits type/status from the where clause entirely when not provided', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
-
-            await service.findVisible(mockCtx);
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where).not.toHaveProperty('type');
-            expect(where).not.toHaveProperty('status');
-        });
-
-        it('applies search as an ILIKE substring match against the document number', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
-
-            await service.findVisible(mockCtx, { search: '42' });
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            // ILike() returns a FindOperator, not a plain string — assert on its shape rather
-            // than object identity (TypeORM's own FindOperator has no useful toEqual match).
-            expect(where.number).toMatchObject({ _type: 'ilike', _value: '%42%' });
-        });
-
-        it('omits the number filter entirely when search is not provided', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockRepo.findAndCount.mockResolvedValue([[], 0]);
-
-            await service.findVisible(mockCtx);
-
-            const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where).not.toHaveProperty('number');
+        it('prefers the exact types list over type', async () => {
+            await service.findVisible(mockCtx, { type: 'contract', types: ['waybill'] });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.type IN (:...types)', {
+                types: ['waybill'],
+            });
+            expect(mockQb.andWhere).not.toHaveBeenCalledWith(
+                'document.type ILIKE :type',
+                expect.anything(),
+            );
         });
     });
 
     describe('findVisibleTypes', () => {
-        it('returns no rows without querying documents when no counterparty is visible', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([]);
-            const result = await service.findVisibleTypes(mockCtx);
-            expect(result).toEqual([]);
-            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
-        });
-
-        it("intersects a caller-supplied counterpartyId with the caller's visible-counterparty scope, not either alone", async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
-            mockQb.getRawMany.mockResolvedValue([]);
-
-            const result = await service.findVisibleTypes(mockCtx, '2');
-
-            // '2' isn't in the visible set (['1']) — the intersection must be empty, mirroring
-            // findVisible's identical scoping guarantee, not just handed back the caller's id.
-            expect(result).toEqual([]);
-            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
-        });
-
-        it('returns the distinct type values from the scoped query, in the order the DB returns them', async () => {
-            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }, { id: '2' }]);
-            mockQb.getRawMany.mockResolvedValue([
-                { type: 'contract' },
-                { type: 'proforma-invoice' },
-            ]);
+        it('selects distinct types over the scoped subquery without loading counterparties', async () => {
+            mockCounterpartyService.visibleIdsSql.mockResolvedValue({
+                sql: 'SELECT 1',
+                params: {},
+            });
+            mockQb.getRawMany.mockResolvedValue([{ type: 'contract' }, { type: 'waybill' }]);
 
             const result = await service.findVisibleTypes(mockCtx);
 
+            expect(mockCounterpartyService.findVisible).not.toHaveBeenCalled();
             expect(mockQb.distinct).toHaveBeenCalledWith(true);
-            expect(mockQb.where).toHaveBeenCalledWith(
-                'document.counterpartyId IN (:...counterpartyIds)',
-                { counterpartyIds: ['1', '2'] },
-            );
-            expect(result).toEqual(['contract', 'proforma-invoice']);
+            expect(mockQb.where).toHaveBeenCalledWith('document.counterpartyId IN (SELECT 1)', {});
+            expect(result).toEqual(['contract', 'waybill']);
         });
     });
 });
