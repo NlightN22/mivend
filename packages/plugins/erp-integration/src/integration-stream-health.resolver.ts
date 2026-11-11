@@ -49,6 +49,7 @@ export class IntegrationStreamHealthResolver {
         @Ctx() ctx: RequestContext,
     ): Promise<IntegrationStreamHealthReport> {
         const [lagRows, backlog, noops, contactFailures] = await Promise.all([
+            // unbounded-ok: one lag row per topic partition, tens of rows
             this.connection.getRepository(ctx, KafkaConsumerLagEntry).find(),
             this.inbox.getBacklogByStream(ctx),
             this.inbox.getNoopSummaryByStream(ctx),

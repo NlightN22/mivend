@@ -40,6 +40,7 @@ export class VariantSalesUnitService {
     ): Promise<Map<string, VariantSalesUnitView>> {
         const numericIds = ids.filter(id => /^\d+$/.test(id));
         if (numericIds.length === 0) return new Map();
+        // unbounded-ok: variants matched by the ids passed in, bounded by that list
         const rows = await this.connection
             .getRepository(ctx, 'product_variant')
             .createQueryBuilder('pv')

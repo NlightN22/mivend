@@ -79,6 +79,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         if (!productId) {
             throw new MissingReferenceError(`product ${productExternalId} not imported yet`);
         }
+        // unbounded-ok: photo rows of one product
         const rows = await repo.find({ where: { productExternalId } });
         let transientError: Error | undefined;
         for (const row of rows) {
@@ -95,6 +96,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
                 }
             }
         }
+        // unbounded-ok: photo rows of one product
         await this.attach(ctx, productId, await repo.find({ where: { productExternalId } }));
         return transientError;
     }

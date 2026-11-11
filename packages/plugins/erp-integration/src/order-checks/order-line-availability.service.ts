@@ -113,6 +113,7 @@ export class OrderLineAvailabilityService
         locationIds: string[],
     ): Promise<Map<string, string>> {
         const wanted = new Set(locationIds);
+        // unbounded-ok: stock location registry, tens of rows
         const rows = await this.connection.getRepository(ctx, StockLocation).find();
         return new Map(
             rows

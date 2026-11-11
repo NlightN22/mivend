@@ -119,6 +119,7 @@ export class IntegrationInboxService {
             const ids = await this.findClaimCandidateIds(txCtx, limit, streams);
             if (ids.length === 0) return [];
 
+            // unbounded-ok: rows of the inbox ids passed in, bounded by that list
             const rows = await repo
                 .createQueryBuilder('event')
                 .where('event.id IN (:...ids)', { ids })

@@ -62,6 +62,7 @@ export class KafkaLagResolver {
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     async kafkaConsumerLag(@Ctx() ctx: RequestContext): Promise<KafkaTopicLag[]> {
+        // unbounded-ok: one lag row per topic partition, tens of rows
         const rows = await this.connection.getRepository(ctx, KafkaConsumerLagEntry).find();
         return groupLagRowsByTopic(rows);
     }

@@ -39,6 +39,7 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
         if (!this.processContext.isServer) return;
         try {
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            // unbounded-ok: TRACKED #350 facet sync reads every manufacturer
             const manufacturers = await this.connection.getRepository(ctx, Manufacturer).find();
             const facet = await this.ensureFacet(ctx);
             const values = await this.facetValueService.findByFacetId(ctx, facet.id);

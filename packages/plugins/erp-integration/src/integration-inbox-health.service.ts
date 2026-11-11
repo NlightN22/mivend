@@ -32,6 +32,7 @@ export class IntegrationInboxHealthService {
     // Unprocessed inbox rows per stream: Postgres-side backlog, deliberately a different number
     // from Kafka lag (docs/integration-health.md).
     async getBacklogByStream(ctx: RequestContext): Promise<IntegrationInboxBacklogByStream[]> {
+        // unbounded-ok: grouped by stream and status, a few rows per stream
         const rows = await this.connection
             .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('event')

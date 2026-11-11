@@ -67,6 +67,7 @@ export class OrderCheckDataService {
     ): Promise<Map<string, string[]>> {
         const result = new Map<string, string[]>();
         if (productErpIds.length === 0 || !warehouseErpId) return result;
+        // unbounded-ok: assignments of the products of one order in one warehouse
         const rows = await this.connection.getRepository(ctx, StorageLocationAssignment).find({
             where: { productId: In(productErpIds), warehouseId: warehouseErpId },
         });
@@ -84,6 +85,7 @@ export class OrderCheckDataService {
         counterpartyId: string | null,
     ): Promise<Set<string>> {
         if (!counterpartyId) return new Set();
+        // unbounded-ok: active customer contracts of one counterparty
         const contracts = await this.connection.getRepository(ctx, Contract).find({
             where: { counterpartyId, isActive: true, isCustomerContract: true },
         });
@@ -116,6 +118,7 @@ export class OrderCheckDataService {
             [productErpIds],
         );
         if (rows.length === 0) return new Map();
+        // unbounded-ok: units matched by the ids of one order
         const units = await this.connection.getRepository(ctx, UnitRecord).find({
             where: { entityId: In([...new Set(rows.map(r => r.storageUnitId))]) },
         });

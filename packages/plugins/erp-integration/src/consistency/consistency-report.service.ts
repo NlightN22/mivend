@@ -47,6 +47,7 @@ export class ConsistencyReportService {
     }
 
     async sources(ctx: RequestContext): Promise<ConsistencySourceView[]> {
+        // unbounded-ok: one state row per consistency source, a handful of rows
         const states = await this.connection
             .getRepository(ctx, ConsistencySourceState)
             .find({ order: { source: 'ASC' } });

@@ -362,6 +362,7 @@ export class IntegrationInboxProcessorService {
         // Compared in JS (isVersionNewer): SQL `>` on the varchar version is lexicographic.
         // Only `version` is selected — never the jsonb payload of every historical row.
         const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
+        // unbounded-ok: processed versions of one stream entity, version column only
         const processedRows = await repo.find({
             select: { version: true },
             where: { stream: row.stream, entityId: row.entityId, status: 'processed' },

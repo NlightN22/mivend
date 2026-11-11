@@ -38,6 +38,7 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
                 `stock-organization:${entityId}`,
                 async txCtx => {
                     const repo = this.connection.getRepository(txCtx, StockOrganization);
+                    // unbounded-ok: stock organization rows of one entity
                     const rows = await repo.find({ where: { entityId } });
                     if (rows.length === 0) return false;
                     await repo.delete({ entityId });

@@ -24,6 +24,7 @@ export class ProductPackagingLevelsService {
     ): Promise<Map<string, PackagingLevelView[]>> {
         const byProduct = new Map<string, PackagingLevelView[]>();
         if (productIds.length === 0) return byProduct;
+        // unbounded-ok: packaging levels of the products passed in, bounded by that list
         const rows = await this.connection
             .getRepository(ctx, UnitRecord)
             .createQueryBuilder('u')

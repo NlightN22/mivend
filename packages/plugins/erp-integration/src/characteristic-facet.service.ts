@@ -40,6 +40,7 @@ export class CharacteristicFacetService implements OnApplicationBootstrap {
         if (!this.processContext.isServer) return;
         try {
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            // unbounded-ok: one-off startup backfill, DISTINCT (key, value) pairs only
             const rows = await this.connection
                 .getRepository(ctx, ProductCharacteristic)
                 .createQueryBuilder('c')

@@ -15,6 +15,7 @@ export class StockOrganizationReadService {
     ): Promise<Map<string, Map<string, number>>> {
         const byProduct = new Map<string, Map<string, number>>();
         if (productErpIds.length === 0) return byProduct;
+        // unbounded-ok: stock organization rows of the products passed in
         const rows = await this.connection
             .getRepository(ctx, StockOrganization)
             .find({ where: { productId: In(productErpIds), isActive: true } });

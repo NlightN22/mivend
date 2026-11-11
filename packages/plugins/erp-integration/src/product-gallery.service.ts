@@ -34,6 +34,7 @@ export class ProductGalleryService {
     }
 
     private async load(ctx: RequestContext, productIds: string[]): Promise<Map<string, string[]>> {
+        // unbounded-ok: assets of the products passed in, bounded by that list
         const rows = await this.connection.getRepository(ctx, ProductAsset).find({
             where: { productId: In(productIds) },
             relations: { asset: true },
