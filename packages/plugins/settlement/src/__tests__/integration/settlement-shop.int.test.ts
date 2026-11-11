@@ -386,18 +386,19 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(page.items.map(i => i.number)).toEqual(['3']);
     });
 
-    it('counts every balance of the counterparty, including a non-customer and an unknown contract', async () => {
+    it('counts every balance of the counterparty, including a non-customer and an unknown contract, without exposing their ids', async () => {
         await balance('cp-1', 'ct-1', 0, 100);
         await balance('cp-1', 'ct-2', 0, 500);
         await balance('cp-1', 'ct-unknown', 0, -300);
         const cards = await shop.balanceCards(ctx, '1');
         expect(cards.map(c => [c.contractId, c.currentBalance]).sort()).toEqual([
             ['1', 100],
-            ['2', 500],
             [null, -300],
+            [null, 500],
         ]);
+        expect(await shop.balanceCards(ctx, '1', { contractId: '2' })).toEqual([]);
         expect(cards.reduce((sum, c) => sum + c.currentBalance, 0)).toBe(300);
-        expect(cards.find(c => c.contractId === '2')?.overdue).toBe(0);
+        expect(cards.filter(c => c.contractId === null).every(c => c.overdue === 0)).toBe(true);
     });
 
     it('shows an unknown reference category under other', async () => {

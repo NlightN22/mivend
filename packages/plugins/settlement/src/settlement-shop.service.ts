@@ -43,7 +43,7 @@ export class SettlementShopService {
             ctx,
             `WITH ${AGING_CTE}
              SELECT bal.org AS "organizationErpId", bal.ctr AS "contractId", bal.currency,
-                bal.ob AS "openingBalance", bal.cb AS "closingBalance", bal.cname AS "contractName",
+                bal.ob AS "openingBalance", bal.cb AS "closingBalance", bal.cname AS "contractName", bal.cust,
                 org."legalName" AS "organizationName",
                 COALESCE((SELECT SUM(a.open) FROM aged a WHERE a.org = bal.org
                     AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue,
@@ -58,8 +58,8 @@ export class SettlementShopService {
                 (b): SettlementBalanceCard => ({
                     organizationId: String(b.organizationErpId),
                     organizationName: (b.organizationName as string | null) ?? null,
-                    contractId: (b.contractId as string | null) ?? null,
-                    contractName: (b.contractName as string | null) ?? null,
+                    contractId: b.cust ? ((b.contractId as string | null) ?? null) : null,
+                    contractName: b.cust ? ((b.contractName as string | null) ?? null) : null,
                     currency: toAlphaCurrency(String(b.currency)),
                     openingBalance: Number(b.openingBalance),
                     currentBalance: Number(b.closingBalance),
