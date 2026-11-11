@@ -46,11 +46,24 @@ describe('checkout policy helpers', () => {
         expect(proformaPrintTargets('bank-transfer', [])).toEqual([]);
     });
 
-    it('shows the waiting-for-cash-confirmation state only for cash', () => {
-        expect(describeOrderCreated('1', 'cash').waitingForCashConfirmation).toBe(true);
-        expect(describeOrderCreated('1', 'offline-terms').waitingForCashConfirmation).toBe(false);
-        expect(describeOrderCreated('1', 'online-stub').waitingForCashConfirmation).toBe(false);
-        expect(describeOrderCreated('1', 'cash').status).toMatch(/Waiting for the manager/);
+    it('describes a cash order by its real route, not by the payment form', () => {
+        const direct = describeOrderCreated('1', 'cash', false);
+        expect(direct.status).toBe(
+            'Your order 1 has been created. Pay cash on pickup or delivery.',
+        );
+        expect(direct.steps).not.toContain('The manager confirms the order.');
+        const held = describeOrderCreated('1', 'cash', true);
+        expect(held.status).toMatch(/A manager will confirm the order/);
+        expect(held.steps).toContain('The manager confirms the order.');
+    });
+
+    it('keeps the bank and card texts independent of the manager route', () => {
+        expect(describeOrderCreated('1', 'offline-terms', true).steps).toEqual(
+            describeOrderCreated('1', 'offline-terms', false).steps,
+        );
+        expect(describeOrderCreated('1', 'online-stub', false).status).toBe(
+            describeOrderCreated('1', 'online-stub', true).status,
+        );
     });
 
     it('adds the confirmed card amount in kopecks only when a preview exists', () => {

@@ -227,6 +227,27 @@ export async function setAllowExceeding(
     );
 }
 
+const CASE_FORMS = ['cash', 'bank-transfer'];
+const CASE_FULFILLMENTS = ['pickup', 'delivery'];
+const CASE_TERMS = ['deferred', 'no-terms'];
+
+// Sets the confirmation matrix policy of every case at once, so the test does not depend on the buyer's case.
+export async function setConfirmationMatrix(consequence: 'warn' | 'hold'): Promise<void> {
+    for (const form of CASE_FORMS)
+        for (const fulfillment of CASE_FULFILLMENTS)
+            for (const terms of CASE_TERMS) {
+                await admin(
+                    `mutation($code: String!, $c: String!) {
+                        updateCheckPolicy(input: { checkCode: $code, stage: "placement", consequence: $c, enabled: true }) { id }
+                    }`,
+                    {
+                        code: `payment.confirmation.${form}.${fulfillment}.${terms}`,
+                        c: consequence,
+                    },
+                );
+            }
+}
+
 // The reservation state is written by an async subscriber: poll (bounded) until it is the expected one.
 export async function orderWithReservation(code: string, expected: string): Promise<AdminOrder> {
     let order = await adminOrder(code);

@@ -101,6 +101,29 @@ export class ChecksService {
         return { findings: resolved, strongestConsequence: strongestConsequence(resolved) };
     }
 
+    // Pure path for a stage the caller decides at, with facts the stored subject lacks (the payment form at
+    // placement): no lock, nothing stored. The caller holds whatever lock its own read-compute-write needs.
+    async evaluateWithInput(
+        ctx: RequestContext,
+        subjectType: string,
+        subject: unknown,
+        stage: string,
+        input: unknown,
+    ): Promise<CheckRunResult> {
+        const definition = this.registry.getSubjectType(subjectType);
+        const providers = this.registry.listForStage(subjectType, stage);
+        const resolved = await this.evaluateProviders(
+            ctx,
+            definition,
+            providers,
+            subject,
+            stage,
+            false,
+            input,
+        );
+        return { findings: resolved, strongestConsequence: strongestConsequence(resolved) };
+    }
+
     private async evaluateProviders(
         ctx: RequestContext,
         definition: SubjectTypeDefinition,
@@ -108,6 +131,7 @@ export class ChecksService {
         subject: unknown,
         stage: string,
         lockPolicyRows: boolean,
+        input: unknown = null,
     ): Promise<ResolvedFinding[]> {
         const branchId = definition.branchId?.(subject) ?? null;
         const policies = lockPolicyRows
@@ -125,6 +149,7 @@ export class ChecksService {
                     ctx,
                     stage,
                     recipient: policy.recipient,
+                    input,
                 });
             } catch (error) {
                 this.logger.error(

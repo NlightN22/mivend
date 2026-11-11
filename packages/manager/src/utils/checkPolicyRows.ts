@@ -67,10 +67,16 @@ export function isRowDirty(row: PolicyRow): boolean {
     );
 }
 
-// `credit.limit` at `checkout` is read by the placement decision, not by the staff-confirmation hold.
+// `credit.limit` at `checkout` and the `payment.confirmation.*` matrix at `placement` are read by the placement
+// decision, not by the staff-confirmation hold.
 export function policyCaption(
     row: Pick<PolicyRow, 'checkCode' | 'stage' | 'consequence'>,
 ): string | null {
+    if (row.stage === 'placement' && row.checkCode.startsWith('payment.confirmation.')) {
+        return row.consequence === 'hold'
+            ? 'hold: a manager confirms such an order before it goes on (when the credit limit is not exceeded)'
+            : 'such an order goes on to the ERP now (when the credit limit is not exceeded)';
+    }
     if (row.checkCode !== 'credit.limit' || row.stage !== 'checkout') return null;
     return row.consequence === 'hold'
         ? 'hold: the order is placed and waits for manager confirmation'

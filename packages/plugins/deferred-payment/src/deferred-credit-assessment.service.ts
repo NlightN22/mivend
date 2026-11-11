@@ -19,6 +19,8 @@ export interface DeferredCreditAssessment {
     allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
     limitControlled: boolean;
+    // The buyer has a payment term (the counterparty's payment delay), whatever the limit.
+    hasPaymentTerm: boolean;
     // Debt above the limit that exists before this order, in kopecks.
     excessKopecks: number;
 }
@@ -36,7 +38,7 @@ export class DeferredCreditAssessmentService {
     ) {}
 
     // The order's own branch once placed; before placement, the preferred trading point's servicing branch.
-    private async branchId(
+    async resolveBranchId(
         ctx: RequestContext,
         order: Order,
         customerId: ID,
@@ -67,7 +69,7 @@ export class DeferredCreditAssessmentService {
             null,
             open + orderRubles,
         );
-        const branchId = await this.branchId(ctx, order, customerId);
+        const branchId = await this.resolveBranchId(ctx, order, customerId);
         const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
         // The `checkout` policy of `credit.limit`: off = no limit control, hold = manager confirmation,
         // info/warn = the order may go to the ERP now once the customer acknowledges.
@@ -87,6 +89,7 @@ export class DeferredCreditAssessmentService {
             prepaymentReserveDays:
                 settings?.prepaymentReserveDays ?? DEFAULT_PREPAYMENT_RESERVE_DAYS,
             limitControlled,
+            hasPaymentTerm: Number(counterparty.paymentDelayDays) > 0,
             excessKopecks: limitControlled ? Math.max(0, Math.round(-available * 100)) : 0,
         };
     }

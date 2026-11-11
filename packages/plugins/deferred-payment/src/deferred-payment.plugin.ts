@@ -14,6 +14,7 @@ import { OpenDeferredExposureService } from './open-deferred-exposure.service';
 import { DeferredCreditAssessmentService } from './deferred-credit-assessment.service';
 import { DeferredCreditShopResolver } from './api/shop.resolver';
 import { CreditFlagService } from './credit-flag.service';
+import { PlacementConfirmationCheckRegistrar } from './placement-confirmation-check.registrar';
 import { CreditLimitCheckRegistrar } from './credit-limit-check.registrar';
 import { CreditFlagAdminResolver, OrderCreditFlagResolver } from './api/admin.resolver';
 import { adminApiExtensions } from './api/admin.schema';
@@ -40,6 +41,7 @@ import { CreditPlacementService } from './credit-placement.service';
         OpenDeferredExposureService,
         DeferredCreditAssessmentService,
         CreditLimitCheckRegistrar,
+        PlacementConfirmationCheckRegistrar,
     ],
     exports: [CreditPlacementService],
     configuration: (config: RuntimeVendureConfig) => {

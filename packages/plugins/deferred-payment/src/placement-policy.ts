@@ -6,6 +6,8 @@ export interface PlacementInput {
     exceeded: boolean;
     allowExceeding: boolean;
     acknowledged: boolean;
+    // The matrix case of the order holds it for a manager (layer 2); read only when the limit is not exceeded.
+    confirmationHold?: boolean;
 }
 
 export interface PlacementDecision {
@@ -15,10 +17,11 @@ export interface PlacementDecision {
     prepayment: boolean;
 }
 
-// The single placement matrix (docs/payments.md "Target model"): form x limit state -> route.
+// Layer 1: the credit limit decides when exceeded; layer 2: the order's matrix case (docs/payments.md).
 // A card payment covers the excess plus the order, so it cures an over-limit order.
 export function decidePlacement(input: PlacementInput): PlacementDecision {
-    const { form, limitControlled, exceeded, allowExceeding, acknowledged } = input;
+    const { form, limitControlled, exceeded, allowExceeding, acknowledged, confirmationHold } =
+        input;
     if (form === 'card') {
         return {
             route: 'after-payment',
@@ -36,7 +39,7 @@ export function decidePlacement(input: PlacementInput): PlacementDecision {
         };
     }
     return {
-        route: 'erp-now',
+        route: confirmationHold ? 'manager-confirmation' : 'erp-now',
         countsAgainstLimit: true,
         creditLimitExceeded: false,
         prepayment: !limitControlled,

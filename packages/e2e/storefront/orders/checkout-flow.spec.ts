@@ -41,7 +41,7 @@ test.describe('Checkout places a real order (regression)', () => {
         await page.getByRole('button', { name: 'Place order' }).click();
 
         await expect(page).toHaveURL(/\/order-created\?code=/, { timeout: 15000 });
-        await expect(page.getByText(/Waiting for the manager to confirm/).first()).toBeVisible();
+        await expect(page.getByText(/Pay cash on pickup or delivery/).first()).toBeVisible();
 
         const state = await latestOrderState(page);
         expect(state).not.toBe('AddingItems');

@@ -9,6 +9,7 @@ import {
     adminOrder,
     cancelOpenOrders,
     loginBuyer,
+    setConfirmationMatrix,
     waitForCheckoutReady,
 } from './helpers';
 
@@ -36,14 +37,15 @@ for (const email of [CREDIT_BUYER, PREPAY_BUYER]) {
             await cancelOpenOrders(email);
         });
 
-        test('cash is placed and waits for the manager to confirm receipt', async ({ page }) => {
+        test('cash is placed on the ERP route with the default policies, no manager wait', async ({
+            page,
+        }) => {
             await openCheckout(page, email);
             await page.getByRole('button', { name: /^Cash/i }).click();
             await page.getByRole('button', { name: 'Place order' }).click();
             const code = await orderCodeFromUrl(page);
-            await expect(
-                page.getByText(/Waiting for the manager to confirm/).first(),
-            ).toBeVisible();
+            await expect(page.getByText(/Pay cash on pickup or delivery/).first()).toBeVisible();
+            await expect(page.getByText(/will confirm the order/)).toHaveCount(0);
 
             const order = await orderWithReservation(code, 'RESERVED');
             expect(order.payments[0].method).toBe('cash');
@@ -51,6 +53,34 @@ for (const email of [CREDIT_BUYER, PREPAY_BUYER]) {
             expect(order.reservationState).toBe('RESERVED');
             const placement = order.payments[0].metadata.placement as { route: string };
             expect(placement.route).toBe('erp-now');
+            expect(order.payments[0].metadata.public).toMatchObject({
+                awaitingManagerConfirmation: false,
+            });
+        });
+
+        test('a hold in the confirmation matrix sends cash to the manager with no code change', async ({
+            page,
+        }) => {
+            await setConfirmationMatrix('hold');
+            try {
+                await openCheckout(page, email);
+                await page.getByRole('button', { name: /^Cash/i }).click();
+                await page.getByRole('button', { name: 'Place order' }).click();
+                const code = await orderCodeFromUrl(page);
+                await expect(page.getByText(/will confirm the order/).first()).toBeVisible();
+                const order = await orderWithReservation(code, 'AWAITING_CONFIRMATION');
+                const meta = order.payments[0].metadata as {
+                    placement: { route: string };
+                    public: { creditLimitExceeded: boolean; awaitingManagerConfirmation: boolean };
+                };
+                expect(meta.placement.route).toBe('manager-confirmation');
+                expect(meta.public).toMatchObject({
+                    creditLimitExceeded: false,
+                    awaitingManagerConfirmation: true,
+                });
+            } finally {
+                await setConfirmationMatrix('warn');
+            }
         });
 
         test('bank transfer creates a proforma, offers a print link and reserves', async ({

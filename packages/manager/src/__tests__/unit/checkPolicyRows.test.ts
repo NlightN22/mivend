@@ -93,6 +93,16 @@ describe('buildPolicyRows', () => {
         expect(policyCaption({ ...row, checkCode: 'order.multiplicity' })).toBeNull();
     });
 
+    it('captions a confirmation matrix row by its consequence', () => {
+        const matrix = {
+            checkCode: 'payment.confirmation.cash.pickup.deferred',
+            stage: 'placement',
+            consequence: 'hold' as const,
+        };
+        expect(policyCaption(matrix)).toContain('manager confirms');
+        expect(policyCaption({ ...matrix, consequence: 'warn' })).toContain('goes on to the ERP');
+    });
+
     it('shows a manager control with its stage-only consequence and the subject type', () => {
         const manager = {
             ...defs[0],

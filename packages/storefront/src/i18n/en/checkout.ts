@@ -62,8 +62,8 @@ export default {
             },
             cash: {
                 title: 'Cash',
-                note: 'Pay cash on pickup or delivery; a manager confirms the receipt.',
-                badge: 'Manager confirms receipt',
+                note: 'Pay cash on pickup or delivery.',
+                badge: 'Pay on receipt',
             },
         },
     },
@@ -73,7 +73,8 @@ export default {
         statusTitle: 'Order created',
         created: 'Your order {code} has been created',
         status: {
-            cash: '{created}. Waiting for the manager to confirm receipt of your cash payment.',
+            cash: '{created}. Pay cash on pickup or delivery.',
+            cashAwaitingManager: '{created}. A manager will confirm the order before it goes on.',
             offlineTerms:
                 '{created}. Pay each proforma invoice via your bank; the order is paid once the payment is received.',
             default: '{created}.',
@@ -81,7 +82,7 @@ export default {
         steps: {
             notify: "You'll get a notification when the order is ready.",
             cashHandOver: 'Hand the cash over on pickup or delivery.',
-            cashConfirm: 'The manager confirms the cash receipt.',
+            managerConfirm: 'The manager confirms the order.',
             bankPrint: 'Print the proforma invoices and send them to your bank.',
             bankMatch: 'The payment is matched to the order when it arrives.',
             queued: 'Your order is queued for processing.',
@@ -92,8 +93,8 @@ export default {
             offlineTerms: 'Bank proforma invoice',
             onlineStub: 'Card online',
         },
-        waitingCash:
-            'Waiting for the manager to confirm the cash receipt. The order moves on once the manager has confirmed it.',
+        awaitingConfirmation:
+            'Please wait for your manager to confirm the order. It moves on once the manager has confirmed it.',
         awaitingManager:
             'Your credit limit is exceeded. Please wait for your manager to confirm the order.',
         limitAcknowledged:

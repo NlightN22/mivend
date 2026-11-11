@@ -49,7 +49,6 @@ export function useOrderCreated(): UseOrderCreated {
     const methodCode = computed(() => payment.value?.method ?? '');
 
     const paymentLabel = computed(() => paymentMethodLabel(methodCode.value));
-    const text = computed(() => describeOrderCreated(code.value, methodCode.value));
 
     const publicFlags = computed(
         () =>
@@ -64,6 +63,9 @@ export function useOrderCreated(): UseOrderCreated {
     );
     const awaitingManager = computed(() => publicFlags.value.awaitingManagerConfirmation === true);
     const limitExceeded = computed(() => publicFlags.value.creditLimitExceeded === true);
+    const text = computed(() =>
+        describeOrderCreated(code.value, methodCode.value, awaitingManager.value),
+    );
 
     const tradingPoint = computed(() => {
         const id = order.value?.customFields?.tradingPointId;

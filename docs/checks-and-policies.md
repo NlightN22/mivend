@@ -117,6 +117,12 @@ and checks are registered by the plugins that own them (the one exception is the
   skips the provider and clears its stored findings. `updateCheckPolicy` rejects a consequence the
   subject type does not allow at that stage and appends `check_policy_history` (before/after, user id);
   `resetCheckPolicyOverride` removes a branch row (recorded in the history as removed).
+- **Placement stage and explicit input (#349).** The `order` stage `placement` is evaluated only by the placement decision,
+  never by `runChecks`. `ChecksService.evaluateWithInput(ctx, type, subject, stage, input)` is the pure path (no lock, nothing stored)
+  for a decision that needs facts the stored subject lacks (the payment form is known only at `addPaymentToOrder`); providers read
+  them as `CheckContext.input`, and a branch row overrides the global one through the subject's `branchId`. The eight
+  `payment.confirmation.*` checks (rule text: `docs/payments.md` "Confirmation matrix") use it: `hold` routes the order to manager
+  confirmation, `warn`/`info`/disabled lets it go on. The order subject needs no new consequence for it.
 - **Run.** `ChecksService.runChecks(ctx, subjectType, subjectRef, stage)` takes the subject's
   advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
   that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.

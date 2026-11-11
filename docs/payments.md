@@ -867,6 +867,36 @@ The checkout list below mixes a form (proforma invoice, online) with terms (defe
   bank-transfer form whose payment is not `Authorized` at placement; the reserve/ERP trigger follows payment or
   manager confirmation; exposure is computed from payment fact, not ERP status.
 
+### Confirmation matrix (issue #349)
+
+Placement decides in two layers. Layer 1: when the credit limit is exceeded (by amount or by term) the check `credit.limit`
+(stage `checkout`) decides, as above. Layer 2: when it does not fire, the order's case decides. A case is payment form
+(cash, bank transfer) x fulfillment x deferred terms, eight checks `payment.confirmation.<form>.<fulfillment>.<terms>`
+registered from one data table (`placement-cases.ts`) and evaluated at the order stage `placement`. A card payment is outside the matrix.
+
+- Fulfillment: `delivery` when an order shipping line is the freight method (`hasFreightShippingLine`), else `pickup`.
+- Terms: `deferred` when the buyer's counterparty has a payment delay above zero (the same value `DeferredCreditAssessmentService`
+  uses for `limitControlled`; exposed as `hasPaymentTerm`), else `no-terms`.
+- The payment form is passed into `CreditPlacementService.place` (it is known only at `addPaymentToOrder`); the case is passed to
+  `ChecksService.evaluateWithInput` and the case policy of the order's branch (else global) is read. `hold` = route
+  `manager-confirmation` (the order waits for a manager, public flag `awaitingManagerConfirmation`, `creditLimitExceeded` stays false);
+  `warn`/`info` or a disabled check = `erp-now`. Nothing is stored; the placement runs under `credit-exposure:<counterparty>`.
+
+| Form | Fulfillment | Deferred terms | Check code | Default |
+| --- | --- | --- | --- | --- |
+| cash | pickup | yes | `payment.confirmation.cash.pickup.deferred` | warn (no confirmation) |
+| cash | pickup | no | `payment.confirmation.cash.pickup.no-terms` | warn |
+| cash | delivery | yes | `payment.confirmation.cash.delivery.deferred` | warn |
+| cash | delivery | no | `payment.confirmation.cash.delivery.no-terms` | warn |
+| bank transfer | pickup | yes | `payment.confirmation.bank-transfer.pickup.deferred` | warn |
+| bank transfer | pickup | no | `payment.confirmation.bank-transfer.pickup.no-terms` | warn |
+| bank transfer | delivery | yes | `payment.confirmation.bank-transfer.delivery.deferred` | warn |
+| bank transfer | delivery | no | `payment.confirmation.bank-transfer.delivery.no-terms` | warn |
+
+Defaults keep today's behaviour: no case holds an order that the limit check does not already hold; the owner tightens a case to
+`hold` per global/branch in "Controls and policies". A change applies to orders placed afterwards. The reservation lifetime is unchanged.
+The storefront copy follows the stored route (`awaitingManagerConfirmation`), not the payment form.
+
 **Stage 1 done (#222):** `OpenDeferredExposureService` is payment-method-agnostic: an unconfirmed (ERP `PENDING`/
 `SENT_TO_ERP`/`RESERVED`), non-cancelled, not-too-old order of the counterparty counts until a payment of a method
 other than `deferred-payment` is `Settled`. Legacy `deferred-payment` payments (`Authorized` at placement, no money)

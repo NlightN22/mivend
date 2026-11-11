@@ -170,6 +170,7 @@ describe('order subject helpers and gates', () => {
             'pre-reserve',
             'pre-send-to-erp',
             'on-edit',
+            'placement',
         ]);
     });
 });

@@ -59,6 +59,7 @@ describe('DeferredCreditAssessmentService.assess', () => {
             allowExceedingCreditLimit: false,
             prepaymentReserveDays: 3,
             limitControlled: true,
+            hasPaymentTerm: true,
             excessKopecks: 0,
         });
     });
@@ -99,6 +100,7 @@ describe('DeferredCreditAssessmentService.assess', () => {
             allowExceedingCreditLimit: false,
             prepaymentReserveDays: 3,
             limitControlled: true,
+            hasPaymentTerm: true,
             excessKopecks: 0,
         });
         expect(sumUnconfirmedRubles).toHaveBeenCalledWith(ctx, 3, 9);
@@ -233,4 +235,20 @@ describe('DeferredCreditAssessmentService.assess', () => {
             excessKopecks: 15_050,
         });
     });
+
+    it.each([
+        [0, false],
+        [14, true],
+    ])(
+        'reports a payment term only when the payment delay is positive (%s days)',
+        async (delay, term) => {
+            getForCustomer.mockResolvedValue({
+                id: 3,
+                creditLimit: 0,
+                creditBalance: 0,
+                paymentDelayDays: delay,
+            });
+            expect(await service.assess(ctx, order(1000))).toMatchObject({ hasPaymentTerm: term });
+        },
+    );
 });

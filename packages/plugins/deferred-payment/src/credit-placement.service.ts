@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ChecksService } from '@mivend/plugin-checks';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import {
     Order,
@@ -9,6 +10,7 @@ import {
 } from '@vendure/core';
 import {
     AWAITING_MANAGER_KEY,
+    ctxQuery,
     CARD_AMOUNT_CHANGED_CODE,
     CREDIT_ACKNOWLEDGED_KEY,
     CREDIT_LIMIT_EXCEEDED_KEY,
@@ -16,6 +18,7 @@ import {
     EXPECTED_AMOUNT_KEY,
     PAYMENT_FORM_BY_METHOD_CODE,
     PLACEMENT_KEY,
+    hasFreightShippingLine,
     withAggregateLock,
     type PaymentForm,
     type PlacementMetadata,
@@ -25,6 +28,7 @@ import {
     DeferredCreditAssessment,
     DeferredCreditAssessmentService,
 } from './deferred-credit-assessment.service';
+import { PLACEMENT_CHECK_STAGE, type PlacementCaseKey } from './placement-cases';
 import { decidePlacement, payableAmountKopecks, type PlacementDecision } from './placement-policy';
 
 export const CARD_AMOUNT_CHANGED_MESSAGE = `${CARD_AMOUNT_CHANGED_CODE}: the amount to pay changed, confirm it again`;
@@ -49,6 +53,7 @@ const NO_LIMIT: DeferredCreditAssessment = {
     allowExceedingCreditLimit: false,
     prepaymentReserveDays: DEFAULT_PREPAYMENT_RESERVE_DAYS,
     limitControlled: false,
+    hasPaymentTerm: false,
     excessKopecks: 0,
 };
 
@@ -61,6 +66,7 @@ export class CreditPlacementService {
         private readonly counterpartyService: CounterpartyService,
         private readonly assessmentService: DeferredCreditAssessmentService,
         private readonly paymentMethodService: PaymentMethodService,
+        private readonly checks: ChecksService,
     ) {}
 
     async place(
@@ -75,12 +81,14 @@ export class CreditPlacementService {
             : null;
         const evaluate = async (txCtx: RequestContext): Promise<PlacementResult> => {
             const assessment = (await this.assessmentService.assess(txCtx, order)) ?? NO_LIMIT;
+            const confirmationHold = await this.confirmationHold(txCtx, order, form, assessment);
             const decision = decidePlacement({
                 form,
                 limitControlled: assessment.limitControlled,
                 exceeded: assessment.exceeded,
                 allowExceeding: assessment.allowExceedingCreditLimit,
                 acknowledged: inputMetadata[CREDIT_ACKNOWLEDGED_KEY] === true,
+                confirmationHold,
             });
             const reserveDays = decision.prepayment ? assessment.prepaymentReserveDays : null;
             const amount = payableAmountKopecks(form, order.totalWithTax, assessment.excessKopecks);
@@ -110,6 +118,42 @@ export class CreditPlacementService {
             `credit-exposure:${counterparty.id}`,
             evaluate,
         );
+    }
+
+    // Layer 2: only when the limit does not decide; the case's policy (hold) sends the order to a manager.
+    private async confirmationHold(
+        ctx: RequestContext,
+        order: Order,
+        form: PaymentForm,
+        assessment: DeferredCreditAssessment,
+    ): Promise<boolean> {
+        if (form === 'card' || assessment.exceeded) return false;
+        const methods = await ctxQuery<Array<{ code: string }>>(
+            this.connection,
+            ctx,
+            `SELECT sm.code FROM shipping_line sl
+             INNER JOIN shipping_method sm ON sm.id = sl."shippingMethodId"
+             WHERE sl."orderId" = $1`,
+            [order.id],
+        );
+        const shippingLines = methods.map(m => ({ shippingMethod: { code: m.code } }));
+        const key: PlacementCaseKey = {
+            form,
+            fulfillment: hasFreightShippingLine(shippingLines) ? 'delivery' : 'pickup',
+            terms: assessment.hasPaymentTerm ? 'deferred' : 'no-terms',
+        };
+        const customerId = order.customer?.id ?? order.customerId;
+        const branchId = customerId
+            ? await this.assessmentService.resolveBranchId(ctx, order, customerId)
+            : null;
+        const result = await this.checks.evaluateWithInput(
+            ctx,
+            'order',
+            { branchId },
+            PLACEMENT_CHECK_STAGE,
+            key,
+        );
+        return result.strongestConsequence === 'hold';
     }
 
     async preview(ctx: RequestContext, order: Order): Promise<PlacementPreview> {

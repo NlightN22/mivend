@@ -11,6 +11,7 @@ const EMPTY_PREVIEW: PlacementPreview = {
     allowExceedingCreditLimit: false,
     prepaymentReserveDays: DEFAULT_PREPAYMENT_RESERVE_DAYS,
     limitControlled: false,
+    hasPaymentTerm: false,
     excessKopecks: 0,
     payableCardAmount: 0,
     acknowledgementRequired: false,

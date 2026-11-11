@@ -6,6 +6,7 @@ export const ORDER_CHECK_STAGES = [
     'pre-reserve',
     'pre-send-to-erp',
     'on-edit',
+    'placement',
 ] as const;
 
 export type OrderCheckStage = (typeof ORDER_CHECK_STAGES)[number];

@@ -1,6 +1,12 @@
 import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { DataSource } from 'typeorm';
+import {
+    CheckPolicy,
+    CheckPolicyService,
+    CheckRegistry,
+    ChecksService,
+} from '@mivend/plugin-checks';
 import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
 import type { Order, RequestContext } from '@vendure/core';
 import {
@@ -14,6 +20,7 @@ import {
 import { CreditPlacementService, type PlacementResult } from '../../credit-placement.service';
 import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
 import { OpenDeferredExposureService } from '../../open-deferred-exposure.service';
+import { PlacementConfirmationCheckRegistrar } from '../../placement-confirmation-check.registrar';
 
 export interface Buyer {
     customerId: number;
@@ -56,7 +63,12 @@ export function useCreditPlacementHarness(schemaName: string) {
                 await qr.release();
             }
         },
-        getRepository: (c: TxCtx) => ({ query: (sql: string, p: unknown[]) => runIn(c, sql, p) }),
+        getRepository: (c: TxCtx, entity?: unknown) =>
+            entity && typeof entity !== 'string'
+                ? ((c.qr ?? dataSource).manager as DataSource['manager']).getRepository(
+                      entity as never,
+                  )
+                : { query: (sql: string, p: unknown[]) => runIn(c, sql, p) },
     };
     const counterpartyService = {
         async getForCustomer(_ctx: unknown, customerId: number) {
@@ -92,12 +104,50 @@ export function useCreditPlacementHarness(schemaName: string) {
             }),
         } as never,
     );
+    const registry = new CheckRegistry();
+    registry.registerSubjectType({
+        type: 'order',
+        stages: ['placement'],
+        allowedConsequences: ['info', 'warn', 'hold'],
+        ephemeral: true,
+        branchId: (subject: { branchId: string | null }) => subject.branchId,
+    });
+    new PlacementConfirmationCheckRegistrar(registry).onModuleInit();
+    const checks = new ChecksService(
+        connection as never,
+        registry,
+        new CheckPolicyService(connection as never, registry, null as never, null as never),
+    );
     const placement = new CreditPlacementService(
         connection as never,
         counterpartyService as never,
         assessment,
         { getEligiblePaymentMethods: async () => [] } as never,
+        checks,
     );
+
+    async function setCasePolicy(
+        checkCode: string,
+        consequence: string,
+        enabled = true,
+        branchId: string | null = null,
+    ): Promise<void> {
+        await run(
+            `INSERT INTO check_policy ("uuid", "checkCode", stage, "branchId", consequence, enabled)
+             VALUES (gen_random_uuid(), $1, 'placement', $2, $3, $4)`,
+            [checkCode, branchId, consequence, enabled],
+        );
+    }
+
+    async function addShippingLine(orderId: number, methodCode: string): Promise<void> {
+        const [m] = await run(`INSERT INTO shipping_method (code) VALUES ($1) RETURNING id`, [
+            methodCode,
+        ]);
+        await run(`INSERT INTO shipping_line ("orderId", "shippingMethodId") VALUES ($1, $2)`, [
+            orderId,
+            m.id,
+        ]);
+    }
 
     async function addBuyer(
         creditLimit: number,
@@ -191,7 +241,7 @@ export function useCreditPlacementHarness(schemaName: string) {
             ...testDataSourceConnectionOptions(),
             schema,
             extra,
-            entities: [OrderStatusReference],
+            entities: [OrderStatusReference, CheckPolicy],
         });
         await dataSource.initialize();
         await dataSource.synchronize();
@@ -206,6 +256,10 @@ export function useCreditPlacementHarness(schemaName: string) {
             id serial PRIMARY KEY, "customerId" int, "customFieldsErpstatus" varchar,
             state varchar, "orderPlacedAt" timestamp,
             "subTotalWithTax" int NOT NULL DEFAULT 0, "shippingWithTax" int NOT NULL DEFAULT 0)`);
+        await run(`CREATE TABLE shipping_method (id serial PRIMARY KEY, code varchar NOT NULL)`);
+        await run(
+            `CREATE TABLE shipping_line (id serial PRIMARY KEY, "orderId" int, "shippingMethodId" int)`,
+        );
         await run(`CREATE TABLE payment (
             id serial PRIMARY KEY, "orderId" int, method varchar, state varchar, amount int,
             metadata text NOT NULL DEFAULT '{}', "createdAt" timestamp NOT NULL DEFAULT now())`);
@@ -220,7 +274,9 @@ export function useCreditPlacementHarness(schemaName: string) {
         state.maxAgeDays = 7;
         state.allowExceeding = false;
         state.reserveDays = 3;
-        await run(`TRUNCATE payment, "order", customer, counterparty RESTART IDENTITY`);
+        await run(
+            `TRUNCATE shipping_line, shipping_method, check_policy, payment, "order", customer, counterparty RESTART IDENTITY`,
+        );
     });
 
     return {
@@ -231,6 +287,8 @@ export function useCreditPlacementHarness(schemaName: string) {
         addOrderRow,
         addPayment,
         place,
+        setCasePolicy,
+        addShippingLine,
         connection,
         placement,
         ctx,

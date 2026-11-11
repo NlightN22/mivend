@@ -54,11 +54,12 @@ const {
                 </div>
                 <h2 class="oc-status-title">{{ $t('orderCreated.statusTitle') }}</h2>
                 <p class="oc-status-text">{{ text.status }}</p>
-                <MvNotice v-if="text.waitingForCashConfirmation" variant="info">
-                    {{ $t('orderCreated.waitingCash') }}
-                </MvNotice>
                 <MvNotice v-if="awaitingManager" variant="warning">
-                    {{ $t('orderCreated.awaitingManager') }}
+                    {{
+                        limitExceeded
+                            ? $t('orderCreated.awaitingManager')
+                            : $t('orderCreated.awaitingConfirmation')
+                    }}
                 </MvNotice>
                 <MvNotice v-else-if="limitExceeded" variant="warning">
                     {{ $t('orderCreated.limitAcknowledged') }}

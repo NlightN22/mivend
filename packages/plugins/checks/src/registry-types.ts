@@ -7,6 +7,8 @@ export interface CheckContext {
     stage: string;
     // The policy row's recipient (a role or group code) for the run, null when none is set.
     recipient: string | null;
+    // Facts only the caller knows (e.g. the payment form at placement); null on a run that has none.
+    input?: unknown;
 }
 
 export interface SubjectTypeDefinition<S = unknown> {
