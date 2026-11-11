@@ -4,9 +4,9 @@ test('the customer card starts acting as this customer and opens the storefront 
     page,
 }) => {
     await page.goto('/customers?search=E2E%20Co');
-    const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
+    const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
     await row.waitFor({ timeout: 15000 });
-    await row.click({ position: { x: 20, y: 10 } });
+    await row.getByRole('link', { name: /E2E Co/ }).click();
     await expect(page).toHaveURL(/\/customers\/.+/);
 
     const popupPromise = page.waitForEvent('popup');

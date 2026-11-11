@@ -45,7 +45,7 @@ async function forceInactiveTradingPoint(page: import('@playwright/test').Page):
 test('customers page shows the client list and KPIs @read-only', async ({ page }) => {
     await page.goto('/customers?search=E2E%20Co');
     await expect(page.getByText('Active clients')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Needs attention')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
 
     const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
     await expect(row).toBeVisible();
@@ -125,7 +125,11 @@ test('customer detail Discounts tab shows a grant scoped to this customer (posit
     await page.getByRole('button', { name: 'Discounts' }).click();
     // The 8% grant goes through the real request/decide workflow, not a DB bypass.
     // That workflow's side effects are needed; see DiscountGrantService.decideAndApply.
-    await expect(page.getByText('8%')).toBeVisible({ timeout: 15000 });
+    await expect(
+        page.getByRole('row').filter({ hasText: 'Personal' }).getByText('8%').first(),
+    ).toBeVisible({
+        timeout: 15000,
+    });
 });
 
 test('customer detail Discounts tab does not leak a grant scoped to another customer (negative) @read-only', async ({
@@ -134,7 +138,11 @@ test('customer detail Discounts tab does not leak a grant scoped to another cust
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Discounts' }).click();
-    await expect(page.getByText('8%')).toBeVisible({ timeout: 15000 });
+    await expect(
+        page.getByRole('row').filter({ hasText: 'Personal' }).getByText('8%').first(),
+    ).toBeVisible({
+        timeout: 15000,
+    });
     // The 99% grant is scoped to another counterparty and must not leak into this tab.
     // This test guards the findForCounterparty query fix.
     await expect(page.getByText('99%')).not.toBeVisible();
