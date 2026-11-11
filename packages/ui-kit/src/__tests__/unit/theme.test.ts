@@ -49,11 +49,11 @@ function stubBrowser(opts: { osDark: boolean; saved?: string; storageBlocked?: b
 
 async function load(
     opts: Parameters<typeof stubBrowser>[0],
-): Promise<{ env: ReturnType<typeof stubBrowser>; theme: typeof import('../../theme') }> {
+): Promise<{ env: ReturnType<typeof stubBrowser>; theme: typeof import('../../theme/theme') }> {
     vi.resetModules();
     await import('vue');
     const env = stubBrowser(opts);
-    return { env, theme: await import('../../theme') };
+    return { env, theme: await import('../../theme/theme') };
 }
 
 describe('theme', () => {

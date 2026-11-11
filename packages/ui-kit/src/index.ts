@@ -341,3 +341,10 @@ export type {
     BatchResultMode,
     BatchResultRow,
 } from './components/MvBatchResultTable/batchResultModel';
+export {
+    preference as themePreference,
+    setThemePreference,
+    initTheme,
+    THEME_PREFERENCES,
+    type ThemePreference,
+} from './theme/theme';

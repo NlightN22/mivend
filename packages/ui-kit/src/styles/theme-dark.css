@@ -1,4 +1,4 @@
-/* Dark theme roles. Opt-in via html[data-theme='dark']; the manager portal never sets it. Declared after Element Plus's html.dark vars. */
+/* Dark theme roles. Opt-in via html[data-theme='dark']. Declared after Element Plus's html.dark vars. */
 html[data-theme='dark'] {
     color-scheme: dark;
 

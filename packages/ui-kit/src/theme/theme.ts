@@ -4,7 +4,12 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 
 const STORAGE_KEY = 'mivend.theme';
 const PREFERENCES: ThemePreference[] = ['system', 'light', 'dark'];
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+let darkQuery: MediaQueryList | null = null;
+
+function systemQuery(): MediaQueryList {
+    darkQuery ??= window.matchMedia('(prefers-color-scheme: dark)');
+    return darkQuery;
+}
 
 function readSaved(): ThemePreference {
     try {
@@ -17,8 +22,10 @@ function readSaved(): ThemePreference {
 
 export const preference: Ref<ThemePreference> = ref(readSaved());
 
+export const THEME_PREFERENCES: readonly ThemePreference[] = PREFERENCES;
+
 function resolve(): 'light' | 'dark' {
-    if (preference.value === 'system') return darkQuery.matches ? 'dark' : 'light';
+    if (preference.value === 'system') return systemQuery().matches ? 'dark' : 'light';
     return preference.value;
 }
 
@@ -41,7 +48,7 @@ export function setThemePreference(next: ThemePreference): void {
 
 export function initTheme(): void {
     apply();
-    darkQuery.addEventListener('change', () => {
+    systemQuery().addEventListener('change', () => {
         if (preference.value === 'system') apply();
     });
 }

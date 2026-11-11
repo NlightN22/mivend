@@ -1,7 +1,11 @@
 import { computed, type ComputedRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { ThemeOption } from '@mivend/ui-kit';
-import { preference, setThemePreference, type ThemePreference } from '../theme';
+import {
+    themePreference as preference,
+    setThemePreference,
+    type ThemeOption,
+    type ThemePreference,
+} from '@mivend/ui-kit';
 
 export function useThemeSwitcher(): {
     theme: ComputedRef<string>;
