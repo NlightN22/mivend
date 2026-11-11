@@ -94,6 +94,7 @@ function submitSearch(value: string): void {
             v-model:open="menuOpen"
             :width="isPhone ? 340 : 260"
             :sheet="false"
+            glass
             placement="bottom-end"
         >
             <template #trigger>

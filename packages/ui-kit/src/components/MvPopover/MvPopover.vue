@@ -8,11 +8,13 @@ const props = withDefaults(
         width?: number;
         placement?: 'bottom' | 'bottom-end' | 'bottom-start';
         sheet?: boolean;
+        glass?: boolean;
     }>(),
     {
         width: 260,
         placement: 'bottom-end',
         sheet: true,
+        glass: false,
     },
 );
 const open = defineModel<boolean>('open', { default: false });
@@ -67,7 +69,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
         :width="cardWidth"
         :placement="placement"
         :popper-options="cardOptions"
-        popper-class="mv-popover__popper"
+        :popper-class="
+            glass ? 'mv-popover__popper mv-popover__popper--glass' : 'mv-popover__popper'
+        "
     >
         <template #reference><slot name="trigger" /></template>
         <div ref="content" class="mv-popover__content"><slot /></div>
@@ -114,5 +118,25 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
     border: 1px solid var(--app-nav-border-strong) !important;
     border-radius: 12px !important;
     box-shadow: 0 8px 24px var(--app-ink-14) !important;
+}
+
+.mv-popover__popper--glass {
+    --el-bg-color-overlay: var(--app-glass-strong);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .mv-popover__popper--glass {
+        --el-bg-color-overlay: var(--app-glass);
+        -webkit-backdrop-filter: var(--mv-glass-filter);
+        backdrop-filter: var(--mv-glass-filter);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .mv-popover__popper--glass {
+        --el-bg-color-overlay: var(--app-glass-strong);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
 }
 </style>

@@ -1,0 +1,23 @@
+:root {
+    --mv-glass-filter: blur(14px) saturate(1.4);
+}
+
+.mv-glass {
+    background: var(--app-glass-strong);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .mv-glass {
+        background: var(--app-glass);
+        -webkit-backdrop-filter: var(--mv-glass-filter);
+        backdrop-filter: var(--mv-glass-filter);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .mv-glass {
+        background: var(--app-glass-strong);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}

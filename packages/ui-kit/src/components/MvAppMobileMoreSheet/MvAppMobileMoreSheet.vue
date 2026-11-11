@@ -29,7 +29,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 <template>
     <div v-if="open" class="mv-mobile-sheet-backdrop" @click="emit('close')" />
     <section
-        class="mv-mobile-sheet"
+        class="mv-mobile-sheet mv-glass"
         :class="{ 'mv-mobile-sheet--open': open }"
         :aria-hidden="!open"
     >
@@ -107,7 +107,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         z-index: calc(var(--mv-z-overlay) + 1);
         max-height: min(72vh, 620px);
         padding: 9px 14px calc(18px + env(safe-area-inset-bottom));
-        background: var(--app-surface);
         border-radius: 20px 20px 0 0;
         box-shadow: 0 -16px 40px var(--app-ink-14);
         transform: translateY(105%);

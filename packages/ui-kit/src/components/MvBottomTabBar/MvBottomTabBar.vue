@@ -17,7 +17,7 @@ const emit = defineEmits<{ select: [key: string] }>();
 
 <template>
     <Teleport to="body">
-        <nav class="mv-bottom-tab-bar" :aria-label="ariaLabel">
+        <nav class="mv-bottom-tab-bar mv-glass" :aria-label="ariaLabel">
             <component
                 :is="item.to ? RouterLink : 'button'"
                 v-for="item in items"
@@ -55,8 +55,6 @@ const emit = defineEmits<{ select: [key: string] }>();
     gap: 2px;
     padding: 6px 6px env(safe-area-inset-bottom, 0px);
     box-sizing: border-box;
-    background: var(--app-glass);
-    backdrop-filter: blur(14px) saturate(1.4);
     border-top: 1px solid var(--app-nav-border);
     box-shadow: 0 -8px 24px var(--app-ink-08);
 }

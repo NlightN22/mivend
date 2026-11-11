@@ -38,7 +38,7 @@ const isMoreActive = computed(
 </script>
 
 <template>
-    <nav class="mv-app-mobile-nav" aria-label="Primary mobile navigation">
+    <nav class="mv-app-mobile-nav mv-glass" aria-label="Primary mobile navigation">
         <RouterLink
             v-for="item in items.filter(i => i.key !== 'more')"
             :key="item.key"
@@ -90,7 +90,6 @@ const isMoreActive = computed(
         grid-template-columns: repeat(5, minmax(0, 1fr));
         min-height: 62px;
         padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-        background: var(--app-glass-strong);
         border-top: 1px solid var(--el-border-color);
         box-shadow: 0 -8px 24px var(--app-ink-10);
     }

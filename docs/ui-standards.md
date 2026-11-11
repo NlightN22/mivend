@@ -69,6 +69,15 @@ Desktop keeps the full search field in the header.
 The theme logic (`initTheme`, `setThemePreference`, `themePreference`) lives in `packages/ui-kit/src/theme`
 and is shared by both portals; the choice is kept in `localStorage`, System follows `prefers-color-scheme`.
 
+## Glass surfaces
+
+Frosted surfaces share one set: roles `--app-glass` / `--app-glass-strong` (light and dark in the theme files),
+`--mv-glass-filter` (`blur(14px) saturate(1.4)`) and the `.mv-glass` class in `packages/ui-kit/src/styles/glass.css`.
+The class is a translucent background plus the filter, with a solid `--app-glass-strong` fallback where
+`backdrop-filter` is unsupported and under `prefers-reduced-transparency`. Used by the storefront header and
+bottom bar, the manager bottom tab bar and its More sheet, and the user menu card (`MvPopover` prop `glass`); other
+popovers stay solid. Elements keep their own border and shadow.
+
 ## Exceptions
 
 Colors written outside the template, each approved by the user after the two-step question. Empty by default.
