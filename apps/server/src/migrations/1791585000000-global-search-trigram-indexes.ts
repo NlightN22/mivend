@@ -10,8 +10,8 @@ const INDEXES: ReadonlyArray<readonly [name: string, table: string, column: stri
     ['IDX_counterparty_inn_trgm', 'counterparty', 'inn'],
 ];
 
-export class GlobalSearchTrigramIndexes1791579000000 implements MigrationInterface {
-    name = 'GlobalSearchTrigramIndexes1791579000000';
+export class GlobalSearchTrigramIndexes1791585000000 implements MigrationInterface {
+    name = 'GlobalSearchTrigramIndexes1791585000000';
     // CONCURRENTLY cannot run in a transaction; the settlement document build is the long one.
     transaction = false;
 

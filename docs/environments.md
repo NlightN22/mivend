@@ -60,7 +60,7 @@ transaction mode `each`, so a migration with `transaction = false` may use `CREA
 `integration_outbox` order index does) and does not lock writes on a large table. A failed concurrent build leaves an
 invalid index; the migration drops any existing one first, so re-running it recovers.
 
-**Trigram indexes (#345).** The `pg_trgm` indexes of migration `1791579000000` are migration-only: `synchronize` drops them on the contours, so measure the global search on a database where the migration ran after boot.
+**Trigram indexes (#345).** The `pg_trgm` indexes of migration `1791585000000` are migration-only: `synchronize` drops them on the contours, so measure the global search on a database where the migration ran after boot.
 
 **Renames (#223).** There is no production, so a rename is one plain migration (`RENAME`); a synchronize
 contour that sees the new name first drops and recreates the table, which is accepted for dev data. Do not add

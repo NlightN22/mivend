@@ -399,7 +399,7 @@ safe, `%` and `_` are plain characters, and a displayed order number (`100-00003
   number; discount registry number, price type, product group and customer names.
 - Scope and permissions are the lists' own (see `docs/access-control.md`); kinds run in parallel and a failing kind is
   logged and left out.
-- Performance: `pg_trgm` GIN indexes (migration `1791579000000`) on exactly the columns above that grow
+- Performance: `pg_trgm` GIN indexes (migration `1791585000000`) on exactly the columns above that grow
   (settlement document number, proforma invoice number, order code, customer short and legal name, INN). Trigrams need
   three characters, so a two-character term uses a bounded prefix lookup on the settlement number btree and, for the
   other kinds, a plain scan of small tables. The discount registry is small and unindexed. Document the
