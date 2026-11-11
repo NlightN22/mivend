@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { clampSkip, clampTake, documentNumberSearchTerm } from 'shared';
+import { clampSkip, clampTake, documentNumberSearchTerm, normalizeDocumentNumber } from 'shared';
 import {
     AccessScopeService,
     AccessScope,
@@ -67,7 +67,7 @@ export class ProformaInvoiceVisibilityService {
         const scope = await this.resolveScope(ctx);
         const { entities, raw } = await this.buildScopedQuery(ctx, scope)
             .andWhere('proformaInvoice.number ILIKE :gsTerm', {
-                gsTerm: documentNumberSearchTerm(term),
+                gsTerm: likeTerm(normalizeDocumentNumber(term)),
             })
             .select(['proformaInvoice.id', 'proformaInvoice.number', 'proformaInvoice.status'])
             .addSelect('counterparty.shortName', 'counterpartyShortName')
