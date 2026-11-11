@@ -8,6 +8,7 @@ query OrderDetail($code: String!) {
             orderPlacedAt
             createdAt
             creditLimitExceeded
+            reservationState
             payments {
                 id
                 method

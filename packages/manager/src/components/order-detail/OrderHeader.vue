@@ -23,7 +23,11 @@ const props = defineProps<{
 }>();
 defineEmits<{ recompute: []; cut: []; changed: [] }>();
 
-const heldCase = computed(() => heldConfirmationCase(props.order.payments ?? []));
+const heldCase = computed(() =>
+    props.order.reservationState === 'AWAITING_CONFIRMATION'
+        ? heldConfirmationCase(props.order.payments ?? [])
+        : null,
+);
 
 const customerName = computed(() => {
     const { customer, counterparty } = props.order;
@@ -47,7 +51,7 @@ const customerName = computed(() => {
                     Credit limit exceeded
                 </MvStatusBadge>
                 <MvStatusBadge v-if="heldCase" variant="warning">
-                    Held by policy {{ heldCase }}
+                    Awaiting confirmation: {{ heldCase }}
                 </MvStatusBadge>
                 <PaymentReceivedPanel
                     :order-id="order.id"
