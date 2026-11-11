@@ -49,6 +49,10 @@ onMounted(async () => {
     }
 });
 
+function searchCustomers(search: string): void {
+    void router.push({ path: '/customers', query: { search } });
+}
+
 async function handleLogout(): Promise<void> {
     const providerUrl = await authStore.logout(true);
     if (providerUrl) {
@@ -95,6 +99,7 @@ function handleRelogin(): void {
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"
             search-placeholder="Search customers, orders, documents, products, VIN, OEM, phone…"
+            @search="searchCustomers"
         >
             <template #actions>
                 <MvNotificationBell

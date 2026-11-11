@@ -5,7 +5,7 @@ import { THEME_CHOICES } from './userMenuItems';
 
 <template>
     <div class="user-menu-theme" role="group" aria-label="Theme">
-        <div class="user-menu-theme__title">Theme</div>
+        <span class="user-menu-theme__title">Theme</span>
         <div class="user-menu-theme__segments">
             <button
                 v-for="choice in THEME_CHOICES"
@@ -13,39 +13,45 @@ import { THEME_CHOICES } from './userMenuItems';
                 type="button"
                 class="user-menu-theme__segment"
                 role="menuitemradio"
+                :aria-label="choice.label"
+                :title="choice.label"
                 :aria-checked="themePreference === choice.value"
                 @click.stop="setThemePreference(choice.value)"
             >
-                {{ choice.label }}
+                <component :is="choice.icon" :size="18" aria-hidden="true" />
             </button>
         </div>
     </div>
 </template>
 
 <style scoped>
-.user-menu-theme__title {
-    padding: 4px 8px;
-    color: var(--app-text-grey);
-    font-size: 12px;
+.user-menu-theme {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 8px;
+    color: var(--app-text-body2);
+    font-size: 14px;
 }
 
 .user-menu-theme__segments {
     display: flex;
     gap: 2px;
-    padding: 3px;
+    padding: 2px;
     border: 1px solid var(--el-border-color);
     border-radius: 10px;
     background: var(--el-fill-color-light);
 }
 
 .user-menu-theme__segment {
-    flex: 1;
-    min-height: 34px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 28px;
     border: 1px solid transparent;
     border-radius: 8px;
     background: none;
     color: var(--app-text-body2);
-    font-size: 14px;
     cursor: pointer;
 }
 
@@ -53,7 +59,6 @@ import { THEME_CHOICES } from './userMenuItems';
     border-color: var(--el-border-color);
     background: var(--app-surface);
     color: var(--el-text-color-primary);
-    font-weight: 600;
 }
 
 .user-menu-theme__segment:hover:not([aria-checked='true']),

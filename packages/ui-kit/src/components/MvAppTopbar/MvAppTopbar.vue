@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
-// across every manager portal page. On phone: logo mark, actions and a round avatar; no dead search.
-import { ref } from 'vue';
+// across every manager portal page. On phone: logo mark, search button, actions and a round avatar; search takes over the row.
+import { nextTick, ref } from 'vue';
+import { IconSearch } from '@tabler/icons-vue';
+import MvAppTopbarPhoneSearch from './MvAppTopbarPhoneSearch.vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
 
@@ -20,11 +22,26 @@ withDefaults(
     },
 );
 
+const emit = defineEmits<{ search: [value: string] }>();
+
 const menuOpen = ref(false);
+const searching = ref(false);
+const searchButton = ref<HTMLButtonElement | null>(null);
+
+async function closeSearch(): Promise<void> {
+    searching.value = false;
+    await nextTick();
+    searchButton.value?.focus();
+}
+
+function submitSearch(value: string): void {
+    emit('search', value);
+    void closeSearch();
+}
 </script>
 
 <template>
-    <header class="mv-app-topbar">
+    <header :class="['mv-app-topbar', { 'mv-app-topbar--searching': searching }]">
         <RouterLink class="mv-app-topbar__brand" :to="brandTo">
             <MvLogo size="sm" />
         </RouterLink>
@@ -40,7 +57,25 @@ const menuOpen = ref(false);
             <span class="mv-app-topbar__search-shortcut">Ctrl K</span>
         </div>
 
+        <MvAppTopbarPhoneSearch
+            v-if="searching"
+            class="mv-app-topbar__phone-search"
+            :placeholder="searchPlaceholder"
+            @search="submitSearch"
+            @close="closeSearch"
+        />
+
         <div class="mv-app-topbar__actions">
+            <button
+                ref="searchButton"
+                type="button"
+                class="mv-app-topbar__search-button"
+                aria-label="Search"
+                title="Search"
+                @click="searching = true"
+            >
+                <IconSearch :size="20" aria-hidden="true" />
+            </button>
             <slot name="actions" />
         </div>
 
@@ -166,6 +201,22 @@ const menuOpen = ref(false);
     flex-shrink: 0;
 }
 
+.mv-app-topbar__search-button {
+    display: none;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 50%;
+    place-items: center;
+    background: var(--app-surface);
+    color: var(--el-text-color-primary);
+    cursor: pointer;
+}
+
+.mv-app-topbar .mv-app-topbar__phone-search {
+    display: none;
+}
+
 @media (max-width: 800px) {
     .mv-app-topbar {
         height: auto;
@@ -188,6 +239,20 @@ const menuOpen = ref(false);
         padding: 0;
         border: 0;
         border-radius: 50%;
+    }
+
+    .mv-app-topbar__search-button {
+        display: grid;
+    }
+
+    .mv-app-topbar .mv-app-topbar__phone-search {
+        display: flex;
+    }
+
+    .mv-app-topbar--searching .mv-app-topbar__brand,
+    .mv-app-topbar--searching .mv-app-topbar__actions,
+    .mv-app-topbar--searching .mv-app-topbar__user {
+        display: none;
     }
 
     .mv-app-topbar__avatar {

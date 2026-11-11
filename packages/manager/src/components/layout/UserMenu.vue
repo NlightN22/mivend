@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { IconLogout, IconSettings } from '@tabler/icons-vue';
 import { MvAvatar } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import UserMenuTheme from './UserMenuTheme.vue';
@@ -32,7 +33,7 @@ function onKeydown(event: KeyboardEvent): void {
 <template>
     <div ref="menu" class="user-menu" role="menu" aria-label="Account" @keydown="onKeydown">
         <div class="user-menu__identity">
-            <MvAvatar :name="authStore.fullName" size="md" />
+            <MvAvatar :name="authStore.fullName" size="sm" />
             <div class="user-menu__who">
                 <div class="user-menu__name">{{ authStore.fullName }}</div>
                 <div v-if="authStore.roleLabel" class="user-menu__meta">
@@ -49,10 +50,12 @@ function onKeydown(event: KeyboardEvent): void {
             class="user-menu__item"
             role="menuitem"
         >
+            <component :is="item.icon" :size="18" aria-hidden="true" />
             {{ item.label }}
         </RouterLink>
         <UserMenuTheme />
         <RouterLink v-if="settingsPath" :to="settingsPath" class="user-menu__item" role="menuitem">
+            <IconSettings :size="18" aria-hidden="true" />
             System settings
         </RouterLink>
         <button
@@ -61,6 +64,7 @@ function onKeydown(event: KeyboardEvent): void {
             role="menuitem"
             @click="$emit('logout')"
         >
+            <IconLogout :size="18" aria-hidden="true" />
             Log out
         </button>
     </div>
@@ -70,14 +74,14 @@ function onKeydown(event: KeyboardEvent): void {
 .user-menu {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .user-menu__identity {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 4px 8px 12px;
+    gap: 10px;
+    padding: 2px 8px 8px;
     border-bottom: 1px solid var(--el-border-color);
     margin-bottom: 4px;
 }
@@ -88,7 +92,7 @@ function onKeydown(event: KeyboardEvent): void {
 
 .user-menu__name {
     color: var(--el-text-color-primary);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -99,9 +103,12 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 .user-menu__item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
-    padding: 10px 8px;
+    min-height: 36px;
+    padding: 0 8px;
     border: 0;
     border-radius: 8px;
     background: none;
@@ -116,7 +123,6 @@ function onKeydown(event: KeyboardEvent): void {
     margin-top: 4px;
     border-top: 1px solid var(--el-border-color);
     border-radius: 0 0 8px 8px;
-    padding-top: 12px;
     color: var(--app-danger-fg);
 }
 
