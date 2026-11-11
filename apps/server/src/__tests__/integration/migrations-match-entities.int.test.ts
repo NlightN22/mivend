@@ -30,6 +30,12 @@ const MIGRATION_ONLY_INDEXES = [
     'IDX_settlement_document_number_prefix',
     'IDX_order_placed_at_list',
     'IDX_order_created_at_list',
+    'IDX_order_code_trgm',
+    'IDX_counterparty_short_name_trgm',
+    'IDX_counterparty_legal_name_trgm',
+    'IDX_counterparty_inn_trgm',
+    'IDX_proforma_invoice_number_trgm',
+    'IDX_settlement_document_number_trgm',
 ];
 
 async function onMaintenanceDb(sql: string): Promise<void> {
