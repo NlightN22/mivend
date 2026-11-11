@@ -1,12 +1,7 @@
 import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { DataSource } from 'typeorm';
-import {
-    CheckPolicy,
-    CheckPolicyService,
-    CheckRegistry,
-    ChecksService,
-} from '@mivend/plugin-checks';
+import { CheckPolicyService, CheckRegistry, ChecksService } from '@mivend/plugin-checks';
 import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
 import type { Order, RequestContext } from '@vendure/core';
 import {
@@ -20,6 +15,7 @@ import {
 import { CreditPlacementService, type PlacementResult } from '../../credit-placement.service';
 import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
 import { OpenDeferredExposureService } from '../../open-deferred-exposure.service';
+import { CheckPolicyMirror } from './check-policy-mirror';
 import { PlacementConfirmationCheckRegistrar } from '../../placement-confirmation-check.registrar';
 
 export interface Buyer {
@@ -64,9 +60,9 @@ export function useCreditPlacementHarness(schemaName: string) {
             }
         },
         getRepository: (c: TxCtx, entity?: unknown) =>
-            entity && typeof entity !== 'string'
+            typeof entity === 'function' && entity.name === 'CheckPolicy'
                 ? ((c.qr ?? dataSource).manager as DataSource['manager']).getRepository(
-                      entity as never,
+                      CheckPolicyMirror,
                   )
                 : { query: (sql: string, p: unknown[]) => runIn(c, sql, p) },
     };
@@ -241,7 +237,7 @@ export function useCreditPlacementHarness(schemaName: string) {
             ...testDataSourceConnectionOptions(),
             schema,
             extra,
-            entities: [OrderStatusReference, CheckPolicy],
+            entities: [OrderStatusReference, CheckPolicyMirror],
         });
         await dataSource.initialize();
         await dataSource.synchronize();
