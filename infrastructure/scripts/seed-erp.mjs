@@ -1115,6 +1115,19 @@ async function main() {
             lastName: 'Only',
             password: 'Password123!',
         },
+        // Checkout without a trading point (#347): one buyer routed by its counterparty branch, one with no branch at all.
+        {
+            email: 'nopoint@buyer.example',
+            firstName: 'No',
+            lastName: 'Point',
+            password: 'Password123!',
+        },
+        {
+            email: 'nobranch@buyer.example',
+            firstName: 'No',
+            lastName: 'Branch',
+            password: 'Password123!',
+        },
     ];
     console.log(`Sending ${customers.length} customers...`);
     const customerResult = await postBatch(
@@ -1295,6 +1308,30 @@ async function main() {
             branchId: 'branch-central',
             erpGroupLabel: 'Accounting',
         },
+        {
+            erpId: 'cnt-nopoint',
+            legalName: 'No Point Buyer LLC',
+            shortName: 'No Point',
+            creditLimit: 0,
+            creditBalance: 0,
+            paymentDelayDays: 0,
+            priceType: 'WHOLESALE',
+            isActive: true,
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
+            erpGroupLabel: 'Accounting',
+        },
+        {
+            erpId: 'cnt-nobranch',
+            legalName: 'No Branch Buyer LLC',
+            shortName: 'No Branch',
+            creditLimit: 0,
+            creditBalance: 0,
+            paymentDelayDays: 0,
+            priceType: 'WHOLESALE',
+            isActive: true,
+            erpGroupLabel: 'Accounting',
+        },
     ];
     // Every seeded counterparty gets a main contract with a seeded organization: checkout is
     // blocked without one (#205).
@@ -1378,6 +1415,8 @@ async function main() {
         { customerEmail: 'igor@autobaza.example', counterpartyErpId: 'cnt-010' },
         { customerEmail: 'credit-limited@buyer.example', counterpartyErpId: 'cnt-credit-limited' },
         { customerEmail: 'prepay@buyer.example', counterpartyErpId: 'cnt-prepay' },
+        { customerEmail: 'nopoint@buyer.example', counterpartyErpId: 'cnt-nopoint' },
+        { customerEmail: 'nobranch@buyer.example', counterpartyErpId: 'cnt-nobranch' },
     ];
     console.log(`Sending ${assignments.length} customer-counterparty assignments...`);
     const assignResult = await postBatch(

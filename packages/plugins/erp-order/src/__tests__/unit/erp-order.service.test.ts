@@ -47,6 +47,7 @@ const mockStatusReference = {
 };
 const mockActingContext = { get: vi.fn().mockResolvedValue(null) };
 const mockHistoryService = { createHistoryEntryForOrder: vi.fn() };
+const mockBranchSettings = { getGlobalDefaultBranchId: vi.fn() };
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
 describe('ErpOrderService', () => {
@@ -55,6 +56,9 @@ describe('ErpOrderService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockActingContext.get.mockResolvedValue(null);
+        mockTradingPointService.getPreferredForCustomer.mockResolvedValue(null);
+        mockCounterpartyService.getForCustomer.mockResolvedValue(null);
+        mockBranchSettings.getGlobalDefaultBranchId.mockResolvedValue(null);
         mockOrderRepo.update.mockResolvedValue({ affected: 1 });
         mockFulfillmentQb.innerJoin.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.where.mockReturnValue(mockFulfillmentQb);
@@ -69,6 +73,7 @@ describe('ErpOrderService', () => {
             mockStatusReference as never,
             mockActingContext as never,
             mockHistoryService as never,
+            mockBranchSettings as never,
         );
     });
 
@@ -243,6 +248,79 @@ describe('ErpOrderService', () => {
             expect(mockOrderRepo.update).toHaveBeenCalledTimes(1);
             expect(mockStatusHistory.record).not.toHaveBeenCalled();
             expect(mockEventBus.publish).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('order without a trading point (#347)', () => {
+        const order = () => ({ id: 1, customFields: {}, customerId: 'cust-1' }) as never;
+        const branchOf = (o: never) =>
+            (o as { customFields: { branchId?: string } }).customFields.branchId;
+
+        beforeEach(() => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+        });
+
+        it("takes the counterparty's branch", async () => {
+            mockCounterpartyService.getForCustomer.mockResolvedValue({
+                id: 5,
+                branchId: 'branch-c',
+            });
+            mockBranchSettings.getGlobalDefaultBranchId.mockResolvedValue('branch-default');
+            const o = order();
+
+            await service.denormalizePlacement(mockCtx, o);
+
+            expect(branchOf(o)).toBe('branch-c');
+            expect(mockOrderRepo.update.mock.calls[0][1].customFields).toEqual({
+                counterpartyId: '5',
+                branchId: 'branch-c',
+            });
+        });
+
+        it('falls back to the global default branch when the counterparty has none', async () => {
+            mockCounterpartyService.getForCustomer.mockResolvedValue({ id: 5, branchId: null });
+            mockBranchSettings.getGlobalDefaultBranchId.mockResolvedValue('branch-default');
+            const o = order();
+
+            await service.denormalizePlacement(mockCtx, o);
+
+            expect(branchOf(o)).toBe('branch-default');
+        });
+
+        it('does not consult the counterparty branch when a trading point exists', async () => {
+            mockCounterpartyService.getForCustomer.mockResolvedValue({
+                id: 5,
+                branchId: 'branch-c',
+            });
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue({
+                id: 7,
+                address: 'A',
+            });
+            mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-p');
+            const o = order();
+
+            await service.denormalizePlacement(mockCtx, o);
+
+            expect(branchOf(o)).toBe('branch-p');
+        });
+
+        it('findUnroutableReason is null when a branch resolves', async () => {
+            mockCounterpartyService.getForCustomer.mockResolvedValue({
+                id: 5,
+                branchId: 'branch-c',
+            });
+            expect(await service.findUnroutableReason(mockCtx, order())).toBeNull();
+        });
+
+        it('findUnroutableReason rejects when no branch resolves anywhere', async () => {
+            mockCounterpartyService.getForCustomer.mockResolvedValue({ id: 5, branchId: null });
+            expect(await service.findUnroutableReason(mockCtx, order())).toMatch(
+                /No servicing branch/,
+            );
+        });
+
+        it('findUnroutableReason rejects a pointless customer with no counterparty and no default', async () => {
+            expect(await service.findUnroutableReason(mockCtx, order())).not.toBeNull();
         });
     });
 

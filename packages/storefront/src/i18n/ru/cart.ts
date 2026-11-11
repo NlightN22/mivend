@@ -74,6 +74,7 @@ const ru: typeof en = {
         ORDER_MODIFICATION_ERROR: 'Заказ больше нельзя изменить',
         INELIGIBLE_SHIPPING_METHOD_ERROR: 'Выбранный способ доставки недоступен для этого заказа',
         INELIGIBLE_PAYMENT_METHOD_ERROR: 'Выбранный способ оплаты недоступен для этого заказа',
+        ORDER_STATE_TRANSITION_ERROR: 'Сейчас этот заказ нельзя оформить. Свяжитесь с менеджером',
         ORDER_PAYMENT_STATE_ERROR: 'Заказ ещё не готов к оплате',
         PAYMENT_FAILED_ERROR: 'Оплата не прошла',
         PAYMENT_DECLINED_ERROR: 'Оплата отклонена',

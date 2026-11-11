@@ -4,8 +4,9 @@ import type { Injector, Order, OrderState, RequestContext } from '@vendure/core'
 import { placementDenormalizeProcess } from '../../placement-denormalize.process';
 
 const denormalizePlacement = vi.fn();
+const findUnroutableReason = vi.fn();
 void placementDenormalizeProcess.init?.({
-    get: () => ({ denormalizePlacement }),
+    get: () => ({ denormalizePlacement, findUnroutableReason }),
 } as unknown as Injector);
 
 const run = (from: OrderState, to: OrderState): Promise<unknown> | unknown =>
@@ -28,5 +29,30 @@ describe('placementDenormalizeProcess (#258)', () => {
         denormalizePlacement.mockClear();
         await run('ArrangingPayment', 'PaymentSettled');
         expect(denormalizePlacement).not.toHaveBeenCalled();
+    });
+});
+
+describe('placementDenormalizeProcess onTransitionStart (#347)', () => {
+    const start = (from: OrderState, to: OrderState) =>
+        placementDenormalizeProcess.onTransitionStart?.(from, to, {
+            ctx: {} as RequestContext,
+            order: { id: 1 } as Order,
+        });
+
+    it('rejects the placement transition with the reason, before any allocation', async () => {
+        findUnroutableReason.mockResolvedValue('No servicing branch');
+        expect(await start('AddingItems', 'ArrangingPayment')).toBe('No servicing branch');
+    });
+
+    it('lets a routable order through', async () => {
+        findUnroutableReason.mockResolvedValue(null);
+        expect(await start('Draft', 'ArrangingPayment')).toBeUndefined();
+    });
+
+    it('does not check other transitions', async () => {
+        findUnroutableReason.mockClear();
+        await start('ArrangingPayment', 'AddingItems');
+        await start('AddingItems', 'Cancelled');
+        expect(findUnroutableReason).not.toHaveBeenCalled();
     });
 });

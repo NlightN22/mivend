@@ -9,6 +9,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { IsNull } from 'typeorm';
+import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { ActingContextService } from '@mivend/plugin-session-management';
 import { HistoryEntryType } from '@vendure/common/lib/generated-types';
@@ -32,6 +33,7 @@ export class ErpOrderService {
         private readonly statusReference: OrderStatusReferenceService,
         private readonly actingContext: ActingContextService,
         private readonly historyService: HistoryService,
+        private readonly branchSettingsService: BranchSettingsService,
     ) {}
 
     // Runs after commit on a stale event.order, so it writes only its own keys (#241); never save() the entity.
@@ -66,37 +68,21 @@ export class ErpOrderService {
                 : null;
 
         // Denormalized at placement time; see docs/access-control.md (branch-scope axis).
-        // A missing preferred trading point is not an error; the order just gets no branch scope.
         if (order.customerId) {
-            if (!order.customFields.counterpartyId) {
-                const counterparty = await this.counterpartyService.getForCustomer(
-                    ctx,
-                    order.customerId,
-                );
-                if (counterparty) changed.counterpartyId = String(counterparty.id);
-            }
-            const chosenPointId = admin ? await this.staffChosenPointId(ctx, order) : null;
-            const chosen = chosenPointId
-                ? await this.tradingPointService.findById(ctx, chosenPointId)
-                : null;
-            const preferred = await this.tradingPointService.getPreferredForCustomer(
+            const counterparty = await this.counterpartyService.getForCustomer(
                 ctx,
                 order.customerId,
             );
-            // Staff pick the point explicitly (setDraftOrderTradingPoint); none chosen means self-pickup,
-            // so the customer's preferred point must not leak into tradingPointId/deliveryAddress.
-            const deliveryPoint = admin ? chosen : preferred;
+            if (!order.customFields.counterpartyId && counterparty) {
+                changed.counterpartyId = String(counterparty.id);
+            }
+            const { deliveryPoint, branchPoint } = await this.placementPoints(ctx, order, !!admin);
             if (deliveryPoint) {
                 changed.tradingPointId = String(deliveryPoint.id);
                 changed.deliveryAddress = deliveryPoint.address || null;
             }
-            const branchPoint = deliveryPoint ?? preferred;
-            if (branchPoint) {
-                changed.branchId = await this.tradingPointService.resolveServicingBranchId(
-                    ctx,
-                    branchPoint,
-                );
-            }
+            const branchId = await this.servicingBranchId(ctx, branchPoint, counterparty?.branchId);
+            if (branchId) changed.branchId = branchId;
         }
 
         // Stored once at creation, not derived per request from the first HistoryEntry (pagination).
@@ -112,6 +98,48 @@ export class ErpOrderService {
                 .update(order.id, { customFields: changed });
         }
         Object.assign(order.customFields, changed);
+    }
+
+    // Null means the order cannot be routed to any branch and must not enter placement.
+    async findUnroutableReason(ctx: RequestContext, order: Order): Promise<string | null> {
+        if (!order.customerId) return null;
+        const admin =
+            ctx.activeUserId !== undefined
+                ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
+                : null;
+        const counterparty = await this.counterpartyService.getForCustomer(ctx, order.customerId);
+        const { branchPoint } = await this.placementPoints(ctx, order, !!admin);
+        const branchId = await this.servicingBranchId(ctx, branchPoint, counterparty?.branchId);
+        return branchId ? null : 'No servicing branch can be resolved for this order';
+    }
+
+    // Staff pick the point explicitly (setDraftOrderTradingPoint); none chosen means self-pickup,
+    // so the customer's preferred point must not leak into tradingPointId/deliveryAddress.
+    private async placementPoints(ctx: RequestContext, order: Order, isStaff: boolean) {
+        const chosenPointId = isStaff ? await this.staffChosenPointId(ctx, order) : null;
+        const chosen = chosenPointId
+            ? await this.tradingPointService.findById(ctx, chosenPointId)
+            : null;
+        const preferred = await this.tradingPointService.getPreferredForCustomer(
+            ctx,
+            order.customerId!,
+        );
+        const deliveryPoint = isStaff ? chosen : preferred;
+        return { deliveryPoint, branchPoint: deliveryPoint ?? preferred };
+    }
+
+    // Point's branch, else the counterparty's, else the global default (the point path already ends there).
+    private async servicingBranchId(
+        ctx: RequestContext,
+        branchPoint: Awaited<ReturnType<TradingPointService['getPreferredForCustomer']>>,
+        counterpartyBranchId: string | null | undefined,
+    ): Promise<string | null> {
+        if (branchPoint) {
+            return this.tradingPointService.resolveServicingBranchId(ctx, branchPoint);
+        }
+        return (
+            counterpartyBranchId ?? (await this.branchSettingsService.getGlobalDefaultBranchId(ctx))
+        );
     }
 
     private async recordActingPlacement(

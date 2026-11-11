@@ -72,6 +72,8 @@ export default {
         ORDER_MODIFICATION_ERROR: 'The order can no longer be changed',
         INELIGIBLE_SHIPPING_METHOD_ERROR: 'Selected delivery type is not available for this order',
         INELIGIBLE_PAYMENT_METHOD_ERROR: 'Selected payment method is not available for this order',
+        ORDER_STATE_TRANSITION_ERROR:
+            'This order cannot be placed right now. Please contact your manager',
         ORDER_PAYMENT_STATE_ERROR: 'The order is not ready for payment',
         PAYMENT_FAILED_ERROR: 'Payment failed',
         PAYMENT_DECLINED_ERROR: 'Payment was declined',
