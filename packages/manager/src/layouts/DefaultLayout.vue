@@ -97,9 +97,14 @@ function handleRelogin(): void {
             :user-name="authStore.fullName"
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"
-            search-placeholder="Search customers, orders, documents, products, VIN, OEM, phone…"
-            phone-search-placeholder="Search customers…"
+            v-model:query="search.query.value"
+            search-placeholder="Search customers, orders, documents…"
+            phone-search-placeholder="Search customers, orders, documents…"
+            :search-active-id="
+                search.activeKey.value ? `search-hit-${search.activeKey.value}` : undefined
+            "
             @search="search.run"
+            @search-keydown="search.onKeydown"
         >
             <template #actions>
                 <MvNotificationBell
@@ -107,19 +112,25 @@ function handleRelogin(): void {
                     @click="notificationPanelOpen = !notificationPanelOpen"
                 />
             </template>
-            <template #search-panel="{ close }">
+            <template #search-panel="{ close, desktop }">
                 <SearchPanel
                     :recent="search.recent.value"
                     :shortcuts="search.shortcuts.value"
-                    @run="
-                        search.run($event);
-                        close();
-                    "
+                    :state="search.state.value"
+                    :active-key="search.activeKey.value"
+                    :desktop="desktop"
+                    @run="search.run"
                     @remove="search.remove"
                     @clear="search.clear"
                     @open="
                         search.open($event);
                         close();
+                    "
+                    @select="
+                        (kind, hit) => {
+                            search.select(kind, hit);
+                            close();
+                        }
                     "
                 />
             </template>

@@ -9,6 +9,7 @@ import {
     type DiscountsViewCounts,
 } from '../api/discountsList';
 import { conditionsToDiscountsFilter } from '../api/discountsFilter';
+import { useUrlSearchParam } from './useUrlSearchParam';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import {
     DISCOUNTS_URL_DEFAULTS,
@@ -92,6 +93,8 @@ export function useDiscountsList(counterpartyId = '', urlPrefix = ''): Discounts
         });
     };
     const refreshCountsSoon = useDebouncedCallback(refreshCounts, 250);
+
+    useUrlSearchParam(filters, urlPrefix);
 
     watch([filters, sort, pageSize], () => {
         page.value = 1;

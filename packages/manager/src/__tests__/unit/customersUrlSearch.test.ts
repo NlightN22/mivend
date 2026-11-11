@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BLANK_CUSTOMERS_FILTERS } from '../../api/customersList';
-import { withUrlSearch } from '../../composables/customersListUrl';
+import { withUrlSearch } from '../../utils/urlSearch';
 
 describe('withUrlSearch', () => {
     it('applies a new search from the URL and keeps the other filters', () => {

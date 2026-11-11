@@ -13,6 +13,7 @@ import {
 } from '../api/settlements';
 import { fetchOrganizations } from '../api/organizations';
 import { conditionsToSettlementsFilter } from '../api/settlementsFilter';
+import { useUrlSearchParam } from './useUrlSearchParam';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import {
     SETTLEMENTS_URL_DEFAULTS,
@@ -127,6 +128,8 @@ export function useSettlementsList(fixedCounterpartyId = '', urlPrefix = ''): Se
                 console.warn('[settlements] could not load organizations:', e);
             });
     };
+
+    useUrlSearchParam(filters, urlPrefix);
 
     watch([filters, sort, counterpartyId, pageSize], () => {
         page.value = 1;

@@ -13,12 +13,11 @@ import { fetchManagerLookup, formatManagerName } from '../api/counterpartyPortal
 import { fetchBranchOptions, fetchManagerOptions } from '../api/orders';
 import type { BranchOption, ManagerOption } from '../api/orders';
 import type { CounterpartyFilterParameter } from '../api/generated/graphql';
-import { useRoute } from 'vue-router';
+import { useUrlSearchParam } from './useUrlSearchParam';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import {
     CUSTOMERS_URL_DEFAULTS,
     fromCustomersUrlState,
-    withUrlSearch,
     toCustomersUrlState,
     type CustomersUrlState,
 } from './customersListUrl';
@@ -99,17 +98,7 @@ export function useCustomersList(
     };
     const refreshCountsSoon = useDebouncedCallback(refreshCounts, 250);
 
-    // An outside navigation (header search, back/forward) changes the URL while this list stays mounted.
-    const route = useRoute();
-    const listPath = route.path;
-    watch(
-        () => route.query[`${urlPrefix}search`],
-        urlSearch => {
-            if (route.path !== listPath) return;
-            const next = withUrlSearch(filters.value, urlSearch);
-            if (next) filters.value = next;
-        },
-    );
+    useUrlSearchParam(filters, urlPrefix);
 
     watch([filters, sort, pageSize, fixedFilter], () => {
         page.value = 1;
