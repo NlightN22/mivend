@@ -51,9 +51,14 @@ components.
 
 ## User menu and theme
 
-The topbar has no separate Log out button. The user pill opens one menu (`role=menu`): account settings
-links, the theme choice (`menuitemradio`: Light / Dark / System, current one checked) and Log out as the
-last, separated item. Up/Down move focus, Escape closes. At phone width the pill shrinks to the avatar.
+The topbar has no separate Log out button. The user pill opens one menu (`role=menu`, one component for desktop
+and phone): an identity block (initials, name, role, e-mail), the account link ("Password and security"), the theme
+segmented control (`menuitemradio`: Light / Dark / Auto, current one checked; Auto follows the system), "System
+settings" for users who may open it, and Log out last, separated, in the danger role. Up/Down move focus (Left/Right
+inside the theme control), Escape closes. No language row until the manager has i18n.
+Desktop shows the menu in a dropdown; at <=640px `MvPopover` shows it as a bottom sheet (thumb reach, same content).
+Mobile header (<=800px): logo mark only, then the notification bell and a round avatar button; the search field is
+hidden there because global search is a placeholder (no backend), so no icon opens a fake overlay.
 The theme logic (`initTheme`, `setThemePreference`, `themePreference`) lives in `packages/ui-kit/src/theme`
 and is shared by both portals; the choice is kept in `localStorage`, System follows `prefers-color-scheme`.
 

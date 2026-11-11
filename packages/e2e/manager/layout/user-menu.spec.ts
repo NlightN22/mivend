@@ -6,7 +6,7 @@ test('the user block opens a menu with account settings and closes on Escape @on
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await page.locator('.mv-app-topbar__user').click();
-    const link = page.getByRole('menuitem', { name: 'Password and two-factor sign-in' });
+    const link = page.getByRole('menuitem', { name: 'Password and security' });
     await expect(link).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
     await page.keyboard.press('Escape');
@@ -19,7 +19,7 @@ test('the account settings item opens the security page @on:manager-operator @re
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await page.locator('.mv-app-topbar__user').click();
-    await page.getByRole('menuitem', { name: 'Password and two-factor sign-in' }).click();
+    await page.getByRole('menuitem', { name: 'Password and security' }).click();
     await expect(page).toHaveURL(/\/settings\/security$/);
 });
 
@@ -38,8 +38,17 @@ test('the menu switches the theme, keeps it after reload and ends with Log out @
         'aria-checked',
         'true',
     );
-    await page.getByRole('menuitemradio', { name: 'System' }).click();
+    await page.getByRole('menuitemradio', { name: 'Auto' }).click();
     await expect(page.getByRole('menuitem').last()).toHaveText('Log out');
+});
+
+test('the menu shows who is signed in @on:manager-operator @read-only', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await page.locator('.mv-app-topbar__user').click();
+    const menu = page.getByRole('menu', { name: 'Account' });
+    await expect(menu.locator('.user-menu__name')).not.toBeEmpty();
+    await expect(menu.getByRole('menuitemradio')).toHaveCount(3);
 });
 
 test('the menu is reachable at phone width @on:manager-operator @read-only', async ({ page }) => {
@@ -47,6 +56,7 @@ test('the menu is reachable at phone width @on:manager-operator @read-only', asy
     await page.goto('/');
     await page.locator('.mv-app-topbar__user').click();
     await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
+    await expect(page.locator('.mv-logo__name')).toBeHidden();
 });
 
 test('the menu takes focus on open and moves with the arrow keys @on:manager-operator @read-only', async ({
@@ -55,7 +65,7 @@ test('the menu takes focus on open and moves with the arrow keys @on:manager-ope
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await page.locator('.mv-app-topbar__user').click();
-    const link = page.getByRole('menuitem', { name: 'Password and two-factor sign-in' });
+    const link = page.getByRole('menuitem', { name: 'Password and security' });
     await expect(link).toBeFocused();
     await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('menuitemradio').first()).toBeFocused();
