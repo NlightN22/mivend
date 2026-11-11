@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     KNOWN_CATEGORIES,
-    customerHiddenSql,
+    customerUnpostedSql,
     customerVisibleSql,
     normalizeCategory,
 } from '../../settlement-visibility';
@@ -37,8 +37,14 @@ describe('customerVisibleSql', () => {
     });
 });
 
-describe('customerHiddenSql', () => {
-    it('is exactly the negation of the visible predicate', () => {
-        expect(customerHiddenSql('d', 't')).toBe(`(NOT ${customerVisibleSql('d', 't')})`);
+describe('customerUnpostedSql', () => {
+    const sql = customerUnpostedSql('d', 't');
+
+    it('counts only an explicit not-posted flag', () => {
+        expect(sql).toContain(`'reflectedInAccounting', 'true') = 'false'`);
+    });
+
+    it('excludes internal categories whatever their flag says', () => {
+        expect(sql).toContain(`NOT IN ('supplier', 'payroll')`);
     });
 });

@@ -29,5 +29,7 @@ export const customerVisibleSql = (doc: string, type: string): string => `(
     COALESCE("${type}"."category", 'other') NOT IN (${INTERNAL_LIST})
     AND COALESCE("${doc}"."accounting"->>'reflectedInAccounting', 'true') <> 'false')`;
 
-export const customerHiddenSql = (doc: string, type: string): string =>
-    `(NOT ${customerVisibleSql(doc, type)})`;
+// Only the not-posted documents are counted for the customer; internal categories are never disclosed.
+export const customerUnpostedSql = (doc: string, type: string): string => `(
+    COALESCE("${type}"."category", 'other') NOT IN (${INTERNAL_LIST})
+    AND COALESCE("${doc}"."accounting"->>'reflectedInAccounting', 'true') = 'false')`;

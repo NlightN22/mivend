@@ -16,7 +16,7 @@ import type {
 import { statementScope } from './settlement-statement-scope';
 import {
     CATEGORY_SQL,
-    customerHiddenSql,
+    customerUnpostedSql,
     customerVisibleSql,
     normalizeCategory,
 } from './settlement-visibility';
@@ -149,7 +149,7 @@ export class SettlementShopService {
              JOIN settlement_document d ON d.id = e."documentId"
              LEFT JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
              JOIN contract c ON c.id::text = e."contractId"
-             WHERE ${[...where, customerHiddenSql('d', 't')].join(' AND ')}
+             WHERE ${[...where, customerUnpostedSql('d', 't')].join(' AND ')}
              GROUP BY e.currency ORDER BY e.currency`,
             params,
         );

@@ -49,6 +49,7 @@ export interface SettlementDocumentTypeInput {
     isDeleted: boolean;
     label: string;
     category: string;
+    // Unused by the statement: visibility is decided by customerVisibleSql.
     customerVisible: boolean;
     sortOrder: number | null;
 }

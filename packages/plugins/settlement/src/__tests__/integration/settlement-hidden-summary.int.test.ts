@@ -126,10 +126,30 @@ describe('hidden documents stay aggregate-only (real Postgres)', () => {
         expect(page.items.map(i => i.number)).toEqual(['1']);
         expect(page.totalItems).toBe(1);
         expect(page.hiddenSummary).toEqual([
-            { currency: 'RUB', count: 2, netAmount: 2000 },
+            { currency: 'RUB', count: 1, netAmount: 3000 },
             { currency: 'USD', count: 1, netAmount: -500 },
         ]);
         expect(JSON.stringify(page.hiddenSummary)).not.toMatch(/222|333|Purchase|supplier/);
+    });
+
+    it('ignores supplier and payroll documents whatever their accounting flag', async () => {
+        await typeRef('Purchase', 'supplier', true);
+        await typeRef('Salary', 'payroll', false);
+        for (const [i, type] of ['Purchase', 'Salary'].entries()) {
+            for (const flag of [true, false]) {
+                await doc(`d-${type}-${flag}`, {
+                    number: `9${i}${flag ? 1 : 0}`,
+                    documentType: type,
+                    accounting: { reflectedInAccounting: flag },
+                    entries: [entry({ amount: 777 })],
+                });
+            }
+        }
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).hiddenSummary).toEqual([]);
+        await doc('d-x', { number: '1', accounting: hiddenAccounting, entries: [entry()] });
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).hiddenSummary).toEqual([
+            { currency: 'RUB', count: 1, netAmount: 10000 },
+        ]);
     });
 
     it('follows the contract, organization and period filters but not search or category', async () => {

@@ -30,6 +30,7 @@ export class SettlementDocumentType {
     category!: string;
 
     @Column({ type: 'boolean', default: false })
+    // Unused by the statement: visibility is decided by customerVisibleSql.
     customerVisible!: boolean;
 
     @Column({ type: 'int', nullable: true })
