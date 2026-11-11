@@ -13,6 +13,7 @@ import noSwallowedHandlerError from './eslint-rules/no-swallowed-handler-error.j
 import noRawAdvisoryLock from './eslint-rules/no-raw-advisory-lock.js';
 import noRawConnection from './eslint-rules/no-raw-connection.js';
 import noUnguardedPageCount from './eslint-rules/no-unguarded-page-count.js';
+import noUnboundedQuery from './eslint-rules/no-unbounded-query.js';
 
 const pgPaths = ['pg', 'pg-pool'].map(name => ({
     name,
@@ -294,6 +295,21 @@ export default [
         languageOptions: { parser: tsParser },
         plugins: { pagination: { rules: { 'no-unguarded-page-count': noUnguardedPageCount } } },
         rules: { 'pagination/no-unguarded-page-count': 'error' },
+    },
+    {
+        files: ['packages/plugins/*/src/**/*.ts', 'packages/shared/src/**/*.ts', 'apps/server/src/**/*.ts'],
+        ignores: [
+            '**/*.test.ts',
+            '**/__tests__/**',
+            '**/migrations/**',
+            '**/migration*.ts',
+            '**/seed*',
+            '**/dev-seed*/**',
+            '**/scripts/**',
+        ],
+        languageOptions: { parser: tsParser },
+        plugins: { bounded: { rules: { 'no-unbounded-query': noUnboundedQuery } } },
+        rules: { 'bounded/no-unbounded-query': 'error' },
     },
     // #216: storefront .vue files are parsed only for the i18n guard.
     {
