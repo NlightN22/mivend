@@ -109,7 +109,7 @@ async function add(
     });
     if (opts.live || opts.deleted) {
         await dataSource.getRepository(TestCustomer).save({
-            customFieldsCounterpartyid: row.id,
+            customFieldsCounterpartyid: String(row.id),
             deletedAt: opts.deleted ? new Date() : null,
         });
     }

@@ -48,6 +48,7 @@ export function readinessText(
 ): string {
     if (readiness !== 'missing-data') return READINESS_LABEL[readiness];
     const fields = missingFields(c);
-    const list = fields.length > 1 ? `${fields.slice(0, -1).join(', ')} and ${fields.at(-1)}` : fields[0];
+    const last = fields[fields.length - 1];
+    const list = fields.length > 1 ? `${fields.slice(0, -1).join(', ')} and ${last}` : last;
     return `Missing ${list} (ERP)`;
 }

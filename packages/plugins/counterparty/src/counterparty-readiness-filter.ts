@@ -34,7 +34,7 @@ const FRAGMENTS: Record<PortalReadiness, string> = {
 };
 
 export function portalReadinessSql(readiness: string): string {
-    if (!Object.hasOwn(FRAGMENTS, readiness)) {
+    if (!Object.prototype.hasOwnProperty.call(FRAGMENTS, readiness)) {
         throw new UserInputError(`Unknown readiness filter: ${readiness}`);
     }
     return FRAGMENTS[readiness as PortalReadiness];
