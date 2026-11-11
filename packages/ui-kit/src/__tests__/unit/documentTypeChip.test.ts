@@ -26,6 +26,29 @@ describe('resolveDocumentTypeStyle', () => {
     });
 });
 
+describe('payment kind icons', () => {
+    const kinds = [
+        'ПриходныйКассовыйОрдер',
+        'РасходныйКассовыйОрдер',
+        'ПлатежноеПоручениеВходящее',
+        'ПлатежноеПоручениеИсходящее',
+        'ПлатежныйОрдерПоступлениеДенежныхСредств',
+        'ПлатежныйОрдерСписаниеДенежныхСредств',
+        'ОплатаОтПокупателяПлатежнойКартой',
+        'ПлатежноеТребованиеВыставленное',
+        'ПлатежноеТребованиеПолученное',
+        'ИнкассовоеПоручениеПереданное',
+        'ИнкассовоеПоручениеПолученное',
+        'АккредитивПереданный',
+        'АккредитивПолученный',
+    ];
+
+    it('gives every payment kind its own icon', () => {
+        const icons = kinds.map(kind => ERP_DOCUMENT_TYPE_STYLES[kind].icon);
+        expect(new Set(icons).size).toBe(kinds.length);
+    });
+});
+
 describe('MvDocumentTypeChip', () => {
     it('renders an unknown document type with the supplied label and its category icon', () => {
         const wrapper = mount(MvDocumentTypeChip, {
