@@ -5,6 +5,8 @@ description: Use for the whole path from finished work to a prod release - check
 
 # Release workflow
 
+**Batch rule (the release owner always works in packages).** The release session collects every audit-signed change that has reached it, freezes that set as one package, tests and ships it in one version, and tells every session what is in and what is out. Anything arriving after the freeze, or not signed yet, goes to the next package; never one change per version, never reopening a frozen package. Only an emergency hotfix (prod broken) ships alone, ahead of the package.
+
 Gate rules live in `AGENTS.md` ("Release gate — audit before release"); this skill is the order of steps, not a second copy of the rules.
 
 ## Steps
@@ -19,3 +21,5 @@ Gate rules live in `AGENTS.md` ("Release gate — audit before release"); this s
 8. **Deploy.** Hand over to the `deploy-prod` skill; the owner must authorise the deploy in the chat. Pushing, building and closing issues (step 10) also happen only on the owner's direct request.
 9. **Verify.** Services healthy, migrate exit 0, a read-only check of the changed behaviour on prod.
 10. **Close.** `finish-task` for each linked issue (push, summary comment, close). Update `docs/ai/PROJECT_CONTEXT.md` when the release changes it.
+
+**Batch rule (the release owner always works in packages).** The release session collects every audit-signed change that has reached it, freezes that set as one package, tests and ships it in one version, and tells every session what is in and what is out. Anything arriving after the freeze, or not signed yet, goes to the next package; never one change per version, never reopening a frozen package. Only an emergency hotfix (prod broken) ships alone, ahead of the package.
