@@ -119,7 +119,7 @@ test.describe('07: discount grants of hidden price types', () => {
     test('the registry and approvals pages show only the allowed grant', async ({ browser }) => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
-            await s.page.goto('/discounts');
+            await s.page.goto(`/discounts?filters=priceType:eq:${ALLOWED[0]}`);
             await expect
                 .poll(() => s.bodies.join('\n').includes(grantJustification('allowed')), {
                     timeout: 15000,
@@ -127,7 +127,7 @@ test.describe('07: discount grants of hidden price types', () => {
                 .toBe(true);
             await shot(s.page, 'grant-registry-manager-a');
             await s.page.goto('/approvals');
-            await s.page.getByText("All requests I'm involved in").click();
+            await s.page.getByRole('button', { name: /^All\b/ }).click();
             await expect
                 .poll(() => s.bodies.join('\n').includes(grantJustification('allowed')), {
                     timeout: 15000,

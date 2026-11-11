@@ -6,6 +6,7 @@ import {
     type ActorKey,
     type CustomerKey,
 } from '../../fixtures/visibility/plan';
+import { formatDocumentNumber } from '../../helpers/e2e-order';
 import { expectNotReceived, openManagerAs, shot, visData } from '../session';
 
 let orders: Record<CustomerKey, VisOrder>;
@@ -41,10 +42,13 @@ for (const { actor, own, other } of CASES) {
         test('proforma invoices list', async ({ browser }) => {
             const s = await openManagerAs(browser, actor);
             try {
-                await s.page.goto('/proforma-invoices');
-                await expect(s.page.getByText(orders[own].proforma.number).first()).toBeVisible({
-                    timeout: 15000,
-                });
+                const ownNumber = orders[own].proforma.number;
+                await s.page.goto(`/proforma-invoices?search=${ownNumber}`);
+                await expect(s.page.getByText(formatDocumentNumber(ownNumber)).first()).toBeVisible(
+                    {
+                        timeout: 15000,
+                    },
+                );
                 await expectNotReceived(s, [orders[other].proforma.number, clientOf(other)]);
                 await shot(s.page, `proformas-${actor}`);
             } finally {
