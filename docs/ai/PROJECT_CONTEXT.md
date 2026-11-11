@@ -61,6 +61,7 @@ Updated: 2026-11-10
 
 ## #342 customer statement kinds (branch issue-342-statement-kinds, not pushed)
 - Statement visibility is one SQL predicate, `customerVisibleSql` (settlement-visibility.ts): hidden only when `accounting.reflectedInAccounting` is explicitly false or the type category is supplier/payroll; absent key and types missing from the reference are shown (category `other`, label from the document). `customerVisible` is no longer read by the statement or suggest queries (admin list never read it).
+- Hidden documents are never listed; `settlementDocuments.hiddenSummary` gives only count and signed net per currency (`customerHiddenSql` = negated predicate, same contract/organization/period scope via `settlement-statement-scope.ts`, not search/category). Balance cards come from `settlement_balance` and do not depend on document rows or visibility; the storefront shows a neutral notice (`settlements.hidden`).
 - Icons/variants per ERP documentType live in ui-kit `erpDocumentTypeStyles.ts` (category fallback, ASCII `labelKey` for storefront `settlements.documentType.*` labels); demo data: `seed-statement-kinds.mjs` (docs/environments.md).
 
 ## #303 data-drift consumer + reconciliation/widgets/settlement statement (2026-11-02..04, DONE, prod since 0.0.27; full text: `.backup/PROJECT_CONTEXT-2026-11-06-303-reconciliation-full.md`)

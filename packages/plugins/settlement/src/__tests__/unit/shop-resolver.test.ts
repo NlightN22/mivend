@@ -23,6 +23,7 @@ describe('SettlementShopResolver', () => {
         expect(await resolver.settlementDocuments({} as never, {})).toEqual({
             items: [],
             totalItems: 0,
+            hiddenSummary: [],
         });
         expect(await resolver.settlementBalances({} as never, {})).toEqual([]);
     });

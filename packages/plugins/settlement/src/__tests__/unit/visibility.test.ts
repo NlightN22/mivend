@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     KNOWN_CATEGORIES,
+    customerHiddenSql,
     customerVisibleSql,
     normalizeCategory,
 } from '../../settlement-visibility';
@@ -33,5 +34,11 @@ describe('customerVisibleSql', () => {
 
     it('keeps purchase and payroll categories internal', () => {
         expect(sql).toContain(`NOT IN ('supplier', 'payroll')`);
+    });
+});
+
+describe('customerHiddenSql', () => {
+    it('is exactly the negation of the visible predicate', () => {
+        expect(customerHiddenSql('d', 't')).toBe(`(NOT ${customerVisibleSql('d', 't')})`);
     });
 });

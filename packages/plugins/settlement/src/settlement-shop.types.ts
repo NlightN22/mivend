@@ -35,9 +35,16 @@ export interface SettlementDocumentRow {
     orders: SettlementOrderRef[];
 }
 
+export interface SettlementHiddenSummary {
+    currency: string;
+    count: number;
+    netAmount: number;
+}
+
 export interface SettlementDocumentPage {
     items: SettlementDocumentRow[];
     totalItems: number;
+    hiddenSummary: SettlementHiddenSummary[];
 }
 
 export interface SettlementBalanceCard {

@@ -4132,8 +4132,16 @@ export type SettlementDocumentFilter = {
 };
 
 export type SettlementDocumentPage = {
+    hiddenSummary: Array<SettlementHiddenSummary>;
     items: Array<SettlementDocumentRow>;
     totalItems: Scalars['Int']['output'];
+};
+
+/** Aggregate of statement documents that are not listed; never carries anything per document. */
+export type SettlementHiddenSummary = {
+    count: Scalars['Int']['output'];
+    currency: Scalars['String']['output'];
+    netAmount: Scalars['Money']['output'];
 };
 
 export type SettlementDocumentRow = {
@@ -5701,6 +5709,7 @@ export type SettlementDocumentsQueryVariables = Exact<{
 export type SettlementDocumentsQuery = {
     settlementDocuments: {
         totalItems: number;
+        hiddenSummary: Array<{ currency: string; count: number; netAmount: any }>;
         items: Array<{
             id: string;
             documentType: string;
@@ -7367,6 +7376,11 @@ export const SettlementDocumentsDocument = new TypedDocumentString(`
       }
     }
     totalItems
+    hiddenSummary {
+      currency
+      count
+      netAmount
+    }
   }
 }
     `) as unknown as TypedDocumentString<

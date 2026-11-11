@@ -25,7 +25,7 @@ export class SettlementShopResolver {
         @Args() args: { filter?: SettlementDocumentFilter; skip?: number; take?: number },
     ): Promise<SettlementDocumentPage> {
         const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
-        if (!counterpartyId) return { items: [], totalItems: 0 };
+        if (!counterpartyId) return { items: [], totalItems: 0, hiddenSummary: [] };
         return this.shopService.documents(
             ctx,
             counterpartyId,

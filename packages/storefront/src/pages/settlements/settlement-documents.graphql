@@ -23,6 +23,11 @@ query SettlementDocuments($filter: SettlementDocumentFilter, $skip: Int, $take: 
             }
         }
         totalItems
+        hiddenSummary {
+            currency
+            count
+            netAmount
+        }
     }
 }
 

@@ -111,6 +111,14 @@ beforeEach(async () => {
     await doc('d5', '109', 'Sale');
     await h.documents.apply(
         ctx,
+        documentInput('d7', {
+            number: '177',
+            accounting: { reflectedInAccounting: false },
+            entries: [entry()],
+        }),
+    );
+    await h.documents.apply(
+        ctx,
         documentInput('d5', { number: '109', isDeleted: true, version: '2026-10-02T10:00:00Z' }),
     );
 });
@@ -136,6 +144,7 @@ describe('settlement filter suggestions (real Postgres)', () => {
         expect(await service.suggest(ctx, 'number', '10')).toEqual(['101']);
         expect(await service.suggest(ctx, 'number', '30')).toEqual([]);
         expect(await service.suggest(ctx, 'number', '40')).toEqual([]);
+        expect(await service.suggest(ctx, 'number', '17')).toEqual([]);
     });
 
     it.each([

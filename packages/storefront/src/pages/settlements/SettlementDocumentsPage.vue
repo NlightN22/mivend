@@ -5,6 +5,7 @@ import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import type { DateRangeFilterValue, SelectOption } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import SettlementBalanceCards from './SettlementBalanceCards.vue';
+import SettlementHiddenNotice from './SettlementHiddenNotice.vue';
 import SettlementFilters from './SettlementFilters.vue';
 import SettlementTable from './SettlementTable.vue';
 import { totalsByCurrency, useSettlementDocuments } from './useSettlementDocuments';
@@ -15,7 +16,8 @@ const paginationLabels = usePaginationLabels();
 
 const PAGE_SIZE = 20;
 
-const { rows, totalItems, balances, loading, load, loadBalances } = useSettlementDocuments();
+const { rows, totalItems, balances, hidden, loading, load, loadBalances } =
+    useSettlementDocuments();
 
 const { filters: urlState, page } = useUrlState(
     { chip: 'all', contract: '', org: '', preset: '', from: '', to: '', q: '' },
@@ -108,6 +110,7 @@ onMounted(() => {
             </div>
 
             <SettlementBalanceCards :totals="totals" />
+            <SettlementHiddenNotice :summary="hidden" />
 
             <SettlementFilters
                 v-model:chip="chip"

@@ -34,6 +34,7 @@ export default {
         title: 'Account statement',
         subtitle: 'Sales, payments, returns and corrections that make up your balance.',
         loading: 'Loading documents...',
+        hidden: '{n} document is not shown on this statement; their net amount is {amount} | {n} documents are not shown on this statement; their net amount is {amount}',
         empty: 'No documents found.',
         cards: { opening: 'Opening balance', current: 'Current balance', overdue: 'Overdue' },
         chips: {

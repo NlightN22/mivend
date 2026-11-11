@@ -10,6 +10,8 @@ import {
 } from '../../api/generated/graphql';
 
 export type SettlementRow = SettlementDocumentsQuery['settlementDocuments']['items'][number];
+export type SettlementHidden =
+    SettlementDocumentsQuery['settlementDocuments']['hiddenSummary'][number];
 export type SettlementBalance = SettlementBalancesQuery['settlementBalances'][number];
 
 export interface SettlementOptions {
@@ -70,6 +72,7 @@ export function useSettlementDocuments(): {
     rows: Ref<SettlementRow[]>;
     totalItems: Ref<number>;
     balances: Ref<SettlementBalance[]>;
+    hidden: Ref<SettlementHidden[]>;
     loading: Ref<boolean>;
     load: (options: SettlementOptions) => Promise<void>;
     loadBalances: () => Promise<void>;
@@ -77,6 +80,7 @@ export function useSettlementDocuments(): {
     const rows = ref<SettlementRow[]>([]);
     const totalItems = ref(0);
     const balances = ref<SettlementBalance[]>([]);
+    const hidden = ref<SettlementHidden[]>([]);
     const loading = ref(false);
 
     async function load(options: SettlementOptions): Promise<void> {
@@ -97,6 +101,7 @@ export function useSettlementDocuments(): {
             });
             rows.value = result.settlementDocuments.items;
             totalItems.value = result.settlementDocuments.totalItems;
+            hidden.value = result.settlementDocuments.hiddenSummary;
         } catch (e) {
             console.error('[useSettlementDocuments]', e);
         } finally {
@@ -113,5 +118,5 @@ export function useSettlementDocuments(): {
         }
     }
 
-    return { rows, totalItems, balances, loading, load, loadBalances };
+    return { rows, totalItems, balances, hidden, loading, load, loadBalances };
 }

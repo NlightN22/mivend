@@ -28,3 +28,6 @@ const INTERNAL_LIST = INTERNAL_CATEGORIES.map(c => `'${c}'`).join(', ');
 export const customerVisibleSql = (doc: string, type: string): string => `(
     COALESCE("${type}"."category", 'other') NOT IN (${INTERNAL_LIST})
     AND COALESCE("${doc}"."accounting"->>'reflectedInAccounting', 'true') <> 'false')`;
+
+export const customerHiddenSql = (doc: string, type: string): string =>
+    `(NOT ${customerVisibleSql(doc, type)})`;

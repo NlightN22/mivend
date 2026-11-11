@@ -10,13 +10,19 @@ import type {
     SettlementDocumentFilter,
     SettlementDocumentPage,
     SettlementDocumentRow,
+    SettlementHiddenSummary,
     SettlementOrderRef,
 } from './settlement-shop.types';
-import { CATEGORY_SQL, customerVisibleSql, normalizeCategory } from './settlement-visibility';
+import { statementScope } from './settlement-statement-scope';
+import {
+    CATEGORY_SQL,
+    customerHiddenSql,
+    customerVisibleSql,
+    normalizeCategory,
+} from './settlement-visibility';
 import { toAlphaCurrency } from './currency-code';
 
 const MAX_PAGE = 100;
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 type Row = Record<string, unknown>;
 
@@ -81,28 +87,8 @@ export class SettlementShopService {
         skip: number,
         take: number,
     ): Promise<SettlementDocumentPage> {
-        const params: unknown[] = [counterpartyId];
-        const bind = (value: unknown): string => {
-            params.push(value);
-            return `$${params.length}`;
-        };
-        const where = [
-            'e."counterpartyId" = $1',
-            'NOT d."isDeleted"',
-            'e."contractId" IS NOT NULL',
-            'c."isCustomerContract" IS TRUE',
-            customerVisibleSql('d', 't'),
-        ];
-        if (filter.contractId) where.push(`e."contractId" = ${bind(filter.contractId)}`);
-        if (filter.organizationId) {
-            where.push(`e."organizationErpId" = ${bind(filter.organizationId)}`);
-        }
-        if (filter.dateFrom && DATE_ONLY.test(filter.dateFrom)) {
-            where.push(`d.date::date >= ${bind(filter.dateFrom)}::date`);
-        }
-        if (filter.dateTo && DATE_ONLY.test(filter.dateTo)) {
-            where.push(`d.date::date <= ${bind(filter.dateTo)}::date`);
-        }
+        const { params, bind, where: scope } = statementScope(counterpartyId, filter);
+        const where = [...scope, customerVisibleSql('d', 't')];
         if (filter.search?.trim()) {
             const term = bind(`%${escapeLike(filter.search.trim())}%`);
             where.push(`(d.number ILIKE ${term} ESCAPE '\\' OR EXISTS (
@@ -146,7 +132,32 @@ export class SettlementShopService {
         return {
             items: rows.map(r => this.toRow(r, now)),
             totalItems: Number(total),
+            hiddenSummary: await this.hiddenSummary(ctx, counterpartyId, filter),
         };
+    }
+
+    private async hiddenSummary(
+        ctx: RequestContext,
+        counterpartyId: string,
+        filter: SettlementDocumentFilter,
+    ): Promise<SettlementHiddenSummary[]> {
+        const { params, where } = statementScope(counterpartyId, filter);
+        const rows = await this.query(
+            ctx,
+            `SELECT e.currency, COUNT(DISTINCT d.id)::int AS count, SUM(e."amountMinor") AS net
+             FROM settlement_document_entry e
+             JOIN settlement_document d ON d.id = e."documentId"
+             LEFT JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
+             JOIN contract c ON c.id::text = e."contractId"
+             WHERE ${[...where, customerHiddenSql('d', 't')].join(' AND ')}
+             GROUP BY e.currency ORDER BY e.currency`,
+            params,
+        );
+        return rows.map(r => ({
+            currency: toAlphaCurrency(String(r.currency)),
+            count: Number(r.count),
+            netAmount: Number(r.net),
+        }));
     }
 
     private toRow(r: Row, now: Date): SettlementDocumentRow {

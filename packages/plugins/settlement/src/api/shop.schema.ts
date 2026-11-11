@@ -28,9 +28,17 @@ export const shopApiExtensions = gql`
         orders: [SettlementOrderRef!]!
     }
 
+    "Aggregate of statement documents that are not listed; never carries anything per document."
+    type SettlementHiddenSummary {
+        currency: String!
+        count: Int!
+        netAmount: Money!
+    }
+
     type SettlementDocumentPage {
         items: [SettlementDocumentRow!]!
         totalItems: Int!
+        hiddenSummary: [SettlementHiddenSummary!]!
     }
 
     type SettlementBalanceCard {
