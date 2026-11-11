@@ -167,8 +167,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--el-text-color-primary);
-    color: var(--app-on-accent);
+    background: var(--app-fill-soft);
+    color: var(--app-ok-fg);
+    border: 1px solid var(--el-color-primary-light-7);
     display: grid;
     place-items: center;
     font-size: 12px;
@@ -183,7 +184,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .mv-mobile-sheet__user-role {
     font-size: 12px;
-    color: var(--el-text-color-secondary, var(--app-text-grey));
+    color: var(--app-text-body2);
 }
 
 .mv-mobile-sheet__grid {
@@ -210,7 +211,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 }
 
 .mv-mobile-sheet__item--danger {
-    color: var(--el-color-danger, var(--app-danger-btn));
+    color: var(--app-danger-fg);
 }
 
 .mv-mobile-sheet__item--active {

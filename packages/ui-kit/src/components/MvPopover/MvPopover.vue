@@ -122,6 +122,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
 
 .mv-popover__popper--glass {
     --el-bg-color-overlay: var(--app-glass-strong);
+    /* !important: the popper's own shadow above is !important too, this one has to replace it. */
     box-shadow:
         inset 0 1px 0 var(--app-glass-edge),
         0 12px 32px var(--app-ink-14) !important;

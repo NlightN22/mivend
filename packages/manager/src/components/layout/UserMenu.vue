@@ -97,7 +97,7 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 .user-menu__meta {
-    color: var(--app-text-grey);
+    color: var(--app-text-body2);
     font-size: 12px;
     overflow-wrap: anywhere;
 }
