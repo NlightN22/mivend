@@ -11,6 +11,7 @@ export class OrderLineIdentityService {
 
     async uuidsByLineId(ctx: RequestContext, lineIds: ID[]): Promise<Map<string, string>> {
         if (lineIds.length === 0) return new Map();
+        // unbounded-ok: identities of the order line ids passed in
         const rows = await this.connection.getRepository(ctx, OrderLineIdentity).find({
             where: { orderLineId: In(lineIds.map(Number)) },
         });
