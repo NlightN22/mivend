@@ -90,6 +90,7 @@ export class SettlementAdminListService {
     ): Promise<SettlementTypeCount[]> {
         if (counterpartyId && !isCounterpartyId(counterpartyId)) return [];
         const qb = await this.baseQuery(ctx, options, counterpartyId);
+        // unbounded-ok: grouped by document type, a handful of rows
         const rows = await qb
             .select('"d"."documentType"', 'documentType')
             .addSelect(`MIN(${TYPE_LABEL_SQL})`, 'label')

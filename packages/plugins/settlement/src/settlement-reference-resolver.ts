@@ -43,6 +43,7 @@ export class SettlementReferenceResolver {
         const resolved = new Map<string, number>();
         if (erpIds.size === 0) return resolved;
         const rows: Array<{ id: number; erpOrderId: string | null; uuid: string | null }> =
+            // unbounded-ok: orders matched by the references passed in
             await this.connection.getRepository(ctx, Order).query(
                 `SELECT id, "customFieldsErporderid" AS "erpOrderId", "customFieldsUuid"::text AS uuid
                  FROM "order"

@@ -32,6 +32,7 @@ export class SettlementSuggestService {
         const visible = await this.counterparties.visibleErpIdsSql(ctx);
         const qb = this.sourceQuery(ctx, field, visible);
         applySuggest(qb, spec, text, take);
+        // unbounded-ok: suggestion query is limited by applySuggest to the clamped take
         const rows = await qb.getRawMany<{ value: string | null }>();
         return dedupeSuggestions(rows, take);
     }
