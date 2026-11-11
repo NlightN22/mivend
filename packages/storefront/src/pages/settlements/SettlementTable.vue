@@ -7,6 +7,7 @@ import {
     MvStatusBadge,
     formatDocumentNumber,
 } from '@mivend/ui-kit';
+import SettlementMobileRow from './SettlementMobileRow.vue';
 import {
     PAYMENT_STATUS_VARIANT,
     documentTypeLabel,
@@ -24,6 +25,9 @@ const formatDate = (value: string | null | undefined): string =>
 
 <template>
     <div class="settlement-table">
+        <ul class="mobile-list">
+            <SettlementMobileRow v-for="row in rows" :key="row.id" :row="row" />
+        </ul>
         <table>
             <thead>
                 <tr>
@@ -143,5 +147,21 @@ tr:last-child td {
 
 .credit {
     color: var(--app-nav-accent);
+}
+
+.mobile-list {
+    display: none;
+    margin: 0;
+    padding: 0;
+}
+
+@media (max-width: 760px) {
+    .mobile-list {
+        display: block;
+    }
+
+    table {
+        display: none;
+    }
 }
 </style>
