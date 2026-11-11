@@ -53,7 +53,8 @@ export class DocumentsService {
             .where('document.counterpartyId = :counterpartyId', {
                 counterpartyId: String(counterpartyId),
             })
-            .orderBy('document.issueDate', 'DESC');
+            .orderBy('document.issueDate', 'DESC')
+            .addOrderBy('document.id', 'DESC');
 
         if (options?.type) {
             qb.andWhere('document.type = :type', { type: options.type });
@@ -110,7 +111,7 @@ export class DocumentsService {
                 term: documentNumberSearchTerm(options.search),
             });
         }
-        qb.orderBy('document.issueDate', 'DESC');
+        qb.orderBy('document.issueDate', 'DESC').addOrderBy('document.id', 'DESC');
         return getPageAndCount(qb, options?.take ?? 50, options?.skip ?? 0);
     }
 

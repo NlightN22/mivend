@@ -8,6 +8,7 @@ const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
     orderBy: vi.fn(),
+    addOrderBy: vi.fn(),
     take: vi.fn(),
     skip: vi.fn(),
     getManyAndCount: vi.fn(),
@@ -18,6 +19,7 @@ mockQb.distinct.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.addOrderBy.mockReturnValue(mockQb);
 mockQb.take.mockReturnValue(mockQb);
 mockQb.skip.mockReturnValue(mockQb);
 
@@ -309,6 +311,12 @@ describe('DocumentsService', () => {
                 { scopeBranch: 'branch-a' },
             );
             expect(result).toEqual({ items: [{ id: 'doc-1' }], totalItems: 1 });
+        });
+
+        it('orders by issue date then id so pages are stable across equal dates', async () => {
+            await service.findVisible(mockCtx);
+            expect(mockQb.orderBy).toHaveBeenCalledWith('document.issueDate', 'DESC');
+            expect(mockQb.addOrderBy).toHaveBeenCalledWith('document.id', 'DESC');
         });
 
         it('adds no visibility condition for scope all', async () => {
