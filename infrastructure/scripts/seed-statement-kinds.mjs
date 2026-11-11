@@ -89,7 +89,7 @@ function statementKindsRecords(now) {
     const version = new Date(now).toISOString();
     const types = new Map();
     for (const [type, label, category] of KINDS) {
-        if (category) types.set(type, { type, label, category });
+        if (category) types.set(type, { documentType: type, label, category });
     }
     const flagsOf = accounting =>
         accounting === null
