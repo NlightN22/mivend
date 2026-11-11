@@ -49,7 +49,7 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         orderLine: OrderLine,
         quantity: number,
     ): Promise<LocationWithQuantity[]> {
-        // Upstream ReservationService already rejects incomplete orders, so reaching here means a real bug.
+        // Placement rejects an order with no resolvable branch before allocation (erp-order), so reaching here is a bug.
         // Never fall back to a non-branch-scoped StockLocation; throw instead.
         if (stockLocations.length === 0) {
             const message = `orderLine ${orderLine.id}: cannot allocate stock, no StockLocation exists at all`;
