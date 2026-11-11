@@ -79,7 +79,7 @@ test.describe.serial('checkout where no branch can be resolved (#347)', () => {
     });
     test.afterAll(async () => {
         await admin(
-            `mutation($b: ID) { updateGlobalSettings(input: { customFields: { defaultBranchId: $b } }) { __typename } }`,
+            `mutation($b: String) { updateGlobalSettings(input: { customFields: { defaultBranchId: $b } }) { __typename } }`,
             { b: savedDefaultBranch },
         );
         await cancelOpenOrders(NO_BRANCH_BUYER);
