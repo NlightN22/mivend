@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // Staff-edited retention per notification source type; seeded at start and by the cleanup, not here.
-// The notification createdAt index bounds the hourly source-type discovery.
+// The notification createdAt index bounds the hourly source-type discovery; types already stored are backfilled here once.
 export class NotificationRetentionRules1791584000000 implements MigrationInterface {
     name = 'NotificationRetentionRules1791584000000';
 
@@ -17,6 +17,9 @@ export class NotificationRetentionRules1791584000000 implements MigrationInterfa
         );
         await queryRunner.query(
             `CREATE INDEX "IDX_b11a5e627c41d4dc3170f1d370" ON "notification" ("createdAt")`,
+        );
+        await queryRunner.query(
+            `INSERT INTO "notification_retention_rule" ("uuid", "sourceType") SELECT gen_random_uuid(), "sourceType" FROM (SELECT DISTINCT "sourceType" FROM "notification") s`,
         );
     }
 
