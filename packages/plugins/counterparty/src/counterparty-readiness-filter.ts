@@ -1,26 +1,57 @@
-import { UserInputError } from '@vendure/core';
+import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { hasChosenChannelSql } from './counterparty-chosen-contact.sql';
+import { INN_DIGITS_SQL, innDigitsSql } from './counterparty-inn-guard';
 
-export const PORTAL_READINESS = ['ready', 'missing-data', 'erp-inactive', 'activated'] as const;
+export const PORTAL_READINESS = [
+    'ready',
+    'missing-data',
+    'inn-duplicate',
+    'erp-inactive',
+    'activated',
+] as const;
 export type PortalReadiness = (typeof PORTAL_READINESS)[number];
 
-const LINKED = `EXISTS (SELECT 1 FROM customer cu
-    WHERE cu."customFieldsCounterpartyid"::text = c.id::text AND cu."deletedAt" IS NULL)`;
+const linkedSql = (alias: string): string => `EXISTS (SELECT 1 FROM customer cu
+    WHERE cu."customFieldsCounterpartyid"::text = ${alias}.id::text AND cu."deletedAt" IS NULL)`;
+const LINKED = linkedSql('c');
 const HAS_CONTACTS = `${hasChosenChannelSql('phone')} AND ${hasChosenChannelSql('email')}`;
+const HAS_INN = `${INN_DIGITS_SQL} <> ''`;
+// Matches findLinkedInnDuplicate: another active holder of the same digits that has a live portal Customer.
+const INN_DUPLICATE = `EXISTS (SELECT 1 FROM counterparty d WHERE d.id <> c.id AND d."isActive" = true
+    AND ${innDigitsSql('d')} = ${INN_DIGITS_SQL} AND ${linkedSql('d')})`;
 
-// Same precedence as the manager portal's activationReadiness: activated, ERP inactive, missing data.
+const BINDABLE = `NOT ${LINKED} AND c."isActive" = true`;
+
+// Precedence mirrors the activation executor: linked, ERP inactive, contacts, INN, duplicate INN.
+const FRAGMENTS: Record<PortalReadiness, string> = {
+    activated: LINKED,
+    'erp-inactive': `NOT ${LINKED} AND c."isActive" = false`,
+    'missing-data': `${BINDABLE} AND (NOT (${HAS_CONTACTS}) OR NOT (${HAS_INN}))`,
+    'inn-duplicate': `${BINDABLE} AND (${HAS_CONTACTS}) AND ${HAS_INN} AND ${INN_DUPLICATE}`,
+    ready: `${BINDABLE} AND (${HAS_CONTACTS}) AND ${HAS_INN} AND NOT ${INN_DUPLICATE}`,
+};
+
 export function portalReadinessSql(readiness: string): string {
-    switch (readiness) {
-        case 'activated':
-            return LINKED;
-        case 'erp-inactive':
-            return `NOT ${LINKED} AND c."isActive" = false`;
-        case 'missing-data':
-            return `NOT ${LINKED} AND c."isActive" = true AND NOT (${HAS_CONTACTS})`;
-        case 'ready':
-            return `NOT ${LINKED} AND c."isActive" = true AND ${HAS_CONTACTS}`;
-        default:
-            throw new UserInputError(`Unknown readiness filter: ${readiness}`);
+    if (!Object.hasOwn(FRAGMENTS, readiness)) {
+        throw new UserInputError(`Unknown readiness filter: ${readiness}`);
     }
+    return FRAGMENTS[readiness as PortalReadiness];
+}
+
+const READINESS_CASE_SQL = `CASE ${PORTAL_READINESS.map(r => `WHEN ${FRAGMENTS[r]} THEN '${r}'`).join(' ')} END`;
+
+export async function getPortalReadiness(
+    connection: Pick<TransactionalConnection, 'getRepository'>,
+    ctx: RequestContext,
+    counterpartyId: string | number,
+): Promise<PortalReadiness> {
+    const rows = await ctxQuery<Array<{ readiness: PortalReadiness }>>(
+        connection,
+        ctx,
+        `SELECT ${READINESS_CASE_SQL} AS readiness FROM counterparty c WHERE c.id::text = $1`,
+        [String(counterpartyId)],
+    );
+    return rows[0].readiness;
 }

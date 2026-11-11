@@ -11,6 +11,7 @@ query CounterpartyActivationCandidates($options: CounterpartyListOptions) {
             phone
             officialEmail
             linkedCustomerId
+            portalReadiness
         }
         totalItems
     }

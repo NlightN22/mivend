@@ -2,6 +2,7 @@ query CounterpartyActivationCounts(
     $all: CounterpartyListOptions
     $ready: CounterpartyListOptions
     $missing: CounterpartyListOptions
+    $duplicate: CounterpartyListOptions
     $inactive: CounterpartyListOptions
     $activated: CounterpartyListOptions
 ) {
@@ -12,6 +13,9 @@ query CounterpartyActivationCounts(
         totalItems
     }
     missing: counterparties(options: $missing) {
+        totalItems
+    }
+    duplicate: counterparties(options: $duplicate) {
         totalItems
     }
     inactive: counterparties(options: $inactive) {

@@ -1150,6 +1150,8 @@ export type Counterparty = Node & {
     legalName: Scalars['String']['output'];
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId: Maybe<Scalars['ID']['output']>;
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
+    portalReadiness: Scalars['String']['output'];
     /** Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
     managerErpId: Maybe<Scalars['String']['output']>;
     /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
@@ -11813,6 +11815,7 @@ export type CounterpartyActivationCandidatesQuery = {
             phone: string | null;
             officialEmail: string | null;
             linkedCustomerId: string | null;
+            portalReadiness: string;
         }>;
     };
 };
@@ -11821,6 +11824,7 @@ export type CounterpartyActivationCountsQueryVariables = Exact<{
     all?: InputMaybe<CounterpartyListOptions>;
     ready?: InputMaybe<CounterpartyListOptions>;
     missing?: InputMaybe<CounterpartyListOptions>;
+    duplicate?: InputMaybe<CounterpartyListOptions>;
     inactive?: InputMaybe<CounterpartyListOptions>;
     activated?: InputMaybe<CounterpartyListOptions>;
 }>;
@@ -11829,6 +11833,7 @@ export type CounterpartyActivationCountsQuery = {
     all: { totalItems: number };
     ready: { totalItems: number };
     missing: { totalItems: number };
+    duplicate: { totalItems: number };
     inactive: { totalItems: number };
     activated: { totalItems: number };
 };
@@ -15786,6 +15791,7 @@ export const CounterpartyActivationCandidatesDocument = new TypedDocumentString(
       phone
       officialEmail
       linkedCustomerId
+      portalReadiness
     }
     totalItems
   }
@@ -15795,7 +15801,7 @@ export const CounterpartyActivationCandidatesDocument = new TypedDocumentString(
     CounterpartyActivationCandidatesQueryVariables
 >;
 export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
-    query CounterpartyActivationCounts($all: CounterpartyListOptions, $ready: CounterpartyListOptions, $missing: CounterpartyListOptions, $inactive: CounterpartyListOptions, $activated: CounterpartyListOptions) {
+    query CounterpartyActivationCounts($all: CounterpartyListOptions, $ready: CounterpartyListOptions, $missing: CounterpartyListOptions, $duplicate: CounterpartyListOptions, $inactive: CounterpartyListOptions, $activated: CounterpartyListOptions) {
   all: counterparties(options: $all) {
     totalItems
   }
@@ -15803,6 +15809,9 @@ export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
     totalItems
   }
   missing: counterparties(options: $missing) {
+    totalItems
+  }
+  duplicate: counterparties(options: $duplicate) {
     totalItems
   }
   inactive: counterparties(options: $inactive) {

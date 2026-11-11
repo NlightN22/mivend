@@ -13,7 +13,7 @@ import {
     DEFAULT_HIDDEN_COLUMNS,
     UNASSIGNED_BRANCH,
 } from '../../components/bulk-operations/activationColumns';
-import { readinessText } from '../../components/bulk-operations/activationReadiness';
+import { readinessOf, readinessText } from '../../components/bulk-operations/activationReadiness';
 
 describe('activation table columns', () => {
     const columns = buildActivationColumns([
@@ -53,11 +53,12 @@ describe('activation table columns', () => {
 });
 
 describe('activation views', () => {
-    it('are All plus the four readiness states, and only the states reach the server', () => {
+    it('are All plus the five readiness states, and only the states reach the server', () => {
         expect(ACTIVATION_VIEWS.map(v => v.key)).toEqual([
             'all',
             'ready',
             'missing-data',
+            'inn-duplicate',
             'erp-inactive',
             'activated',
         ]);
@@ -117,24 +118,38 @@ describe('conditionsToCounterpartyFilter', () => {
     });
 });
 
+describe('readinessOf', () => {
+    it('reads the server value and falls back to missing data for an unknown one', () => {
+        expect(readinessOf({ portalReadiness: 'inn-duplicate' })).toBe('inn-duplicate');
+        expect(readinessOf({ portalReadiness: 'ready' })).toBe('ready');
+        expect(readinessOf({ portalReadiness: 'future-state' })).toBe('missing-data');
+    });
+});
+
 describe('readinessText', () => {
+    const full = { phone: '1', officialEmail: 'a@example.test', inn: '7700000001' };
+
     it('names exactly what is missing', () => {
-        expect(
-            readinessText('missing-data', { phone: null, officialEmail: 'a@example.test' }),
-        ).toBe('Missing phone (ERP)');
-        expect(readinessText('missing-data', { phone: '1', officialEmail: '' })).toBe(
+        expect(readinessText('missing-data', { ...full, phone: null })).toBe(
+            'Missing phone (ERP)',
+        );
+        expect(readinessText('missing-data', { ...full, officialEmail: '' })).toBe(
             'Missing email (ERP)',
         );
-        expect(readinessText('missing-data', { phone: '', officialEmail: null })).toBe(
-            'Missing phone and email (ERP)',
+        expect(readinessText('missing-data', { ...full, inn: null })).toBe('Missing INN (ERP)');
+        expect(readinessText('missing-data', { ...full, inn: ' - ' })).toBe('Missing INN (ERP)');
+        expect(readinessText('missing-data', { phone: '', officialEmail: null, inn: '' })).toBe(
+            'Missing phone, email and INN (ERP)',
+        );
+        expect(readinessText('missing-data', { ...full, phone: null, inn: null })).toBe(
+            'Missing phone and INN (ERP)',
         );
     });
 
     it('uses the plain label for the other states', () => {
-        expect(readinessText('ready', { phone: '1', officialEmail: 'a' })).toBe(
-            'Ready to activate',
-        );
-        expect(readinessText('erp-inactive', { phone: null, officialEmail: null })).toBe(
+        expect(readinessText('ready', full)).toBe('Ready to activate');
+        expect(readinessText('inn-duplicate', full)).toBe('Duplicate INN');
+        expect(readinessText('erp-inactive', { phone: null, officialEmail: null, inn: null })).toBe(
             'ERP inactive',
         );
     });

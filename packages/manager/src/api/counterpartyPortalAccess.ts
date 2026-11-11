@@ -18,6 +18,7 @@ export interface ActivationCandidate {
     phone: string | null;
     officialEmail: string | null;
     linkedCustomerId: string | null;
+    portalReadiness: string;
 }
 
 // Must match server's CounterpartySortParameter; unsortable columns are left out on purpose.
@@ -52,15 +53,6 @@ export async function fetchActivationCandidates(
         },
     });
     return result.counterparties;
-}
-
-export function activationReadiness(
-    c: Pick<ActivationCandidate, 'isActive' | 'phone' | 'officialEmail' | 'linkedCustomerId'>,
-): 'ready' | 'missing-data' | 'erp-inactive' | 'activated' {
-    if (c.linkedCustomerId) return 'activated';
-    if (!c.isActive) return 'erp-inactive';
-    if (!c.phone || !c.officialEmail) return 'missing-data';
-    return 'ready';
 }
 
 const APPLY_CHANGES_MUTATION = /* GraphQL */ `

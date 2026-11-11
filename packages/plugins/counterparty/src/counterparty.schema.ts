@@ -28,6 +28,8 @@ export const adminApiSchema = gql`
         linkedCustomerId: ID
         "ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225"
         innStatus: String!
+        "ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies"
+        portalReadiness: String!
         departmentId: String
         branchId: String
         creditTermOverrideExtraDays: Int
@@ -101,7 +103,7 @@ export const adminApiSchema = gql`
         unassignedOnly: Boolean
         "missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225)"
         innStatus: String
-        "ready | missing-data | erp-inactive | activated — whether portal access can be switched on"
+        "ready | missing-data | inn-duplicate | erp-inactive | activated — whether portal access can be switched on"
         readiness: String
         "Filter builder conditions; fixed field whitelist, no regex, applied on top of the visibility scope"
         filter: CounterpartyFilterParameter
@@ -135,7 +137,7 @@ export const adminApiSchema = gql`
         unassignedOnly: Boolean
         "missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225)"
         innStatus: String
-        "ready | missing-data | erp-inactive | activated — whether portal access can be switched on"
+        "ready | missing-data | inn-duplicate | erp-inactive | activated — whether portal access can be switched on"
         readiness: String
     }
 

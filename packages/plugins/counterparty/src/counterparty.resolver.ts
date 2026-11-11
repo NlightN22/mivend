@@ -101,6 +101,14 @@ export class CounterpartyCustomerLinkResolver {
     ): Promise<string> {
         return this.counterpartyService.getInnStatus(ctx, counterparty);
     }
+
+    @ResolveField()
+    async portalReadiness(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string> {
+        return this.counterpartyService.getPortalReadiness(ctx, counterparty.id);
+    }
 }
 
 // phone and officialEmail show the chosen contact channels; the legacy columns are only a fallback.

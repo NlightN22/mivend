@@ -1,9 +1,9 @@
 import { adminApi } from './client';
 import { CounterpartyActivationCountsDocument } from './generated/graphql';
 import type { CounterpartyFilterParameter } from './generated/graphql';
-import type { activationReadiness } from './counterpartyPortalAccess';
+import type { Readiness } from '../components/bulk-operations/activationReadiness';
 
-export type ReadinessCounts = Record<ReturnType<typeof activationReadiness> | 'all', number>;
+export type ReadinessCounts = Record<Readiness | 'all', number>;
 
 export interface ReadinessCountBase {
     search?: string;
@@ -17,6 +17,7 @@ export async function fetchReadinessCounts(filters: ReadinessCountBase): Promise
         all: base,
         ready: { ...base, readiness: 'ready' },
         missing: { ...base, readiness: 'missing-data' },
+        duplicate: { ...base, readiness: 'inn-duplicate' },
         inactive: { ...base, readiness: 'erp-inactive' },
         activated: { ...base, readiness: 'activated' },
     });
@@ -24,6 +25,7 @@ export async function fetchReadinessCounts(filters: ReadinessCountBase): Promise
         all: result.all.totalItems,
         ready: result.ready.totalItems,
         'missing-data': result.missing.totalItems,
+        'inn-duplicate': result.duplicate.totalItems,
         'erp-inactive': result.inactive.totalItems,
         activated: result.activated.totalItems,
     };

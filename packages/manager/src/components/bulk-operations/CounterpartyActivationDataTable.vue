@@ -9,14 +9,18 @@ import {
     useDataTableState,
     type FilterChip,
 } from '@mivend/ui-kit';
-import { activationReadiness } from '../../api/counterpartyPortalAccess';
 import { ACTIVATION_VIEWS, BLANK_ACTIVATION_FILTERS } from '../../api/activationFilter';
 import type { ActivationCandidatesState } from '../../composables/useActivationCandidates';
 import type { TableViewState } from '../../composables/tableViewState';
 import ActivationQuickFilters from './ActivationQuickFilters.vue';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import { buildActivationColumns, DEFAULT_HIDDEN_COLUMNS } from './activationColumns';
-import { READINESS_BADGE_VARIANT, readinessText, type Readiness } from './activationReadiness';
+import {
+    READINESS_BADGE_VARIANT,
+    readinessOf,
+    readinessText,
+    type Readiness,
+} from './activationReadiness';
 import { ACTIVATION_SORT_FIELDS, sortFromState, sortToState } from './counterpartySort';
 
 // Rows of any readiness can be selected; the review step explains what will be skipped.
@@ -88,7 +92,7 @@ watch(
 
 const rows = computed(() =>
     list.items.value.map(c => {
-        const readiness = activationReadiness(c);
+        const readiness = readinessOf(c);
         return {
             id: c.id,
             shortName: c.shortName,
