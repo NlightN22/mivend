@@ -100,6 +100,7 @@ export class ContractService {
     }
 
     async findActiveForCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<Contract[]> {
+        // unbounded-ok: active customer contracts of one counterparty
         return this.connection.getRepository(ctx, Contract).find({
             where: { counterpartyId: String(counterpartyId), isActive: true },
             order: { name: 'ASC', erpId: 'ASC' },
@@ -111,6 +112,7 @@ export class ContractService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<Contract[]> {
+        // unbounded-ok: active customer contracts of one counterparty
         return this.connection.getRepository(ctx, Contract).find({
             where: {
                 counterpartyId: String(counterpartyId),

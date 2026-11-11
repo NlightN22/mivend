@@ -59,6 +59,7 @@ export class PriceTypeGapService {
         const contractIds = counterparties.flatMap(c =>
             c.mainContractId ? [c.mainContractId] : [],
         );
+        // unbounded-ok: contracts matched by the erp ids of one page of counterparties
         const contracts = contractIds.length
             ? await this.connection
                   .getRepository(ctx, Contract)

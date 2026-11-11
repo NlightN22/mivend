@@ -176,6 +176,7 @@ export class VisibilityGrantQueryService {
         if (!ctx.userHasPermissions([CustomPermission.ManageAccessControl.Permission])) {
             await this.restrictToCaller(ctx, qb);
         }
+        // unbounded-ok: visible subset of the grant ids passed in, ids only
         const rows = await qb.getRawMany<{ id: number }>();
         return new Set(rows.map(r => String(r.id)));
     }

@@ -42,7 +42,10 @@ export class CounterpartyBatchLoaders {
         return this.chosen.load(ctx, counterpartyId);
     }
 
-    portalReadiness(ctx: RequestContext, counterpartyId: string | number): Promise<PortalReadiness> {
+    portalReadiness(
+        ctx: RequestContext,
+        counterpartyId: string | number,
+    ): Promise<PortalReadiness> {
         return this.readiness.load(ctx, counterpartyId);
     }
 
@@ -65,6 +68,7 @@ export class CounterpartyBatchLoaders {
             .select('c.id')
             .where('c.id IN (:...ids)', { ids: keys });
         const visible = await applyCounterpartyVisibilityScope(this.accessScopeService, ctx, qb);
+        // unbounded-ok: visible subset of the counterparty ids passed in, ids only
         const seen = new Set((await visible.getMany()).map(row => String(row.id)));
         return keys.map(key => !seen.has(key));
     }
@@ -73,6 +77,7 @@ export class CounterpartyBatchLoaders {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<TradingPoint[][]> {
+        // unbounded-ok: trading points of the counterparties passed in, bounded by that list
         const rows = await this.connection.getRepository(ctx, TradingPoint).find({
             where: {
                 counterpartyId: In([...keys]),

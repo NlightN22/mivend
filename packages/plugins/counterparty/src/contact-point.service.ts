@@ -113,6 +113,7 @@ export class ContactPointService {
         ctx: RequestContext,
         counterpartyIds: readonly (number | string)[],
     ): Promise<Map<string, ChosenContact>> {
+        // unbounded-ok: contact channels of the counterparties passed in, bounded by that list
         const rows: Array<{ id: number } & ChosenContact> = await this.connection
             .getRepository(ctx, Counterparty)
             .query(
@@ -164,6 +165,7 @@ export class ContactPointService {
         const { entity, column, table } = LINKS[kind];
         const links = this.connection.getRepository(ctx, entity);
         const points = this.connection.getRepository(ctx, ContactPoint);
+        // unbounded-ok: contact point links of one owner
         const owned = await links.find({
             where: { [column]: ownerId } as unknown as FindOptionsWhere<ContactPointLink>,
             relations: { contactPoint: true },

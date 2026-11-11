@@ -22,6 +22,7 @@ export class CounterpartyTeamService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<CounterpartyTeamMember[]> {
+        // unbounded-ok: team members of one counterparty
         return this.connection.getRepository(ctx, CounterpartyTeamMember).find({
             where: { counterpartyId: String(counterpartyId) },
             order: { createdAt: 'ASC' },

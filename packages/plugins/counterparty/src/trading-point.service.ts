@@ -387,6 +387,7 @@ export class TradingPointService {
     // Shop API callers (customer self-service) must never see a trading point staff deactivated
     // — only Admin API (manager portal) needs inactive ones visible, so staff can reactivate them.
     async findByCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<TradingPoint[]> {
+        // unbounded-ok: trading points of one counterparty
         return this.connection.getRepository(ctx, TradingPoint).find({
             where: {
                 counterpartyId: String(counterpartyId),
@@ -503,6 +504,7 @@ export class TradingPointService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<TradingPoint[]> {
+        // unbounded-ok: active trading points of one counterparty
         return this.connection.getRepository(ctx, TradingPoint).find({
             where: {
                 counterpartyId: String(counterpartyId),
@@ -518,6 +520,7 @@ export class TradingPointService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<TradingPoint[]> {
+        // unbounded-ok: hidden trading points of one counterparty
         return this.connection.getRepository(ctx, TradingPoint).find({
             where: { counterpartyId: String(counterpartyId), customerStatus: 'hidden' },
             relations: ['contacts'],

@@ -167,6 +167,7 @@ export class CounterpartyService {
     }
 
     async findAll(ctx: RequestContext): Promise<Counterparty[]> {
+        // unbounded-ok: ERP-owned counterparty master list, no list-path callers
         return this.connection
             .getRepository(ctx, Counterparty)
             .find({ order: { shortName: 'ASC' } });
@@ -174,6 +175,7 @@ export class CounterpartyService {
 
     /** @deprecated Loads every visible row; use visibleIdsSql() as a subquery or findVisiblePage(). */
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
+        // unbounded-ok: TRACKED parallel-fix documents
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
 

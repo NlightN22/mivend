@@ -148,6 +148,7 @@ export class VisibilityGrantService {
     }
 
     private async assertLiveAdministrators(ctx: RequestContext, ids: string[]): Promise<void> {
+        // unbounded-ok: administrators matched by the ids passed in
         const live = await this.connection
             .getRepository(ctx, Administrator)
             .find({ where: ids.map(id => ({ id, deletedAt: IsNull() })), select: ['id'] });

@@ -163,6 +163,7 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
                 .createQueryBuilder('c')
                 .select('c.id', 'id')
                 .where('c.id IN (:...ids)', { ids: numeric.slice(i, i + ID_CHUNK) });
+            // unbounded-ok: ids selected from a chunk of ID_CHUNK ids passed in
             const rows = await (
                 await applyCounterpartyVisibilityScope(this.accessScope, ctx, qb)
             ).getRawMany<{ id: number }>();
