@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // Staff-edited legal-form abbreviations for the payment QR name; seeded at server start, not here.
-export class LegalNameAbbreviations1791552000000 implements MigrationInterface {
-    name = 'LegalNameAbbreviations1791552000000';
+export class LegalNameAbbreviations1791583000000 implements MigrationInterface {
+    name = 'LegalNameAbbreviations1791583000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // Staff-edited retention per notification source type; seeded at start and by the cleanup, not here.
-export class NotificationRetentionRules1791553000000 implements MigrationInterface {
-    name = 'NotificationRetentionRules1791553000000';
+export class NotificationRetentionRules1791584000000 implements MigrationInterface {
+    name = 'NotificationRetentionRules1791584000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

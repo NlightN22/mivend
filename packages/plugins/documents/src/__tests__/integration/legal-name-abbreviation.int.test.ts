@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DataSource } from 'typeorm';
+import { DataSource, PrimaryGeneratedColumn } from 'typeorm';
 import { UserInputError } from '@vendure/core';
 import type { ProcessContext } from '@vendure/core';
 import {
@@ -19,6 +19,9 @@ const { schema, extra } = testSchemaOptions('legal_name_abbreviation');
 let dataSource: DataSource;
 let service: LegalNameAbbreviationService;
 const ctx = testRequestContext;
+
+// VendureEntity's id column exists only after bootstrap registers an EntityIdStrategy.
+PrimaryGeneratedColumn()(LegalNameAbbreviation.prototype, 'id');
 
 beforeAll(async () => {
     await createTestSchema(schema);
