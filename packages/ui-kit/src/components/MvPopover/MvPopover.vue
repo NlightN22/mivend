@@ -122,13 +122,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
 
 .mv-popover__popper--glass {
     --el-bg-color-overlay: var(--app-glass-strong);
+    box-shadow:
+        inset 0 1px 0 var(--app-glass-edge),
+        0 12px 32px var(--app-ink-14) !important;
 }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
     .mv-popover__popper--glass {
-        --el-bg-color-overlay: var(--app-glass);
-        -webkit-backdrop-filter: var(--mv-glass-filter);
-        backdrop-filter: var(--mv-glass-filter);
+        --el-bg-color-overlay: var(--app-glass-liquid);
+        -webkit-backdrop-filter: var(--mv-glass-liquid-filter);
+        backdrop-filter: var(--mv-glass-liquid-filter);
     }
 }
 

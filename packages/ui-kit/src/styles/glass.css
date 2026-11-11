@@ -1,5 +1,6 @@
 :root {
     --mv-glass-filter: blur(14px) saturate(1.4);
+    --mv-glass-liquid-filter: blur(22px) saturate(1.7);
 }
 
 .mv-glass {
@@ -16,6 +17,26 @@
 
 @media (prefers-reduced-transparency: reduce) {
     .mv-glass {
+        background: var(--app-glass-strong);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+
+.mv-glass-liquid {
+    background: var(--app-glass-strong);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .mv-glass-liquid {
+        background: var(--app-glass-liquid);
+        -webkit-backdrop-filter: var(--mv-glass-liquid-filter);
+        backdrop-filter: var(--mv-glass-liquid-filter);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .mv-glass-liquid {
         background: var(--app-glass-strong);
         -webkit-backdrop-filter: none;
         backdrop-filter: none;

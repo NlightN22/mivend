@@ -38,7 +38,7 @@ const isMoreActive = computed(
 </script>
 
 <template>
-    <nav class="mv-app-mobile-nav mv-glass" aria-label="Primary mobile navigation">
+    <nav class="mv-app-mobile-nav mv-glass-liquid" aria-label="Primary mobile navigation">
         <RouterLink
             v-for="item in items.filter(i => i.key !== 'more')"
             :key="item.key"
@@ -91,7 +91,9 @@ const isMoreActive = computed(
         min-height: 62px;
         padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
         border-top: 1px solid var(--el-border-color);
-        box-shadow: 0 -8px 24px var(--app-ink-10);
+        box-shadow:
+            inset 0 1px 0 var(--app-glass-edge),
+            0 -8px 28px var(--app-ink-10);
     }
 }
 
@@ -101,7 +103,7 @@ const isMoreActive = computed(
     gap: 2px;
     border: 0;
     background: transparent;
-    color: var(--el-text-color-secondary, var(--app-text-grey));
+    color: var(--app-text-body2);
     text-decoration: none;
     font-size: 10px;
     font-weight: 700;

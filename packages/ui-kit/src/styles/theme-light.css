@@ -136,6 +136,8 @@
     --app-on-accent-soft: rgba(255, 255, 255, 0.25);
     --app-glass: rgba(255, 255, 255, 0.66);
     --app-glass-strong: rgba(255, 255, 255, 0.92);
+    --app-glass-liquid: rgba(255, 255, 255, 0.45);
+    --app-glass-edge: rgba(255, 255, 255, 0.85);
     --app-qr-bg: var(--palette-ink-0);
     --app-qr-fg: var(--palette-ink-900);
     --app-mix-dark: #000000;

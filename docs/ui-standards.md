@@ -71,12 +71,13 @@ and is shared by both portals; the choice is kept in `localStorage`, System foll
 
 ## Glass surfaces
 
-Frosted surfaces share one set: roles `--app-glass` / `--app-glass-strong` (light and dark in the theme files),
-`--mv-glass-filter` (`blur(14px) saturate(1.4)`) and the `.mv-glass` class in `packages/ui-kit/src/styles/glass.css`.
-The class is a translucent background plus the filter, with a solid `--app-glass-strong` fallback where
-`backdrop-filter` is unsupported and under `prefers-reduced-transparency`. Used by the storefront header and
-bottom bar, the manager bottom tab bar and its More sheet, and the user menu card (`MvPopover` prop `glass`); other
-popovers stay solid. Elements keep their own border and shadow.
+Two frosted sets in `packages/ui-kit/src/styles/glass.css`, roles in both theme files. `.mv-glass` (storefront header,
+bottom bar): `--app-glass` (alpha .66), `blur(14px) saturate(1.4)`. `.mv-glass-liquid` (manager bottom tab bar,
+its More sheet, the user menu card via `MvPopover` prop `glass`): `--app-glass-liquid` (alpha .45 light, .40 dark),
+`blur(22px) saturate(1.7)` (`--mv-glass-liquid-filter`), a 1px inset top highlight `--app-glass-edge` and a soft
+shadow. Both fall back to solid `--app-glass-strong` without `backdrop-filter` support and under
+`prefers-reduced-transparency`. Other popovers stay solid. Tab labels use `--app-text-body2` so they keep >=4.5:1
+(measured 7.7 light, 8.0 dark) over a dense list scrolled behind the bar.
 
 ## Exceptions
 

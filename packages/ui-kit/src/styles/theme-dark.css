@@ -138,6 +138,8 @@ html[data-theme='dark'] {
     --app-on-accent-soft: rgba(255, 255, 255, 0.25);
     --app-glass: rgba(20, 28, 37, 0.66);
     --app-glass-strong: rgba(20, 28, 37, 0.92);
+    --app-glass-liquid: rgba(20, 28, 37, 0.4);
+    --app-glass-edge: rgba(255, 255, 255, 0.16);
     --app-qr-bg: var(--palette-ink-0);
     --app-qr-fg: var(--palette-ink-900);
     --app-mix-dark: #ffffff;
