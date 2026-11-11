@@ -30,6 +30,8 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
             'await conn.query("SELECT count(*) FROM t");',
             'await conn.query("SELECT id FROM orders WHERE id = $1 FOR UPDATE", [id]);',
             'await conn.query("SELECT set_config($1, $2, true)");',
+            'await repo.find({ where: { erpId: In(erpIds) } });',
+            'await conn.query("WITH s AS (SELECT 1 FROM t) INSERT INTO u SELECT * FROM s");',
             'await conn.query("UPDATE t SET a = 1");',
             'stream.pipe(out); readable.stream();',
             '// unbounded-ok: registry table, at most a dozen rows by design\nawait repo.find({ where });',

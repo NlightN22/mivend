@@ -35,7 +35,7 @@ function receiverName(node) {
     return '';
 }
 
-const UNIQUE_KEYS = new Set(['id', 'uuid']);
+const UNIQUE_KEYS = new Set(['id', 'uuid', 'erpId']);
 
 function filtersByUniqueKey(objectNode) {
     const where = objectNode.properties.find(p => p.type === 'Property' && p.key.name === 'where');
@@ -155,6 +155,7 @@ export default {
                               ? arg.quasis.map(q => q.value.cooked).join(' ')
                               : '';
                     if (!/^\s*(select|with)\b/i.test(text) || /\blimit\b/i.test(text)) return;
+                    if (/\b(insert\s+into|update\s+\S+\s+set|delete\s+from)\b/i.test(text)) return;
                     if (!/\bfrom\b/i.test(text) || /\bwhere\s+"?id"?\s*=\s*\$\d/i.test(text))
                         return;
                     if (
