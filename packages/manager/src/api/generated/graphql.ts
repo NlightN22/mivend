@@ -4401,7 +4401,7 @@ export type Mutation = {
      */
     login: NativeAuthenticationResult;
     logout: Success;
-    createClientNotification: Notification;
+    createClientNotification: Maybe<Notification>;
     markNotificationRead: Notification;
     /**
      * Allows an Order to be modified after it has been completed by the Customer. The Order must first
@@ -12773,7 +12773,7 @@ export type CreateClientNotificationMutation = {
         resolvedAt: any | null;
         resolution: string | null;
         createdAt: any;
-    };
+    } | null;
 };
 
 export type MarkNotificationReadMutationVariables = Exact<{

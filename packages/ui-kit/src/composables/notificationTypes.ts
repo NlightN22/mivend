@@ -40,7 +40,7 @@ export interface NewNotification {
 
 export interface NotificationTransport {
     // Stores a popup the user just saw; the backend collapses an identical one sent within a minute.
-    create(input: NewNotification): Promise<NotificationItem>;
+    create(input: NewNotification): Promise<NotificationItem | null>;
     fetch(opts?: NotificationFetchOptions): Promise<NotificationPage>;
     subscribe(onReceived: (n: NotificationItem) => void): () => void;
     markRead(id: string): Promise<NotificationItem>;

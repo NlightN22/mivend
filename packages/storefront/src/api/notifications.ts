@@ -69,11 +69,11 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
-async function createNotification(input: NewNotification): Promise<NotificationItem> {
+async function createNotification(input: NewNotification): Promise<NotificationItem | null> {
     const result = await shopApi(CreateClientNotificationDocument, {
         input: { ...input, kind: input.kind as unknown as GeneratedNotificationKind },
     });
-    return toNotificationItem(result.createClientNotification);
+    return result.createClientNotification ? toNotificationItem(result.createClientNotification) : null;
 }
 
 export async function markNotificationRead(id: string): Promise<NotificationItem> {

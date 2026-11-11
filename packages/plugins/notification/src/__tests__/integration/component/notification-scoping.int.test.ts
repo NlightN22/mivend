@@ -564,4 +564,30 @@ describe('NotificationService.findForRecipient — search (component, real Postg
         expect(page.items).toHaveLength(0);
         expect(page.totalItems).toBe(0);
     });
+
+    it('treats % and _ in the term literally, not as wildcards', async () => {
+        for (const [n, title] of [
+            ['5', 'Discount 50% applied'],
+            ['6', 'Discount 500 applied'],
+        ]) {
+            await notificationService.create({} as never, {
+                recipientType: 'administrator',
+                recipientId: 'admin-search-3',
+                kind: 'info',
+                sourceType: 'stock.low',
+                sourceId: `search-${n}`,
+                title,
+                message: 'x',
+            });
+        }
+
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-search-3',
+            { search: '0%' },
+        );
+
+        expect(page.items.map(n => n.sourceId)).toEqual(['search-5']);
+    });
 });

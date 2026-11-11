@@ -106,9 +106,9 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
-async function createNotification(input: NewNotification): Promise<NotificationItem> {
+async function createNotification(input: NewNotification): Promise<NotificationItem | null> {
     const result = await adminApi(CreateClientNotificationDocument, { input });
-    return result.createClientNotification as NotificationItem;
+    return result.createClientNotification as NotificationItem | null;
 }
 
 export async function markNotificationRead(id: string): Promise<NotificationItem> {

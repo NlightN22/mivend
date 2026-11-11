@@ -61,12 +61,14 @@ export class NotificationRetentionRuleService implements OnApplicationBootstrap 
     }
 
     // A source type becomes a rule row (inheriting the default) the first time the cleanup sees it.
+    // Bounded to recent rows (indexed createdAt) so the hourly run never scans the whole table.
     async discoverTypes(ctx: RequestContext): Promise<void> {
         await ctxQuery(
             this.connection,
             ctx,
             `INSERT INTO notification_retention_rule (uuid, "sourceType")
-             SELECT gen_random_uuid(), s."sourceType" FROM (SELECT DISTINCT "sourceType" FROM notification) s
+             SELECT gen_random_uuid(), s."sourceType" FROM (SELECT DISTINCT "sourceType" FROM notification
+                   WHERE "createdAt" > now() - interval '2 days') s
              ON CONFLICT ("sourceType") DO NOTHING`,
         );
     }

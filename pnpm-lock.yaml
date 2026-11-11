@@ -1279,6 +1279,9 @@ importers:
       '@mivend/plugin-erp-order':
         specifier: workspace:*
         version: link:../erp-order
+      '@mivend/plugin-session-management':
+        specifier: workspace:*
+        version: link:../session-management
       graphql-subscriptions:
         specifier: ^3.0.0
         version: 3.0.0(graphql@16.14.2)

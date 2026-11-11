@@ -90,7 +90,9 @@ beforeAll(async () => {
     notifications = new NotificationService(mapped, {
         publish: async (_t: string, payload: unknown) => void published.push(payload),
     } as never);
-    service = new ClientNotificationService(mapped, notifications);
+    service = new ClientNotificationService(mapped, notifications, {
+        get: async () => null,
+    } as never);
     retention = new NotificationRetentionService(
         mapped,
         new NotificationRetentionRuleService(mapped, {} as never, {} as never),

@@ -18,7 +18,8 @@
         "graphql-subscriptions": "^3.0.0",
         "pg": "^8.11.0",
         "@mivend/plugin-access-control": "workspace:*",
-        "@mivend/plugin-erp-order": "workspace:*"
+        "@mivend/plugin-erp-order": "workspace:*",
+        "@mivend/plugin-session-management": "workspace:*"
     },
     "devDependencies": {
         "shared": "workspace:*",

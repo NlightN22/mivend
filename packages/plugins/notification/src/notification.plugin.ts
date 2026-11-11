@@ -1,5 +1,6 @@
 import { PluginCommonModule, RuntimeVendureConfig, VendurePlugin } from '@vendure/core';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationRetentionRule } from './entities/notification-retention-rule.entity';
@@ -19,7 +20,7 @@ import { shopApiExtensions } from './api/shop.schema';
 // This plugin owns only storage, the upsert-by-source rule, and the Admin/Shop API surface.
 // Producers calling NotificationService.create come in follow-up work; none exist yet.
 @VendurePlugin({
-    imports: [PluginCommonModule, ErpOrderPlugin],
+    imports: [PluginCommonModule, ErpOrderPlugin, SessionManagementPlugin],
     entities: [Notification, NotificationRetentionRule],
     providers: [
         NotificationService,

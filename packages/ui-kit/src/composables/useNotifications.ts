@@ -67,7 +67,9 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
     }
 
     async function record(input: NewNotification): Promise<void> {
-        upsert(await transport.create(input));
+        const created = await transport.create(input);
+        if (!created) return;
+        upsert(created);
         await refreshUnreadTotal();
     }
 

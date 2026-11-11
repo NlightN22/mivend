@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { getPageAndCount } from 'shared';
+import { getPageAndCount, likeTerm } from 'shared';
 import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, IsNull, Not } from 'typeorm';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -220,9 +220,7 @@ export class NotificationService {
         if (opts.search) {
             qb.andWhere(
                 '(notification.title ILIKE :search OR notification.message ILIKE :search)',
-                {
-                    search: `%${opts.search}%`,
-                },
+                { search: likeTerm(opts.search) },
             );
         }
 

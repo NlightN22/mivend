@@ -9,6 +9,7 @@
     "references": [
         { "path": "../../shared" },
         { "path": "../access-control" },
-        { "path": "../erp-order" }
+        { "path": "../erp-order" },
+        { "path": "../session-management" }
     ]
 }

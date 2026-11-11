@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { ActingContextService } from '@mivend/plugin-session-management';
 import { withAggregateLock } from 'shared';
 import type { SelectQueryBuilder } from 'typeorm';
 
@@ -16,11 +17,13 @@ import { NotificationService } from './notification.service';
 import type { NotificationRecipient } from './notification-recipient.service';
 
 // Persists a notification a portal shows as a popup (#348). The recipient is always the caller.
+// An acting-as-customer session stores nothing: the customer must not see the manager's popups.
 @Injectable()
 export class ClientNotificationService {
     constructor(
         private connection: TransactionalConnection,
         private notificationService: NotificationService,
+        private actingContext: ActingContextService,
     ) {}
 
     // The lock serializes one recipient's writes, so the duplicate check and the rate count read
@@ -29,7 +32,8 @@ export class ClientNotificationService {
         ctx: RequestContext,
         recipient: NotificationRecipient,
         raw: ClientNotificationInput,
-    ): Promise<Notification> {
+    ): Promise<Notification | null> {
+        if (await this.actingContext.get(ctx)) return null;
         const input = normalizeClientNotification(raw);
         const key = `client-notification:${recipient.recipientType}:${recipient.recipientId}`;
         return withAggregateLock(this.connection, ctx, key, async txCtx => {

@@ -12,6 +12,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { withAggregateLock } from 'shared';
 import { QueryFailedError } from 'typeorm';
 
 import { loggerCtx } from './constants';
@@ -48,7 +49,7 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
         }
     }
 
-    // Only into an empty table, so staff edits and deletions are never overwritten or resurrected piecemeal.
+    // Only into an empty table: the last row cannot be deleted, so staff edits are never overwritten.
     async provisionDefaults(ctx: RequestContext): Promise<number> {
         const repo = this.connection.getRepository(ctx, LegalNameAbbreviation);
         if ((await repo.count()) > 0) return 0;
@@ -78,6 +79,7 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
             .then(([items, totalItems]) => ({ items, totalItems }));
     }
 
+    // unbounded-ok: a few dozen staff-edited rows, loaded once per render
     async findRules(ctx: RequestContext): Promise<LegalNameAbbreviationRule[]> {
         const rows = await this.connection.getRepository(ctx, LegalNameAbbreviation).find();
         return rows.map(row => ({ phrase: row.phrase, abbreviation: row.abbreviation }));
@@ -115,8 +117,14 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
     }
 
     async delete(ctx: RequestContext, id: ID): Promise<void> {
-        const result = await this.connection.getRepository(ctx, LegalNameAbbreviation).delete(id);
-        if (!result.affected) throw new EntityNotFoundError('LegalNameAbbreviation', id);
+        await withAggregateLock(this.connection, ctx, 'legal-name-abbreviation:delete', async txCtx => {
+            const repo = this.connection.getRepository(txCtx, LegalNameAbbreviation);
+            if (!(await repo.findOne({ where: { id } })))
+                throw new EntityNotFoundError('LegalNameAbbreviation', id);
+            if ((await repo.count()) <= 1)
+                throw new UserInputError('The last abbreviation cannot be deleted; edit it instead');
+            await repo.delete(id);
+        });
     }
 
     private clean(input: LegalNameAbbreviationInput): LegalNameAbbreviationInput {

@@ -95,9 +95,25 @@ describe('LegalNameAbbreviationService (integration, real Postgres)', () => {
     });
 
     it('deletes a row and reports a missing one', async () => {
+        await service.create(ctx, { phrase: 'Союз', abbreviation: 'С' });
         const row = await service.create(ctx, { phrase: 'Фонд', abbreviation: 'Ф' });
         await service.delete(ctx, row.id);
         await expect(service.delete(ctx, row.id)).rejects.toThrow();
+    });
+
+    it('refuses to delete the last row so the table is never emptied by staff', async () => {
+        const row = await service.create(ctx, { phrase: 'Фонд', abbreviation: 'Ф' });
+        await expect(service.delete(ctx, row.id)).rejects.toBeInstanceOf(UserInputError);
+        expect(await dataSource.getRepository(LegalNameAbbreviation).count()).toBe(1);
+    });
+
+    it('lets concurrent deletes of the last two rows remove only one', async () => {
+        const [a, b] = [
+            await service.create(ctx, { phrase: 'Фонд', abbreviation: 'Ф' }),
+            await service.create(ctx, { phrase: 'Союз', abbreviation: 'С' }),
+        ];
+        await Promise.allSettled([service.delete(ctx, a.id), service.delete(ctx, b.id)]);
+        expect(await dataSource.getRepository(LegalNameAbbreviation).count()).toBe(1);
     });
 
     describe('provisionDefaults', () => {

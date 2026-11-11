@@ -1931,7 +1931,7 @@ export type Mutation = {
     login: NativeAuthenticationResult;
     /** End the current authenticated session */
     logout: Success;
-    createClientNotification: Notification;
+    createClientNotification?: Maybe<Notification>;
     markNotificationRead: Notification;
     payProformaInvoice: ProformaInvoice;
     /** Regenerate and send a verification token for a new Customer registration. Only applicable if `authOptions.requireVerification` is set to true. */
@@ -4717,7 +4717,7 @@ export type CreateClientNotificationMutationVariables = Exact<{
 }>;
 
 export type CreateClientNotificationMutation = {
-    createClientNotification: {
+    createClientNotification?: {
         id: string;
         kind: NotificationKind;
         sourceType: string;
@@ -4729,7 +4729,7 @@ export type CreateClientNotificationMutation = {
         resolvedAt?: any | null;
         resolution?: string | null;
         createdAt: any;
-    };
+    } | null;
 };
 
 export type MarkNotificationReadMutationVariables = Exact<{

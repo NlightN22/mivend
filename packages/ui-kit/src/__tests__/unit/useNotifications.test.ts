@@ -147,6 +147,19 @@ describe('useNotifications', () => {
         expect(unreadCount.value).toBe(1);
     });
 
+    it('notify() keeps the popup out of the list when the server stored nothing (null)', async () => {
+        const transport = makeTransport([]);
+        vi.mocked(transport.create).mockResolvedValueOnce(null);
+        const { notifications } = useNotifications(transport);
+        await flush();
+
+        notify('Could not save', 'error');
+        await flush();
+
+        expect(transport.create).toHaveBeenCalledTimes(1);
+        expect(notifications.value).toEqual([]);
+    });
+
     it('notify() with ephemeral shows the popup and stores nothing', async () => {
         const transport = makeTransport([]);
         useNotifications(transport);

@@ -25,8 +25,8 @@ export const shopApiExtensions: DocumentNode = gql`
     }
 
     extend type Mutation {
-        "Stores a popup the caller saw as their own notification; an identical one within a minute is returned, not duplicated (#348)."
-        createClientNotification(input: ClientNotificationInput!): Notification!
+        "Stores a popup the caller saw as their own notification; an identical one within a minute is returned, not duplicated. Null when nothing is stored (acting-as-customer session) (#348)."
+        createClientNotification(input: ClientNotificationInput!): Notification
         markNotificationRead(id: ID!): Notification!
         resolveNotification(id: ID!, resolution: String!): Notification!
     }

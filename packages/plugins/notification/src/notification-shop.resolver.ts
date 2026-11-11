@@ -62,7 +62,7 @@ export class NotificationShopResolver {
     async createClientNotification(
         @Ctx() ctx: RequestContext,
         @Args() args: { input: ClientNotificationInput },
-    ): Promise<Notification> {
+    ): Promise<Notification | null> {
         const recipient = await this.recipientService.getCurrentCustomer(ctx);
         if (!recipient) throw new ForbiddenError();
         return this.clientNotificationService.record(ctx, recipient, args.input);

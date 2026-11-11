@@ -10,6 +10,7 @@ export type NotificationStatus = 'unread' | 'read' | 'resolved';
 // Broadcast rows use recipientId = null and are never fanned out per admin (breaks upsert dedupe).
 @Entity()
 @Index(['sourceType', 'sourceId'])
+@Index(['createdAt'])
 export class Notification extends VendureEntity {
     constructor(input?: DeepPartial<Notification>) {
         super(input);

@@ -492,7 +492,8 @@ cells and only rows may break across pages (totals and signatures stay together)
   `LegalNameAbbreviation` rows (phrase to abbreviation, phrase unique case-insensitively, immutable `uuid`):
   case-insensitive whole-phrase match, longest phrase first (`abbreviateLegalName`), loaded once per render.
   Defaults (full forms of the common legal forms and the sole-proprietor form) are seeded at server start only
-  into an empty table, so staff edits are never overwritten; a table staff emptied is seeded again. Edit under
+  into an empty table, so staff edits are never overwritten; the last remaining row cannot be deleted, so
+  the table never becomes empty by staff action and defaults are not resurrected. Edit under
   Dashboard > Settings > "Legal name abbreviations" (`ReadSettings` to list, `UpdateSettings` to change). A
   payload still over 300 after shortening keeps the old behaviour: no QR and a warning.
 

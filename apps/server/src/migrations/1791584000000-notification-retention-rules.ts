@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // Staff-edited retention per notification source type; seeded at start and by the cleanup, not here.
+// The notification createdAt index bounds the hourly source-type discovery.
 export class NotificationRetentionRules1791584000000 implements MigrationInterface {
     name = 'NotificationRetentionRules1791584000000';
 
@@ -14,9 +15,13 @@ export class NotificationRetentionRules1791584000000 implements MigrationInterfa
         await queryRunner.query(
             `CREATE UNIQUE INDEX "IDX_2d3448dde84559a0947692c50a" ON "notification_retention_rule" ("sourceType")`,
         );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_b11a5e627c41d4dc3170f1d370" ON "notification" ("createdAt")`,
+        );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP INDEX "IDX_b11a5e627c41d4dc3170f1d370"`);
         await queryRunner.query(`DROP TABLE "notification_retention_rule"`);
     }
 }

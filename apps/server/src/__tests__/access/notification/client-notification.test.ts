@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
-import { DENIED, admin, customerToken, shop, staffToken } from '../harness/actors';
+import { DENIED, admin, customerToken, seed, shop, staffToken } from '../harness/actors';
+import { gql } from '../harness/graphql';
 
 const CREATE = `mutation($input: ClientNotificationInput!) {
     createClientNotification(input: $input) { id message status } }`;
+const ACTING = { 'x-acting-session': '1' };
 const LIST = `query($s: String!) { notifications(options: { search: $s, take: 100 }) {
     totalItems items { id message } } }`;
 const READ = `mutation($id: ID!) { markNotificationRead(id: $id) { id } }`;
@@ -67,5 +69,45 @@ describe('createClientNotification keeps each caller to their own rows', () => {
             input: { kind: 'info', message: 'x'.repeat(1001) },
         });
         expect(tooLong.errors.length).toBeGreaterThan(0);
+    });
+});
+
+describe('createClientNotification in an acting-as-customer session', () => {
+    it('stores nothing in the real customer bell and answers null', async () => {
+        const started = await admin<{ startActingSession: { ticket: string } }>(
+            await staffToken('superadmin'),
+            `mutation($c: ID!) { startActingSession(counterpartyId: $c) { ticket } }`,
+            { c: seed().counterparties['a-own'] },
+        );
+        expect(started.errors).toEqual([]);
+        const url = inject('accessBaseUrl');
+        const exchanged = await gql<{ exchangeActingTicket: { token: string } }>(
+            url,
+            'shop-api',
+            `mutation($t: String!) { exchangeActingTicket(ticket: $t) { token } }`,
+            { t: started.data!.startActingSession.ticket },
+            undefined,
+            ACTING,
+        );
+        expect(exchanged.errors).toEqual([]);
+        const token = exchanged.data!.exchangeActingTicket.token;
+        const actingMarker = `${marker}-acting`;
+        try {
+            const created = await gql<{ createClientNotification: unknown }>(
+                url,
+                'shop-api',
+                CREATE,
+                { input: { kind: 'error', title: '', message: actingMarker } },
+                token,
+                ACTING,
+            );
+            const listed = await gql<Listed>(url, 'shop-api', LIST, { s: actingMarker }, token, ACTING);
+
+            expect(created.errors).toEqual([]);
+            expect(created.data!.createClientNotification).toBeNull();
+            expect(listed.data!.notifications.totalItems).toBe(0);
+        } finally {
+            await gql(url, 'shop-api', `mutation { finishActingSession }`, {}, token, ACTING);
+        }
     });
 });
