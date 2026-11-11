@@ -68,3 +68,12 @@ export function fromCustomersUrlState(url: CustomersUrlState): {
         pageSize: pageSize > 0 ? pageSize : 20,
     };
 }
+
+// Filters with the URL's search applied, or null when it already matches (stops URL <-> state loops).
+export function withUrlSearch(
+    filters: CustomersListFilters,
+    urlSearch: unknown,
+): CustomersListFilters | null {
+    const search = typeof urlSearch === 'string' ? urlSearch : '';
+    return search === filters.search ? null : { ...filters, search };
+}

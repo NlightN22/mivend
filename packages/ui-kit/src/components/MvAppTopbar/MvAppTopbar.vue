@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
 // across every manager portal page. On phone: logo mark, search button, actions and a round avatar; search takes over the row.
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import { IconSearch } from '@tabler/icons-vue';
 import MvAppTopbarPhoneSearch from './MvAppTopbarPhoneSearch.vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
@@ -26,6 +27,10 @@ const emit = defineEmits<{ search: [value: string] }>();
 
 const menuOpen = ref(false);
 const searching = ref(false);
+const isPhone = useIsMobileViewport(800);
+watch(isPhone, phone => {
+    if (!phone) searching.value = false;
+});
 const searchButton = ref<HTMLButtonElement | null>(null);
 
 async function closeSearch(): Promise<void> {
