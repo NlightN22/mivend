@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { clearPersonalUiState } from '../composables/clearPersonalUiState';
+import { resetDocumentTypeCodes } from '../composables/useDocumentTypeCodes';
 import { adminApi } from '../api/client';
 import { fetchProviderSignOutUrl } from '../api/oidc';
 import {
@@ -143,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
         // Clear this admin's persisted table UI state so a shared machine never shows stale prefs.
         // Must run before administrator.value is cleared, since it needs the id.
         if (administrator.value) clearPersonalUiState(administrator.value.id);
+        resetDocumentTypeCodes();
         generation++;
         stopBackgroundRetry();
         stopHeartbeat();
