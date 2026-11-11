@@ -1,11 +1,29 @@
 // A read that can return every row of a table is a latent outage once the table grows.
 // Exception: `// unbounded-ok: <reason>` above the statement; see docs/testing-strategy.md.
 const READ_METHODS = new Set(['find', 'findBy', 'findAndCount', 'findAndCountBy']);
-const QB_TERMINALS = new Set(['getMany', 'getRawMany', 'getManyAndCount', 'getRawAndEntities', 'stream']);
+const QB_TERMINALS = new Set([
+    'getMany',
+    'getRawMany',
+    'getManyAndCount',
+    'getRawAndEntities',
+    'stream',
+]);
 const BOUNDING = new Set(['take', 'limit']);
-const QB_HINTS = new Set(['createQueryBuilder', 'where', 'andWhere', 'select', 'from', 'leftJoin', 'innerJoin', 'leftJoinAndSelect', 'innerJoinAndSelect', 'orderBy']);
+const QB_HINTS = new Set([
+    'createQueryBuilder',
+    'where',
+    'andWhere',
+    'select',
+    'from',
+    'leftJoin',
+    'innerJoin',
+    'leftJoinAndSelect',
+    'innerJoinAndSelect',
+    'orderBy',
+]);
 const REPO_NAME = /repo|repository|manager|connection|\bem\b/i;
-const PLACEHOLDERS = /^(todo|fixme|tbd|ok|n\/a|na|none|because|fine|needed|required|legacy|temp|wip|skip|ignore|\.+|-+)$/i;
+const PLACEHOLDERS =
+    /^(todo|fixme|tbd|ok|n\/a|na|none|because|fine|needed|required|legacy|temp|wip|skip|ignore|\.+|-+)$/i;
 const MARKER = /unbounded-ok:\s*([\s\S]*)$/;
 
 function receiverName(node) {
@@ -17,13 +35,27 @@ function receiverName(node) {
     return '';
 }
 
+const UNIQUE_KEYS = new Set(['id', 'uuid']);
+
+function filtersByUniqueKey(objectNode) {
+    const where = objectNode.properties.find(p => p.type === 'Property' && p.key.name === 'where');
+    return (
+        where?.value.type === 'ObjectExpression' &&
+        where.value.properties.some(p => p.type === 'Property' && UNIQUE_KEYS.has(p.key.name))
+    );
+}
+
 function hasTake(objectNode) {
-    return objectNode.properties.some(
-        p =>
-            p.type === 'SpreadElement' ||
-            (p.type === 'Property' &&
-                ((p.key.name === 'take' && !(p.value.type === 'Literal' && p.value.value === 0)) ||
-                    p.key.value === 'take')),
+    return (
+        filtersByUniqueKey(objectNode) ||
+        objectNode.properties.some(
+            p =>
+                p.type === 'SpreadElement' ||
+                (p.type === 'Property' &&
+                    ((p.key.name === 'take' &&
+                        !(p.value.type === 'Literal' && p.value.value === 0)) ||
+                        p.key.value === 'take')),
+        )
     );
 }
 
@@ -70,7 +102,10 @@ export default {
             while (current) {
                 if (current.type === 'AwaitExpression' || current.type === 'TSNonNullExpression') {
                     current = current.argument ?? current.expression;
-                } else if (current.type === 'CallExpression' && current.callee.type === 'MemberExpression') {
+                } else if (
+                    current.type === 'CallExpression' &&
+                    current.callee.type === 'MemberExpression'
+                ) {
                     names.push(current.callee.property.name);
                     current = current.callee.object;
                 } else break;
@@ -120,7 +155,15 @@ export default {
                               ? arg.quasis.map(q => q.value.cooked).join(' ')
                               : '';
                     if (!/^\s*(select|with)\b/i.test(text) || /\blimit\b/i.test(text)) return;
-                    if (/^\s*select\s+(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(text) && !/group\s+by/i.test(text)) return;
+                    if (!/\bfrom\b/i.test(text) || /\bwhere\s+"?id"?\s*=\s*\$\d/i.test(text))
+                        return;
+                    if (
+                        /^\s*select\s+(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(
+                            text,
+                        ) &&
+                        !/group\s+by/i.test(text)
+                    )
+                        return;
                     report(node, callee.property);
                     return;
                 }
@@ -129,14 +172,21 @@ export default {
                 const args = node.arguments;
                 const repoLike = REPO_NAME.test(receiverName(callee.object));
                 if (name === 'findBy' || name === 'findAndCountBy') {
+                    const arg = args[0];
+                    if (
+                        arg?.type === 'ObjectExpression' &&
+                        arg.properties.some(
+                            p => p.type === 'Property' && UNIQUE_KEYS.has(p.key.name),
+                        )
+                    )
+                        return;
                     if (repoLike || args.length) report(node, callee.property);
                     return;
                 }
                 if (!repoLike && !args.some(a => a.type === 'ObjectExpression')) return;
                 if (args.length && args[0].type === 'ArrowFunctionExpression') return;
                 if (args.length && args[0].type === 'FunctionExpression') return;
-                const options =
-                    args.length > 1 ? args[1] : args.length === 1 ? args[0] : undefined;
+                const options = args.length > 1 ? args[1] : args.length === 1 ? args[0] : undefined;
                 if (!repoLike && !(options && options.type === 'ObjectExpression')) return;
                 if (options && options.type === 'ObjectExpression' && hasTake(options)) return;
                 if (options && options.type !== 'ObjectExpression' && !repoLike) return;
