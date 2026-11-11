@@ -12,6 +12,8 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
     rule,
     {
         valid: [
+            'await ctxQuery(conn, ctx, "SELECT (SELECT a FROM t WHERE k = $1) AS a, (SELECT b FROM u WHERE k = $2) AS b");',
+            'await ctxQuery(conn, ctx, "SELECT id FROM t WHERE id = $1 AND x IN (SELECT y FROM u)", [a]);',
             'await ctxQuery(conn, ctx, "SELECT COALESCE(MAX(v), 0) + 1 AS v FROM t WHERE a = $1");',
             'await ctxQuery(conn, ctx, `SELECT id FROM t ${clause} ORDER BY id LIMIT $${n + 1} OFFSET $${n + 2}`);',
             'await ctxQuery(conn, ctx, "SELECT id FROM product p WHERE p.\\"customFieldsExternalid\\" = $1", [x]);',
@@ -54,6 +56,14 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
             '// unbounded-ok: one row per warehouse, tens at most\nconst rows = await this.repo\n    .createQueryBuilder("w")\n    .getMany();',
         ],
         invalid: [
+            {
+                code: 'await ctxQuery(conn, ctx, "SELECT id FROM t WHERE x IN (SELECT y FROM u WHERE id = $1)", [a]);',
+                errors: 1,
+            },
+            {
+                code: 'await ctxQuery(conn, ctx, "WITH k AS (SELECT id FROM u WHERE id = $1) SELECT * FROM t JOIN k ON true");',
+                errors: 1,
+            },
             { code: 'await ctxQuery(conn, ctx, "SELECT id FROM t WHERE a = $1", [a]);', errors: 1 },
             { code: 'await ctxQuery(conn, ctx, "SELECT id FROM t");', errors: 1 },
             {

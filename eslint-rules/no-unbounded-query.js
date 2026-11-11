@@ -1,6 +1,6 @@
 // A read that can return every row of a table is a latent outage once the table grows.
 // Exception: `// unbounded-ok: <reason>` above the statement; see docs/testing-strategy.md.
-// Not seen: raw SQL passed through anything but a literal, template or single-assignment variable.
+// Not seen: SQL from a helper/concatenation; a trailing ${fragment} after an identifier is assumed to be a limit.
 const READ_METHODS = new Set(['find', 'findBy', 'findAndCount', 'findAndCountBy']);
 const QB_TERMINALS = new Set([
     'getMany',
@@ -139,6 +139,20 @@ export default {
             return '';
         }
 
+        function withoutSubselects(text) {
+            const chars = [...text];
+            const open = [];
+            for (let i = 0; i < chars.length; i++) {
+                if (chars[i] === '(') open.push(i);
+                else if (chars[i] === ')' && open.length) {
+                    const from = open.pop();
+                    if (/\bselect\b/i.test(chars.slice(from, i).join('')))
+                        for (let j = from + 1; j < i; j++) chars[j] = ' ';
+                }
+            }
+            return chars.join('');
+        }
+
         function checkRaw(node, arg, nameNode) {
             const text = sqlText(arg);
             if (!/^\s*(select|with)\b/i.test(text)) return;
@@ -151,8 +165,8 @@ export default {
                 return;
             if (/[\w)"']\s+__x__$/i.test(tail)) return;
             if (/\b(insert\s+into|update\s+\S+(\s+\S+)?\s+set|delete\s+from)\b/i.test(text)) return;
-            if (!/\bfrom\b/i.test(text)) return;
-            if (UNIQUE_SQL_KEY.test(text)) return;
+            if (!/\bfrom\b/i.test(withoutSubselects(text))) return;
+            if (UNIQUE_SQL_KEY.test(withoutSubselects(text))) return;
             if (
                 /^\s*select\s+[(\s]*(?:select\s+)?(?:coalesce\(\s*)?(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(
                     text,

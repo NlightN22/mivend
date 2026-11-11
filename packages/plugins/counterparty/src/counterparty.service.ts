@@ -288,13 +288,12 @@ export class CounterpartyService {
 
     // Read-only: shows an existing link only; creating it is the separate activation mutation
     async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
-        // unbounded-ok: portal customers of one counterparty, only the first is used
         const result = await ctxQuery<Array<{ id: ID }>>(
             this.connection,
             ctx,
             `SELECT cu.id AS id FROM customer cu
              WHERE cu."customFieldsCounterpartyid"::text = $1 AND cu."deletedAt" IS NULL
-             ORDER BY cu.id`,
+             ORDER BY cu.id LIMIT 1`,
             [String(counterpartyId)],
         );
         return result[0]?.id ?? null;

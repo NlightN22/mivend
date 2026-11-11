@@ -253,12 +253,12 @@ export class CounterpartyPortalAccessService {
     }
 
     private async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
-        // unbounded-ok: portal customers of one counterparty, only the first is used
         const result = await ctxQuery<Array<{ id: ID }>>(
             this.connection,
             ctx,
             `SELECT cu.id AS id FROM customer cu
-             WHERE cu."customFieldsCounterpartyid"::text = $1 AND cu."deletedAt" IS NULL`,
+             WHERE cu."customFieldsCounterpartyid"::text = $1 AND cu."deletedAt" IS NULL
+             LIMIT 1`,
             [String(counterpartyId)],
         );
         return result[0]?.id ?? null;

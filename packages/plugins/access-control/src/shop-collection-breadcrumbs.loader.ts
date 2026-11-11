@@ -79,6 +79,7 @@ export class ShopCollectionBreadcrumbsLoader {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Map<string, string[]>> {
+        // unbounded-ok: ancestor chains of the collection ids passed in, depth capped by MAX_DEPTH
         const rows = await ctxQuery<Array<{ leaf: number; node: number }>>(
             this.connection,
             ctx,
