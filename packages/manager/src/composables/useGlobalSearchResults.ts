@@ -26,7 +26,9 @@ export function useGlobalSearchResults(query: Ref<string>) {
             settledTerm.value = r.value;
         },
     );
-    const runSoon = useDebouncedCallback((value: string) => void run(value), DEBOUNCE_MS);
+    const runSoon = useDebouncedCallback((value: string) => {
+        if (term.value === value) void run(value);
+    }, DEBOUNCE_MS);
 
     watch(term, value => {
         if (value.length < GLOBAL_SEARCH_MIN_CHARS) {
