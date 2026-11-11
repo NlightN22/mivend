@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-staff-search": "workspace:*",
         "@mivend/plugin-checks": "workspace:*",
         "@mivend/plugin-deferred-payment": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",

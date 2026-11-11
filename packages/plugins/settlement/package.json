@@ -23,6 +23,7 @@
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-staff-search": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@nestjs/graphql": "^13.0.0",
         "graphql": "^16.0.0",

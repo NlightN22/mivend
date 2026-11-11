@@ -34,6 +34,7 @@
         { "path": "./two-factor" },
         { "path": "./oidc-sign-in" },
         { "path": "./saved-views" },
+        { "path": "./staff-search" },
         { "path": "./checks" },
         { "path": "./numbering" },
         { "path": "./change-journal" }

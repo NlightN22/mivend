@@ -47,6 +47,7 @@
         "@mivend/plugin-retro-bonus": "workspace:*",
         "@mivend/plugin-settlement": "workspace:*",
         "@mivend/plugin-saved-views": "workspace:*",
+        "@mivend/plugin-staff-search": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-acting-session": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",

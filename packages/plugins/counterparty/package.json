@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-staff-search": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-bulk-operations": "workspace:*",
         "@mivend/plugin-checks": "workspace:*",

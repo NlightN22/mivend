@@ -63,6 +63,7 @@ import {
     offlineTermsPaymentHandler,
 } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { ChangeJournalPlugin } from '@mivend/plugin-change-journal';
@@ -902,6 +903,7 @@ export const config: VendureConfig = {
         NotificationPlugin,
         MoqPlugin,
         SavedViewsPlugin,
+        StaffSearchPlugin,
         BulkOperationsPlugin,
         // After every plugin that registers a scheduled task: it labels their writes in the journal.
         ChangeJournalPlugin.init({}),

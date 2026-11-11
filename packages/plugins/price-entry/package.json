@@ -26,6 +26,7 @@
         "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-staff-search": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-checks": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",

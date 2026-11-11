@@ -182,6 +182,9 @@ importers:
       '@mivend/plugin-sign-in-protection':
         specifier: workspace:*
         version: link:../../packages/plugins/sign-in-protection
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../../packages/plugins/staff-search
       '@mivend/plugin-sync':
         specifier: workspace:*
         version: link:../../packages/plugins/sync
@@ -543,6 +546,9 @@ importers:
       '@mivend/plugin-numbering':
         specifier: workspace:*
         version: link:../numbering
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../staff-search
       '@mivend/plugin-sync':
         specifier: workspace:*
         version: link:../sync
@@ -801,6 +807,9 @@ importers:
       '@mivend/plugin-session-management':
         specifier: workspace:*
         version: link:../session-management
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../staff-search
       '@mivend/plugin-versioning':
         specifier: workspace:*
         version: link:../versioning
@@ -1174,6 +1183,9 @@ importers:
       '@mivend/plugin-session-management':
         specifier: workspace:*
         version: link:../session-management
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../staff-search
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
@@ -1525,6 +1537,9 @@ importers:
       '@mivend/plugin-reservation':
         specifier: workspace:*
         version: link:../reservation
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../staff-search
       dataloader:
         specifier: 2.2.3
         version: 2.2.3
@@ -1807,6 +1822,9 @@ importers:
       '@mivend/plugin-counterparty':
         specifier: workspace:*
         version: link:../counterparty
+      '@mivend/plugin-staff-search':
+        specifier: workspace:*
+        version: link:../staff-search
       '@nestjs/graphql':
         specifier: ^13.0.0
         version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
@@ -1840,6 +1858,40 @@ importers:
         version: 4.1.9(@types/node@20.19.43)(jsdom@31.0.0)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/plugins/sign-in-protection:
+    dependencies:
+      graphql-tag:
+        specifier: ^2.12.6
+        version: 2.12.7(graphql@16.14.2)
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
+    devDependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+      '@nestjs/graphql':
+        specifier: ^13.0.0
+        version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
+      '@vendure/common':
+        specifier: ^3.7.3
+        version: 3.7.3
+      '@vendure/core':
+        specifier: ^3.7.3
+        version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+      graphql:
+        specifier: ^16.0.0
+        version: 16.14.2
+      typeorm:
+        specifier: ^0.3.0
+        version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.9(@types/node@20.19.43)(jsdom@31.0.0)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/plugins/staff-search:
     dependencies:
       graphql-tag:
         specifier: ^2.12.6
