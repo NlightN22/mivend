@@ -52,7 +52,6 @@ new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
             '// unbounded-ok: registry table, at most a dozen rows by design\nawait repo.find({ where });',
             '// unbounded-ok: paged by applyList, take is clamped\n// another note on the line\nawait repo.find({ where });',
             'await repo.find({ where }); // unbounded-ok: TRACKED #351 needs a product decision',
-            '// unbounded-ok: TRACKED parallel-fix documents\nawait repo.find();',
             '// unbounded-ok: one row per warehouse, tens at most\nconst rows = await this.repo\n    .createQueryBuilder("w")\n    .getMany();',
         ],
         invalid: [

@@ -65,7 +65,6 @@ function hasTake(objectNode) {
 function reasonProblem(raw) {
     const reason = raw.replace(/\*\/\s*$/, '').trim();
     if (/^TRACKED\s+#\d+\s+\S+/.test(reason)) return null;
-    if (/^TRACKED parallel-fix documents$/.test(reason)) return null;
     if (PLACEHOLDERS.test(reason) || reason.split(/\s+/).length < 3 || reason.length < 15)
         return 'unbounded-ok needs a specific reason naming the bound (at least 3 words)';
     return null;

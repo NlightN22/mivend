@@ -175,7 +175,7 @@ export class CounterpartyService {
 
     /** @deprecated Loads every visible row; use visibleIdsSql() as a subquery or findVisiblePage(). */
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
-        // unbounded-ok: TRACKED parallel-fix documents
+        // unbounded-ok: deprecated, scoped by visibility; list paths use findVisiblePage()
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
 
