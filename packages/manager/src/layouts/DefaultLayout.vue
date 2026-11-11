@@ -95,7 +95,6 @@ function handleRelogin(): void {
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"
             search-placeholder="Search customers, orders, documents, products, VIN, OEM, phone…"
-            @logout="handleLogout"
         >
             <template #actions>
                 <MvNotificationBell

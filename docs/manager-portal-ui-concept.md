@@ -182,7 +182,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
 | Analytics | placeholder | not implemented yet |
 | System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, renamed System settings; the security page (password, two-factor) is also linked from the user menu |
-| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built with "Account settings" (password and two-factor sign-in, the existing security page) and Log out; profile, language and theme switch not built yet (no dark theme) |
+| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built: "Account settings" (password and two-factor sign-in), theme switch (Light / Dark / System, kept per browser) and Log out as the last item; no separate Log out button in the header; profile and language not built (the manager has no i18n) |
 
 The Catalog item is removed from the portal (see principles).
 

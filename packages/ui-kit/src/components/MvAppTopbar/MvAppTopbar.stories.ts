@@ -27,7 +27,7 @@ export const Default: Story = {
     render: args => ({
         components: { MvAppTopbar },
         setup: () => ({ args }),
-        template: '<MvAppTopbar v-bind="args" @logout="() => {}" />',
+        template: '<MvAppTopbar v-bind="args" />',
     }),
 };
 
@@ -36,7 +36,7 @@ export const WithActionsSlot: Story = {
         components: { MvAppTopbar, MvButton },
         setup: () => ({ args }),
         template: `
-      <MvAppTopbar v-bind="args" @logout="() => {}">
+      <MvAppTopbar v-bind="args">
         <template #actions><MvButton size="sm" variant="secondary">Sync now</MvButton></template>
       </MvAppTopbar>
     `,
@@ -48,6 +48,6 @@ export const NoRole: Story = {
     render: args => ({
         components: { MvAppTopbar },
         setup: () => ({ args }),
-        template: '<MvAppTopbar v-bind="args" @logout="() => {}" />',
+        template: '<MvAppTopbar v-bind="args" />',
     }),
 };

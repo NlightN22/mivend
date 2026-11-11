@@ -49,6 +49,14 @@ Structure and rules: `frontend-rules` skill, "Colors, tokens and themes". Palett
 `make lint` (stylelint) rejects any color literal or `--palette-*` reference in storefront and ui-kit
 components. The manager portal is not migrated yet and is outside that lint (#320).
 
+## User menu and theme
+
+The topbar has no separate Log out button. The user pill opens one menu (`role=menu`): account settings
+links, the theme choice (`menuitemradio`: Light / Dark / System, current one checked) and Log out as the
+last, separated item. Up/Down move focus, Escape closes. At phone width the pill shrinks to the avatar.
+The theme logic (`initTheme`, `setThemePreference`, `themePreference`) lives in `packages/ui-kit/src/theme`
+and is shared by both portals; the choice is kept in `localStorage`, System follows `prefers-color-scheme`.
+
 ## Exceptions
 
 Colors written outside the template, each approved by the user after the two-step question. Empty by default.

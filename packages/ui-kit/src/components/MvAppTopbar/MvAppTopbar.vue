@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Backoffice topbar shell (logo + global search placeholder + user pill + logout) — shared
+// Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
 // across every manager portal page, see docs/ai/manager-portal-pages/00-shared-conventions.md.
 import { ref } from 'vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
@@ -20,7 +20,6 @@ withDefaults(
     },
 );
 
-const emit = defineEmits<{ logout: [] }>();
 const menuOpen = ref(false);
 </script>
 
@@ -51,6 +50,7 @@ const menuOpen = ref(false);
                     class="mv-app-topbar__user"
                     type="button"
                     aria-haspopup="menu"
+                    :aria-label="userName"
                     :aria-expanded="menuOpen"
                 >
                     <span class="mv-app-topbar__avatar">{{ userInitials }}</span>
@@ -60,11 +60,10 @@ const menuOpen = ref(false);
                     </span>
                 </button>
             </template>
-            <div role="menu" @click="menuOpen = false">
+            <div @click="menuOpen = false">
                 <slot name="user-menu" />
             </div>
         </MvPopover>
-        <button class="mv-app-topbar__logout" type="button" @click="emit('logout')">Log out</button>
     </header>
 </template>
 
@@ -167,20 +166,6 @@ const menuOpen = ref(false);
     flex-shrink: 0;
 }
 
-.mv-app-topbar__logout {
-    background: none;
-    border: 1px solid var(--el-border-color);
-    color: var(--el-text-color-primary);
-    border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.mv-app-topbar__logout:hover {
-    background: var(--el-fill-color-light);
-}
-
 @media (max-width: 800px) {
     .mv-app-topbar {
         height: auto;
@@ -193,9 +178,15 @@ const menuOpen = ref(false);
         max-width: none;
     }
 
-    .mv-app-topbar__actions,
-    .mv-app-topbar__user,
-    .mv-app-topbar__logout {
+    .mv-app-topbar__actions {
+        display: none;
+    }
+
+    .mv-app-topbar__user {
+        padding: 2px;
+    }
+
+    .mv-app-topbar__user-text {
         display: none;
     }
 }

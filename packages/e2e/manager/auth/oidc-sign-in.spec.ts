@@ -122,7 +122,8 @@ test.describe('Manager sign-in through the corporate account', () => {
         const before = (await (await request.get(`${MOCK_URL}/_state`)).json()) as ProviderState;
         expect(before.providerSession).toBe(true);
 
-        await page.getByRole('button', { name: 'Log out', exact: true }).first().click();
+        await page.locator('.mv-app-topbar__user').click();
+        await page.getByRole('menuitem', { name: 'Log out', exact: true }).click();
         await page.waitForURL(url => url.pathname === '/login');
 
         const after = (await (await request.get(`${MOCK_URL}/_state`)).json()) as ProviderState;

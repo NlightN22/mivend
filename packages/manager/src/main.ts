@@ -4,6 +4,7 @@ import ElementPlus from 'element-plus';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import PrimeVue from 'primevue/config';
 import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
 import '@mivend/ui-kit/src/styles/tokens.css';
 import { mivendPrimeVuePreset } from './primevue-preset';
 
@@ -20,12 +21,14 @@ import {
     MvBreadcrumbs,
     layers,
     reloadOnStaleChunk,
+    initTheme,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
 import { router } from './router';
 
 reloadOnStaleChunk();
+initTheme();
 
 const app = createApp(App);
 
