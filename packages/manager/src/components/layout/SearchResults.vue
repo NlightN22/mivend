@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { SearchGroup, SearchHit } from '../../api/globalSearch';
-import { humanize, searchHitKey as resultKey, searchKindLabel } from '../../utils/searchTarget';
-import { documentTypeVariant } from '../../utils/documentTypeVariant';
+import { searchHitKey as resultKey, searchKindLabel } from '../../utils/searchTarget';
+import { searchStatusBadge } from '../../utils/searchStatusBadge';
 
 defineProps<{ groups: SearchGroup[]; activeKey: string | null }>();
 defineEmits<{ select: [kind: string, hit: SearchHit] }>();
@@ -36,8 +36,11 @@ defineEmits<{ select: [kind: string, hit: SearchHit] }>();
                     </span>
                     <span v-if="hit.subtitle" class="search-results__sub">{{ hit.subtitle }}</span>
                 </span>
-                <MvStatusBadge v-if="hit.status" :variant="documentTypeVariant(hit.status)">
-                    {{ humanize(hit.status) }}
+                <MvStatusBadge
+                    v-if="hit.status"
+                    :variant="searchStatusBadge(group.kind, hit.status).variant"
+                >
+                    {{ searchStatusBadge(group.kind, hit.status).label }}
                 </MvStatusBadge>
             </button>
         </section>
