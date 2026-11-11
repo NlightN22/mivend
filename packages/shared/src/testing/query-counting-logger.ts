@@ -1,10 +1,11 @@
 export interface QueryCounter {
     count: number;
+    queries?: string[];
 }
 
-// TypeORM `logger` option that only counts executed queries, for "query count does not grow with rows" tests.
+// TypeORM `logger` option that counts executed queries (and keeps their text when `queries` is set), for "query count does not grow with rows" tests.
 export function queryCountingLogger(counter: QueryCounter): {
-    logQuery: () => void;
+    logQuery: (sql: string) => void;
     logQueryError: () => void;
     logQuerySlow: () => void;
     logSchemaBuild: () => void;
@@ -13,8 +14,9 @@ export function queryCountingLogger(counter: QueryCounter): {
 } {
     const noop = (): void => undefined;
     return {
-        logQuery: () => {
+        logQuery: sql => {
             counter.count++;
+            counter.queries?.push(sql);
         },
         logQueryError: noop,
         logQuerySlow: noop,

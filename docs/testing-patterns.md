@@ -386,6 +386,24 @@ SQL actually issued; one integration case per list only when its scope clauses c
 
 **Exceptions**: a bounded internal scan never paged by a client, with the reason in the disable comment.
 
+## List paths stay within a row budget
+
+**Applies to**: any list, picker, loader or background read over a table that grows with business volume.
+
+**Risk**: a read without `take`/`LIMIT` passes every test on a handful of seed rows and hangs the server once the table holds tens of thousands (a counterparty list did exactly that). The `bounded/no-unbounded-query` lint rule catches the shapes it can see; this pattern catches the rest.
+
+**Minimum scenarios**: seed more rows than the page or budget, call the service with a `take`, assert the rows returned are within it, and assert no captured `SELECT` on the table lacks a `LIMIT`.
+
+**Preferred level**: integration on real Postgres (the SQL actually issued matters).
+
+**Required assertions**: `expectRowBudget(result, take)` and `expectNoUnlimitedSelect(queries, 'table')` from `shared` (`packages/shared/src/testing/row-budget.ts`); capture the statements with `queryCountingLogger({ count: 0, queries })`.
+
+**Common false positive**: seeding fewer rows than `take`, which any unbounded read also passes.
+
+**mivend example**: `paginate-query.int.test.ts` (shared) and `payment-list-filter-sort.int.test.ts` (acquiring).
+
+**Exceptions**: reads with an `unbounded-ok` reason (see testing-strategy "Commands").
+
 ## Authorization and visibility
 
 **Applies to**: any query or mutation gated by role/scope.

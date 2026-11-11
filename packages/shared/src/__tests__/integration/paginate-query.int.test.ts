@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn, SelectQueryBuilder } from 'typeorm';
 
 import { getPageAndCount } from '../../paginate-query';
+import { expectNoUnlimitedSelect, expectRowBudget } from '../../testing/row-budget';
 import {
     createTestSchema,
     dropTestSchema,
@@ -73,6 +74,13 @@ describe('getPageAndCount (real Postgres)', () => {
         expect(selects).toHaveLength(1);
         expect(selects[0]).toMatch(/COUNT\(/i);
         expect(selects[0]).not.toMatch(/"label"/);
+    });
+
+    it('a client page stays within the requested row budget and never selects without LIMIT', async () => {
+        const page = await getPageAndCount(rows(), 5, 0);
+
+        expectRowBudget(page, 5);
+        expectNoUnlimitedSelect(queries, 'page_row');
     });
 
     it('take > 0 pages with skip and keeps the order', async () => {

@@ -7,6 +7,7 @@ import { Counterparty } from '@mivend/plugin-counterparty';
 import {
     createTestSchema,
     dropTestSchema,
+    expectRowBudget,
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
@@ -238,6 +239,7 @@ describe('payment list filter and sort (real Postgres)', () => {
         expect(await numbers({ filter, search: 'Alpha' })).toEqual([]);
         expect((await service.findVisible(ctx, { filter, take: 0 })).totalItems).toBe(2);
         const page = await service.findVisible(ctx, { filter, take: 1, skip: 1 });
+        expectRowBudget(page, 1);
         expect(page.totalItems).toBe(2);
         expect(page.items).toHaveLength(1);
     });
