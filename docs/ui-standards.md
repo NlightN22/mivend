@@ -57,11 +57,15 @@ desktop and phone): an identity block (initials, name, role, e-mail), "Password 
 Auto, current one checked; Auto follows the system), "System settings" for users who may open it, and Log out last,
 separated, in the danger role. Rows are 36px with small leading icons. Up/Down move focus (Left/Right inside the
 theme control), Escape closes. No language row until the manager has i18n.
-Desktop shows the menu in a dropdown; at <=640px `MvPopover` shows it as a bottom sheet.
+The menu is a dropdown card anchored under the avatar on desktop and on phone (`MvPopover` with `:sheet="false"`: arrow, dimmed page, 16px side gutters, max 340px); other popovers still become a bottom sheet at <=640px.
 Mobile header (<=800px): logo mark, a round search button, the notification bell and a round avatar button. The
-search button makes the field take over the whole header row (cross on the right closes it, Escape closes, auto-focus,
-Enter submits). Global search has no backend yet, so submit opens the Customers list with the text as its `search`
-URL param; there is no results overlay. Desktop keeps the full search field in the header.
+search button makes the field take over the whole header row (placeholder "Search customers…", cross closes, Escape
+closes, auto-focus, Enter submits) and a full-height panel covers the page with "Recent queries" (per user in
+`localStorage`, max 6, trimmed, de-duplicated, newest first, remove one / Clear; tapping one runs it) and "Quick links"
+(chips to the lists the user can open, taken from the nav items so permissions apply). Saved views cannot feed
+quick filters: they are fetched per list (`tableViews(pageKey)`), there is no cross-list query. Global search has no
+backend, so submit opens the Customers list with the text as its `search` URL param; no results list.
+Desktop keeps the full search field in the header.
 The theme logic (`initTheme`, `setThemePreference`, `themePreference`) lives in `packages/ui-kit/src/theme`
 and is shared by both portals; the choice is kept in `localStorage`, System follows `prefers-color-scheme`.
 

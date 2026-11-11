@@ -111,3 +111,37 @@ test('searching from the phone header while already on the customers list update
     await expect(page).toHaveURL(/\/customers\?.*search=alpha/);
     await expect(page.getByPlaceholder(/Company name/)).toHaveValue('alpha');
 });
+
+test('the phone search panel keeps recent queries and runs one @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/orders');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('searchbox').fill('alpha');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/search=alpha/);
+    await page.goto('/orders');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Quick links' })).toBeVisible();
+    await page.getByRole('button', { name: 'alpha', exact: true }).click();
+    await expect(page).toHaveURL(/\/customers\?.*search=alpha/);
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('button', { name: 'Clear' }).click();
+    await expect(page.getByRole('region', { name: 'Recent queries' })).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('searchbox')).toBeHidden();
+});
+
+test('the phone profile menu is a card under the avatar, not a bottom sheet @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/');
+    await page.locator('.mv-app-topbar__user').click();
+    const card = page.locator('.mv-popover__popper');
+    await expect(card).toBeVisible();
+    const box = await card.boundingBox();
+    expect(box?.y ?? 999).toBeLessThan(120);
+    expect(box?.width ?? 999).toBeLessThanOrEqual(360);
+});
