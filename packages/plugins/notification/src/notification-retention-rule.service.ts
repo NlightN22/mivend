@@ -85,7 +85,7 @@ export class NotificationRetentionRuleService implements OnApplicationBootstrap 
         ctx: RequestContext,
         options?: ListQueryOptions<NotificationRetentionRule>,
     ): Promise<PaginatedList<NotificationRetentionRule>> {
-        const qb = this.listQueryBuilder.build(NotificationRetentionRule, options, {
+        const qb = this.listQueryBuilder.build(NotificationRetentionRule, options ?? {}, {
             ctx,
             orderBy: { sourceType: 'ASC' },
         });

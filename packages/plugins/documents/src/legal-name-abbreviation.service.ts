@@ -73,7 +73,7 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
         ctx: RequestContext,
         options?: ListQueryOptions<LegalNameAbbreviation>,
     ): Promise<PaginatedList<LegalNameAbbreviation>> {
-        const qb = this.listQueryBuilder.build(LegalNameAbbreviation, options, {
+        const qb = this.listQueryBuilder.build(LegalNameAbbreviation, options ?? {}, {
             ctx,
             orderBy: { phrase: 'ASC' },
         });
