@@ -21,6 +21,7 @@ export class AdministratorSyncService {
         event: SyncEventByType<'administrator.created'> | SyncEventByType<'administrator.updated'>,
     ): Promise<void> {
         const { payload } = event;
+        // unbounded-ok: roles named in one synced administrator payload
         const roles = await this.connection.getRepository(ctx, Role).find({
             where: payload.roleCodes.map(code => ({ code })),
         });
