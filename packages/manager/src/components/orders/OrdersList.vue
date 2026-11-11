@@ -85,7 +85,6 @@ defineExpose({ filters: list.filters, applyFilters });
     >
         <template #view-chips>
             <MvFilterChips
-                scrollable
                 :chips="chips"
                 :active="list.filters.value.view"
                 @select="selectView"

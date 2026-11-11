@@ -176,7 +176,6 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
 
         <template #toolbar-start>
             <MvFilterChips
-                scrollable
                 :chips="chips"
                 :active="history.filters.value.view"
                 @select="update({ view: $event })"

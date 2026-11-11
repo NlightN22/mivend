@@ -156,7 +156,7 @@ bottom margin shifts the visible content off-center within it.
 - Chips carry `count` from one grouped `take: 0` query whose filters come from the same builder as the list
   (see `api/orders-counts.ts`); the most operational chip is first with `emphasis`. Chips replace KPI tiles
   and attention banners that show the same numbers.
-- Pass `scrollable` to `MvFilterChips` so chips become one scrolling row on a phone.
+- `MvFilterChips` needs no overflow prop: it keeps two rows and hides the rest behind `More N` on every viewport.
 - No default quick panel: row click opens the card, the identifying cell is a link. Give columns a `priority` (higher is kept) with `minWidth = width` for ones that must not truncate.
 - The default visible columns must fit the page at 1360px with no horizontal scroll; the rest start hidden.
 

@@ -1,4 +1,5 @@
 .mv-filter-chips {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -51,59 +52,21 @@
     color: var(--app-warn-bg);
 }
 
-.mv-filter-chips-wrap {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
+.mv-filter-chips {
     flex: 1 1 100%;
     min-width: 0;
+    align-items: center;
 }
 
-.mv-filter-chips-wrap > .mv-filter-chips {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.mv-filter-chips {
-    --mv-chips-clamp: 68px;
-}
-
-/* Two chip rows (2 x 30px + 8px gap); the rest is hidden until "More" or until a chip gets focus. */
-.mv-filter-chips--clamped {
-    max-height: var(--mv-chips-clamp);
-    overflow: hidden;
+/* Stays measurable (intrinsic width) but out of layout, paint and tab order. */
+.mv-filter-chip--overflow {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .mv-filter-chips__toggle {
     flex: none;
-    height: 30px;
-    padding: 0 12px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 999px;
-    background: var(--app-surface);
-    color: var(--el-text-color-regular);
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.mv-filter-chips__toggle:hover {
-    background: var(--el-fill-color-light);
-}
-
-/* Wraps on desktop; on a phone the row scrolls sideways instead of growing tall. */
-@media (max-width: 800px) {
-    .mv-filter-chips--scrollable {
-        flex-wrap: nowrap;
-        max-height: none;
-        overflow-x: auto;
-        max-width: 100%;
-        scrollbar-width: none;
-    }
-
-    .mv-filter-chips--scrollable .mv-filter-chip {
-        flex: none;
-    }
 }
 
 .mv-filter-chip:hover {

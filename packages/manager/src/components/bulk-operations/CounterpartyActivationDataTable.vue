@@ -194,7 +194,6 @@ function applyView(state: TableViewState): void {
             <ActivationQuickFilters :list="list" />
             <div class="activation-chips">
                 <MvFilterChips
-                    scrollable
                     :chips="chips"
                     :active="list.filters.value.view"
                     @select="list.filters.value = { ...list.filters.value, view: $event }"

@@ -104,7 +104,7 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
 
 Layout: the table takes the full page width; at a 1360px viewport the identifying columns fit without
 horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
-list and the chips are one horizontally scrolling row (`scrollable`).
+list; the chips behave the same as on desktop.
 
 ## Filter value suggestions
 
@@ -187,17 +187,17 @@ One scale for every `MvAdvancedDataTable` cell (classes in `AdvancedDataTableGri
 - Cells are middle-aligned; the default cell text clamps to two lines. Every column declares `width` (and `minWidth` for
   columns that must not shrink); the table is `table-layout: fixed` and reserves the scrollbar gutter, so columns stay put
   between pages and sorts. Skeleton rows use the list's `rowHeightPx`.
-- Chip rows wrap to at most two rows; a `More` button expands all rows and `Collapse` folds back, shown only when the chips overflow two rows (`MvFilterChips`); counts of 10,000 and
+- Chip rows take at most two rows on every viewport; chips that do not fit are hidden behind a `More N` button (N = hidden chips) that expands all of them, and `Collapse` at the end folds back (`MvFilterChips`, measured with a `ResizeObserver`; hidden chips stay measurable but out of layout and tab order); the selected chip is never hidden; counts of 10,000 and
   more are shown as `309.9k` with the exact value in the title. ERP-provided type names are shown as received.
 - Rows have one uniform height (`rowHeightPx`, 64px on the document lists; every cell has that as its minimum height,
   skeleton rows included). A cell never grows the row: several orders or flags show the first one plus a `mv-cell-more`
   `+N` with the full list in the title.
 - The toolbar keeps search, Filter, Views and column settings on one row (end group right-aligned); chips (`view-chips`
-  in `toolbar-start`) take their own full-width row below. Chip rows wrap to two rows with `More`/`Collapse`. The table never exceeds its
+  in `toolbar-start`) take their own full-width row below. Chip rows take two rows with `More N`/`Collapse`. The table never exceeds its
   parent, and the default visible columns must fit about 1090px of table width.
 - On a phone the table container reserves the bottom tab bar height.
 - The `+N` pill is `role="note"` with an `aria-label` and title listing the hidden items; the order card/detail shows the
-  same items. The `More`/`Collapse` button has `aria-expanded`; focusing a clipped chip or selecting one in a hidden row expands the row; on a phone the chips stay one horizontal row without the button; chip order follows the counts (largest first, then label), so chips may reorder when filters change; the selected chip has `aria-pressed`.
+  same items. The `More`/`Collapse` button has `aria-expanded`; the selected chip stays among the visible ones; chip order follows the counts (largest first, then label), so chips may reorder when filters change; the selected chip has `aria-pressed`.
 - Cells with buttons, inputs, selects or switches keep the table's 13px/18px defaults; wrap content in `mv-cell-raw` to
   reset the clamp, line height and font size where a control needs its own box.
 - A column that is empty for most rows (e.g. organization, proforma invoice on settlements) starts hidden.

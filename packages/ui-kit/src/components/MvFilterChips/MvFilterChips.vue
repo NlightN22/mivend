@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ref } from 'vue';
+import MvButton from '../MvButton/MvButton.vue';
+import { useChipsOverflow } from './useChipsOverflow';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
-// Quick-filter chip row; a `variant` chip mirrors its table badge colour, see docs/ui-standards.md.
+// Quick-filter chips: two rows at most, the rest behind More; see docs/ui-standards.md.
 export interface FilterChip {
     key: string;
     label: string;
@@ -17,107 +19,70 @@ export interface FilterChip {
     emphasis?: boolean;
 }
 
-// Chips wrap to at most two rows; "More" expands to all rows when they overflow.
-const props = withDefaults(
-    defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(),
-    {
-        scrollable: false,
-    },
-);
+const props = defineProps<{ chips: FilterChip[]; active: string }>();
 const row = ref<HTMLElement | null>(null);
+const toggle = ref<{ $el: HTMLElement } | null>(null);
 const expanded = ref(false);
-const overflows = ref(false);
-
-function clampPx(): number {
-    return row.value
-        ? parseFloat(getComputedStyle(row.value).getPropertyValue('--mv-chips-clamp'))
-        : 0;
-}
-function measure(): void {
-    if (row.value) overflows.value = row.value.scrollHeight > clampPx() + 1;
-}
-function revealActive(): void {
-    const chip = row.value?.querySelector<HTMLElement>('[data-active="true"]');
-    if (!chip || !row.value) return;
-    const bottom = chip.getBoundingClientRect().bottom - row.value.getBoundingClientRect().top;
-    if (bottom > clampPx() + 1) expanded.value = true;
-}
-let observer: ResizeObserver | undefined;
-onMounted(() => {
-    measure();
-    revealActive();
-    if (typeof ResizeObserver !== 'undefined' && row.value) {
-        observer = new ResizeObserver(measure);
-        observer.observe(row.value);
-    }
-});
-onBeforeUnmount(() => observer?.disconnect());
-watch(
-    () => [props.chips.length, props.active],
-    async () => {
-        await nextTick();
-        measure();
-        revealActive();
-    },
+const { visible, overflows, hiddenCount } = useChipsOverflow(
+    row,
+    toggle,
+    () => [props.chips.map(c => `${c.key}|${c.label}|${c.count}|${c.countLoading}`), props.active],
+    () => props.chips.findIndex(c => c.key === props.active),
 );
+function isHidden(index: number): boolean {
+    return !expanded.value && visible.value !== null && visible.value[index] === false;
+}
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-    <div class="mv-filter-chips-wrap">
-        <div
-            ref="row"
-            class="mv-filter-chips"
-            :class="{
-                'mv-filter-chips--scrollable': scrollable,
-                'mv-filter-chips--clamped': !expanded,
-            }"
-            @focusin="expanded = true"
-        >
-            <button
-                v-for="chip in chips"
-                :key="chip.key"
-                type="button"
-                class="mv-filter-chip"
-                :data-active="chip.key === active"
-                :aria-pressed="chip.key === active"
-                :class="[
-                    chip.variant ? `mv-filter-chip--${chip.variant}` : '',
-                    chip.key === active
-                        ? chip.variant
-                            ? 'mv-filter-chip--selected'
-                            : 'mv-filter-chip--active'
-                        : '',
-                ]"
-                @click="emit('select', chip.key)"
-            >
-                <span class="mv-filter-chip__label" :title="chip.label">{{ chip.label }}</span>
-                <span
-                    v-if="chip.countLoading"
-                    class="mv-filter-chip__count-skeleton"
-                    role="status"
-                    aria-label="Loading"
-                    data-testid="chip-count-skeleton"
-                    ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
-                /></span>
-                <span
-                    v-else-if="chip.count !== undefined"
-                    class="mv-filter-chip__count"
-                    :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
-                    :title="formatExactCount(chip.count)"
-                    >{{ formatCompactCount(chip.count) }}</span
-                >
-            </button>
-        </div>
+    <div ref="row" class="mv-filter-chips">
         <button
-            v-if="overflows"
+            v-for="(chip, index) in chips"
+            :key="chip.key"
             type="button"
+            class="mv-filter-chip"
+            :class="[
+                chip.variant ? `mv-filter-chip--${chip.variant}` : '',
+                chip.key === active
+                    ? chip.variant
+                        ? 'mv-filter-chip--selected'
+                        : 'mv-filter-chip--active'
+                    : '',
+                { 'mv-filter-chip--overflow': isHidden(index) },
+            ]"
+            :data-active="chip.key === active"
+            :aria-pressed="chip.key === active"
+            @click="emit('select', chip.key)"
+        >
+            <span class="mv-filter-chip__label" :title="chip.label">{{ chip.label }}</span>
+            <span
+                v-if="chip.countLoading"
+                class="mv-filter-chip__count-skeleton"
+                role="status"
+                aria-label="Loading"
+                data-testid="chip-count-skeleton"
+                ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
+            /></span>
+            <span
+                v-else-if="chip.count !== undefined"
+                class="mv-filter-chip__count"
+                :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
+                :title="formatExactCount(chip.count)"
+                >{{ formatCompactCount(chip.count) }}</span
+            >
+        </button>
+        <MvButton
+            v-if="overflows"
+            ref="toggle"
             class="mv-filter-chips__toggle"
+            variant="subtle"
+            size="sm"
             :aria-expanded="expanded"
             @click="expanded = !expanded"
         >
-            {{ expanded ? 'Collapse' : 'More' }}
-        </button>
+            {{ expanded ? 'Collapse' : `More ${hiddenCount}` }}
+        </MvButton>
     </div>
 </template>
 

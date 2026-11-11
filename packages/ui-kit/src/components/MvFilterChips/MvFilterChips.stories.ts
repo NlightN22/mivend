@@ -49,8 +49,7 @@ export const WithCounts: Story = {
             ];
             return { active, chips };
         },
-        template:
-            '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
+        template: '<MvFilterChips :chips="chips" :active="active" @select="active = $event" />',
     }),
 };
 
@@ -68,14 +67,21 @@ const MANY_CHIPS: FilterChip[] = [
 const manyTemplate = {
     components: { MvFilterChips },
     setup: () => ({ active: ref('awaiting'), chips: MANY_CHIPS }),
-    template:
-        '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
+    template: '<MvFilterChips :chips="chips" :active="active" @select="active = $event" />',
 };
 
 export const TwoRowsWithMore: Story = { render: () => manyTemplate };
 
-export const ScrollableScrollsOnPhone: Story = {
+export const TwoRowsWithMoreOnPhone: Story = {
     render: () => manyTemplate,
+    parameters: { viewport: { defaultViewport: 'mvMobile' } },
+};
+
+export const ActiveChipStaysVisible: Story = {
+    render: () => ({
+        ...manyTemplate,
+        setup: () => ({ active: ref('blocked'), chips: MANY_CHIPS }),
+    }),
     parameters: { viewport: { defaultViewport: 'mvMobile' } },
 };
 

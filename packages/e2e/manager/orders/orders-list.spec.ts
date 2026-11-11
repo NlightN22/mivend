@@ -46,18 +46,18 @@ test('status chips wrap to two rows, More reveals the rest and none overlaps @re
 }) => {
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto('/orders');
-    const chips = page.locator('.mv-filter-chip');
+    const chips = page.locator('.mv-filter-chip:visible');
     await expect(chips.first()).toBeVisible({ timeout: 15000 });
 
     const row = page.locator('.mv-filter-chips').first();
-    expect((await row.boundingBox())?.height ?? 0).toBeLessThanOrEqual(69);
+    expect((await row.boundingBox())?.height ?? 0).toBeLessThanOrEqual(72);
     const toggle = page.locator('.mv-filter-chips__toggle');
     if (await toggle.isVisible()) {
         await toggle.click();
         await expect(toggle).toHaveText('Collapse');
         await expect(chips.last()).toBeInViewport();
         await toggle.click();
-        await expect(toggle).toHaveText('More');
+        await expect(toggle).toHaveText(/^More \d+$/);
         await toggle.click();
     }
 
