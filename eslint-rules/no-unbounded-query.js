@@ -76,7 +76,8 @@ export default {
     },
     create(context) {
         const sourceCode = context.sourceCode;
-        const comments = sourceCode.getAllComments().filter(c => MARKER.test(c.value));
+        const allComments = sourceCode.getAllComments();
+        const comments = allComments.filter(c => MARKER.test(c.value));
 
         function isBoundedVariable(identifier) {
             let scope = sourceCode.getScope(identifier);
@@ -116,7 +117,11 @@ export default {
         function report(node, calleeProperty) {
             let stmt = node;
             while (stmt.parent && !/Statement|Declaration$/.test(stmt.type)) stmt = stmt.parent;
-            const first = Math.min(node.loc.start.line, stmt.loc.start.line) - 1;
+            let first = Math.min(node.loc.start.line, stmt.loc.start.line);
+            for (let c = allComments.find(x => x.loc.end.line === first - 1); c; ) {
+                first = c.loc.start.line;
+                c = allComments.find(x => x.loc.end.line === first - 1);
+            }
             const last = calleeProperty.loc.start.line;
             const marker = comments.find(c => c.loc.end.line >= first && c.loc.start.line <= last);
             if (!marker) {
