@@ -157,6 +157,16 @@ describe('toDiscountRows', () => {
         expect(customer(null)).toBe('All customers');
     });
 
+    it('marks a one-customer grant personal and any wider set as shared', () => {
+        const scope = (ids: string[] | null): string[] => {
+            const [r] = toDiscountRows([item({ counterpartyIds: ids })], new Map(), NOW);
+            return [r.scope, String(r.shared)];
+        };
+        expect(scope(['1'])).toEqual(['Personal', 'false']);
+        expect(scope(['1', '2'])).toEqual(['Shared with 1 more', 'true']);
+        expect(scope(null)).toEqual(['All customers', 'true']);
+    });
+
     it('renews only portal-origin rules and shows the product group or all products', () => {
         const [portal, erp] = toDiscountRows(
             [item({ facetValueCode: 'group-a' }), item({ approvalRequestId: null })],

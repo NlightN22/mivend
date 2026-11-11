@@ -42,10 +42,8 @@ const props = defineProps<{
     urlPrefix?: string;
 }>();
 
-// Nested under a customer, the customer column and filter are redundant.
-const COLUMNS = props.nested
-    ? DISCOUNTS_COLUMNS.filter(c => c.field !== 'customer')
-    : DISCOUNTS_COLUMNS;
+// Nested under a customer, the customer column is redundant; the scope column marks shared discounts.
+const COLUMNS = DISCOUNTS_COLUMNS.filter(c => c.field !== (props.nested ? 'customer' : 'scope'));
 
 const emit = defineEmits<{
     'update:filters': [filters: DiscountsListFilters];
@@ -279,6 +277,12 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
             <span class="mv-cell-primary" :title="(data as DiscountRow).customer">{{
                 (data as DiscountRow).customer
             }}</span>
+        </template>
+
+        <template #cell-scope="{ data }">
+            <MvStatusBadge :variant="(data as DiscountRow).shared ? 'info' : 'neutral'">{{
+                (data as DiscountRow).scope
+            }}</MvStatusBadge>
         </template>
 
         <template #cell-percent="{ data }">

@@ -43,6 +43,14 @@ export const DISCOUNTS_COLUMNS: AdvancedDataTableColumn[] = [
         filterOperators: [...TEXT_OPERATORS],
     },
     {
+        field: 'scope',
+        header: 'Applies to',
+        width: 150,
+        priority: 9,
+        minWidth: 130,
+        filterConfig: NOT_FILTERED,
+    },
+    {
         field: 'priceType',
         header: 'Price type',
         sortField: 'priceType',

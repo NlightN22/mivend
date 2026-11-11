@@ -11,6 +11,8 @@ export type DiscountRow = {
     number: string;
     createdAt: string;
     customer: string;
+    scope: string;
+    shared: boolean;
     priceType: string;
     productGroup: string;
     percent: number;
@@ -43,6 +45,12 @@ function customerLabel(ids: string[] | null, namesById: Map<string, string>): st
     return ids.map(id => namesById.get(id) ?? id).join(', ');
 }
 
+// Personal means exactly one customer; any other set (or company-wide) reaches other customers too.
+function scopeLabel(ids: string[] | null): string {
+    if (!ids || ids.length === 0) return 'All customers';
+    return ids.length === 1 ? 'Personal' : `Shared with ${ids.length - 1} more`;
+}
+
 // A portal rule's erpId is portal-<approval request id> (DiscountGrantService.decideAndApply).
 export function toDiscountRows(
     items: DiscountRegistryItem[],
@@ -56,6 +64,8 @@ export function toDiscountRows(
             number: item.number,
             createdAt: item.createdAt,
             customer: customerLabel(item.counterpartyIds, namesById),
+            scope: scopeLabel(item.counterpartyIds),
+            shared: (item.counterpartyIds?.length ?? 0) !== 1,
             priceType: item.priceTypeCode,
             productGroup: item.facetValueCode ?? 'All products',
             percent: item.percent,
