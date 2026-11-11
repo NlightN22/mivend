@@ -58,6 +58,7 @@ export class DiscountRegistryResolver {
     @Mutation()
     @Allow(CustomPermission.ManageApprovalWorkflows.Permission)
     async backfillDiscountRegistry(@Ctx() ctx: RequestContext): Promise<number> {
+        // unbounded-ok: one-off admin backfill mutation over the discount rule table
         const rules = await this.connection.getRepository(ctx, DiscountRule).find();
 
         // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.

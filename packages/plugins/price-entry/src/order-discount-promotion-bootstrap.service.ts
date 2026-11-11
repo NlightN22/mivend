@@ -30,6 +30,7 @@ export class OrderDiscountPromotionBootstrapService implements OnApplicationBoot
         if (this.processContext.isWorker) return;
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         await withAggregateLock(this.connection, ctx, 'order-discount-promotion', async txCtx => {
+            // unbounded-ok: startup lookup of the promotion table, a handful of promotions
             const promotions = await this.connection.getRepository(txCtx, Promotion).find();
             const existing = promotions.find(
                 p => !p.deletedAt && p.actions.some(a => a.code === ORDER_DISCOUNT_ACTION_CODE),

@@ -41,6 +41,7 @@ export async function activeGrantCounts(
 
     const [wide, rows] = await Promise.all([
         companyWide.getCount(),
+        // unbounded-ok: grouped by counterparty id of the ids passed in
         scoped.getRawMany<{ counterpartyId: string | number; count: string }>(),
     ]);
     for (const id of ids) counts.set(id, wide);

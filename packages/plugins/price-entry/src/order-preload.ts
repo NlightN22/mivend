@@ -104,6 +104,7 @@ export async function preloadOrderLookups(
 
     if (erpIds.size > 0) {
         const now = new Date();
+        // unbounded-ok: promo rules active now for the products of one order
         const rules = await connection
             .getRepository(ctx, DiscountRule)
             .createQueryBuilder('dr')

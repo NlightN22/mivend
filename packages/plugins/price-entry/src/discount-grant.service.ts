@@ -260,6 +260,7 @@ export class DiscountGrantService {
     ): Promise<DiscountGrant[]> {
         const now = new Date();
         const horizon = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+        // unbounded-ok: TRACKED #350 expiring grants inside the horizon are not capped
         return this.connection
             .getRepository(ctx, DiscountGrant)
             .createQueryBuilder('grant')

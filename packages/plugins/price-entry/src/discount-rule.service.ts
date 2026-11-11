@@ -89,6 +89,7 @@ export class DiscountRuleService {
     ): Promise<DiscountRule[]> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
         if (priceTypeCode) {
+            // unbounded-ok: TRACKED #350 rules of one price type are not capped
             return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
         }
         // Promo rules are excluded: this listing only shows facet/priceType-threshold rules.
@@ -148,6 +149,7 @@ export class DiscountRuleService {
         memo?: LookupMemo,
     ): Promise<DiscountRule[]> {
         return memoized(memo, `dr:${priceTypeCode}`, () =>
+            // unbounded-ok: rules active now for one price type
             this.connection
                 .getRepository(ctx, DiscountRule)
                 .createQueryBuilder('dr')
@@ -204,6 +206,7 @@ export class DiscountRuleService {
         if (rules.length === 0) return rules;
         const ruleIds = rules.map(r => String(r.id));
         const grants = await memoized(memo, `grants:${ruleIds.join(',')}`, () =>
+            // unbounded-ok: grants of the rule ids passed in, bounded by that list
             this.connection.getRepository(ctx, DiscountGrant).find({
                 where: { discountRuleId: In(ruleIds) },
                 relations: ['counterparties'],

@@ -56,6 +56,7 @@ export class OrderLineContextService {
             .getRepository(ctx, OrderLine)
             .find({ where: { id: In([...ids]) }, relations: ['order'] });
         const orderIds = [...new Set(lines.map(l => l.order.id))];
+        // unbounded-ok: lines of the orders passed in, a page of orders
         const siblings =
             orderIds.length > 0
                 ? await this.connection

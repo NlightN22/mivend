@@ -93,6 +93,7 @@ export class PromoDiscountRuleService {
     ): Promise<number | null> {
         if (quantityInOrderByProductErpId.size === 0) return null;
         const rules = await memoized(memo, `promo:${productErpId}`, () =>
+            // unbounded-ok: promo rules active now for one product
             this.connection
                 .getRepository(ctx, DiscountRule)
                 .createQueryBuilder('dr')
