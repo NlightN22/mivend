@@ -15,7 +15,7 @@ export
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
-        prod-up prod-init-storage prod-backup prod-restore-check prod-down \
+        prod-up prod-init-storage prod-backup prod-restore-check db-hot-queries prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
         seed-customer-detail seed-order-edit-states seed-order-flags seed-order-card-finance seed-order-card-states seed-all \
         verify-branch-scope \
@@ -372,6 +372,10 @@ prod-restore-check:
 	$(COMPOSE_PROD) exec -T postgres pg_restore -U "$$POSTGRES_USER" -d restore_check < $$f && \
 	$(COMPOSE_PROD) exec -T postgres psql -U "$$POSTGRES_USER" -d restore_check -tAc "select count(*) || ' tables restored' from information_schema.tables where table_schema='public'"; \
 	$(COMPOSE_PROD) exec -T postgres dropdb -U "$$POSTGRES_USER" restore_check
+
+# Read-only: heaviest statements from pg_stat_statements; PSQL=... targets another database (see the script).
+db-hot-queries:
+	infrastructure/scripts/pg-hot-queries.sh
 
 prod-down:
 	$(COMPOSE_PROD) down
