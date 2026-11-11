@@ -50,6 +50,7 @@ defineExpose({ focus: () => field.value?.focus() });
             :placeholder="placeholder"
             :aria-label="placeholder"
             @focus="open = true"
+            @input="open = true"
             @keydown="onKeydown"
         />
         <span class="search-box__shortcut" aria-hidden="true">Ctrl K</span>
