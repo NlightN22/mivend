@@ -29,12 +29,12 @@ test('the menu switches the theme, keeps it after reload and ends with Log out @
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await page.locator('.mv-app-topbar__user').click();
-    await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+    await page.getByRole('menuitemradio', { name: 'Dark', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.locator('.mv-app-topbar__user').click();
-    await expect(page.getByRole('menuitemradio', { name: 'Dark' })).toHaveAttribute(
+    await expect(page.getByRole('menuitemradio', { name: 'Dark', exact: true })).toHaveAttribute(
         'aria-checked',
         'true',
     );
@@ -73,4 +73,29 @@ test('the menu takes focus on open and moves with the arrow keys @on:manager-ope
     await expect(link).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('.mv-app-topbar__user')).toBeFocused();
+});
+
+test('the phone search button takes over the header row and the cross restores it @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    const field = page.getByRole('searchbox');
+    await expect(field).toBeFocused();
+    await expect(page.locator('.mv-app-topbar__user')).toBeHidden();
+    await page.getByRole('button', { name: 'Close search' }).click();
+    await expect(field).toBeHidden();
+    await expect(page.locator('.mv-app-topbar__user')).toBeVisible();
+});
+
+test('submitting the phone search opens the customers list with the text @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('searchbox').fill('alpha');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/customers\?.*search=alpha/);
 });
