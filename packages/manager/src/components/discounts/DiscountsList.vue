@@ -65,11 +65,7 @@ function clearFilters(): void {
         @renew="$emit('renew', $event)"
     >
         <template #view-chips>
-            <MvFilterChips
-                :chips="chips"
-                :active="list.filters.value.view"
-                @select="selectView"
-            />
+            <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
         </template>
     </DiscountsListTable>
 </template>

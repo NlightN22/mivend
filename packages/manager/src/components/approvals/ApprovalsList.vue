@@ -58,11 +58,7 @@ defineExpose({ filters: list.filters, applyFilters });
         @retry="list.reload"
     >
         <template #view-chips>
-            <MvFilterChips
-                :chips="chips"
-                :active="list.filters.value.view"
-                @select="selectView"
-            />
+            <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
         </template>
     </ApprovalsListTable>
 </template>

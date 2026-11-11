@@ -81,7 +81,8 @@ function toOptions(filters: TeamFilters, status: string): TeamDirectoryListOptio
             branchId: filters.branchId || undefined,
             roleCode: filters.roleCode || undefined,
             status: (status === 'all' || !status ? undefined : status) as
-                TeamMemberStatus | undefined,
+                | TeamMemberStatus
+                | undefined,
         },
     };
 }

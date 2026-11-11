@@ -28,12 +28,7 @@ fragment OrderListItemFields on Order {
 }
 
 query OrdersPage($list: OrderListInput, $managerId: ID, $customerId: ID, $search: String) {
-    visibleOrders(
-        list: $list
-        managerId: $managerId
-        customerId: $customerId
-        search: $search
-    ) {
+    visibleOrders(list: $list, managerId: $managerId, customerId: $customerId, search: $search) {
         totalItems
         items {
             ...OrderListItemFields

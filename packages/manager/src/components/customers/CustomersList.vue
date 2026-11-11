@@ -108,11 +108,7 @@ function exportCsv(): void {
         @export="exportCsv"
     >
         <template #view-chips>
-            <MvFilterChips
-                :chips="chips"
-                :active="list.filters.value.view"
-                @select="selectView"
-            />
+            <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
         </template>
     </CustomersListTable>
 </template>
