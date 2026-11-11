@@ -12,6 +12,8 @@ export function useChipsOverflow(
     const hiddenCount = ref(0);
     let toggleWidth = 0;
     let observer: ResizeObserver | undefined;
+    const observed = new Set<Element>();
+    let lastKey = '';
 
     function measure(): void {
         const el = row.value;
@@ -20,19 +22,33 @@ export function useChipsOverflow(
         const tw = toggle.value?.$el.offsetWidth;
         if (tw) toggleWidth = Math.max(toggleWidth, tw);
         const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
-        const fit = fitChips(
-            chips.map(c => c.offsetWidth),
-            activeIndex(),
-            el.clientWidth,
-            gap,
-            toggleWidth || 90,
-        );
+        const widths = chips.map(c => c.offsetWidth);
+        const active = activeIndex();
+        const key = `${widths.join(',')}|${el.clientWidth}|${gap}|${toggleWidth}|${active}`;
+        syncObserved([el, ...chips]);
+        if (key === lastKey) return;
+        lastKey = key;
+        const fit = fitChips(widths, active, el.clientWidth, gap, toggleWidth || 90);
         overflows.value = fit.overflows;
         visible.value = fit.visible;
         hiddenCount.value = fit.visible.filter(v => !v).length;
-        observer?.disconnect();
-        observer?.observe(el);
-        chips.forEach(c => observer?.observe(c));
+    }
+
+    function syncObserved(next: Element[]): void {
+        if (!observer) return;
+        const keep = new Set(next);
+        observed.forEach(e => {
+            if (!keep.has(e)) {
+                observer?.unobserve(e);
+                observed.delete(e);
+            }
+        });
+        next.forEach(e => {
+            if (!observed.has(e)) {
+                observer?.observe(e);
+                observed.add(e);
+            }
+        });
     }
 
     onMounted(() => {

@@ -19,4 +19,16 @@ describe('fitChips', () => {
         expect(fit.visible[4]).toBe(true);
         expect(fit.visible.filter(Boolean).length).toBeLessThan(5);
     });
+
+    it('keeps a hidden active chip in the middle', () => {
+        const fit = fitChips([100, 100, 100, 100, 100, 100], 2, 220, 8, 60);
+        expect(fit.visible[2]).toBe(true);
+        expect(fit.visible[5]).toBe(false);
+    });
+
+    it('handles a chip wider than the container', () => {
+        const fit = fitChips([260, 100, 100, 100], 0, 240, 8, 60);
+        expect(fit.overflows).toBe(true);
+        expect(fit.visible[0]).toBe(true);
+    });
 });
