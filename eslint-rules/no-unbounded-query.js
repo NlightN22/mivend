@@ -1,5 +1,6 @@
 // A read that can return every row of a table is a latent outage once the table grows.
 // Exception: `// unbounded-ok: <reason>` above the statement; see docs/testing-strategy.md.
+// Not seen: raw SQL passed through anything but a literal, template or single-assignment variable.
 const READ_METHODS = new Set(['find', 'findBy', 'findAndCount', 'findAndCountBy']);
 const QB_TERMINALS = new Set([
     'getMany',
@@ -114,6 +115,49 @@ export default {
             return { names, base: current };
         }
 
+        function sqlText(arg) {
+            if (!arg) return '';
+            if (arg.type === 'Literal' && typeof arg.value === 'string') return arg.value;
+            if (arg.type === 'TemplateLiteral')
+                return arg.quasis.map(q => q.value.cooked).join(' __x__ ');
+            if (arg.type !== 'Identifier') return '';
+            let scope = sourceCode.getScope(arg);
+            while (scope) {
+                const variable = scope.set.get(arg.name);
+                if (variable) {
+                    const defs = variable.defs;
+                    const init =
+                        defs.length === 1 && defs[0].type === 'Variable' ? defs[0].node.init : null;
+                    return init && variable.references.filter(r => r.isWrite()).length === 1
+                        ? sqlText(init)
+                        : '';
+                }
+                scope = scope.upper;
+            }
+            return '';
+        }
+
+        function checkRaw(node, arg, nameNode) {
+            const text = sqlText(arg);
+            if (!/^\s*(select|with)\b/i.test(text)) return;
+            const tail = text.replace(/[\s;]+$/, '');
+            if (
+                /\b(limit\s+\S+(\s+offset\s+\S+)?|fetch\s+first\s+.+)(\s+for\s+(update|share)(\s+(skip\s+locked|nowait))?)?$/i.test(
+                    tail,
+                )
+            )
+                return;
+            if (/[\w)"']\s+__x__$/i.test(tail)) return;
+            if (/\b(insert\s+into|update\s+\S+\s+set|delete\s+from)\b/i.test(text)) return;
+            if (!/\bfrom\b/i.test(text) || /\bwhere\s+"?id"?\s*=\s*\$\d/i.test(text)) return;
+            if (
+                /^\s*select\s+(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(text) &&
+                !/group\s+by/i.test(text)
+            )
+                return;
+            report(node, nameNode);
+        }
+
         function report(node, calleeProperty) {
             let stmt = node;
             while (stmt.parent && !/Statement|Declaration$/.test(stmt.type)) stmt = stmt.parent;
@@ -138,6 +182,10 @@ export default {
         return {
             CallExpression(node) {
                 const callee = node.callee;
+                if (callee.type === 'Identifier' && callee.name === 'ctxQuery') {
+                    checkRaw(node, node.arguments[2], callee);
+                    return;
+                }
                 if (callee.type !== 'MemberExpression' || callee.computed) return;
                 const name = callee.property.name;
 
@@ -152,25 +200,7 @@ export default {
                 }
 
                 if (name === 'query') {
-                    const arg = node.arguments[0];
-                    const text =
-                        arg && arg.type === 'Literal' && typeof arg.value === 'string'
-                            ? arg.value
-                            : arg && arg.type === 'TemplateLiteral'
-                              ? arg.quasis.map(q => q.value.cooked).join(' ')
-                              : '';
-                    if (!/^\s*(select|with)\b/i.test(text) || /\blimit\b/i.test(text)) return;
-                    if (/\b(insert\s+into|update\s+\S+\s+set|delete\s+from)\b/i.test(text)) return;
-                    if (!/\bfrom\b/i.test(text) || /\bwhere\s+"?id"?\s*=\s*\$\d/i.test(text))
-                        return;
-                    if (
-                        /^\s*select\s+(count|sum|max|min|avg|exists|1\b|pg_|now|current_)/i.test(
-                            text,
-                        ) &&
-                        !/group\s+by/i.test(text)
-                    )
-                        return;
-                    report(node, callee.property);
+                    checkRaw(node, node.arguments[0], callee.property);
                     return;
                 }
 
