@@ -114,7 +114,7 @@ table {
 
 th {
     text-align: left;
-    padding: 14px 16px;
+    padding: 14px 10px;
     color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 800;
@@ -123,13 +123,19 @@ th {
 }
 
 td {
-    padding: 12px 16px;
+    padding: 12px 10px;
     border-bottom: 1px solid var(--app-nav-border);
     vertical-align: middle;
 }
 
 tr:last-child td {
     border-bottom: 0;
+}
+
+.settlement-table :deep(.mv-document-type-chip) {
+    max-width: 168px;
+    white-space: normal;
+    line-height: 1.25;
 }
 
 .num {

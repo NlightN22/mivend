@@ -1,4 +1,5 @@
-// Positive opening balance = oldest debt, already overdue.
+// Every balance of the counterparty counts toward the total, whether or not its contract is known;
+// only balances of customer contracts are aged. Positive opening balance = oldest debt, already overdue.
 // Missing term means no due date, never an implicit zero.
 export const AGING_CTE = `
 bal AS (
@@ -6,11 +7,11 @@ bal AS (
         b."openingBalance" AS ob, b."closingBalance" AS cb, b.currency,
         CASE WHEN c."controlledIndividually" IS TRUE AND c."debtDaysLimit" > 0
             THEN c."debtDaysLimit" ELSE NULLIF(cp."paymentDelayDays", 0) END AS delay,
-        c.name AS cname
+        c.name AS cname, (c."isCustomerContract" IS TRUE) AS cust
     FROM settlement_balance b
-    JOIN contract c ON c.id::text = b."contractId" AND c."isCustomerContract" IS TRUE
-    JOIN counterparty cp ON cp.id::text = b."counterpartyId"
-    WHERE b."counterpartyId" = $1 AND NOT b."isDeleted" AND b."contractId" IS NOT NULL
+    LEFT JOIN contract c ON c.id::text = b."contractId"
+    LEFT JOIN counterparty cp ON cp.id::text = b."counterpartyId"
+    WHERE b."counterpartyId" = $1 AND NOT b."isDeleted"
 ),
 ent AS (
     SELECT e.id, bal.org, bal.ctr, d.date, e."amountMinor" AS amt,
@@ -18,7 +19,7 @@ ent AS (
     FROM settlement_document_entry e
     JOIN settlement_document d ON d.id = e."documentId" AND NOT d."isDeleted"
     JOIN bal ON bal.org = e."organizationErpId" AND bal.ctr = e."contractId"
-    WHERE e."counterpartyId" = $1 AND (bal.od IS NULL OR d.date >= bal.od)
+    WHERE e."counterpartyId" = $1 AND bal.cust AND (bal.od IS NULL OR d.date >= bal.od)
 ),
 credit AS (
     SELECT bal.org, bal.ctr,
@@ -31,7 +32,7 @@ lot AS (
     FROM ent WHERE ent.amt > 0
     UNION ALL
     SELECT NULL::int, bal.org, bal.ctr, bal.ob, to_timestamp(0), 0, COALESCE(bal.od, to_timestamp(0))
-    FROM bal WHERE bal.ob > 0
+    FROM bal WHERE bal.ob > 0 AND bal.cust
 ),
 aged AS (
     SELECT lot.id, lot.org, lot.ctr, lot.due,

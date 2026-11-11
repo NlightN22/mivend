@@ -386,11 +386,18 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(page.items.map(i => i.number)).toEqual(['3']);
     });
 
-    it('shows a customer-contract balance only and hides a non-customer one', async () => {
+    it('counts every balance of the counterparty, including a non-customer and an unknown contract', async () => {
         await balance('cp-1', 'ct-1', 0, 100);
         await balance('cp-1', 'ct-2', 0, 500);
+        await balance('cp-1', 'ct-unknown', 0, -300);
         const cards = await shop.balanceCards(ctx, '1');
-        expect(cards.map(c => c.contractId)).toEqual(['1']);
+        expect(cards.map(c => [c.contractId, c.currentBalance]).sort()).toEqual([
+            ['1', 100],
+            ['2', 500],
+            [null, -300],
+        ]);
+        expect(cards.reduce((sum, c) => sum + c.currentBalance, 0)).toBe(300);
+        expect(cards.find(c => c.contractId === '2')?.overdue).toBe(0);
     });
 
     it('shows an unknown reference category under other', async () => {
