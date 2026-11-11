@@ -110,6 +110,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `cart-totals` | dev | cart totals and discount invariants | `--project=storefront-cart-totals` |
 | `storefront-catalog` | dev | catalog, search, filters, category tree, product card | `--project=storefront storefront/catalog` |
 | `storefront-checkout-credit` | dev | checkout, credit limits | `--project=storefront storefront/checkout-credit` |
+| `storefront-checkout-no-point` | dev | checkout without a trading point | `--project=storefront storefront/checkout-no-point` |
 | `storefront-documents` | dev | customer documents | `--project=storefront storefront/documents` |
 | `storefront-favorites` | dev | favorites | `--project=storefront storefront/favorites` |
 | `storefront-home` | dev | home page | `--project=storefront storefront/home` |
