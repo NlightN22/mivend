@@ -134,4 +134,29 @@ html[data-theme='dark'] {
     --app-mix-dark: #ffffff;
     --app-shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.35);
     --app-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+    --app-cat-1-bg: var(--palette-teal-950);
+    --app-cat-1-fg: var(--palette-teal-300);
+    --app-cat-1-bd: var(--palette-teal-700);
+    --app-cat-2-bg: var(--palette-indigo-950);
+    --app-cat-2-fg: var(--palette-indigo-300);
+    --app-cat-2-bd: var(--palette-indigo-700);
+    --app-cat-3-bg: var(--palette-rose-950);
+    --app-cat-3-fg: var(--palette-rose-300);
+    --app-cat-3-bd: var(--palette-rose-700);
+    --app-cat-4-bg: var(--palette-orange-950);
+    --app-cat-4-fg: var(--palette-orange-300);
+    --app-cat-4-bd: var(--palette-orange-700);
+    --app-cat-5-bg: var(--palette-cyan-950);
+    --app-cat-5-fg: var(--palette-cyan-300);
+    --app-cat-5-bd: var(--palette-cyan-700);
+    --app-cat-6-bg: var(--palette-fuchsia-950);
+    --app-cat-6-fg: var(--palette-fuchsia-300);
+    --app-cat-6-bd: var(--palette-fuchsia-700);
+    --app-cat-7-bg: var(--palette-olive-950);
+    --app-cat-7-fg: var(--palette-olive-300);
+    --app-cat-7-bd: var(--palette-olive-700);
+    --app-cat-8-bg: var(--palette-stone-950);
+    --app-cat-8-fg: var(--palette-stone-300);
+    --app-cat-8-bd: var(--palette-stone-700);
 }

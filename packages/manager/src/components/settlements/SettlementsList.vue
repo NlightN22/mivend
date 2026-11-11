@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { documentTypeVariant } from '../../utils/documentTypeVariant';
 import { MvFilterChips, MvWarningBanner, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useSettlementsList } from '../../composables/useSettlementsList';
@@ -33,6 +34,7 @@ const chips = computed<FilterChip[]>(() => {
         ...(counts ?? []).map(c => ({
             key: c.documentType,
             label: c.label,
+            variant: documentTypeVariant(c.documentType),
             count: c.count,
             countLoading: loading,
         })),
@@ -78,11 +80,7 @@ function clearFilters(): void {
         @retry="list.reload"
     >
         <template #view-chips>
-            <MvFilterChips
-                :chips="chips"
-                :active="list.filters.value.view"
-                @select="selectView"
-            />
+            <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
         </template>
     </SettlementsListTable>
 </template>

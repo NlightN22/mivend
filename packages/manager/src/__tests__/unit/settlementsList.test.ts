@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { restoreSettlementsFilters } from '../../api/settlementsList';
+import { documentTypeVariant } from '../../utils/documentTypeVariant';
 import { conditionsToSettlementsFilter } from '../../api/settlementsFilter';
 import {
     SETTLEMENTS_URL_DEFAULTS,
@@ -93,7 +94,7 @@ describe('toSettlementRows', () => {
             number: 'A-1',
             customer: '—',
             type: 'Payment',
-            typeVariant: 'success',
+            typeVariant: documentTypeVariant(item.documentType),
             proformaInvoice: '',
             orderCodes: ['1000'],
         });

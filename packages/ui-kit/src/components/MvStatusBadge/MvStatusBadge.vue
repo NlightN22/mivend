@@ -1,7 +1,16 @@
 <script setup lang="ts">
 // Generic status pill for backoffice screens (order/approval/document statuses) — distinct
 // from MvStatusTag, whose variants are storefront product/cart states (in-stock, in-cart, ...).
-export type StatusBadgeVariant = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+import type { CategoricalVariant } from './categoricalVariants';
+
+// cat-N are meaning-free categorical hues, for sets owned by external data (e.g. document types).
+export type StatusBadgeVariant =
+    | 'neutral'
+    | 'success'
+    | 'warning'
+    | 'danger'
+    | 'info'
+    | CategoricalVariant;
 
 // `clamp` wraps long text inside the column to two lines instead of widening the cell.
 withDefaults(defineProps<{ variant?: StatusBadgeVariant; clamp?: boolean }>(), {
@@ -65,5 +74,37 @@ withDefaults(defineProps<{ variant?: StatusBadgeVariant; clamp?: boolean }>(), {
 .mv-status-badge--info {
     background: var(--app-info-bg);
     color: var(--app-info-fg);
+}
+.mv-status-badge--cat-1 {
+    background: var(--app-cat-1-bg);
+    color: var(--app-cat-1-fg);
+}
+.mv-status-badge--cat-2 {
+    background: var(--app-cat-2-bg);
+    color: var(--app-cat-2-fg);
+}
+.mv-status-badge--cat-3 {
+    background: var(--app-cat-3-bg);
+    color: var(--app-cat-3-fg);
+}
+.mv-status-badge--cat-4 {
+    background: var(--app-cat-4-bg);
+    color: var(--app-cat-4-fg);
+}
+.mv-status-badge--cat-5 {
+    background: var(--app-cat-5-bg);
+    color: var(--app-cat-5-fg);
+}
+.mv-status-badge--cat-6 {
+    background: var(--app-cat-6-bg);
+    color: var(--app-cat-6-fg);
+}
+.mv-status-badge--cat-7 {
+    background: var(--app-cat-7-bg);
+    color: var(--app-cat-7-fg);
+}
+.mv-status-badge--cat-8 {
+    background: var(--app-cat-8-bg);
+    color: var(--app-cat-8-fg);
 }
 </style>

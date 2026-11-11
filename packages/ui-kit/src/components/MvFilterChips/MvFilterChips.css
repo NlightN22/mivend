@@ -160,3 +160,91 @@
     color: var(--app-info-fg);
     border-color: var(--app-sel-info-bd);
 }
+
+.mv-filter-chip--cat-1 {
+    background: var(--app-cat-1-bg);
+    color: var(--app-cat-1-fg);
+    border-color: var(--app-cat-1-bg);
+}
+
+.mv-filter-chip--cat-1.mv-filter-chip--selected,
+.mv-filter-chip--cat-1.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-1-fg);
+}
+
+.mv-filter-chip--cat-2 {
+    background: var(--app-cat-2-bg);
+    color: var(--app-cat-2-fg);
+    border-color: var(--app-cat-2-bg);
+}
+
+.mv-filter-chip--cat-2.mv-filter-chip--selected,
+.mv-filter-chip--cat-2.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-2-fg);
+}
+
+.mv-filter-chip--cat-3 {
+    background: var(--app-cat-3-bg);
+    color: var(--app-cat-3-fg);
+    border-color: var(--app-cat-3-bg);
+}
+
+.mv-filter-chip--cat-3.mv-filter-chip--selected,
+.mv-filter-chip--cat-3.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-3-fg);
+}
+
+.mv-filter-chip--cat-4 {
+    background: var(--app-cat-4-bg);
+    color: var(--app-cat-4-fg);
+    border-color: var(--app-cat-4-bg);
+}
+
+.mv-filter-chip--cat-4.mv-filter-chip--selected,
+.mv-filter-chip--cat-4.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-4-fg);
+}
+
+.mv-filter-chip--cat-5 {
+    background: var(--app-cat-5-bg);
+    color: var(--app-cat-5-fg);
+    border-color: var(--app-cat-5-bg);
+}
+
+.mv-filter-chip--cat-5.mv-filter-chip--selected,
+.mv-filter-chip--cat-5.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-5-fg);
+}
+
+.mv-filter-chip--cat-6 {
+    background: var(--app-cat-6-bg);
+    color: var(--app-cat-6-fg);
+    border-color: var(--app-cat-6-bg);
+}
+
+.mv-filter-chip--cat-6.mv-filter-chip--selected,
+.mv-filter-chip--cat-6.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-6-fg);
+}
+
+.mv-filter-chip--cat-7 {
+    background: var(--app-cat-7-bg);
+    color: var(--app-cat-7-fg);
+    border-color: var(--app-cat-7-bg);
+}
+
+.mv-filter-chip--cat-7.mv-filter-chip--selected,
+.mv-filter-chip--cat-7.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-7-fg);
+}
+
+.mv-filter-chip--cat-8 {
+    background: var(--app-cat-8-bg);
+    color: var(--app-cat-8-fg);
+    border-color: var(--app-cat-8-bg);
+}
+
+.mv-filter-chip--cat-8.mv-filter-chip--selected,
+.mv-filter-chip--cat-8.mv-filter-chip--selected:hover {
+    border-color: var(--app-cat-8-fg);
+}

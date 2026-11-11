@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { ref } from 'vue';
 import MvFilterChips from './MvFilterChips.vue';
 import type { FilterChip } from './MvFilterChips.vue';
+import { CATEGORICAL_VARIANTS } from '../MvStatusBadge/categoricalVariants';
 
 const CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
@@ -93,4 +94,21 @@ export const LoadingCounts: Story = {
             { key: 'awaiting-approval', label: 'Awaiting approval', countLoading: true },
         ],
     },
+};
+
+export const CategoricalColours: Story = {
+    render: () => ({
+        components: { MvFilterChips },
+        setup: () => {
+            const active = ref('t3');
+            const chips: FilterChip[] = CATEGORICAL_VARIANTS.map((variant, i) => ({
+                key: `t${i + 1}`,
+                label: `Document type ${i + 1}`,
+                variant,
+                count: (i + 1) * 12,
+            }));
+            return { chips, active };
+        },
+        template: '<MvFilterChips :chips="chips" :active="active" @select="active = $event" />',
+    }),
 };

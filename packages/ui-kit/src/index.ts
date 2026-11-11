@@ -45,6 +45,7 @@ export { default as MvLanguageSwitcher } from './components/MvLanguageSwitcher/M
 export type { LanguageOption } from './components/MvLanguageSwitcher/MvLanguageSwitcher.vue';
 export { default as MvIconStat } from './components/MvIconStat/MvIconStat.vue';
 export { default as MvStatusBadge } from './components/MvStatusBadge/MvStatusBadge.vue';
+export { CATEGORICAL_VARIANTS } from './components/MvStatusBadge/categoricalVariants';
 export type { StatusBadgeVariant } from './components/MvStatusBadge/MvStatusBadge.vue';
 
 export { default as MvDocumentTypeChip } from './components/MvDocumentTypeChip/MvDocumentTypeChip.vue';

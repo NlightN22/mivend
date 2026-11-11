@@ -1,5 +1,6 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
-import { SETTLEMENT_CATEGORY_VARIANT, type SettlementListItem } from '../../api/settlements';
+import type { SettlementListItem } from '../../api/settlements';
+import { documentTypeVariant } from '../../utils/documentTypeVariant';
 
 export type SettlementRow = {
     id: string;
@@ -34,7 +35,7 @@ export function toSettlementRows(items: SettlementListItem[]): SettlementRow[] {
         counterpartyId: item.counterpartyId ?? '',
         customer: item.counterpartyShortName ?? '—',
         type: item.documentTypeLabel,
-        typeVariant: SETTLEMENT_CATEGORY_VARIANT[item.category] ?? 'neutral',
+        typeVariant: documentTypeVariant(item.documentType),
         contract: item.contractName ?? '—',
         organization: item.organizationName ?? '—',
         orderCodes: item.orderCodes,

@@ -1,8 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import MvStatusBadge from './MvStatusBadge.vue';
 import type { StatusBadgeVariant } from './MvStatusBadge.vue';
+import { CATEGORICAL_VARIANTS } from './categoricalVariants';
 
-const VARIANTS: StatusBadgeVariant[] = ['neutral', 'success', 'warning', 'danger', 'info'];
+const VARIANTS: StatusBadgeVariant[] = [
+    'neutral',
+    'success',
+    'warning',
+    'danger',
+    'info',
+    ...CATEGORICAL_VARIANTS,
+];
 
 const meta: Meta<typeof MvStatusBadge> = {
     title: 'Atoms/MvStatusBadge',
