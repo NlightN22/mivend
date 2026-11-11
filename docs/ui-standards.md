@@ -59,13 +59,17 @@ separated, in the danger role. Rows are 36px with small leading icons. Up/Down m
 theme control), Escape closes. No language row until the manager has i18n.
 The menu is a dropdown card anchored under the avatar on desktop and on phone (`MvPopover` with `:sheet="false"`: arrow, dimmed page, 16px side gutters, max 340px); other popovers still become a bottom sheet at <=640px.
 Mobile header (<=800px): logo mark, a round search button, the notification bell and a round avatar button. The
-search button makes the field take over the whole header row (placeholder "Search customers…", cross closes, Escape
-closes, auto-focus, Enter submits) and a full-height panel covers the page with "Recent queries" (per user in
-`localStorage`, max 6, trimmed, de-duplicated, newest first, remove one / Clear; tapping one runs it) and "Quick links"
-(chips to the lists the user can open, taken from the nav items so permissions apply). Saved views cannot feed
-quick filters: they are fetched per list (`tableViews(pageKey)`), there is no cross-list query. Global search has no
-backend, so submit opens the Customers list with the text as its `search` URL param; no results list.
-Desktop keeps the full search field in the header.
+search button makes the field take over the whole header row (cross closes, Escape closes, auto-focus) and a
+full-height panel covers the page. Empty field: "Recent queries" (per user in `localStorage` under
+`recent-searches:<administratorId>`, max 6, newest first, remove one / Clear) and "Quick links" (chips to the lists the
+user can open, from the nav items so permissions apply; saved views cannot feed them, they are fetched per list).
+From 2 characters: grouped `globalSearch` results (see `docs/access-control.md` "Global search"), 250 ms debounce,
+stale responses ignored, 5 hits per kind, one 44px row per hit (bold number, title, subtitle, status badge); under 2
+characters a hint, no hits "No results", a failed query an error line. A result opens the entity (customer, order,
+proforma invoice; settlement documents and discounts have no card, so they open their list filtered by the number) and
+is saved to the recent queries; Enter without a choice only saves the query. Desktop: the header field is the same
+search; typing 2+ characters opens a glass dropdown with the same rows (Up/Down move, Enter opens, Escape closes), an
+empty focused field shows the recent queries, Ctrl K / Cmd K focuses it.
 The theme logic (`initTheme`, `setThemePreference`, `themePreference`) lives in `packages/ui-kit/src/theme`
 and is shared by both portals; the choice is kept in `localStorage`, System follows `prefers-color-scheme`.
 
