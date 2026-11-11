@@ -14,7 +14,9 @@ export function clampSuggestLimit(limit: number | undefined | null): number {
 }
 
 export function suggestSpecFor(config: ListQueryConfig, field: string): SuggestSpec {
-    const spec = Object.prototype.hasOwnProperty.call(config.fields, field) ? config.fields[field].suggest : undefined;
+    const spec = Object.prototype.hasOwnProperty.call(config.fields, field)
+        ? config.fields[field].suggest
+        : undefined;
     if (!spec) throw new UserInputError(`No suggestions for "${field}"`);
     return spec;
 }

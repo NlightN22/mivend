@@ -11,7 +11,9 @@ const DOCUMENT_JOINS = `JOIN "settlement_document" "sd" ON "sd"."id" = "se"."doc
     LEFT JOIN "settlement_document_type" "st" ON "st"."documentType" = "sd"."documentType" AND NOT "st"."isDeleted"`;
 
 // A scalar subselect, not EXISTS: the planner would flatten EXISTS into a hash join over every entry.
-const HAS_LISTABLE_ENTRY = (entryMatch: string): string => `(SELECT 1 FROM "settlement_document_entry" "se"
+const HAS_LISTABLE_ENTRY = (
+    entryMatch: string,
+): string => `(SELECT 1 FROM "settlement_document_entry" "se"
     ${DOCUMENT_JOINS} WHERE ${entryMatch} AND ${LISTABLE_CATEGORY} LIMIT 1) IS NOT NULL`;
 
 // Outer aliases: "cp" counterparty, "d" document (joined to its entry "e" and type "st").

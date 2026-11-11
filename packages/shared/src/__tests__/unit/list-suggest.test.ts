@@ -24,8 +24,12 @@ const CONFIG: ListQueryConfig = {
 };
 
 function fakeQb() {
-    const calls: { where: [string, unknown?][]; order: string[]; limit: number[]; select: string[] } =
-        { where: [], order: [], limit: [], select: [] };
+    const calls: {
+        where: [string, unknown?][];
+        order: string[];
+        limit: number[];
+        select: string[];
+    } = { where: [], order: [], limit: [], select: [] };
     const qb = {
         select: (sql: string) => (calls.select.push(sql), qb),
         andWhere: (sql: string, params?: unknown) => (calls.where.push([sql, params]), qb),
