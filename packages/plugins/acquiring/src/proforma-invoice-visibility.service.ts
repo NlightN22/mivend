@@ -106,7 +106,7 @@ export class ProformaInvoiceVisibilityService {
     }
 
     // Scoped like findVisible so a department manager cannot probe balances outside their branch.
-    // Assumes one currency per counterparty; takes one currency rather than summing mixed ones.
+    // Assumes one currency per counterparty; mixed currencies report the alphabetically smallest code (MIN), deterministically.
     async getOutstandingBalance(
         ctx: RequestContext,
         counterpartyId: string,
