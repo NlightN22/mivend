@@ -31,6 +31,7 @@ export class ProformaRequeueService {
         organizationId: number,
         label: string,
     ): Promise<void> {
+        // unbounded-ok: one-off requeue after a data fix, limited to failed proforma documents of one organization
         const failed = await this.failedProformas(ctx)
             .andWhere(qb => {
                 const sub = qb
@@ -48,6 +49,7 @@ export class ProformaRequeueService {
 
     async requeueForUnconfirmedVat(ctx: RequestContext, categoryName: string): Promise<void> {
         const expected = unconfirmedVatError(categoryName);
+        // unbounded-ok: one-off requeue after a data fix, limited to failed proforma documents
         const rows = await this.failedProformas(ctx)
             .addSelect('document.metadata', 'metadata')
             .getRawMany<{ id: string; metadata: string | null }>();

@@ -36,6 +36,7 @@ export class ContractProformaCleanupService {
                         type: 'proforma-invoice',
                         proformaInvoiceId: In(ids.map(String)),
                     };
+                    // unbounded-ok: documents of the proforma invoices of one contract, deleted in the same call
                     const docs = await repo.find({ where });
                     for (const doc of docs) uuids.push(doc.uuid);
                     await repo.delete(where);

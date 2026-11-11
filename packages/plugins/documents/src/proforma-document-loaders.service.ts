@@ -43,6 +43,7 @@ export class ProformaDocumentLoaders {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Array<Document | null>> {
+        // unbounded-ok: documents of the proforma invoice ids passed in, bounded by that list
         const rows = await this.connection.getRepository(ctx, Document).find({
             where: { type: 'proforma-invoice', proformaInvoiceId: In([...keys]) },
             order: { id: 'ASC' },

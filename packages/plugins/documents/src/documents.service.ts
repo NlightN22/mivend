@@ -117,6 +117,7 @@ export class DocumentsService {
 
     // Bounded server-side DISTINCT over the scoped rows (not fetch-all and dedupe in JS).
     async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {
+        // unbounded-ok: DISTINCT document types, bounded by the small ERP document-type vocabulary
         const rows = await (await this.visibleDocumentsQb(ctx, counterpartyId))
             .select('document.type', 'type')
             .distinct(true)
@@ -210,6 +211,7 @@ export class DocumentsService {
     // Seed/admin-only: maps an ERP org erpId to the platform's auto-increment id, e.g. to fill
     // ProductVariant.customFields.organizationId before a real ERP export exists.
     async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
+        // unbounded-ok: organization requisites registry, a handful of legal entities
         return this.connection.getRepository(ctx, OrganizationRequisites).find();
     }
 

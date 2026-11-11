@@ -182,6 +182,7 @@ export class ProformaInvoiceHtmlBuilder {
         variantIds: number[],
     ): Promise<Map<number, string>> {
         if (variantIds.length === 0) return new Map();
+        // unbounded-ok: variants of the lines of one proforma invoice
         const rows = await this.connection
             .getRepository(ctx, 'product_variant')
             .createQueryBuilder('pv')
@@ -200,6 +201,7 @@ export class ProformaInvoiceHtmlBuilder {
             ...new Set(lines.filter(l => l.taxRate === null).map(l => l.taxCategoryName ?? '')),
         ].filter(Boolean);
         if (names.length === 0) return new Map();
+        // unbounded-ok: tax rates of the categories named on one proforma invoice, a few rows
         const rates = await this.connection.getRepository(ctx, TaxRate).find({
             where: { enabled: true, category: { name: In(names) } },
             relations: { category: true },
