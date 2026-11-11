@@ -1,22 +1,33 @@
-import { computed, ref, type Ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { AppSidebarItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
-import { addRecent, loadRecent, removeRecent, saveRecent } from '../utils/recentSearches';
+import {
+    addRecent,
+    loadRecent,
+    recentSearchesKey,
+    removeRecent,
+    saveRecent,
+} from '../utils/recentSearches';
 import type { SearchShortcut } from '../components/layout/SearchPanel.vue';
 
 // No search backend yet: submit opens the Customers list with the text as its search.
 export function useHeaderSearch(menuItems: Ref<AppSidebarItem[]>) {
     const router = useRouter();
     const authStore = useAuthStore();
-    const key = computed(
-        () => `mivend.manager.recentSearches.${authStore.administrator?.id ?? ''}`,
+    const administratorId = computed(() => authStore.administrator?.id ?? '');
+    const recent = ref<string[]>([]);
+    watch(
+        administratorId,
+        id => {
+            recent.value = id ? loadRecent(recentSearchesKey(id)) : [];
+        },
+        { immediate: true },
     );
-    const recent = ref<string[]>(loadRecent(key.value));
 
     function update(next: string[]): void {
         recent.value = next;
-        saveRecent(key.value, next);
+        if (administratorId.value) saveRecent(recentSearchesKey(administratorId.value), next);
     }
 
     function run(query: string): void {

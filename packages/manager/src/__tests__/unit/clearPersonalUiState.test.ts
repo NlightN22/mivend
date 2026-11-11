@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearPersonalUiState } from '../../composables/clearPersonalUiState';
+import { recentSearchesKey } from '../../utils/recentSearches';
 
 const localStorageMock = (() => {
     let store: Record<string, string> = {};
@@ -37,6 +38,16 @@ describe('clearPersonalUiState', () => {
         expect(localStorageMock.getItem('customer-orders-datatable-v2:42')).toBeNull();
         expect(localStorageMock.getItem('customer-proforma-invoices-datatable:42')).toBeNull();
         expect(localStorageMock.getItem('orders-datatable:42')).toBeNull();
+    });
+
+    it('removes the recent searches of the signed-out administrator only', () => {
+        localStorageMock.setItem(recentSearchesKey('42'), '["alpha"]');
+        localStorageMock.setItem(recentSearchesKey('99'), '["beta"]');
+
+        clearPersonalUiState('42');
+
+        expect(localStorageMock.getItem(recentSearchesKey('42'))).toBeNull();
+        expect(localStorageMock.getItem(recentSearchesKey('99'))).toBe('["beta"]');
     });
 
     it("never touches another administrator's keys on a shared browser", () => {

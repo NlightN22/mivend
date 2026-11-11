@@ -1,5 +1,10 @@
 const MAX_RECENT = 6;
 
+// <name>:<administratorId>, so clearPersonalUiState removes it on logout.
+export function recentSearchesKey(administratorId: string): string {
+    return `recent-searches:${administratorId}`;
+}
+
 export function addRecent(list: string[], query: string, max = MAX_RECENT): string[] {
     const value = query.trim();
     if (!value) return list;

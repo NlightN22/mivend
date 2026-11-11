@@ -39,7 +39,7 @@ defineEmits<{ run: [query: string]; remove: [query: string]; clear: []; open: [p
             <div class="search-panel__chips">
                 <button
                     v-for="shortcut in shortcuts"
-                    :key="shortcut.path"
+                    :key="`${shortcut.label}${shortcut.path}`"
                     type="button"
                     class="search-panel__chip"
                     @click="$emit('open', shortcut.path)"
