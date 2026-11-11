@@ -1,4 +1,6 @@
 import { concatAST } from 'graphql';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
+import { OrderSearchProvider } from './order-search.provider';
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
@@ -67,6 +69,7 @@ import { OrderListService } from './order-list.service';
 
 @VendurePlugin({
     imports: [
+        StaffSearchPlugin,
         PluginCommonModule,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
@@ -74,6 +77,7 @@ import { OrderListService } from './order-list.service';
         SessionManagementPlugin,
     ],
     providers: [
+        OrderSearchProvider,
         ErpDocumentWriter,
         ErpOrderService,
         OrderStatusHistoryService,

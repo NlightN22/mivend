@@ -58,6 +58,31 @@ export class ProformaInvoiceVisibilityService {
         return { items: entities, totalItems: Number(countRow?.total ?? 0) };
     }
 
+    // Same scope as the list, matching the number only (global search); newest first.
+    async searchByNumber(
+        ctx: RequestContext,
+        term: string,
+        limit: number,
+    ): Promise<Array<ProformaInvoice & { counterpartyShortName: string | null }>> {
+        const scope = await this.resolveScope(ctx);
+        const { entities, raw } = await this.buildScopedQuery(ctx, scope)
+            .andWhere('proformaInvoice.number ILIKE :gsTerm', {
+                gsTerm: documentNumberSearchTerm(term),
+            })
+            .select(['proformaInvoice.id', 'proformaInvoice.number', 'proformaInvoice.status'])
+            .addSelect('counterparty.shortName', 'counterpartyShortName')
+            .addSelect('"proformaInvoice"."counterpartyId"', 'counterpartyId')
+            .orderBy('proformaInvoice.id', 'DESC')
+            .limit(limit)
+            .getRawAndEntities<{ counterpartyShortName: string | null; counterpartyId: number }>();
+        return entities.map((item, i) =>
+            Object.assign(item, {
+                counterpartyShortName: raw[i]?.counterpartyShortName ?? null,
+                counterpartyId: raw[i]?.counterpartyId,
+            }),
+        );
+    }
+
     // Same scope as the list; an unknown and a hidden id are both null.
     async findOneVisible(ctx: RequestContext, id: string): Promise<ProformaInvoice | null> {
         if (!/^\d{1,9}$/.test(id)) return null;

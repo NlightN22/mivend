@@ -1,4 +1,6 @@
 import { ErpIdLookupService } from './erp-id-lookup.service';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
+import { CounterpartySearchProvider } from './counterparty-search.provider';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import {
     LanguageCode,
@@ -135,6 +137,7 @@ const adminResolvers = [
 
 @VendurePlugin({
     imports: [
+        StaffSearchPlugin,
         PluginCommonModule,
         CustomerPricingPlugin,
         AccessControlPlugin,
@@ -182,6 +185,7 @@ const adminResolvers = [
         resolvers: adminResolvers,
     },
     providers: [
+        CounterpartySearchProvider,
         ...visibilityBundle.providers,
         CounterpartyPortalAccessExecutor,
         CounterpartyService,

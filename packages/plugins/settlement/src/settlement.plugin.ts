@@ -4,6 +4,8 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
+import { SettlementSearchProvider } from './settlement-search.provider';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import { SettlementBalance } from './entities/settlement-balance.entity';
@@ -31,7 +33,7 @@ import { SettlementShopService } from './settlement-shop.service';
 import { DEFAULT_RETENTION_MONTHS } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin],
+    imports: [StaffSearchPlugin, PluginCommonModule, CounterpartyPlugin],
     entities: [
         SettlementDocument,
         SettlementDocumentEntry,
@@ -42,6 +44,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
     adminApiExtensions: { schema: adminApiExtensions, resolvers: [SettlementAdminResolver] },
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [SettlementShopResolver] },
     providers: [
+        SettlementSearchProvider,
         SettlementReferenceResolver,
         SettlementDocumentService,
         SettlementBalanceService,

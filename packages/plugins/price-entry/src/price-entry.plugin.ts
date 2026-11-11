@@ -4,6 +4,8 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
+import { DiscountRegistrySearchProvider } from './discount-registry-search.provider';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ChecksPlugin } from '@mivend/plugin-checks';
@@ -72,6 +74,7 @@ import { GrantedDiscountService } from './granted-discount.service';
 
 @VendurePlugin({
     imports: [
+        StaffSearchPlugin,
         PluginCommonModule,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
@@ -111,6 +114,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         ],
     },
     providers: [
+        DiscountRegistrySearchProvider,
         VariantPriceCheck,
         { provide: LINE_PRICE_CHECK, useExisting: VariantPriceCheck },
         PriceEntryService,

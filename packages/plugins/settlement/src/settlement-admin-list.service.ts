@@ -106,7 +106,8 @@ export class SettlementAdminListService {
         }));
     }
 
-    private async baseQuery(
+    // The scoped, filter-free list query; the global search adds its own predicate on top.
+    async baseQuery(
         ctx: RequestContext,
         options: SettlementListOptions | null | undefined,
         counterpartyId: string | null | undefined,

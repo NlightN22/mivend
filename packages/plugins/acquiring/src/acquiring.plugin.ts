@@ -1,4 +1,6 @@
 import { Kind } from 'graphql';
+import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
+import { ProformaInvoiceSearchProvider } from './proforma-invoice-search.provider';
 import { ProformaInvoiceRefLoader } from './proforma-invoice-ref-loader.service';
 import {
     LanguageCode,
@@ -80,6 +82,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
 
 @VendurePlugin({
     imports: [
+        StaffSearchPlugin,
         PluginCommonModule,
         CounterpartyPlugin,
         AccessControlPlugin,
@@ -100,6 +103,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         IncomingPaymentEvent,
     ],
     providers: [
+        ProformaInvoiceSearchProvider,
         ContractProformaPurgeService,
         ContractProformaInvoiceService,
         IdempotencyService,
