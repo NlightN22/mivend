@@ -24,7 +24,7 @@ const props = defineProps<{
 defineEmits<{ recompute: []; cut: []; changed: [] }>();
 
 const heldCase = computed(() =>
-    props.order.reservationState === 'AWAITING_CONFIRMATION'
+    props.order.customFields?.reservationState === 'AWAITING_CONFIRMATION'
         ? heldConfirmationCase(props.order.payments ?? [])
         : null,
 );

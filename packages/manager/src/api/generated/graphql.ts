@@ -13005,10 +13005,10 @@ export type OrderDetailQuery = {
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
-            reservationState: string | null;
             payments: Array<{ id: string; method: string; state: string; metadata: any }> | null;
             customFields: {
                 reservationDays: number | null;
+                reservationState: string | null;
                 branchId: string | null;
                 isExternal: boolean | null;
                 reservationFailureReason: string | null;
@@ -17094,7 +17094,6 @@ export const OrderDetailDocument = new TypedDocumentString(`
       orderPlacedAt
       createdAt
       creditLimitExceeded
-      reservationState
       payments {
         id
         method
@@ -17108,6 +17107,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       totalWithTax
       customFields {
         reservationDays
+        reservationState
         branchId
         isExternal
         reservationFailureReason

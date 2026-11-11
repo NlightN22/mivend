@@ -8,7 +8,6 @@ query OrderDetail($code: String!) {
             orderPlacedAt
             createdAt
             creditLimitExceeded
-            reservationState
             payments {
                 id
                 method
@@ -22,6 +21,7 @@ query OrderDetail($code: String!) {
             totalWithTax
             customFields {
                 reservationDays
+                reservationState
                 branchId
                 isExternal
                 reservationFailureReason
