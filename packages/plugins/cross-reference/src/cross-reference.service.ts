@@ -12,6 +12,7 @@ export class CrossReferenceService {
         ctx: RequestContext,
         productId: number,
     ): Promise<ProductCrossReference[]> {
+        // unbounded-ok: cross references of one product
         return this.connection
             .getRepository(ctx, ProductCrossReference)
             .find({ where: { productId } });
