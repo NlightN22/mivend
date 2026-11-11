@@ -27,7 +27,9 @@ watch(open, async isOpen => {
         content.value?.querySelector<HTMLElement>('[data-popover-autofocus]')?.focus();
     } else {
         document.removeEventListener('keydown', closeOnEscape);
-        opener?.focus();
+        const active = document.activeElement;
+        const focusLost = !active || active === document.body || content.value?.contains(active);
+        if (focusLost) opener?.focus();
         opener = null;
     }
 });
