@@ -46,8 +46,8 @@ grep -rnE "#ff8a00|#ff8900|#e67c00|#e87800|#e07a00|#cc6e00|#00b894|#00a884|#c8f2
 Structure and rules: `frontend-rules` skill, "Colors, tokens and themes". Palette steps are in
 `packages/ui-kit/src/styles/palette.css`; role tokens for each theme are in `theme-light.css` and
 `theme-dark.css`. Hover and active use the same role names in both themes; in dark they step lighter.
-`make lint` (stylelint) rejects any color literal or `--palette-*` reference in storefront and ui-kit
-components. The manager portal is not migrated yet and is outside that lint (#320).
+`make lint` (stylelint) rejects any color literal or `--palette-*` reference in storefront, ui-kit and manager
+components.
 
 ## User menu and theme
 

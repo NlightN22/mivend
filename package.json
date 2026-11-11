@@ -24,7 +24,7 @@
         "dev:staging-integration-all": "concurrently --names 'staging-server,staging-worker,staging-worker-email,staging-storefront,staging-manager,staging-dashboard' --prefix-colors 'cyan,blue,blueBright,green,magenta,red' 'pnpm dev:central:staging-integration' 'pnpm dev:worker:staging-integration' 'pnpm dev:worker-email:staging-integration' 'pnpm dev:storefront:staging-integration' 'pnpm dev:manager:staging-integration' 'pnpm dev:dashboard:staging-integration'",
         "build": "pnpm -r build",
         "lint": "eslint . && pnpm lint:css",
-        "lint:css": "stylelint \"packages/{storefront,ui-kit}/src/**/*.{css,vue}\"",
+        "lint:css": "stylelint \"packages/{storefront,ui-kit,manager}/src/**/*.{css,vue}\"",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "test": "vitest run",
@@ -43,7 +43,7 @@
             "eslint --fix",
             "prettier --write"
         ],
-        "packages/{storefront,ui-kit}/src/**/*.{css,vue}": [
+        "packages/{storefront,ui-kit,manager}/src/**/*.{css,vue}": [
             "stylelint"
         ],
         "*.{json,yml,yaml,md}": [

@@ -315,7 +315,7 @@ Rules:
 - **Do not write a bespoke list filter engine or filter UI.** Every server list that filters or sorts uses the shared list filter engine (`packages/shared/src/list-filter-engine.ts`, extended there when it lacks a feature) and the standard filter builder in the portal; a second engine is a defect.
 - **Do not put business logic in page components.** Pages are thin — use composables and stores.
 - **Do not write raw GraphQL strings with manual types.** Use codegen.
-- **Do not write a color outside `packages/ui-kit/src/styles/`** (palette, light and dark roles; enforced by stylelint in `packages/storefront` and `packages/ui-kit` only, the manager portal is not migrated yet and is outside the lint until #320): no hex, `rgb()`, `oklch()`, named color or `--palette-*` in components. If a task seems to need it, ask the user twice first; see the `frontend-rules` skill.
+- **Do not write a color outside `packages/ui-kit/src/styles/`** (palette, light and dark roles; enforced by stylelint in `packages/storefront`, `packages/ui-kit` and `packages/manager`): no hex, `rgb()`, `oklch()`, named color or `--palette-*` in components. If a task seems to need it, ask the user twice first; see the `frontend-rules` skill.
 
 ## Project context maintenance
 
