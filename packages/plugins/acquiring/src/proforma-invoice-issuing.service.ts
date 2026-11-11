@@ -117,6 +117,7 @@ export class ProformaInvoiceIssuingService {
         const repo = this.connection.getRepository(ctx, ProformaInvoice);
         const order = await this.loadOrder(ctx, orderId);
         // Row lock: a concurrent payment allocation cannot flip a head to paid between this read and the supersede.
+        // unbounded-ok: proforma invoices of one order, locked for issuing
         const existing = await repo.find({
             where: { orderId: Number(orderId) },
             lock: { mode: 'pessimistic_write' },
@@ -182,6 +183,7 @@ export class ProformaInvoiceIssuingService {
             }
         }
 
+        // unbounded-ok: proforma invoices of one order
         const current = await repo.find({
             where: { orderId: Number(orderId) },
             order: { number: 'ASC' },

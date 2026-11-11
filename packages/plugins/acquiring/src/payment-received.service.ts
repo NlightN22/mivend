@@ -43,6 +43,7 @@ export class PaymentReceivedService {
             `payment-received:${orderId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, Payment);
+                // unbounded-ok: manual payments of one order
                 const manual = (
                     await repo
                         .createQueryBuilder('p')

@@ -14,6 +14,7 @@ export class PaymentRefundService {
     ) {}
 
     async findByPaymentId(ctx: RequestContext, paymentId: number): Promise<PaymentRefund[]> {
+        // unbounded-ok: refunds of one payment
         return this.connection.getRepository(ctx, PaymentRefund).find({
             where: { paymentId },
             order: { createdAt: 'DESC' },

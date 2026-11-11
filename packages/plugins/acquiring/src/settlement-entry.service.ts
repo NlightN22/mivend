@@ -123,6 +123,7 @@ export class SettlementEntryService {
         documents: ProformaInvoice[],
     ): Promise<Map<number, number>> {
         if (documents.length === 0) return new Map();
+        // unbounded-ok: grouped by document id, one row per document passed in
         const rows = await this.connection
             .getRepository(ctx, SettlementEntry)
             .createQueryBuilder('entry')
@@ -140,6 +141,7 @@ export class SettlementEntryService {
     // Nothing yet draws advances down against new proforma invoices; this only reports the balance.
     //
     async getAdvanceBalance(ctx: RequestContext, counterpartyId: number): Promise<MoneyAmount[]> {
+        // unbounded-ok: grouped by currency, a few rows per counterparty
         const rows = await this.connection
             .getRepository(ctx, SettlementEntry)
             .createQueryBuilder('entry')

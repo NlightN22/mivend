@@ -61,6 +61,7 @@ export class ProformaInvoiceDetailService {
         keys: readonly string[],
     ): Promise<ProformaInvoice[][]> {
         const orderIds = [...new Set(keys.map(key => Number(key.split(':')[0])))];
+        // unbounded-ok: proforma invoice versions of the orders passed in, a page of orders
         const all = await this.connection.getRepository(ctx, ProformaInvoice).find({
             where: { orderId: In(orderIds) },
             order: { version: 'DESC' },

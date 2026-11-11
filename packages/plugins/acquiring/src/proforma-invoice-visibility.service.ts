@@ -87,6 +87,7 @@ export class ProformaInvoiceVisibilityService {
     async findOneVisible(ctx: RequestContext, id: string): Promise<ProformaInvoice | null> {
         if (!/^\d{1,9}$/.test(id)) return null;
         const scope = await this.resolveScope(ctx);
+        // unbounded-ok: single proforma invoice selected by primary key
         const { entities, raw } = await this.buildScopedQuery(ctx, scope)
             .andWhere('proformaInvoice.id = :id', { id: Number(id) })
             .addSelect('counterparty.shortName', 'counterpartyShortName')
@@ -105,7 +106,7 @@ export class ProformaInvoiceVisibilityService {
     }
 
     // Scoped like findVisible so a department manager cannot probe balances outside their branch.
-    // Assumes one currency per counterparty; takes the first currency rather than summing mixed ones.
+    // Assumes one currency per counterparty; takes one currency rather than summing mixed ones.
     async getOutstandingBalance(
         ctx: RequestContext,
         counterpartyId: string,
@@ -127,18 +128,13 @@ export class ProformaInvoiceVisibilityService {
                 contractKinds: CONTRACT_PAYMENT_KINDS,
             });
         this.applyScope(qb, scope);
-        const rows = await qb
-            .select('proformaInvoice.amount', 'amount')
-            .addSelect('proformaInvoice.currencyCode', 'currencyCode')
-            .getRawMany<{
-                amount: number;
-                currencyCode: string;
-            }>();
-        if (!rows.length) return null;
-        return {
-            amount: rows.reduce((sum, row) => sum + Number(row.amount), 0),
-            currencyCode: rows[0].currencyCode,
-        };
+        const row = await qb
+            .select('COUNT(*)', 'count')
+            .addSelect('SUM(proformaInvoice.amount)', 'amount')
+            .addSelect('MIN(proformaInvoice.currencyCode)', 'currencyCode')
+            .getRawOne<{ count: string; amount: string | null; currencyCode: string }>();
+        if (!row || Number(row.count) === 0) return null;
+        return { amount: Number(row.amount), currencyCode: row.currencyCode };
     }
 
     // Shared by PaymentVisibilityService, which joins PaymentAttempt -> ProformaInvoice and needs the

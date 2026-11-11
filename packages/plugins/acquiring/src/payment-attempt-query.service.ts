@@ -46,6 +46,7 @@ export class PaymentAttemptQueryService {
     ): Promise<Map<number, number>> {
         const result = new Map<number, number>();
         if (!orderIds.length) return result;
+        // unbounded-ok: grouped by order id, one row per order id passed in
         const rows = await this.connection
             .getRepository(ctx, PaymentAttempt)
             .createQueryBuilder('payment')
@@ -122,6 +123,7 @@ export class PaymentAttemptQueryService {
         ctx: RequestContext,
         paymentAttemptId: number,
     ): Promise<PaymentAllocation[]> {
+        // unbounded-ok: settlement entries of one payment
         const entries = await this.connection
             .getRepository(ctx, SettlementEntry)
             .find({ where: { sourcePaymentId: paymentAttemptId }, order: { id: 'ASC' } });

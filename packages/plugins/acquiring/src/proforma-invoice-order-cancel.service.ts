@@ -17,6 +17,7 @@ export class ProformaInvoiceOrderCancelService {
             ctx,
             `proformaInvoices-for-order:${orderId}`,
             async txCtx => {
+                // unbounded-ok: proforma invoices of one order, locked for cancel
                 const invoices = await this.connection
                     .getRepository(txCtx, ProformaInvoice)
                     .createQueryBuilder('proformaInvoice')

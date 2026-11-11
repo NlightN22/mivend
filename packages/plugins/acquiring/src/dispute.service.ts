@@ -10,6 +10,7 @@ export class DisputeService {
     constructor(private connection: TransactionalConnection) {}
 
     async findByPaymentId(ctx: RequestContext, paymentId: number): Promise<Dispute[]> {
+        // unbounded-ok: disputes of one payment
         return this.connection.getRepository(ctx, Dispute).find({
             where: { paymentId },
             order: { openedAt: 'DESC' },

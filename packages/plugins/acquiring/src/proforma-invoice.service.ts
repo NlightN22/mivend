@@ -25,6 +25,7 @@ export class ProformaInvoiceService {
     constructor(private connection: TransactionalConnection) {}
 
     async findByOrderId(ctx: RequestContext, orderId: number): Promise<ProformaInvoice[]> {
+        // unbounded-ok: proforma invoices of one order
         return this.connection.getRepository(ctx, ProformaInvoice).find({ where: { orderId } });
     }
 
