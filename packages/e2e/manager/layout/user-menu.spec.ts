@@ -145,3 +145,17 @@ test('the phone profile menu is a card under the avatar, not a bottom sheet @on:
     expect(box?.y ?? 999).toBeLessThan(120);
     expect(box?.width ?? 999).toBeLessThanOrEqual(360);
 });
+
+test('leaving the customers list after a header search leaves no customers params on the next page @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/customers');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('searchbox').fill('alpha');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/search=alpha/);
+    await page.getByText('Orders', { exact: true }).last().click();
+    await expect(page).toHaveURL(/\/orders(\?|$)/);
+    await expect(page).not.toHaveURL(/search=|sortField=|pageSize=/);
+});
