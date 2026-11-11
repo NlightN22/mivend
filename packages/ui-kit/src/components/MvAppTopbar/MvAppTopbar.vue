@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
-// across every manager portal page, see docs/ai/manager-portal-pages/00-shared-conventions.md.
+// across every manager portal page. On phone: logo mark, actions and a round avatar; no dead search.
 import { ref } from 'vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
@@ -172,18 +172,28 @@ const menuOpen = ref(false);
         min-height: 58px;
         padding: 8px 12px;
         gap: 8px;
+        justify-content: space-between;
     }
 
+    .mv-app-topbar__brand :deep(.mv-logo__name),
     .mv-app-topbar__search {
-        max-width: none;
-    }
-
-    .mv-app-topbar__actions {
         display: none;
     }
 
+    .mv-app-topbar__actions {
+        gap: 8px;
+    }
+
     .mv-app-topbar__user {
-        padding: 2px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+    }
+
+    .mv-app-topbar__avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
     }
 
     .mv-app-topbar__user-text {

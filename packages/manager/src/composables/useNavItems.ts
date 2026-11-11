@@ -3,6 +3,7 @@ import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mive
 import { useAuthStore } from '../stores/auth';
 import { CHANGE_JOURNAL_LABELS } from '../components/change-journal/changeJournalLabels';
 import { canOpenBulkOperations } from '../components/bulk-operations/operationUi';
+import { systemSettingsPath } from '../components/layout/userMenuItems';
 
 // Navigation entries of the default layout, gated by the same permissions as the pages they open.
 export function useNavItems(approvalsBadgeCount: Ref<number>) {
@@ -36,11 +37,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
         // itself checks — not a role-code allowlist, so granting/revoking this via the native
         // Vendure admin UI (any role) is enough, no manager-portal code change needed.
-        if (authStore.hasPermission('ManageAccessControl')) {
-            items.push({ label: 'System settings', path: '/settings' });
-        } else if (authStore.hasPermission('ManageVisibilityGrants')) {
-            items.push({ label: 'System settings', path: '/settings/visibility-grants' });
-        }
+        const settingsPath = systemSettingsPath(authStore.hasPermission);
+        if (settingsPath) items.push({ label: 'System settings', path: settingsPath });
         return items;
     });
 
@@ -85,15 +83,9 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                 label: CHANGE_JOURNAL_LABELS.pageTitle,
                 path: '/change-journal',
             });
-        if (authStore.hasPermission('ManageAccessControl')) {
-            items.push({ key: 'settings', label: 'System settings', path: '/settings' });
-        } else if (authStore.hasPermission('ManageVisibilityGrants')) {
-            items.push({
-                key: 'settings',
-                label: 'System settings',
-                path: '/settings/visibility-grants',
-            });
-        }
+        const settingsPath = systemSettingsPath(authStore.hasPermission);
+        if (settingsPath)
+            items.push({ key: 'settings', label: 'System settings', path: settingsPath });
         return items;
     });
 
