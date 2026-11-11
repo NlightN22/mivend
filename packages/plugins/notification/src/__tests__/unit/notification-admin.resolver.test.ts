@@ -191,6 +191,7 @@ describe('NotificationAdminResolver — assertOwnNotification with broadcast row
         const resolver = new NotificationAdminResolver(
             notificationService as never,
             recipientService as never,
+            { record: vi.fn() } as never,
             orderVisibility as never,
             pubSub as never,
         );

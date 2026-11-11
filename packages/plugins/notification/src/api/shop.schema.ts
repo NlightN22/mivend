@@ -13,7 +13,7 @@ export const shopApiExtensions: DocumentNode = gql`
 
     input NotificationListOptions {
         status: NotificationStatus
-        "Case-insensitive contains match against title (issue #92 — the full notifications page's search box)."
+        "Case-insensitive contains match against title or message (issue #92 — the full notifications page's search box)."
         search: String
         take: Int
         skip: Int
@@ -25,6 +25,8 @@ export const shopApiExtensions: DocumentNode = gql`
     }
 
     extend type Mutation {
+        "Stores a popup the caller saw as their own notification; an identical one within a minute is returned, not duplicated (#348)."
+        createClientNotification(input: ClientNotificationInput!): Notification!
         markNotificationRead(id: ID!): Notification!
         resolveNotification(id: ID!, resolution: String!): Notification!
     }

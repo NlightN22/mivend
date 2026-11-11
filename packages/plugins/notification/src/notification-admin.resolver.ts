@@ -6,6 +6,8 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
+import { ClientNotificationService } from './client-notification.service';
+import type { ClientNotificationInput } from './client-notification-rules';
 import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
 import {
@@ -53,6 +55,7 @@ export class NotificationAdminResolver {
     constructor(
         private notificationService: NotificationService,
         private recipientService: NotificationRecipientService,
+        private clientNotificationService: ClientNotificationService,
         private orderVisibility: OrderVisibilityService,
         @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSubEngine,
     ) {}
@@ -72,6 +75,17 @@ export class NotificationAdminResolver {
             args.options ?? {},
             await this.orderVisibility.visibleIdsSql(ctx),
         );
+    }
+
+    @Mutation()
+    @Allow(Permission.Authenticated)
+    async createClientNotification(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { input: ClientNotificationInput },
+    ): Promise<Notification> {
+        const recipient = await this.recipientService.getCurrentAdministrator(ctx);
+        if (!recipient) throw new ForbiddenError();
+        return this.clientNotificationService.record(ctx, recipient, args.input);
     }
 
     @Mutation()

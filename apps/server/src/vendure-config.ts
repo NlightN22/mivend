@@ -77,6 +77,7 @@ import { ProductPhotosDashboardPlugin } from './product-photos-dashboard.plugin'
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { ConsistencyReportsDashboardPlugin } from './consistency-reports-dashboard.plugin';
 import { LegalNameAbbreviationsDashboardPlugin } from './legal-name-abbreviations-dashboard.plugin';
+import { NotificationSettingsDashboardPlugin } from './notification-settings-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
 import { TwoFactorSignInDashboardPlugin } from './two-factor-sign-in-dashboard.plugin';
 import { consistencySourcesFromEnv } from './consistency-sources';
@@ -623,6 +624,7 @@ export const config: VendureConfig = {
         OrganizationsDashboardPlugin,
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         LegalNameAbbreviationsDashboardPlugin,
+        NotificationSettingsDashboardPlugin,
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         ErpUsersDashboardPlugin,
         ProductPhotosDashboardPlugin,

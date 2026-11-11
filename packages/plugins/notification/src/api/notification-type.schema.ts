@@ -14,6 +14,15 @@ export const notificationTypeSDL = `
         resolved
     }
 
+    "A notification a portal shows as a popup and keeps in the bell (#348). The owner is always the caller."
+    input ClientNotificationInput {
+        kind: NotificationKind!
+        "Up to 120 characters, may be empty."
+        title: String
+        "Up to 1000 characters."
+        message: String!
+    }
+
     type Notification {
         id: ID!
         kind: NotificationKind!

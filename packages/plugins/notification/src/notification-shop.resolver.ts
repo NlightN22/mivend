@@ -5,6 +5,8 @@ import { PubSubEngine } from 'graphql-subscriptions';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
+import { ClientNotificationService } from './client-notification.service';
+import type { ClientNotificationInput } from './client-notification-rules';
 import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
 import {
@@ -35,6 +37,7 @@ export class NotificationShopResolver {
     constructor(
         private notificationService: NotificationService,
         private recipientService: NotificationRecipientService,
+        private clientNotificationService: ClientNotificationService,
         @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSubEngine,
     ) {}
 
@@ -52,6 +55,17 @@ export class NotificationShopResolver {
             recipient.recipientId,
             args.options ?? {},
         );
+    }
+
+    @Mutation()
+    @Allow(Permission.Owner)
+    async createClientNotification(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { input: ClientNotificationInput },
+    ): Promise<Notification> {
+        const recipient = await this.recipientService.getCurrentCustomer(ctx);
+        if (!recipient) throw new ForbiddenError();
+        return this.clientNotificationService.record(ctx, recipient, args.input);
     }
 
     @Mutation()

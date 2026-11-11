@@ -2,7 +2,11 @@ import { PluginCommonModule, RuntimeVendureConfig, VendurePlugin } from '@vendur
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 import { Notification } from './entities/notification.entity';
+import { NotificationRetentionRule } from './entities/notification-retention-rule.entity';
+import { NotificationRetentionRuleService } from './notification-retention-rule.service';
+import { NotificationRetentionRuleAdminResolver } from './notification-retention-rule.resolver';
 import { NotificationService } from './notification.service';
+import { ClientNotificationService } from './client-notification.service';
 import { createNotificationCleanupTask } from './notification-cleanup.scheduled-task';
 import { NotificationRetentionService } from './notification-retention.service';
 import { NotificationRecipientService } from './notification-recipient.service';
@@ -16,11 +20,13 @@ import { shopApiExtensions } from './api/shop.schema';
 // Producers calling NotificationService.create come in follow-up work; none exist yet.
 @VendurePlugin({
     imports: [PluginCommonModule, ErpOrderPlugin],
-    entities: [Notification],
+    entities: [Notification, NotificationRetentionRule],
     providers: [
         NotificationService,
         NotificationRecipientService,
         NotificationRetentionService,
+        NotificationRetentionRuleService,
+        ClientNotificationService,
         {
             provide: NOTIFICATION_PUB_SUB,
             useFactory: createNotificationPubSub,
@@ -29,7 +35,7 @@ import { shopApiExtensions } from './api/shop.schema';
     exports: [NotificationService],
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [NotificationAdminResolver],
+        resolvers: [NotificationAdminResolver, NotificationRetentionRuleAdminResolver],
     },
     shopApiExtensions: {
         schema: shopApiExtensions,

@@ -30,7 +30,7 @@ export interface CreateNotificationInput {
 
 export interface FindForRecipientOptions {
     status?: NotificationStatus;
-    // Case-insensitive contains match against title (issue #92's full notifications page).
+    // Case-insensitive contains match against title or message (issue #92's full notifications page).
     search?: string;
     take?: number;
     skip?: number;
@@ -218,7 +218,12 @@ export class NotificationService {
         }
 
         if (opts.search) {
-            qb.andWhere('notification.title ILIKE :search', { search: `%${opts.search}%` });
+            qb.andWhere(
+                '(notification.title ILIKE :search OR notification.message ILIKE :search)',
+                {
+                    search: `%${opts.search}%`,
+                },
+            );
         }
 
         qb.orderBy('notification.createdAt', 'DESC').addOrderBy('notification.id', 'DESC');

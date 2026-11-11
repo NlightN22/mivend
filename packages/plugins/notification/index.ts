@@ -17,3 +17,5 @@ export type { NotificationList, NotificationListOptions } from './src/types';
 export { notificationTypeSDL } from './src/api/notification-type.schema';
 export { resolveBroadcastVisibility } from './src/notification-source-permissions';
 export type { BroadcastVisibility } from './src/notification-source-permissions';
+export { ClientNotificationService } from './src/client-notification.service';
+export { CLIENT_SOURCE_TYPE } from './src/client-notification-rules';
