@@ -14,6 +14,7 @@ import type { SettlementDocumentEntry } from './settlement-document-entry.entity
 @Entity('settlement_document')
 @Index('IDX_settlement_document_erp_id', ['erpId'], { unique: true })
 @Index('IDX_settlement_document_date', ['date'])
+@Index('IDX_settlement_document_type', ['documentType'])
 export class SettlementDocument {
     @PrimaryGeneratedColumn('increment')
     id!: number;

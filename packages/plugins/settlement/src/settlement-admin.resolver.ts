@@ -4,10 +4,12 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { SettlementAdminListService } from './settlement-admin-list.service';
+import { SettlementDocumentTypeService } from './settlement-document-type.service';
 import { SettlementSuggestService } from './settlement-suggest.service';
 import { SettlementShopService } from './settlement-shop.service';
 import type {
     SettlementListOptions,
+    SettlementDocumentTypeInfo,
     SettlementListPage,
     SettlementTypeCount,
 } from './settlement-admin.types';
@@ -22,6 +24,7 @@ export class SettlementAdminResolver {
         private readonly counterparties: CounterpartyService,
         private readonly listService: SettlementAdminListService,
         private readonly suggestService: SettlementSuggestService,
+        private readonly documentTypes: SettlementDocumentTypeService,
     ) {}
 
     // A finance figure, so it needs the credit right; an invisible counterparty answers like a missing one.
@@ -51,6 +54,12 @@ export class SettlementAdminResolver {
         @Args() args: { options?: SettlementListOptions; counterpartyId?: string },
     ): Promise<SettlementTypeCount[]> {
         return this.listService.typeCounts(ctx, args.options, args.counterpartyId);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ReadSettlementDocument.Permission)
+    settlementDocumentTypes(@Ctx() ctx: RequestContext): Promise<SettlementDocumentTypeInfo[]> {
+        return this.documentTypes.listAll(ctx);
     }
 
     @Query()

@@ -41,6 +41,12 @@ export const adminApiExtensions = gql`
         count: Int!
     }
 
+    type SettlementDocumentTypeInfo {
+        documentType: String!
+        label: String!
+        category: String
+    }
+
     input SettlementListOptions {
         take: Int
         skip: Int
@@ -93,6 +99,8 @@ export const adminApiExtensions = gql`
             options: SettlementListOptions
             counterpartyId: ID
         ): [SettlementTypeCount!]!
+        "Every document type known to the system (registry plus types seen only on documents), no counts; needs ReadSettlementDocument."
+        settlementDocumentTypes: [SettlementDocumentTypeInfo!]!
         "Typeahead values (up to limit, at most 20) for a filter field that starts with the prefix (2+ characters), from the documents the caller may list; field is one of customer, number."
         settlementFilterSuggestions(field: String!, prefix: String!, limit: Int): [String!]!
     }

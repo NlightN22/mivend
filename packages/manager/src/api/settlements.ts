@@ -1,5 +1,6 @@
 import { adminApi } from './client';
 import {
+    SettlementDocumentTypesDocument,
     SettlementTypeCountsDocument,
     type SettlementFilterParameter,
     type SettlementListItemFieldsFragment,
@@ -25,4 +26,10 @@ export async function fetchSettlementTypeCounts(
         filter,
     });
     return result.counts;
+}
+
+// Registry metadata without counts: cheap enough for every page load.
+export async function fetchSettlementDocumentTypes(): Promise<string[]> {
+    const result = await adminApi(SettlementDocumentTypesDocument, {});
+    return result.types.map(t => t.documentType);
 }

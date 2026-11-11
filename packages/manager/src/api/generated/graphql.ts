@@ -8310,6 +8310,8 @@ export type Query = {
     /** Non-blocking VAT-code review flags raised while importing products, newest first (issue #79). */
     recentProductTaxCodeFlags: ProductTaxCodeFlagList;
     /** Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204. */
+    /** Every document type known to the system (registry plus types seen only on documents), no counts; needs ReadSettlementDocument. */
+    settlementDocumentTypes: Array<SettlementDocumentTypeInfo>;
     rejectedOrderCount: Scalars['Int']['output'];
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     retroBonusRules: Array<RetroBonusRule>;
@@ -9650,6 +9652,12 @@ export type SettleRefundInput = {
 export type SettleRefundResult = Refund | RefundStateTransitionError;
 
 /** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
+export type SettlementDocumentTypeInfo = {
+    category: Maybe<Scalars['String']['output']>;
+    documentType: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+};
+
 export type SettlementFilterParameter = {
     _and?: InputMaybe<Array<SettlementFilterParameter>>;
     _or?: InputMaybe<Array<SettlementFilterParameter>>;
@@ -13911,6 +13919,12 @@ export type SettlementTypeCountsQuery = {
     counts: Array<{ documentType: string; label: string; count: number }>;
 };
 
+export type SettlementDocumentTypesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SettlementDocumentTypesQuery = {
+    types: Array<{ documentType: string; label: string; category: string | null }>;
+};
+
 export type SettlementsPageQueryVariables = Exact<{
     options?: InputMaybe<SettlementListOptions>;
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
@@ -18008,6 +18022,18 @@ export const SettlementTypeCountsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SettlementTypeCountsQuery,
     SettlementTypeCountsQueryVariables
+>;
+export const SettlementDocumentTypesDocument = new TypedDocumentString(`
+    query SettlementDocumentTypes {
+  types: settlementDocumentTypes {
+    documentType
+    label
+    category
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SettlementDocumentTypesQuery,
+    SettlementDocumentTypesQueryVariables
 >;
 export const SettlementsPageDocument = new TypedDocumentString(`
     query SettlementsPage($options: SettlementListOptions, $counterpartyId: ID) {

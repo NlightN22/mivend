@@ -38,3 +38,9 @@ export interface SettlementTypeCount {
     label: string;
     count: number;
 }
+
+export interface SettlementDocumentTypeInfo {
+    documentType: string;
+    label: string;
+    category: string | null;
+}

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { fetchSettlementTypeCounts } from '../api/settlements';
+import { fetchSettlementDocumentTypes } from '../api/settlements';
 
 // One global, sorted list per session so a type keeps its colour on every screen.
 const codes = ref<string[]>([]);
@@ -14,10 +14,10 @@ export function resetDocumentTypeCodes(): void {
 export function useDocumentTypeCodes(): { codes: typeof codes; ensureLoaded: () => void } {
     function ensureLoaded(): void {
         if (loading) return;
-        const pending: Promise<void> = fetchSettlementTypeCounts('')
+        const pending: Promise<void> = fetchSettlementDocumentTypes()
             .then(result => {
                 if (loading !== pending) return;
-                codes.value = result.map(c => c.documentType).sort();
+                codes.value = [...result].sort();
             })
             .catch(e => {
                 if (loading === pending) loading = null;

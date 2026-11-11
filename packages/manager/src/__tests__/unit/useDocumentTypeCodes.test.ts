@@ -1,19 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchSettlementTypeCounts } from '../../api/settlements';
+import { fetchSettlementDocumentTypes } from '../../api/settlements';
 import {
     resetDocumentTypeCodes,
     useDocumentTypeCodes,
 } from '../../composables/useDocumentTypeCodes';
 import { documentTypeVariant } from '../../utils/documentTypeVariant';
 
-vi.mock('../../api/settlements', () => ({ fetchSettlementTypeCounts: vi.fn() }));
-const fetchMock = vi.mocked(fetchSettlementTypeCounts);
-const counts = (...codes: string[]) =>
-    codes.map(documentTypeCode => ({
-        documentType: documentTypeCode,
-        label: documentTypeCode,
-        count: 1,
-    }));
+vi.mock('../../api/settlements', () => ({ fetchSettlementDocumentTypes: vi.fn() }));
+const fetchMock = vi.mocked(fetchSettlementDocumentTypes);
+const counts = (...codes: string[]): string[] => codes;
 
 describe('useDocumentTypeCodes', () => {
     beforeEach(() => {

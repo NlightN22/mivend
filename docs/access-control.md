@@ -167,7 +167,7 @@ to a role, nothing inherits it from `ManageErpIntegration`.
 
 ### Settlement documents (#320)
 
-`visibleSettlementDocuments` and `visibleSettlementTypeCounts` need `ReadSettlementDocument`, granted to every
+`visibleSettlementDocuments`, `visibleSettlementTypeCounts` and `settlementDocumentTypes` need `ReadSettlementDocument`, granted to every
 default role (operator, manager, department-head, general-director, security-officer, portal-admin). It is a
 separate permission from `ReadCounterpartyCredit` on purpose: credit limits and balances stay with the credit
 holders, while the documents (sales invoices, payments, returns) are shown to anyone within the counterparty
@@ -178,6 +178,11 @@ reader of the list can add them up; that is the accepted trade-off of showing th
 balance, limit and overdue figures themselves stay behind `ReadCounterpartyCredit`. The rows are limited to the counterparties the caller sees (`CounterpartyService.visibleErpIdsSql`),
 applied before any client filter, search or counterparty argument. The grant lives in `default-roles.ts`
 (re-provisioned on every start, never by hand in the Admin UI).
+
+`settlementDocumentTypes` returns the document type list (code, label, category) with no counts and no counterparty
+scope: it is ERP reference metadata (the registry plus codes seen on documents), carries no per-customer data, and
+exists so the manager portal can colour types consistently without the scoped count aggregate. It sits behind the
+same permission as the list, so a role that cannot read documents cannot read it either.
 
 ### Team table views (#320)
 
