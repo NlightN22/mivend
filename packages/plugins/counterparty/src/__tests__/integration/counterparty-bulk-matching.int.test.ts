@@ -81,9 +81,10 @@ beforeEach(async () => {
     scope = { kind: 'all' };
     await dataSource.getRepository(TestCustomer).clear();
     await dataSource.getRepository(TestCounterparty).clear();
-    const base = { inn: '7700000000', phone: '+10000000', officialEmail: 'a@example.test' };
+    const base = { phone: '+10000000', officialEmail: 'a@example.test' };
     const rows = Array.from({ length: 30 }, (_, i) => ({
         ...base,
+        inn: `77000000${String(i).padStart(2, '0')}`,
         erpId: `e-${i}`,
         legalName: `Legal ${i}`,
         shortName: `${i % 3 === 0 ? 'Alpha' : 'Beta'} ${i}`,
