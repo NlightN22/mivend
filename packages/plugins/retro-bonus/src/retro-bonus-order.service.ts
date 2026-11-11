@@ -29,6 +29,7 @@ export class RetroBonusOrderService {
         if (!counterparty) return NONE;
         const rules = await this.rules.findForCounterparty(ctx, counterparty.erpId);
         if (rules.length === 0) return NONE;
+        // unbounded-ok: product membership rows of the matched rules, bounded by that list
         const rows = await this.connection
             .getRepository(ctx, RetroBonusRuleProduct)
             .find({ where: { ruleId: In(rules.map(r => r.id as number)) } });
