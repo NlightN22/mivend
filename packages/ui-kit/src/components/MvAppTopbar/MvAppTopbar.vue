@@ -157,7 +157,7 @@ const menuOpen = ref(false);
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: var(--el-text-color-primary);
+    background: var(--el-color-primary);
     color: var(--app-on-accent);
     display: grid;
     place-items: center;

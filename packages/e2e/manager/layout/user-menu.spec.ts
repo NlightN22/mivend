@@ -48,3 +48,19 @@ test('the menu is reachable at phone width @on:manager-operator @read-only', asy
     await page.locator('.mv-app-topbar__user').click();
     await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
 });
+
+test('the menu takes focus on open and moves with the arrow keys @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await page.locator('.mv-app-topbar__user').click();
+    const link = page.getByRole('menuitem', { name: 'Password and two-factor sign-in' });
+    await expect(link).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitemradio').first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(link).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.mv-app-topbar__user')).toBeFocused();
+});

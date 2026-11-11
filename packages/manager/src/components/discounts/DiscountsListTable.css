@@ -10,3 +10,8 @@
     gap: 4px;
     min-width: 0;
 }
+
+.discounts-list-table__renew {
+    color: var(--app-nav-accent);
+    border-color: currentcolor;
+}

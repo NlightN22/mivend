@@ -302,6 +302,7 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
                     v-if="(data as DiscountRow).status === 'expiring-soon'"
                     size="sm"
                     variant="ghost"
+                    class="discounts-list-table__renew"
                     @click="emit('renew', data as DiscountRow)"
                     >Renew</MvButton
                 >

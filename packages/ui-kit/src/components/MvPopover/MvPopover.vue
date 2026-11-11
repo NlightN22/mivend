@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { ElPopover } from 'element-plus';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 
@@ -17,9 +17,19 @@ const isMobile = useIsMobileViewport(640);
 const closeOnEscape = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') open.value = false;
 };
-watch(open, isOpen => {
-    if (isOpen) document.addEventListener('keydown', closeOnEscape);
-    else document.removeEventListener('keydown', closeOnEscape);
+const content = ref<HTMLElement | null>(null);
+let opener: HTMLElement | null = null;
+watch(open, async isOpen => {
+    if (isOpen) {
+        opener = document.activeElement as HTMLElement | null;
+        document.addEventListener('keydown', closeOnEscape);
+        await nextTick();
+        content.value?.querySelector<HTMLElement>('[data-popover-autofocus]')?.focus();
+    } else {
+        document.removeEventListener('keydown', closeOnEscape);
+        opener?.focus();
+        opener = null;
+    }
 });
 onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
 </script>
@@ -30,7 +40,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
         <Teleport to="body">
             <div v-if="open" class="mv-popover__backdrop" @click="open = false" />
             <div v-if="open" class="mv-popover__sheet" role="dialog">
-                <div class="mv-popover__content"><slot /></div>
+                <div ref="content" class="mv-popover__content"><slot /></div>
             </div>
         </Teleport>
     </template>
@@ -43,7 +53,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape));
         popper-class="mv-popover__popper"
     >
         <template #reference><slot name="trigger" /></template>
-        <div class="mv-popover__content"><slot /></div>
+        <div ref="content" class="mv-popover__content"><slot /></div>
     </ElPopover>
 </template>
 

@@ -27,6 +27,7 @@ function chooseTheme(value: ThemePreference): void {
             <div class="user-menu__group-title">{{ group.label }}</div>
             <RouterLink
                 v-for="item in group.items"
+                data-popover-autofocus
                 :key="item.to"
                 :to="item.to"
                 class="user-menu__item"
