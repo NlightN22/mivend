@@ -3116,6 +3116,20 @@ export type GeoProviderInfo = {
 
 export type GlobalFlag = 'FALSE' | 'INHERIT' | 'TRUE';
 
+export type GlobalSearchGroup = {
+    items: Array<GlobalSearchItem>;
+    kind: Scalars['String']['output'];
+};
+
+export type GlobalSearchItem = {
+    counterpartyId: Maybe<Scalars['ID']['output']>;
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    status: Maybe<Scalars['String']['output']>;
+    subtitle: Maybe<Scalars['String']['output']>;
+    title: Scalars['String']['output'];
+};
+
 export type GlobalSettings = {
     availableLanguages: Array<LanguageCode>;
     createdAt: Scalars['DateTime']['output'];
@@ -8214,6 +8228,7 @@ export type Query = {
     getSettingsStoreValue: Maybe<Scalars['JSON']['output']>;
     /** Get multiple key-value pairs (each automatically scoped) */
     getSettingsStoreValues: Maybe<Scalars['JSON']['output']>;
+    globalSearch: Array<GlobalSearchGroup>;
     globalSettings: GlobalSettings;
     grantedRetroBonuses: GrantedRetroBonusList;
     highUsageCounterparties: Array<Counterparty>;
@@ -8656,6 +8671,11 @@ export type QueryGetSettingsStoreValueArgs = {
 
 export type QueryGetSettingsStoreValuesArgs = {
     keys: Array<Scalars['String']['input']>;
+};
+
+export type QueryGlobalSearchArgs = {
+    limitPerKind?: InputMaybe<Scalars['Int']['input']>;
+    term: Scalars['String']['input'];
 };
 
 export type QueryGrantedRetroBonusesArgs = {
@@ -12621,6 +12641,25 @@ export type ReverseGeocodeQueryVariables = Exact<{
 }>;
 
 export type ReverseGeocodeQuery = { reverseGeocode: string | null };
+
+export type GlobalSearchQueryVariables = Exact<{
+    term: Scalars['String']['input'];
+    limitPerKind?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GlobalSearchQuery = {
+    globalSearch: Array<{
+        kind: string;
+        items: Array<{
+            id: string;
+            number: string;
+            title: string;
+            subtitle: string | null;
+            status: string | null;
+            counterpartyId: string | null;
+        }>;
+    }>;
+};
 
 export type EntityVersionRowFieldsFragment = {
     id: string;
@@ -16701,6 +16740,21 @@ export const ReverseGeocodeDocument = new TypedDocumentString(`
   reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
 }
     `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
+export const GlobalSearchDocument = new TypedDocumentString(`
+    query GlobalSearch($term: String!, $limitPerKind: Int) {
+  globalSearch(term: $term, limitPerKind: $limitPerKind) {
+    kind
+    items {
+      id
+      number
+      title
+      subtitle
+      status
+      counterpartyId
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<GlobalSearchQuery, GlobalSearchQueryVariables>;
 export const EntityVersionsDocument = new TypedDocumentString(`
     query EntityVersions($entityName: String!, $entityId: ID!) {
   entityVersions(entityName: $entityName, entityId: $entityId) {

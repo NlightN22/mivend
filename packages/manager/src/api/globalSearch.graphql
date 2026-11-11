@@ -1,0 +1,13 @@
+query GlobalSearch($term: String!, $limitPerKind: Int) {
+    globalSearch(term: $term, limitPerKind: $limitPerKind) {
+        kind
+        items {
+            id
+            number
+            title
+            subtitle
+            status
+            counterpartyId
+        }
+    }
+}
