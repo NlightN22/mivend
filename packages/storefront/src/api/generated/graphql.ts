@@ -4137,13 +4137,6 @@ export type SettlementDocumentPage = {
     totalItems: Scalars['Int']['output'];
 };
 
-/** Aggregate of statement documents that are not listed; never carries anything per document. */
-export type SettlementHiddenSummary = {
-    count: Scalars['Int']['output'];
-    currency: Scalars['String']['output'];
-    netAmount: Scalars['Money']['output'];
-};
-
 export type SettlementDocumentRow = {
     amount: Scalars['Money']['output'];
     category: Scalars['String']['output'];
@@ -4162,6 +4155,13 @@ export type SettlementDocumentRow = {
     organizationId: Scalars['String']['output'];
     organizationName?: Maybe<Scalars['String']['output']>;
     paymentStatus?: Maybe<Scalars['String']['output']>;
+};
+
+/** Aggregate of statement documents that are not listed; never carries anything per document. */
+export type SettlementHiddenSummary = {
+    count: Scalars['Int']['output'];
+    currency: Scalars['String']['output'];
+    netAmount: Scalars['Money']['output'];
 };
 
 export type SettlementOrderRef = {
@@ -5709,7 +5709,6 @@ export type SettlementDocumentsQueryVariables = Exact<{
 export type SettlementDocumentsQuery = {
     settlementDocuments: {
         totalItems: number;
-        hiddenSummary: Array<{ currency: string; count: number; netAmount: any }>;
         items: Array<{
             id: string;
             documentType: string;
@@ -5732,6 +5731,7 @@ export type SettlementDocumentsQuery = {
                 orderErpId: string;
             }>;
         }>;
+        hiddenSummary: Array<{ currency: string; count: number; netAmount: any }>;
     };
 };
 
