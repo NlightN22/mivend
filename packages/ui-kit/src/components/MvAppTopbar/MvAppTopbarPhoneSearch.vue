@@ -3,9 +3,9 @@ import { onMounted, ref } from 'vue';
 import { IconSearch, IconX } from '@tabler/icons-vue';
 
 defineProps<{ placeholder: string }>();
+const query = defineModel<string>('query', { default: '' });
 const emit = defineEmits<{ search: [value: string]; close: [] }>();
 
-const query = ref('');
 const field = ref<HTMLInputElement | null>(null);
 onMounted(() => field.value?.focus());
 

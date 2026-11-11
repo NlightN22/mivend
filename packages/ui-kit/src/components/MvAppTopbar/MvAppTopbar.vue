@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
 // across every manager portal page. On phone: logo mark, search button, actions and a round avatar; search takes over the row.
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import { IconSearch } from '@tabler/icons-vue';
 import MvAppTopbarPhoneSearch from './MvAppTopbarPhoneSearch.vue';
+import MvAppTopbarSearchBox from './MvAppTopbarSearchBox.vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
 
@@ -16,16 +17,19 @@ withDefaults(
         brandTo?: string;
         searchPlaceholder?: string;
         phoneSearchPlaceholder?: string;
+        searchActiveId?: string;
     }>(),
     {
         brandTo: '/',
         searchPlaceholder: 'Search…',
         phoneSearchPlaceholder: 'Search…',
         userRoleLabel: null,
+        searchActiveId: undefined,
     },
 );
 
-const emit = defineEmits<{ search: [value: string] }>();
+const query = defineModel<string>('query', { default: '' });
+const emit = defineEmits<{ search: [value: string]; 'search-keydown': [event: KeyboardEvent] }>();
 
 const menuOpen = ref(false);
 const searching = ref(false);
@@ -34,17 +38,25 @@ watch(isPhone, phone => {
     if (!phone) searching.value = false;
 });
 const searchButton = ref<HTMLButtonElement | null>(null);
+const searchBox = ref<InstanceType<typeof MvAppTopbarSearchBox> | null>(null);
 
 async function closeSearch(): Promise<void> {
     searching.value = false;
+    query.value = '';
     await nextTick();
     searchButton.value?.focus();
 }
 
-function submitSearch(value: string): void {
-    emit('search', value);
-    void closeSearch();
+function onShortcut(event: KeyboardEvent): void {
+    if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    if (isPhone.value) searching.value = true;
+    else searchBox.value?.focus();
 }
+
+onMounted(() => document.addEventListener('keydown', onShortcut));
+onBeforeUnmount(() => document.removeEventListener('keydown', onShortcut));
+defineExpose({ closeSearch });
 </script>
 
 <template>
@@ -53,27 +65,30 @@ function submitSearch(value: string): void {
             <MvLogo size="sm" />
         </RouterLink>
 
-        <div class="mv-app-topbar__search">
-            <span class="mv-app-topbar__search-icon">⌕</span>
-            <input
-                class="mv-app-topbar__search-input"
-                type="search"
-                :placeholder="searchPlaceholder"
-                disabled
-            />
-            <span class="mv-app-topbar__search-shortcut">Ctrl K</span>
-        </div>
+        <MvAppTopbarSearchBox
+            ref="searchBox"
+            v-model:query="query"
+            class="mv-app-topbar__search"
+            :placeholder="searchPlaceholder"
+            :active-id="searchActiveId"
+            @keydown="emit('search-keydown', $event)"
+        >
+            <template #default="{ close }">
+                <slot name="search-panel" :close="close" :desktop="true" />
+            </template>
+        </MvAppTopbarSearchBox>
 
         <MvAppTopbarPhoneSearch
             v-if="searching"
             class="mv-app-topbar__phone-search"
+            v-model:query="query"
             :placeholder="phoneSearchPlaceholder"
-            @search="submitSearch"
+            @search="emit('search', $event)"
             @close="closeSearch"
         />
 
         <div v-if="searching && $slots['search-panel']" class="mv-app-topbar__panel">
-            <slot name="search-panel" :close="closeSearch" />
+            <slot name="search-panel" :close="closeSearch" :desktop="false" />
         </div>
 
         <div class="mv-app-topbar__actions">
@@ -138,47 +153,6 @@ function submitSearch(value: string): void {
     align-items: center;
     color: inherit;
     text-decoration: none;
-}
-
-.mv-app-topbar__search {
-    flex: 1;
-    max-width: 640px;
-    position: relative;
-}
-
-.mv-app-topbar__search-icon {
-    position: absolute;
-    top: 10px;
-    left: 14px;
-    color: var(--el-text-color-secondary);
-}
-
-.mv-app-topbar__search-input {
-    width: 100%;
-    height: 40px;
-    padding: 0 70px 0 38px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 999px;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-primary);
-    font-size: 14px;
-    outline: none;
-}
-
-.mv-app-topbar__search-input::placeholder {
-    color: var(--el-text-color-secondary);
-}
-
-.mv-app-topbar__search-shortcut {
-    position: absolute;
-    right: 10px;
-    top: 7px;
-    padding: 3px 7px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 8px;
-    color: var(--el-text-color-secondary);
-    background: var(--app-surface);
-    font-size: 12px;
 }
 
 .mv-app-topbar__actions {
