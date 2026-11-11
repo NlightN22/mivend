@@ -249,6 +249,10 @@ defineExpose({ closeSearch });
         background: var(--el-bg-color-page);
     }
 
+    .mv-app-topbar--searching {
+        z-index: var(--mv-z-floating);
+    }
+
     .mv-app-topbar--searching .mv-app-topbar__brand,
     .mv-app-topbar--searching .mv-app-topbar__actions,
     .mv-app-topbar--searching .mv-app-topbar__user {
