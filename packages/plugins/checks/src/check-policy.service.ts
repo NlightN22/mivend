@@ -94,6 +94,7 @@ export class CheckPolicyService {
         if (providers.length === 0) return new Map();
         const repo = this.connection.getRepository(ctx, CheckPolicy);
         const codes = providers.map(p => p.code);
+        // unbounded-ok: policies of the check codes and stage passed in, one per code and branch
         const rows = await repo.find({
             where: [
                 { stage, checkCode: In(codes), branchId: IsNull() },
@@ -152,6 +153,7 @@ export class CheckPolicyService {
         if (providers.length === 0) {
             return [];
         }
+        // unbounded-ok: policies of the registered check providers, one per code, stage and branch
         return this.connection.getRepository(ctx, CheckPolicy).find({
             where: { checkCode: In(providers.map(p => p.code)) },
             order: { checkCode: 'ASC', stage: 'ASC', branchId: 'ASC' },

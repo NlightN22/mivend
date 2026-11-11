@@ -223,6 +223,7 @@ export class ChecksService {
         if (!ids.has(subjectId)) {
             return [];
         }
+        // unbounded-ok: check results of one subject
         return this.connection.getRepository(ctx, CheckResult).find({
             where: { subjectType, subjectId },
             order: { id: 'ASC' },
