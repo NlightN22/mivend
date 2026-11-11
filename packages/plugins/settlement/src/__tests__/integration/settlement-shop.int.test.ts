@@ -478,7 +478,12 @@ describe('settlement shop queries (real Postgres)', () => {
                 accounting: { reflectedInAccounting: true },
                 entries: [entry({ amount: -40 })],
             });
-            await doc('d-2', { number: '2', documentType: 'NewKind', entries: [entry()] });
+            await doc('d-2', {
+                number: '2',
+                documentType: 'NewKind',
+                documentTypeLabel: 'NewKind',
+                entries: [entry()],
+            });
             const page = await shop.documents(ctx, '1', { category: 'other' }, 0, 20);
             expect(
                 page.items.map(i => [i.number, i.category, i.documentTypeLabel, i.amount]).sort(),

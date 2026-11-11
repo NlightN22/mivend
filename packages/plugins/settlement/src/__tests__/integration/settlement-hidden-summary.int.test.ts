@@ -222,7 +222,7 @@ describe('hidden documents stay aggregate-only (real Postgres)', () => {
             openingBalance: 50000,
             currentBalance: 90000,
             currency: 'RUB',
-            contractId: 'ct-1',
+            contractId: '1',
         });
         expect(before[0]).toMatchObject({ openingBalance: 50000, currentBalance: 90000 });
     });
