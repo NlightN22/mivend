@@ -30,6 +30,7 @@ export const freightPointGuard: OrderProcess<OrderState> = {
             fromState === 'ArrangingPayment' &&
             (toState === 'PaymentAuthorized' || toState === 'PaymentSettled');
         if (!placement && !payment) return;
+        // unbounded-ok: shipping lines of one order
         const lines = await connection.getRepository(ctx, ShippingLine).find({
             where: { order: { id: order.id } },
             relations: ['shippingMethod'],

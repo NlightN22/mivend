@@ -132,6 +132,7 @@ export class OrderVisibilityService {
     async visibleIds(ctx: RequestContext, orderIds: ID[]): Promise<Set<string>> {
         if (orderIds.length === 0) return new Set();
         const qb = await this.buildVisibleOrdersQuery(ctx);
+        // unbounded-ok: visible subset of the order ids passed in, bounded by that list
         const rows = await qb
             .andWhere(`${qb.alias}.id IN (:...scopeOrderIds)`, { scopeOrderIds: orderIds })
             .getMany();

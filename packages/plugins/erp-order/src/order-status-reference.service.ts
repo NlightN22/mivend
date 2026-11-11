@@ -46,6 +46,7 @@ export class OrderStatusReferenceService {
     }
 
     async dictionary(ctx: RequestContext): Promise<OrderStatusDictionary> {
+        // unbounded-ok: order status dictionary, tens of rows
         const rows = await this.connection
             .getRepository(ctx, OrderStatusReference)
             .find({ where: { isDeleted: false }, order: { rank: 'ASC', id: 'ASC' } });

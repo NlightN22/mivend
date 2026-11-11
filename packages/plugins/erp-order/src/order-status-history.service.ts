@@ -33,6 +33,7 @@ export class OrderStatusHistoryService {
     }
 
     list(ctx: RequestContext, orderId: number | string): Promise<OrderStatusHistoryEntry[]> {
+        // unbounded-ok: status history of one order
         return this.connection
             .getRepository(ctx, OrderStatusHistoryEntry)
             .find({ where: { orderId: Number(orderId) }, order: { occurredAt: 'ASC', id: 'ASC' } });

@@ -46,6 +46,7 @@ export class OrderVisibilityAggregatesService {
             throw new UserInputError(`At most ${MAX_COUNTERPARTY_IDS} counterparty ids per call`);
         }
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
+        // unbounded-ok: grouped by counterparty id of the ids passed in
         const rows = await qb
             .select('counterparty.id::text', 'counterpartyId')
             .addSelect(`MAX(${qb.alias}.orderPlacedAt)`, 'lastOrderAt')

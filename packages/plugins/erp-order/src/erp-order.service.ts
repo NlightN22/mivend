@@ -175,6 +175,7 @@ export class ErpOrderService {
         if (!full) return;
 
         for (const orderRef of full.orders) {
+            // unbounded-ok: fulfillments of one order
             const orderFulfillments = await this.connection
                 .getRepository(ctx, Fulfillment)
                 .createQueryBuilder('fulfillment')
