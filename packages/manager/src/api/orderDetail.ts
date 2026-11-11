@@ -27,6 +27,7 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
         ...order,
         customFields: order.customFields ?? {
             reservationDays: null,
+            reservationState: null,
             branchId: null,
             isExternal: null,
             reservationFailureReason: null,
