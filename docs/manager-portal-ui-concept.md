@@ -184,6 +184,7 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, renamed System settings; the security page (password, two-factor) is also linked from the user menu |
 | User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built: identity block, "Password and security", compact menu with an icon-only theme control in one row with its label (Light / Dark / Auto, kept per browser), "System settings" when permitted, Log out last in the danger role; same component in the desktop dropdown and the phone bottom sheet; profile and language not built (the manager has no i18n) |
 | Mobile header | <=800px: logo mark, round search button (the field takes over the header row; a panel with recent queries and quick links covers the page; cross or Escape closes), notification bell with unread badge, round avatar button opening the user menu card | built; submit opens the Customers list filtered by the typed text; quick links are the user's accessible lists (saved views are per list and cannot be listed across lists). Target once a search backend exists: results grouped by entity and real quick filters in the same overlay |
+| Global search | one box in the header (desktop) and the search overlay (phone, Ctrl K): customers, orders, proforma invoices, settlement documents, discounts, grouped by kind, a few hits each | server search exists (`globalSearch`, #345, see below); the header box and the overlay are not wired to it yet |
 
 The Catalog item is removed from the portal (see principles).
 
@@ -384,3 +385,24 @@ Orders list performance follow-ups (measured on a prod-scaled clone, #320): the 
 `createdAt` descending only (ascending sorts and code, state, total sorts have no index on either path); the department
 scope costs about 600-1200 ms per query at 50k orders (a sequential scan of order, customer, counterparty and trading
 point) and needs its own index or query rework; counts and text search scan the order table (55-740 ms at 50k).
+
+## Global search (#345)
+
+`globalSearch(term, limitPerKind)` is an admin query in the `staff-search` plugin. The term is trimmed, at least two
+and at most 64 characters (shorter answers an empty list), `limitPerKind` defaults to 5 and is capped at 10. The answer
+is one group per kind that has hits: `kind` (`counterparty`, `order`, `proformaInvoice`, `settlementDocument`,
+`discount`), and items `id`, `number`, `title`, `subtitle`, `status`, `counterpartyId`. The portal opens `kind` + `id`
+(the settlement document id is the list row id) and builds the route itself. Matching is case-insensitive and Cyrillic
+safe, `%` and `_` are plain characters, and a displayed order number (`100-0000303`) matches its stored form.
+
+- Fields searched: customer short and legal name and INN; order code; proforma invoice number; settlement document
+  number; discount registry number, price type, product group and customer names.
+- Scope and permissions are the lists' own (see `docs/access-control.md`); kinds run in parallel and a failing kind is
+  logged and left out.
+- Performance: `pg_trgm` GIN indexes (migration `1791579000000`) on exactly the columns above that grow
+  (settlement document number, proforma invoice number, order code, customer short and legal name, INN). Trigrams need
+  three characters, so a two-character term uses a bounded prefix lookup on the settlement number btree and, for the
+  other kinds, a plain scan of small tables. The discount registry is small and unindexed. Document the
+  measurement on a production-sized copy before changing the set; if the unified search ever exceeds about 100 ms there,
+  the fallback decided in #345 is a separate OpenSearch index behind the same query.
+- Synchronize contours drop migration-only indexes on start, so measure on a database where the migration ran.
