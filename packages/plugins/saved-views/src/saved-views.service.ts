@@ -47,6 +47,7 @@ export class SavedViewsService {
         pageKey: string,
     ): Promise<SavedTableView[]> {
         const administratorId = await this.requireAdministratorId(ctx);
+        // unbounded-ok: saved views of one administrator and page plus the shared ones for that page
         return this.connection.getRepository(ctx, SavedTableView).find({
             where: [
                 { administratorId, pageKey, scope: 'PERSONAL' },
