@@ -309,6 +309,33 @@ services:
         restart: unless-stopped
         logging: *logging
 
+    # Nightly VACUUM (ANALYZE) by crond; optional VACUUM FULL of listed tables. See docs/deployment.md "Nightly maintenance".
+    pg-maintenance:
+        image: postgres:16-alpine
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            PGHOST: postgres
+            PGUSER: ${POSTGRES_USER:?POSTGRES_USER is required}
+            PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+            PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB is required}
+            MAINTENANCE_CRON: ${MAINTENANCE_CRON:-0 1 * * *}
+            MAINTENANCE_FULL_TABLES: ${MAINTENANCE_FULL_TABLES:-}
+            MAINTENANCE_LOCK_TIMEOUT: ${MAINTENANCE_LOCK_TIMEOUT:-10s}
+        volumes:
+            - ./pg-maintenance.sh:/usr/local/bin/pg-maintenance.sh:ro
+            - /etc/localtime:/etc/localtime:ro
+        entrypoint: ['sh', '-c']
+        command:
+            - echo "$$MAINTENANCE_CRON /usr/local/bin/pg-maintenance.sh >/proc/1/fd/1 2>&1" | crontab - && exec crond -f -L /dev/stdout
+        deploy:
+            resources:
+                limits:
+                    memory: 256m
+        restart: unless-stopped
+        logging: *logging
+
     rabbitmq:
         image: rabbitmq:3.13-management-alpine
         environment:

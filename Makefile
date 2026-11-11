@@ -282,6 +282,7 @@ test:
 	$(TEST_LOCK) bash infrastructure/scripts/tests/site-identity-envsh.test.sh
 	$(TEST_LOCK) bash infrastructure/scripts/tests/nginx-real-ip.test.sh
 	$(TEST_LOCK) bash infrastructure/scripts/tests/e2e-picker-seed.test.sh
+	$(TEST_LOCK) bash infrastructure/scripts/tests/pg-maintenance.test.sh
 
 # Quick loop: tests of the packages changed since BASE (default origin/main) and their dependents. Full runs stay required before audit and release.
 test-changed:

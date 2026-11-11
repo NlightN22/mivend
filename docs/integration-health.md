@@ -108,10 +108,8 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   tombstone that lost its version reference is never removed. A full pass reads every row older than the horizon
   (about 80 s on 4.4M rows), so the pass runs at most once an hour per process (decision, #343); a part-way pass
   resumes on the next tick. A partial index on tombstones would make it proportional to the tombstones; not added.
-- One-time reclaim after the first purge (#343): the file keeps its size until rewritten. In a maintenance window
-  with the workers stopped, after a fresh `make prod-backup` and a `df` check (new table file plus WAL needs about
-  the table plus its indexes free): `VACUUM FULL integration_inbox_event;` (ACCESS EXCLUSIVE lock: the server's
-  health queries wait too, not only the workers), then watch `pg_total_relation_size('integration_inbox_event')`.
+- One-time reclaim after the first purge (#343): the file keeps its size until rewritten. Let the nightly job do it: after a `df` check (new table file plus WAL needs about
+  the table plus its indexes free) set `MAINTENANCE_FULL_TABLES=integration_inbox_event` for one night (docs/deployment.md "Nightly maintenance"; ACCESS EXCLUSIVE lock, the server's health queries wait too, so it runs under `lock_timeout` and skips the night when the table is busy), then empty the variable and watch `pg_total_relation_size('integration_inbox_event')`.
 - Any stream with a `failed` row raises a red alert on the Inbound tab, highlights the stream row, and opens a
   `failed-inbox-rows` issue in the reconciliation list (nightly run, #305); it clears when no failed row remains.
 - Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
