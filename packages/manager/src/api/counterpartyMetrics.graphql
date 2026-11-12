@@ -1,0 +1,26 @@
+query CounterpartyMetrics($counterpartyId: ID!) {
+    counterpartyMetrics(counterpartyId: $counterpartyId) {
+        currency
+        balanceMinor
+        balances {
+            currency
+            amountMinor
+        }
+        contractBalances {
+            contractId
+            contractErpId
+            contractName
+            organizationName
+            currency
+            closingBalanceMinor
+            openingDate
+        }
+        salesLast30DaysMinor
+        salesPrev30DaysMinor
+        salesLast12MonthsMinor
+        saleDocumentsLast12Months
+        averageCheckMinor
+        openOrdersCount
+        computedAt
+    }
+}

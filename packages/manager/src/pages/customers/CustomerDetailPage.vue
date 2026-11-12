@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel, MvStatusBadge, MvKpiCard, MvKpiCarousel, MvSkeleton } from '@mivend/ui-kit';
+import { MvPanel, MvStatusBadge, MvSkeleton } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useTabSync } from '../../composables/useTabSync';
 import { useCurrency } from '../../composables/useCurrency';
@@ -9,10 +9,8 @@ import {
     fetchCustomerById,
     fetchCreditForCounterparty,
     fetchCustomerIdForCounterparty,
-    fetchOrdersForCustomer,
     type CustomerListItem,
     type CustomerCredit,
-    type CustomerOrderItem,
 } from '../../api/customers';
 import {
     fetchManagerOptions,
@@ -39,6 +37,7 @@ import {
     IconListDetails,
 } from '@tabler/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
+import CustomerMetricsKpis from '../../components/customers/CustomerMetricsKpis.vue';
 import OrdersList from '../../components/orders/OrdersList.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
@@ -63,7 +62,6 @@ const credit = ref<CustomerCredit | null>(null);
 const outstandingBalance = ref<OutstandingBalance | null>(null);
 const managers = ref<ManagerOption[]>([]);
 const branches = ref<BranchOption[]>([]);
-const orders = ref<CustomerOrderItem[]>([]);
 // The Vendure Customer id, resolved from the route's counterparty id — distinct from
 // customer.value.id (the counterparty id) and required by visibleOrders(customerId: ...).
 const vendureCustomerId = ref<string | null>(null);
@@ -199,22 +197,7 @@ onBeforeUnmount(() => {
 // the refs to fetch for, not a pre-loaded array.
 const historyRefs = ref<EntityRef[]>([]);
 
-// Terminal states orders no longer need attention in — mirrors the 'Delivered'/'Cancelled'
-// options in api/orders.ts's ORDER_STATE_OPTIONS.
-const CLOSED_ORDER_STATES = new Set(['Delivered', 'Cancelled']);
-
-const sales30d = computed(() => {
-    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return orders.value
-        .filter(o => o.orderPlacedAt && new Date(o.orderPlacedAt).getTime() >= since)
-        .reduce((sum, o) => sum + o.totalWithTax, 0);
-});
-
-const openOrdersCount = computed(
-    () => orders.value.filter(o => !CLOSED_ORDER_STATES.has(o.state)).length,
-);
-
-const { formatWhole, formatMinor } = useCurrency();
+const { formatWhole } = useCurrency();
 
 async function load(): Promise<void> {
     loading.value = true;
@@ -237,11 +220,8 @@ async function load(): Promise<void> {
         credit.value = creditResult;
 
         vendureCustomerId.value = await fetchCustomerIdForCounterparty(counterpartyId);
-        orders.value = vendureCustomerId.value
-            ? await fetchOrdersForCustomer(vendureCustomerId.value)
-            : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
-        // The list tabs own their fetching; this page only needs outstandingBalance for its KPI card.
+        // The list tabs own their fetching; this page only needs the unpaid proforma amount for its KPI card.
         outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
 
         if (canViewHistory.value) {
@@ -404,21 +384,12 @@ function initials(name: string | null): string {
             </div>
         </div>
 
-        <MvKpiCarousel v-if="!loading" class="customer-detail__kpis">
-            <MvKpiCard label="Sales last 30 days" :value="formatMinor(sales30d)" />
-            <MvKpiCard label="Open orders" :value="openOrdersCount" />
-            <MvKpiCard
-                label="Outstanding balance"
-                :value="
-                    outstandingBalance ? formatMinor(outstandingBalance.amount) : formatMinor(0)
-                "
-            />
-            <MvKpiCard
-                v-if="credit"
-                label="Available credit"
-                :value="formatWhole(credit.creditLimit - credit.creditBalance)"
-            />
-        </MvKpiCarousel>
+        <CustomerMetricsKpis
+            v-if="!loading"
+            :counterparty-id="String(route.params.id)"
+            :unpaid-proforma-minor="outstandingBalance?.amount ?? 0"
+            :available-credit="credit ? credit.creditLimit - credit.creditBalance : null"
+        />
 
         <div class="customer-detail__tabs">
             <button
@@ -616,10 +587,6 @@ function initials(name: string | null): string {
     font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-primary);
-}
-
-.customer-detail__kpis {
-    margin-top: 4px;
 }
 
 .customer-detail__kpis-skeleton {
