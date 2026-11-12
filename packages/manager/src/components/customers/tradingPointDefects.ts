@@ -7,3 +7,7 @@ const LABELS: Record<string, string> = {
 export function tradingPointDefectLabel(code: string): string {
     return LABELS[code] ?? code;
 }
+
+export function visibleTradingPointDefects(codes: readonly string[]): string[] {
+    return codes.filter(code => code !== 'INACTIVE');
+}
