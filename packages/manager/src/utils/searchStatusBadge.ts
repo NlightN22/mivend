@@ -2,7 +2,13 @@ import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { DISCOUNT_STATUS_BADGE_VARIANT } from '../api/discounts';
 import { ORDER_STATE_BADGE_VARIANT, ORDER_STATE_LABEL } from '../api/orders';
 import { PROFORMA_INVOICE_STATUS_BADGE_VARIANT } from '../api/proforma-invoices';
+import { i18n } from '../i18n';
 import { humanize } from './searchTarget';
+
+function statusLabel(status: string): string {
+    const key = `shell.search.status.${status}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : humanize(status);
+}
 
 export interface SearchStatusBadge {
     label: string;
@@ -20,23 +26,23 @@ export function searchStatusBadge(kind: string, status: string): SearchStatusBad
             };
         case 'proformaInvoice':
             return {
-                label: humanize(status),
+                label: statusLabel(status),
                 variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[status] ?? 'neutral',
             };
         case 'counterparty':
             return {
-                label: humanize(status),
+                label: statusLabel(status),
                 variant: status === 'active' ? 'success' : 'neutral',
             };
         case 'discount':
             return {
-                label: humanize(status),
+                label: statusLabel(status),
                 variant:
                     status === 'pending' || status === 'rejected'
                         ? DISCOUNT_STATUS_BADGE_VARIANT[status]
                         : 'neutral',
             };
         default:
-            return { label: humanize(status), variant: 'neutral' };
+            return { label: statusLabel(status), variant: 'neutral' };
     }
 }

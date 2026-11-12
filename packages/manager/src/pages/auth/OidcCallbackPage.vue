@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
 import { readSiteIconUrl, readSiteName, MvLogo, MvButton, MvNotice } from '@mivend/ui-kit';
 import { consumeOidcState } from '../../composables/oidcBinding';
 import { completeOidcSignIn, openOidcSession } from '../../api/oidc';
 import { useAuthStore } from '../../stores/auth';
-import { OIDC_LABELS } from './oidcLabels';
 
+const { t } = useI18n();
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
 const router = useRouter();
@@ -46,12 +47,12 @@ onMounted(async () => {
             <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
             <div class="oidc-card">
                 <template v-if="failed">
-                    <MvNotice variant="error">{{ OIDC_LABELS.failed }}</MvNotice>
+                    <MvNotice variant="error">{{ t('auth.oidc.failed') }}</MvNotice>
                     <MvButton variant="primary" size="lg" @click="router.push('/login')">
-                        {{ OIDC_LABELS.backToLogin }}
+                        {{ t('auth.oidc.backToLogin') }}
                     </MvButton>
                 </template>
-                <p v-else>{{ OIDC_LABELS.checking }}</p>
+                <p v-else>{{ t('auth.oidc.checking') }}</p>
             </div>
         </div>
     </main>

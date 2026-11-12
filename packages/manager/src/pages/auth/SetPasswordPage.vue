@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useRedirectCountdown } from '../../composables/useRedirectCountdown';
 import {
@@ -19,6 +20,7 @@ import {
     type PasswordResetIdentity,
 } from '../../api/users';
 
+const { t } = useI18n();
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
 
@@ -77,7 +79,7 @@ async function handleSubmit(): Promise<void> {
         } else {
             state.value = result.reason ? REASON_TO_STATE[result.reason] : 'invalid';
             if (result.reason === 'validation')
-                validationMessage.value = 'Пароль не соответствует требованиям.';
+                validationMessage.value = t('auth.setPassword.validation');
         }
     } catch {
         state.value = 'invalid';
@@ -100,9 +102,9 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 
             <div class="set-password-card">
                 <template v-if="state === 'form' || state === 'validation'">
-                    <h1 class="set-password-card__title">Задайте пароль</h1>
+                    <h1 class="set-password-card__title">{{ t('auth.setPassword.title') }}</h1>
                     <p class="set-password-card__desc">
-                        Создайте пароль для учётной записи в портале менеджера.
+                        {{ t('auth.setPassword.description') }}
                     </p>
 
                     <div v-if="identity" class="set-password-card__identity">
@@ -126,32 +128,31 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     </MvNotice>
 
                     <form class="set-password-form" novalidate @submit.prevent="handleSubmit">
-                        <MvFormField label="Новый пароль">
+                        <MvFormField :label="t('auth.setPassword.newPassword')">
                             <MvPasswordInput
                                 v-model="form.password"
                                 autocomplete="new-password"
-                                show-label="Показать"
-                                hide-label="Скрыть"
+                                :show-label="t('auth.login.show')"
+                                :hide-label="t('auth.login.hide')"
                                 :error="tooShortError"
                             />
                         </MvFormField>
 
-                        <MvFormField label="Повторите пароль">
+                        <MvFormField :label="t('auth.setPassword.repeatPassword')">
                             <MvPasswordInput
                                 v-model="form.confirmPassword"
                                 autocomplete="new-password"
-                                show-label="Показать"
-                                hide-label="Скрыть"
+                                :show-label="t('auth.login.show')"
+                                :hide-label="t('auth.login.hide')"
                                 :error="mismatchError"
                             />
                         </MvFormField>
                         <MvNotice v-if="mismatchError" variant="error"
-                            >Пароли не совпадают.</MvNotice
+                            >{{ t('auth.setPassword.mismatch') }}</MvNotice
                         >
 
                         <p class="set-password-card__rules">
-                            Не короче {{ MIN_PASSWORD_LENGTH }} символов. Пароль должен
-                            соответствовать политике безопасности портала менеджера.
+                            {{ t('auth.setPassword.rules', { min: MIN_PASSWORD_LENGTH }) }}
                         </p>
 
                         <MvButton
@@ -162,7 +163,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                             :disabled="!form.password || mismatchError || tooShortError"
                             class="set-password-form__submit"
                         >
-                            Сохранить пароль
+                            {{ t('auth.setPassword.submit') }}
                         </MvButton>
                     </form>
                 </template>
@@ -172,8 +173,8 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     class="set-password-state set-password-state--success"
                 >
                     <div class="set-password-state__icon">✓</div>
-                    <h3>Пароль сохранён</h3>
-                    <p>Пароль успешно задан. Теперь вы можете войти в портал менеджера.</p>
+                    <h3>{{ t('auth.setPassword.savedTitle') }}</h3>
+                    <p>{{ t('auth.setPassword.savedText') }}</p>
 
                     <div
                         v-if="identity"
@@ -190,20 +191,17 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                         </div>
                     </div>
 
-                    <p role="status">Переход ко входу через {{ remaining }} с...</p>
+                    <p role="status">{{ t('auth.setPassword.redirect', { seconds: remaining }) }}</p>
 
                     <MvButton variant="primary" size="lg" @click="goToSignIn"
-                        >Перейти ко входу</MvButton
+                        >{{ t('auth.setPassword.toSignIn') }}</MvButton
                     >
                 </div>
 
                 <div v-else class="set-password-state set-password-state--error">
                     <div class="set-password-state__icon">!</div>
-                    <h3>Ссылка недействительна или устарела</h3>
-                    <p>
-                        Эту ссылку для установки пароля больше нельзя использовать. Запросите новое
-                        приглашение у администратора.
-                    </p>
+                    <h3>{{ t('auth.setPassword.invalidTitle') }}</h3>
+                    <p>{{ t('auth.setPassword.invalidText') }}</p>
 
                     <div
                         v-if="identity"
@@ -221,7 +219,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                     </div>
 
                     <MvButton variant="secondary" size="lg" @click="goToSignIn"
-                        >Вернуться ко входу</MvButton
+                        >{{ t('auth.setPassword.backToSignIn') }}</MvButton
                     >
                 </div>
             </div>

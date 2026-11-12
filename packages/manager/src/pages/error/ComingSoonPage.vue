@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 const route = useRoute();
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="coming-soon">
-        <h1>{{ route.meta.title ?? 'Coming soon' }}</h1>
-        <p>This section of the manager portal is not built yet — it's on the roadmap.</p>
+        <h1>{{ t(String(route.meta.titleKey ?? 'shell.comingSoon.title')) }}</h1>
+        <p>{{ t('shell.comingSoon.text') }}</p>
     </div>
 </template>
 

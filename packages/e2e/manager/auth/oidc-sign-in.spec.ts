@@ -21,10 +21,10 @@ test.describe('Manager sign-in through the corporate account', () => {
         page,
     }) => {
         await page.goto('/login');
-        const button = page.getByRole('button', { name: 'Войти с помощью localhost', exact: true });
+        const button = page.getByRole('button', { name: 'Sign in with localhost', exact: true });
         await expect(button).toBeVisible();
-        await expect(page.getByRole('separator')).toHaveText('или');
-        await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+        await expect(page.getByRole('separator')).toHaveText('or');
+        await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
     });
 
     test('an unknown e-mail is refused with the generic error and no session', async ({

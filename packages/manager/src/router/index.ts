@@ -270,13 +270,13 @@ export const router = createRouter({
                     },
                 },
                 ...[
-                    { path: 'customers/new', title: 'New client' },
-                    { path: 'analytics', title: 'Analytics' },
-                    { path: 'profile', title: 'Profile' },
-                ].map(({ path, title }) => ({
+                    { path: 'customers/new', titleKey: 'shell.comingSoon.newCustomer' },
+                    { path: 'analytics', titleKey: 'shell.comingSoon.analytics' },
+                    { path: 'profile', titleKey: 'shell.comingSoon.profile' },
+                ].map(({ path, titleKey }) => ({
                     path,
                     component: () => import('../pages/error/ComingSoonPage.vue'),
-                    meta: { requiresAuth: true, title },
+                    meta: { requiresAuth: true, titleKey },
                 })),
                 {
                     path: ':pathMatch(.*)*',

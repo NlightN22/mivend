@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
 import {
     readSiteIconUrl,
@@ -20,9 +21,9 @@ import { rememberOidcState } from '../../composables/oidcBinding';
 import { fetchAuthorizationUrl, fetchOidcSignIn } from '../../api/oidc';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
-import { OIDC_LABELS, oidcButtonLabel } from './oidcLabels';
-import { RECOVERED_NOTICE, TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
+import { TWO_FACTOR_LABELS as labels } from './twoFactorLabels';
 
+const { t } = useI18n();
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
 
@@ -104,17 +105,17 @@ function handleSubmit(): Promise<void> {
                     @back="signIn.back"
                 />
                 <template v-else>
-                    <h1 class="login-card__title">Вход в портал менеджера</h1>
+                    <h1 class="login-card__title">{{ t('auth.login.title') }}</h1>
 
                     <MvNotice v-if="recovered && !error" variant="info" class="login-card__error">
-                        {{ RECOVERED_NOTICE }}
+                        {{ t('auth.twoFactor.recovered') }}
                     </MvNotice>
                     <MvNotice v-if="error" variant="error" class="login-card__error">
                         {{ labels.errors[error === 'UNKNOWN' ? 'INVALID_CREDENTIALS' : error] }}
                     </MvNotice>
 
                     <form class="login-form" novalidate @submit.prevent="handleSubmit">
-                        <MvFormField label="Логин">
+                        <MvFormField :label="t('auth.login.username')">
                             <MvInput
                                 v-model="form.username"
                                 type="text"
@@ -123,12 +124,12 @@ function handleSubmit(): Promise<void> {
                             />
                         </MvFormField>
 
-                        <MvFormField label="Пароль">
+                        <MvFormField :label="t('auth.login.password')">
                             <MvPasswordInput
                                 v-model="form.password"
                                 autocomplete="current-password"
-                                show-label="Показать"
-                                hide-label="Скрыть"
+                                :show-label="t('auth.login.show')"
+                                :hide-label="t('auth.login.hide')"
                                 :error="!!error"
                             />
                         </MvFormField>
@@ -144,7 +145,7 @@ function handleSubmit(): Promise<void> {
 
                         <label class="login-form__remember">
                             <input v-model="form.remember" type="checkbox" />
-                            <span>Запомнить меня</span>
+                            <span>{{ t('auth.login.remember') }}</span>
                         </label>
 
                         <MvButton
@@ -154,16 +155,16 @@ function handleSubmit(): Promise<void> {
                             :loading="loading"
                             class="login-form__submit"
                         >
-                            Войти
+                            {{ t('auth.login.submit') }}
                         </MvButton>
                     </form>
 
                     <MvNotice v-if="oidcError" variant="error" class="login-card__error">
-                        {{ OIDC_LABELS.startFailed }}
+                        {{ t('auth.oidc.startFailed') }}
                     </MvNotice>
                     <template v-if="oidcInfo">
                         <div class="login-divider" role="separator">
-                            <span>{{ OIDC_LABELS.divider }}</span>
+                            <span>{{ t('auth.oidc.divider') }}</span>
                         </div>
                         <MvButton
                             variant="secondary"
@@ -182,7 +183,7 @@ function handleSubmit(): Promise<void> {
                                 height="20"
                                 @error="oidcIconFailed = true"
                             />
-                            {{ oidcButtonLabel(oidcInfo.host) }}
+                            {{ t('auth.oidc.button', { host: oidcInfo.host }) }}
                         </MvButton>
                     </template>
                 </template>

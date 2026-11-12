@@ -1,15 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { SearchGroup, SearchHit } from '../../api/globalSearch';
 import { searchHitKey as resultKey, searchKindLabel } from '../../utils/searchTarget';
 import { searchStatusBadge } from '../../utils/searchStatusBadge';
 
+const { t } = useI18n();
 defineProps<{ groups: SearchGroup[]; activeKey: string | null }>();
 defineEmits<{ select: [kind: string, hit: SearchHit] }>();
 </script>
 
 <template>
-    <div class="search-results" role="listbox" aria-label="Search results">
+    <div class="search-results" role="listbox" :aria-label="t('shell.search.results')">
         <section v-for="group in groups" :key="group.kind" class="search-results__group">
             <h2 class="search-results__title">{{ searchKindLabel(group.kind) }}</h2>
             <button

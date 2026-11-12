@@ -1,13 +1,6 @@
 import type { RouteLocationRaw } from 'vue-router';
 import type { SearchHit } from '../api/globalSearch';
-
-const KIND_LABELS: Record<string, string> = {
-    counterparty: 'Customers',
-    order: 'Orders',
-    proformaInvoice: 'Proforma invoices',
-    settlementDocument: 'Settlement documents',
-    discount: 'Discounts',
-};
+import { i18n } from '../i18n';
 
 export function humanize(value: string): string {
     const text = value
@@ -18,7 +11,8 @@ export function humanize(value: string): string {
 }
 
 export function searchKindLabel(kind: string): string {
-    return KIND_LABELS[kind] ?? humanize(kind);
+    const key = `shell.search.kind.${kind}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : humanize(kind);
 }
 
 // Orders open by code (their route key). Settlement documents and discounts have no card of their own

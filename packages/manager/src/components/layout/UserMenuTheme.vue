@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { themePreference, setThemePreference } from '@mivend/ui-kit';
 import { THEME_CHOICES } from './userMenuItems';
+
+const { t } = useI18n();
 </script>
 
 <template>
-    <div class="user-menu-theme" role="group" aria-label="Theme">
-        <span class="user-menu-theme__title">Theme</span>
+    <div class="user-menu-theme" role="group" :aria-label="t('shell.userMenu.theme')">
+        <span class="user-menu-theme__title">{{ t('shell.userMenu.theme') }}</span>
         <div class="user-menu-theme__segments">
             <button
                 v-for="choice in THEME_CHOICES"
@@ -13,8 +16,8 @@ import { THEME_CHOICES } from './userMenuItems';
                 type="button"
                 class="user-menu-theme__segment"
                 role="menuitemradio"
-                :aria-label="choice.label"
-                :title="choice.label"
+                :aria-label="t(choice.labelKey)"
+                :title="t(choice.labelKey)"
                 :aria-checked="themePreference === choice.value"
                 @click.stop="setThemePreference(choice.value)"
             >

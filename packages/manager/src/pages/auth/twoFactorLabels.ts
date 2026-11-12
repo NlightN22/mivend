@@ -1,58 +1,24 @@
 import type { TwoFactorLabels } from '@mivend/ui-kit';
+import { i18n } from '../../i18n';
+import en from '../../i18n/en/auth';
 
-export const TWO_FACTOR_LABELS: TwoFactorLabels = {
-    codeLabel: 'Код из приложения',
-    codeTitle: 'Введите код',
-    codeSubtitle: 'Откройте приложение-аутентификатор и введите 6-значный код.',
-    codeSubmit: 'Подтвердить',
-    back: 'Назад',
-    lostAccess: 'Нет доступа к приложению',
-    enrolTitle: 'Настройте двухфакторную защиту',
-    enrolSubtitle:
-        'Вход привязан к вашему телефону. Подключите приложение-аутентификатор, чтобы продолжить.',
-    stepInstall: 'Установите на телефон приложение-аутентификатор (список ниже).',
-    stepScan: 'Отсканируйте QR-код в приложении или введите ключ вручную.',
-    stepCode: 'Введите 6-значный код, который показывает приложение.',
-    appsTitle: 'Приложения-аутентификаторы',
-    playStore: 'Android',
-    appStore: 'iPhone',
-    qrAlt: 'QR-код для приложения-аутентификатора',
-    manualKey: 'Ключ для ручного ввода',
-    copyKey: 'Скопировать ключ',
-    enrolSubmit: 'Подтвердить и войти',
-    recoverySentTitle: 'Проверьте почту',
-    recoverySentText: 'Мы отправили ссылку для сброса на',
-    recoverySentValid: 'Ссылка действует 30 минут.',
-    backToCode: 'Вернуться к вводу кода',
-    backToSignIn: 'Вернуться ко входу',
-    passwordLabel: 'Пароль',
-    currentCodeLabel: 'Текущий код из приложения',
-    settingsTitle: 'Двухфакторная аутентификация',
-    settingsSub: 'При каждом входе запрашивается одноразовый код с вашего телефона.',
-    statusOn: 'Включена',
-    statusOff: 'Не настроена',
-    statusRequired: 'Двухфакторная защита обязательна. Настройте её сейчас.',
-    changeDevice: 'Сменить устройство',
-    enableDevice: 'Настроить',
-    settingsContinue: 'Продолжить',
-    cancel: 'Отмена',
-    enabledDone: 'Новое устройство активно.',
-    recoveryPageTitle: 'Сбросить двухфакторную защиту',
-    recoveryPageSub:
-        'Введите пароль для подтверждения. Старое устройство будет удалено, а новое вы настроите при следующем входе.',
-    recoveryComplete: 'Отвязать старое устройство',
-    recoveryInvalid: 'Ссылка недействительна или устарела. Запросите новую на странице входа.',
-    errors: {
-        INVALID_CREDENTIALS: 'Неверный логин или пароль.',
-        CHALLENGE_INVALID: 'Попытка входа устарела. Введите пароль ещё раз.',
-        INVALID_CODE: 'Код неверный или уже использован.',
-        PASSWORD_INVALID: 'Неверный пароль.',
-        CODE_REQUIRED: 'Введите текущий код из приложения.',
-        NOT_ENROLLED: 'Двухфакторная защита не настроена.',
-        ENROLMENT_EXPIRED: 'Время настройки истекло. Показан новый QR-код, отсканируйте его.',
-        RECOVERY_LINK_INVALID: 'Ссылка недействительна или устарела.',
-        UNKNOWN: 'Что-то пошло не так. Попробуйте ещё раз.',
-    },
-};
+const { errors: errorKeys, ...flatKeys } = en.twoFactor;
 
-export const RECOVERED_NOTICE = 'Старое устройство удалено. Войдите и настройте новое.';
+function defineLazy(target: object, prefix: string, keys: object): void {
+    for (const key of Object.keys(keys)) {
+        Object.defineProperty(target, key, {
+            enumerable: true,
+            get: () => i18n.global.t(`${prefix}.${key}`),
+        });
+    }
+}
+
+// Getters resolve at render time so a language switch updates labels held in this module-level object.
+const errors = {};
+defineLazy(errors, 'auth.twoFactor.errors', errorKeys);
+const labels = { errors };
+defineLazy(labels, 'auth.twoFactor', flatKeys);
+
+export const TWO_FACTOR_LABELS = labels as TwoFactorLabels;
+
+export const recoveredNotice = (): string => i18n.global.t('auth.twoFactor.recovered');

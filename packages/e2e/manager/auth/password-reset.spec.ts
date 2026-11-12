@@ -49,13 +49,13 @@ test.describe('Password reset mail link depends on the recipient (#137)', () => 
             await page.goto(link.toString());
             await page.getByRole('textbox').first().fill(NEW_PASSWORD);
             await page.getByRole('textbox').last().fill(NEW_PASSWORD);
-            await page.getByRole('button', { name: 'Сохранить пароль' }).click();
-            await expect(page.getByText('Пароль сохранён')).toBeVisible();
+            await page.getByRole('button', { name: 'Save password' }).click();
+            await expect(page.getByText('Password saved')).toBeVisible();
 
             await page.waitForURL(url => url.pathname === '/login', { timeout: 15_000 });
             await page.locator('input').first().fill(email);
             await page.locator('input[type="password"]').fill(NEW_PASSWORD);
-            await page.getByRole('button', { name: 'Войти', exact: true }).click();
+            await page.getByRole('button', { name: 'Sign in', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
         } finally {
             await adminGql(

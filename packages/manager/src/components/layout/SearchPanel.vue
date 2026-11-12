@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { IconHistory, IconX } from '@tabler/icons-vue';
 import type { SearchGroup, SearchHit } from '../../api/globalSearch';
 import SearchResults from './SearchResults.vue';
@@ -17,6 +18,7 @@ export interface SearchState {
     empty: boolean;
 }
 
+const { t } = useI18n();
 defineProps<{
     recent: string[];
     shortcuts: SearchShortcut[];
@@ -35,7 +37,7 @@ defineEmits<{
 
 <template>
     <div class="search-panel">
-        <p v-if="state.tooShort" class="search-panel__note">Type at least 2 characters</p>
+        <p v-if="state.tooShort" class="search-panel__note">{{ t('shell.search.tooShort') }}</p>
         <template v-if="state.active">
             <SearchResults
                 v-if="state.groups.length"
@@ -43,18 +45,18 @@ defineEmits<{
                 :active-key="activeKey"
                 @select="(kind, hit) => $emit('select', kind, hit)"
             />
-            <p v-if="state.pending" class="search-panel__note" role="status">Searching…</p>
+            <p v-if="state.pending" class="search-panel__note" role="status">{{ t('shell.search.pending') }}</p>
             <p v-else-if="state.failed" class="search-panel__note" role="alert">
-                Search is unavailable, try again
+                {{ t('shell.search.failed') }}
             </p>
-            <p v-else-if="state.empty" class="search-panel__note" role="status">No results</p>
+            <p v-else-if="state.empty" class="search-panel__note" role="status">{{ t('shell.search.empty') }}</p>
         </template>
         <template v-else>
-            <section v-if="recent.length" aria-label="Recent queries">
+            <section v-if="recent.length" :aria-label="t('shell.search.recent')">
                 <div class="search-panel__head">
-                    <h2 class="search-panel__title">Recent queries</h2>
+                    <h2 class="search-panel__title">{{ t('shell.search.recent') }}</h2>
                     <button type="button" class="search-panel__clear" @click="$emit('clear')">
-                        Clear
+                        {{ t('shell.search.clear') }}
                     </button>
                 </div>
                 <div v-for="query in recent" :key="query" class="search-panel__row">
@@ -65,15 +67,15 @@ defineEmits<{
                     <button
                         type="button"
                         class="search-panel__remove"
-                        :aria-label="`Remove ${query}`"
+                        :aria-label="t('shell.search.remove', { query })"
                         @click="$emit('remove', query)"
                     >
                         <IconX :size="16" aria-hidden="true" />
                     </button>
                 </div>
             </section>
-            <section v-if="!desktop" aria-label="Quick links">
-                <h2 class="search-panel__title">Quick links</h2>
+            <section v-if="!desktop" :aria-label="t('shell.search.quickLinks')">
+                <h2 class="search-panel__title">{{ t('shell.search.quickLinks') }}</h2>
                 <div class="search-panel__chips">
                     <button
                         v-for="shortcut in shortcuts"
@@ -91,7 +93,7 @@ defineEmits<{
             v-if="desktop && !state.active && !recent.length && !state.tooShort"
             class="search-panel__note"
         >
-            Search customers, orders, documents…
+            {{ t('shell.topbar.searchPlaceholder') }}
         </p>
     </div>
 </template>

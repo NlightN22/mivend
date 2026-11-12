@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UserMenu from '../components/layout/UserMenu.vue';
 import { computed, onMounted, ref } from 'vue';
+import { I18nT, useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -21,6 +22,7 @@ import { useHeaderSearch } from '../composables/useHeaderSearch';
 import SearchPanel from '../components/layout/SearchPanel.vue';
 import { useNotificationsStore } from '../stores/notifications';
 
+const { t } = useI18n();
 const notificationsStore = useNotificationsStore();
 const {
     notifications,
@@ -98,8 +100,8 @@ function handleRelogin(): void {
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"
             v-model:query="search.query.value"
-            search-placeholder="Search customers, orders, documents…"
-            phone-search-placeholder="Search customers, orders, documents…"
+            :search-placeholder="t('shell.topbar.searchPlaceholder')"
+            :phone-search-placeholder="t('shell.topbar.searchPlaceholder')"
             :search-active-id="
                 search.activeKey.value ? `search-hit-${search.activeKey.value}` : undefined
             "
@@ -152,16 +154,21 @@ function handleRelogin(): void {
             />
         </div>
         <div class="layout__body">
-            <MvAppSidebar :items="menuItems" section-title="Workspace" />
+            <MvAppSidebar :items="menuItems" :section-title="t('shell.nav.workspace')" />
             <main class="layout__content">
                 <MvNotice
                     v-if="authStore.isDefaultSuperadminAccount"
                     variant="warning"
                     class="layout__default-account"
                 >
-                    You're signed in with the default <strong>superadmin</strong> account and its
-                    default password.
-                    <RouterLink to="/settings/security">Change the password</RouterLink>
+                    <I18nT keypath="shell.layout.defaultAccount" tag="span">
+                        <template #name>
+                            <strong>{{ t('shell.layout.defaultAccountName') }}</strong>
+                        </template>
+                    </I18nT>
+                    <RouterLink to="/settings/security">{{
+                        t('shell.layout.changePassword')
+                    }}</RouterLink>
                 </MvNotice>
                 <RouterView />
             </main>

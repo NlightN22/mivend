@@ -150,7 +150,7 @@ test.describe('Settings > Security page — UI', () => {
             await page.goto('/login');
             await page.locator('input').first().fill(OPERATOR.username);
             await page.locator('input[type="password"]').fill(OPERATOR.password);
-            await page.getByRole('button', { name: 'Войти', exact: true }).click();
+            await page.getByRole('button', { name: 'Sign in', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/settings/security');
@@ -193,7 +193,7 @@ test.describe('Settings > Security page — UI', () => {
             await page.goto('/login');
             await page.locator('input').first().fill(OPERATOR.username);
             await page.locator('input[type="password"]').fill(OPERATOR.password);
-            await page.getByRole('button', { name: 'Войти', exact: true }).click();
+            await page.getByRole('button', { name: 'Sign in', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/settings/security');

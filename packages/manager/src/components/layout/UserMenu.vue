@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconLogout, IconSettings } from '@tabler/icons-vue';
 import { MvAvatar } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -9,6 +10,7 @@ import { USER_MENU_ITEMS, systemSettingsPath } from './userMenuItems';
 
 defineEmits<{ logout: [] }>();
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const settingsPath = computed(() => systemSettingsPath(authStore.hasPermission));
 const email = computed(() => authStore.administrator?.emailAddress ?? null);
@@ -32,7 +34,7 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-    <div ref="menu" class="user-menu" role="menu" aria-label="Account" @keydown="onKeydown">
+    <div ref="menu" class="user-menu" role="menu" :aria-label="t('shell.userMenu.account')" @keydown="onKeydown">
         <div class="user-menu__identity">
             <MvAvatar :name="authStore.fullName" size="sm" />
             <div class="user-menu__who">
@@ -52,13 +54,13 @@ function onKeydown(event: KeyboardEvent): void {
             role="menuitem"
         >
             <component :is="item.icon" :size="18" aria-hidden="true" />
-            {{ item.label }}
+            {{ t(item.labelKey) }}
         </RouterLink>
         <UserMenuTheme />
         <UserMenuLanguage />
         <RouterLink v-if="settingsPath" :to="settingsPath" class="user-menu__item" role="menuitem">
             <IconSettings :size="18" aria-hidden="true" />
-            System settings
+            {{ t('shell.nav.systemSettings') }}
         </RouterLink>
         <button
             type="button"
@@ -67,7 +69,7 @@ function onKeydown(event: KeyboardEvent): void {
             @click="$emit('logout')"
         >
             <IconLogout :size="18" aria-hidden="true" />
-            Log out
+            {{ t('shell.userMenu.logout') }}
         </button>
     </div>
 </template>

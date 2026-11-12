@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { oidcButtonLabel } from '../../pages/auth/oidcLabels';
+import { i18n } from '../../i18n';
 
-describe('oidcButtonLabel', () => {
+describe('oidc sign-in button label', () => {
     it('names the provider host', () => {
-        expect(oidcButtonLabel('idp.example.com')).toBe('Войти с помощью idp.example.com');
+        expect(i18n.global.t('auth.oidc.button', { host: 'idp.example.com' })).toBe(
+            'Sign in with idp.example.com',
+        );
     });
 });
