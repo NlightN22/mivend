@@ -1,3 +1,4 @@
+import { i18n } from '../../i18n';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import type { ActivationCandidate } from '../../api/counterpartyPortalAccess';
 
@@ -15,13 +16,8 @@ export function readinessOf(c: Pick<ActivationCandidate, 'portalReadiness'>): Re
     return READINESS_VALUES.find(v => v === c.portalReadiness) ?? 'missing-data';
 }
 
-export const READINESS_LABEL: Record<Readiness, string> = {
-    ready: 'Ready to activate',
-    'missing-data': 'Missing data',
-    'inn-duplicate': 'Duplicate INN',
-    'erp-inactive': 'ERP inactive',
-    activated: 'Activated',
-};
+export const readinessLabel = (readiness: string): string =>
+    i18n.global.t('bulkOperations.activation.readiness.' + readiness);
 
 export const READINESS_BADGE_VARIANT: Record<Readiness, StatusBadgeVariant> = {
     ready: 'success',
@@ -38,7 +34,7 @@ export function missingFields(
     const missing: string[] = [];
     if (!c.phone) missing.push('phone');
     if (!c.officialEmail) missing.push('email');
-    if (!/\d/.test(c.inn ?? '')) missing.push('INN');
+    if (!/\d/.test(c.inn ?? '')) missing.push('inn');
     return missing;
 }
 
@@ -46,9 +42,12 @@ export function readinessText(
     readiness: Readiness,
     c: Pick<ActivationCandidate, 'phone' | 'officialEmail' | 'inn'>,
 ): string {
-    if (readiness !== 'missing-data') return READINESS_LABEL[readiness];
-    const fields = missingFields(c);
+    const t = (key: string, named?: Record<string, unknown>): string =>
+        i18n.global.t('bulkOperations.activation.' + key, named ?? {});
+    if (readiness !== 'missing-data') return readinessLabel(readiness);
+    const fields = missingFields(c).map(f => t(`missing.${f}`));
     const last = fields[fields.length - 1];
-    const list = fields.length > 1 ? `${fields.slice(0, -1).join(', ')} and ${last}` : last;
-    return `Missing ${list} (ERP)`;
+    const list =
+        fields.length > 1 ? `${fields.slice(0, -1).join(', ')} ${t('missing.and')} ${last}` : last;
+    return t('missing.text', { list });
 }

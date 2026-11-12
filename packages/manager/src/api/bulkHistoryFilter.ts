@@ -19,12 +19,12 @@ export const BLANK_HISTORY_FILTERS: BulkHistoryFilters = {
 };
 
 export const HISTORY_VIEWS = [
-    { key: 'all', label: 'All', status: '' },
-    { key: 'running', label: 'In progress', status: 'running' },
-    { key: 'done', label: 'Done', status: 'done' },
-    { key: 'partial', label: 'Partly failed', status: 'partial' },
-    { key: 'stopped', label: 'Stopped', status: 'stopped' },
-    { key: 'failed', label: 'Failed', status: 'failed' },
+    { key: 'all', status: '' },
+    { key: 'running', status: 'running' },
+    { key: 'done', status: 'done' },
+    { key: 'partial', status: 'partial' },
+    { key: 'stopped', status: 'stopped' },
+    { key: 'failed', status: 'failed' },
 ] as const;
 
 export const HISTORY_SORT_FIELDS = ['createdAt', 'number', 'operationType', 'status'];

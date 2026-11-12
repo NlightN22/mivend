@@ -1,21 +1,10 @@
+import { i18n } from '../i18n';
 import type { BulkBatch, BulkBatchItem } from './bulkOperations';
 
 // Reason codes are stable server-side; an unknown code falls back to the raw code.
-const REASON_LABELS: Record<string, string> = {
-    not_found: 'Record not found',
-    out_of_scope: 'Outside your scope',
-    already_active: 'Portal access already granted',
-    no_portal_access: 'No portal access to revoke',
-    inactive: 'Inactive in the ERP',
-    no_contact: 'Phone or e-mail is missing',
-    no_inn: 'INN is missing in the ERP',
-    inn_duplicate: 'INN is used by another counterparty with portal access',
-    actor_not_allowed: 'Your access changed before this record was reached',
-    error: 'Could not be applied',
-};
-
 export function reasonLabel(code: string): string {
-    return REASON_LABELS[code] ?? code;
+    const key = `bulkOperations.reasons.${code}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : code;
 }
 
 // A cell starting with = + - @ (or a control character) would run as a formula in a spreadsheet.
@@ -25,13 +14,15 @@ function cell(raw: string): string {
 }
 
 export function batchReportCsv(batch: BulkBatch, items: BulkBatchItem[]): string {
-    const header = ['Batch', 'Record', 'Name', 'Result', 'Reason', 'Message'];
+    const header = ['batch', 'record', 'name', 'result', 'reason', 'message'].map(k =>
+        i18n.global.t(`bulkOperations.report.${k}`),
+    );
     const lines = items.map(i =>
         [
             batch.number,
             i.targetId,
             i.label ?? '',
-            i.outcome ?? 'pending',
+            i.outcome ?? i18n.global.t('bulkOperations.report.pending'),
             i.reasonCode ? reasonLabel(i.reasonCode) : '',
             i.message ?? '',
         ]

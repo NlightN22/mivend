@@ -1,4 +1,5 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
+import { i18n } from '../../i18n';
 import type { BranchOption } from '../../api/orders';
 
 export const UNASSIGNED_BRANCH = 'unassigned';
@@ -16,7 +17,7 @@ export function buildActivationColumns(
     return [
         {
             field: 'shortName',
-            header: 'Company name',
+            header: i18n.global.t('bulkOperations.activation.columns.shortName'),
             width: 200,
             minWidth: 160,
             priority: 10,
@@ -29,7 +30,7 @@ export function buildActivationColumns(
         },
         {
             field: 'inn',
-            header: 'INN',
+            header: i18n.global.t('bulkOperations.activation.columns.inn'),
             width: 120,
             minWidth: 120,
             priority: 8,
@@ -41,7 +42,7 @@ export function buildActivationColumns(
         // Sorts by the raw managerErpId though the cell shows a resolved name.
         {
             field: 'manager',
-            header: 'Manager',
+            header: i18n.global.t('bulkOperations.activation.columns.manager'),
             width: 140,
             minWidth: 110,
             priority: 6,
@@ -54,7 +55,7 @@ export function buildActivationColumns(
         },
         {
             field: 'branch',
-            header: 'Branch',
+            header: i18n.global.t('bulkOperations.activation.columns.branch'),
             width: 130,
             minWidth: 100,
             priority: 4,
@@ -63,13 +64,13 @@ export function buildActivationColumns(
             filterField: 'branchId',
             filterOperators: ['eq', 'notEq'],
             filterOptions: [
-                { value: UNASSIGNED_BRANCH, label: 'Unassigned' },
+                { value: UNASSIGNED_BRANCH, label: i18n.global.t('bulkOperations.activation.unassigned') },
                 ...branches.map(b => ({ value: b.id, label: b.name })),
             ],
         },
         {
             field: 'officialEmail',
-            header: 'Official email',
+            header: i18n.global.t('bulkOperations.activation.columns.officialEmail'),
             width: 190,
             minWidth: 150,
             priority: 7,
@@ -80,7 +81,7 @@ export function buildActivationColumns(
         },
         {
             field: 'readiness',
-            header: 'Portal access',
+            header: i18n.global.t('bulkOperations.activation.columns.readiness'),
             width: 210,
             minWidth: 210,
             priority: 9,
@@ -89,7 +90,7 @@ export function buildActivationColumns(
         },
         {
             field: 'phone',
-            header: 'Phone',
+            header: i18n.global.t('bulkOperations.activation.columns.phone'),
             width: 150,
             priority: 3,
             sortField: 'phone',
@@ -100,7 +101,7 @@ export function buildActivationColumns(
         },
         {
             field: 'isActive',
-            header: 'Active in ERP',
+            header: i18n.global.t('bulkOperations.activation.columns.isActive'),
             width: 130,
             priority: 2,
             filterConfig: NOT_FILTERED,

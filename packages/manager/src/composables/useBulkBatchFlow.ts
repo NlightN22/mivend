@@ -1,4 +1,5 @@
 import { onBeforeUnmount, ref, type Ref } from 'vue';
+import { i18n } from '../i18n';
 import {
     ACTIVE_STATUSES,
     fetchBulkBatch,
@@ -44,7 +45,7 @@ export function useBulkBatchFlow(type: string): BulkBatchFlow {
             try {
                 if (batch.value) batch.value = await fetchBulkBatch(batch.value.uuid);
             } catch (e) {
-                error.value = e instanceof Error ? e.message : 'Could not refresh the batch';
+                error.value = e instanceof Error ? e.message : i18n.global.t('bulkOperations.refreshFailed');
             }
             poll();
         }, POLL_MS);
@@ -58,7 +59,7 @@ export function useBulkBatchFlow(type: string): BulkBatchFlow {
             poll();
             return true;
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'The request failed';
+            error.value = e instanceof Error ? e.message : i18n.global.t('bulkOperations.requestFailed');
             return false;
         } finally {
             busy.value = false;

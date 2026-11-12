@@ -9,10 +9,7 @@ import {
     buildActivationColumns,
     UNASSIGNED_BRANCH,
 } from '../components/bulk-operations/activationColumns';
-import {
-    READINESS_LABEL,
-    READINESS_VALUES,
-} from '../components/bulk-operations/activationReadiness';
+import { READINESS_VALUES } from '../components/bulk-operations/activationReadiness';
 import { mergeFilters } from './orders-filter';
 import type { CounterpartyFilterParameter } from './generated/graphql';
 
@@ -28,10 +25,7 @@ export const BLANK_ACTIVATION_FILTERS: ActivationFilters = {
     conditions: [],
 };
 
-export const ACTIVATION_VIEWS = [
-    { key: 'all', label: 'All' },
-    ...READINESS_VALUES.map(value => ({ key: value, label: READINESS_LABEL[value] })),
-];
+export const ACTIVATION_VIEWS = [{ key: 'all' }, ...READINESS_VALUES.map(value => ({ key: value }))];
 
 export const ACTIVATION_FILTER_COLUMNS = toFilterColumns(buildActivationColumns([]));
 

@@ -1,3 +1,5 @@
+import { i18n } from '../../i18n';
+
 // What the wizard's select step holds: ticked ids, or "all records the list filter matches" (resolved by the server).
 export interface MatchingSelection {
     total: number;
@@ -34,7 +36,7 @@ export function changeRows(s: BulkSelection, next: Set<string>, pageIds: string[
     return {
         ids: next,
         matching: null,
-        notice: 'A row was unticked, so the selection of all matching records was reset.',
+        notice: i18n.global.t('bulkOperations.activation.unticked'),
     };
 }
 
@@ -59,6 +61,6 @@ export function criteriaChanged(
     return {
         ids: new Set(),
         matching: null,
-        notice: 'The filter changed, so the selection of all matching records was reset.',
+        notice: i18n.global.t('bulkOperations.activation.filterChanged'),
     };
 }

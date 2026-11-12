@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 // "Operations" and "History" tabs of the Bulk operations menu item; each tab is its own route.
 const route = useRoute();
-const TABS = [
-    { name: 'bulk-operations', label: 'Operations', path: '/bulk-operations' },
-    { name: 'bulk-operations-history', label: 'History', path: '/bulk-operations/history' },
-];
+const { t } = useI18n();
+const TABS = computed(() => [
+    { name: 'bulk-operations', label: t('bulkOperations.tabs.operations'), path: '/bulk-operations' },
+    {
+        name: 'bulk-operations-history',
+        label: t('bulkOperations.tabs.history'),
+        path: '/bulk-operations/history',
+    },
+]);
 </script>
 
 <template>
-    <nav class="bulk-tabs" aria-label="Bulk operations">
+    <nav class="bulk-tabs" :aria-label="t('bulkOperations.title')">
         <RouterLink
             v-for="tab in TABS"
             :key="tab.name"

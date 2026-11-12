@@ -1,6 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { WizardStep } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import type { OperationUi } from '../components/bulk-operations/operationUi';
 import {
     emptySelection,
@@ -10,18 +11,10 @@ import {
 } from '../components/bulk-operations/bulkSelection';
 import { useBulkBatchFlow, type BulkBatchFlow } from './useBulkBatchFlow';
 
-export const WIZARD_STEPS: WizardStep[] = [
-    { key: 'select', label: 'Select records' },
-    { key: 'parameters', label: 'Parameters' },
-    { key: 'review', label: 'Review' },
-    { key: 'run', label: 'Run and result' },
-];
-
-const NEXT_LABEL: Record<string, string> = {
-    select: 'Next',
-    parameters: 'Review',
-    review: 'Run batch',
-};
+const STEP_KEYS = ['select', 'parameters', 'review', 'run'];
+const NEXT_KEYS = ['select', 'parameters', 'review'];
+const t = (key: string, named?: Record<string, unknown>): string =>
+    i18n.global.t(`bulkOperations.wizard.${key}`, named ?? {});
 
 export interface BulkWizard {
     step: Ref<string>;
@@ -30,6 +23,7 @@ export interface BulkWizard {
     parameters: Ref<Record<string, unknown>>;
     flow: BulkBatchFlow;
     willChange: Ref<number | null>;
+    steps: ComputedRef<WizardStep[]>;
     nextDisabledReason: ComputedRef<string>;
     nextLabel: ComputedRef<string>;
     goTo: (key: string) => Promise<void>;
@@ -50,10 +44,10 @@ export function useBulkWizard(type: string, ui: OperationUi): BulkWizard {
 
     const nextDisabledReason = computed(() => {
         if (step.value === 'select' && selectionCount(selection.value) === 0)
-            return 'Select at least one record';
+            return t('selectAtLeastOne');
         if (step.value === 'select' && selectionCount(selection.value) > maxRecords.value)
-            return `At most ${maxRecords.value} records per batch; narrow the filter`;
-        if (step.value === 'review' && willChange.value === 0) return 'Nothing would change';
+            return t('overLimit', { max: maxRecords.value });
+        if (step.value === 'review' && willChange.value === 0) return t('nothingWouldChange');
         return '';
     });
 
@@ -98,8 +92,11 @@ export function useBulkWizard(type: string, ui: OperationUi): BulkWizard {
         parameters,
         flow,
         willChange,
+        steps: computed(() => STEP_KEYS.map(key => ({ key, label: t(`steps.${key}`) }))),
         nextDisabledReason,
-        nextLabel: computed(() => NEXT_LABEL[step.value] ?? 'Next'),
+        nextLabel: computed(() =>
+            t(`next.${NEXT_KEYS.includes(step.value) ? step.value : 'fallback'}`),
+        ),
         goTo,
         undo,
         init,

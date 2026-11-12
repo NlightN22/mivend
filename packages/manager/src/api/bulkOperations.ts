@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     BulkBatchDocument,
@@ -33,15 +34,10 @@ export const ITEMS_PAGE_SIZE = 25;
 const EXPORT_PAGE_SIZE = 100;
 export const ACTIVE_STATUSES = ['queued', 'running'];
 
-export const BATCH_STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft',
-    queued: 'Queued',
-    running: 'Running',
-    done: 'Done',
-    partial: 'Partly failed',
-    stopped: 'Stopped',
-    failed: 'Failed',
-};
+export function batchStatusLabel(status: string): string {
+    const key = `bulkOperations.status.${status}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : status;
+}
 
 export const BATCH_STATUS_VARIANT: Record<string, StatusBadgeVariant> = {
     draft: 'neutral',
@@ -53,14 +49,11 @@ export const BATCH_STATUS_VARIANT: Record<string, StatusBadgeVariant> = {
     failed: 'danger',
 };
 
-export const BATCH_STATUS_OPTIONS = [
-    'queued',
-    'running',
-    'done',
-    'partial',
-    'stopped',
-    'failed',
-].map(value => ({ value, label: BATCH_STATUS_LABEL[value] }));
+export const batchStatusOptions = (): Array<{ value: string; label: string }> =>
+    ['queued', 'running', 'done', 'partial', 'stopped', 'failed'].map(value => ({
+        value,
+        label: batchStatusLabel(value),
+    }));
 
 export function fetchBulkCatalog(): Promise<BulkOperationInfo[]> {
     return adminApi(BulkOperationCatalogDocument).then(r => r.bulkOperationCatalog);

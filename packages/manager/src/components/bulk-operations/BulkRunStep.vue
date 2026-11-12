@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvBatchResultTable,
     MvButton,
@@ -9,9 +10,9 @@ import {
 } from '@mivend/ui-kit';
 import {
     ACTIVE_STATUSES,
-    BATCH_STATUS_LABEL,
     BATCH_STATUS_VARIANT,
     ITEMS_PAGE_SIZE,
+    batchStatusLabel,
     fetchAllBulkBatchItems,
     type BulkBatch,
 } from '../../api/bulkOperations';
@@ -23,6 +24,7 @@ import { progressOf, refreshKeyOf, toResultRows } from './bulkRows';
 const props = defineProps<{ batch: BulkBatch; busy: boolean; error: string }>();
 const emit = defineEmits<{ undo: [] }>();
 
+const { t } = useI18n();
 const uuid = computed(() => props.batch.uuid);
 const list = useBulkBatchItems(
     uuid,
@@ -46,7 +48,7 @@ async function downloadReport(): Promise<void> {
         const items = await fetchAllBulkBatchItems(props.batch.uuid);
         downloadCsv(`bulk-batch-${props.batch.number}.csv`, batchReportCsv(props.batch, items));
     } catch (e) {
-        exportError.value = e instanceof Error ? e.message : 'Could not build the report';
+        exportError.value = e instanceof Error ? e.message : t('bulkOperations.run.reportFailed');
     } finally {
         exporting.value = false;
     }
@@ -56,9 +58,9 @@ async function downloadReport(): Promise<void> {
 <template>
     <div class="bulk-run-step">
         <div class="bulk-run-step__head">
-            <span class="bulk-run-step__title">Batch #{{ batch.number }}</span>
+            <span class="bulk-run-step__title">{{ t('bulkOperations.run.batch', { number: batch.number }) }}</span>
             <MvStatusBadge :variant="BATCH_STATUS_VARIANT[batch.status] ?? 'neutral'">
-                {{ BATCH_STATUS_LABEL[batch.status] ?? batch.status }}
+                {{ batchStatusLabel(batch.status) }}
             </MvStatusBadge>
             <span class="bulk-run-step__actions">
                 <MvButton
@@ -68,7 +70,7 @@ async function downloadReport(): Promise<void> {
                     :disabled="active"
                     @click="downloadReport"
                 >
-                    Download report
+                    {{ t('bulkOperations.run.downloadReport') }}
                 </MvButton>
                 <MvButton
                     v-if="batch.undoable && ['done', 'partial', 'stopped'].includes(batch.status)"
@@ -77,7 +79,7 @@ async function downloadReport(): Promise<void> {
                     :loading="busy"
                     @click="emit('undo')"
                 >
-                    Undo
+                    {{ t('bulkOperations.run.undo') }}
                 </MvButton>
             </span>
         </div>
@@ -86,7 +88,12 @@ async function downloadReport(): Promise<void> {
             v-if="active"
             :value="progressOf(batch)"
             :max="batch.totalCount"
-            :label="`${progressOf(batch)} of ${batch.totalCount} records processed`"
+            :label="
+                t('bulkOperations.run.progress', {
+                    done: progressOf(batch),
+                    total: batch.totalCount,
+                })
+            "
         />
         <MvNotice
             v-if="batch.errorMessage"
@@ -94,8 +101,11 @@ async function downloadReport(): Promise<void> {
             >{{ batch.errorMessage }}</MvNotice
         >
         <MvNotice v-if="batch.undoOfUuid" variant="info">
-            This batch undoes
-            <RouterLink :to="{ query: { batch: batch.undoOfUuid } }">an earlier batch</RouterLink>.
+            {{ t('bulkOperations.run.undoOf') }}
+            <RouterLink :to="{ query: { batch: batch.undoOfUuid } }">{{
+                t('bulkOperations.run.earlierBatch')
+            }}</RouterLink
+            >.
         </MvNotice>
         <MvNotice v-if="error || exportError || list.error.value" variant="error">
             {{ error || exportError || list.error.value }}
@@ -103,7 +113,7 @@ async function downloadReport(): Promise<void> {
 
         <MvBatchResultTable
             mode="result"
-            record-label="Counterparty"
+            :record-label="t('bulkOperations.review.recordLabel')"
             :rows="toResultRows(list.items.value)"
             :counters="counters"
             :page="list.page.value"

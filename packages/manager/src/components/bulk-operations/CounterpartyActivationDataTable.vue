@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvErrorState,
@@ -32,6 +33,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ 'update:selectedIds': [ids: Set<string>] }>();
 const list = props.list;
+const { t } = useI18n();
 
 const baseColumns = buildActivationColumns([]);
 const columns = computed(() =>
@@ -101,7 +103,7 @@ const rows = computed(() =>
             branch: list.branchName(c.branchId),
             phone: c.phone ?? '—',
             officialEmail: c.officialEmail ?? '—',
-            isActive: c.isActive ? 'Yes' : 'No',
+            isActive: c.isActive ? t('bulkOperations.activation.yes') : t('bulkOperations.activation.no'),
             readiness,
             readinessText: readinessText(readiness, c),
         };
@@ -112,7 +114,7 @@ type Row = (typeof rows.value)[number];
 const chips = computed<FilterChip[]>(() =>
     ACTIVATION_VIEWS.map(v => ({
         key: v.key,
-        label: v.label,
+        label: t(`bulkOperations.activation.readiness.${v.key}`),
         variant: v.key === 'all' ? undefined : READINESS_BADGE_VARIANT[v.key as Readiness],
         count: list.readinessCounts.value?.[v.key as Readiness | 'all'],
         countLoading: list.readinessCounts.value === null,
@@ -161,10 +163,10 @@ function applyView(state: TableViewState): void {
         data-key="id"
         :row-height-px="52"
         :header-height-px="65"
-        :search="{ filterKey: 'shortName', placeholder: 'Search company, legal name or INN…' }"
+        :search="{ filterKey: 'shortName', placeholder: t('bulkOperations.activation.searchPlaceholder') }"
         :conditions="list.filters.value.conditions"
         :default-filters="{ shortName: '' }"
-        empty-message="No counterparties match these filters"
+        :empty-message="t('bulkOperations.activation.empty')"
         selectable
         :selected-ids="selectedIds"
         :selection-label="selectionLabel"
@@ -177,12 +179,12 @@ function applyView(state: TableViewState): void {
         <template #empty>
             <MvErrorState
                 v-if="list.failed.value"
-                title="Could not load counterparties"
-                message="Check the connection and try again."
+                :title="t('bulkOperations.activation.loadFailedTitle')"
+                :message="t('bulkOperations.activation.loadFailedMessage')"
                 @retry="list.reload"
             />
             <template v-else>{{
-                list.loading.value ? '' : 'No counterparties match your filters'
+                list.loading.value ? '' : t('bulkOperations.activation.noMatch')
             }}</template>
         </template>
 

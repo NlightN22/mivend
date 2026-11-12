@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useActivationCandidates } from '../../composables/useActivationCandidates';
@@ -17,6 +18,7 @@ import CounterpartyActivationDataTable from './CounterpartyActivationDataTable.v
 const props = defineProps<{ selection: BulkSelection; maxRecords: number }>();
 const emit = defineEmits<{ 'update:selection': [selection: BulkSelection] }>();
 
+const { t } = useI18n();
 const list = useActivationCandidates();
 const administratorId = useAuthStore().administrator?.id ?? 'anonymous';
 
@@ -44,8 +46,8 @@ const canOfferAll = computed(
 );
 const label = computed(() =>
     matching.value
-        ? `All ${matching.value.total} selected`
-        : `Selected ${props.selection.ids.size} of ${total.value}`,
+        ? t('bulkOperations.activation.selectedAll', { total: matching.value.total })
+        : t('bulkOperations.activation.selectedOf', { count: props.selection.ids.size, total: total.value }),
 );
 
 watch(criteria, value => {
@@ -73,8 +75,7 @@ function selectAll(): void {
         >
             <template #below-toolbar>
                 <MvNotice v-if="overCap" variant="warning" data-testid="select-over-cap">
-                    {{ total }} match; at most {{ maxRecords }} can be processed in one batch.
-                    Narrow the filter (for example by branch, manager or readiness).
+                    {{ t('bulkOperations.activation.overCap', { total, max: maxRecords }) }}
                 </MvNotice>
             </template>
             <template #selection-actions>
@@ -85,7 +86,7 @@ function selectAll(): void {
                     data-testid="select-all-matching"
                     @click="selectAll"
                 >
-                    Select all {{ total }} records
+                    {{ t('bulkOperations.activation.selectAllRecords', { total }) }}
                 </button>
             </template>
         </CounterpartyActivationDataTable>

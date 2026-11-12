@@ -1,5 +1,6 @@
 import { ref, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { ITEMS_PAGE_SIZE, fetchBulkBatchItems, type BulkBatchItem } from '../api/bulkOperations';
 
 export interface BulkBatchItemsState {
@@ -30,7 +31,7 @@ export function useBulkBatchItems(
                 error.value = '';
                 return await fetchBulkBatchItems(uuid.value, page.value, outcome.value);
             } catch (e) {
-                error.value = e instanceof Error ? e.message : 'Could not load the records';
+                error.value = e instanceof Error ? e.message : i18n.global.t('bulkOperations.recordsLoadFailed');
                 return null;
             }
         },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvCard, MvErrorState, MvNotice, MvInput, MvSkeleton } from '@mivend/ui-kit';
 import type { BulkOperationInfo } from '../../api/bulkOperations';
 import { filterOperations, groupOperations, searchable } from './catalogGroups';
@@ -12,25 +13,26 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ retry: [] }>();
 
+const { t } = useI18n();
 const query = ref('');
 const groups = computed(() => groupOperations(filterOperations(props.operations, query.value)));
 </script>
 
 <template>
     <div class="bulk-catalog">
-        <MvInput v-if="searchable(operations)" v-model="query" placeholder="Search operations…" />
+        <MvInput v-if="searchable(operations)" v-model="query" :placeholder="t('bulkOperations.catalog.search')" />
         <MvSkeleton v-if="loading" height="64px" />
         <MvErrorState
             v-else-if="failed"
-            title="Could not load the operations"
-            message="Check the connection and try again."
+            :title="t('bulkOperations.catalog.loadFailedTitle')"
+            :message="t('bulkOperations.catalog.loadFailedMessage')"
             @retry="emit('retry')"
         />
         <MvNotice v-else-if="!operations.length" variant="info">
-            No bulk operations are available for your role.
+            {{ t('bulkOperations.catalog.none') }}
         </MvNotice>
         <MvNotice v-else-if="!groups.some(g => g.operations.length)" variant="info">
-            No operation matches your search.
+            {{ t('bulkOperations.catalog.noMatch') }}
         </MvNotice>
         <template v-else>
             <section v-for="group in groups" :key="group.area" class="bulk-catalog__group">

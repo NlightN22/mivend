@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvDateTimeCell,
@@ -12,7 +13,7 @@ import {
     type AdvancedDataTableRowClickPayload,
     type FilterChip,
 } from '@mivend/ui-kit';
-import { BATCH_STATUS_LABEL, BATCH_STATUS_VARIANT, type BulkBatch } from '../../api/bulkOperations';
+import { BATCH_STATUS_VARIANT, batchStatusLabel, type BulkBatch } from '../../api/bulkOperations';
 import {
     BLANK_HISTORY_FILTERS,
     HISTORY_VIEWS,
@@ -26,6 +27,7 @@ import { buildHistoryColumns } from './bulkHistoryColumns';
 
 const props = defineProps<{ history: BulkHistoryState; administratorId: string }>();
 const history = props.history;
+const { t } = useI18n();
 
 const columns = computed(() =>
     buildHistoryColumns(history.operations.value.map(o => ({ value: o.type, label: o.title }))),
@@ -100,7 +102,7 @@ type Row = (typeof rows.value)[number];
 const chips = computed<FilterChip[]>(() =>
     HISTORY_VIEWS.map(v => ({
         key: v.key,
-        label: v.label,
+        label: t(`bulkOperations.history.views.${v.key}`),
         variant: v.status ? BATCH_STATUS_VARIANT[v.status] : undefined,
         count: history.viewCounts.value?.[v.key],
         countLoading: history.viewCounts.value === null,
@@ -152,10 +154,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
         data-key="uuid"
         :row-height-px="56"
         :header-height-px="65"
-        :search="{ filterKey: 'number', placeholder: 'Search batch number…' }"
+        :search="{ filterKey: 'number', placeholder: t('bulkOperations.history.searchPlaceholder') }"
         :conditions="history.filters.value.conditions"
         :default-filters="{ number: '' }"
-        empty-message="No batches yet"
+        :empty-message="t('bulkOperations.history.empty')"
         @update:conditions="update({ conditions: $event })"
         @update:page="history.page.value = $event"
         @reset-page="history.page.value = 1"
@@ -165,12 +167,12 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
         <template #empty>
             <MvErrorState
                 v-if="history.failed.value"
-                title="Could not load the history"
-                message="Check the connection and try again."
+                :title="t('bulkOperations.history.loadFailedTitle')"
+                :message="t('bulkOperations.history.loadFailedMessage')"
                 @retry="history.reload"
             />
             <template v-else>{{
-                history.loading.value ? '' : 'No batches match your filters'
+                history.loading.value ? '' : t('bulkOperations.history.noMatch')
             }}</template>
         </template>
 
@@ -207,12 +209,16 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
         <template #cell-result="{ data }">
             <div class="bulk-history-table__result">
                 <MvStatusBadge :variant="BATCH_STATUS_VARIANT[(data as Row).status] ?? 'neutral'">{{
-                    BATCH_STATUS_LABEL[(data as Row).status] ?? (data as Row).status
+                    batchStatusLabel((data as Row).status)
                 }}</MvStatusBadge>
                 <span class="bulk-history-table__counts">
-                    {{ (data as Row).batch.appliedCount }} applied ·
-                    {{ (data as Row).batch.skippedCount }} skipped ·
-                    {{ (data as Row).batch.failedCount }} failed
+                    {{
+                        t('bulkOperations.history.counts', {
+                            applied: (data as Row).batch.appliedCount,
+                            skipped: (data as Row).batch.skippedCount,
+                            failed: (data as Row).batch.failedCount,
+                        })
+                    }}
                 </span>
             </div>
         </template>

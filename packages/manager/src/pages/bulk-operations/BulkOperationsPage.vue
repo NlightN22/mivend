@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { fetchBulkCatalog, type BulkOperationInfo } from '../../api/bulkOperations';
 import BulkCatalog from '../../components/bulk-operations/BulkCatalog.vue';
 import BulkOperationsTabs from '../../components/bulk-operations/BulkOperationsTabs.vue';
 import { operationUi } from '../../components/bulk-operations/operationUi';
 
+const { t } = useI18n();
 const catalog = ref<BulkOperationInfo[]>([]);
 const loading = ref(true);
 const failed = ref(false);
@@ -27,7 +29,7 @@ onMounted(() => void load());
 
 <template>
     <div class="bulk-page">
-        <h1 class="bulk-page__title">Bulk operations</h1>
+        <h1 class="bulk-page__title">{{ t('bulkOperations.title') }}</h1>
         <BulkOperationsTabs />
         <BulkCatalog :operations="operations" :loading="loading" :failed="failed" @retry="load" />
     </div>

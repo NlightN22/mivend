@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useBulkHistory } from '../../composables/useBulkHistory';
 import BulkHistoryTable from '../../components/bulk-operations/BulkHistoryTable.vue';
 import BulkOperationsTabs from '../../components/bulk-operations/BulkOperationsTabs.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const history = useBulkHistory();
 </script>
 
 <template>
     <div class="bulk-page">
-        <h1 class="bulk-page__title">Bulk operations</h1>
+        <h1 class="bulk-page__title">{{ t('bulkOperations.title') }}</h1>
         <BulkOperationsTabs />
         <BulkHistoryTable
             :history="history"

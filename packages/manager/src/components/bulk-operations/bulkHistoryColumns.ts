@@ -1,5 +1,6 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
-import { BATCH_STATUS_OPTIONS } from '../../api/bulkOperations';
+import { i18n } from '../../i18n';
+import { batchStatusOptions } from '../../api/bulkOperations';
 
 const NOT_FILTERED = { type: 'none' } as const;
 
@@ -10,7 +11,7 @@ export function buildHistoryColumns(
     return [
         {
             field: 'number',
-            header: 'Batch #',
+            header: i18n.global.t('bulkOperations.history.columns.number'),
             sortField: 'number',
             width: 120,
             minWidth: 110,
@@ -22,7 +23,7 @@ export function buildHistoryColumns(
         },
         {
             field: 'date',
-            header: 'Date',
+            header: i18n.global.t('bulkOperations.history.columns.date'),
             sortField: 'createdAt',
             width: 150,
             minWidth: 140,
@@ -33,7 +34,7 @@ export function buildHistoryColumns(
         },
         {
             field: 'operation',
-            header: 'Operation',
+            header: i18n.global.t('bulkOperations.history.columns.operation'),
             sortField: 'operationType',
             width: 200,
             minWidth: 160,
@@ -45,7 +46,7 @@ export function buildHistoryColumns(
         },
         {
             field: 'createdBy',
-            header: 'Run by',
+            header: i18n.global.t('bulkOperations.history.columns.createdBy'),
             width: 160,
             minWidth: 120,
             priority: 6,
@@ -53,7 +54,7 @@ export function buildHistoryColumns(
         },
         {
             field: 'records',
-            header: 'Records',
+            header: i18n.global.t('bulkOperations.history.columns.records'),
             width: 130,
             minWidth: 110,
             priority: 7,
@@ -61,14 +62,14 @@ export function buildHistoryColumns(
         },
         {
             field: 'result',
-            header: 'Result',
+            header: i18n.global.t('bulkOperations.history.columns.result'),
             sortField: 'status',
             width: 220,
             minWidth: 180,
             priority: 5,
             filterConfig: NOT_FILTERED,
             filterType: 'select',
-            filterOptions: BATCH_STATUS_OPTIONS,
+            filterOptions: batchStatusOptions(),
             filterField: 'status',
             filterOperators: ['eq'],
             mobile: { badge: true },

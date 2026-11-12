@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvSelect } from '@mivend/ui-kit';
 import type { ActivationCandidatesState } from '../../composables/useActivationCandidates';
 import { UNASSIGNED_BRANCH } from './activationColumns';
@@ -7,15 +8,16 @@ import { ANY, quickValue, withQuickValue } from './activationQuickFilters';
 
 // Branch and Manager quick filters; they edit the same conditions as the Filter builder.
 const props = defineProps<{ list: ActivationCandidatesState }>();
+const { t } = useI18n();
 
 const conditions = computed(() => props.list.filters.value.conditions);
 const branchOptions = computed(() => [
-    { value: ANY, label: 'All branches' },
-    { value: UNASSIGNED_BRANCH, label: 'Unassigned' },
+    { value: ANY, label: t('bulkOperations.activation.allBranches') },
+    { value: UNASSIGNED_BRANCH, label: t('bulkOperations.activation.unassigned') },
     ...props.list.branches.value.map(b => ({ value: b.id, label: b.name })),
 ]);
 const managerOptions = computed(() => [
-    { value: ANY, label: 'All managers' },
+    { value: ANY, label: t('bulkOperations.activation.allManagers') },
     ...props.list.managerOptions.value,
 ]);
 const branch = computed(() => quickValue(conditions.value, 'branch', 'eq'));
@@ -36,7 +38,7 @@ function reset(): void {
             <MvSelect
                 :model-value="branch"
                 :options="branchOptions"
-                aria-label="Branch"
+                :aria-label="t('bulkOperations.activation.branch')"
                 data-testid="quick-filter-branch"
                 @update:model-value="
                     setConditions(withQuickValue(conditions, 'branch', 'eq', $event))
@@ -47,7 +49,7 @@ function reset(): void {
             <MvSelect
                 :model-value="manager"
                 :options="managerOptions"
-                aria-label="Manager"
+                :aria-label="t('bulkOperations.activation.manager')"
                 data-testid="quick-filter-manager"
                 @update:model-value="
                     setConditions(withQuickValue(conditions, 'manager', 'eq', $event))
@@ -61,7 +63,7 @@ function reset(): void {
             data-testid="quick-filter-reset"
             @click="reset"
         >
-            Reset
+            {{ t('bulkOperations.activation.reset') }}
         </MvButton>
     </div>
 </template>

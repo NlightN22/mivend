@@ -1,27 +1,30 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvWizard } from '@mivend/ui-kit';
 import BulkReviewStep from '../../components/bulk-operations/BulkReviewStep.vue';
 import BulkRunStep from '../../components/bulk-operations/BulkRunStep.vue';
 import { fetchBulkCatalog } from '../../api/bulkOperations';
 import { operationUi } from '../../components/bulk-operations/operationUi';
-import { WIZARD_STEPS, useBulkWizard } from '../../composables/useBulkWizard';
+import { useBulkWizard } from '../../composables/useBulkWizard';
 
 // One shell for every operation: the operation brings only its select and parameters steps.
+const { t } = useI18n();
 const type = String(useRoute().params.operation);
 const ui = operationUi(type);
 const wizard = ui ? useBulkWizard(type, ui) : null;
 const batch = computed(() => wizard?.flow.batch.value ?? null);
 const running = computed(() => wizard?.step.value === 'run');
 
-const title = ref('Bulk operation');
+const catalogTitle = ref('');
+const title = computed(() => catalogTitle.value || t('bulkOperations.defaultOperationTitle'));
 onMounted(() => {
     void wizard?.init();
     void fetchBulkCatalog()
         .then(list => {
             const info = list.find(o => o.type === type);
-            title.value = info?.title ?? title.value;
+            catalogTitle.value = info?.title ?? catalogTitle.value;
             if (wizard && info) wizard.maxRecords.value = info.maxRecords;
         })
         .catch(() => undefined);
@@ -31,18 +34,18 @@ onMounted(() => {
 <template>
     <div class="bulk-wizard-page">
         <div>
-            <RouterLink class="bulk-wizard-page__back" to="/bulk-operations"
-                >Bulk operations</RouterLink
-            >
+            <RouterLink class="bulk-wizard-page__back" to="/bulk-operations">{{
+                t('bulkOperations.title')
+            }}</RouterLink>
             <h1 class="bulk-wizard-page__title">{{ title }}</h1>
         </div>
 
         <MvNotice v-if="!ui || !wizard" variant="warning">
-            This operation is not available in the portal.
+            {{ t('bulkOperations.unavailable') }}
         </MvNotice>
         <MvWizard
             v-else
-            :steps="WIZARD_STEPS"
+            :steps="wizard.steps.value"
             :model-value="wizard.step.value"
             :next-disabled-reason="wizard.nextDisabledReason.value"
             :next-label="wizard.nextLabel.value"

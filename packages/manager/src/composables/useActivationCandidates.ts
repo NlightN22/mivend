@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, shallowRef, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { useUrlSyncedState } from './useUrlSyncedState';
 import { fetchBranchOptions, type BranchOption } from '../api/orders';
 import {
@@ -174,7 +175,7 @@ export function useActivationCandidates(): ActivationCandidatesState {
         branches,
         managerOptions,
         managerName: id => formatManagerName(id, managerLookup.value),
-        branchName: id => (id ? (branches.value.find(b => b.id === id)?.name ?? id) : 'Unassigned'),
+        branchName: id => (id ? (branches.value.find(b => b.id === id)?.name ?? id) : i18n.global.t('bulkOperations.activation.unassigned')),
         reload,
     };
 }

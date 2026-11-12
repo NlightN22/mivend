@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice } from '@mivend/ui-kit';
 
 export type ActivationAction = 'activate' | 'deactivate';
@@ -6,25 +8,26 @@ export type ActivationAction = 'activate' | 'deactivate';
 const props = defineProps<{ modelValue: Record<string, unknown> }>();
 const emit = defineEmits<{ 'update:modelValue': [parameters: Record<string, unknown>] }>();
 
-const OPTIONS: Array<{ value: ActivationAction; title: string; text: string }> = [
+const { t } = useI18n();
+const OPTIONS = computed<Array<{ value: ActivationAction; title: string; text: string }>>(() => [
     {
         value: 'activate',
-        title: 'Grant portal access',
-        text: 'Creates a customer login from the counterparty phone and e-mail. The counterparty sets its own password from the e-mail link.',
+        title: t('bulkOperations.activation.activateTitle'),
+        text: t('bulkOperations.activation.activateText'),
     },
     {
         value: 'deactivate',
-        title: 'Revoke portal access',
-        text: 'Deactivates the linked customer login. A revoke cannot be undone: granting again creates a new login.',
+        title: t('bulkOperations.activation.deactivateTitle'),
+        text: t('bulkOperations.activation.deactivateText'),
     },
-];
+]);
 </script>
 
 <template>
     <div class="activation-parameters">
         <fieldset class="activation-parameters__group">
             <legend class="activation-parameters__legend">
-                What to do with the selected counterparties
+                {{ t('bulkOperations.activation.optionsLegend') }}
             </legend>
             <label
                 v-for="option in OPTIONS"
@@ -49,8 +52,7 @@ const OPTIONS: Array<{ value: ActivationAction; title: string; text: string }> =
             </label>
         </fieldset>
         <MvNotice variant="info">
-            Records that cannot change (already in the target state, missing contact data, outside
-            your scope) are skipped and listed on the next step.
+            {{ t('bulkOperations.activation.skipNotice') }}
         </MvNotice>
     </div>
 </template>
