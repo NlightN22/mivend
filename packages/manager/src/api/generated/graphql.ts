@@ -8549,6 +8549,7 @@ export type Query = {
     slugForEntity: Scalars['String']['output'];
     stockLocation: Maybe<StockLocation>;
     stockLocations: StockLocationList;
+    suggestAddress: Array<Scalars['String']['output']>;
     systemHealthChecklist: Array<SystemHealthCheckItem>;
     tableViews: Array<SavedTableView>;
     tag: Tag;
@@ -9181,6 +9182,10 @@ export type QueryStockLocationArgs = {
 
 export type QueryStockLocationsArgs = {
     options?: InputMaybe<StockLocationListOptions>;
+};
+
+export type QuerySuggestAddressArgs = {
+    query: Scalars['String']['input'];
 };
 
 export type QueryTableViewsArgs = {
@@ -12873,6 +12878,12 @@ export type ReverseGeocodeQueryVariables = Exact<{
 }>;
 
 export type ReverseGeocodeQuery = { reverseGeocode: string | null };
+
+export type SuggestAddressQueryVariables = Exact<{
+    query: Scalars['String']['input'];
+}>;
+
+export type SuggestAddressQuery = { suggestAddress: Array<string> };
 
 export type GlobalSearchQueryVariables = Exact<{
     term: Scalars['String']['input'];
@@ -17017,6 +17028,11 @@ export const ReverseGeocodeDocument = new TypedDocumentString(`
   reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
 }
     `) as unknown as TypedDocumentString<ReverseGeocodeQuery, ReverseGeocodeQueryVariables>;
+export const SuggestAddressDocument = new TypedDocumentString(`
+    query SuggestAddress($query: String!) {
+  suggestAddress(query: $query)
+}
+    `) as unknown as TypedDocumentString<SuggestAddressQuery, SuggestAddressQueryVariables>;
 export const GlobalSearchDocument = new TypedDocumentString(`
     query GlobalSearch($term: String!, $limitPerKind: Int) {
   globalSearch(term: $term, limitPerKind: $limitPerKind) {
