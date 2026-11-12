@@ -52,6 +52,12 @@ const ru: typeof en = {
             phonePlaceholder: '+7 900 000-00-00',
             hours: 'Часы работы',
             hoursPlaceholder: 'например, Пн–Пт 09:00–18:00',
+            hoursPreset: {
+                monFri: 'Пн–Пт 09:00–18:00',
+                monSat: 'Пн–Сб 09:00–18:00',
+                daily: 'Ежедневно 09:00–21:00',
+                roundClock: 'Ежедневно, круглосуточно',
+            },
             comment: 'Комментарий к доставке',
             commentPlaceholder: 'Код ворот, въезд со двора и т. п.',
         },

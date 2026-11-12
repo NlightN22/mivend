@@ -32,10 +32,10 @@ describe('field predicates', () => {
         expect(formatEmail(' a @b.co ')).toBe('a@b.co');
     });
 
-    it('accepts hours with a digit or round the clock, rejects long or digitless text', () => {
+    it('accepts hours in any language, rejects only over-long text', () => {
         expect(isValidWorkingHours('9-18')).toBe(true);
-        expect(isValidWorkingHours('Daily, round the clock')).toBe(true);
-        expect(isValidWorkingHours('whenever')).toBe(false);
+        expect(isValidWorkingHours('Круглосуточно')).toBe(true);
+        expect(isValidWorkingHours('Пн-Пт, без выходных')).toBe(true);
         expect(isValidWorkingHours('9'.repeat(201))).toBe(false);
     });
 });
@@ -50,7 +50,7 @@ describe('tradingPointFieldErrors', () => {
             address: 'Somewhere',
             contactName: 'Ivan',
             contactPhone: '+7 (913',
-            workingHours: 'whenever',
+            workingHours: 'x'.repeat(201),
         });
         expect(Object.keys(errors).sort()).toEqual([
             'address',
@@ -62,10 +62,12 @@ describe('tradingPointFieldErrors', () => {
     });
 
     it('leaves untouched values alone but checks edited ones', () => {
-        const original = { ...base, address: 'Somewhere', workingHours: 'whenever' };
+        const original = { ...base, address: 'Somewhere', workingHours: 'x'.repeat(201) };
         expect(tradingPointFieldErrors(original, original)).toEqual({});
         expect(
-            Object.keys(tradingPointFieldErrors({ ...original, workingHours: 'soon' }, original)),
+            Object.keys(
+                tradingPointFieldErrors({ ...original, workingHours: 'y'.repeat(202) }, original),
+            ),
         ).toEqual(['workingHours']);
     });
 

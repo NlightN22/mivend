@@ -105,7 +105,7 @@ One behaviour per field type in both portals; never a bare `MvInput` for these:
 | Address | `MvAddressInput` (fetcher injected) | 10+ characters with a digit |
 | Location | `MvLocationPicker` | required |
 | E-mail | `MvEmailInput` | no spaces, `a@b.c` shape |
-| Working hours | `MvWorkingHoursInput` | plain text, preset suggestions, needs a digit, 200 characters max |
+| Working hours | `MvWorkingHoursInput` | plain text in any language, optional preset suggestions (the portal passes localized ones), 200 characters max |
 
 Forms show an error only after the field was touched (blur) or a submit was tried, and an ERP value that
 was not edited is not re-validated. Each portal maps the shared error keys to its own messages

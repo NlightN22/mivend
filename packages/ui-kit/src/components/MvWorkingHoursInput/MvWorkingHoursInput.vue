@@ -4,14 +4,6 @@ import MvInput from '../MvInput/MvInput.vue';
 import type { InputSize } from '../MvInput/MvInput.vue';
 import { WORKING_HOURS_MAX_LENGTH } from '../../utils/fieldValidation';
 
-const DEFAULT_PRESETS = [
-    'Mon-Fri 9:00-18:00',
-    'Mon-Fri 8:00-17:00',
-    'Mon-Sat 9:00-18:00',
-    'Daily 9:00-21:00',
-    'Daily, round the clock',
-];
-
 withDefaults(
     defineProps<{
         modelValue: string;
@@ -21,7 +13,7 @@ withDefaults(
         size?: InputSize;
         presets?: string[];
     }>(),
-    { presets: () => DEFAULT_PRESETS },
+    { presets: () => [] },
 );
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
 

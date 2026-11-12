@@ -18,13 +18,9 @@ export function formatEmail(raw: string): string {
     return raw.replace(/\s+/g, '');
 }
 
-// Free text, so the check is light: a time or digit has to be there.
+// Free text in any language, so only the length is checked.
 export function isValidWorkingHours(raw: string): boolean {
-    const hours = raw.trim();
-    return (
-        hours.length <= WORKING_HOURS_MAX_LENGTH &&
-        (/\d/.test(hours) || /round[- ]the[- ]clock/i.test(hours))
-    );
+    return raw.trim().length <= WORKING_HOURS_MAX_LENGTH;
 }
 
 export type TradingPointFieldKey =

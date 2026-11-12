@@ -23,8 +23,16 @@ const emit = defineEmits<{ submitted: []; cancel: [] }>();
 const FIELD_ERROR_TEXT = {
     name: 'Enter the trading point name',
     address: 'Enter a full address with a street and building number',
-    workingHours: 'Enter working hours with a time, e.g. Mon-Fri 9:00-18:00',
+    workingHours: 'Working hours are too long (200 characters max)',
 } as const;
+
+const HOURS_PRESETS = [
+    'Mon-Fri 9:00-18:00',
+    'Mon-Fri 8:00-17:00',
+    'Mon-Sat 9:00-18:00',
+    'Daily 9:00-21:00',
+    'Daily, round the clock',
+];
 
 const submitting = ref(false);
 const error = ref('');
@@ -130,6 +138,7 @@ async function submit(): Promise<void> {
             <MvFormField label="Working hours" :error="shown('workingHours')">
                 <MvWorkingHoursInput
                     v-model="form.workingHours"
+                    :presets="HOURS_PRESETS"
                     size="sm"
                     :error="!!shown('workingHours')"
                     @blur="touched.workingHours = true"

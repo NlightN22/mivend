@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAddressInput,
     MvFormField,
@@ -16,6 +17,12 @@ import { tradingPointErrors } from './tradingPointValidation';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
 const props = defineProps<{ original?: TradingPointAddForm; sibling: GeoPoint | null }>();
+const { t } = useI18n();
+const hoursPresets = computed(() =>
+    ['monFri', 'monSat', 'daily', 'roundClock'].map(key =>
+        t(`tradingPoints.field.hoursPreset.${key}`),
+    ),
+);
 const touched = reactive({ name: false, address: false, contactName: false, contactPhone: false });
 const errors = computed(() => tradingPointErrors(model.value, props.original));
 const location = computed<GeoPoint | null>({
@@ -92,6 +99,7 @@ const location = computed<GeoPoint | null>({
         <MvFormField class="tp-field--wide" :label="$t('tradingPoints.field.hours')">
             <MvWorkingHoursInput
                 v-model="model.workingHours"
+                :presets="hoursPresets"
                 :placeholder="$t('tradingPoints.field.hoursPlaceholder')"
             />
         </MvFormField>

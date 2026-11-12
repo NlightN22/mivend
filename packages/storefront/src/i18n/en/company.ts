@@ -49,6 +49,12 @@ export default {
             phonePlaceholder: '+7 900 000-00-00',
             hours: 'Working hours',
             hoursPlaceholder: 'e.g. Mon–Fri 09:00–18:00',
+            hoursPreset: {
+                monFri: 'Mon–Fri 09:00–18:00',
+                monSat: 'Mon–Sat 09:00–18:00',
+                daily: 'Daily 09:00–21:00',
+                roundClock: 'Daily, round the clock',
+            },
             comment: 'Delivery comment',
             commentPlaceholder: 'Gate code, entry from rear, etc.',
         },

@@ -16,11 +16,13 @@ describe('MvEmailInput', () => {
 
 describe('MvWorkingHoursInput', () => {
     it('offers presets through a datalist linked to the input', () => {
-        const wrapper = mount(MvWorkingHoursInput, { props: { modelValue: '' } });
+        const wrapper = mount(MvWorkingHoursInput, {
+            props: { modelValue: '', presets: ['A 1', 'B 2', 'C 3'] },
+        });
         const listId = wrapper.find('input').attributes('list');
         expect(listId).toBeTruthy();
         expect(wrapper.find('datalist').attributes('id')).toBe(listId);
-        expect(wrapper.findAll('option').length).toBeGreaterThan(2);
+        expect(wrapper.findAll('option')).toHaveLength(3);
     });
 
     it('takes custom presets and keeps the typed text as is', async () => {
