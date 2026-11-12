@@ -34,35 +34,35 @@ describe('formatActor', () => {
     it('names a known administrator and falls back to the id for an unknown one', () => {
         expect(
             formatActor(entry({ actorType: 'administrator', administratorId: '5' }), names),
-        ).toBe('Администратор: Anna Admin');
+        ).toBe('Administrator: Anna Admin');
         expect(
             formatActor(entry({ actorType: 'administrator', administratorId: '9' }), names),
-        ).toBe('Администратор: #9');
+        ).toBe('Administrator: #9');
     });
 
     it('shows the acting manager and the customer user it acted for', () => {
         const acting = entry({ actorType: 'acting', administratorId: '5', userId: '42' });
-        expect(formatActor(acting, names)).toBe('Anna Admin от имени клиента (пользователь #42)');
+        expect(formatActor(acting, names)).toBe('Anna Admin on behalf of the customer (user #42)');
     });
 
     it('shows a customer by user id and the system without ids', () => {
         expect(formatActor(entry({ actorType: 'customer', userId: '42' }), names)).toBe(
-            'Клиент: пользователь #42',
+            'Customer: user #42',
         );
-        expect(formatActor(entry({ actorType: 'system' }), names)).toBe('Система');
+        expect(formatActor(entry({ actorType: 'system' }), names)).toBe('System');
     });
 });
 
 describe('formatSource', () => {
     it.each([
-        ['admin-api:updateTradingPointDetails', 'Админ-API: updateTradingPointDetails'],
-        ['shop-api:addItemToOrder', 'Витрина: addItemToOrder'],
+        ['admin-api:updateTradingPointDetails', 'Admin API: updateTradingPointDetails'],
+        ['shop-api:addItemToOrder', 'Storefront: addItemToOrder'],
         ['shop-api:rest:POST /payments/callback', 'REST: POST /payments/callback'],
         [
             'scheduled-task:settlement-reconcile-pending',
-            'Плановая задача: settlement-reconcile-pending',
+            'Scheduled task: settlement-reconcile-pending',
         ],
-        ['background', 'Фоновая обработка'],
+        ['background', 'Background processing'],
         ['something-new', 'something-new'],
     ])('%s', (source, expected) => {
         expect(formatSource(source)).toBe(expected);
@@ -82,8 +82,8 @@ describe('changeLines', () => {
             { field: 'phone', before: '—', after: '—', redacted: false },
             {
                 field: 'passwordHash',
-                before: 'изменено, значение скрыто',
-                after: 'изменено, значение скрыто',
+                before: 'changed, value hidden',
+                after: 'changed, value hidden',
                 redacted: true,
             },
             { field: 'contacts', before: '—', after: '[{"name":"A"}]', redacted: false },
@@ -98,7 +98,7 @@ describe('changeLines', () => {
     it('formats scalars and keeps unknown actions as they are', () => {
         expect(formatValue(false)).toBe('false');
         expect(formatValue(0)).toBe('0');
-        expect(formatAction('soft-remove')).toBe('Удаление в архив');
+        expect(formatAction('soft-remove')).toBe('Archived');
         expect(formatAction('merge')).toBe('merge');
     });
 });

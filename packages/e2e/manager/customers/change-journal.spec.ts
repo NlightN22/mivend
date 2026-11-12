@@ -37,7 +37,7 @@ async function openE2eCustomerDetail(page: Page): Promise<void> {
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
-test('a trading point edit shows up in its Журнал изменений and in the journal page @on:manager-portal-admin', async ({
+test('a trading point edit shows up in its Change journal and in the journal page @on:manager-portal-admin', async ({
     page,
 }) => {
     await page.goto('/');
@@ -52,19 +52,19 @@ test('a trading point edit shows up in its Журнал изменений and i
             .getByRole('button', { name: 'Edit' })
             .click();
         const modal = page.locator('li').filter({ has: page.locator('.tp-edit-form') });
-        await expect(modal.getByRole('heading', { name: 'Журнал изменений' })).toBeVisible();
+        await expect(modal.getByRole('heading', { name: 'Change journal' })).toBeVisible();
         const latest = modal.getByTestId('change-journal').getByRole('listitem').first();
-        await expect(latest).toContainText('Изменение', { timeout: 15000 });
-        await expect(latest).toContainText('Администратор:');
+        await expect(latest).toContainText('Updated', { timeout: 15000 });
+        await expect(latest).toContainText('Administrator:');
         await expect(latest.getByRole('row', { name: /latitude/ })).toContainText(/10\.50*/);
         await modal.getByRole('button', { name: 'Cancel' }).click();
-        await expect(page.getByRole('link', { name: 'Журнал изменений' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Change journal' })).toBeVisible();
 
         await page.goto('/change-journal?entityType=TradingPoint');
-        await expect(page.getByRole('heading', { name: 'Журнал изменений' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Change journal' })).toBeVisible();
         await expect(
             page.getByTestId('change-journal').getByRole('listitem').first(),
-        ).toContainText(`Торговая точка #${pointId}`, { timeout: 15000 });
+        ).toContainText(`Trading point #${pointId}`, { timeout: 15000 });
     } finally {
         await adminApiViaPage(page, UPDATE_POINT, { id: pointId, input: SEED_LOCATION });
     }
@@ -80,8 +80,8 @@ test('the journal in the trading point card, the menu item and the page are hidd
         .getByRole('button', { name: 'Edit' })
         .click();
     await expect(page.locator('.tp-edit-form')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Журнал изменений' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Журнал изменений' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Change journal' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Change journal' })).toHaveCount(0);
 
     await page.goto('/change-journal');
     await expect(page).not.toHaveURL(/change-journal/);
@@ -92,5 +92,5 @@ test('the journal page shows an access error to a role without access to all cus
 }) => {
     await page.goto('/change-journal');
     const alert = page.getByRole('alert');
-    await expect(alert).toContainText('Нет прав на эту историю', { timeout: 15000 });
+    await expect(alert).toContainText('You do not have access to this history', { timeout: 15000 });
 });

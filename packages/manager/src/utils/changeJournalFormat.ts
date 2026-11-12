@@ -6,6 +6,7 @@ import {
     ENTITY_TYPE_LABELS,
     SOURCE_LABELS,
 } from '../components/change-journal/changeJournalLabels';
+import { tr } from './lazyLabels';
 
 export type AdminNameLookup = (administratorId: string) => string | null;
 
@@ -22,14 +23,19 @@ function adminLabel(id: string | null, lookup: AdminNameLookup): string {
 }
 
 export function formatActor(entry: ChangeJournalEntry, lookup: AdminNameLookup): string {
-    const user = entry.userId ? `пользователь #${entry.userId}` : 'пользователь не указан';
+    const user = entry.userId
+        ? tr('changeJournal.actor.user', { id: entry.userId })
+        : tr('changeJournal.actor.userUnknown');
     switch (entry.actorType) {
         case 'administrator':
             return `${ACTOR_TYPE_LABELS.administrator}: ${adminLabel(entry.administratorId, lookup)}`;
         case 'customer':
             return `${ACTOR_TYPE_LABELS.customer}: ${user}`;
         case 'acting':
-            return `${adminLabel(entry.administratorId, lookup)} от имени клиента (${user})`;
+            return tr('changeJournal.actor.acting', {
+                admin: adminLabel(entry.administratorId, lookup),
+                user,
+            });
         case 'system':
             return ACTOR_TYPE_LABELS.system;
         default:

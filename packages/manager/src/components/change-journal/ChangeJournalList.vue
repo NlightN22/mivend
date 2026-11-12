@@ -31,7 +31,7 @@ const props = withDefaults(
         showEntity?: boolean;
         emptyText?: string;
     }>(),
-    { managers: () => [], showEntity: false, emptyText: L.empty },
+    { managers: () => [], showEntity: false },
 );
 
 defineEmits<{ 'update:page': [page: number]; retry: [] }>();
@@ -66,7 +66,7 @@ function adminName(id: string): string | null {
             <span class="change-journal__sr">{{ L.loading }}</span>
             <MvSkeleton v-for="i in 3" :key="i" height="72px" radius="12px" />
         </div>
-        <p v-else-if="!entries.length" class="change-journal__empty">{{ emptyText }}</p>
+        <p v-else-if="!entries.length" class="change-journal__empty">{{ emptyText ?? L.empty }}</p>
         <template v-else>
             <ul class="change-journal__list" :aria-busy="loading">
                 <li v-for="{ entry, lines } in rows" :key="entry.id" class="change-journal__entry">

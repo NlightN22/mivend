@@ -12,15 +12,15 @@ import {
 const props = defineProps<{ modelValue: ChangeJournalUrlFilters; managers: ManagerOption[] }>();
 const emit = defineEmits<{ 'update:modelValue': [value: ChangeJournalUrlFilters]; reset: [] }>();
 
-const actorOptions = [
+const actorOptions = computed(() => [
     { value: '', label: L.anyOption },
     ...Object.entries(ACTOR_TYPE_LABELS).map(([value, label]) => ({ value, label })),
-];
+]);
 const adminOptions = computed(() => [
     { value: '', label: L.anyOption },
     ...props.managers.map(m => ({ value: m.id, label: m.name })),
 ]);
-const entityTypes = Object.entries(ENTITY_TYPE_LABELS);
+const entityTypes = computed(() => Object.entries(ENTITY_TYPE_LABELS));
 
 function set(key: keyof ChangeJournalUrlFilters, value: string): void {
     emit('update:modelValue', { ...props.modelValue, [key]: value });
