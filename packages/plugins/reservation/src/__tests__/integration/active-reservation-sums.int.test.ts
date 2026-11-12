@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DataSource } from 'typeorm';
+import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
@@ -9,13 +9,21 @@ import {
 } from 'shared';
 
 import { sumActiveReservations } from '../../active-reservation-sums';
-import { Reservation } from '../../entities/reservation.entity';
+
+// Replica of the table: the real entity needs a bootstrapped EntityIdStrategy to load.
+@Entity('reservation')
+class TReservation {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) productVariantId!: string;
+    @Column({ type: 'varchar' }) stockLocationId!: string;
+    @Column({ type: 'int' }) quantity!: number;
+    @Column({ type: 'varchar' }) status!: string;
+}
 
 const { schema, extra } = testSchemaOptions('active_reservation_sums');
 const ctx = {} as RequestContext;
 let dataSource: DataSource;
 let connection: TransactionalConnection;
-let lineSeq = 0;
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -24,13 +32,12 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [Reservation],
+        entities: [TReservation],
         synchronize: true,
     });
     await dataSource.initialize();
     connection = {
-        getRepository: (_ctx: unknown, entity: unknown) =>
-            dataSource.getRepository(entity as never),
+        getRepository: () => dataSource.getRepository(TReservation),
     } as unknown as TransactionalConnection;
 });
 
@@ -49,18 +56,12 @@ async function reserve(
     quantity: number,
     status: 'active' | 'released' | 'expired' = 'active',
 ): Promise<void> {
-    await dataSource.getRepository(Reservation).insert({
-        orderId: 'order-1',
-        orderLineId: `line-${++lineSeq}`,
+    await dataSource.getRepository(TReservation).insert({
         productVariantId: variant,
         stockLocationId: location,
         quantity,
         status,
-        reservedAt: new Date(),
-        expiresAt: new Date(Date.now() + 86_400_000),
-        creationMethod: 'manual',
-        erpOperationId: `op-${lineSeq}`,
-    } as never);
+    });
 }
 
 describe('sumActiveReservations (real Postgres)', () => {
