@@ -77,6 +77,10 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 - Trading point coordinates are free-text attributes with no default. Latitude 90 with longitude 99.999999 are entered
   placeholder values: treat such coordinates as invalid. A point without an address is a normal working point, never
   junk.
+- The 1C documents carry the base document (a return points at its sale, a correction at the corrected document, with an
+  operation kind on corrections), but the exchange does not send it; adding it needs a change in the ERP exchange and in
+  the contract, an owner decision. Dates are converted to UTC from the exchange node's zone on the ERP side; day-only
+  dates (counterparties) arrive as plain `yyyy-MM-dd` with no zone.
 - Planned on the ERP side (not yet built): the balances stream is replaced by balances inside document entries
   (`openingBalance`, `closingBalance`, `balanceAsOf`), the key snapshot stays. The balance rule must be re-checked
   against that change when it lands.
