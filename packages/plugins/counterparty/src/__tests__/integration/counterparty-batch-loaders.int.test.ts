@@ -40,6 +40,7 @@ class TestTradingPoint {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar' }) counterpartyId!: string;
     @Column({ type: 'varchar' }) name!: string;
+    @Column({ type: 'varchar', default: 'Address 1' }) address!: string;
     @Column({ type: 'boolean', default: true }) isActive!: boolean;
     @OneToMany(() => TestContact, c => c.tradingPoint) contacts!: TestContact[];
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomerService, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { TradingPointService } from '../../trading-point.service';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { ContactPerson } from '../../entities/contact-person.entity';
@@ -145,7 +145,7 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
                 counterpartyId: 'cp1',
                 servicingBranchId: null,
                 isActive: true,
-                latitude: 90,
+                latitude: 95,
                 longitude: 99.999999,
             });
 

@@ -42,7 +42,7 @@ beforeAll(async () => {
         CREATE TABLE customer (id int PRIMARY KEY, "userId" int, "customFieldsCounterpartyid" varchar,
             "customFieldsPreferredtradingpointid" varchar);
         CREATE TABLE trading_point (id int PRIMARY KEY, "counterpartyId" varchar, name varchar,
-            "isActive" boolean, "customerStatus" varchar);
+            address varchar DEFAULT 'Address 1', "isActive" boolean, "customerStatus" varchar);
         CREATE SEQUENCE mivend_number_seq_order;
         INSERT INTO session VALUES (1);
         INSERT INTO counterparty VALUES (1, 'branch-a', 'contract-1');
