@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     ProformaInvoiceOutstandingBalanceDocument,
@@ -28,15 +29,24 @@ export const DEFAULT_PROFORMA_INVOICE_FILTERS: ProformaInvoiceFilters = {
 
 // User-facing ProformaInvoice.displayStatus (a fixed internal state machine, not ERP-sourced business data —
 // same carve-out as api/orders.ts's ORDER_STATE_OPTIONS). A proforma invoice is never shown as paid.
-export const PROFORMA_INVOICE_STATUS_OPTIONS = [
-    { value: '', label: 'All statuses' },
-    { value: 'current', label: 'Current' },
-    { value: 'superseded', label: 'Superseded' },
-    { value: 'cancelled', label: 'Cancelled' },
-] as const;
+export const PROFORMA_INVOICE_STATUS_OPTIONS = ['', 'current', 'superseded', 'cancelled'].map(
+    value => ({
+        value,
+        get label(): string {
+            return i18n.global.t(`proformaInvoices.status.${value || 'any'}`);
+        },
+    }),
+);
 
-export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = Object.fromEntries(
-    PROFORMA_INVOICE_STATUS_OPTIONS.filter(o => o.value).map(o => [o.value, o.label]),
+// Labels resolve on read so a language switch reaches this module-level map.
+export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = Object.defineProperties(
+    {},
+    Object.fromEntries(
+        PROFORMA_INVOICE_STATUS_OPTIONS.filter(o => o.value).map(o => [
+            o.value,
+            { get: () => o.label, enumerable: true },
+        ]),
+    ),
 );
 
 // Mirrors ORDER_STATE_BADGE_VARIANT in api/orders.ts; keep the two maps in sync.

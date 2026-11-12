@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvDocumentLines, MvDocumentTotals, type DocColumn, type DocRow } from '@mivend/ui-kit';
 import type { ProformaCard } from '../../api/proformaInvoiceCard';
 import { documentMoney } from '../../utils/documentMoney';
@@ -7,13 +8,14 @@ import OrderLineProduct from '../order-detail/OrderLineProduct.vue';
 
 const props = defineProps<{ card: ProformaCard }>();
 
-const columns: DocColumn[] = [
-    { key: 'product', label: 'Product' },
-    { key: 'qty', label: 'Qty' },
-    { key: 'price', label: 'Price' },
-    { key: 'discount', label: 'Discount' },
-    { key: 'total', label: 'Total' },
-];
+const { t } = useI18n();
+
+const columns = computed<DocColumn[]>(() =>
+    ['product', 'qty', 'price', 'discount', 'total'].map(key => ({
+        key,
+        label: t(`proformaInvoices.lines.${key}`),
+    })),
+);
 const money = computed(() => documentMoney(props.card.currencyCode));
 const rows = computed(() =>
     props.card.lines.map((line, i): DocRow & { line: ProformaCard['lines'][number] } => ({
@@ -25,15 +27,32 @@ const rows = computed(() =>
 const subtotal = computed(() => props.card.lines.reduce((s, l) => s + l.linePriceWithTax, 0));
 const discount = computed(() => props.card.lines.reduce((s, l) => s + l.discountAmount, 0));
 const totals = computed(() => [
-    { key: 'positions', label: 'Positions', value: String(props.card.lines.length) },
-    { key: 'subtotal', label: 'Subtotal', value: money.value(subtotal.value) },
-    { key: 'discount', label: 'Discount total', value: money.value(discount.value) },
-    { key: 'total', label: 'Total', value: money.value(props.card.amount), emphasis: true },
+    {
+        key: 'positions',
+        label: t('proformaInvoices.lines.positions'),
+        value: String(props.card.lines.length),
+    },
+    {
+        key: 'subtotal',
+        label: t('proformaInvoices.lines.subtotal'),
+        value: money.value(subtotal.value),
+    },
+    {
+        key: 'discount',
+        label: t('proformaInvoices.lines.discountTotal'),
+        value: money.value(discount.value),
+    },
+    {
+        key: 'total',
+        label: t('proformaInvoices.lines.total'),
+        value: money.value(props.card.amount),
+        emphasis: true,
+    },
 ]);
 </script>
 
 <template>
-    <MvDocumentLines title="Lines" :columns="columns" :rows="rows">
+    <MvDocumentLines :title="t('proformaInvoices.lines.title')" :columns="columns" :rows="rows">
         <template #cell-product="{ row }">
             <OrderLineProduct
                 :name="row.line.productVariant.name"

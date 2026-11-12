@@ -1,0 +1,75 @@
+import type en from '../en/proformaInvoices';
+
+const proformaInvoices: typeof en = {
+    status: { any: 'Все статусы', current: 'Действующий', superseded: 'Заменён', cancelled: 'Отменён' },
+    kind: {
+        'order-placed': 'Заказ оформлен',
+        'order-changed': 'Заказ изменён',
+        'by-shipment': 'По отгрузке',
+    },
+    paymentStatus: {
+        captured: 'Получен',
+        pending: 'Ожидает',
+        authorized: 'Авторизован',
+        failed: 'Не прошёл',
+        canceled: 'Отменён',
+        refunded: 'Возвращён',
+        partiallyRefunded: 'Частично возвращён',
+        disputed: 'Оспаривается',
+        chargeback: 'Чарджбэк',
+    },
+    card: {
+        notFound: 'Счёт на оплату не найден',
+        backToList: 'Назад к счетам на оплату',
+    },
+    header: {
+        breadcrumb: 'Счета на оплату',
+        title: 'Счёт на оплату {number}',
+        copyNumber: 'Скопировать номер',
+        showInList: 'Показать в списке',
+        openOrder: 'Открыть заказ',
+        open: 'Открыть',
+        download: 'Скачать',
+        pdfPreparing: 'PDF готовится',
+        issued: 'Выставлен:',
+        payBy: 'Оплатить до:',
+        order: 'Заказ:',
+    },
+    parties: {
+        customer: 'Клиент',
+        customerFallback: 'Клиент {id}',
+        seller: 'Продавец',
+        inn: 'ИНН {inn}',
+        innKpp: 'ИНН {inn} / КПП {kpp}',
+    },
+    lines: {
+        title: 'Позиции',
+        product: 'Товар',
+        qty: 'Кол-во',
+        price: 'Цена',
+        discount: 'Скидка',
+        total: 'Сумма',
+        positions: 'Позиций',
+        subtotal: 'Подытог',
+        discountTotal: 'Скидка всего',
+    },
+    payments: {
+        title: 'Платежи',
+        denied: 'Платежи недоступны для вашей роли.',
+        none: 'К этому счёту на оплату платежи не применены.',
+        paid: 'Оплачено',
+        remaining: 'Осталось',
+        note: 'Справочно: задолженность берётся из реализации в ERP.',
+    },
+    related: { title: 'Связанное', order: 'Заказ', salesInvoice: 'Реализация в ERP' },
+    versions: {
+        title: 'История версий',
+        thisOne: '(этот)',
+        unchanged: 'Сумма не изменилась',
+        added: 'добавлено: {count}',
+        removed: 'удалено: {count}',
+        changed: 'изменено: {count}',
+    },
+};
+
+export default proformaInvoices;

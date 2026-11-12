@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvDateTimeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import { PAYMENT_STATUS_LABEL, type ProformaCard } from '../../api/proformaInvoiceCard';
 import { useAuthStore } from '../../stores/auth';
@@ -7,19 +8,20 @@ import { documentMoney } from '../../utils/documentMoney';
 import { paymentSummary } from '../../utils/proformaPayments';
 
 const props = defineProps<{ card: ProformaCard }>();
+const { t } = useI18n();
 const canSeePayments = useAuthStore().hasPermission('ReadPayment');
 const money = computed(() => documentMoney(props.card.currencyCode));
 const summary = computed(() => paymentSummary(props.card.amount, props.card.payments));
 </script>
 
 <template>
-    <MvPanel title="Payments" data-testid="proforma-payments">
+    <MvPanel :title="t('proformaInvoices.payments.title')" data-testid="proforma-payments">
         <p v-if="!canSeePayments" class="pf-payments__empty" data-testid="proforma-payments-denied">
-            Payments are not available for your role.
+            {{ t('proformaInvoices.payments.denied') }}
         </p>
         <template v-else>
             <p v-if="!card.payments.length" class="pf-payments__empty">
-                No payments applied to this proforma invoice.
+                {{ t('proformaInvoices.payments.none') }}
             </p>
             <ul v-else class="pf-payments__list">
                 <li v-for="payment in card.payments" :key="payment.id" class="pf-payments__item">
@@ -46,16 +48,16 @@ const summary = computed(() => paymentSummary(props.card.amount, props.card.paym
             </ul>
             <dl class="pf-payments__summary">
                 <div>
-                    <dt>Paid</dt>
+                    <dt>{{ t('proformaInvoices.payments.paid') }}</dt>
                     <dd data-testid="proforma-paid">{{ money(summary.paid) }}</dd>
                 </div>
                 <div v-if="card.displayStatus === 'current'">
-                    <dt>Remaining</dt>
+                    <dt>{{ t('proformaInvoices.payments.remaining') }}</dt>
                     <dd data-testid="proforma-remaining">{{ money(summary.remaining) }}</dd>
                 </div>
             </dl>
             <p class="pf-payments__note">
-                Informational: the debt is taken from the ERP sales invoice.
+                {{ t('proformaInvoices.payments.note') }}
             </p>
         </template>
     </MvPanel>

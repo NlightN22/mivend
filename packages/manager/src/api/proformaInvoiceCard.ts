@@ -1,3 +1,4 @@
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import { ProformaInvoiceCardDocument, type ProformaInvoiceCardQuery } from './generated/graphql';
 
@@ -16,20 +17,30 @@ export function proformaPdfHref(pdfUrl: string, download: boolean): string {
     return download ? `${pdfUrl}?download=1` : pdfUrl;
 }
 
-export const PROFORMA_KIND_LABEL: Record<string, string> = {
-    'order-placed': 'Order placed',
-    'order-changed': 'Order changed',
-    'by-shipment': 'By shipment',
-};
+const KINDS = ['order-placed', 'order-changed', 'by-shipment'];
+const PAYMENT_STATUSES = [
+    'captured',
+    'pending',
+    'authorized',
+    'failed',
+    'canceled',
+    'refunded',
+    'partiallyRefunded',
+    'disputed',
+    'chargeback',
+];
 
-export const PAYMENT_STATUS_LABEL: Record<string, string> = {
-    captured: 'Received',
-    pending: 'Pending',
-    authorized: 'Authorized',
-    failed: 'Failed',
-    canceled: 'Canceled',
-    refunded: 'Refunded',
-    partiallyRefunded: 'Partially refunded',
-    disputed: 'Disputed',
-    chargeback: 'Chargeback',
-};
+const lazyMap = (prefix: string, keys: string[]): Record<string, string> =>
+    Object.defineProperties(
+        {},
+        Object.fromEntries(
+            keys.map(key => [
+                key,
+                { get: () => i18n.global.t(`${prefix}.${key}`), enumerable: true },
+            ]),
+        ),
+    );
+
+// Labels resolve on read so a language switch reaches these module-level maps.
+export const PROFORMA_KIND_LABEL = lazyMap('proformaInvoices.kind', KINDS);
+export const PAYMENT_STATUS_LABEL = lazyMap('proformaInvoices.paymentStatus', PAYMENT_STATUSES);

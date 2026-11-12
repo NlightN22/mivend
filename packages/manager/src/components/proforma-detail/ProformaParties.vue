@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { toRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { ProformaCard } from '../../api/proformaInvoiceCard';
 import { useCustomerKpiData } from '../../composables/useCustomerKpiData';
 import OrderCustomerSummary from '../order-detail/OrderCustomerSummary.vue';
 
 const props = defineProps<{ card: ProformaCard }>();
+const { t } = useI18n();
 const kpiData = useCustomerKpiData(toRef(() => props.card.counterpartyId));
 </script>
 
@@ -12,21 +14,32 @@ const kpiData = useCustomerKpiData(toRef(() => props.card.counterpartyId));
     <section class="pf-parties" data-testid="proforma-parties">
         <div class="pf-parties__row">
             <div class="pf-parties__party">
-                <span class="pf-parties__label">Customer</span>
+                <span class="pf-parties__label">{{ t('proformaInvoices.parties.customer') }}</span>
                 <RouterLink
                     :to="`/customers/${card.counterpartyId}`"
                     class="pf-parties__name"
                     data-testid="proforma-customer-link"
                 >
-                    {{ card.counterpartyShortName ?? `Customer ${card.counterpartyId}` }}
+                    {{
+                        card.counterpartyShortName ??
+                        t('proformaInvoices.parties.customerFallback', {
+                            id: card.counterpartyId,
+                        })
+                    }}
                 </RouterLink>
             </div>
             <div class="pf-parties__party">
-                <span class="pf-parties__label">Seller</span>
+                <span class="pf-parties__label">{{ t('proformaInvoices.parties.seller') }}</span>
                 <strong class="pf-parties__name">{{ card.seller?.legalName ?? '—' }}</strong>
                 <span v-if="card.seller?.inn" class="pf-parties__ids">
-                    INN {{ card.seller.inn
-                    }}<template v-if="card.seller.kpp"> / KPP {{ card.seller.kpp }}</template>
+                    {{
+                        card.seller.kpp
+                            ? t('proformaInvoices.parties.innKpp', {
+                                  inn: card.seller.inn,
+                                  kpp: card.seller.kpp,
+                              })
+                            : t('proformaInvoices.parties.inn', { inn: card.seller.inn })
+                    }}
                 </span>
             </div>
         </div>

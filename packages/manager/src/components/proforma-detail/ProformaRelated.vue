@@ -1,19 +1,21 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvPanel, formatDocumentNumber } from '@mivend/ui-kit';
 import type { ProformaCard } from '../../api/proformaInvoiceCard';
 
 defineProps<{ card: ProformaCard }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <MvPanel
         v-if="card.order || card.salesInvoiceNumber"
-        title="Related"
+        :title="t('proformaInvoices.related.title')"
         data-testid="proforma-related"
     >
         <dl class="pf-related">
             <div v-if="card.order">
-                <dt>Order</dt>
+                <dt>{{ t('proformaInvoices.related.order') }}</dt>
                 <dd>
                     <RouterLink :to="`/orders/${card.order.code}`">
                         {{ formatDocumentNumber(card.order.code) }}
@@ -21,7 +23,7 @@ defineProps<{ card: ProformaCard }>();
                 </dd>
             </div>
             <div v-if="card.salesInvoiceNumber">
-                <dt>ERP sales invoice</dt>
+                <dt>{{ t('proformaInvoices.related.salesInvoice') }}</dt>
                 <dd data-testid="proforma-sales-invoice">№ {{ card.salesInvoiceNumber }}</dd>
             </div>
         </dl>

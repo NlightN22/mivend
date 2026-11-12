@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvDateTimeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
@@ -11,12 +12,13 @@ import { changeSummary, signedMoney } from '../../utils/proformaVersionText';
 import { timelineEntries } from '../../utils/proformaVersionDiff';
 
 const props = defineProps<{ card: ProformaCard }>();
+const { t } = useI18n();
 const money = computed(() => documentMoney(props.card.currencyCode));
 const entries = computed(() => timelineEntries(props.card.versions));
 </script>
 
 <template>
-    <MvPanel title="Version history" data-testid="proforma-versions">
+    <MvPanel :title="t('proformaInvoices.versions.title')" data-testid="proforma-versions">
         <ol class="pf-timeline">
             <li
                 v-for="entry in entries"
@@ -35,7 +37,7 @@ const entries = computed(() => timelineEntries(props.card.versions));
                         № {{ entry.version.number }}
                     </RouterLink>
                     <strong v-else class="pf-timeline__number">
-                        № {{ entry.version.number }} (this one)
+                        № {{ entry.version.number }} {{ t('proformaInvoices.versions.thisOne') }}
                     </strong>
                     <MvStatusBadge
                         :variant="

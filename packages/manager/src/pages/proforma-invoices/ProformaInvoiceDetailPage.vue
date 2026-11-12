@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { MvPanel } from '@mivend/ui-kit';
 import { useProformaCard } from '../../composables/useProformaCard';
@@ -9,14 +10,17 @@ import ProformaPaymentsPanel from '../../components/proforma-detail/ProformaPaym
 import ProformaRelated from '../../components/proforma-detail/ProformaRelated.vue';
 import ProformaVersionTimeline from '../../components/proforma-detail/ProformaVersionTimeline.vue';
 
+const { t } = useI18n();
 const route = useRoute();
 const { card, notFound } = useProformaCard(() => String(route.params.id));
 </script>
 
 <template>
     <div v-if="notFound" class="pf-detail__not-found">
-        <h1>Proforma invoice not found</h1>
-        <RouterLink to="/proforma-invoices">Back to proforma invoices</RouterLink>
+        <h1>{{ t('proformaInvoices.card.notFound') }}</h1>
+        <RouterLink to="/proforma-invoices">{{
+            t('proformaInvoices.card.backToList')
+        }}</RouterLink>
     </div>
 
     <div v-else-if="card" class="pf-detail" data-testid="proforma-card">
