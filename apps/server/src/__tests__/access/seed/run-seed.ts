@@ -1,6 +1,7 @@
 import { login } from '../harness/graphql';
 import { seedApprovals } from './approval-seed';
 import { seedCategories } from './category-seed';
+import { seedDiscountSetups } from './discount-setup-seed';
 import { seedDocuments } from './document-seed';
 import { seedGapClients } from './gap-seed';
 import { seedHistory } from './history-seed';
@@ -25,6 +26,7 @@ export async function runAccessSeed(
     const target = { baseUrl, token: importToken };
     await seedMasterData(target);
     await seedGapClients(target);
+    await seedDiscountSetups(target);
     await seedStaff(target, superadmin);
     const ids = await readSeedIds(baseUrl, superadmin);
     await seedRelations(baseUrl, superadmin, ids);

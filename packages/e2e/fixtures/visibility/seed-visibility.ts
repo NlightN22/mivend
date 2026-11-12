@@ -5,6 +5,7 @@ import { readVisIds, type VisIds } from './ids';
 import { importClients, importEmployees, importStructure, importWidgetProducts } from './import';
 import { seedOrders } from './orders';
 import { seedRelations } from './relations';
+import { seedSetups } from './setups';
 import { seedStaff } from './staff';
 import { seedTeam } from './team';
 
@@ -31,5 +32,6 @@ export async function seedVisibility(superadmin: string): Promise<VisIds> {
     await seedRelations(superadmin, ids);
     await seedOrders(superadmin, ids);
     await seedGrants(superadmin);
+    await seedSetups();
     return ids;
 }

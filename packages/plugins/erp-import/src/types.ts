@@ -200,7 +200,13 @@ export interface DiscountRuleRecord {
 
 export interface CounterpartyDiscountRuleRecord {
     erpId: string;
-    counterpartyErpId: string;
+    // Without counterpartyErpIds: the single recipient; empty = every counterparty.
+    counterpartyErpId?: string;
+    // Overrides counterpartyErpId; an empty list means no recipient rows (applies to everyone).
+    counterpartyErpIds?: string[];
+    documentNumber?: string;
+    // A non-empty reason seeds a setup mivend does not apply.
+    inactiveReason?: string | null;
     productErpId?: string | null;
     // The ERP condition enum value name (DiscountConditionKind.erpName); empty = unconditional.
     condition: string;

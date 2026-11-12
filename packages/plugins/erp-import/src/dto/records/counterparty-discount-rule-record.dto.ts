@@ -6,8 +6,28 @@ export class CounterpartyDiscountRuleRecordDto {
     @ApiProperty({ description: 'ERP identifier, used as the idempotency key.' })
     erpId!: string;
 
-    @ApiProperty({ description: 'erpId of the counterparty the rule is addressed to.' })
-    counterpartyErpId!: string;
+    @ApiPropertyOptional({
+        description:
+            'erpId of the counterparty the rule is addressed to; empty = every counterparty.',
+    })
+    counterpartyErpId?: string;
+
+    @ApiPropertyOptional({
+        type: [String],
+        description:
+            'Several recipients; overrides counterpartyErpId, an empty list = no recipient rows.',
+    })
+    counterpartyErpIds?: string[];
+
+    @ApiPropertyOptional({ description: 'The document number shown to people.' })
+    documentNumber?: string;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description: 'The ERP reason a setup is not applied (cancelled, no-header-percent).',
+    })
+    inactiveReason?: string | null;
 
     @ApiPropertyOptional({
         type: String,

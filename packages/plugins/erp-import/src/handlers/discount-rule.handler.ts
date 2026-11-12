@@ -32,7 +32,7 @@ export class DiscountRuleHandler {
         await this.discountSetupService.apply(ctx, {
             setup: {
                 erpId: record.erpId,
-                documentNumber: '',
+                documentNumber: record.documentNumber ?? '',
                 percent: record.percent,
                 conditionName: record.condition,
                 conditionNumber: record.conditionValue,
@@ -40,14 +40,16 @@ export class DiscountRuleHandler {
                 limitPercent: null,
                 validFrom: new Date(record.validFrom),
                 validTo: record.validTo ? new Date(record.validTo) : null,
-                active: true,
-                inactiveReason: null,
+                active: !record.inactiveReason,
+                inactiveReason: record.inactiveReason ?? null,
                 allProducts: !record.productErpId,
                 productMode: 'list',
                 productFilter: null,
                 sourceVersion: String(Date.now()),
             },
-            recipients: [{ counterpartyErpId: record.counterpartyErpId, contractErpId: '' }],
+            recipients: (record.counterpartyErpIds ?? [record.counterpartyErpId ?? '']).map(
+                counterpartyErpId => ({ counterpartyErpId, contractErpId: '' }),
+            ),
             productErpIds: record.productErpId ? [record.productErpId] : [],
             operationKind: '',
         });

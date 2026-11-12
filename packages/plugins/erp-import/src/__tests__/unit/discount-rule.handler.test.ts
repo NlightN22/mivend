@@ -48,4 +48,39 @@ describe('DiscountRuleHandler.upsertCounterparty', () => {
         expect(input[1].setup.allProducts).toBe(false);
         expect(input[1].productErpIds).toEqual(['prod-1']);
     });
+
+    it('seeds several, empty or no recipients and an inactive document', async () => {
+        const apply = vi.fn(async () => 'applied');
+        const handler = new DiscountRuleHandler({} as never, { apply } as never);
+        const base = {
+            condition: '',
+            conditionValue: 0,
+            percent: 5,
+            validFrom: '2026-01-01T00:00:00.000Z',
+        };
+        await handler.upsertCounterparty({} as RequestContext, {
+            ...base,
+            erpId: 'r-wide',
+            counterpartyErpIds: ['cnt-1', 'cnt-2'],
+            documentNumber: '9101',
+            inactiveReason: 'cancelled',
+        });
+        await handler.upsertCounterparty({} as RequestContext, {
+            ...base,
+            erpId: 'r-none',
+            counterpartyErpIds: [],
+        });
+        await handler.upsertCounterparty({} as RequestContext, { ...base, erpId: 'r-empty' });
+        const [wide, none, empty] = apply.mock.calls.map(
+            c => (c as unknown as [unknown, { setup: object; recipients: object[] }])[1],
+        );
+        expect(wide.recipients).toHaveLength(2);
+        expect(wide.setup).toMatchObject({
+            documentNumber: '9101',
+            active: false,
+            inactiveReason: 'cancelled',
+        });
+        expect(none.recipients).toEqual([]);
+        expect(empty.recipients).toEqual([{ counterpartyErpId: '', contractErpId: '' }]);
+    });
 });
