@@ -141,6 +141,17 @@ export const adminApiSchema: DocumentNode = gql`
         status: String!
     }
 
+    type DiscountFacetValueOption {
+        code: String!
+        name: String!
+    }
+
+    type DiscountFacetOption {
+        code: String!
+        name: String!
+        values: [DiscountFacetValueOption!]!
+    }
+
     type CounterpartyDiscountCount {
         counterpartyId: ID!
         count: Int!
@@ -246,6 +257,8 @@ export const adminApiSchema: DocumentNode = gql`
         ): DiscountGrantForCustomerList!
         # Active grant count per counterparty in one request; same filters as discountGrantsForCounterparty(status: active).
         activeDiscountCounts(counterpartyIds: [ID!]!): [CounterpartyDiscountCount!]!
+        # Facets with their values in one lean query; the stock facets list hydrates every entity and stalls the server.
+        discountFacetOptions: [DiscountFacetOption!]!
         priceTypeCodes: [String!]!
         # Batch lookup for the catalog list/detail pages; see PriceEntryAdminResolver.priceEntriesForVariants.
         priceEntriesForVariants(variantIds: [ID!]!, priceTypeCode: String!): [VariantPriceEntry!]!

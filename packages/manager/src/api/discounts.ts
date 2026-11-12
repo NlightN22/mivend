@@ -51,12 +51,8 @@ export interface FacetOption {
 }
 
 export async function fetchFacets(): Promise<FacetOption[]> {
-    const all: FacetOption[] = [];
-    for (;;) {
-        const { facets } = await adminApi(DiscountFacetsDocument, { skip: all.length });
-        all.push(...facets.items);
-        if (!facets.items.length || all.length >= facets.totalItems) return all;
-    }
+    const { discountFacetOptions } = await adminApi(DiscountFacetsDocument);
+    return discountFacetOptions;
 }
 
 export async function requestDiscountGrant(input: DiscountGrantInput): Promise<{ id: string }> {

@@ -2,6 +2,7 @@ import { Args, Query, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Allow,
+    ConfigService,
     Ctx,
     PaginatedList,
     Permission,
@@ -13,6 +14,7 @@ import {
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
+import { loadDiscountFacetOptions, type DiscountFacetOption } from './discount-facet-options';
 import { activeGrantCounts } from './discount-grant-counts';
 import { DiscountGrantService } from './discount-grant.service';
 import {
@@ -30,7 +32,18 @@ export class DiscountGrantResolver {
         private discountGrantService: DiscountGrantService,
         private priceTypeAccess: PriceTypeAccessService,
         private connection: TransactionalConnection,
+        private configService: ConfigService,
     ) {}
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    discountFacetOptions(@Ctx() ctx: RequestContext): Promise<DiscountFacetOption[]> {
+        return loadDiscountFacetOptions(
+            this.connection,
+            ctx,
+            this.configService.defaultLanguageCode,
+        );
+    }
 
     @Query()
     @Allow(Permission.ReadCatalog)
