@@ -139,8 +139,8 @@ function applyView(state: TableViewState): void {
 const router = useRouter();
 function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>): void {
     const target = event.originalEvent.target;
-    if (!event.row.orderCode || (target instanceof Element && target.closest('a, button'))) return;
-    const href = router.resolve(`/orders/${event.row.orderCode}`).href;
+    if (target instanceof Element && target.closest('a, button')) return;
+    const href = router.resolve(`/proforma-invoices/${event.row.id}`).href;
     const mouse = event.originalEvent as MouseEvent;
     if (mouse.ctrlKey || mouse.metaKey) window.open(href, '_blank', 'noopener');
     else void router.push(href);
@@ -195,9 +195,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         </template>
 
         <template #cell-number="{ data }">
-            <span class="mv-cell-id mv-cell-id--inline">{{
-                formatDocumentNumber((data as ProformaInvoiceRow).number)
-            }}</span>
+            <RouterLink
+                class="mv-cell-id mv-cell-id--inline mv-cell-link"
+                :to="`/proforma-invoices/${(data as ProformaInvoiceRow).id}`"
+                >{{ formatDocumentNumber((data as ProformaInvoiceRow).number) }}</RouterLink
+            >
             <MvStatusBadge
                 v-if="(data as ProformaInvoiceRow).version > 1"
                 class="proforma-invoices-list-table__version"

@@ -63,3 +63,19 @@ test('an unknown proforma invoice id shows the not found state @on:manager-opera
         timeout: 15000,
     });
 });
+
+test('a click on a list row or on its number opens the proforma card, not the order @on:manager-operator @read-only', async ({
+    page,
+}) => {
+    const id = await firstVisibleProformaId();
+    await page.goto('/proforma-invoices');
+    const row = page.locator('tbody tr').first();
+    await expect(row).toBeVisible({ timeout: 15000 });
+    await row.locator('td').nth(1).click();
+    await expect(page).toHaveURL(/\/proforma-invoices\/[^/?]+$/);
+    await expect(page.getByTestId('proforma-card-header')).toBeVisible({ timeout: 15000 });
+
+    await page.goto('/proforma-invoices');
+    await page.locator('tbody tr').first().locator('a.mv-cell-link').first().click();
+    await expect(page).toHaveURL(new RegExp(`/proforma-invoices/${id}$|/proforma-invoices/\\d+$`));
+});
