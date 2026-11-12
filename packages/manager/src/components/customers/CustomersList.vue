@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
@@ -19,6 +20,7 @@ import { toCustomerRows } from './customersRows';
 const props = defineProps<{ fixedFilter?: CounterpartyFilterParameter; urlPrefix?: string }>();
 const urlPrefix = props.urlPrefix ?? (props.fixedFilter ? 'nested.' : '');
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
 const withManagerFilter = authStore.roleCode !== 'manager';
@@ -47,7 +49,7 @@ const rows = computed(() =>
 const chips = computed<FilterChip[]>(() =>
     CUSTOMERS_VIEWS.map(v => ({
         key: v.key,
-        label: v.label,
+        label: t(`customers.list.views.${v.key}`),
         count: list.counts.value?.[v.key],
         countLoading: list.countsLoading.value,
     })),
@@ -63,15 +65,9 @@ function clearFilters(): void {
 function exportCsv(): void {
     downloadCsv(
         'customers.csv',
-        [
-            'Company name',
-            'INN',
-            'Credit limit',
-            'Credit balance',
-            'Active discounts',
-            'Last order',
-            'Status',
-        ],
+        ['shortName', 'inn', 'creditLimit', 'creditBalance', 'discounts', 'lastOrder', 'isActive'].map(
+            field => t(`customers.list.columns.${field}`),
+        ),
         rows.value.map(r => [
             r.shortName,
             r.inn,
@@ -79,7 +75,7 @@ function exportCsv(): void {
             r.creditBalance,
             r.discounts,
             r.lastOrder,
-            r.isActive ? 'Active' : 'Inactive',
+            t(r.isActive ? 'customers.list.status.active' : 'customers.list.status.inactive'),
         ]),
     );
 }

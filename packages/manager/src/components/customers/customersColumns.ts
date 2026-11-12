@@ -1,18 +1,24 @@
+import { i18n } from '../../i18n';
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 
 export const UNASSIGNED = 'unassigned';
+
+const col = (field: string): string => i18n.global.t(`customers.list.columns.${field}`);
 
 const NOT_FILTERED = { type: 'none' } as const;
 const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq'] as const;
 const TEXT_OR_EMPTY = [...TEXT_OPERATORS, 'isNull', 'notNull'] as const;
 
 // The server computes these; the labels only name them.
-export const INN_STATUS_OPTIONS: FilterOption[] = [
-    { value: 'ok', label: 'OK' },
-    { value: 'missing', label: 'Missing' },
-    { value: 'duplicate', label: 'Duplicate (ERP)' },
-];
+export function innStatusOptions(): FilterOption[] {
+    const t = i18n.global.t;
+    return [
+        { value: 'ok', label: t('customers.list.innStatusFilter.ok') },
+        { value: 'missing', label: t('customers.list.innStatusFilter.missing') },
+        { value: 'duplicate', label: t('customers.list.innStatusFilter.duplicate') },
+    ];
+}
 
 export interface CustomersColumnOptions {
     managers?: FilterOption[];
@@ -25,13 +31,13 @@ export function buildCustomersColumns(
     options: CustomersColumnOptions = {},
 ): AdvancedDataTableColumn[] {
     const withUnassigned = (list: FilterOption[] = []): FilterOption[] => [
-        { value: UNASSIGNED, label: 'Unassigned' },
+        { value: UNASSIGNED, label: i18n.global.t('customers.list.unassigned') },
         ...list,
     ];
     return [
         {
             field: 'shortName',
-            header: 'Company name',
+            header: col('shortName'),
             sortField: 'shortName',
             width: 230,
             minWidth: 170,
@@ -44,7 +50,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'inn',
-            header: 'INN',
+            header: col('inn'),
             sortField: 'inn',
             width: 120,
             minWidth: 120,
@@ -55,7 +61,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'manager',
-            header: 'Manager',
+            header: col('manager'),
             sortField: 'managerErpId',
             width: 150,
             minWidth: 110,
@@ -68,7 +74,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'branch',
-            header: 'Branch',
+            header: col('branch'),
             width: 130,
             minWidth: 100,
             priority: 4,
@@ -81,7 +87,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'group',
-            header: 'Group',
+            header: col('group'),
             width: 140,
             minWidth: 110,
             priority: 1,
@@ -93,19 +99,19 @@ export function buildCustomersColumns(
         },
         {
             field: 'innStatus',
-            header: 'INN check',
+            header: col('innStatus'),
             width: 130,
             minWidth: 110,
             priority: 1,
             filterConfig: NOT_FILTERED,
             filterType: 'select',
             filterOperators: ['eq', 'notEq'],
-            filterOptions: INN_STATUS_OPTIONS,
+            filterOptions: innStatusOptions(),
             mobile: { hidden: true },
         },
         {
             field: 'contact',
-            header: 'Contact person',
+            header: col('contact'),
             width: 160,
             minWidth: 120,
             priority: 3,
@@ -114,7 +120,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'creditLimit',
-            header: 'Credit limit',
+            header: col('creditLimit'),
             width: 120,
             minWidth: 110,
             priority: 5,
@@ -124,7 +130,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'creditBalance',
-            header: 'Credit balance',
+            header: col('creditBalance'),
             width: 160,
             minWidth: 150,
             priority: 7,
@@ -132,7 +138,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'discounts',
-            header: 'Active discounts',
+            header: col('discounts'),
             width: 140,
             minWidth: 130,
             priority: 2,
@@ -141,7 +147,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'lastOrder',
-            header: 'Last order',
+            header: col('lastOrder'),
             width: 110,
             minWidth: 100,
             priority: 4,
@@ -149,7 +155,7 @@ export function buildCustomersColumns(
         },
         {
             field: 'isActive',
-            header: 'Status',
+            header: col('isActive'),
             width: 110,
             minWidth: 110,
             priority: 9,

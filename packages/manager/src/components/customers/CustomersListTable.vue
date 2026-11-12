@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvAdvancedDataTable,
@@ -49,6 +50,8 @@ const emit = defineEmits<{
     retry: [];
     export: [];
 }>();
+
+const { t } = useI18n();
 
 const COLUMNS = buildCustomersColumns({ managers: [] });
 const filterColumns = computed(() =>
@@ -159,10 +162,10 @@ function applyView(state: TableViewState): void {
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Company name or INN…' }"
+        :search="{ filterKey: 'search', placeholder: t('customers.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="{ search: BLANK_CUSTOMERS_FILTERS.search }"
-        empty-message="No customers match your filters"
+        :empty-message="t('customers.list.empty')"
         @update:conditions="emit('update:filters', { ...filters, conditions: $event })"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -172,11 +175,11 @@ function applyView(state: TableViewState): void {
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load customers"
-                message="Check the connection and try again."
+                :title="t('customers.list.loadFailedTitle')"
+                :message="t('customers.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No customers match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('customers.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
@@ -185,7 +188,7 @@ function applyView(state: TableViewState): void {
 
         <template #toolbar-end>
             <MvButton size="sm" variant="secondary" @click="emit('export')"
-                >Export page (CSV)</MvButton
+                >{{ t('customers.list.exportPage') }}</MvButton
             >
             <TableViewsMenu
                 views-key="customers"
@@ -267,9 +270,11 @@ function applyView(state: TableViewState): void {
                 class="mv-cell-link"
                 :to="{ path: '/discounts', query: { search: (data as CustomerRow).shortName } }"
             >
-                <MvStatusBadge variant="info"
-                    >{{ (data as CustomerRow).discounts }} active</MvStatusBadge
-                >
+                <MvStatusBadge variant="info">{{
+                    t('customers.list.activeDiscounts', {
+                        count: (data as CustomerRow).discounts,
+                    })
+                }}</MvStatusBadge>
             </RouterLink>
             <template v-else>—</template>
         </template>
@@ -280,7 +285,7 @@ function applyView(state: TableViewState): void {
 
         <template #cell-isActive="{ data }">
             <MvStatusBadge :variant="(data as CustomerRow).isActive ? 'success' : 'neutral'">{{
-                (data as CustomerRow).isActive ? 'Active' : 'Inactive'
+                t((data as CustomerRow).isActive ? 'customers.list.status.active' : 'customers.list.status.inactive')
             }}</MvStatusBadge>
         </template>
     </MvAdvancedDataTable>

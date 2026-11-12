@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvStatusBadge,
     MvDocumentTypeChip,
@@ -51,44 +52,59 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
-    {
-        field: 'number',
-        header: 'Document #',
-        width: 180,
-        required: true,
-        filterConfig: { type: 'text', placeholder: 'Document number contains…' },
-        mobile: { primary: true },
-    },
-    { field: 'issueDate', header: 'Issue date', width: 130, filterConfig: { type: 'none' } },
-    {
-        field: 'type',
-        header: 'Type',
-        width: 140,
-        // options spliced in by resolvedColumns below, once typeOptions arrives from the backend.
-        filterConfig: { type: 'status', multiple: true, placeholder: 'All types', options: [] },
-    },
-    {
-        field: 'status',
-        header: 'Status',
-        width: 140,
-        filterConfig: {
-            type: 'status',
-            placeholder: 'All statuses',
-            options: DOCUMENT_STATUS_OPTIONS.filter(o => o.value).map(o => ({
-                value: o.value,
-                label: o.label,
-                variant: DOCUMENT_STATUS_BADGE_VARIANT[o.value] ?? 'neutral',
-            })),
+const { t } = useI18n();
+
+function buildColumns(): AdvancedDataTableColumn[] {
+    return [
+        {
+            field: 'number',
+            header: t('customers.documents.columns.number'),
+            width: 180,
+            required: true,
+            filterConfig: { type: 'text', placeholder: t('customers.documents.numberFilter') },
+            mobile: { primary: true },
         },
-        mobile: { badge: true },
-    },
-];
+        {
+            field: 'issueDate',
+            header: t('customers.documents.columns.issueDate'),
+            width: 130,
+            filterConfig: { type: 'none' },
+        },
+        {
+            field: 'type',
+            header: t('customers.documents.columns.type'),
+            width: 140,
+            // options spliced in by resolvedColumns below, once typeOptions arrives from the backend.
+            filterConfig: {
+                type: 'status',
+                multiple: true,
+                placeholder: t('customers.documents.allTypes'),
+                options: [],
+            },
+        },
+        {
+            field: 'status',
+            header: t('customers.documents.columns.status'),
+            width: 140,
+            filterConfig: {
+                type: 'status',
+                placeholder: t('customers.documents.allStatuses'),
+                options: DOCUMENT_STATUS_OPTIONS.filter(o => o.value).map(o => ({
+                    value: o.value,
+                    label: t(`customers.documents.status.${o.value}`),
+                    variant: DOCUMENT_STATUS_BADGE_VARIANT[o.value] ?? 'neutral',
+                })),
+            },
+            mobile: { badge: true },
+        },
+    ];
+}
+const ALL_COLUMNS = buildColumns();
 
 // Splices in the Type column's live options — see ALL_COLUMNS' doc comment on the 'type' entry —
 // same shape as CustomerOrdersDataTable.vue's resolvedColumns (its 'placedBy' entry).
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
-    ALL_COLUMNS.map(col => {
+    buildColumns().map(col => {
         if (col.field === 'type' && col.filterConfig.type === 'status') {
             return {
                 ...col,
@@ -185,7 +201,9 @@ const rows = computed<DocumentRow[]>(() =>
         number: doc.number,
         type: doc.type,
         issueDate: doc.issueDate,
-        status: DOCUMENT_STATUS_OPTIONS.find(o => o.value === doc.status)?.label ?? doc.status,
+        status: DOCUMENT_STATUS_OPTIONS.some(o => o.value === doc.status)
+            ? t(`customers.documents.status.${doc.status}`)
+            : doc.status,
         statusVariant: DOCUMENT_STATUS_BADGE_VARIANT[doc.status] ?? 'neutral',
     })),
 );
@@ -203,8 +221,8 @@ const rows = computed<DocumentRow[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'number', placeholder: 'Search documents…' }"
-        empty-message="No documents for this customer"
+        :search="{ filterKey: 'number', placeholder: t('customers.documents.search') }"
+        :empty-message="t('customers.documents.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >

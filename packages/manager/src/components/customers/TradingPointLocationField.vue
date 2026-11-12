@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconMapPin } from '@tabler/icons-vue';
 import { MvButton, MvLocationPicker, type GeoPoint } from '@mivend/ui-kit';
-import { PROVIDER_NAMES, useLocationPick } from '../../composables/useLocationPick';
+import { providerNames, useLocationPick } from '../../composables/useLocationPick';
 import { reverseGeocode, searchAddress } from '../../api/geo';
 
+const { t } = useI18n();
 const model = defineModel<GeoPoint | null>({ required: true });
 const props = defineProps<{ address: string; sibling: GeoPoint | null; legacy: boolean }>();
 
@@ -26,7 +28,7 @@ function onPicked(point: GeoPoint): void {
 <template>
     <div class="tp-loc">
         <div class="tp-loc__head">
-            <span class="tp-loc__label">Location</span>
+            <span class="tp-loc__label">{{ t('customers.tradingPoints.location.title') }}</span>
             <MvButton
                 variant="secondary"
                 size="sm"
@@ -34,7 +36,11 @@ function onPicked(point: GeoPoint): void {
                 data-testid="tp-pick-on-map"
                 @click="pick.start()"
             >
-                {{ coords ? 'Change on map' : 'Pick on map' }}
+                {{
+                    coords
+                        ? t('customers.tradingPoints.location.change')
+                        : t('customers.tradingPoints.location.pick')
+                }}
             </MvButton>
         </div>
         <div
@@ -45,12 +51,12 @@ function onPicked(point: GeoPoint): void {
             <IconMapPin :size="18" stroke-width="1.8" aria-hidden="true" />
             <span v-if="coords">{{ coords }}</span>
             <span v-else-if="legacy">
-                This trading point has no location yet. Pick it on the map to be able to save.
+                {{ t('customers.tradingPoints.location.legacy') }}
             </span>
-            <span v-else>No location chosen. Pick it on the map to be able to save.</span>
+            <span v-else>{{ t('customers.tradingPoints.location.none') }}</span>
         </div>
         <p v-if="pick.failed.value" class="tp-loc__error" role="alert">
-            The map is unavailable right now. Try again later.
+            {{ t('customers.tradingPoints.location.mapUnavailable') }}
         </p>
         <MvLocationPicker
             v-if="pick.open.value && pick.config.value"
@@ -61,7 +67,7 @@ function onPicked(point: GeoPoint): void {
             :suggestion-point="pick.suggestionPoint.value"
             :sibling-point="sibling"
             :initial-query="address"
-            :provider-names="PROVIDER_NAMES"
+            :provider-names="providerNames()"
             @update:model-value="onPicked"
             @close="pick.open.value = false"
         />

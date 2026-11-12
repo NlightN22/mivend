@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvButton,
@@ -23,6 +24,7 @@ const props = defineProps<{
     canManage: boolean;
 }>();
 
+const { t, te } = useI18n();
 const users = ref<CounterpartyPortalUser[]>([]);
 const loading = ref(false);
 const error = ref('');
@@ -38,7 +40,7 @@ async function load(): Promise<void> {
     try {
         users.value = await fetchCounterpartyPortalUsers(props.counterpartyId);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load portal users';
+        error.value = e instanceof Error ? e.message : t('customers.portalUsers.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -47,46 +49,48 @@ async function load(): Promise<void> {
 onMounted(load);
 watch(() => props.counterpartyId, load);
 
-const ROLE_LABEL: Record<string, string> = {
-    client_admin: 'Client admin',
-    buyer: 'Buyer',
-    accountant: 'Accountant',
-    observer: 'Observer',
-};
+function roleLabel(role: string): string {
+    return te(`customers.portalUsers.roles.${role}`) ? t(`customers.portalUsers.roles.${role}`) : role;
+}
 
-const COLUMNS: AdvancedDataTableColumn[] = [
-    {
-        field: 'name',
-        header: 'Name / Email',
-        width: 240,
-        sortField: 'name',
-        filterConfig: { type: 'none' },
-        mobile: { primary: true },
-    },
-    {
-        field: 'portalRole',
-        header: 'Portal role',
-        width: 150,
-        sortField: 'portalRole',
-        filterConfig: { type: 'none' },
-    },
-    // status is a binary active/inactive badge, not a column worth sorting by.
-    {
-        field: 'status',
-        header: 'Status',
-        width: 120,
-        filterConfig: { type: 'none' },
-        mobile: { badge: true },
-    },
-    {
-        field: 'createdAt',
-        header: 'Created',
-        width: 130,
-        sortField: 'createdAt',
-        filterConfig: { type: 'none' },
-    },
-    { field: 'actions', header: 'Actions', width: 230, filterConfig: { type: 'none' } },
-];
+function buildColumns(): AdvancedDataTableColumn[] {
+    const col = (field: string): string => t(`customers.portalUsers.columns.${field}`);
+    return [
+        {
+            field: 'name',
+            header: col('name'),
+            width: 240,
+            sortField: 'name',
+            filterConfig: { type: 'none' },
+            mobile: { primary: true },
+        },
+        {
+            field: 'portalRole',
+            header: col('portalRole'),
+            width: 150,
+            sortField: 'portalRole',
+            filterConfig: { type: 'none' },
+        },
+        // status is a binary active/inactive badge, not a column worth sorting by.
+        {
+            field: 'status',
+            header: col('status'),
+            width: 120,
+            filterConfig: { type: 'none' },
+            mobile: { badge: true },
+        },
+        {
+            field: 'createdAt',
+            header: col('createdAt'),
+            width: 130,
+            sortField: 'createdAt',
+            filterConfig: { type: 'none' },
+        },
+        { field: 'actions', header: col('actions'), width: 230, filterConfig: { type: 'none' } },
+    ];
+}
+const COLUMNS = buildColumns();
+const columns = computed(buildColumns);
 
 // No real filters (exempt table, see the pagination comment above) — useDataTableState is
 // still required by MvAdvancedDataTable's own props contract (tableState/defaultFilters).
@@ -123,7 +127,7 @@ const rows = computed<Row[]>(() =>
         id: u.id,
         name: `${u.firstName} ${u.lastName}`,
         email: u.emailAddress,
-        portalRole: u.portalRole ? (ROLE_LABEL[u.portalRole] ?? u.portalRole) : '—',
+        portalRole: u.portalRole ? roleLabel(u.portalRole) : '—',
         active: u.active,
         createdAt: formatDate(u.createdAt),
         createdAtSortKey: new Date(u.createdAt).getTime(),
@@ -161,7 +165,7 @@ async function handleDeactivate(): Promise<void> {
         confirmTarget.value = null;
         await load();
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not deactivate this portal user';
+        error.value = e instanceof Error ? e.message : t('customers.portalUsers.deactivateFailed');
     } finally {
         deactivatingId.value = null;
     }
@@ -172,7 +176,7 @@ async function handleDeactivate(): Promise<void> {
     <div class="customer-portal-users">
         <MvAdvancedDataTable
             v-model:table-state="tableState"
-            :columns="COLUMNS"
+            :columns="columns"
             :rows="sortedRows"
             :loading="loading"
             :total-items="rows.length"
@@ -181,7 +185,7 @@ async function handleDeactivate(): Promise<void> {
             :row-height-px="52"
             :header-height-px="52"
             :default-filters="BLANK_FILTERS"
-            empty-message="No portal users yet"
+            :empty-message="t('customers.portalUsers.empty')"
         >
             <template #cell-name="{ data }">
                 <div>
@@ -191,7 +195,11 @@ async function handleDeactivate(): Promise<void> {
             </template>
             <template #cell-status="{ data }">
                 <MvStatusBadge :variant="(data as Row).active ? 'success' : 'danger'">
-                    {{ (data as Row).active ? 'Active' : 'Deactivated' }}
+                    {{
+                        (data as Row).active
+                            ? t('customers.portalUsers.active')
+                            : t('customers.portalUsers.deactivated')
+                    }}
                 </MvStatusBadge>
             </template>
             <template #cell-actions="{ data }">
@@ -203,31 +211,40 @@ async function handleDeactivate(): Promise<void> {
                         :loading="deactivatingId === (data as Row).id"
                         @click="openConfirm(data as Row)"
                     >
-                        Deactivate
+                        {{ t('customers.portalUsers.deactivate') }}
                     </MvButton>
                     <span
                         v-else-if="!(data as Row).active"
                         class="customer-portal-users__deactivated"
-                        >Deactivated</span
+                        >{{ t('customers.portalUsers.deactivated') }}</span
                     >
                 </div>
             </template>
         </MvAdvancedDataTable>
         <p v-if="error" class="customer-portal-users__error">{{ error }}</p>
 
-        <MvModal v-if="confirmTarget" title="Deactivate portal user?" @close="confirmTarget = null">
+        <MvModal
+            v-if="confirmTarget"
+            :title="t('customers.portalUsers.confirmTitle')"
+            @close="confirmTarget = null"
+        >
             <p>
-                {{ confirmTarget.firstName }} {{ confirmTarget.lastName }} will be soft-deleted and
-                lose access to the portal. The record stays in history.
+                {{
+                    t('customers.portalUsers.confirmText', {
+                        name: `${confirmTarget.firstName} ${confirmTarget.lastName}`,
+                    })
+                }}
             </p>
             <div class="customer-portal-users__modal-actions">
-                <MvButton variant="ghost" @click="confirmTarget = null">Cancel</MvButton>
+                <MvButton variant="ghost" @click="confirmTarget = null">{{
+                    t('common.cancel')
+                }}</MvButton>
                 <MvButton
                     variant="danger"
                     :loading="deactivatingId !== null"
                     @click="handleDeactivate"
                 >
-                    Deactivate
+                    {{ t('customers.portalUsers.deactivate') }}
                 </MvButton>
             </div>
         </MvModal>

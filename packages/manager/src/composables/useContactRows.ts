@@ -7,12 +7,6 @@ export interface ContactRow extends ContactRowValues {
     touched: Record<keyof ContactRowValues, boolean>;
 }
 
-export const CONTACT_ERROR_TEXT: Record<keyof ContactRowValues, string> = {
-    name: 'Enter the first and last name',
-    phone: 'Enter a full phone number',
-    email: 'Enter a valid e-mail address',
-};
-
 interface SourceContact {
     name: string;
     phone?: string | null;

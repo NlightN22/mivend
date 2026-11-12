@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvStatusBadge,
@@ -43,67 +44,79 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ remove: [administratorId: string] }>();
+const { t, te } = useI18n();
 
 // Single source of truth for the Role column's badge color, reused by both the row cell and the
 // column's own status-filter checklist (manager-table-standard skill point 4/4a) — never a
 // bespoke per-cell color choice.
 const ROLE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
-    'Primary manager': 'info',
-    'Backup manager': 'neutral',
-    'Accounting contact': 'neutral',
-    Observer: 'neutral',
+    primary: 'info',
+    backup: 'neutral',
+    'accounting-contact': 'neutral',
+    observer: 'neutral',
 };
-const ROLE_OPTIONS = Object.keys(ROLE_BADGE_VARIANT).map(label => ({
-    value: label,
-    label,
-    variant: ROLE_BADGE_VARIANT[label],
-}));
+const roleLabel = (role: string): string =>
+    te(`customers.team.roles.${role}`) ? t(`customers.team.roles.${role}`) : role;
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
-    {
-        field: 'member',
-        header: 'Member',
-        width: 200,
-        required: true,
-        filterConfig: { type: 'text', placeholder: 'Member name contains…' },
-        mobile: { primary: true },
-    },
-    // The Owner row is synthetic (assembled from Counterparty.assignedManagerId, not a real
-    // CounterpartyTeamMember row) and has no creation timestamp of its own — rendered as a dash.
-    { field: 'createdAt', header: 'Date added', width: 140, filterConfig: { type: 'none' } },
-    {
-        field: 'role',
-        header: 'Role',
-        width: 170,
-        filterConfig: { type: 'status', placeholder: 'All roles', options: ROLE_OPTIONS },
-        mobile: { badge: true },
-    },
-    {
-        field: 'primaryContact',
-        header: 'Primary contact',
-        width: 130,
-        filterConfig: { type: 'none' },
-    },
-    { field: 'email', header: 'Email', width: 220, filterConfig: { type: 'none' } },
-    {
-        field: 'phone',
-        header: 'Phone',
-        width: 150,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
-    },
-    // Always "Active" today — no real per-row lifecycle exists yet for a team membership, so a
-    // filter here would have exactly one value and mislead the user into thinking it does
-    // something. Revisit once team membership has a real status (AGENTS.md's "What not to do" — no hardcoded enums).
-    {
-        field: 'status',
-        header: 'Status',
-        width: 110,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
-    },
-    { field: 'actions', header: 'Actions', width: 110, filterConfig: { type: 'none' } },
-];
+function buildColumns(): AdvancedDataTableColumn[] {
+    const roleOptions = Object.keys(ROLE_BADGE_VARIANT).map(role => ({
+        value: role,
+        label: roleLabel(role),
+        variant: ROLE_BADGE_VARIANT[role],
+    }));
+    const col = (field: string): string => t(`customers.team.columns.${field}`);
+    return [
+        {
+            field: 'member',
+            header: col('member'),
+            width: 200,
+            required: true,
+            filterConfig: { type: 'text', placeholder: t('customers.team.memberFilter') },
+            mobile: { primary: true },
+        },
+        // The Owner row is synthetic (assembled from Counterparty.assignedManagerId, not a real
+        // CounterpartyTeamMember row) and has no creation timestamp of its own — rendered as a dash.
+        { field: 'createdAt', header: col('createdAt'), width: 140, filterConfig: { type: 'none' } },
+        {
+            field: 'role',
+            header: col('role'),
+            width: 170,
+            filterConfig: {
+                type: 'status',
+                placeholder: t('customers.team.allRoles'),
+                options: roleOptions,
+            },
+            mobile: { badge: true },
+        },
+        {
+            field: 'primaryContact',
+            header: col('primaryContact'),
+            width: 130,
+            filterConfig: { type: 'none' },
+        },
+        { field: 'email', header: col('email'), width: 220, filterConfig: { type: 'none' } },
+        {
+            field: 'phone',
+            header: col('phone'),
+            width: 150,
+            filterConfig: { type: 'none' },
+            mobile: { hidden: true },
+        },
+        // Always "Active" today — no real per-row lifecycle exists yet for a team membership, so a
+        // filter here would have exactly one value and mislead the user into thinking it does
+        // something. Revisit once team membership has a real status (AGENTS.md's "What not to do" — no hardcoded enums).
+        {
+            field: 'status',
+            header: col('status'),
+            width: 110,
+            filterConfig: { type: 'none' },
+            mobile: { hidden: true },
+        },
+        { field: 'actions', header: col('actions'), width: 110, filterConfig: { type: 'none' } },
+    ];
+}
+const ALL_COLUMNS = buildColumns();
+const columns = computed(buildColumns);
 
 interface TeamFilterState {
     [key: string]: unknown;
@@ -163,7 +176,7 @@ const pagedRows = computed(() => {
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="ALL_COLUMNS"
+        :columns="columns"
         :rows="pagedRows"
         :loading="loading"
         :total-items="filteredRows.length"
@@ -172,8 +185,8 @@ const pagedRows = computed(() => {
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'member', placeholder: 'Search team members…' }"
-        empty-message="No team members yet"
+        :search="{ filterKey: 'member', placeholder: t('customers.team.search') }"
+        :empty-message="t('customers.team.empty')"
         @update:page="p => (page = p)"
         @reset-page="page = 1"
     >
@@ -190,7 +203,7 @@ const pagedRows = computed(() => {
         </template>
         <template #cell-role="{ data }">
             <MvStatusBadge :variant="ROLE_BADGE_VARIANT[(data as TeamRow).role] ?? 'neutral'">{{
-                (data as TeamRow).role
+                roleLabel((data as TeamRow).role)
             }}</MvStatusBadge>
         </template>
         <template #cell-status="{ data }">
@@ -204,7 +217,7 @@ const pagedRows = computed(() => {
                 :disabled="saving"
                 @click="emit('remove', (data as TeamRow).administratorId as string)"
             >
-                Remove
+                {{ t('customers.team.remove') }}
             </MvButton>
         </template>
     </MvAdvancedDataTable>

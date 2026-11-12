@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import {
     setTradingPointActive,
@@ -21,6 +22,7 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ changed: [] }>();
 
+const { t } = useI18n();
 const editingId = ref<string | null>(null);
 const authStore = useAuthStore();
 const canReadJournal = computed(() => authStore.hasPermission('ReadChangeJournal'));
@@ -52,11 +54,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 
 <template>
     <div class="tp-list">
-        <h3>Trading points</h3>
+        <h3>{{ t('customers.tradingPoints.title') }}</h3>
         <ul v-if="customer.tradingPoints.length">
             <li v-for="tp in customer.tradingPoints" :key="tp.id">
                 <template v-if="editingId === tp.id">
-                    <h4 class="tp-list__edit-title">Edit trading point</h4>
+                    <h4 class="tp-list__edit-title">{{ t('customers.tradingPoints.editTitle') }}</h4>
                     <TradingPointPendingChange
                         v-if="pending.byPoint.value.get(tp.id)"
                         :change="pending.byPoint.value.get(tp.id)!"
@@ -94,13 +96,17 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                                     {{ tradingPointDefectLabel(d) }}
                                 </MvStatusBadge>
                                 <div v-if="!tp.customerUsable" class="tp-list__meta tp-list__warn">
-                                    The customer cannot use this point
+                                    {{ t('customers.tradingPoints.unusable') }}
                                 </div>
                             </div>
                         </div>
                         <div class="tp-list__actions">
                             <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
-                                {{ tp.isActive ? 'Active' : 'Inactive' }}
+                                {{
+                                    tp.isActive
+                                        ? t('customers.tradingPoints.active')
+                                        : t('customers.tradingPoints.inactive')
+                                }}
                             </MvStatusBadge>
                             <button
                                 v-if="!tp.isActive"
@@ -109,7 +115,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                                 :disabled="reactivating === tp.id"
                                 @click="reactivate(tp)"
                             >
-                                Reactivate
+                                {{ t('customers.tradingPoints.reactivate') }}
                             </button>
                             <button
                                 type="button"
@@ -117,7 +123,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                                 :disabled="editingId !== null"
                                 @click="editingId = tp.id"
                             >
-                                Edit
+                                {{ t('customers.tradingPoints.edit') }}
                             </button>
                         </div>
                     </div>
@@ -133,7 +139,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
         </ul>
         <p v-if="pending.error.value" class="tp-list__warn">{{ pending.error.value }}</p>
         <p v-else-if="!customer.tradingPoints.length" class="tp-list__empty">
-            No trading points on file
+            {{ t('customers.tradingPoints.empty') }}
         </p>
     </div>
 </template>

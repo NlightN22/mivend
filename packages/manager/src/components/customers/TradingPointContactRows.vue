@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvEmailInput, MvFormField, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
-import { CONTACT_ERROR_TEXT, type useContactRows } from '../../composables/useContactRows';
+import type { useContactRows } from '../../composables/useContactRows';
 
 defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="tp-contacts">
         <div class="tp-contacts__head">
-            <span>Contacts</span>
+            <span>{{ t('customers.tradingPoints.contacts.title') }}</span>
             <button type="button" class="tp-contacts__add" @click="contacts.add()">
-                + Add contact
+                {{ t('customers.tradingPoints.contacts.add') }}
             </button>
         </div>
         <div v-for="(row, index) in contacts.rows" :key="index" class="tp-contacts__row">
@@ -18,13 +20,13 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
                 class="tp-contacts__name"
                 :error="
                     row.touched.name && contacts.errors.value[index].name
-                        ? CONTACT_ERROR_TEXT.name
+                        ? t('customers.tradingPoints.contacts.nameError')
                         : undefined
                 "
             >
                 <MvNameInput
                     v-model="row.name"
-                    placeholder="Full name"
+                    :placeholder="t('customers.tradingPoints.contacts.fullName')"
                     :error="row.touched.name && !!contacts.errors.value[index].name"
                     @blur="row.touched.name = true"
                 />
@@ -32,7 +34,7 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
             <MvFormField
                 :error="
                     row.touched.phone && contacts.errors.value[index].phone
-                        ? CONTACT_ERROR_TEXT.phone
+                        ? t('customers.tradingPoints.contacts.phoneError')
                         : undefined
                 "
             >
@@ -45,22 +47,24 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
             <MvFormField
                 :error="
                     row.touched.email && contacts.errors.value[index].email
-                        ? CONTACT_ERROR_TEXT.email
+                        ? t('customers.tradingPoints.contacts.emailError')
                         : undefined
                 "
             >
                 <MvEmailInput
                     v-model="row.email"
-                    placeholder="E-mail"
+                    :placeholder="t('customers.tradingPoints.contacts.email')"
                     :error="row.touched.email && !!contacts.errors.value[index].email"
                     @blur="row.touched.email = true"
                 />
             </MvFormField>
             <button type="button" class="tp-contacts__remove" @click="contacts.remove(index)">
-                Remove contact
+                {{ t('customers.tradingPoints.contacts.remove') }}
             </button>
         </div>
-        <p v-if="!contacts.rows.length" class="tp-contacts__empty">No contacts</p>
+        <p v-if="!contacts.rows.length" class="tp-contacts__empty">
+            {{ t('customers.tradingPoints.contacts.empty') }}
+        </p>
     </div>
 </template>
 

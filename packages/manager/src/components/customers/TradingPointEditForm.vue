@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAddressInput,
     MvButton,
@@ -20,19 +21,19 @@ import TradingPointLocationField from './TradingPointLocationField.vue';
 const props = defineProps<{ tradingPoint: TradingPointInfo; siblingPoint?: GeoPoint | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
-const FIELD_ERROR_TEXT = {
-    name: 'Enter the trading point name',
-    address: 'Enter a full address with a street and building number',
-    workingHours: 'Working hours are too long (200 characters max)',
+const { t } = useI18n();
+
+const FIELD_ERROR_KEYS = {
+    name: 'customers.tradingPoints.form.nameError',
+    address: 'customers.tradingPoints.form.addressError',
+    workingHours: 'customers.tradingPoints.form.workingHoursError',
 } as const;
 
-const HOURS_PRESETS = [
-    'Mon-Fri 9:00-18:00',
-    'Mon-Fri 8:00-17:00',
-    'Mon-Sat 9:00-18:00',
-    'Daily 9:00-21:00',
-    'Daily, round the clock',
-];
+const HOURS_PRESETS = computed(() =>
+    ['weekdays9to18', 'weekdays8to17', 'monSat9to18', 'daily9to21', 'roundTheClock'].map(key =>
+        t(`customers.tradingPoints.form.hoursPresets.${key}`),
+    ),
+);
 
 const submitting = ref(false);
 const error = ref('');
@@ -76,8 +77,8 @@ const errors = computed(() =>
     ),
 );
 
-function shown(key: keyof typeof FIELD_ERROR_TEXT): string | undefined {
-    return touched[key] && errors.value[key] ? FIELD_ERROR_TEXT[key] : undefined;
+function shown(key: keyof typeof FIELD_ERROR_KEYS): string | undefined {
+    return touched[key] && errors.value[key] ? t(FIELD_ERROR_KEYS[key]) : undefined;
 }
 
 async function submit(): Promise<void> {
@@ -86,7 +87,7 @@ async function submit(): Promise<void> {
     contacts.touchAll();
     if (errors.value.name || errors.value.address || errors.value.workingHours) return;
     if (!form.location) {
-        error.value = 'Pick the trading point location on the map';
+        error.value = t('customers.tradingPoints.form.pickLocation');
         return;
     }
     if (!contacts.valid.value) return;
@@ -108,7 +109,7 @@ async function submit(): Promise<void> {
         });
         emit('submitted');
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not save the trading point';
+        error.value = e instanceof Error ? e.message : t('customers.tradingPoints.form.saveFailed');
     } finally {
         submitting.value = false;
     }
@@ -117,14 +118,22 @@ async function submit(): Promise<void> {
 
 <template>
     <div class="tp-edit-form">
-        <MvFormField label="Name" :error="shown('name')" required>
+        <MvFormField
+            :label="t('customers.tradingPoints.form.name')"
+            :error="shown('name')"
+            required
+        >
             <MvInput
                 v-model="form.name"
                 :error="!!shown('name')"
                 @focusout="touched.name = true"
             />
         </MvFormField>
-        <MvFormField label="Address" :error="shown('address')" required>
+        <MvFormField
+            :label="t('customers.tradingPoints.form.address')"
+            :error="shown('address')"
+            required
+        >
             <MvAddressInput
                 v-model="form.address"
                 :fetch-suggestions="suggestAddress"
@@ -140,7 +149,10 @@ async function submit(): Promise<void> {
             :legacy="tradingPoint.latitude == null || tradingPoint.longitude == null"
         />
 
-        <MvFormField label="Working hours" :error="shown('workingHours')">
+        <MvFormField
+            :label="t('customers.tradingPoints.form.workingHours')"
+            :error="shown('workingHours')"
+        >
             <MvWorkingHoursInput
                 v-model="form.workingHours"
                 :presets="HOURS_PRESETS"
@@ -149,7 +161,7 @@ async function submit(): Promise<void> {
             />
         </MvFormField>
 
-        <MvFormField label="Delivery comment">
+        <MvFormField :label="t('customers.tradingPoints.form.deliveryComment')">
             <textarea v-model="form.deliveryComment" class="tp-edit-form__comment" rows="2" />
         </MvFormField>
 
@@ -159,10 +171,10 @@ async function submit(): Promise<void> {
 
         <div class="tp-edit-form__actions">
             <MvButton :loading="submitting" :disabled="!form.location" @click="submit"
-                >Save changes</MvButton
+                >{{ t('customers.tradingPoints.form.saveChanges') }}</MvButton
             >
             <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
-                Cancel
+                {{ t('common.cancel') }}
             </button>
         </div>
     </div>

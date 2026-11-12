@@ -1,3 +1,4 @@
+import { i18n } from '../../i18n';
 import { formatDate } from '../../i18n/format';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import type { CustomerCredit, CustomerListItem } from '../../api/customers';
@@ -62,12 +63,16 @@ export function usageVariant(percent: number): 'danger' | 'warn' | 'normal' {
     return 'normal';
 }
 
-const INN_STATUS_BADGE = {
-    ok: { variant: 'neutral', label: 'OK' },
-    missing: { variant: 'warning', label: 'Missing' },
-    duplicate: { variant: 'danger', label: 'Duplicate' },
+const INN_STATUS_VARIANT = {
+    ok: 'neutral',
+    missing: 'warning',
+    duplicate: 'danger',
 } as const;
 
 export function innStatusBadge(status: string): { variant: StatusBadgeVariant; label: string } {
-    return INN_STATUS_BADGE[status as keyof typeof INN_STATUS_BADGE] ?? INN_STATUS_BADGE.ok;
+    const key = status in INN_STATUS_VARIANT ? (status as keyof typeof INN_STATUS_VARIANT) : 'ok';
+    return {
+        variant: INN_STATUS_VARIANT[key],
+        label: i18n.global.t(`customers.list.innStatus.${key}`),
+    };
 }

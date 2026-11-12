@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { CustomerListItem, CustomerCredit } from '../../api/customers';
 import { useCurrency } from '../../composables/useCurrency';
 import CustomerTradingPoints from './CustomerTradingPoints.vue';
@@ -14,49 +15,60 @@ withDefaults(
 );
 const emit = defineEmits<{ changed: [] }>();
 
+const { t } = useI18n();
 const { formatWhole } = useCurrency();
 </script>
 
 <template>
     <div class="overview-tab">
         <div class="overview-tab__contacts">
-            <h3>Contacts</h3>
+            <h3>{{ t('customers.overview.contacts') }}</h3>
             <ul v-if="customer.contacts.length">
                 <li
                     v-for="contact in customer.contacts"
                     :key="contact.name + (contact.phone ?? '')"
                 >
                     <strong>{{ contact.name }}</strong>
-                    <span v-if="contact.isPrimary" class="overview-tab__primary">Primary</span>
+                    <span v-if="contact.isPrimary" class="overview-tab__primary">{{
+                        t('customers.overview.primary')
+                    }}</span>
                     <div class="overview-tab__contact-meta">
                         <span v-if="contact.phone">{{ contact.phone }}</span>
                         <span v-if="contact.email">{{ contact.email }}</span>
                     </div>
                 </li>
             </ul>
-            <p v-else class="overview-tab__empty">No contacts on file</p>
+            <p v-else class="overview-tab__empty">{{ t('customers.overview.noContacts') }}</p>
         </div>
 
         <dl class="overview-tab__facts">
             <div>
-                <dt>Price type</dt>
+                <dt>{{ t('customers.overview.priceType') }}</dt>
                 <dd>{{ customer.priceType ?? '—' }}</dd>
             </div>
             <div v-if="credit">
-                <dt>Credit limit</dt>
+                <dt>{{ t('customers.overview.creditLimit') }}</dt>
                 <dd>{{ formatWhole(credit.creditLimit) }}</dd>
             </div>
             <div v-if="credit">
-                <dt>Debt</dt>
+                <dt>{{ t('customers.overview.debt') }}</dt>
                 <dd>{{ formatWhole(credit.creditBalance) }}</dd>
             </div>
             <div v-if="credit">
-                <dt>Available</dt>
+                <dt>{{ t('customers.overview.available') }}</dt>
                 <dd>{{ formatWhole(credit.creditLimit - credit.creditBalance) }}</dd>
             </div>
             <div v-if="credit && credit.paymentDelayDays > 0">
-                <dt>Payment terms</dt>
-                <dd>{{ credit.paymentDelayDays }} days</dd>
+                <dt>{{ t('customers.overview.paymentTerms') }}</dt>
+                <dd>
+                    {{
+                        t(
+                            'customers.overview.days',
+                            { count: credit.paymentDelayDays },
+                            credit.paymentDelayDays,
+                        )
+                    }}
+                </dd>
             </div>
         </dl>
 

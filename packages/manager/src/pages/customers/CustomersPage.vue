@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPanel, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
@@ -18,10 +19,13 @@ import NeedsAttentionPanel, {
     type AttentionEntry,
 } from '../../components/customers/NeedsAttentionPanel.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 // "My Clients" only makes sense for Manager, whose list is their own assigned book — every
 // other role sees a department/company-wide list, so the generic title fits better there.
-const title = computed(() => (authStore.roleCode === 'manager' ? 'My Clients' : 'Customers'));
+const title = computed(() =>
+    t(authStore.roleCode === 'manager' ? 'customers.page.titleManager' : 'customers.page.title'),
+);
 
 const { formatWhole } = useCurrency();
 
@@ -50,8 +54,8 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         return {
             customerId: c.id,
             title: c.shortName,
-            meta: `Credit balance is at ${percent}%; a new order may exceed the limit and need approval.`,
-            tag: 'Risk',
+            meta: t('customers.page.attention.highUsage', { percent }),
+            tag: t('customers.page.attention.riskTag'),
             variant: 'danger',
         };
     });
@@ -60,16 +64,16 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         .map(([customerId, validTo]) => ({
             customerId,
             title: expiringNames.value.get(customerId) ?? '—',
-            meta: `Discount grant expires ${formatDate(validTo)}.`,
-            tag: 'Discounts',
+            meta: t('customers.page.attention.expiring', { date: formatDate(validTo) }),
+            tag: t('customers.page.attention.discountsTag'),
             variant: 'warning',
         }));
     const exceeded: AttentionEntry[] = [...creditExceededCustomers.value.entries()].map(
         ([customerId, name]) => ({
             customerId,
             title: name,
-            meta: 'Open order exceeds the credit limit and needs confirmation.',
-            tag: 'Credit',
+            meta: t('customers.page.attention.exceeded'),
+            tag: t('customers.page.attention.creditTag'),
             variant: 'danger',
         }),
     );
@@ -104,21 +108,30 @@ onMounted(async () => {
 <template>
     <div class="customers-page">
         <div class="customers-page__header">
-            <div class="customers-page__breadcrumb">Customers</div>
+            <div class="customers-page__breadcrumb">{{ t('customers.page.breadcrumb') }}</div>
             <h1 class="customers-page__title">{{ title }}</h1>
         </div>
 
         <MvKpiCarousel v-if="summary" class="customers-page__kpis">
-            <MvKpiCard label="Active clients" :value="activeClientsCount" />
+            <MvKpiCard
+                :label="t('customers.page.kpi.activeClients')"
+                :value="activeClientsCount"
+            />
             <MvKpiCard
                 v-if="canReadCredit"
-                label="Credit balance used"
+                :label="t('customers.page.kpi.creditUsed')"
                 :value="formatWhole(totalCreditBalance)"
-                :caption="`${highUsageCount} clients above 80%`"
+                :caption="
+                    t(
+                        'customers.page.kpi.creditUsedCaption',
+                        { count: highUsageCount },
+                        highUsageCount,
+                    )
+                "
                 accent
             />
             <MvKpiCard
-                label="Discounts expiring soon"
+                :label="t('customers.page.kpi.expiringDiscounts')"
                 :value="expiringGrantsCount"
                 accent
                 to="/discounts"
@@ -127,7 +140,7 @@ onMounted(async () => {
 
         <CustomersList />
 
-        <MvPanel title="Needs attention">
+        <MvPanel :title="t('customers.page.attention.title')">
             <NeedsAttentionPanel :items="attentionItems" />
         </MvPanel>
     </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvPanel, MvStatusBadge, MvSkeleton } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useTabSync } from '../../composables/useTabSync';
@@ -50,9 +51,14 @@ import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue'
 import EntityChangeJournal from '../../components/change-journal/EntityChangeJournal.vue';
 import { CHANGE_JOURNAL_LABELS } from '../../components/change-journal/changeJournalLabels';
 
+const { t } = useI18n();
+
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
 // versions need an entry; anything else falls back to its raw entityName.
-const HISTORY_ENTITY_LABELS = { Counterparty: 'Customer', TradingPoint: 'Trading point' };
+const historyEntityLabels = computed(() => ({
+    Counterparty: t('customers.detail.entities.Counterparty'),
+    TradingPoint: t('customers.detail.entities.TradingPoint'),
+}));
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -109,18 +115,8 @@ const TABS: CustomerDetailTab[] = [
     'history',
     'changeJournal',
 ];
-const TAB_LABELS: Record<CustomerDetailTab, string> = {
-    overview: 'Overview',
-    orders: 'Orders',
-    proformaInvoices: 'Proforma invoices',
-    settlements: 'Settlements',
-    discounts: 'Discounts',
-    documents: 'Documents',
-    team: 'Team',
-    portalUsers: 'Portal Users',
-    history: 'History',
-    changeJournal: CHANGE_JOURNAL_LABELS.tab,
-};
+const tabLabel = (tab: CustomerDetailTab): string =>
+    tab === 'changeJournal' ? CHANGE_JOURNAL_LABELS.tab : t(`customers.detail.tabs.${tab}`);
 const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     overview: IconHome2,
     orders: IconShoppingBag,
@@ -275,8 +271,8 @@ function initials(name: string | null): string {
 
 <template>
     <div v-if="notFound" class="customer-detail__not-found">
-        <h1>Customer not found</h1>
-        <RouterLink to="/customers">Back to customers</RouterLink>
+        <h1>{{ t('customers.detail.notFound') }}</h1>
+        <RouterLink to="/customers">{{ t('customers.detail.backToCustomers') }}</RouterLink>
     </div>
 
     <!-- First load only (no `customer` yet) — a stale-shaped skeleton is worse than nothing once
@@ -297,24 +293,27 @@ function initials(name: string | null): string {
 
     <div v-else-if="customer" class="customer-detail">
         <div class="customer-detail__breadcrumb">
-            <RouterLink to="/customers">Customers</RouterLink> / {{ customer.shortName }}
+            <RouterLink to="/customers">{{ t('customers.detail.breadcrumb') }}</RouterLink> /
+            {{ customer.shortName }}
         </div>
         <h1 class="customer-detail__title">
             {{ customer.shortName }}
             <MvStatusBadge :variant="customer.isActive ? 'success' : 'neutral'">
-                {{ customer.isActive ? 'Active' : 'Inactive' }}
+                {{ t(customer.isActive ? 'customers.detail.active' : 'customers.detail.inactive') }}
             </MvStatusBadge>
             <MvStatusBadge v-if="customer.erpGroupLabel" variant="info">
                 {{ customer.erpGroupLabel }}
             </MvStatusBadge>
         </h1>
-        <p v-if="customer.inn" class="customer-detail__subtitle">INN {{ customer.inn }}</p>
+        <p v-if="customer.inn" class="customer-detail__subtitle">
+            {{ t('customers.detail.inn', { inn: customer.inn }) }}
+        </p>
         <ActAsCustomerButton :counterparty-id="customer.id" />
         <MvStatusBadge v-if="customer.innStatus === 'missing'" variant="warning">
-            INN missing — fill it in the ERP before portal access
+            {{ t('customers.detail.innMissing') }}
         </MvStatusBadge>
         <MvStatusBadge v-else-if="customer.innStatus === 'duplicate'" variant="warning">
-            INN duplicate (ERP) — merge the counterparties in the ERP before portal access
+            {{ t('customers.detail.innDuplicate') }}
         </MvStatusBadge>
 
         <!-- Info-only row — no edit controls here at all (see AGENTS.md-style rule this page now
@@ -327,7 +326,9 @@ function initials(name: string | null): string {
             <div class="customer-detail__info-item">
                 <Location class="customer-detail__info-icon" />
                 <div class="customer-detail__info-text">
-                    <span class="customer-detail__info-label">Location</span>
+                    <span class="customer-detail__info-label">{{
+                        t('customers.detail.location')
+                    }}</span>
                     <span class="customer-detail__info-value">{{
                         branchName(customer.branchId) ?? '—'
                     }}</span>
@@ -337,7 +338,9 @@ function initials(name: string | null): string {
             <div class="customer-detail__info-item">
                 <Wallet class="customer-detail__info-icon" />
                 <div class="customer-detail__info-text">
-                    <span class="customer-detail__info-label">Credit limit</span>
+                    <span class="customer-detail__info-label">{{
+                        t('customers.detail.creditLimit')
+                    }}</span>
                     <span class="customer-detail__info-value">{{
                         credit ? formatWhole(credit.creditLimit) : '—'
                     }}</span>
@@ -348,9 +351,17 @@ function initials(name: string | null): string {
                 <div class="customer-detail__info-item">
                     <Wallet class="customer-detail__info-icon" />
                     <div class="customer-detail__info-text">
-                        <span class="customer-detail__info-label">Payment terms</span>
+                        <span class="customer-detail__info-label">{{
+                            t('customers.detail.paymentTerms')
+                        }}</span>
                         <span class="customer-detail__info-value"
-                            >{{ credit.paymentDelayDays }} days</span
+                            >{{
+                            t(
+                                'customers.overview.days',
+                                { count: credit.paymentDelayDays },
+                                credit.paymentDelayDays,
+                            )
+                        }}</span
                         >
                     </div>
                 </div>
@@ -361,16 +372,20 @@ function initials(name: string | null): string {
                     initials(managerName(customer.assignedManagerId))
                 }}</span>
                 <div class="customer-detail__info-text">
-                    <span class="customer-detail__info-label">Primary manager</span>
+                    <span class="customer-detail__info-label">{{
+                        t('customers.detail.primaryManager')
+                    }}</span>
                     <span class="customer-detail__info-value">{{
-                        managerName(customer.assignedManagerId) ?? 'Unassigned'
+                        managerName(customer.assignedManagerId) ?? t('customers.detail.unassigned')
                     }}</span>
                 </div>
             </div>
             <div class="customer-detail__info-item">
                 <span class="customer-detail__avatar">{{ initials(backupManagerName) }}</span>
                 <div class="customer-detail__info-text">
-                    <span class="customer-detail__info-label">Backup manager</span>
+                    <span class="customer-detail__info-label">{{
+                        t('customers.detail.backupManager')
+                    }}</span>
                     <span class="customer-detail__info-value">{{ backupManagerName ?? '—' }}</span>
                 </div>
             </div>
@@ -378,7 +393,9 @@ function initials(name: string | null): string {
             <div class="customer-detail__info-item">
                 <User class="customer-detail__info-icon" />
                 <div class="customer-detail__info-text">
-                    <span class="customer-detail__info-label">Observers</span>
+                    <span class="customer-detail__info-label">{{
+                        t('customers.detail.observers')
+                    }}</span>
                     <span class="customer-detail__info-value">{{ observerCount }}</span>
                 </div>
             </div>
@@ -400,7 +417,7 @@ function initials(name: string | null): string {
                 @click="selectTab(tab)"
             >
                 <component :is="TAB_ICONS[tab]" class="customer-detail__tab-icon" />
-                {{ TAB_LABELS[tab] }}
+                {{ tabLabel(tab) }}
             </button>
             <div v-if="overflowTabs.length" ref="tabsMoreRef" class="customer-detail__tabs-more">
                 <button
@@ -414,7 +431,7 @@ function initials(name: string | null): string {
                         :is="TAB_ICONS[activeTab]"
                         class="customer-detail__tab-icon"
                     />
-                    {{ isOverflowActive ? TAB_LABELS[activeTab] : 'More' }} ▾
+                    {{ isOverflowActive ? tabLabel(activeTab) : t('customers.detail.more') }} ▾
                 </button>
                 <div v-if="tabsMoreOpen" class="customer-detail__tabs-more-menu">
                     <button
@@ -425,7 +442,7 @@ function initials(name: string | null): string {
                         @click="selectTab(tab)"
                     >
                         <component :is="TAB_ICONS[tab]" class="customer-detail__tab-icon" />
-                        {{ TAB_LABELS[tab] }}
+                        {{ tabLabel(tab) }}
                     </button>
                 </div>
             </div>
@@ -445,7 +462,7 @@ function initials(name: string | null): string {
                 url-prefix="orders."
             />
             <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">
-                No orders yet
+                {{ t('customers.detail.noOrders') }}
             </p>
             <ProformaInvoicesList
                 v-else-if="activeTab === 'proformaInvoices'"
@@ -489,7 +506,7 @@ function initials(name: string | null): string {
                 v-else
                 :refs="historyRefs"
                 :managers="managers"
-                :entity-labels="HISTORY_ENTITY_LABELS"
+                :entity-labels="historyEntityLabels"
             />
         </MvPanel>
     </div>

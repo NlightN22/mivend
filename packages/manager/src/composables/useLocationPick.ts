@@ -1,12 +1,16 @@
 import { ref, type Ref } from 'vue';
 import { searchesThroughHost, type GeoConfig, type GeoPoint } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { loadGeoConfig, searchAddress } from '../api/geo';
 
-export const PROVIDER_NAMES: Record<string, string> = {
-    'provider-a': 'Map 1',
-    'provider-b': 'Map 2',
-    open: 'Open map',
-};
+export function providerNames(): Record<string, string> {
+    const t = i18n.global.t;
+    return {
+        'provider-a': t('customers.tradingPoints.location.providers.provider-a'),
+        'provider-b': t('customers.tradingPoints.location.providers.provider-b'),
+        open: t('customers.tradingPoints.location.providers.open'),
+    };
+}
 
 export interface LocationPick {
     open: Ref<boolean>;

@@ -1,3 +1,4 @@
+import { i18n } from '../i18n';
 import type { CustomerCredit, CustomerOrderItem } from '../api/customers';
 import type { OutstandingBalance } from '../api/proforma-invoices';
 
@@ -7,6 +8,8 @@ export interface CustomerKpi {
     kind: 'minor' | 'whole' | 'count';
     value: number;
 }
+
+const label = (key: string): string => i18n.global.t(`customers.kpis.${key}`);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Mirrors the customer card: terminal states need no attention.
@@ -22,7 +25,7 @@ export function customerKpis(
     const kpis: CustomerKpi[] = [
         {
             key: 'sales30d',
-            label: 'Sales last 30 days',
+            label: label('sales30d'),
             kind: 'minor',
             value: orders
                 .filter(o => o.orderPlacedAt && new Date(o.orderPlacedAt).getTime() >= since)
@@ -30,13 +33,13 @@ export function customerKpis(
         },
         {
             key: 'openOrders',
-            label: 'Open orders',
+            label: label('openOrders'),
             kind: 'count',
             value: orders.filter(o => !CLOSED_ORDER_STATES.has(o.state)).length,
         },
         {
             key: 'outstanding',
-            label: 'Outstanding balance',
+            label: label('outstanding'),
             kind: 'minor',
             value: outstanding?.amount ?? 0,
         },
@@ -45,11 +48,11 @@ export function customerKpis(
         kpis.push(
             {
                 key: 'availableCredit',
-                label: 'Available credit',
+                label: label('availableCredit'),
                 kind: 'whole',
                 value: credit.creditLimit - credit.creditBalance,
             },
-            { key: 'creditLimit', label: 'Credit limit', kind: 'whole', value: credit.creditLimit },
+            { key: 'creditLimit', label: label('creditLimit'), kind: 'whole', value: credit.creditLimit },
         );
     }
     return kpis;

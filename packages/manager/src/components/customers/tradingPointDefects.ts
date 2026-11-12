@@ -1,11 +1,8 @@
-const LABELS: Record<string, string> = {
-    NO_ADDRESS: 'No address',
-    NO_LOCATION: 'No coordinates',
-    INACTIVE: 'Inactive',
-};
+import { i18n } from '../../i18n';
 
 export function tradingPointDefectLabel(code: string): string {
-    return LABELS[code] ?? code;
+    const key = `customers.tradingPoints.defects.${code}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : code;
 }
 
 export function visibleTradingPointDefects(codes: readonly string[]): string[] {

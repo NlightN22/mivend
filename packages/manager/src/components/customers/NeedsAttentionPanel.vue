@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 
@@ -13,12 +14,13 @@ export interface AttentionEntry {
 
 defineProps<{ items: AttentionEntry[] }>();
 const router = useRouter();
+const { t } = useI18n();
 </script>
 
 <template>
     <ul class="needs-attention">
         <li v-if="!items.length" class="needs-attention__empty">
-            Nothing needs attention right now
+            {{ t('customers.page.attention.empty') }}
         </li>
         <li
             v-for="item in items"
