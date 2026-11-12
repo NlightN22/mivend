@@ -45,6 +45,44 @@ export const adminApiExtensions = gql`
         documentType: String!
         label: String!
         category: String
+        "Whether the type's amounts count toward customer turnover (sales, sales corrections, returns)."
+        movesTurnover: Boolean!
+    }
+
+    "Amount of one currency, minor units."
+    type CurrencyAmount {
+        currency: String!
+        amountMinor: Money!
+    }
+
+    "One settlement balance row of a counterparty; contractName is null when the contract is not imported."
+    type CounterpartyContractBalance {
+        contractId: String
+        contractErpId: String!
+        contractName: String
+        organizationName: String
+        currency: String!
+        closingBalanceMinor: Money!
+        openingDate: DateTime
+    }
+
+    """
+    Real ledger figures of one counterparty. Positive balance = the counterparty owes us. Totals and turnover are in
+    `currency` (the currency with the largest absolute balance); `balances` lists every currency.
+    """
+    type CounterpartyMetrics {
+        currency: String!
+        balanceMinor: Money!
+        balances: [CurrencyAmount!]!
+        contractBalances: [CounterpartyContractBalance!]!
+        salesLast30DaysMinor: Money!
+        salesPrev30DaysMinor: Money!
+        salesLast12MonthsMinor: Money!
+        saleDocumentsLast12Months: Int!
+        "Net turnover of 12 months per sale document; null when there is no sale document."
+        averageCheckMinor: Money
+        openOrdersCount: Int!
+        computedAt: DateTime!
     }
 
     input SettlementListOptions {
@@ -89,6 +127,8 @@ export const adminApiExtensions = gql`
 
     extend type Query {
         counterpartyOverdue(counterpartyId: ID!): CounterpartyOverdue
+        "Balance, turnover and open orders of one counterparty; null when it is outside the caller's scope; needs the credit right."
+        counterpartyMetrics(counterpartyId: ID!): CounterpartyMetrics
         "Manager-portal settlement documents of the customers the caller may see; needs ReadSettlementDocument."
         visibleSettlementDocuments(
             options: SettlementListOptions

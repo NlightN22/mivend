@@ -3,6 +3,8 @@ import { Allow, Ctx, ID, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
+import { CounterpartyMetricsService } from './counterparty-metrics.service';
+import type { CounterpartyMetrics } from './counterparty-metrics.types';
 import { SettlementAdminListService } from './settlement-admin-list.service';
 import { SettlementDocumentTypeService } from './settlement-document-type.service';
 import { SettlementSuggestService } from './settlement-suggest.service';
@@ -25,6 +27,7 @@ export class SettlementAdminResolver {
         private readonly listService: SettlementAdminListService,
         private readonly suggestService: SettlementSuggestService,
         private readonly documentTypes: SettlementDocumentTypeService,
+        private readonly metrics: CounterpartyMetricsService,
     ) {}
 
     // A finance figure, so it needs the credit right; an invisible counterparty answers like a missing one.
@@ -36,6 +39,17 @@ export class SettlementAdminResolver {
     ): Promise<CounterpartyOverdue | null> {
         if (!(await this.counterparties.findOneVisible(ctx, args.counterpartyId))) return null;
         return this.shopService.overdue(ctx, String(args.counterpartyId));
+    }
+
+    // Balances and turnover are finance figures: same right and scope guard as counterpartyOverdue.
+    @Query()
+    @Allow(CustomPermission.ReadCounterpartyCredit.Permission)
+    async counterpartyMetrics(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyId: ID },
+    ): Promise<CounterpartyMetrics | null> {
+        if (!(await this.counterparties.findOneVisible(ctx, args.counterpartyId))) return null;
+        return this.metrics.metrics(ctx, String(args.counterpartyId));
     }
 
     @Query()

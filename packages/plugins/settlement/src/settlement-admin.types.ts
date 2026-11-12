@@ -43,4 +43,5 @@ export interface SettlementDocumentTypeInfo {
     documentType: string;
     label: string;
     category: string | null;
+    movesTurnover: boolean;
 }

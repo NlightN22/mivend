@@ -54,7 +54,7 @@ export class SettlementDocumentTypeService {
     // Registry rows plus types seen only on documents (label from the document); no counts, no scope.
     // The distinct types are walked through the documentType index, so the cost does not grow with the table.
     async listAll(ctx: RequestContext): Promise<SettlementDocumentTypeInfo[]> {
-        const rows: Array<{ documentType: string; label: string; category: string | null }> =
+        const rows: Array<{ documentType: string; label: string; category: string | null; movesTurnover: boolean }> =
             // unbounded-ok: one row per document type from a loose index scan
             await this.connection.getRepository(ctx, SettlementDocumentType).query(`
                 WITH RECURSIVE seen("documentType") AS (
@@ -66,13 +66,13 @@ export class SettlementDocumentTypeService {
                         ORDER BY d."documentType" LIMIT 1)
                     FROM seen WHERE seen."documentType" IS NOT NULL
                 )
-                SELECT t."documentType", t."label", t."category" FROM "settlement_document_type" t
+                SELECT t."documentType", t."label", t."category", t."movesTurnover" FROM "settlement_document_type" t
                     WHERE NOT t."isDeleted"
                 UNION ALL
                 SELECT s."documentType",
                     (SELECT d."documentTypeLabel" FROM "settlement_document" d
                         WHERE d."documentType" = s."documentType" AND NOT d."isDeleted" LIMIT 1),
-                    NULL
+                    NULL, false
                 FROM seen s
                 WHERE s."documentType" IS NOT NULL AND NOT EXISTS (
                     SELECT 1 FROM "settlement_document_type" t

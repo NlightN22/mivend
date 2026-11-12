@@ -13,6 +13,7 @@ import { SettlementDocumentType } from './entities/settlement-document-type.enti
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { SettlementOrderLink } from './entities/settlement-order-link.entity';
+import { CounterpartyMetricsService } from './counterparty-metrics.service';
 import { SettlementBalanceService } from './settlement-balance.service';
 import { SettlementCounterpartyListener } from './settlement-counterparty.listener';
 import { SettlementDocumentService } from './settlement-document.service';
@@ -56,6 +57,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementShopService,
         SettlementAdminListService,
         SettlementSuggestService,
+        CounterpartyMetricsService,
     ],
     exports: [
         SettlementDocumentService,

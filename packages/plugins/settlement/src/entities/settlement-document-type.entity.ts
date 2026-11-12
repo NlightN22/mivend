@@ -33,6 +33,10 @@ export class SettlementDocumentType {
     // Unused by the statement: visibility is decided by customerVisibleSql.
     customerVisible!: boolean;
 
+    // Owned by us, never overwritten by the ERP stream: the type's amounts count toward customer turnover.
+    @Column({ type: 'boolean', default: false })
+    movesTurnover!: boolean;
+
     @Column({ type: 'int', nullable: true })
     sortOrder!: number | null;
 
