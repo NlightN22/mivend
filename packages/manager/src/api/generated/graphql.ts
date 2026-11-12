@@ -844,6 +844,15 @@ export type CheckResult = {
     subjectType: Scalars['String']['output'];
 };
 
+/** A notification a portal shows as a popup and keeps in the bell (#348). The owner is always the caller. */
+export type ClientNotificationInput = {
+    kind: NotificationKind;
+    /** Up to 1000 characters. */
+    message: Scalars['String']['input'];
+    /** Up to 120 characters, may be empty. */
+    title?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Collection = Node & {
     assets: Array<Asset>;
     breadcrumbs: Array<CollectionBreadcrumb>;
@@ -1150,8 +1159,6 @@ export type Counterparty = Node & {
     legalName: Scalars['String']['output'];
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId: Maybe<Scalars['ID']['output']>;
-    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
-    portalReadiness: Scalars['String']['output'];
     /** Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
     managerErpId: Maybe<Scalars['String']['output']>;
     /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
@@ -1159,6 +1166,8 @@ export type Counterparty = Node & {
     paymentDelayDays: Scalars['Int']['output'];
     /** Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation. */
     phone: Maybe<Scalars['String']['output']>;
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
+    portalReadiness: Scalars['String']['output'];
     /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
     portalUsers: Array<Customer>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
@@ -1203,6 +1212,8 @@ export type CounterpartyFilterParameter = {
     officialEmail?: InputMaybe<StringOperators>;
     paymentDelayDays?: InputMaybe<NumberOperators>;
     phone?: InputMaybe<StringOperators>;
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
+    portalReadiness?: InputMaybe<StringOperators>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<StringOperators>;
     shortName?: InputMaybe<StringOperators>;
@@ -1228,7 +1239,7 @@ export type CounterpartyListFilter = {
     innStatus?: InputMaybe<Scalars['String']['input']>;
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
-    /** ready | missing-data | erp-inactive | activated — whether portal access can be switched on */
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated — whether portal access can be switched on */
     readiness?: InputMaybe<Scalars['String']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
@@ -1252,7 +1263,7 @@ export type CounterpartyListOptions = {
     /** Substring match (case-insensitive) against Counterparty.managerErpId OR the ERP-reported administrator name (access-control's erp_user.fullName) — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet */
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
-    /** ready | missing-data | erp-inactive | activated — whether portal access can be switched on */
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated — whether portal access can be switched on */
     readiness?: InputMaybe<Scalars['String']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
@@ -1311,6 +1322,8 @@ export type CounterpartySortParameter = {
     officialEmail?: InputMaybe<SortOrder>;
     paymentDelayDays?: InputMaybe<SortOrder>;
     phone?: InputMaybe<SortOrder>;
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
+    portalReadiness?: InputMaybe<SortOrder>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<SortOrder>;
     shortName?: InputMaybe<SortOrder>;
@@ -4029,6 +4042,59 @@ export type LanguageNotAvailableError = ErrorResult & {
     message: Scalars['String']['output'];
 };
 
+/** Shortens a legal-form phrase in the payment QR recipient name only; the printed name stays full. */
+export type LegalNameAbbreviation = Node & {
+    abbreviation: Scalars['String']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    phrase: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type LegalNameAbbreviationFilterParameter = {
+    _and?: InputMaybe<Array<LegalNameAbbreviationFilterParameter>>;
+    _or?: InputMaybe<Array<LegalNameAbbreviationFilterParameter>>;
+    abbreviation?: InputMaybe<StringOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    id?: InputMaybe<IdOperators>;
+    phrase?: InputMaybe<StringOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+    uuid?: InputMaybe<StringOperators>;
+};
+
+export type LegalNameAbbreviationInput = {
+    abbreviation: Scalars['String']['input'];
+    phrase: Scalars['String']['input'];
+};
+
+export type LegalNameAbbreviationList = PaginatedList & {
+    items: Array<LegalNameAbbreviation>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type LegalNameAbbreviationListOptions = {
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<LegalNameAbbreviationFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
+    /** Skips the first n results, for use in pagination */
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Specifies which properties to sort the results by */
+    sort?: InputMaybe<LegalNameAbbreviationSortParameter>;
+    /** Takes n results, for use in pagination */
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type LegalNameAbbreviationSortParameter = {
+    abbreviation?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    phrase?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
+    uuid?: InputMaybe<SortOrder>;
+};
+
 export type LocaleStringCustomFieldConfig = CustomField & {
     deprecated: Maybe<Scalars['Boolean']['output']>;
     deprecationReason: Maybe<Scalars['String']['output']>;
@@ -4249,6 +4315,8 @@ export type Mutation = {
     createBranch: Branch;
     /** Create a new Channel */
     createChannel: CreateChannelResult;
+    /** Stores a popup the caller saw as their own notification; an identical one within a minute is returned, not duplicated (#348). */
+    createClientNotification: Maybe<Notification>;
     /** Create a new Collection */
     createCollection: Collection;
     /** Create a new Country */
@@ -4267,6 +4335,7 @@ export type Mutation = {
     createFacetValue: FacetValue;
     /** Create one or more FacetValues */
     createFacetValues: Array<FacetValue>;
+    createLegalNameAbbreviation: LegalNameAbbreviation;
     /** Create existing PaymentMethod */
     createPaymentMethod: PaymentMethod;
     /** Create a new Product */
@@ -4341,6 +4410,7 @@ export type Mutation = {
     deleteFacetValues: Array<DeletionResponse>;
     /** Delete multiple existing Facets */
     deleteFacets: Array<DeletionResponse>;
+    deleteLegalNameAbbreviation: Scalars['Boolean']['output'];
     deleteOrderNote: DeletionResponse;
     /** Delete a PaymentMethod */
     deletePaymentMethod: DeletionResponse;
@@ -4417,7 +4487,6 @@ export type Mutation = {
      */
     login: NativeAuthenticationResult;
     logout: Success;
-    createClientNotification: Maybe<Notification>;
     markNotificationRead: Notification;
     /**
      * Allows an Order to be modified after it has been completed by the Customer. The Order must first
@@ -4599,6 +4668,8 @@ export type Mutation = {
     /** Update one or more FacetValues */
     updateFacetValues: Array<FacetValue>;
     updateGlobalSettings: UpdateGlobalSettingsResult;
+    updateLegalNameAbbreviation: LegalNameAbbreviation;
+    updateNotificationRetentionRule: NotificationRetentionRule;
     updateOrderNote: HistoryEntry;
     /** Update an existing PaymentMethod */
     updatePaymentMethod: PaymentMethod;
@@ -4862,6 +4933,10 @@ export type MutationCreateChannelArgs = {
     input: CreateChannelInput;
 };
 
+export type MutationCreateClientNotificationArgs = {
+    input: ClientNotificationInput;
+};
+
 export type MutationCreateCollectionArgs = {
     input: CreateCollectionInput;
 };
@@ -4894,6 +4969,10 @@ export type MutationCreateFacetValueArgs = {
 
 export type MutationCreateFacetValuesArgs = {
     input: Array<CreateFacetValueInput>;
+};
+
+export type MutationCreateLegalNameAbbreviationArgs = {
+    input: LegalNameAbbreviationInput;
 };
 
 export type MutationCreatePaymentMethodArgs = {
@@ -5071,6 +5150,10 @@ export type MutationDeleteFacetsArgs = {
     ids: Array<Scalars['ID']['input']>;
 };
 
+export type MutationDeleteLegalNameAbbreviationArgs = {
+    id: Scalars['ID']['input'];
+};
+
 export type MutationDeleteOrderNoteArgs = {
     id: Scalars['ID']['input'];
 };
@@ -5238,10 +5321,6 @@ export type MutationLoginArgs = {
     password: Scalars['String']['input'];
     rememberMe?: InputMaybe<Scalars['Boolean']['input']>;
     username: Scalars['String']['input'];
-};
-
-export type MutationCreateClientNotificationArgs = {
-    input: ClientNotificationInput;
 };
 
 export type MutationMarkNotificationReadArgs = {
@@ -5748,6 +5827,16 @@ export type MutationUpdateGlobalSettingsArgs = {
     input: UpdateGlobalSettingsInput;
 };
 
+export type MutationUpdateLegalNameAbbreviationArgs = {
+    id: Scalars['ID']['input'];
+    input: LegalNameAbbreviationInput;
+};
+
+export type MutationUpdateNotificationRetentionRuleArgs = {
+    id: Scalars['ID']['input'];
+    input: NotificationRetentionRuleInput;
+};
+
 export type MutationUpdateOrderNoteArgs = {
     input: UpdateOrderNoteInput;
 };
@@ -5965,21 +6054,72 @@ export type NotificationList = {
     totalItems: Scalars['Int']['output'];
 };
 
-/** A notification a portal shows as a popup and keeps in the bell (#348). The owner is always the caller. */
-export type ClientNotificationInput = {
-    kind: NotificationKind;
-    /** Up to 1000 characters. */
-    message: Scalars['String']['input'];
-    /** Up to 120 characters, may be empty. */
-    title?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type NotificationListOptions = {
     /** Case-insensitive contains match against title or message (issue #92 — the full notifications page's search box). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<NotificationStatus>;
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** How long notifications of one source type are kept; null days inherit the default rule ('*'). */
+export type NotificationRetentionRule = Node & {
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    /** Read and resolved notifications. */
+    readDays: Maybe<Scalars['Int']['output']>;
+    sourceType: Scalars['String']['output'];
+    unreadDays: Maybe<Scalars['Int']['output']>;
+    updatedAt: Scalars['DateTime']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type NotificationRetentionRuleFilterParameter = {
+    _and?: InputMaybe<Array<NotificationRetentionRuleFilterParameter>>;
+    _or?: InputMaybe<Array<NotificationRetentionRuleFilterParameter>>;
+    createdAt?: InputMaybe<DateOperators>;
+    id?: InputMaybe<IdOperators>;
+    /** Read and resolved notifications. */
+    readDays?: InputMaybe<NumberOperators>;
+    sourceType?: InputMaybe<StringOperators>;
+    unreadDays?: InputMaybe<NumberOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+    uuid?: InputMaybe<StringOperators>;
+};
+
+/** Whole days, 1 to 3650; null inherits the default rule and is refused on the default rule itself. */
+export type NotificationRetentionRuleInput = {
+    readDays?: InputMaybe<Scalars['Int']['input']>;
+    unreadDays?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type NotificationRetentionRuleList = PaginatedList & {
+    items: Array<NotificationRetentionRule>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type NotificationRetentionRuleListOptions = {
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<NotificationRetentionRuleFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
+    /** Skips the first n results, for use in pagination */
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Specifies which properties to sort the results by */
+    sort?: InputMaybe<NotificationRetentionRuleSortParameter>;
+    /** Takes n results, for use in pagination */
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type NotificationRetentionRuleSortParameter = {
+    createdAt?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    /** Read and resolved notifications. */
+    readDays?: InputMaybe<SortOrder>;
+    sourceType?: InputMaybe<SortOrder>;
+    unreadDays?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
+    uuid?: InputMaybe<SortOrder>;
 };
 
 export type NotificationStatus = 'read' | 'resolved' | 'unread';
@@ -8251,11 +8391,13 @@ export type Query = {
     kafkaConsumerLag: Array<KafkaTopicLag>;
     /** Latest placed-order date per listed counterparty, visible orders only */
     lastOrderDates: Array<CounterpartyLastOrder>;
+    legalNameAbbreviations: LegalNameAbbreviationList;
     me: Maybe<CurrentUser>;
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
     mySessions: Array<SessionSummary>;
     mySignInSettings: SignInSettings;
+    notificationRetentionRules: NotificationRetentionRuleList;
     /** The calling administrator's own notifications plus visible broadcast notifications, newest first, server-paginated (issue #87). */
     notifications: NotificationList;
     oidcSignIn: Maybe<OidcSignInInfo>;
@@ -8341,8 +8483,6 @@ export type Query = {
     /** Non-blocking VAT-code review flags raised while importing products, newest first (issue #79). */
     recentProductTaxCodeFlags: ProductTaxCodeFlagList;
     /** Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204. */
-    /** Every document type known to the system (registry plus types seen only on documents), no counts; needs ReadSettlementDocument. */
-    settlementDocumentTypes: Array<SettlementDocumentTypeInfo>;
     rejectedOrderCount: Scalars['Int']['output'];
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     retroBonusRules: Array<RetroBonusRule>;
@@ -8358,6 +8498,8 @@ export type Query = {
     sellers: SellerList;
     /** Returns all registered settings store field definitions with their current values */
     settingsStoreFieldDefinitions: Array<SettingsStoreFieldDefinition>;
+    /** Every document type known to the system (registry plus types seen only on documents), no counts; needs ReadSettlementDocument. */
+    settlementDocumentTypes: Array<SettlementDocumentTypeInfo>;
     /** Typeahead values (up to limit, at most 20) for a filter field that starts with the prefix (2+ characters), from the documents the caller may list; field is one of customer, number. */
     settlementFilterSuggestions: Array<Scalars['String']['output']>;
     shippingCalculators: Array<ConfigurableOperationDefinition>;
@@ -8715,6 +8857,10 @@ export type QueryLastOrderDatesArgs = {
     counterpartyIds: Array<Scalars['ID']['input']>;
 };
 
+export type QueryLegalNameAbbreviationsArgs = {
+    options?: InputMaybe<LegalNameAbbreviationListOptions>;
+};
+
 export type QueryMyApprovalRequestsSummaryArgs = {
     recentLimit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -8722,6 +8868,10 @@ export type QueryMyApprovalRequestsSummaryArgs = {
 export type QueryMyApprovalsInboxArgs = {
     allInvolvedOptions?: InputMaybe<ApprovalListOptions>;
     awaitingOptions?: InputMaybe<ApprovalListOptions>;
+};
+
+export type QueryNotificationRetentionRulesArgs = {
+    options?: InputMaybe<NotificationRetentionRuleListOptions>;
 };
 
 export type QueryNotificationsArgs = {
@@ -9687,13 +9837,13 @@ export type SettleRefundInput = {
 
 export type SettleRefundResult = Refund | RefundStateTransitionError;
 
-/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
 export type SettlementDocumentTypeInfo = {
     category: Maybe<Scalars['String']['output']>;
     documentType: Scalars['String']['output'];
     label: Scalars['String']['output'];
 };
 
+/** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
 export type SettlementFilterParameter = {
     _and?: InputMaybe<Array<SettlementFilterParameter>>;
     _or?: InputMaybe<Array<SettlementFilterParameter>>;
@@ -12810,26 +12960,6 @@ export type NotificationReceivedSubscription = {
     };
 };
 
-export type CreateClientNotificationMutationVariables = Exact<{
-    input: ClientNotificationInput;
-}>;
-
-export type CreateClientNotificationMutation = {
-    createClientNotification: {
-        id: string;
-        kind: NotificationKind;
-        sourceType: string;
-        sourceId: string | null;
-        title: string;
-        message: string;
-        status: NotificationStatus;
-        readAt: any | null;
-        resolvedAt: any | null;
-        resolution: string | null;
-        createdAt: any;
-    } | null;
-};
-
 export type MarkNotificationReadMutationVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
@@ -12869,6 +12999,26 @@ export type ResolveNotificationMutation = {
         resolution: string | null;
         createdAt: any;
     };
+};
+
+export type CreateClientNotificationMutationVariables = Exact<{
+    input: ClientNotificationInput;
+}>;
+
+export type CreateClientNotificationMutation = {
+    createClientNotification: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt: any | null;
+        resolvedAt: any | null;
+        resolution: string | null;
+        createdAt: any;
+    } | null;
 };
 
 export type OidcSignInQueryVariables = Exact<{ [key: string]: never }>;
@@ -13015,7 +13165,12 @@ export type OrderDetailQuery = {
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
-            payments: Array<{ id: string; method: string; state: string; metadata: any }> | null;
+            payments: Array<{
+                id: string;
+                method: string;
+                state: string;
+                metadata: any | null;
+            }> | null;
             customFields: {
                 reservationDays: number | null;
                 reservationState: string | null;
@@ -14008,12 +14163,6 @@ export type SettlementTypeCountsQuery = {
     counts: Array<{ documentType: string; label: string; count: number }>;
 };
 
-export type SettlementDocumentTypesQueryVariables = Exact<{ [key: string]: never }>;
-
-export type SettlementDocumentTypesQuery = {
-    types: Array<{ documentType: string; label: string; category: string | null }>;
-};
-
 export type SettlementsPageQueryVariables = Exact<{
     options?: InputMaybe<SettlementListOptions>;
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
@@ -14047,6 +14196,12 @@ export type SettlementFilterSuggestionsQueryVariables = Exact<{
 }>;
 
 export type SettlementFilterSuggestionsQuery = { settlementFilterSuggestions: Array<string> };
+
+export type SettlementDocumentTypesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SettlementDocumentTypesQuery = {
+    types: Array<{ documentType: string; label: string; category: string | null }>;
+};
 
 export type SignInCaptchaRequirementQueryVariables = Exact<{
     login: Scalars['String']['input'];
@@ -16895,28 +17050,6 @@ export const NotificationReceivedDocument = new TypedDocumentString(`
     NotificationReceivedSubscription,
     NotificationReceivedSubscriptionVariables
 >;
-export const CreateClientNotificationDocument = new TypedDocumentString(`
-    mutation CreateClientNotification($input: ClientNotificationInput!) {
-  createClientNotification(input: $input) {
-    ...NotificationFields
-  }
-}
-    fragment NotificationFields on Notification {
-  id
-  kind
-  sourceType
-  sourceId
-  title
-  message
-  status
-  readAt
-  resolvedAt
-  resolution
-  createdAt
-}`) as unknown as TypedDocumentString<
-    CreateClientNotificationMutation,
-    CreateClientNotificationMutationVariables
->;
 export const MarkNotificationReadDocument = new TypedDocumentString(`
     mutation MarkNotificationRead($id: ID!) {
   markNotificationRead(id: $id) {
@@ -16960,6 +17093,28 @@ export const ResolveNotificationDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     ResolveNotificationMutation,
     ResolveNotificationMutationVariables
+>;
+export const CreateClientNotificationDocument = new TypedDocumentString(`
+    mutation CreateClientNotification($input: ClientNotificationInput!) {
+  createClientNotification(input: $input) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    CreateClientNotificationMutation,
+    CreateClientNotificationMutationVariables
 >;
 export const OidcSignInDocument = new TypedDocumentString(`
     query OidcSignIn {
@@ -18163,18 +18318,6 @@ export const SettlementTypeCountsDocument = new TypedDocumentString(`
     SettlementTypeCountsQuery,
     SettlementTypeCountsQueryVariables
 >;
-export const SettlementDocumentTypesDocument = new TypedDocumentString(`
-    query SettlementDocumentTypes {
-  types: settlementDocumentTypes {
-    documentType
-    label
-    category
-  }
-}
-    `) as unknown as TypedDocumentString<
-    SettlementDocumentTypesQuery,
-    SettlementDocumentTypesQueryVariables
->;
 export const SettlementsPageDocument = new TypedDocumentString(`
     query SettlementsPage($options: SettlementListOptions, $counterpartyId: ID) {
   visibleSettlementDocuments(options: $options, counterpartyId: $counterpartyId) {
@@ -18207,6 +18350,18 @@ export const SettlementFilterSuggestionsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SettlementFilterSuggestionsQuery,
     SettlementFilterSuggestionsQueryVariables
+>;
+export const SettlementDocumentTypesDocument = new TypedDocumentString(`
+    query SettlementDocumentTypes {
+  types: settlementDocumentTypes {
+    documentType
+    label
+    category
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SettlementDocumentTypesQuery,
+    SettlementDocumentTypesQueryVariables
 >;
 export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
     query SignInCaptchaRequirement($login: String!) {
