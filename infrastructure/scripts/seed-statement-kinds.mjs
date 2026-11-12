@@ -192,6 +192,20 @@ function statementKindsRecords(now) {
                 closingBalance: shown.reduce((sum, k) => sum + k[3], 0),
             },
         },
+        {
+            type: 'settlementBalance',
+            data: {
+                key: 'statement-kinds-balance-no-documents',
+                version,
+                organizationErpId: ORGANIZATION,
+                counterpartyErpId: COUNTERPARTY,
+                contractErpId: 'ctr-statement-kinds-not-exported',
+                currency: 'RUB',
+                openingDate: null,
+                openingBalance: 0,
+                closingBalance: -1250000,
+            },
+        },
     ];
 }
 
