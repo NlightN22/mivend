@@ -35,8 +35,7 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 - Document types already carry a data-driven `category` (sale, return, payment, correction, bonus, supplier, payroll).
   One counterparty is often both buyer and supplier, so supplier and payroll categories must stay out of customer
   turnover. The `correction` category mixes sales corrections and debt corrections; a dedicated per-type flag is
-  needed to know which corrections move turnover (a new column on `settlement_document_type`, edited as data, not a
-  hard-coded list).
+  needed to know which corrections move turnover (decision below).
 - Computing on the fly is not yet slow: 30-day sales for the largest counterparty took about 0.4 s cold, the
   company-wide 30-day sales about 0.16 s. It grows with the stream and cannot give dynamics cheaply, so the figures
   are precomputed (below).
@@ -48,9 +47,9 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 | Metric | Definition |
 | --- | --- |
 | Balance | Rule 1 |
-| Turnover, last 30 days | Sale entries minus return entries (plus the corrections flagged as moving turnover), local calendar days, today included |
+| Turnover, last 30 days | Sum of entries of the document types flagged as moving turnover (sales, sales corrections, returns), local calendar days, today included |
 | Turnover, last 12 months | The same over 12 months |
-| Average check | Net sale entries divided by the number of sale documents in the window (state the unit on the card) |
+| Average check | Net turnover divided by the number of ERP sale documents (category `sale`) in the window; corrections and returns add to the amount, never to the count. The card names the unit ("per sales document") |
 | Dynamics | Last 30 days against the 30 days before; "new" when the earlier window is empty |
 | Open orders | Orders of the counterparty (not only of its portal customer) in a non-terminal state |
 | Debt and overdue | Existing FIFO aging read through `counterpartyOverdue` |
@@ -94,5 +93,20 @@ guides (no hard row threshold; a read replica and rollups first).
    replaying the stream.
 6. Company dashboard on the rollup.
 
-Open decisions for the owner: the unit of average check (per sale document or per order), which correction types move
-turnover, the business time zone for day boundaries, and whether the card also shows supplier-side turnover.
+## Decisions (owner, 2026-11-12)
+
+- **Average check is per ERP sale document**, as above.
+- **Turnover moves with sales corrections, not with debt corrections.** A sales correction document carries the signed
+  change of a sale (on production almost all are negative: about 0.4% of sales in amount; returns are always negative),
+  dated by the correction itself, so summing sales, sales corrections and returns gives the net figure. A debt
+  correction moves the balance only. The `correction` category cannot tell them apart, hence a boolean flag
+  `movesTurnover` on `settlement_document_type`, edited as data. To verify before building: how the ERP books a
+  correction that changes the quantity of a sale from an earlier period (the amount lands in the correction's own
+  period, which is the accepted rule).
+- **Business time zone = the server's `TZ`.** Production already sets `TZ` for the server containers (the database
+  session stays UTC); no second variable is added. The ERP sends every document date as a UTC instant, so no
+  per-document zone is needed. The application computes day boundaries in the process zone, passes UTC instants to
+  SQL, and buckets the daily rollup by the same zone name read from the runtime (`Intl`). Changing `TZ` later
+  requires rebuilding the rollup, which the nightly reconcile detects. This replaces the "no business timezone is
+  configured" note in `docs/payments.md` for the metrics (that note concerns printed dates and stays as is).
+- Still open: whether the card also shows supplier-side turnover (default: no).
