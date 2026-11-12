@@ -123,7 +123,7 @@ onBeforeUnmount(() => {
             <button
                 type="button"
                 class="mv-filter-builder__chip-remove"
-                :aria-label="label('removeFilter', 'Remove {label} filter').replace('{label}', chip.label)"
+                :aria-label="label('removeFilter', 'Remove {label} filter').replace('{label}', () => chip.label)"
                 @click="remove(chip.index)"
             >
                 ×

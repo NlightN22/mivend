@@ -228,7 +228,6 @@ export const router = createRouter({
                     meta: {
                         requiresAuth: true,
                         requiresAnyPermission: ['ReadChangeJournal'],
-                        title: 'Журнал изменений',
                     },
                 },
                 {

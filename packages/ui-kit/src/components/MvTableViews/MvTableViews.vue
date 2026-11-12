@@ -157,7 +157,7 @@ function pick(id: string): void {
                             variant="primary"
                             :disabled="busy"
                             @click="emit('update')"
-                            >{{ label('update', 'Update "{name}"').replace('{name}', activeName ?? '') }}</MvButton
+                            >{{ label('update', 'Update "{name}"').replace('{name}', () => activeName ?? '') }}</MvButton
                         >
                         <MvButton size="sm" variant="ghost" @click="emit('reset')"
                             >{{ label('discard', 'Discard') }}</MvButton
