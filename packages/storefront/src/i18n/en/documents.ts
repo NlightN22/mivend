@@ -36,8 +36,7 @@ export default {
         loading: 'Loading documents...',
         hidden: '{n} document is not shown on this statement; their net amount is {amount} | {n} documents are not shown on this statement; their net amount is {amount}',
         coverage: {
-            text: 'Statement is incomplete: a balance of {amount} is not confirmed by documents in the portal. To reconcile, contact your manager or order a {link}.',
-            link: 'reconciliation act',
+            text: 'Statement is incomplete: a balance of {amount} is not confirmed by documents in the portal. To reconcile, contact your manager.',
         },
         empty: 'No documents found.',
         cards: { opening: 'Opening balance', current: 'Current balance', overdue: 'Overdue' },
