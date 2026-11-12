@@ -1178,6 +1178,17 @@ export type Counterparty = Node & {
     tradingPoints: Array<TradingPoint>;
 };
 
+/** One settlement balance row of a counterparty; contractName is null when the contract is not imported. */
+export type CounterpartyContractBalance = {
+    closingBalanceMinor: Scalars['Money']['output'];
+    contractErpId: Scalars['String']['output'];
+    contractId: Maybe<Scalars['String']['output']>;
+    contractName: Maybe<Scalars['String']['output']>;
+    currency: Scalars['String']['output'];
+    openingDate: Maybe<Scalars['DateTime']['output']>;
+    organizationName: Maybe<Scalars['String']['output']>;
+};
+
 export type CounterpartyDiscountCount = {
     count: Scalars['Int']['output'];
     counterpartyId: Scalars['ID']['output'];
@@ -1273,6 +1284,25 @@ export type CounterpartyListOptions = {
     take?: InputMaybe<Scalars['Int']['input']>;
     /** When true, overrides managerId and filters to counterparties with no assigned manager */
     unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/**
+ * Real ledger figures of one counterparty. Positive balance = the counterparty owes us. Totals and turnover are in
+ * the currency field (the currency with the largest absolute balance); balances lists every currency.
+ */
+export type CounterpartyMetrics = {
+    /** Net turnover of 12 months per sale document; null when there is no sale document. */
+    averageCheckMinor: Maybe<Scalars['Money']['output']>;
+    balanceMinor: Scalars['Money']['output'];
+    balances: Array<CurrencyAmount>;
+    computedAt: Scalars['DateTime']['output'];
+    contractBalances: Array<CounterpartyContractBalance>;
+    currency: Scalars['String']['output'];
+    openOrdersCount: Scalars['Int']['output'];
+    saleDocumentsLast12Months: Scalars['Int']['output'];
+    salesLast12MonthsMinor: Scalars['Money']['output'];
+    salesLast30DaysMinor: Scalars['Money']['output'];
+    salesPrev30DaysMinor: Scalars['Money']['output'];
 };
 
 /** Overdue debt of one counterparty over all its customer contracts; oldestDays is null when no due date is known. */
@@ -1756,6 +1786,12 @@ export type CreditTermRequestInput = {
     justification: Scalars['String']['input'];
     requestedAmount?: InputMaybe<Scalars['Int']['input']>;
     requestedExtraDays: Scalars['Int']['input'];
+};
+
+/** Amount of one currency, minor units. */
+export type CurrencyAmount = {
+    amountMinor: Scalars['Money']['output'];
+    currency: Scalars['String']['output'];
 };
 
 /**
@@ -8322,6 +8358,8 @@ export type Query = {
     consistencySources: Array<ConsistencySource>;
     counterparties: CounterpartyList;
     counterparty: Maybe<Counterparty>;
+    /** Balance, turnover and open orders of one counterparty; null when it is outside the caller's scope; needs the credit right. */
+    counterpartyMetrics: Maybe<CounterpartyMetrics>;
     counterpartyOverdue: Maybe<CounterpartyOverdue>;
     counterpartySummary: CounterpartySummary;
     countries: CountryList;
@@ -8680,6 +8718,10 @@ export type QueryCounterpartiesArgs = {
 
 export type QueryCounterpartyArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryCounterpartyMetricsArgs = {
+    counterpartyId: Scalars['ID']['input'];
 };
 
 export type QueryCounterpartyOverdueArgs = {
@@ -9841,6 +9883,8 @@ export type SettlementDocumentTypeInfo = {
     category: Maybe<Scalars['String']['output']>;
     documentType: Scalars['String']['output'];
     label: Scalars['String']['output'];
+    /** Whether the type's amounts count toward customer turnover (sales, sales corrections, returns). */
+    movesTurnover: Scalars['Boolean']['output'];
 };
 
 /** Filtered on the server inside the caller's visible set; field names are a fixed whitelist. */
@@ -12008,6 +12052,34 @@ export type CounterpartyActivationCountsQuery = {
     duplicate: { totalItems: number };
     inactive: { totalItems: number };
     activated: { totalItems: number };
+};
+
+export type CounterpartyMetricsQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type CounterpartyMetricsQuery = {
+    counterpartyMetrics: {
+        currency: string;
+        balanceMinor: any;
+        salesLast30DaysMinor: any;
+        salesPrev30DaysMinor: any;
+        salesLast12MonthsMinor: any;
+        saleDocumentsLast12Months: number;
+        averageCheckMinor: any | null;
+        openOrdersCount: number;
+        computedAt: any;
+        balances: Array<{ currency: string; amountMinor: any }>;
+        contractBalances: Array<{
+            contractId: string | null;
+            contractErpId: string;
+            contractName: string | null;
+            organizationName: string | null;
+            currency: string;
+            closingBalanceMinor: any;
+            openingDate: any | null;
+        }>;
+    } | null;
 };
 
 export type CounterpartyOverdueQueryVariables = Exact<{
@@ -16031,6 +16103,37 @@ export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CounterpartyActivationCountsQuery,
     CounterpartyActivationCountsQueryVariables
+>;
+export const CounterpartyMetricsDocument = new TypedDocumentString(`
+    query CounterpartyMetrics($counterpartyId: ID!) {
+  counterpartyMetrics(counterpartyId: $counterpartyId) {
+    currency
+    balanceMinor
+    balances {
+      currency
+      amountMinor
+    }
+    contractBalances {
+      contractId
+      contractErpId
+      contractName
+      organizationName
+      currency
+      closingBalanceMinor
+      openingDate
+    }
+    salesLast30DaysMinor
+    salesPrev30DaysMinor
+    salesLast12MonthsMinor
+    saleDocumentsLast12Months
+    averageCheckMinor
+    openOrdersCount
+    computedAt
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyMetricsQuery,
+    CounterpartyMetricsQueryVariables
 >;
 export const CounterpartyOverdueDocument = new TypedDocumentString(`
     query CounterpartyOverdue($counterpartyId: ID!) {
