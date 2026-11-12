@@ -613,6 +613,16 @@ A permission alone never exposes another scope's rows. These Admin API reads re-
 - Approval requests (#263) follow the record they are about. Owning plugins register a SQL rule per request type in `ApprovalScopeRegistry` (approval-workflow): price-entry scopes `priceAdjustmentApproval` by the payload's order (`OrderVisibilityService.visibleIdsSql`), counterparty scopes both credit-term types by the payload's counterparty (`CounterpartyService.visibleErpIdsSql`). The rule applies to `approvalRequest(id)`, `myApprovalsInbox` (both tabs and their counts), `myApprovalRequestsSummary`, `pendingPriceAdjustmentOrderIds`, `priceAdjustmentRequestsForOrder`, and to `decide()` for every decide mutation, so a head of another branch can neither see nor decide it. `requestPriceAdjustment` and `requestCreditTermExtension` answer an order/counterparty outside the caller's scope like a missing one, and the order line must belong to the order. The registry is deny by default: a type is registered with a rule or declared company-wide (`register(type, null)`); `createRequest` refuses an undeclared type and its rows match no read. `discountGrantApproval` is declared company-wide, gated by price type only. Pinned by `access/approval/approval-visibility.test.ts`.
 - Document PDFs (#263) are never Vendure assets: they live in a private directory named by document uuid and are served only by `GET /document-pdf/<uuid>` (`DocumentPdfAccessService`). Staff need the counterparty visible through `CounterpartyService.findOneVisible`; any other session only its own counterparty; guest, hidden and missing all get the same 404. `Document.pdfUrl` carries that path, and the endpoint serves exactly the documents it exposes (generated and ready; a missing file of an old ready document is rendered on first download). A staff role without ReadCustomer/ReadCounterparty takes the customer path and gets 404.
 
+## Who sees which ERP discount
+
+Admin `discountSetups` / `discountSetupCounts` (`price-entry`, `Permission.ReadCatalog`) list the ERP discount setup documents (`DiscountSetup`). Scope is the counterparty visibility scope (`CounterpartyService.visibleErpIdsSql`, never re-implemented):
+
+1. A setup that applies to everyone is visible to every role holding the read permission: it has no recipient rows, or a recipient row with an empty counterparty.
+2. A setup naming several counterparties is visible when at least one of them is visible to the caller. The caller gets only the recipient names inside the own scope (`counterparties`) plus the total `recipientCount`; a name outside the scope is never read or returned. A setup naming only hidden counterparties is invisible.
+3. The director-level scope (`all`) sees every setup.
+
+A setup bound to a price type the caller cannot see (`PriceTypeAccessService.allowedCodes`) is neither listed nor counted. Pinned by `discount-setup-list.int.test.ts` and `access/discount-setup`.
+
 ## Layer 4: field-level redaction
 
 **Rule: a field that must never reach a role (e.g. the purchase or floor price) is protected

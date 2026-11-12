@@ -533,3 +533,5 @@ needs no recompute.
   The manager order card reads them through `orderRetroBonus(orderId)` (same gate as `retroBonusRules`, plus the order's
   visibility): per line the deepest percent among active, in-period rules whose product list or `allProducts` flag covers the
   product, with an amount only for a rule without a threshold. A product-side filter rule is never evaluated for it. Display only.
+
+The manager portal reads these documents through the admin queries `discountSetups` and `discountSetupCounts` (read-only; statuses running, expiring-soon, upcoming, expired, inactive are disjoint). Visibility rules: "Who sees which ERP discount" in `docs/access-control.md`.

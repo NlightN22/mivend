@@ -39,6 +39,9 @@ import { adminApiSchema, shopApiSchema } from './price-entry.schema';
 import { discountLimitSchema } from './discount-limit.schema';
 import { DiscountLimit } from './discount-limit.entity';
 import { DiscountLimitResolver } from './discount-limit.resolver';
+import { DiscountSetupResolver } from './discount-setup.resolver';
+import { DiscountSetupListService } from './discount-setup-list.service';
+import { discountSetupSchema } from './discount-setup.schema';
 import { DiscountLimitService } from './discount-limit.service';
 import { DiscountLimitScopeOptionsService } from './discount-limit-scope-options.service';
 import { LineDiscountService } from './line-discount.service';
@@ -103,7 +106,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],
     },
     adminApiExtensions: {
-        schema: concatAST([adminApiSchema, discountLimitSchema]),
+        schema: concatAST([adminApiSchema, discountLimitSchema, discountSetupSchema]),
         resolvers: [
             PriceEntryAdminResolver,
             DiscountRuleAdminResolver,
@@ -111,6 +114,7 @@ import { GrantedDiscountService } from './granted-discount.service';
             DiscountGrantResolver,
             DiscountRegistryResolver,
             DiscountLimitResolver,
+            DiscountSetupResolver,
         ],
     },
     providers: [
@@ -122,6 +126,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountRuleService,
         PromoDiscountRuleService,
         DiscountSetupService,
+        DiscountSetupListService,
         DiscountSetupRulesService,
         DiscountConditionKindBootstrapService,
         DiscountSetupReclassifyService,
