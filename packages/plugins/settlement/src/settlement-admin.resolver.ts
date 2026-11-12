@@ -17,8 +17,8 @@ import type {
 } from './settlement-admin.types';
 import type { CounterpartyOverdue } from './settlement-shop.types';
 
-// The list queries have their own permission, not ReadCounterpartyCredit (which also exposes credit
-// limits and balances); the counterparty visibility scope applies on top of it.
+// The list queries have their own permission, not ReadCounterpartyCredit; the counterparty visibility
+// scope applies on top of it.
 @Resolver()
 export class SettlementAdminResolver {
     constructor(
@@ -30,7 +30,7 @@ export class SettlementAdminResolver {
         private readonly metrics: CounterpartyMetricsService,
     ) {}
 
-    // A finance figure, so it needs the credit right; an invisible counterparty answers like a missing one.
+    // A finance figure behind the credit right (every default role has it); an invisible counterparty answers like a missing one.
     @Query()
     @Allow(CustomPermission.ReadCounterpartyCredit.Permission)
     async counterpartyOverdue(

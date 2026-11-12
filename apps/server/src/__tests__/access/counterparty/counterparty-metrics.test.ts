@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { admin, DENIED, staffToken } from '../harness/actors';
+import { admin, staffToken } from '../harness/actors';
 import { STAFF, VISIBLE_COUNTERPARTIES, type ActorKey } from '../seed/fixture-plan';
 import { ALL_KEYS, idOf } from './counterparty-queries';
 
@@ -18,10 +18,7 @@ describe('counterpartyMetrics follows the credit right and the counterparty scop
                     METRICS,
                     { id: idOf(counterparty) },
                 );
-                if (result.errors.length) {
-                    for (const e of result.errors) expect(e).toMatch(DENIED);
-                    continue;
-                }
+                expect(result.errors, `${key} -> ${counterparty}`).toEqual([]);
                 expect(result.data!.counterpartyMetrics !== null, `${key} -> ${counterparty}`).toBe(
                     VISIBLE_COUNTERPARTIES[key].includes(counterparty),
                 );

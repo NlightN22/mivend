@@ -72,7 +72,7 @@ One page, no tabs, top to bottom:
    available credit, credit limit (same data as the customer card) and the overdue debt (amount, and
    the days since the oldest overdue lot, in the danger tone). The overdue figure is the same FIFO
    aging the customer portal shows, read through `counterpartyOverdue` (needs the counterparty
-   credit right and the counterparty in the caller's scope); without the right it is not shown.
+   credit right, held by every default role, and the counterparty in the caller's scope); a custom role without the right does not see it.
 3. **Lines table.** Built from the ui-kit document lines kit (`MvDocumentLines`, see `docs/ui-standards.md`,
    "Document lines kit"). Header row in the style of the orders list; value cells and their column labels are
    left-aligned, so the flag icon after a value never makes the alignment look broken. Columns: Product (image, name,
@@ -300,7 +300,7 @@ mobile cards are shared with the payments list. `visibleSettlementDocuments` tak
 `options { documentType search filter sort }` and `counterpartyId`, inside the counterparties the
 caller may see; `SettlementsList` accepts a fixed `counterpartyId` so the same list can later sit
 in the customer card. Gated by its own `ReadSettlementDocument` (granted to every default role; it shows no credit
-limit, balance or overdue figure, unlike `ReadCounterpartyCredit`, though the signed amounts can be added up), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
+limit, balance or overdue figure itself, though the signed amounts can be added up), with the counterparty scope on top; the proforma number is a raw read of the acquiring plugin's
 `proforma_invoice` table (no plugin dependency; the server always loads both). The per-row
 correlated order-code aggregation used by the search and the type counts is the first thing to
 profile when the settlements table grows (check the plan once on a prod-sized table). No running balance is shown because the model keeps none per document.

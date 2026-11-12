@@ -30,10 +30,7 @@ describe('counterpartyOverdue follows the credit right and the counterparty scop
                     OVERDUE,
                     { id: idOf(counterparty) },
                 );
-                if (result.errors.length) {
-                    for (const e of result.errors) expect(e).toMatch(DENIED);
-                    continue;
-                }
+                expect(result.errors, `${key} -> ${counterparty}`).toEqual([]);
                 const answered = result.data!.counterpartyOverdue !== null;
                 expect(answered, `${key} -> ${counterparty}`).toBe(
                     VISIBLE_COUNTERPARTIES[key].includes(counterparty),
@@ -69,10 +66,7 @@ describe('orderRetroBonus, orderLineQuote and addOrderLineBySku follow the order
                 const result = await admin<{
                     orderRetroBonus: { hasRules: boolean; lines: unknown[] };
                 }>(token, RETRO, { id: orderOf(orderKey).id });
-                if (result.errors.length) {
-                    for (const e of result.errors) expect(e).toMatch(DENIED);
-                    continue;
-                }
+                expect(result.errors, `${key} -> ${counterparty}`).toEqual([]);
                 expect(result.data!.orderRetroBonus).toEqual({ hasRules: false, lines: [] });
             }
         },
