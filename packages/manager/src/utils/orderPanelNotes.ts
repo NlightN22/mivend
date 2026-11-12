@@ -1,3 +1,4 @@
+import { formatDateTime } from '../i18n/format';
 import type { OrderLineShortfallRow } from '../api/orderLineEdit';
 import { RESERVATION_FAILURE_LABEL } from '../api/orders';
 import type { ProblemTone } from './orderLineProblems';
@@ -36,7 +37,7 @@ function segments(failure: ReservationFailure): string[] {
 }
 
 function failureNotes(failure: ReservationFailure, parts: string[]): Note[] {
-    const when = failure.failedAt ? new Date(failure.failedAt).toLocaleString('en-US') : null;
+    const when = failure.failedAt ? formatDateTime(failure.failedAt) : null;
     const texts = [
         `Reservation failed: ${RESERVATION_FAILURE_LABEL[failure.reason] ?? failure.reason}`,
         ...parts,
@@ -50,7 +51,7 @@ function shortfallNote(row: OrderLineShortfallRow): string {
     const limit = row.limitedBy
         ? `, limited by ${LIMITED_BY_LABEL[row.limitedBy] ?? row.limitedBy}`
         : '';
-    const when = new Date(row.createdAt).toLocaleString('en-US');
+    const when = formatDateTime(row.createdAt);
     return `Cut for lack of stock: ${row.requestedQuantity} requested, ${row.keptQuantity} kept, ${row.shortfallQuantity} cut${limit} (${when}). Kept for demand statistics only.`;
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed, watch } from 'vue';
 import {
     MvAdvancedDataTable,
@@ -148,7 +149,7 @@ const rows = computed<OrganizationRow[]>(() =>
 );
 
 function formatDate(value: string): string {
-    return new Date(value).toLocaleDateString();
+    return formatDate(value);
 }
 </script>
 

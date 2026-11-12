@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { useCurrency } from '../../composables/useCurrency';
 import type {
@@ -72,9 +73,9 @@ const rows = computed<DetailRow[]>(() => {
             { label: 'Discount', value: `${p.percent as number}%` },
             {
                 label: 'Valid from',
-                value: new Date(p.validFrom as string).toLocaleDateString('en-US'),
+                value: formatDate(p.validFrom as string),
             },
-            { label: 'Valid to', value: new Date(p.validTo as string).toLocaleDateString('en-US') },
+            { label: 'Valid to', value: formatDate(p.validTo as string) },
             { label: 'Justification', value: (p.requestedByJustification as string | null) ?? '—' },
             ...(p.supersedesDiscountRuleId
                 ? [

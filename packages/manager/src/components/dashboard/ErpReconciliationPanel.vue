@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '../../i18n/format';
 import { ref } from 'vue';
 import { MvButton, MvStatusBadge } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
@@ -53,7 +54,7 @@ async function handleRunNow(): Promise<void> {
                     <span class="erp-reconciliation__title">{{ notification.title }}</span>
                     <span class="erp-reconciliation__detail">
                         {{ notification.message }} · detected
-                        {{ new Date(notification.createdAt).toLocaleString() }}
+                        {{ formatDateTime(notification.createdAt) }}
                     </span>
                 </div>
                 <MvStatusBadge variant="warning">{{ notification.status }}</MvStatusBadge>

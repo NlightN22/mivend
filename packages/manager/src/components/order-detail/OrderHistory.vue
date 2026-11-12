@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '../../i18n/format';
 import { computed } from 'vue';
 import { IconCheck } from '@tabler/icons-vue';
 import type { OrderDetail } from '../../api/orderDetail';
@@ -8,7 +9,7 @@ const props = defineProps<{ history: OrderDetail['statusHistory'] }>();
 const entries = computed(() => [...props.history].reverse());
 
 function date(iso: string): string {
-    return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    return formatDateTime(iso);
 }
 </script>
 

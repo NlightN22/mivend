@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { MvCopyButton, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { PaymentCardData } from '../../api/payments';
 import { channelLabel, listLinkFor, statusLabel, statusVariant } from './paymentCardModel';
@@ -34,7 +35,7 @@ defineProps<{ payment: PaymentCardData; amount: string }>();
         </div>
         <p class="payment-card-header__subtitle">
             <strong>{{ amount }}</strong> · {{ channelLabel(payment.channel) }} · Created
-            {{ new Date(payment.createdAt).toLocaleDateString('en-US') }}
+            {{ formatDate(payment.createdAt) }}
         </p>
     </header>
 </template>

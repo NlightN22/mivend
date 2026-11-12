@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { onMounted } from 'vue';
 import { MvButton, MvNotice, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import {
@@ -12,11 +13,7 @@ const { proformaInvoices, allowed, requesting, error, load, request, withdraw } 
     useOrderProformaInvoices(() => props.orderId);
 
 function date(iso: string): string {
-    return new Date(iso).toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    });
+    return formatDate(iso);
 }
 
 function money(cents: number, currency: string): string {

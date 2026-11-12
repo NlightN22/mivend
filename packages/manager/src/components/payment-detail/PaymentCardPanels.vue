@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { MvDateTimeCell, MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { formatPaymentAmount, type PaymentCardData } from '../../api/payments';
 import {
@@ -72,7 +73,7 @@ defineProps<{ payment: PaymentCardData }>();
                     }}
                 </dd>
                 <dt>Due date</dt>
-                <dd>{{ new Date(payment.proformaInvoice.dueDate).toLocaleDateString('en-US') }}</dd>
+                <dd>{{ formatDate(payment.proformaInvoice.dueDate) }}</dd>
                 <dt>Status</dt>
                 <dd>
                     <MvStatusBadge

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { MvWarningBanner } from '@mivend/ui-kit';
 
 export interface ExpiringDiscount {
@@ -20,7 +21,7 @@ const props = defineProps<{ discounts: ExpiringDiscount[] }>();
         <ul>
             <li v-for="discount in props.discounts.slice(0, 3)" :key="discount.id">
                 {{ discount.customerName }} — expires
-                {{ new Date(discount.validTo).toLocaleDateString('en-US') }}
+                {{ formatDate(discount.validTo) }}
             </li>
         </ul>
     </MvWarningBanner>

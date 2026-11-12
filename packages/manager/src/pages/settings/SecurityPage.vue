@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '../../i18n/format';
 import { onMounted, ref } from 'vue';
 import { MvButton, MvFormField, MvNotice, MvPanel, MvPasswordInput } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -103,7 +104,7 @@ async function handleSignOutEverywhere(): Promise<void> {
                         <strong>{{ s.deviceLabel }}</strong>
                         <span class="security-page__meta">
                             {{ s.current ? 'Текущий сеанс' : 'Вход выполнен' }} · с
-                            {{ new Date(s.createdAt).toLocaleString('ru-RU') }}
+                            {{ formatDateTime(s.createdAt) }}
                         </span>
                     </div>
                     <span v-if="s.current" class="security-page__current">Текущий</span>

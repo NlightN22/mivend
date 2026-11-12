@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '../../i18n/format';
 import { computed, onMounted, ref, watch } from 'vue';
 import {
     MvAdvancedDataTable,
@@ -373,7 +374,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
             <div class="entity-history__detail">
                 <dl class="entity-history__detail-meta">
                     <dt>When</dt>
-                    <dd>{{ new Date(selectedRow.createdAt).toLocaleString('en-US') }}</dd>
+                    <dd>{{ formatDateTime(selectedRow.createdAt) }}</dd>
                     <dt>Action</dt>
                     <dd>{{ ACTION_LABEL[selectedRow.action] ?? selectedRow.action }}</dd>
                     <dt>Object</dt>

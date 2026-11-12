@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed, onMounted, ref, watch } from 'vue';
 import {
     MvAdvancedDataTable,
@@ -124,7 +125,7 @@ const rows = computed<Row[]>(() =>
         email: u.emailAddress,
         portalRole: u.portalRole ? (ROLE_LABEL[u.portalRole] ?? u.portalRole) : '—',
         active: u.active,
-        createdAt: new Date(u.createdAt).toLocaleDateString(),
+        createdAt: formatDate(u.createdAt),
         createdAtSortKey: new Date(u.createdAt).getTime(),
     })),
 );

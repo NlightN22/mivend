@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import type { ActivityItem } from '../../api/dashboard';
 
 defineProps<{ items: ActivityItem[] }>();
@@ -10,7 +11,7 @@ function timeAgo(at: string): string {
     if (minutes < 60) return `${minutes} min ago`;
     const hours = Math.round(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
-    return new Date(at).toLocaleDateString('en-US');
+    return formatDate(at);
 }
 </script>
 

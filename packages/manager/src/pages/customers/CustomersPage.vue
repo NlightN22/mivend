@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed, onMounted, ref } from 'vue';
 import { MvPanel, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -59,7 +60,7 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         .map(([customerId, validTo]) => ({
             customerId,
             title: expiringNames.value.get(customerId) ?? '—',
-            meta: `Discount grant expires ${new Date(validTo).toLocaleDateString('en-US')}.`,
+            meta: `Discount grant expires ${formatDate(validTo)}.`,
             tag: 'Discounts',
             variant: 'warning',
         }));

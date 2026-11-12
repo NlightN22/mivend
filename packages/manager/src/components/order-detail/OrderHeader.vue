@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { IconCalendar, IconUser, IconUserCircle } from '@tabler/icons-vue';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
@@ -90,7 +91,7 @@ const customerName = computed(() => {
             <span class="order-header__item">
                 <IconCalendar :size="16" />
                 Created:
-                <strong>{{ new Date(order.createdAt).toLocaleDateString('en-US') }}</strong>
+                <strong>{{ formatDate(order.createdAt) }}</strong>
             </span>
         </div>
         <OrderHeaderFields

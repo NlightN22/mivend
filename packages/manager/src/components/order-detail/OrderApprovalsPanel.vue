@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
@@ -39,7 +40,7 @@ const rows = computed(() => props.requests.map(r => ({ request: r, line: lineNam
             <RouterLink :to="`/approvals/${request.id}`" class="approvals__link">
                 Price: {{ line ?? `request #${request.id}` }}
                 <span class="approvals__meta">
-                    {{ new Date(request.createdAt).toLocaleDateString('en-US') }}
+                    {{ formatDate(request.createdAt) }}
                 </span>
             </RouterLink>
             <MvStatusBadge :variant="variant(request.status)">{{

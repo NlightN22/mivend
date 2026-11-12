@@ -1,3 +1,4 @@
+import { formatDate } from '../../i18n/format';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
@@ -32,6 +33,6 @@ export function toProformaInvoiceRows(items: ProformaInvoiceListItem[]): Proform
             style: 'currency',
             currency: item.currencyCode,
         }).format(item.amount / 100),
-        dueDate: new Date(item.dueDate).toLocaleDateString('en-US'),
+        dueDate: formatDate(item.dueDate),
     }));
 }

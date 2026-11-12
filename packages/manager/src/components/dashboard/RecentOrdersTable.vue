@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
@@ -42,7 +43,7 @@ const rows = computed<TableRow[]>(() =>
             style: 'currency',
             currency: order.currencyCode,
         }).format(order.totalWithTax / 100),
-        date: new Date(order.createdAt).toLocaleDateString('en-US'),
+        date: formatDate(order.createdAt),
     })),
 );
 

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../i18n/format';
 // "new" when the earlier window had no turnover; null when neither window has any.
 export function dynamicsText(current: number, previous: number): string | null {
     if (previous === 0) return current === 0 ? null : 'new';
@@ -19,4 +20,4 @@ export function contractLabel(row: {
 }
 
 export const formatComputedAt = (iso: string): string =>
-    new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    formatDateTime(iso);

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../i18n/format';
 import type { ApprovalRequestDetail } from '../../api/approvals';
 import type { ManagerOption } from '../../api/orders';
 import { managerName } from './approvalsListRows';
@@ -76,5 +77,5 @@ export function buildTimeline(
 }
 
 export function formatWhen(iso: string): string {
-    return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    return formatDateTime(iso);
 }

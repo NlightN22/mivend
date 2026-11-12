@@ -1,3 +1,4 @@
+import { formatDate } from '../../i18n/format';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import type { CustomerCredit, CustomerListItem } from '../../api/customers';
 
@@ -48,7 +49,7 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
                     ? (credit.creditBalance / credit.creditLimit) * 100
                     : null,
             discounts: src.discountCounts.get(c.id) ?? 0,
-            lastOrder: lastOrder ? new Date(lastOrder).toLocaleDateString('en-US') : '—',
+            lastOrder: lastOrder ? formatDate(lastOrder) : '—',
             isActive: c.isActive,
         };
     });

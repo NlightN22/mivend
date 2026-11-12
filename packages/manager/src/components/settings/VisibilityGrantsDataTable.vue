@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed, ref, watch } from 'vue';
 import {
     MvAdvancedDataTable,
@@ -142,7 +143,7 @@ const revocable = (row: Row): boolean => row.status === 'active' || row.status =
             <slot name="toolbar-end" />
         </template>
         <template #cell-createdAt="{ data }">
-            {{ new Date((data as Row).createdAt).toLocaleDateString('en-GB') }}
+            {{ formatDate((data as Row).createdAt) }}
         </template>
         <template #cell-status="{ data }">
             <MvStatusBadge
