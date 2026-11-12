@@ -515,7 +515,11 @@ export class TradingPointService {
     ): Promise<TradingPoint[]> {
         // unbounded-ok: hidden trading points of one counterparty
         return this.connection.getRepository(ctx, TradingPoint).find({
-            where: { counterpartyId: String(counterpartyId), customerStatus: 'hidden', address: Not('') },
+            where: {
+                counterpartyId: String(counterpartyId),
+                customerStatus: 'hidden',
+                address: Not(''),
+            },
             relations: ['contacts'],
             order: { name: 'ASC' },
         });
