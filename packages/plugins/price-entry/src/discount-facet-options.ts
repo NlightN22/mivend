@@ -51,6 +51,7 @@ export async function loadDiscountFacetOptions(
     ctx: RequestContext,
     defaultLanguage: string,
 ): Promise<DiscountFacetOption[]> {
+    // unbounded-ok: one row per facet value of the channel, about 7.6k values in the largest catalog
     const rows = await ctxQuery<FacetOptionRow[]>(connection, ctx, FACET_OPTIONS_SQL, [
         ctx.channelId,
         ctx.languageCode,
