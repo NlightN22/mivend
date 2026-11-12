@@ -133,10 +133,10 @@ export class CreditPlacementService {
         assessment: DeferredCreditAssessment,
     ): Promise<{ code: string; hold: boolean } | null> {
         if (form === 'card' || assessment.exceeded) return null;
+        // unbounded-ok: the shipping lines of one order
         const methods = await ctxQuery<Array<{ code: string }>>(
             this.connection,
             ctx,
-            // unbounded-ok: the shipping lines of one order
             `SELECT sm.code FROM shipping_line sl
              INNER JOIN shipping_method sm ON sm.id = sl."shippingMethodId"
              WHERE sl."orderId" = $1`,

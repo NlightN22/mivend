@@ -80,8 +80,8 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
         return getPageAndCount(qb, options?.take, options?.skip);
     }
 
-    // unbounded-ok: a few dozen staff-edited rows, loaded once per render
     async findRules(ctx: RequestContext): Promise<LegalNameAbbreviationRule[]> {
+        // unbounded-ok: a few dozen staff-edited rows, loaded once per render
         const rows = await this.connection.getRepository(ctx, LegalNameAbbreviation).find();
         return rows.map(row => ({ phrase: row.phrase, abbreviation: row.abbreviation }));
     }

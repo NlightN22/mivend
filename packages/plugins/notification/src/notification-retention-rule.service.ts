@@ -74,6 +74,7 @@ export class NotificationRetentionRuleService implements OnApplicationBootstrap 
     }
 
     loadRows(ctx: RequestContext): Promise<RetentionRuleRow[]> {
+        // unbounded-ok: one row per notification source type, a small configuration table
         return ctxQuery<RetentionRuleRow[]>(
             this.connection,
             ctx,
