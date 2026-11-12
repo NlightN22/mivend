@@ -48,7 +48,9 @@ export class SettlementShopService {
                 COALESCE((SELECT SUM(a.open) FROM aged a WHERE a.org = bal.org
                     AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue,
                 (SELECT MIN(a.due) FROM aged a WHERE a.org = bal.org AND a.ctr = bal.ctr
-                    AND a.open > 0 AND a.due < now()) AS "oldestOverdueDue"
+                    AND a.open > 0 AND a.due < now()) AS "oldestOverdueDue",
+                bal.cb - bal.ob - COALESCE((SELECT SUM(ent.amt) FROM ent WHERE ent.org = bal.org
+                    AND ent.ctr = bal.ctr), 0) AS unexplained
              FROM bal LEFT JOIN organization_requisites org ON org."erpId" = bal.org
              ORDER BY bal.org, bal.ctr`,
             [counterpartyId],
@@ -67,6 +69,7 @@ export class SettlementShopService {
                     oldestOverdueDue: b.oldestOverdueDue
                         ? new Date(b.oldestOverdueDue as string)
                         : null,
+                    unexplained: Number(b.unexplained),
                 }),
             )
             .filter(

@@ -401,6 +401,30 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(cards.filter(c => c.contractId === null).every(c => c.overdue === 0)).toBe(true);
     });
 
+    it('reports the part of the balance that documents do not explain', async () => {
+        await balance('cp-1', 'ct-1', 100, 600);
+        await doc('d-sale', {
+            number: '1',
+            date: new Date('2026-09-01T00:00:00Z'),
+            entries: [entry({ amount: 500 })],
+        });
+        const [explained] = await shop.balanceCards(ctx, '1');
+        expect(explained.unexplained).toBe(0);
+
+        await h.dataSource.query('TRUNCATE settlement_document, settlement_balance CASCADE');
+        await balance('cp-1', 'ct-1', 100, 600);
+        const [bare] = await shop.balanceCards(ctx, '1');
+        expect(bare.unexplained).toBe(50000);
+    });
+
+    it('treats a non-customer and an unknown contract as fully unexplained', async () => {
+        await balance('cp-1', 'ct-2', 100, 600);
+        await balance('cp-1', 'ct-unknown', 0, -300);
+        const cards = await shop.balanceCards(ctx, '1');
+        expect(cards.every(c => c.contractId === null)).toBe(true);
+        expect(cards.map(c => c.unexplained).sort((a, b) => a - b)).toEqual([-30000, 50000]);
+    });
+
     it('shows an unknown reference category under other', async () => {
         await typeRef('Odd', 'brand-new', true);
         await doc('d-odd', { number: '1', documentType: 'Odd', entries: [entry()] });

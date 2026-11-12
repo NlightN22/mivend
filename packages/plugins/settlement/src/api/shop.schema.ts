@@ -50,6 +50,7 @@ export const shopApiExtensions = gql`
         openingBalance: Money!
         currentBalance: Money!
         overdue: Money!
+        unexplained: Money!
     }
 
     input SettlementDocumentFilter {
