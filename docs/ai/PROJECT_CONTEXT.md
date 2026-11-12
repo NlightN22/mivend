@@ -238,6 +238,20 @@ manages manager-portal login accounts; org-structure directory is the separate `
 Org-structure-blocking infra actions (creating a Branch) live in the native Dashboard instead,
 `Permission.SuperAdmin`.
 
+## Customer metrics, version 1 (live computation)
+
+- Admin query `counterpartyMetrics(counterpartyId)` (plugin settlement, `CounterpartyMetricsService`): balance, per-contract
+  balances, turnover 30 days / previous 30 days / 12 months, sale documents, average check, open orders, `computedAt`.
+  Same guard as `counterpartyOverdue` (credit right plus counterparty scope; null outside scope). A rollup can replace the service later.
+- The balance is always the full total of all non-deleted `settlement_balance` rows of the counterparty (contract-less and unlinked
+  contracts included); filters belong to the customer portal only. Positive means the counterparty owes us.
+- Turnover sums entries of document types with `settlement_document_type.movesTurnover` (sales, returns, sales corrections; never debt
+  corrections, payments, suppliers). The flag is ours: the ERP type stream does not overwrite it. Average check = 12-month net turnover
+  per `sale`-category document.
+- Windows are local calendar days in the process time zone (`TZ`), today included. Totals are in one currency: the one with the largest
+  absolute balance; `balances` lists all currencies. Open orders exclude AddingItems, Draft, Cancelled, Delivered.
+- Manager card: `CustomerMetricsKpis.vue`; the old outstanding-balance tile is now "Unpaid proforma invoices".
+
 ## Planned next work (full list: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 - Open issues from the 2026-11-07 session: #325 CI `lint:css` fails (workflow pins Node 20, stylelint 18 needs 22; CI on main is red since 0.0.47), #326 detect a dev-contour child stuck at high CPU without listening and restart only it, #327 acting-token security review, #323 acting change journal, #320 manager color migration, #321 per-service image tags.
 
