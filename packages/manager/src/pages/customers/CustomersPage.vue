@@ -134,7 +134,7 @@ onMounted(async () => {
                 :label="t('customers.page.kpi.expiringDiscounts')"
                 :value="expiringGrantsCount"
                 accent
-                to="/discounts"
+                to="/discounts?source=requests"
             />
         </MvKpiCarousel>
 

@@ -28,7 +28,7 @@ export function searchTarget(kind: string, hit: SearchHit): RouteLocationRaw | n
         case 'settlementDocument':
             return { path: '/settlements', query: { search: hit.number } };
         case 'discount':
-            return { path: '/discounts', query: { search: hit.number } };
+            return { path: '/discounts', query: { search: hit.number, source: 'requests' } };
         default:
             return null;
     }

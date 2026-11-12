@@ -163,11 +163,94 @@ function mockDiscountsData(): void {
     }));
 }
 
+const SETUPS = [
+    {
+        id: '1',
+        documentNumber: '5001',
+        percent: 7.8,
+        validFrom: new Date(now - 10 * 86400000).toISOString(),
+        validTo: null,
+        status: 'running',
+        inactiveReason: null,
+        priceTypeCode: 'price-type-wholesale',
+        allProducts: true,
+        productMode: 'list',
+        productCount: 0,
+        recipientCount: 0,
+        counterparties: [],
+    },
+    {
+        id: '2',
+        documentNumber: '5002',
+        percent: -4,
+        validFrom: new Date(now - 20 * 86400000).toISOString(),
+        validTo: new Date(now + 5 * 86400000).toISOString(),
+        status: 'expiring-soon',
+        inactiveReason: null,
+        priceTypeCode: null,
+        allProducts: false,
+        productMode: 'list',
+        productCount: 12,
+        recipientCount: 2,
+        counterparties: [
+            { id: '1', name: 'customer-101', contractErpId: null },
+            { id: null, name: 'customer-102', contractErpId: null },
+        ],
+    },
+    {
+        id: '3',
+        documentNumber: '5003',
+        percent: 3,
+        validFrom: new Date(now - 90 * 86400000).toISOString(),
+        validTo: new Date(now - 30 * 86400000).toISOString(),
+        status: 'inactive',
+        inactiveReason: 'cancelled',
+        priceTypeCode: 'price-type-retail',
+        allProducts: false,
+        productMode: 'filter',
+        productCount: 0,
+        recipientCount: 1,
+        counterparties: [{ id: '3', name: 'customer-103', contractErpId: null }],
+    },
+];
+
+function mockSetupsData(): void {
+    registerMock('DiscountSetupsPage', (variables: DiscountsPageVariables) => {
+        const status = variables.options?.status;
+        const items = status ? SETUPS.filter(d => d.status === status) : SETUPS;
+        return { discountSetups: paginate(items, variables.options) };
+    });
+    registerMock('DiscountSetupCounts', () => ({
+        discountSetupCounts: {
+            all: SETUPS.length,
+            running: 1,
+            expiringSoon: 1,
+            upcoming: 0,
+            expired: 0,
+            inactive: 1,
+        },
+    }));
+    registerMock('TableViews', () => ({ tableViews: [] }));
+}
+
+export const ErpDiscounts: Story = {
+    loaders: [
+        async () => {
+            mockSetupsData();
+            await router.push('/discounts');
+        },
+    ],
+    render: () => ({
+        components: { DiscountsPage },
+        template: '<DiscountsPage />',
+    }),
+};
+
 export const Default: Story = {
     loaders: [
         async () => {
             mockDiscountsData();
-            await router.push('/discounts');
+            await router.push('/discounts?source=requests');
         },
     ],
     render: () => ({
@@ -190,7 +273,7 @@ export const Empty: Story = {
                 rejected: { totalItems: 0 },
             }));
             registerMock('TableViews', () => ({ tableViews: [] }));
-            await router.push('/discounts');
+            await router.push('/discounts?source=requests');
         },
     ],
     render: () => ({

@@ -8,7 +8,7 @@ const actions = [
     {
         label: 'New discount',
         description: 'Submit a discount grant approval request.',
-        to: '/discounts',
+        to: '/discounts?source=requests',
     },
     {
         label: 'New client',

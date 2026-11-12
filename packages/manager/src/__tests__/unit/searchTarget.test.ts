@@ -27,7 +27,7 @@ describe('searchTarget', () => {
         });
         expect(searchTarget('discount', hit)).toEqual({
             path: '/discounts',
-            query: { search: '100-0001412' },
+            query: { search: '100-0001412', source: 'requests' },
         });
     });
 

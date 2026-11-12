@@ -1,23 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { MvPanel } from '@mivend/ui-kit';
-import DiscountsList from '../../components/discounts/DiscountsList.vue';
-import DiscountGrantForm from '../../components/discounts/DiscountGrantForm.vue';
-import type { DiscountRow } from '../../components/discounts/discountsRows';
-
-const list = ref<InstanceType<typeof DiscountsList> | null>(null);
-const showForm = ref(false);
-const renewFrom = ref<DiscountRow | null>(null);
-
-function openForm(row: DiscountRow | null): void {
-    renewFrom.value = row;
-    showForm.value = true;
-}
-
-function handleSubmitted(): void {
-    showForm.value = false;
-    list.value?.reload();
-}
+import DiscountsWorkspace from '../../components/discounts/DiscountsWorkspace.vue';
 </script>
 
 <template>
@@ -27,15 +9,7 @@ function handleSubmitted(): void {
             <h1 class="discounts-page__title">Discounts</h1>
         </div>
 
-        <MvPanel v-if="showForm" :title="renewFrom ? 'Renew discount grant' : 'New discount grant'">
-            <DiscountGrantForm
-                :renew-from="renewFrom"
-                @submitted="handleSubmitted"
-                @cancel="showForm = false"
-            />
-        </MvPanel>
-
-        <DiscountsList ref="list" @new="openForm(null)" @renew="openForm($event)" />
+        <DiscountsWorkspace />
     </div>
 </template>
 
