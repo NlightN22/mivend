@@ -297,11 +297,15 @@ function initials(name: string | null): string {
             {{ customer.shortName }}
         </div>
         <h1 class="customer-detail__title">
-            {{ customer.shortName }}
+            <span class="customer-detail__name">{{ customer.shortName }}</span>
             <MvStatusBadge :variant="customer.isActive ? 'success' : 'neutral'">
                 {{ t(customer.isActive ? 'customers.detail.active' : 'customers.detail.inactive') }}
             </MvStatusBadge>
-            <MvStatusBadge v-if="customer.erpGroupLabel" variant="info">
+            <MvStatusBadge
+                v-if="customer.erpGroupLabel"
+                variant="info"
+                class="customer-detail__group"
+            >
                 {{ customer.erpGroupLabel }}
             </MvStatusBadge>
         </h1>
@@ -309,10 +313,18 @@ function initials(name: string | null): string {
             {{ t('customers.detail.inn', { inn: customer.inn }) }}
         </p>
         <ActAsCustomerButton :counterparty-id="customer.id" />
-        <MvStatusBadge v-if="customer.innStatus === 'missing'" variant="warning">
+        <MvStatusBadge
+            v-if="customer.innStatus === 'missing'"
+            variant="warning"
+            class="customer-detail__notice"
+        >
             {{ t('customers.detail.innMissing') }}
         </MvStatusBadge>
-        <MvStatusBadge v-else-if="customer.innStatus === 'duplicate'" variant="warning">
+        <MvStatusBadge
+            v-else-if="customer.innStatus === 'duplicate'"
+            variant="warning"
+            class="customer-detail__notice"
+        >
             {{ t('customers.detail.innDuplicate') }}
         </MvStatusBadge>
 
@@ -354,15 +366,13 @@ function initials(name: string | null): string {
                         <span class="customer-detail__info-label">{{
                             t('customers.detail.paymentTerms')
                         }}</span>
-                        <span class="customer-detail__info-value"
-                            >{{
+                        <span class="customer-detail__info-value">{{
                             t(
                                 'customers.overview.days',
                                 { count: credit.paymentDelayDays },
                                 credit.paymentDelayDays,
                             )
-                        }}</span
-                        >
+                        }}</span>
                     </div>
                 </div>
             </template>
@@ -517,6 +527,12 @@ function initials(name: string | null): string {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-width: 0;
+}
+
+.customer-detail > * {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .customer-detail__breadcrumb {
@@ -535,7 +551,20 @@ function initials(name: string | null): string {
     letter-spacing: -0.03em;
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.customer-detail__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.customer-detail__group,
+.customer-detail__notice {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .customer-detail__subtitle {
@@ -634,6 +663,20 @@ function initials(name: string | null): string {
     border-bottom: 1px solid var(--el-border-color);
     margin-top: 8px;
     position: relative;
+}
+
+.customer-detail__tabs {
+    min-width: 0;
+}
+
+.customer-detail__tabs > button {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.customer-detail__tabs-more {
+    flex-shrink: 0;
 }
 
 .customer-detail__tabs > button,
