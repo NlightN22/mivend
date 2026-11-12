@@ -147,10 +147,6 @@ const rows = computed<OrganizationRow[]>(() =>
         hasCompleteRequisitesVariant: o.hasCompleteRequisites ? 'success' : 'warning',
     })),
 );
-
-function formatDate(value: string): string {
-    return formatDate(value);
-}
 </script>
 
 <template>
