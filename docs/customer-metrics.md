@@ -77,7 +77,7 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 - Trading point coordinates are free-text attributes with no default. Latitude 90 with longitude 99.999999 are entered
   placeholder values: treat such coordinates as invalid. A point without an address is a normal working point, never
   junk.
-- The 1C documents carry the base document (a return points at its sale, a correction at the corrected document, with an
+- The ERP documents carry the base document (a return points at its sale, a correction at the corrected document, with an
   operation kind on corrections), but the exchange does not send it; adding it needs a change in the ERP exchange and in
   the contract, an owner decision. Dates are converted to UTC from the exchange node's zone on the ERP side; day-only
   dates (counterparties) arrive as plain `yyyy-MM-dd` with no zone.
@@ -127,14 +127,15 @@ guides (no hard row threshold; a read replica and rollups first).
 
 ## Order of work
 
-1. This document and the balance rule (done here).
-2. Card: real balance total from the balance rows (with the contract breakdown beside it), orders by counterparty.
-3. Flag column on `settlement_document_type`, rollup tables, recompute in the apply path, backfill, reconcile, tests
-   (row-budget and a concurrent-writer test).
-4. Card tiles read the totals row; dynamics and average check.
+1. This document and the balance rule (done).
+2. Card: real balance total from the balance rows (with the contract breakdown beside it), orders by counterparty
+   (done, version 1 computes live behind a replaceable service).
+3. Flag column on `settlement_document_type` (done), rollup tables, recompute in the apply path, backfill, reconcile,
+   tests (row-budget and a concurrent-writer test) (pending).
+4. Card tiles read the totals row (pending); dynamics and average check already work live in version 1.
 5. Trading points: create points without an address and show every defect on the card; backfill the skipped ones by
-   replaying the stream.
-6. Company dashboard on the rollup.
+   replaying the stream (done in code; the replay of the skipped points is an operator step after deploy).
+6. Company dashboard on the rollup (pending).
 
 ## Decisions (owner, 2026-11-12)
 
