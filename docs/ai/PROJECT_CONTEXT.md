@@ -246,7 +246,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 - The balance is always the full total of all non-deleted `settlement_balance` rows of the counterparty (contract-less and unlinked
   contracts included); filters belong to the customer portal only. Positive means the counterparty owes us.
 - Turnover sums entries of document types with `settlement_document_type.movesTurnover` (sales, returns, sales corrections; never debt
-  corrections, payments, suppliers). The flag is ours: the ERP type stream does not overwrite it. Average check = 12-month net turnover
+  corrections, payments, suppliers). The flag is ours: derived once when the type row is created (categories sale and return, plus the single named sales-correction type) and never overwritten by the ERP type stream; there is no edit UI yet, so a type first created with another category keeps false until edited in the database. Average check = 12-month net turnover
   per `sale`-category document.
 - Windows are local calendar days in the process time zone (`TZ`), today included. Totals are in one currency: the one with the largest
   absolute balance; `balances` lists all currencies. Open orders exclude AddingItems, Draft, Cancelled, Delivered.
