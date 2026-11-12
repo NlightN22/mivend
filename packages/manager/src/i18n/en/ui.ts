@@ -1,0 +1,16 @@
+export default {
+    filter: 'Filter',
+    filterBy: 'Filter by',
+    removeFilter: 'Remove {label} filter',
+    views: 'Views',
+    unsavedChanges: 'Unsaved changes',
+    defaultView: 'Default view',
+    myViews: 'My views',
+    teamViews: 'Team views',
+    update: 'Update "{name}"',
+    discard: 'Discard',
+    saveCurrentAs: 'Save current table as…',
+    onlyMe: 'Only me',
+    team: 'Team',
+    save: 'Save',
+};

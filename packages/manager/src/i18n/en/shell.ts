@@ -28,7 +28,9 @@ export default {
         logout: 'Log out',
     },
     layout: {
-        defaultAccount: "You're signed in with the default {name} account and its default password.",
+        defaultAccount:
+            "You're signed in with the default {name} account and its default password.",
+        defaultAccountName: 'superadmin',
         changePassword: 'Change the password',
     },
     search: {

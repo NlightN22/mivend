@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import { useAnchoredPanel } from '../../composables/useAnchoredPanel';
@@ -11,6 +12,7 @@ export type TableViewSaveScope = 'PERSONAL' | 'SHARED';
 
 // Presentational "Views" menu for a table toolbar; the owner holds the storage and the table state.
 // Team views (`shared`) can be applied by anyone; `canManageShared` unlocks editing them.
+const label = useUiLabels();
 const props = defineProps<{
     views: TableViewItem[];
     activeId: string;
@@ -94,8 +96,8 @@ function pick(id: string): void {
             @click="open = !open"
         >
             <Collection class="mv-table-views__icon" />
-            <span class="mv-table-views__label">{{ activeName || 'Views' }}</span>
-            <span v-if="dirty" class="mv-table-views__dirty" title="Unsaved changes">*</span>
+            <span class="mv-table-views__label">{{ activeName || label('views', 'Views') }}</span>
+            <span v-if="dirty" class="mv-table-views__dirty" :title="label('unsavedChanges', 'Unsaved changes')">*</span>
         </MvButton>
         <Teleport to="body">
             <div v-if="open && isMobile" class="mv-table-views__backdrop" @click="open = false" />
@@ -108,19 +110,19 @@ function pick(id: string): void {
                 role="menu"
                 data-testid="table-views-panel"
             >
-                <div class="mv-table-views__title">Views</div>
+                <div class="mv-table-views__title">{{ label('views', 'Views') }}</div>
                 <button
                     type="button"
                     class="mv-table-views__row"
                     :class="{ 'mv-table-views__row--active': !activeId }"
                     @click="pick('')"
                 >
-                    Default view
+                    {{ label('defaultView', 'Default view') }}
                 </button>
                 <template
                     v-for="group in [
-                        { key: 'mine', label: 'My views', items: mine },
-                        { key: 'team', label: 'Team views', items: team },
+                        { key: 'mine', label: label('myViews', 'My views'), items: mine },
+                        { key: 'team', label: label('teamViews', 'Team views'), items: team },
                     ]"
                     :key="group.key"
                 >
@@ -155,17 +157,17 @@ function pick(id: string): void {
                             variant="primary"
                             :disabled="busy"
                             @click="emit('update')"
-                            >Update "{{ activeName }}"</MvButton
+                            >{{ label('update', 'Update "{name}"').replace('{name}', activeName ?? '') }}</MvButton
                         >
                         <MvButton size="sm" variant="ghost" @click="emit('reset')"
-                            >Discard</MvButton
+                            >{{ label('discard', 'Discard') }}</MvButton
                         >
                     </div>
                     <div class="mv-table-views__new">
                         <input
                             v-model="newName"
                             class="mv-table-views__input mv-table-views__name"
-                            placeholder="Save current table as…"
+                            :placeholder="label('saveCurrentAs', 'Save current table as…')"
                             maxlength="80"
                             data-testid="table-views-name"
                             @keyup.enter="create"
@@ -177,8 +179,8 @@ function pick(id: string): void {
                                 class="mv-table-views__input mv-table-views__scope"
                                 data-testid="table-views-scope"
                             >
-                                <option value="PERSONAL">Only me</option>
-                                <option value="SHARED">Team</option>
+                                <option value="PERSONAL">{{ label('onlyMe', 'Only me') }}</option>
+                                <option value="SHARED">{{ label('team', 'Team') }}</option>
                             </select>
                             <MvButton
                                 size="sm"
@@ -187,7 +189,7 @@ function pick(id: string): void {
                                 :disabled="busy || !newName.trim()"
                                 data-testid="table-views-save"
                                 @click="create"
-                                >Save</MvButton
+                                >{{ label('save', 'Save') }}</MvButton
                             >
                         </div>
                     </div>

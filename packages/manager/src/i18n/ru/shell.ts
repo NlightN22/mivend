@@ -31,6 +31,7 @@ const shell: typeof en = {
     },
     layout: {
         defaultAccount: 'Вы вошли под стандартной учётной записью {name} со стандартным паролем.',
+        defaultAccountName: 'superadmin',
         changePassword: 'Сменить пароль',
     },
     search: {

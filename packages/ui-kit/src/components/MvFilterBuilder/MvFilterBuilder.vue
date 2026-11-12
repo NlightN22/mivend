@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Filter } from '@element-plus/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
@@ -11,6 +12,7 @@ import './MvFilterBuilder.css';
 
 // One toolbar control for every table: pick a column, set operator and value, get removable chips.
 // The owner holds the conditions (v-model) and turns them into a query.
+const label = useUiLabels();
 const props = defineProps<{ columns: FilterColumn[] }>();
 const conditions = defineModel<FilterCondition[]>({ required: true });
 const emit = defineEmits<{ change: [] }>();
@@ -101,7 +103,7 @@ onBeforeUnmount(() => {
                 @click="openPicker"
             >
                 <Filter class="mv-filter-builder__icon" />
-                <span class="mv-filter-builder__label">Filter</span>
+                <span class="mv-filter-builder__label">{{ label('filter', 'Filter') }}</span>
             </MvButton>
         </span>
         <span
@@ -121,7 +123,7 @@ onBeforeUnmount(() => {
             <button
                 type="button"
                 class="mv-filter-builder__chip-remove"
-                :aria-label="`Remove ${chip.label} filter`"
+                :aria-label="label('removeFilter', 'Remove {label} filter').replace('{label}', chip.label)"
                 @click="remove(chip.index)"
             >
                 ×
@@ -160,7 +162,7 @@ onBeforeUnmount(() => {
                     @back="picked = null"
                 />
                 <template v-else>
-                    <div class="mv-filter-builder__title">Filter by</div>
+                    <div class="mv-filter-builder__title">{{ label('filterBy', 'Filter by') }}</div>
                     <button
                         v-for="column in columns"
                         :key="column.key"

@@ -24,6 +24,7 @@ import {
     reloadOnStaleChunk,
     initTheme,
     UI_LOCALE_KEY,
+    UI_LABELS_KEY,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -57,6 +58,16 @@ app.use(i18n);
 app.provide(
     UI_LOCALE_KEY,
     computed(() => activeTag()),
+);
+app.provide(
+    UI_LABELS_KEY,
+    computed(
+        () =>
+            (i18n.global.messages.value[i18n.global.locale.value]?.ui ?? {}) as Record<
+                string,
+                string
+            >,
+    ),
 );
 app.use(router);
 app.use(ElementPlus, { zIndex: layers.popover });
