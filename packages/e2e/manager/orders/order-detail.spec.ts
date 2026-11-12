@@ -55,7 +55,7 @@ test("the action menu opens this order's proforma invoices and documents @read-o
     await expect(page.getByRole('dialog')).toContainText('Documents');
 });
 
-test('the customer summary shows the credit figures to a role with the credit right @on:manager-portal-admin @read-only', async ({
+test('the customer summary shows the credit figures to every role that sees the order @read-only', async ({
     page,
 }) => {
     await page.goto(`/orders/${readE2eOrder().code}`);

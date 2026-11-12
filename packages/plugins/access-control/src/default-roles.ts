@@ -27,6 +27,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'CancelOrder',
             'ReadCustomer',
             'ReadCounterparty',
+            'ReadCounterpartyCredit',
         ],
         accessScopeConfig: {
             counterparty: 'department',
@@ -52,6 +53,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'CancelOrder',
             'ReadCustomer',
             'ReadCounterparty',
+            'ReadCounterpartyCredit',
             'AdjustPriceWithinLimit',
             'RequestPriceAdjustmentApproval',
             'RequestDiscountGrantApproval',
@@ -73,6 +75,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ConfirmOrder',
             'ReadCustomer',
             'ReadCounterparty',
+            'ReadCounterpartyCredit',
             'ReadConfidentialPriceTypes',
             'ReadAllCustomerPriceTypes',
             'ApproveDiscountRequest',

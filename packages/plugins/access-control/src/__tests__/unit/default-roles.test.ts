@@ -4,6 +4,16 @@ import { DEFAULT_ROLES } from '../../default-roles';
 
 const byCode = (code: string) => DEFAULT_ROLES.find(r => r.code === code)?.permissions ?? [];
 
+describe('default roles: finance figures', () => {
+    it('every role that reads counterparties also reads their balance, turnover and credit', () => {
+        const readers = DEFAULT_ROLES.filter(r => r.permissions.includes('ReadCounterparty'));
+        expect(readers.length).toBeGreaterThan(0);
+        for (const role of readers) {
+            expect(role.permissions, role.code).toContain('ReadCounterpartyCredit');
+        }
+    });
+});
+
 describe('default roles: check permissions (#237)', () => {
     it('every role that reads orders can read their check results', () => {
         const readers = DEFAULT_ROLES.filter(r => r.permissions.includes('ReadOrder'));
