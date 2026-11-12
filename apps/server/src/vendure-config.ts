@@ -1,4 +1,5 @@
 import path from 'path';
+import { SlowRequestLogPlugin } from './slow-request-log/slow-request-log.plugin';
 import { readFileSync } from 'fs';
 import {
     DefaultJobQueuePlugin,
@@ -606,6 +607,7 @@ export const config: VendureConfig = {
         DefaultJobQueuePlugin.init({}),
         // Recurring plugin work must use this: worker-only and DB-locked (DefaultSchedulerStrategy).
         DefaultSchedulerPlugin.init({}),
+        SlowRequestLogPlugin,
         // Dashboard is a standalone app, so no .init(): this registers only to expose the metricSummary query.
         DashboardPlugin,
         // Not in packages/plugins: @vendure/dashboard can't find extensions in pnpm-symlinked packages.
