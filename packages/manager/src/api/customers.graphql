@@ -18,6 +18,7 @@ fragment CustomerListItemFields on Counterparty {
         workingHours
         deliveryComment
         isActive
+        defects
         contacts {
             name
             phone

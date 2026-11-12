@@ -8,6 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { randomUUID } from 'crypto';
+import { Not } from 'typeorm';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { ActingContextService } from '@mivend/plugin-session-management';
 import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
@@ -309,8 +310,7 @@ export class TradingPointService {
         return rows[0] ? { id: rows[0].id, branchId: rows[0].branchId ?? null } : null;
     }
 
-    // Missing name/address for a new erpId means 'don't create yet', not an error.
-    // Same rule as the organization/counterparty null-name tombstones.
+    // A missing name (tombstone) for a new erpId means 'don't create'; a missing address still creates the point.
     async upsertFromStream(
         ctx: RequestContext,
         erpId: string,
@@ -335,21 +335,12 @@ export class TradingPointService {
                 );
                 return;
             }
-            if (!fields.address) {
-                // Not a silent skip: if the ERP never sends an event with an address for this
-                // erpId, this point never appears at all and nothing else surfaces that.
-                Logger.warn(
-                    `trading point ${erpId}: no address yet, no existing row — deferring create`,
-                    loggerCtx,
-                );
-                return;
-            }
             record = repo.create({
                 erpId,
                 counterpartyId: fields.counterpartyId,
                 servicingBranchId: fields.servicingBranchId,
                 name: fields.name,
-                address: fields.address,
+                address: fields.address ?? '',
                 latitude: usable ? fields.latitude! : null,
                 longitude: usable ? fields.longitude! : null,
                 workingHours: null,
@@ -360,6 +351,7 @@ export class TradingPointService {
             // mivend's record is the source of truth; the ERP only moves activity and ownership.
             record.isActive = fields.isActive;
             record.counterpartyId = fields.counterpartyId;
+            if (!record.address && fields.address) record.address = fields.address;
         }
 
         await repo.save(record);
@@ -391,7 +383,7 @@ export class TradingPointService {
         return this.connection.getRepository(ctx, TradingPoint).find({
             where: {
                 counterpartyId: String(counterpartyId),
-                ...(ctx.apiType === 'admin' ? {} : { isActive: true }),
+                ...(ctx.apiType === 'admin' ? {} : { isActive: true, address: Not('') }),
             },
             relations: ['contacts'],
             order: { name: 'ASC' },
@@ -410,7 +402,7 @@ export class TradingPointService {
         const counterpartyId = await this.getCounterpartyIdForUser(ctx);
         if (!counterpartyId) return null;
         return this.connection.getRepository(ctx, TradingPoint).findOne({
-            where: { id: String(id), counterpartyId, isActive: true },
+            where: { id: String(id), counterpartyId, isActive: true, address: Not('') },
             relations: ['contacts'],
         });
     }
@@ -424,9 +416,9 @@ export class TradingPointService {
         if (acting?.tradingPointId) return this.findById(ctx, acting.tradingPointId);
         const pick = `COALESCE(
                  (SELECT tp.id::text FROM trading_point tp WHERE tp.id::text = cu."customFieldsPreferredtradingpointid"
-                    AND tp."isActive" AND tp."customerStatus" = 'active'),
+                    AND tp."isActive" AND tp.address <> '' AND tp."customerStatus" = 'active'),
                  (SELECT tp.id::text FROM trading_point tp WHERE tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
-                    AND tp."isActive" AND tp."customerStatus" = 'active' ORDER BY tp.name, tp.id LIMIT 1),
+                    AND tp."isActive" AND tp.address <> '' AND tp."customerStatus" = 'active' ORDER BY tp.name, tp.id LIMIT 1),
                  cu."customFieldsPreferredtradingpointid")`;
         const rows = await ctxQuery<TpRow[] | [TpRow[], number]>(
             this.connection,
@@ -466,7 +458,7 @@ export class TradingPointService {
             ctx,
             `SELECT tp.id FROM trading_point tp
              JOIN customer cu ON tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
-             WHERE cu.id = $1 AND tp.id::text = $2 AND tp."isActive" AND tp."customerStatus" = 'active'`,
+             WHERE cu.id = $1 AND tp.id::text = $2 AND tp."isActive" AND tp.address <> '' AND tp."customerStatus" = 'active'`,
             [customerId, String(tradingPointId)],
         );
         if (!rows[0]) throw new UserInputError(`TradingPoint not found or access denied`);
@@ -509,6 +501,7 @@ export class TradingPointService {
             where: {
                 counterpartyId: String(counterpartyId),
                 isActive: true,
+                address: Not(''),
                 customerStatus: 'active',
             },
             relations: ['contacts'],

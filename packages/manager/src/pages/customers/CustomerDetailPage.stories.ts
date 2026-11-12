@@ -86,6 +86,7 @@ function mockCustomerDetailData(): void {
                     workingHours: '09:00-18:00',
                     deliveryComment: null,
                     isActive: true,
+                    defects: [],
                     contacts: [
                         {
                             name: 'Ivan Petrov',

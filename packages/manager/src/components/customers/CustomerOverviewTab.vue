@@ -8,6 +8,7 @@ import {
     type TradingPointInfo,
 } from '../../api/customers';
 import { useCurrency } from '../../composables/useCurrency';
+import { tradingPointDefectLabel } from './tradingPointDefects';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 import TradingPointPendingChange from './TradingPointPendingChange.vue';
 import EntityChangeJournal from '../change-journal/EntityChangeJournal.vue';
@@ -107,11 +108,13 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                     <div>
                         <strong>{{ tp.name }}</strong>
                         <div class="overview-tab__contact-meta">{{ tp.address }}</div>
-                        <div
-                            v-if="tp.latitude == null || tp.longitude == null"
-                            class="overview-tab__contact-meta overview-tab__no-location"
-                        >
-                            No location set
+                        <div v-if="tp.defects.length" class="overview-tab__tp-defects">
+                            <MvStatusBadge v-for="d in tp.defects" :key="d" variant="warning">
+                                {{ tradingPointDefectLabel(d) }}
+                            </MvStatusBadge>
+                            <div class="overview-tab__contact-meta overview-tab__no-location">
+                                The customer cannot use this point
+                            </div>
                         </div>
                     </div>
                     <div class="overview-tab__tp-actions">
@@ -185,6 +188,13 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__journal-title {
     margin: 0 0 12px;
     font-size: 16px;
+}
+
+.overview-tab__tp-defects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: center;
 }
 
 .overview-tab__no-location {

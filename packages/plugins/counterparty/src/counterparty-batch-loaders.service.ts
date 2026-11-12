@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CtxLoader, ctxQuery } from 'shared';
-import { In } from 'typeorm';
+import { In, Not } from 'typeorm';
 
 import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
 import { ContactPointService, type ChosenContact } from './contact-point.service';
@@ -81,7 +81,7 @@ export class CounterpartyBatchLoaders {
         const rows = await this.connection.getRepository(ctx, TradingPoint).find({
             where: {
                 counterpartyId: In([...keys]),
-                ...(ctx.apiType === 'admin' ? {} : { isActive: true }),
+                ...(ctx.apiType === 'admin' ? {} : { isActive: true, address: Not('') }),
             },
             relations: ['contacts'],
             order: { name: 'ASC' },

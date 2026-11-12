@@ -38,6 +38,7 @@ export const tradingPointFields = gql`
         servicingBranchId: String
         contacts: [ContactPerson!]!
         pendingChange: TradingPointChange
+        defects: [String!]!
     }
 `;
 
