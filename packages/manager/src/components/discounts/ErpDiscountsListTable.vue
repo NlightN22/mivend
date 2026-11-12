@@ -19,6 +19,7 @@ import TableViewsMenu from '../TableViewsMenu.vue';
 import { ERP_DISCOUNTS_COLUMNS, ERP_DISCOUNTS_HIDDEN_BY_DEFAULT } from './erpDiscountsColumns';
 import type { ErpDiscountRow } from './erpDiscountsRows';
 import { erpSortFromState, erpSortToState } from './erpDiscountsSort';
+import { formatDate } from '../../i18n/format';
 
 const props = defineProps<{
     rows: ErpDiscountRow[];
@@ -124,7 +125,7 @@ function applyView(state: TableViewState): void {
     emit('update:filters', restoreErpDiscountsFilters(state.filters));
 }
 
-const dateLabel = (value: string): string => new Date(value).toLocaleDateString('en-US');
+const dateLabel = (value: string): string => formatDate(value);
 </script>
 
 <template>
