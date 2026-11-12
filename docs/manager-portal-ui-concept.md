@@ -322,6 +322,9 @@ and the same proforma-derived scope as `visiblePayments`, a foreign, unknown or 
 summaries are batched per request (`PaymentCardLoader`); the `PaymentCard` type exists in the Admin
 schema only.
 
+Balance and turnover figures on the customer card and the dashboard follow `docs/customer-metrics.md`: the balance is
+always the real total, never filtered by contracts or document visibility.
+
 ## Not implemented yet
 
 Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,
