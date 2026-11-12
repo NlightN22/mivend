@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const POINT_NAME = 'E2E Trading Point';
+const POINT_NAME = 'E2E Pending Point';
 
 test.describe('Editing an ERP trading point', () => {
     test('the edit waits for a manager and the point keeps its data', async ({ page }) => {

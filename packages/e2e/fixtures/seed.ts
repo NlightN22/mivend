@@ -361,6 +361,18 @@ export const seedRecords = [
             isActive: true,
         },
     },
+    // Only trading-point-pending.spec.ts edits this one, so manager specs that rename the others cannot break it.
+    {
+        type: 'tradingPoint' as const,
+        data: {
+            erpId: 'e2e-tp-005',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            name: 'E2E Pending Point',
+            address: 'Pending Lane 5',
+            ...SEED_LOCATION,
+            isActive: true,
+        },
+    },
     // Deliberately inactive — the Reactivate-flow e2e positive case (customers.spec.ts).
     {
         type: 'tradingPoint' as const,
