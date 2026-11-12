@@ -2,6 +2,8 @@ import type en from '../en/ui';
 
 const ui: typeof en = {
     filter: 'Фильтр',
+    activeFilters: 'Активные фильтры:',
+    clearFilters: 'Сбросить фильтры',
     filterBy: 'Фильтровать по',
     removeFilter: 'Убрать фильтр «{label}»',
     views: 'Виды',

@@ -3,18 +3,21 @@
 // described chips (label + key), this component only renders and forwards remove/clear-all
 // intent. Kept separate from the per-column filter popovers themselves so it can sit anywhere in
 // a table's toolbar without depending on the registry/config types those use.
+import { useUiLabels } from '../../utils/uiLabels';
+
 export interface ActiveFilterChip {
     key: string;
     label: string;
 }
 
 defineProps<{ chips: ActiveFilterChip[] }>();
+const label = useUiLabels();
 const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
 </script>
 
 <template>
     <div v-if="chips.length" class="mv-active-filter-chips">
-        <span class="mv-active-filter-chips__label">Active filters:</span>
+        <span class="mv-active-filter-chips__label">{{ label('activeFilters', 'Active filters:') }}</span>
         <span v-for="chip in chips" :key="chip.key" class="mv-active-filter-chips__chip">
             {{ chip.label }}
             <button
@@ -26,7 +29,7 @@ const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
             </button>
         </span>
         <button type="button" class="mv-active-filter-chips__clear-all" @click="emit('clear-all')">
-            Clear filters
+            {{ label('clearFilters', 'Clear filters') }}
         </button>
     </div>
 </template>

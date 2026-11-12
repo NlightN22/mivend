@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
             data-testid="filter-clear"
             @click="commit([])"
         >
-            Clear filters
+            {{ label('clearFilters', 'Clear filters') }}
         </button>
         <Teleport to="body">
             <div

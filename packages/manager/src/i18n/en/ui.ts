@@ -1,5 +1,7 @@
 export default {
     filter: 'Filter',
+    activeFilters: 'Active filters:',
+    clearFilters: 'Clear filters',
     filterBy: 'Filter by',
     removeFilter: 'Remove {label} filter',
     views: 'Views',
