@@ -2643,6 +2643,69 @@ export type DiscountRuleInput = {
     validTo: Scalars['DateTime']['input'];
 };
 
+export type DiscountSetupCounterparty = {
+    contractErpId: Maybe<Scalars['String']['output']>;
+    /** Null when the recipient counterparty is not imported. */
+    id: Maybe<Scalars['ID']['output']>;
+    name: Scalars['String']['output'];
+};
+
+export type DiscountSetupCounts = {
+    all: Scalars['Int']['output'];
+    expired: Scalars['Int']['output'];
+    expiringSoon: Scalars['Int']['output'];
+    inactive: Scalars['Int']['output'];
+    running: Scalars['Int']['output'];
+    upcoming: Scalars['Int']['output'];
+};
+
+export type DiscountSetupList = {
+    items: Array<DiscountSetupRow>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type DiscountSetupListOptions = {
+    /** Only setups naming this counterparty, plus the ones that apply to everyone. */
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    /** Document number (displayed or stored form) or a visible recipient's legal or short name. */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Default: validFrom descending, then id descending. */
+    sort?: InputMaybe<DiscountSetupSort>;
+    /** running | expiring-soon | upcoming | expired | inactive; disjoint, so the counts add up. */
+    status?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** One ERP discount setup document; ERP-owned, identified by its document number. */
+export type DiscountSetupRow = {
+    allProducts: Scalars['Boolean']['output'];
+    /** Only the recipients inside the caller's counterparty scope. */
+    counterparties: Array<DiscountSetupCounterparty>;
+    documentNumber: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    inactiveReason: Maybe<Scalars['String']['output']>;
+    /** Negative is a markup. */
+    percent: Scalars['Float']['output'];
+    priceTypeCode: Maybe<Scalars['String']['output']>;
+    /** Listed products; 0 for all products or a filter-mode selection. */
+    productCount: Scalars['Int']['output'];
+    /** list or filter */
+    productMode: Scalars['String']['output'];
+    /** Distinct recipient counterparties in total, in scope or not; 0 = applies to everyone. */
+    recipientCount: Scalars['Int']['output'];
+    status: Scalars['String']['output'];
+    validFrom: Scalars['DateTime']['output'];
+    validTo: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type DiscountSetupSort = {
+    direction: SortOrder;
+    field: DiscountSetupSortField;
+};
+
+export type DiscountSetupSortField = 'documentNumber' | 'percent' | 'validFrom' | 'validTo';
+
 export type Dispute = {
     amount: Scalars['Int']['output'];
     id: Scalars['ID']['output'];
@@ -8395,6 +8458,8 @@ export type Query = {
     discountLimits: Array<DiscountLimit>;
     discountRegistryPage: DiscountRegistryEntryList;
     discountRules: Array<DiscountRule>;
+    discountSetupCounts: DiscountSetupCounts;
+    discountSetups: DiscountSetupList;
     documentTypes: Array<Scalars['String']['output']>;
     documents: DocumentList;
     /** Returns a list of eligible shipping methods for the draft Order */
@@ -8804,6 +8869,14 @@ export type QueryDiscountRegistryPageArgs = {
 
 export type QueryDiscountRulesArgs = {
     priceTypeCode?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryDiscountSetupCountsArgs = {
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type QueryDiscountSetupsArgs = {
+    options?: InputMaybe<DiscountSetupListOptions>;
 };
 
 export type QueryDocumentTypesArgs = {
@@ -12760,6 +12833,66 @@ export type DiscountLimitScopeOptionsQuery = {
     discountLimitScopeOptions: Array<{ ref: string; name: string }>;
 };
 
+export type DiscountSetupRowFieldsFragment = {
+    id: string;
+    documentNumber: string;
+    percent: number;
+    validFrom: any;
+    validTo: any | null;
+    status: string;
+    inactiveReason: string | null;
+    priceTypeCode: string | null;
+    allProducts: boolean;
+    productMode: string;
+    productCount: number;
+    recipientCount: number;
+    counterparties: Array<{ id: string | null; name: string; contractErpId: string | null }>;
+};
+
+export type DiscountSetupsPageQueryVariables = Exact<{
+    options?: InputMaybe<DiscountSetupListOptions>;
+}>;
+
+export type DiscountSetupsPageQuery = {
+    discountSetups: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            documentNumber: string;
+            percent: number;
+            validFrom: any;
+            validTo: any | null;
+            status: string;
+            inactiveReason: string | null;
+            priceTypeCode: string | null;
+            allProducts: boolean;
+            productMode: string;
+            productCount: number;
+            recipientCount: number;
+            counterparties: Array<{
+                id: string | null;
+                name: string;
+                contractErpId: string | null;
+            }>;
+        }>;
+    };
+};
+
+export type DiscountSetupCountsQueryVariables = Exact<{
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type DiscountSetupCountsQuery = {
+    discountSetupCounts: {
+        all: number;
+        running: number;
+        expiringSoon: number;
+        upcoming: number;
+        expired: number;
+        inactive: number;
+    };
+};
+
 export type DiscountRegistryItemFieldsFragment = {
     id: string;
     uuid: string;
@@ -15086,6 +15219,30 @@ export const DepartmentBranchNodeFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'DepartmentBranchNodeFields' },
 ) as unknown as TypedDocumentString<DepartmentBranchNodeFieldsFragment, unknown>;
+export const DiscountSetupRowFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment DiscountSetupRowFields on DiscountSetupRow {
+  id
+  documentNumber
+  percent
+  validFrom
+  validTo
+  status
+  inactiveReason
+  priceTypeCode
+  allProducts
+  productMode
+  productCount
+  recipientCount
+  counterparties {
+    id
+    name
+    contractErpId
+  }
+}
+    `,
+    { fragmentName: 'DiscountSetupRowFields' },
+) as unknown as TypedDocumentString<DiscountSetupRowFieldsFragment, unknown>;
 export const DiscountRegistryItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment DiscountRegistryItemFields on DiscountRegistryEntry {
@@ -16888,6 +17045,49 @@ export const DiscountLimitScopeOptionsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     DiscountLimitScopeOptionsQuery,
     DiscountLimitScopeOptionsQueryVariables
+>;
+export const DiscountSetupsPageDocument = new TypedDocumentString(`
+    query DiscountSetupsPage($options: DiscountSetupListOptions) {
+  discountSetups(options: $options) {
+    totalItems
+    items {
+      ...DiscountSetupRowFields
+    }
+  }
+}
+    fragment DiscountSetupRowFields on DiscountSetupRow {
+  id
+  documentNumber
+  percent
+  validFrom
+  validTo
+  status
+  inactiveReason
+  priceTypeCode
+  allProducts
+  productMode
+  productCount
+  recipientCount
+  counterparties {
+    id
+    name
+    contractErpId
+  }
+}`) as unknown as TypedDocumentString<DiscountSetupsPageQuery, DiscountSetupsPageQueryVariables>;
+export const DiscountSetupCountsDocument = new TypedDocumentString(`
+    query DiscountSetupCounts($counterpartyId: ID) {
+  discountSetupCounts(counterpartyId: $counterpartyId) {
+    all
+    running
+    expiringSoon
+    upcoming
+    expired
+    inactive
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DiscountSetupCountsQuery,
+    DiscountSetupCountsQueryVariables
 >;
 export const DiscountRegistryPageDocument = new TypedDocumentString(`
     query DiscountRegistryPage($options: DiscountRegistryListOptions) {

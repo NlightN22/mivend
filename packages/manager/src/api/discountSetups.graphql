@@ -1,0 +1,39 @@
+fragment DiscountSetupRowFields on DiscountSetupRow {
+    id
+    documentNumber
+    percent
+    validFrom
+    validTo
+    status
+    inactiveReason
+    priceTypeCode
+    allProducts
+    productMode
+    productCount
+    recipientCount
+    counterparties {
+        id
+        name
+        contractErpId
+    }
+}
+
+query DiscountSetupsPage($options: DiscountSetupListOptions) {
+    discountSetups(options: $options) {
+        totalItems
+        items {
+            ...DiscountSetupRowFields
+        }
+    }
+}
+
+query DiscountSetupCounts($counterpartyId: ID) {
+    discountSetupCounts(counterpartyId: $counterpartyId) {
+        all
+        running
+        expiringSoon
+        upcoming
+        expired
+        inactive
+    }
+}
