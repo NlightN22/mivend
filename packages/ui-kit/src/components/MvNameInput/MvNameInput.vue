@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
+import type { InputSize } from '../MvInput/MvInput.vue';
 import { applyNameInput } from '../../utils/contactFormat';
 
 defineProps<{
@@ -8,6 +9,7 @@ defineProps<{
     placeholder?: string;
     disabled?: boolean;
     error?: boolean;
+    size?: InputSize;
     autocomplete?: string;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
@@ -33,6 +35,7 @@ function onInput(raw: string): void {
             :placeholder="placeholder"
             :disabled="disabled"
             :error="error"
+            :size="size"
             @update:model-value="onInput"
         />
     </div>

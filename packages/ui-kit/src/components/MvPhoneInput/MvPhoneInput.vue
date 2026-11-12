@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
+import type { InputSize } from '../MvInput/MvInput.vue';
 import { applyPhoneInput } from '../../utils/phoneFormat';
 
 const props = defineProps<{
@@ -8,6 +9,7 @@ const props = defineProps<{
     placeholder?: string;
     disabled?: boolean;
     error?: boolean;
+    size?: InputSize;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
 
@@ -44,6 +46,7 @@ function onInput(raw: string): void {
             :placeholder="placeholder ?? '+7 900 000-00-00'"
             :disabled="disabled"
             :error="error"
+            :size="size"
             @update:model-value="onInput"
         />
     </div>

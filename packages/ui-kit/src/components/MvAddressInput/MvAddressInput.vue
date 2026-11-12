@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
+import type { InputSize } from '../MvInput/MvInput.vue';
 import { useDebouncedCallback } from '../../composables/useDebouncedCallback';
 import { useLatestRequest } from '../../composables/useLatestRequest';
 
@@ -9,6 +10,7 @@ const props = defineProps<{
     fetchSuggestions: (query: string) => Promise<string[]>;
     placeholder?: string;
     error?: boolean;
+    size?: InputSize;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
 
@@ -80,6 +82,7 @@ function onFocusout(event: FocusEvent): void {
             :maxlength="300"
             :placeholder="placeholder"
             :error="error"
+            :size="size"
             @update:model-value="onInput"
         />
         <ul v-if="open" class="mv-address__list" role="listbox">

@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
-import { MvAddressInput, MvFormField, MvInput, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
+import {
+    MvAddressInput,
+    MvFormField,
+    MvInput,
+    MvNameInput,
+    MvPhoneInput,
+    MvWorkingHoursInput,
+} from '@mivend/ui-kit';
 import type { GeoPoint } from '@mivend/ui-kit';
 import TradingPointLocation from './TradingPointLocation.vue';
 import type { TradingPointAddForm } from './useTradingPoints';
@@ -83,7 +90,7 @@ const location = computed<GeoPoint | null>({
             />
         </MvFormField>
         <MvFormField class="tp-field--wide" :label="$t('tradingPoints.field.hours')">
-            <MvInput
+            <MvWorkingHoursInput
                 v-model="model.workingHours"
                 :placeholder="$t('tradingPoints.field.hoursPlaceholder')"
             />

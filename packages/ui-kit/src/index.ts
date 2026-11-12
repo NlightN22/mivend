@@ -68,6 +68,21 @@ export { default as MvAddressInput } from './components/MvAddressInput/MvAddress
 export { default as MvNameInput } from './components/MvNameInput/MvNameInput.vue';
 export { formatPersonName, isValidPersonName } from './utils/contactFormat';
 export { isValidPhone } from './utils/phoneFormat';
+export { default as MvEmailInput } from './components/MvEmailInput/MvEmailInput.vue';
+export { default as MvWorkingHoursInput } from './components/MvWorkingHoursInput/MvWorkingHoursInput.vue';
+export {
+    contactRowErrors,
+    formatEmail,
+    isValidAddress,
+    isValidEmail,
+    isValidWorkingHours,
+    tradingPointFieldErrors,
+} from './utils/fieldValidation';
+export type {
+    ContactRowValues,
+    TradingPointFieldKey,
+    TradingPointFieldValues,
+} from './utils/fieldValidation';
 export { default as MvPasswordInput } from './components/MvPasswordInput/MvPasswordInput.vue';
 
 export { default as MvNotice } from './components/MvNotice/MvNotice.vue';
