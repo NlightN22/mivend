@@ -4133,6 +4133,7 @@ export type SettlementBalanceCard = {
     organizationId: Scalars['String']['output'];
     organizationName?: Maybe<Scalars['String']['output']>;
     overdue: Scalars['Money']['output'];
+    unexplained: Scalars['Money']['output'];
 };
 
 export type SettlementDocumentFilter = {
@@ -4471,6 +4472,8 @@ export type TradingPoint = {
     contacts: Array<ContactPerson>;
     customerOwned: Scalars['Boolean']['output'];
     customerStatus: Scalars['String']['output'];
+    customerUsable: Scalars['Boolean']['output'];
+    defects: Array<Scalars['String']['output']>;
     deliveryComment?: Maybe<Scalars['String']['output']>;
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -5785,6 +5788,7 @@ export type SettlementBalancesQuery = {
         openingBalance: any;
         currentBalance: any;
         overdue: any;
+        unexplained: any;
     }>;
 };
 
@@ -7455,6 +7459,7 @@ export const SettlementBalancesDocument = new TypedDocumentString(`
     openingBalance
     currentBalance
     overdue
+    unexplained
   }
 }
     `) as unknown as TypedDocumentString<SettlementBalancesQuery, SettlementBalancesQueryVariables>;
