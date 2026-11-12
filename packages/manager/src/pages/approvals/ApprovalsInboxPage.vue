@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import ApprovalsList from '../../components/approvals/ApprovalsList.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 </script>
 
@@ -10,8 +12,8 @@ const authStore = useAuthStore();
     <div class="approvals-page">
         <div class="approvals-page__header">
             <div>
-                <div class="approvals-page__breadcrumb">Workspace / Approvals</div>
-                <h1 class="approvals-page__title">Approvals</h1>
+                <div class="approvals-page__breadcrumb">{{ t('approvals.page.breadcrumb') }}</div>
+                <h1 class="approvals-page__title">{{ t('approvals.page.title') }}</h1>
             </div>
             <MvStatusBadge variant="info">{{
                 authStore.roleLabel ?? authStore.roleCode

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useCurrency } from '../../composables/useCurrency';
 import type {
     ApprovalRequestDetail,
     OrderReference,
     CounterpartyReference,
 } from '../../api/approvals';
+
+const { t } = useI18n();
 
 const props = defineProps<{
     request: ApprovalRequestDetail;
@@ -50,10 +53,21 @@ const stepRows = computed<DetailRow[]>(() => {
     const step = r.steps.find(s => s.stepIndex === r.currentStepIndex);
     return [
         {
-            label: 'Current step',
-            value: `${r.currentStepIndex + 1} of ${r.totalSteps} · ${r.currentStepRole ?? '—'}`,
+            label: t('approvals.details.currentStep'),
+            value: t('approvals.details.currentStepValue', {
+                n: r.currentStepIndex + 1,
+                total: r.totalSteps,
+                role: r.currentStepRole ?? '—',
+            }),
         },
-        ...(step?.wasEscalated ? [{ label: 'Escalated', value: 'to a named approver' }] : []),
+        ...(step?.wasEscalated
+            ? [
+                  {
+                      label: t('approvals.details.escalated'),
+                      value: t('approvals.details.escalatedValue'),
+                  },
+              ]
+            : []),
     ];
 });
 
@@ -61,27 +75,44 @@ const rows = computed<DetailRow[]>(() => {
     const p = payload.value;
     if (props.request.requestType === 'priceAdjustmentApproval') {
         return [
-            { label: 'Order', value: props.orderReference?.code ?? `#${p.orderId as string}` },
-            { label: 'Customer', value: props.orderReference?.customerName ?? '—' },
-            { label: 'Justification', value: (p.justification as string | null) ?? '—' },
+            {
+                label: t('approvals.details.order'),
+                value: props.orderReference?.code ?? `#${p.orderId as string}`,
+            },
+            {
+                label: t('approvals.details.customer'),
+                value: props.orderReference?.customerName ?? '—',
+            },
+            {
+                label: t('approvals.details.justification'),
+                value: (p.justification as string | null) ?? '—',
+            },
         ];
     }
     if (props.request.requestType === 'discountGrantApproval') {
         return [
-            { label: 'Price type', value: p.priceTypeCode as string },
-            { label: 'Applies to', value: (p.facetValueCode as string | null) ?? 'All products' },
-            { label: 'Discount', value: `${p.percent as number}%` },
+            { label: t('approvals.details.priceType'), value: p.priceTypeCode as string },
             {
-                label: 'Valid from',
+                label: t('approvals.details.appliesTo'),
+                value: (p.facetValueCode as string | null) ?? t('approvals.details.allProducts'),
+            },
+            { label: t('approvals.details.discount'), value: `${p.percent as number}%` },
+            {
+                label: t('approvals.details.validFrom'),
                 value: formatDate(p.validFrom as string),
             },
-            { label: 'Valid to', value: formatDate(p.validTo as string) },
-            { label: 'Justification', value: (p.requestedByJustification as string | null) ?? '—' },
+            { label: t('approvals.details.validTo'), value: formatDate(p.validTo as string) },
+            {
+                label: t('approvals.details.justification'),
+                value: (p.requestedByJustification as string | null) ?? '—',
+            },
             ...(p.supersedesDiscountRuleId
                 ? [
                       {
-                          label: 'Supersedes',
-                          value: `Discount rule #${p.supersedesDiscountRuleId as string}`,
+                          label: t('approvals.details.supersedes'),
+                          value: t('approvals.details.supersedesValue', {
+                              id: p.supersedesDiscountRuleId as string,
+                          }),
                       },
                   ]
                 : []),
@@ -90,19 +121,22 @@ const rows = computed<DetailRow[]>(() => {
     // creditTermApproval / creditTermApprovalEscalated
     return [
         {
-            label: 'Customer',
+            label: t('approvals.details.customer'),
             value: props.counterpartyReference?.shortName ?? (p.counterpartyErpId as string),
         },
-        { label: 'Extra days requested', value: String(p.requestedExtraDays) },
+        { label: t('approvals.details.extraDays'), value: String(p.requestedExtraDays) },
         ...(p.requestedAmount != null
             ? [
                   {
-                      label: 'Amount',
+                      label: t('approvals.details.amount'),
                       value: money(p.requestedAmount as number),
                   },
               ]
             : []),
-        { label: 'Justification', value: (p.justification as string | null) ?? '—' },
+        {
+            label: t('approvals.details.justification'),
+            value: (p.justification as string | null) ?? '—',
+        },
     ];
 });
 </script>
@@ -112,7 +146,7 @@ const rows = computed<DetailRow[]>(() => {
         <div class="request-details__line-product">
             <div class="request-details__line-name">{{ orderLine.productName }}</div>
             <div class="request-details__line-sku">
-                {{ orderLine.sku }} · qty {{ orderLine.quantity }}
+                {{ orderLine.sku }} · {{ t('approvals.details.quantity', { n: orderLine.quantity }) }}
             </div>
         </div>
         <div class="request-details__line-prices">

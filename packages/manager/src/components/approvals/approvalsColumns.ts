@@ -1,19 +1,20 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 import { REQUEST_TYPE_LABEL } from '../../api/approvals';
+import { lazyLabels, tr } from '../../utils/lazyLabels';
 
 const NOT_FILTERED = { type: 'none' } as const;
 
-export const APPROVAL_STATUS_LABEL: Record<string, string> = {
-    pending: 'Pending',
-    approved: 'Approved',
-    rejected: 'Rejected',
-};
+export const APPROVAL_STATUS_LABEL = lazyLabels('approvals.status', [
+    'pending',
+    'approved',
+    'rejected',
+]);
 
+// Headers and option labels resolve on read, so the table follows a language switch.
 // Visible widths sum to 1060 and fit the 1088px table of a 1360px page; Current step opens hidden.
-export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const COLUMNS: Omit<AdvancedDataTableColumn, 'header'>[] = [
     {
         field: 'id',
-        header: 'Request #',
         sortField: 'id',
         width: 130,
         minWidth: 130,
@@ -24,22 +25,16 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'type',
-        header: 'Type',
         sortField: 'requestType',
         width: 190,
         minWidth: 170,
         priority: 9,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
-        filterOptions: Object.entries(REQUEST_TYPE_LABEL).map(([value, label]) => ({
-            value,
-            label,
-        })),
         filterOperators: ['eq', 'in'],
     },
     {
         field: 'subject',
-        header: 'Subject',
         width: 220,
         minWidth: 160,
         priority: 8,
@@ -47,7 +42,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'requested',
-        header: 'Requested',
         width: 120,
         minWidth: 110,
         priority: 5,
@@ -56,7 +50,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'requestedBy',
-        header: 'Requested by',
         width: 150,
         minWidth: 120,
         priority: 6,
@@ -67,7 +60,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'step',
-        header: 'Current step',
         width: 150,
         minWidth: 130,
         priority: 3,
@@ -76,7 +68,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'createdAt',
-        header: 'Submitted',
         sortField: 'createdAt',
         width: 120,
         minWidth: 120,
@@ -86,20 +77,30 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'status',
-        header: 'Status',
         sortField: 'status',
         width: 120,
         minWidth: 120,
         priority: 4,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
-        filterOptions: Object.entries(APPROVAL_STATUS_LABEL).map(([value, label]) => ({
-            value,
-            label,
-        })),
         filterOperators: ['eq', 'in'],
         mobile: { badge: true },
     },
 ];
+
+const LAZY_OPTIONS: Record<string, () => { value: string; label: string }[]> = {
+    type: () => Object.entries(REQUEST_TYPE_LABEL).map(([value, label]) => ({ value, label })),
+    status: () => Object.entries(APPROVAL_STATUS_LABEL).map(([value, label]) => ({ value, label })),
+};
+
+export const ALL_COLUMNS: AdvancedDataTableColumn[] = COLUMNS.map(column => {
+    const lazy = Object.defineProperty({ ...column }, 'header', {
+        enumerable: true,
+        get: () => tr(`approvals.columns.${column.field}`),
+    }) as AdvancedDataTableColumn;
+    const options = LAZY_OPTIONS[column.field];
+    if (options) Object.defineProperty(lazy, 'filterOptions', { enumerable: true, get: options });
+    return lazy;
+});
 
 export const DEFAULT_HIDDEN_COLUMNS: string[] = ['step'];

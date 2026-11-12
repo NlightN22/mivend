@@ -1,4 +1,5 @@
 import type { ApprovalRequestDetail } from '../../api/approvals';
+import { tr } from '../../utils/lazyLabels';
 
 type Flags = Pick<
     ApprovalRequestDetail,
@@ -8,9 +9,10 @@ type Flags = Pick<
 // Rejecting is allowed whenever the step permission holds, so approve-only refusal means the approval limit.
 export function decisionDisabledReason(r: Flags): string {
     if (r.status !== 'pending' || (r.viewerCanApprove && r.viewerCanReject)) return '';
-    if (r.viewerCanReject) {
-        return 'Your discount limit does not cover this request, so you can reject it but not approve it.';
-    }
-    if (r.viewerCanApprove) return 'You can approve this request but not reject it.';
-    return `Only ${r.currentStepRole ?? 'the current approver'} (or the person this step was escalated to) can decide step ${r.currentStepIndex + 1}.`;
+    if (r.viewerCanReject) return tr('approvals.decision.limitNotCovered');
+    if (r.viewerCanApprove) return tr('approvals.decision.approveOnly');
+    return tr('approvals.decision.notAllowed', {
+        role: r.currentStepRole ?? tr('approvals.decision.currentApprover'),
+        n: r.currentStepIndex + 1,
+    });
 }

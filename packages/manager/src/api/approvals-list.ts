@@ -6,14 +6,32 @@ import { toFilterColumns } from '@mivend/ui-kit/src/components/MvAdvancedDataTab
 import { ALL_COLUMNS } from '../components/approvals/approvalsColumns';
 import { ApprovalsInboxDocument } from './generated/graphql';
 import { adminApi } from './client';
+import { tr } from '../utils/lazyLabels';
 import type { ApprovalRequestPage } from './approvals';
 
 export type ApprovalsView = 'awaiting' | 'mine' | 'all';
 
-export const APPROVALS_VIEWS: { key: ApprovalsView; label: string }[] = [
-    { key: 'awaiting', label: 'Awaiting me' },
-    { key: 'mine', label: 'My requests' },
-    { key: 'all', label: 'All' },
+const viewLabel = (key: ApprovalsView): string => tr(`approvals.views.${key}`);
+
+export const APPROVALS_VIEWS: { key: ApprovalsView; readonly label: string }[] = [
+    {
+        key: 'awaiting',
+        get label() {
+            return viewLabel('awaiting');
+        },
+    },
+    {
+        key: 'mine',
+        get label() {
+            return viewLabel('mine');
+        },
+    },
+    {
+        key: 'all',
+        get label() {
+            return viewLabel('all');
+        },
+    },
 ];
 
 export type ApprovalSortField = 'id' | 'requestType' | 'status' | 'createdAt';

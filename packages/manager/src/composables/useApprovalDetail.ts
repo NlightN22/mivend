@@ -15,6 +15,7 @@ import { decisionDisabledReason } from '../components/approvals/approvalDecision
 import { parsePayload } from '../components/approvals/approvalsListRows';
 import type { SubjectLink } from '../components/approvals/ApprovalHeader.vue';
 import { useAuthStore } from '../stores/auth';
+import { tr } from '../utils/lazyLabels';
 
 export interface ApprovalDetailState {
     request: Ref<ApprovalRequestDetail | null>;
@@ -94,7 +95,10 @@ export function useApprovalDetail(): ApprovalDetailState {
         const order = orderReference.value;
         if (order)
             return {
-                label: `Order ${order.code} · ${order.customerName}`,
+                label: tr('approvals.rows.order', {
+                    code: order.code,
+                    customer: order.customerName,
+                }),
                 to: `/orders/${order.code}`,
             };
         const cp = counterpartyReference.value;
@@ -133,10 +137,10 @@ export function useApprovalDetail(): ApprovalDetailState {
                         decision,
                         comment || undefined,
                     );
-            }, 'Could not record the decision'),
+            }, tr('approvals.decision.recordFailed')),
         escalate: administratorId =>
             act(async () => {
                 if (request.value) await escalateApprovalRequest(request.value.id, administratorId);
-            }, 'Could not escalate the request'),
+            }, tr('approvals.decision.escalateFailed')),
     };
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPanel, MvNotice } from '@mivend/ui-kit';
 import { useApprovalDetail } from '../../composables/useApprovalDetail';
 import ApprovalHeader from '../../components/approvals/ApprovalHeader.vue';
@@ -9,6 +10,7 @@ import DecisionActions from '../../components/approvals/DecisionActions.vue';
 import { buildTimeline } from '../../components/approvals/approvalTimeline';
 import { managerName } from '../../components/approvals/approvalsListRows';
 
+const { t } = useI18n();
 const d = useApprovalDetail();
 const timeline = computed(() =>
     d.request.value ? buildTimeline(d.request.value, d.managers.value) : [],
@@ -17,8 +19,8 @@ const timeline = computed(() =>
 
 <template>
     <div v-if="d.notFound.value" class="approval-detail__not-found">
-        <h1>Request not found</h1>
-        <RouterLink to="/approvals">Back to approvals</RouterLink>
+        <h1>{{ t('approvals.notFound.title') }}</h1>
+        <RouterLink to="/approvals">{{ t('approvals.notFound.back') }}</RouterLink>
     </div>
 
     <div v-else-if="d.request.value" class="approval-detail">
@@ -34,7 +36,7 @@ const timeline = computed(() =>
 
         <div class="approval-detail__grid">
             <div class="approval-detail__main">
-                <MvPanel title="Request details">
+                <MvPanel :title="t('approvals.panels.details')">
                     <RequestDetailsCard
                         :request="d.request.value"
                         :order-reference="d.orderReference.value"
@@ -42,7 +44,10 @@ const timeline = computed(() =>
                     />
                 </MvPanel>
 
-                <MvPanel v-if="d.request.value.status === 'pending'" title="Decision">
+                <MvPanel
+                    v-if="d.request.value.status === 'pending'"
+                    :title="t('approvals.panels.decision')"
+                >
                     <DecisionActions
                         :escalates-to="d.request.value.escalatesTo"
                         :managers="d.managers.value"
@@ -58,7 +63,7 @@ const timeline = computed(() =>
                 </MvPanel>
             </div>
 
-            <MvPanel title="Steps and decisions" class="approval-detail__timeline">
+            <MvPanel :title="t('approvals.panels.timeline')" class="approval-detail__timeline">
                 <ApprovalTimeline :items="timeline" />
             </MvPanel>
         </div>

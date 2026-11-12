@@ -7,6 +7,7 @@ import {
 } from '../../api/approvals';
 import type { ManagerOption } from '../../api/orders';
 import { APPROVAL_STATUS_LABEL } from './approvalsColumns';
+import { tr } from '../../utils/lazyLabels';
 
 export type ApprovalListRow = {
     id: string;
@@ -52,10 +53,12 @@ function subjectOf(request: ApprovalRequestSummary, ctx: ApprovalRowContext): st
     const p = parsePayload(request.payload);
     if (request.requestType === 'priceAdjustmentApproval') {
         const ref = ctx.orders.get(String(p.orderId));
-        return ref ? `Order ${ref.code} · ${ref.customerName}` : `Order ${String(p.orderId)}`;
+        return ref
+            ? tr('approvals.rows.order', { code: ref.code, customer: ref.customerName })
+            : tr('approvals.rows.orderId', { id: String(p.orderId) });
     }
     if (request.requestType === 'discountGrantApproval') {
-        return `${String(p.priceTypeCode)} · ${(p.facetValueCode as string | null) ?? 'all products'}`;
+        return `${String(p.priceTypeCode)} · ${(p.facetValueCode as string | null) ?? tr('approvals.rows.allProducts')}`;
     }
     if (request.requestType.startsWith('creditTermApproval')) {
         return (
@@ -73,7 +76,7 @@ function requestedOf(request: ApprovalRequestSummary, ctx: ApprovalRowContext): 
     if (request.requestType === 'discountGrantApproval' && p.percent != null)
         return `${String(p.percent)}%`;
     if (request.requestType.startsWith('creditTermApproval') && p.requestedExtraDays != null)
-        return `+${String(p.requestedExtraDays)} days`;
+        return tr('approvals.rows.extraDays', { n: String(p.requestedExtraDays) });
     return '—';
 }
 
@@ -91,7 +94,11 @@ export function toApprovalRows(
             requestedBy: managerName(ctx.managers, r.requestedByAdministratorId),
             step:
                 r.status === 'pending'
-                    ? `${r.currentStepIndex + 1} of ${r.totalSteps} · ${r.currentStepRole ?? ''}`
+                    ? tr('approvals.rows.step', {
+                          n: r.currentStepIndex + 1,
+                          total: r.totalSteps,
+                          role: r.currentStepRole ?? '',
+                      })
                     : '—',
             createdAt: r.createdAt,
             status: APPROVAL_STATUS_LABEL[r.status] ?? r.status,

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { formatWhen, type TimelineItem } from './approvalTimeline';
 
+const { t } = useI18n();
 defineProps<{ items: TimelineItem[] }>();
 </script>
 
 <template>
-    <ol class="approval-timeline" aria-label="Approval steps and decisions">
+    <ol class="approval-timeline" :aria-label="t('approvals.timeline.ariaLabel')">
         <li
             v-for="item in items"
             :key="item.key"

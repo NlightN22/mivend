@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import { REQUEST_TYPE_LABEL, type ApprovalRequestDetail } from '../../api/approvals';
 import { APPROVAL_STATUS_LABEL } from './approvalsColumns';
@@ -10,6 +11,8 @@ export interface SubjectLink {
     label: string;
     to: string | null;
 }
+
+const { t } = useI18n();
 
 const props = defineProps<{
     request: ApprovalRequestDetail;
@@ -29,20 +32,25 @@ const escalated = computed(
 <template>
     <div class="approval-header">
         <div class="approval-header__breadcrumb">
-            <RouterLink to="/approvals">Approvals</RouterLink> / {{ request.id }}
+            <RouterLink to="/approvals">{{ t('approvals.header.breadcrumbRoot') }}</RouterLink> /
+            {{ request.id }}
         </div>
         <div class="approval-header__heading">
-            <h1 class="approval-header__title">Request {{ request.id }}</h1>
+            <h1 class="approval-header__title">
+                {{ t('approvals.header.title', { id: request.id }) }}
+            </h1>
             <MvStatusBadge variant="neutral">{{
                 REQUEST_TYPE_LABEL[request.requestType] ?? request.requestType
             }}</MvStatusBadge>
             <MvStatusBadge :variant="STATUS_VARIANT[request.status] ?? 'neutral'">{{
                 APPROVAL_STATUS_LABEL[request.status] ?? request.status
             }}</MvStatusBadge>
-            <MvStatusBadge v-if="escalated" variant="warning">Escalated</MvStatusBadge>
+            <MvStatusBadge v-if="escalated" variant="warning">{{
+                t('approvals.header.escalated')
+            }}</MvStatusBadge>
         </div>
         <p class="approval-header__meta">
-            <span>Requested by {{ requestedBy }}</span>
+            <span>{{ t('approvals.header.requestedBy', { name: requestedBy }) }}</span>
             <span>{{ formatWhen(request.createdAt) }}</span>
             <template v-if="subject">
                 <span aria-hidden="true">·</span>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
@@ -27,6 +28,8 @@ import {
     sortToState,
     type ApprovalsTableFilters,
 } from './approvalsTableState';
+
+const { t } = useI18n();
 
 const props = defineProps<{
     rows: ApprovalListRow[];
@@ -157,10 +160,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ApprovalListRow>): v
         data-key="id"
         :row-height-px="61"
         :header-height-px="65"
-        :search="{ filterKey: 'id', placeholder: 'Search by request #…' }"
+        :search="{ filterKey: 'id', placeholder: t('approvals.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="BLANK_TABLE_FILTERS"
-        empty-message="No requests match your filters"
+        :empty-message="t('approvals.list.empty')"
         @update:conditions="emit('update:filters', { ...filters, conditions: $event })"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -170,11 +173,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ApprovalListRow>): v
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load approvals"
-                message="Check the connection and try again."
+                :title="t('approvals.list.loadFailedTitle')"
+                :message="t('approvals.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No requests match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('approvals.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
@@ -209,9 +212,9 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ApprovalListRow>): v
                 <MvStatusBadge :variant="(data as ApprovalListRow).statusVariant">{{
                     (data as ApprovalListRow).status
                 }}</MvStatusBadge>
-                <MvStatusBadge v-if="(data as ApprovalListRow).escalated" variant="warning"
-                    >Escalated</MvStatusBadge
-                >
+                <MvStatusBadge v-if="(data as ApprovalListRow).escalated" variant="warning">{{
+                    t('approvals.header.escalated')
+                }}</MvStatusBadge>
             </div>
         </template>
     </MvAdvancedDataTable>

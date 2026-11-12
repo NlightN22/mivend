@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvSelect, MvNotice } from '@mivend/ui-kit';
 import type { ManagerOption } from '../../api/orders';
+
+const { t } = useI18n();
 
 const props = defineProps<{
     escalatesTo: string[];
@@ -35,7 +38,7 @@ const escalationCandidates = computed(() =>
 
 function handleReject(): void {
     if (!comment.value.trim()) {
-        error.value = 'A comment is required to reject a request';
+        error.value = t('approvals.decision.commentRequired');
         return;
     }
     error.value = '';
@@ -50,12 +53,12 @@ function handleEscalate(): void {
 
 <template>
     <div class="decision-actions">
-        <label class="decision-actions__label">Comment</label>
+        <label class="decision-actions__label">{{ t('approvals.decision.comment') }}</label>
         <textarea
             v-model="comment"
             class="decision-actions__comment"
             rows="3"
-            placeholder="Optional for approve, required for reject"
+            :placeholder="t('approvals.decision.commentPlaceholder')"
             :disabled="(!canApprove && !canReject) || busy"
         />
         <MvNotice v-if="disabledReason" variant="warning">{{ disabledReason }}</MvNotice>
@@ -66,10 +69,10 @@ function handleEscalate(): void {
                 variant="primary"
                 :disabled="!canApprove || busy"
                 @click="emit('approve', comment)"
-                >Approve</MvButton
+                >{{ t('approvals.decision.approve') }}</MvButton
             >
             <MvButton variant="danger" :disabled="!canReject || busy" @click="handleReject"
-                >Reject</MvButton
+                >{{ t('approvals.decision.reject') }}</MvButton
             >
             <button
                 v-if="escalationCandidates.length"
@@ -78,17 +81,20 @@ function handleEscalate(): void {
                 :disabled="busy"
                 @click="showEscalate = !showEscalate"
             >
-                Escalate to...
+                {{ t('approvals.decision.escalateTo') }}
             </button>
         </div>
 
         <div v-if="showEscalate" class="decision-actions__escalate">
             <MvSelect
                 v-model="escalateToId"
-                :options="[{ value: '', label: 'Select a person' }, ...escalationCandidates]"
+                :options="[
+                    { value: '', label: t('approvals.decision.selectPerson') },
+                    ...escalationCandidates,
+                ]"
             />
             <MvButton size="sm" :disabled="!escalateToId" @click="handleEscalate"
-                >Confirm escalation</MvButton
+                >{{ t('approvals.decision.confirmEscalation') }}</MvButton
             >
         </div>
     </div>

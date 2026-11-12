@@ -2,6 +2,7 @@ import { formatDateTime } from '../../i18n/format';
 import type { ApprovalRequestDetail } from '../../api/approvals';
 import type { ManagerOption } from '../../api/orders';
 import { managerName } from './approvalsListRows';
+import { tr } from '../../utils/lazyLabels';
 
 export type TimelineState = 'created' | 'done' | 'rejected' | 'escalated' | 'current' | 'upcoming';
 
@@ -24,21 +25,24 @@ export function buildTimeline(
         {
             key: 'created',
             state: 'created',
-            title: 'Request submitted',
-            meta: `by ${who(request.requestedByAdministratorId)}`,
+            title: tr('approvals.timeline.submitted'),
+            meta: tr('approvals.timeline.by', { name: who(request.requestedByAdministratorId) }),
             at: request.createdAt,
             comment: null,
         },
     ];
     request.stepRoles.forEach((role, index) => {
         const step = request.steps.find(s => s.stepIndex === index);
-        const label = `Step ${index + 1} of ${request.totalSteps} · ${role}`;
+        const stepParams = { n: index + 1, total: request.totalSteps, role };
         if (step?.wasEscalated) {
             items.push({
                 key: `escalated-${index}`,
                 state: 'escalated',
-                title: `${label} escalated`,
-                meta: `to ${who(step.escalatedToAdministratorId)} by ${who(step.escalatedByAdministratorId)}`,
+                title: tr('approvals.timeline.escalated', stepParams),
+                meta: tr('approvals.timeline.escalatedMeta', {
+                    to: who(step.escalatedToAdministratorId),
+                    by: who(step.escalatedByAdministratorId),
+                }),
                 at: null,
                 comment: null,
             });
@@ -48,8 +52,11 @@ export function buildTimeline(
             items.push({
                 key: `decision-${index}`,
                 state: approved ? 'done' : 'rejected',
-                title: `${label} ${approved ? 'approved' : 'rejected'}`,
-                meta: `by ${who(step.approverAdministratorId)}`,
+                title: tr(
+                    approved ? 'approvals.timeline.approved' : 'approvals.timeline.rejected',
+                    stepParams,
+                ),
+                meta: tr('approvals.timeline.by', { name: who(step.approverAdministratorId) }),
                 at: step.decidedAt,
                 comment: step.comment,
             });
@@ -57,7 +64,7 @@ export function buildTimeline(
             items.push({
                 key: `current-${index}`,
                 state: 'current',
-                title: `${label} awaiting decision`,
+                title: tr('approvals.timeline.awaiting', stepParams),
                 meta: '',
                 at: null,
                 comment: null,
@@ -66,8 +73,8 @@ export function buildTimeline(
             items.push({
                 key: `upcoming-${index}`,
                 state: 'upcoming',
-                title: label,
-                meta: 'not reached yet',
+                title: tr('approvals.timeline.step', stepParams),
+                meta: tr('approvals.timeline.notReached'),
                 at: null,
                 comment: null,
             });

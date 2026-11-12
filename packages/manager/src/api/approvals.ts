@@ -1,4 +1,5 @@
 import { adminApi } from './client';
+import { lazyLabels } from '../utils/lazyLabels';
 import {
     ApprovalCounterpartiesDocument,
     ApprovalDetailDocument,
@@ -30,12 +31,12 @@ export interface ApprovalsInbox {
 
 // requestType is set by the workflow engine, not ERP data — this table is the documented carve-out
 // creditTermApproval and escalated variant share one mutation; see CreditTermService.decideAndApply
-export const REQUEST_TYPE_LABEL: Record<string, string> = {
-    priceAdjustmentApproval: 'Price adjustment',
-    discountGrantApproval: 'Discount grant',
-    creditTermApproval: 'Payment term extension',
-    creditTermApprovalEscalated: 'Payment term extension (escalated)',
-};
+export const REQUEST_TYPE_LABEL = lazyLabels('approvals.requestType', [
+    'priceAdjustmentApproval',
+    'discountGrantApproval',
+    'creditTermApproval',
+    'creditTermApprovalEscalated',
+]);
 
 // Decide mutations must be distinct, statically-named operations: codegen rejects dynamic names
 // so dispatch by generated Document, not by a mutation-name string
