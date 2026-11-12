@@ -12,6 +12,9 @@ export type SetupKey =
 
 const day = 24 * 3600 * 1000;
 
+// Names no catalog product, so the seeded setups never change a price in another spec.
+const NO_SUCH_PRODUCT = 'e2e-setup-no-such-product';
+
 // A recipient of '' is an empty counterparty row (applies to everyone); [] is no recipient rows at all.
 export const SETUPS: Record<
     SetupKey,
@@ -81,7 +84,7 @@ export async function seedSetups(): Promise<void> {
                 erpId: `e2e-vis-setup-${key}`,
                 documentNumber: setupNumber(key),
                 counterpartyErpIds: SETUPS[key].recipients.map(r => (r ? clientErpId(r) : '')),
-                productErpId: null,
+                productErpId: NO_SUCH_PRODUCT,
                 condition: 'БезУсловий',
                 conditionValue: 0,
                 percent: SETUPS[key].percent,

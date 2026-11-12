@@ -48,13 +48,14 @@ export const VISIBLE_SETUPS: Record<ActorKey, SetupKey[]> = {
     ],
 };
 
+// The product names nothing in the catalog, so these setups never change a price in another test.
 export async function seedDiscountSetups(target: ImportTarget): Promise<void> {
     const validFrom = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
     const records = (Object.keys(SETUPS) as SetupKey[]).map(key => ({
         erpId: setupErpId(key),
         documentNumber: setupNumber(key),
         counterpartyErpIds: SETUPS[key].recipients.map(r => (r ? counterpartyErpId(r) : '')),
-        productErpId: null,
+        productErpId: 'access-setup-no-such-product',
         condition: 'БезУсловий',
         conditionValue: 0,
         percent: SETUPS[key].percent,
