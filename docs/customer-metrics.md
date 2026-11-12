@@ -42,6 +42,22 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 - 516 trading points sent by the ERP are not in the database: a point without an address is skipped by the stream
   handler ("deferring create") and the event is still marked applied. This contradicts rule 4.
 
+## Facts from the integration service (2026-11-12)
+
+- The source is an accumulation register, so unposted documents never arrive. Contracts marked for deletion are not
+  filtered: their documents flow, and their balance arrives in the key snapshot of every triple with a non-zero balance.
+  This is why rule 1 holds.
+- A repost keeps the document id and sends a newer `version`; unposting or deleting sends `isDeleted` for the same id.
+  There is no separate tombstone for the old date, so a recompute must cover the whole counterparty, not one day.
+- Document amounts are signed; there is no base-document link and no "kind of movement" field: the kind is the document
+  type only. A returned or corrected sale is tied to an order, if at all, through the order links of the entry.
+- There is no per-counterparty aggregate stream (30-day or 12-month turnover, average check, current debt): current debt
+  is the sum of the balance rows. Control aggregates could be added later as reconciliation figures.
+- All dates are UTC instants; the document date is the ERP's local document time converted to UTC (the exact
+  conversion per stream is being confirmed on the ERP side).
+- Trading points: about 650 of about 7,300 sent points have an empty address and about 100 carry latitude exactly 90, so
+  "incomplete point" is a normal state to show, not an exception.
+
 ## Metrics
 
 | Metric | Definition |
