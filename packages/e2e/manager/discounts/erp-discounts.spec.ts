@@ -81,7 +81,7 @@ test('the status chips carry the API counts and filter through the URL @on:manag
     await page.getByRole('button', { name: `Running ${counts.running}`, exact: true }).click();
     await expect(page).toHaveURL(/erp\.view=running/);
     const rows = page.locator(ROWS);
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
+    await expect(rows).toHaveCount(Math.min(counts.running, 10), { timeout: 15000 });
     // The status badge is the last one in a row (the percent cell may carry a Markup badge before it).
     for (const r of await rows.all())
         await expect(r.locator('.mv-status-badge').last()).toHaveText('Running');
