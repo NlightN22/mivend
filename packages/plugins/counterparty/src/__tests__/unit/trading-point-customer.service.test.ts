@@ -1,3 +1,4 @@
+import { Not } from 'typeorm';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     CustomerService,
@@ -71,7 +72,7 @@ describe('TradingPointService — customer methods', () => {
 
             expect(mockTpRepo.find).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    where: { counterpartyId: 'cp1', isActive: true, customerStatus: 'active' },
+                    where: { counterpartyId: 'cp1', isActive: true, address: Not(''), customerStatus: 'active' },
                 }),
             );
         });
@@ -85,7 +86,7 @@ describe('TradingPointService — customer methods', () => {
 
             expect(mockTpRepo.find).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    where: { counterpartyId: 'cp1', customerStatus: 'hidden' },
+                    where: { counterpartyId: 'cp1', customerStatus: 'hidden', address: Not('') },
                 }),
             );
         });

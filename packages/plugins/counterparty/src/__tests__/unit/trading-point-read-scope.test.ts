@@ -1,3 +1,4 @@
+import { Not } from 'typeorm';
 import { CounterpartyBatchLoaders } from '../../counterparty-batch-loaders.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -53,7 +54,7 @@ describe('TradingPointService.findOwnById (Shop API)', () => {
         expect(await service.findOwnById(customer, '1')).toEqual({ id: '1' });
         expect(findOne).toHaveBeenCalledWith(
             expect.objectContaining({
-                where: { id: '1', counterpartyId: 'cp-1', isActive: true },
+                where: { id: '1', counterpartyId: 'cp-1', isActive: true, address: Not('') },
             }),
         );
     });
