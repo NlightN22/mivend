@@ -1,5 +1,4 @@
 import path from 'path';
-import { SlowRequestLogPlugin } from './slow-request-log/slow-request-log.plugin';
 import { readFileSync } from 'fs';
 import {
     DefaultJobQueuePlugin,
@@ -85,6 +84,7 @@ import { TwoFactorSignInDashboardPlugin } from './two-factor-sign-in-dashboard.p
 import { consistencySourcesFromEnv } from './consistency-sources';
 import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
 import { UTC_SESSION_OPTIONS, useUtcTimestamps } from './pg-utc';
+import { SlowRequestLogPlugin } from './slow-request-log/slow-request-log.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const instanceNumberCode = process.env.INSTANCE_NUMBER_CODE ?? '';

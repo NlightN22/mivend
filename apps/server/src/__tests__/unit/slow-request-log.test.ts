@@ -26,7 +26,9 @@ describe('actor and operation labels', () => {
         expect(actorLabel(undefined)).toBe('anonymous');
         expect(actorLabel({ session: { user: undefined } })).toBe('anonymous');
         expect(
-            actorLabel({ session: { user: { channelPermissions: [{ code: '__customer_role__' }] } } }),
+            actorLabel({
+                session: { user: { channelPermissions: [{ code: '__customer_role__' }] } },
+            }),
         ).toBe('customer');
         expect(
             actorLabel({
@@ -40,7 +42,9 @@ describe('actor and operation labels', () => {
             'admin GetOrders took 1234 ms (actor: sales)',
         );
         expect(formatSlowOperation('shop', null, 900, 'customer')).toContain('anonymous-operation');
-        expect(formatSlowOperation('shop', 'x {a:"secret@mail"}', 900, 'customer')).not.toContain('secret');
+        expect(formatSlowOperation('shop', 'x {a:"secret@mail"}', 900, 'customer')).not.toContain(
+            'secret',
+        );
     });
 });
 

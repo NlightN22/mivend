@@ -1,9 +1,16 @@
-import type { ApolloServerPlugin } from '@apollo/server';
 import type { OnApplicationShutdown } from '@nestjs/common';
-import { Logger, PluginCommonModule, VendurePlugin } from '@vendure/core';
+import { Logger, PluginCommonModule, VendurePlugin, type ApiOptions } from '@vendure/core';
 
 import { startLagMonitor, type LagMonitor } from './event-loop-lag';
-import { actorLabel, envMs, formatSlowOperation, isSlow, type ActorContext } from './slow-request-log';
+import {
+    actorLabel,
+    envMs,
+    formatSlowOperation,
+    isSlow,
+    type ActorContext,
+} from './slow-request-log';
+
+type ApolloServerPlugin = NonNullable<ApiOptions['apolloServerPlugins']>[number];
 
 const loggerCtx = 'slow-request';
 
@@ -34,7 +41,7 @@ function slowRequestApolloPlugin(thresholdMs: number): ApolloServerPlugin {
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    configuration: (config) => {
+    configuration: config => {
         const thresholdMs = envMs(process.env.SLOW_REQUEST_LOG_MS, 500);
         config.apiOptions.apolloServerPlugins = [
             ...(config.apiOptions.apolloServerPlugins ?? []),
@@ -48,7 +55,7 @@ export class SlowRequestLogPlugin implements OnApplicationShutdown {
 
     onApplicationBootstrap(): void {
         const thresholdMs = envMs(process.env.EVENT_LOOP_LAG_LOG_MS, 1000);
-        this.monitor = startLagMonitor(thresholdMs, (lag) =>
+        this.monitor = startLagMonitor(thresholdMs, lag =>
             Logger.warn(`event loop was blocked for about ${lag} ms`, loggerCtx),
         );
     }
