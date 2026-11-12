@@ -32,6 +32,8 @@ const INVENTORY: Record<string, string> = {
     'erp-order/src/api/admin.schema.ts::pendingPriceAdjustmentOrderIds': 'order ids only',
     'price-entry/src/discount-limit.schema.ts::targetUnitPrice':
         'AdjustPriceWithinLimit: staff input of reduceOrderLineDiscount, not a read',
+    'price-entry/src/discount-setup.schema.ts::priceTypeCode':
+        'DiscountSetupListService: setups of a price type outside the allowed codes are neither listed nor counted',
     'price-entry/src/price-entry.schema.ts::bulkUpsertPriceEntries':
         'PriceEntryAdminResolver: every code asserted',
     'price-entry/src/price-entry.schema.ts::compareAtPrice': 'storefront: own price type',
