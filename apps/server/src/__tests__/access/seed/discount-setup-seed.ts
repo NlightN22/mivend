@@ -2,7 +2,13 @@ import { postBatch, type ImportTarget } from './erp-import-seed';
 import { counterpartyErpId, type ActorKey, type CounterpartyKey } from './fixture-plan';
 
 export type SetupKey =
-    'own-a' | 'own-b' | 'own-none' | 'wide' | 'everyone-no-rows' | 'everyone-empty' | 'inactive-a';
+    | 'own-a'
+    | 'own-b'
+    | 'own-none'
+    | 'wide'
+    | 'everyone-no-rows'
+    | 'everyone-empty'
+    | 'inactive-a';
 
 // A recipient of '' is an empty counterparty row (applies to everyone); [] is no recipient rows at all.
 export const SETUPS: Record<
@@ -15,7 +21,8 @@ export const SETUPS: Record<
     wide: { recipients: ['a-own', 'b-own'], percent: 7 },
     'everyone-no-rows': { recipients: [], percent: 3 },
     'everyone-empty': { recipients: [''], percent: -4 },
-    'inactive-a': { recipients: ['a-own'], percent: 1, inactiveReason: 'cancelled' },
+    // The ERP service stores no recipients for an inactive document, so only scope 'all' sees it.
+    'inactive-a': { recipients: [], percent: 1, inactiveReason: 'cancelled' },
 };
 
 export const setupErpId = (key: SetupKey): string => `access-setup-${key}`;
@@ -24,10 +31,10 @@ export const setupNumber = (key: SetupKey): string =>
 
 // Spelled out, not recomputed: a setup is visible when it applies to everyone or names a visible client.
 export const VISIBLE_SETUPS: Record<ActorKey, SetupKey[]> = {
-    'manager-a': ['own-a', 'wide', 'everyone-no-rows', 'everyone-empty', 'inactive-a'],
+    'manager-a': ['own-a', 'wide', 'everyone-no-rows', 'everyone-empty'],
     'manager-b': ['own-b', 'wide', 'everyone-no-rows', 'everyone-empty'],
-    'head-a': ['own-a', 'wide', 'everyone-no-rows', 'everyone-empty', 'inactive-a'],
-    'operator-a': ['own-a', 'own-b', 'wide', 'everyone-no-rows', 'everyone-empty', 'inactive-a'],
+    'head-a': ['own-a', 'wide', 'everyone-no-rows', 'everyone-empty'],
+    'operator-a': ['own-a', 'own-b', 'wide', 'everyone-no-rows', 'everyone-empty'],
     'head-b': ['own-b', 'wide', 'everyone-no-rows', 'everyone-empty'],
     'head-default': ['everyone-no-rows', 'everyone-empty'],
     director: [

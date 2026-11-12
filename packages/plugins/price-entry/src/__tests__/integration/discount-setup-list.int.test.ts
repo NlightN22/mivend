@@ -159,6 +159,16 @@ describe('discountSetups visibility (integration, real Postgres)', () => {
         expect((await numbers()).sort()).toEqual(['100', '300', '400', '500']);
     });
 
+    it('an inactive setup without recipients is never "for everyone": only scope all sees it', async () => {
+        await setup({ number: '800', inactiveReason: 'cancelled' });
+        await setup({ number: '810', active: false, inactiveReason: 'no-header-percent' });
+        await setup({ number: '820', recipients: ['cp-visible'], inactiveReason: 'cancelled' });
+        expect((await numbers({ search: '8' })).sort()).toEqual(['800', '810', '820']);
+        visibleErpIds = ['cp-visible'];
+        expect((await numbers({ search: '8' })).sort()).toEqual(['820']);
+        expect((await service.counts(ctx)).all).toBe(5);
+    });
+
     it('a setup naming only hidden counterparties is invisible', async () => {
         visibleErpIds = ['cp-visible'];
         expect(await numbers({ search: '200' })).toEqual([]);

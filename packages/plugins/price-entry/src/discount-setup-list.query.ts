@@ -21,11 +21,12 @@ export interface SetupScope {
 
 const escapeLike = (term: string): string => term.replace(/[\\%_]/g, '\\$&');
 
-// Applies to every counterparty: no recipient rows, or a row with an empty counterparty (docs/pricing.md).
-const NO_NAMED_RECIPIENT = `(NOT EXISTS (SELECT 1 FROM discount_setup_recipient r
+// Applies to every counterparty: an active document with no recipient rows or an empty-counterparty row.
+// An inactive document stores no recipients, so lacking rows never means "everyone" for it.
+const NO_NAMED_RECIPIENT = `(s."active" = true AND s."inactiveReason" IS NULL AND (NOT EXISTS (SELECT 1 FROM discount_setup_recipient r
     WHERE r."setupId" = s."id" AND r."counterpartyErpId" <> '')
     OR EXISTS (SELECT 1 FROM discount_setup_recipient r
-    WHERE r."setupId" = s."id" AND r."counterpartyErpId" = ''))`;
+    WHERE r."setupId" = s."id" AND r."counterpartyErpId" = '')))`;
 
 // A recipient row the caller may see: all of them for scope 'all', else those naming a visible counterparty.
 function seenRecipient(visible: VisibleCounterparties | null, extra = ''): string {

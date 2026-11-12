@@ -617,9 +617,10 @@ A permission alone never exposes another scope's rows. These Admin API reads re-
 
 Admin `discountSetups` / `discountSetupCounts` (`price-entry`, `Permission.ReadCatalog`) list the ERP discount setup documents (`DiscountSetup`). Scope is the counterparty visibility scope (`CounterpartyService.visibleErpIdsSql`, never re-implemented):
 
-1. A setup that applies to everyone is visible to every role holding the read permission: it has no recipient rows, or a recipient row with an empty counterparty.
+1. An **active** setup that applies to everyone is visible to every role holding the read permission: it has no recipient rows, or a recipient row with an empty counterparty.
 2. A setup naming several counterparties is visible when at least one of them is visible to the caller. The caller gets only the recipient names inside the own scope (`counterparties`) plus the total `recipientCount`; a name outside the scope is never read or returned. A setup naming only hidden counterparties is invisible.
 3. The director-level scope (`all`) sees every setup.
+4. An inactive setup (cancelled, or stored with an inactive reason) keeps no recipients (`DiscountSetupService`), so a missing recipient list never means "everyone" for it: only scope `all` sees one without rows, and `recipientCount` 0 on an inactive row means "not stored", not "all customers".
 
 A setup bound to a price type the caller cannot see (`PriceTypeAccessService.allowedCodes`) is neither listed nor counted. Pinned by `discount-setup-list.int.test.ts` and `access/discount-setup`.
 

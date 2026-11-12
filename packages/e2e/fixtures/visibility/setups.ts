@@ -25,8 +25,9 @@ export const SETUPS: Record<
     'own-a-running': { recipients: ['a-own'], percent: 10, validTo: 90 },
     'own-b-expiring': { recipients: ['b-own'], percent: 5, validTo: 5 },
     'own-b-expired': { recipients: ['b-own'], percent: 2, validTo: -3 },
+    // The ERP service stores no recipients for an inactive document, so only the director sees it.
     'own-a-inactive': {
-        recipients: ['a-own'],
+        recipients: [],
         percent: 1,
         validTo: null,
         inactiveReason: 'cancelled',
@@ -39,15 +40,9 @@ export const SETUPS: Record<
 export const setupNumber = (key: SetupKey): string =>
     String(9100 + Object.keys(SETUPS).indexOf(key));
 
-// Spelled out, not recomputed: a setup is visible when it applies to everyone or names a visible client.
+// Spelled out, not recomputed: visible when active for everyone or naming a visible client; an inactive one only to the director.
 export const VISIBLE_SETUPS: Record<ActorKey, SetupKey[]> = {
-    'manager-a': [
-        'own-a-running',
-        'own-a-inactive',
-        'wide-a-b',
-        'everyone-no-rows',
-        'everyone-empty',
-    ],
+    'manager-a': ['own-a-running', 'wide-a-b', 'everyone-no-rows', 'everyone-empty'],
     'manager-b': [
         'own-b-expiring',
         'own-b-expired',
@@ -55,10 +50,9 @@ export const VISIBLE_SETUPS: Record<ActorKey, SetupKey[]> = {
         'everyone-no-rows',
         'everyone-empty',
     ],
-    'head-a': ['own-a-running', 'own-a-inactive', 'wide-a-b', 'everyone-no-rows', 'everyone-empty'],
+    'head-a': ['own-a-running', 'wide-a-b', 'everyone-no-rows', 'everyone-empty'],
     'operator-a': [
         'own-a-running',
-        'own-a-inactive',
         'own-b-expiring',
         'own-b-expired',
         'wide-a-b',

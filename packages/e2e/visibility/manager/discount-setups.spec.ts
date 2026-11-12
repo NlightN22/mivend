@@ -65,3 +65,8 @@ test('manager-a sees only its own name in the wide setup, never the hidden one',
     expect(wide.counterparties.map(c => c.name)).toEqual([clientName('a-own')]);
     expect(JSON.stringify(list)).not.toContain(clientName('b-own'));
 });
+
+test('an inactive ERP discount stores no recipients, so a manager never sees it as one for everyone', async () => {
+    const list = await rows(await adminTokenFor(actorEmail('manager-a'), VIS_PASSWORD));
+    expect(list.map(r => r.documentNumber)).not.toContain(setupNumber('own-a-inactive'));
+});
