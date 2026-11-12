@@ -3,7 +3,7 @@ import { MvButton } from '@mivend/ui-kit';
 
 import type { PendingTradingPointChange } from '../../api/customers';
 
-defineProps<{ change: PendingTradingPointChange; busy: boolean }>();
+defineProps<{ change: PendingTradingPointChange; busy: boolean; locked?: boolean }>();
 defineEmits<{ accept: []; reject: [] }>();
 </script>
 
@@ -36,6 +36,7 @@ defineEmits<{ accept: []; reject: [] }>();
             <MvButton
                 size="sm"
                 :loading="busy"
+                :disabled="locked"
                 data-testid="tp-pending-accept"
                 @click="$emit('accept')"
             >
@@ -44,7 +45,7 @@ defineEmits<{ accept: []; reject: [] }>();
             <MvButton
                 size="sm"
                 variant="secondary"
-                :disabled="busy"
+                :disabled="busy || locked"
                 data-testid="tp-pending-reject"
                 @click="$emit('reject')"
             >

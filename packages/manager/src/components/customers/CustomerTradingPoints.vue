@@ -60,7 +60,8 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                     <TradingPointPendingChange
                         v-if="pending.byPoint.value.get(tp.id)"
                         :change="pending.byPoint.value.get(tp.id)!"
-                        :busy="pending.busyId.value !== null"
+                        :busy="false"
+                        locked
                         @accept="pending.accept(pending.byPoint.value.get(tp.id)!)"
                         @reject="pending.reject(pending.byPoint.value.get(tp.id)!)"
                     />
