@@ -48,7 +48,12 @@ test('the menu shows who is signed in @on:manager-operator @read-only', async ({
     await page.locator('.mv-app-topbar__user').click();
     const menu = page.getByRole('menu', { name: 'Account' });
     await expect(menu.locator('.user-menu__name')).not.toBeEmpty();
-    await expect(menu.getByRole('menuitemradio')).toHaveCount(3);
+    await expect(menu.getByRole('group', { name: 'Theme' }).getByRole('menuitemradio')).toHaveCount(
+        3,
+    );
+    await expect(
+        menu.getByRole('group', { name: 'Language' }).getByRole('menuitemradio'),
+    ).toHaveText(['EN', 'RU']);
 });
 
 test('the menu is reachable at phone width @on:manager-operator @read-only', async ({ page }) => {
