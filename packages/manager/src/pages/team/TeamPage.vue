@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { MvFilterChips, MvNotice, useLatestRequest, type FilterChip } from '@mivend/ui-kit';
 import TeamDirectoryTable from '../../components/team/TeamDirectoryTable.vue';
@@ -19,6 +20,7 @@ import {
     type TeamViewCounts,
 } from '../../api/team';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const router = useRouter();
 
@@ -34,16 +36,16 @@ const error = ref('');
 const counts = ref<TeamViewCounts>({ all: 0, active: 0, inactive: 0, unassigned: 0 });
 
 const VIEWS = [
-    { key: 'all', label: 'All', variant: undefined },
-    { key: 'active', label: 'Active', variant: TEAM_STATUS_BADGE_VARIANT.active },
-    { key: 'unassigned', label: 'Unassigned', variant: TEAM_STATUS_BADGE_VARIANT.unassigned },
-    { key: 'inactive', label: 'Inactive', variant: TEAM_STATUS_BADGE_VARIANT.inactive },
+    { key: 'all', variant: undefined },
+    { key: 'active', variant: TEAM_STATUS_BADGE_VARIANT.active },
+    { key: 'unassigned', variant: TEAM_STATUS_BADGE_VARIANT.unassigned },
+    { key: 'inactive', variant: TEAM_STATUS_BADGE_VARIANT.inactive },
 ] as const;
 const canSeeInactive = computed(() => authStore.hasPermission('ManageAdministratorLifecycle'));
 const viewChips = computed<FilterChip[]>(() =>
     VIEWS.filter(v => v.key !== 'inactive' || canSeeInactive.value).map(v => ({
         key: v.key,
-        label: `${v.label} ${counts.value[v.key]}`,
+        label: `${t(`team.views.${v.key}`)} ${counts.value[v.key]}`,
         variant: v.variant,
     })),
 );
@@ -79,7 +81,7 @@ async function refresh(): Promise<void> {
     try {
         await Promise.all([load(), loadCounts()]);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load the team directory';
+        error.value = e instanceof Error ? e.message : t('team.errors.loadFailed');
     }
 }
 
@@ -125,7 +127,7 @@ onMounted(async () => {
         ]);
         roleOptions.value = await fetchRoleFilterOptions().catch(() => []);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load departments and branches';
+        error.value = e instanceof Error ? e.message : t('team.errors.loadOptionsFailed');
     }
 });
 </script>
@@ -133,8 +135,8 @@ onMounted(async () => {
 <template>
     <div class="team-page">
         <div class="team-page__header">
-            <div class="team-page__breadcrumb">Workspace</div>
-            <h1 class="team-page__title">Team</h1>
+            <div class="team-page__breadcrumb">{{ t('team.page.breadcrumb') }}</div>
+            <h1 class="team-page__title">{{ t('team.page.title') }}</h1>
         </div>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>

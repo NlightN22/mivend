@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvStatusBadge,
@@ -15,6 +16,8 @@ import {
     NOTIFICATION_STATUS_OPTIONS,
     NOTIFICATION_STATUS_BADGE_VARIANT,
 } from '../../api/notifications';
+
+const { t } = useI18n();
 
 // See manager-table-standard skill. `title` is the identifying/required column (what a user
 // searches by first for a notification), backed by the backend's real `search` filter (title
@@ -42,23 +45,28 @@ const emit = defineEmits<{
     resolve: [id: string, resolution: string];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'title',
-        header: 'Notification',
+        header: t('notifications.columns.title'),
         width: 260,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Title contains…' },
+        filterConfig: { type: 'text', placeholder: t('notifications.table.titleFilter') },
         mobile: { primary: true },
     },
-    { field: 'createdAt', header: 'Date', width: 140, filterConfig: { type: 'none' } },
+    {
+        field: 'createdAt',
+        header: t('notifications.columns.createdAt'),
+        width: 140,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'status',
-        header: 'Status',
+        header: t('notifications.columns.status'),
         width: 130,
         filterConfig: {
             type: 'status',
-            placeholder: 'All statuses',
+            placeholder: t('notifications.status.any'),
             options: NOTIFICATION_STATUS_OPTIONS.filter(o => o.value).map(o => ({
                 value: o.value,
                 label: o.label,
@@ -70,14 +78,19 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'sourceType',
-        header: 'Source',
+        header: t('notifications.columns.sourceType'),
         width: 180,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
-    { field: 'message', header: 'Message', width: 320, filterConfig: { type: 'none' } },
+    {
+        field: 'message',
+        header: t('notifications.columns.message'),
+        width: 320,
+        filterConfig: { type: 'none' },
+    },
     { field: 'actions', header: '', width: 200, filterConfig: { type: 'none' } },
-];
+]);
 
 interface NotificationFilterState {
     [key: string]: unknown;
@@ -89,18 +102,18 @@ const BLANK_FILTERS: NotificationFilterState = { status: '', title: '' };
 const { state: tableState } = useDataTableState<NotificationFilterState>(
     `notifications-datatable:${props.administratorId || 'anonymous'}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { status: props.statusFilter, title: props.searchFilter },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
-            c => c.field,
-        ),
+        columns: ALL_COLUMNS.value,
+        allowedFilterKeys: ALL_COLUMNS.value
+            .filter(c => c.filterConfig.type !== 'none')
+            .map(c => c.field),
         externallyOwned: { pageSize: true, filterKeys: ['status', 'title'] },
     },
 );
@@ -185,8 +198,8 @@ function confirmResolve(id: string): void {
         :row-height-px="56"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'title', placeholder: 'Search notifications…' }"
-        empty-message="No notifications match your filters"
+        :search="{ filterKey: 'title', placeholder: t('notifications.table.searchPlaceholder') }"
+        :empty-message="t('notifications.table.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -199,7 +212,7 @@ function confirmResolve(id: string): void {
         </template>
         <template #cell-status="{ data }">
             <MvStatusBadge :variant="(data as NotificationRow).statusVariant">
-                {{ (data as NotificationRow).status }}
+                {{ t(`notifications.status.${(data as NotificationRow).status}`) }}
             </MvStatusBadge>
         </template>
         <template #cell-message="{ data }">
@@ -219,7 +232,7 @@ function confirmResolve(id: string): void {
                     :disabled="actingId === (data as NotificationRow).id"
                     @click="emit('markRead', (data as NotificationRow).id)"
                 >
-                    Mark read
+                    {{ t('notifications.actions.markRead') }}
                 </button>
                 <button
                     v-if="(data as NotificationRow).status !== 'resolved'"
@@ -228,13 +241,13 @@ function confirmResolve(id: string): void {
                     :disabled="actingId === (data as NotificationRow).id"
                     @click="startResolve((data as NotificationRow).id)"
                 >
-                    Resolve
+                    {{ t('notifications.actions.resolve') }}
                 </button>
             </div>
             <div v-else class="notifications-data-table__resolve-form">
                 <MvInput
                     v-model="resolutionDraft"
-                    placeholder="Resolution note"
+                    :placeholder="t('notifications.actions.resolutionNote')"
                     size="sm"
                     @keyup.enter="confirmResolve((data as NotificationRow).id)"
                 />
@@ -244,9 +257,11 @@ function confirmResolve(id: string): void {
                     :disabled="!resolutionDraft.trim()"
                     @click="confirmResolve((data as NotificationRow).id)"
                 >
-                    OK
+                    {{ t('notifications.actions.confirm') }}
                 </MvButton>
-                <MvButton variant="ghost" size="sm" @click="cancelResolve">Cancel</MvButton>
+                <MvButton variant="ghost" size="sm" @click="cancelResolve">{{
+                    t('common.cancel')
+                }}</MvButton>
             </div>
         </template>
     </MvAdvancedDataTable>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvButton,
@@ -16,6 +17,8 @@ import {
     type TeamFilters,
     type TeamMemberStatus,
 } from '../../api/team';
+
+const { t } = useI18n();
 
 // Server-side paginated + filtered (manager-table-standard). No sortField: the directory has one
 // stable order and a name sort would leak the order of masked names. Position has no
@@ -41,61 +44,67 @@ const emit = defineEmits<{
     'manage-users': [];
 }>();
 
-const STATUS_LABEL: Record<TeamMemberStatus, string> = {
-    active: 'Active',
-    inactive: 'Inactive',
-    unassigned: 'Unassigned',
-};
+const STATUS_KEYS: TeamMemberStatus[] = ['active', 'inactive', 'unassigned'];
 
 const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'name',
-        header: 'Name',
+        header: t('team.columns.name'),
         width: 200,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Name or ERP id contains…' },
+        filterConfig: { type: 'text', placeholder: t('team.filters.name') },
         mobile: { primary: true },
     },
     {
         field: 'department',
-        header: 'Department',
+        header: t('team.columns.department'),
         width: 200,
         filterConfig: {
             type: 'select',
-            placeholder: 'All departments',
+            placeholder: t('team.filters.allDepartments'),
             options: props.departments.map(d => ({ value: d.erpId, label: d.name })),
         },
     },
-    { field: 'position', header: 'Position', width: 180, filterConfig: { type: 'none' } },
+    {
+        field: 'position',
+        header: t('team.columns.position'),
+        width: 180,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'branch',
-        header: 'Branch',
+        header: t('team.columns.branch'),
         width: 160,
         filterConfig: {
             type: 'select',
-            placeholder: 'All branches',
+            placeholder: t('team.filters.allBranches'),
             options: props.branches.map(b => ({ value: b.id, label: b.name })),
         },
     },
     {
         field: 'roles',
-        header: 'Role',
+        header: t('team.columns.roles'),
         width: 200,
         filterConfig: props.roleOptions.length
-            ? { type: 'select', placeholder: 'All roles', options: props.roleOptions }
+            ? { type: 'select', placeholder: t('team.filters.allRoles'), options: props.roleOptions }
             : { type: 'none' },
     },
-    { field: 'erpId', header: 'ERP id', width: 140, filterConfig: { type: 'none' } },
+    {
+        field: 'erpId',
+        header: t('team.columns.erpId'),
+        width: 140,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'status',
-        header: 'Status',
+        header: t('team.columns.status'),
         width: 130,
         filterConfig: {
             type: 'status',
-            placeholder: 'All',
-            options: (Object.keys(STATUS_LABEL) as TeamMemberStatus[]).map(value => ({
+            placeholder: t('team.filters.allStatuses'),
+            options: STATUS_KEYS.map(value => ({
                 value,
-                label: STATUS_LABEL[value],
+                label: t(`team.status.${value}`),
                 variant: TEAM_STATUS_BADGE_VARIANT[value],
             })),
         },
@@ -237,8 +246,8 @@ const rows = computed<TeamRow[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'name', placeholder: 'Search by name or ERP id…' }"
-        empty-message="No employees match your filters"
+        :search="{ filterKey: 'name', placeholder: t('team.table.searchPlaceholder') }"
+        :empty-message="t('team.table.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -252,7 +261,7 @@ const rows = computed<TeamRow[]>(() =>
                 size="sm"
                 @click="emit('manage-users')"
             >
-                Manage roles
+                {{ t('team.table.manageRoles') }}
             </MvButton>
         </template>
 
@@ -266,7 +275,7 @@ const rows = computed<TeamRow[]>(() =>
         </template>
         <template #cell-status="{ data }">
             <MvStatusBadge :variant="(data as TeamRow).statusVariant">
-                {{ STATUS_LABEL[(data as TeamRow).status] }}
+                {{ t(`team.status.${(data as TeamRow).status}`) }}
             </MvStatusBadge>
         </template>
     </MvAdvancedDataTable>

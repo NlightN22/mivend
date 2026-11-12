@@ -10,6 +10,7 @@ import type {
 } from '@mivend/ui-kit';
 import type { SelectOption, StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi, getCapturedAuthToken } from './client';
+import { lazyOptions } from '../utils/lazyLabels';
 import {
     CreateClientNotificationDocument,
     MarkNotificationReadDocument,
@@ -46,12 +47,12 @@ function getWsClient(): Client {
 
 // issue #92: the full /notifications page's status filter + view chips — single source of truth
 // reused by both, per the manager-table-standard skill (point 4/4a).
-export const NOTIFICATION_STATUS_OPTIONS: SelectOption[] = [
-    { value: '', label: 'All statuses' },
-    { value: 'unread', label: 'Unread' },
-    { value: 'read', label: 'Read' },
-    { value: 'resolved', label: 'Resolved' },
-];
+export const NOTIFICATION_STATUS_OPTIONS: SelectOption[] = lazyOptions('notifications.status', [
+    '',
+    'unread',
+    'read',
+    'resolved',
+]);
 export const NOTIFICATION_STATUS_BADGE_VARIANT: Record<NotificationStatus, StatusBadgeVariant> = {
     unread: 'warning',
     read: 'neutral',

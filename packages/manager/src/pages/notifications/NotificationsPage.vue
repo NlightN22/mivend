@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, useLatestRequest, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -15,6 +16,7 @@ import {
     type NotificationViewCounts,
 } from '../../api/notifications';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const pageSize = ref(20);
@@ -23,17 +25,17 @@ const totalItems = ref(0);
 const notifications = ref<NotificationItem[]>([]);
 
 type ViewKey = 'all' | 'unread' | 'read' | 'resolved';
-const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'unread', label: 'Unread', variant: NOTIFICATION_STATUS_BADGE_VARIANT.unread },
-    { key: 'read', label: 'Read', variant: NOTIFICATION_STATUS_BADGE_VARIANT.read },
-    { key: 'resolved', label: 'Resolved', variant: NOTIFICATION_STATUS_BADGE_VARIANT.resolved },
+const VIEWS: { key: ViewKey; variant?: FilterChip['variant'] }[] = [
+    { key: 'all' },
+    { key: 'unread', variant: NOTIFICATION_STATUS_BADGE_VARIANT.unread },
+    { key: 'read', variant: NOTIFICATION_STATUS_BADGE_VARIANT.read },
+    { key: 'resolved', variant: NOTIFICATION_STATUS_BADGE_VARIANT.resolved },
 ];
 const viewCounts = ref<NotificationViewCounts>({ all: 0, unread: 0, read: 0, resolved: 0 });
 const viewChips = computed<FilterChip[]>(() =>
     VIEWS.map(v => ({
         key: v.key,
-        label: `${v.label} ${viewCounts.value[v.key]}`,
+        label: `${t(`notifications.views.${v.key}`)} ${viewCounts.value[v.key]}`,
         variant: v.variant,
     })),
 );
@@ -121,7 +123,7 @@ async function onMarkRead(id: string): Promise<void> {
         if (index !== -1) notifications.value[index] = updated;
         await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not mark notification as read';
+        actionError.value = e instanceof Error ? e.message : t('notifications.errors.markReadFailed');
     } finally {
         actingId.value = null;
     }
@@ -136,7 +138,7 @@ async function onResolve(id: string, resolution: string): Promise<void> {
         if (index !== -1) notifications.value[index] = updated;
         await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not resolve notification';
+        actionError.value = e instanceof Error ? e.message : t('notifications.errors.resolveFailed');
     } finally {
         actingId.value = null;
     }
@@ -150,8 +152,8 @@ onMounted(() => {
 
 <template>
     <div class="notifications-page">
-        <div class="notifications-page__breadcrumb">Workspace</div>
-        <h1 class="notifications-page__title">Notifications</h1>
+        <div class="notifications-page__breadcrumb">{{ t('notifications.page.breadcrumb') }}</div>
+        <h1 class="notifications-page__title">{{ t('notifications.page.title') }}</h1>
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
 
