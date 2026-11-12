@@ -82,9 +82,26 @@ test('customer detail Overview tab shows contacts, price type and trading points
     await expect(page.getByText('E2E Trading Point')).toBeVisible();
     await expect(page.getByText('E2E North Depot')).toBeVisible();
     await expect(page.getByText('E2E Warehouse')).toBeVisible();
+});
+
+test('customer card shows the balance and turnover tiles to a role with the credit right @on:manager-portal-admin @read-only', async ({
+    page,
+}) => {
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('Turnover, 30 days')).toBeVisible();
     await expect(page.getByText('Open orders')).toBeVisible();
+});
+
+test('customer card tells a role without the credit right that the figures are unavailable @on:manager-manager @on:manager-operator @on:manager-department-head @read-only', async ({
+    page,
+}) => {
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText('Could not load balance and turnover figures.')).toBeVisible();
+    await expect(page.getByText('Turnover, 30 days')).toHaveCount(0);
 });
 
 test('customer detail Orders tab shows the seeded e2e order @read-only', async ({ page }) => {
