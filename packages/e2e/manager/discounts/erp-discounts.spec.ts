@@ -44,7 +44,6 @@ test('the ERP discounts list opens first with number, valid from, then the other
         'Valid from',
         'Customer',
         'Discount %',
-        'Price type',
         'Products',
         'Valid to',
         'Status',

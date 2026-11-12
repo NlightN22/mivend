@@ -16,7 +16,7 @@ import {
 import { ERP_DISCOUNTS_URL_DEFAULTS } from '../../composables/erpDiscountsListUrl';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { ERP_DISCOUNTS_COLUMNS } from './erpDiscountsColumns';
+import { ERP_DISCOUNTS_COLUMNS, ERP_DISCOUNTS_HIDDEN_BY_DEFAULT } from './erpDiscountsColumns';
 import type { ErpDiscountRow } from './erpDiscountsRows';
 import { erpSortFromState, erpSortToState } from './erpDiscountsSort';
 
@@ -50,7 +50,7 @@ const { state: tableState } = useDataTableState<{ [key: string]: unknown; search
     {
         columnOrder: COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
-        hiddenColumns: [],
+        hiddenColumns: [...ERP_DISCOUNTS_HIDDEN_BY_DEFAULT],
         sort: erpSortToState(props.sort, COLUMNS),
         filters: { search: props.filters.search },
         pageSize: props.pageSize,
