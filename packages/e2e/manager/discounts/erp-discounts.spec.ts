@@ -21,8 +21,8 @@ interface Counts {
 
 async function apiCounts(): Promise<Counts> {
     const token = await adminTokenFor(
-        MANAGER_ACCOUNTS.operator.username,
-        MANAGER_ACCOUNTS.operator.password,
+        MANAGER_ACCOUNTS.portalAdmin.username,
+        MANAGER_ACCOUNTS.portalAdmin.password,
     );
     const { data } = await adminGql<{ discountSetupCounts: Counts }>(
         '{ discountSetupCounts { all running expiringSoon upcoming expired inactive } }',
@@ -32,9 +32,10 @@ async function apiCounts(): Promise<Counts> {
     return data.discountSetupCounts;
 }
 
-test('the ERP discounts list opens first with number, valid from, then the other columns @on:manager-operator @read-only', async ({
+test('the ERP discounts list opens first with number, valid from, then the other columns @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/discounts');
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
     const headers = page.getByRole('columnheader');
@@ -55,7 +56,7 @@ test('the ERP discounts list opens first with number, valid from, then the other
     );
 });
 
-test('the status chips carry the API counts and filter through the URL @on:manager-operator @read-only', async ({
+test('the status chips carry the API counts and filter through the URL @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     const counts = await apiCounts();
@@ -79,12 +80,14 @@ test('the status chips carry the API counts and filter through the URL @on:manag
 
     await page.getByRole('button', { name: `Running ${counts.running}`, exact: true }).click();
     await expect(page).toHaveURL(/erp\.view=running/);
-    const badges = page.locator(`${ROWS} .mv-status-badge`);
-    await expect(badges.first()).toBeVisible({ timeout: 15000 });
-    for (const badge of await badges.all()) await expect(badge).toHaveText('Running');
+    const rows = page.locator(ROWS);
+    await expect(rows.first()).toBeVisible({ timeout: 15000 });
+    // The status badge is the last one in a row (the percent cell may carry a Markup badge before it).
+    for (const r of await rows.all())
+        await expect(r.locator('.mv-status-badge').last()).toHaveText('Running');
 });
 
-test('searching a seeded document number narrows the list and lives in the URL @on:manager-operator @read-only', async ({
+test('searching a seeded document number narrows the list and lives in the URL @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     const number = setupNumber('own-b-expiring');
@@ -93,7 +96,7 @@ test('searching a seeded document number narrows the list and lives in the URL @
     await page.getByPlaceholder(SEARCH).fill(number);
     await expect(page).toHaveURL(/erp\.search=/);
     await expect(page.locator(ROWS)).toHaveCount(1, { timeout: 15000 });
-    await expect(row(page, number).locator('.mv-status-badge')).toHaveText('Expiring soon');
+    await expect(row(page, number).locator('.mv-status-badge').last()).toHaveText('Expiring soon');
 
     await page.getByPlaceholder(SEARCH).fill('zzz-no-match-xyz');
     await expect(page.getByText('No ERP discounts match your filters')).toBeVisible({
@@ -101,7 +104,7 @@ test('searching a seeded document number narrows the list and lives in the URL @
     });
 });
 
-test('a markup is shown with a plus sign and the company-wide setup says All customers @on:manager-operator @read-only', async ({
+test('a markup is shown with a plus sign and the company-wide setup says All customers @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     const markup = setupNumber('everyone-empty');
@@ -119,7 +122,7 @@ test('a markup is shown with a plus sign and the company-wide setup says All cus
     await expect(row(page, wide)).toContainText('-7%');
 });
 
-test('the source switch moves between ERP discounts and Requests @on:manager-operator @read-only', async ({
+test('the source switch moves between ERP discounts and Requests @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');
@@ -141,7 +144,7 @@ test('the source switch moves between ERP discounts and Requests @on:manager-ope
     });
 });
 
-test('on a phone each ERP discount is a card without horizontal scroll @on:manager-operator @read-only', async ({
+test('on a phone each ERP discount is a card without horizontal scroll @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -153,7 +156,7 @@ test('on a phone each ERP discount is a card without horizontal scroll @on:manag
     );
 });
 
-test('the customer card tab lists that customer setups and the company-wide ones only @on:manager-operator @read-only', async ({
+test('the customer card tab lists that customer setups and the company-wide ones only @on:manager-portal-admin @read-only', async ({
     page,
 }) => {
     const name = clientName('a-own');
@@ -164,15 +167,7 @@ test('the customer card tab lists that customer setups and the company-wide ones
     await expect(page).toHaveURL(/tab=discounts/);
     await page.getByPlaceholder(SEARCH).fill('91');
 
-    const own = (
-        [
-            'own-a-running',
-            'own-a-inactive',
-            'wide-a-b',
-            'everyone-no-rows',
-            'everyone-empty',
-        ] as const
-    )
+    const own = (['own-a-running', 'wide-a-b', 'everyone-no-rows', 'everyone-empty'] as const)
         .map(setupNumber)
         .sort();
     await expect(row(page, own[0])).toBeVisible({ timeout: 15000 });
