@@ -1,5 +1,3 @@
-import { REQUEST_CONTEXT_KEY } from '@vendure/core';
-
 export interface ActorContext {
     apiType?: string;
     session?: { user?: { isSuperAdmin?: boolean } | null } | null;
@@ -37,7 +35,7 @@ export function envMs(raw: string | undefined, fallback: number): number {
 // Vendure stores { default, withTransactionManager } under the key, not the RequestContext itself.
 export function requestContextOf(contextValue: unknown): ActorContext | undefined {
     const req = (contextValue as { req?: Record<string, unknown> } | undefined)?.req;
-    const item = req?.[REQUEST_CONTEXT_KEY] as
+    const item = req?.['vendureRequestContext'] as
         | { default?: ActorContext; withTransactionManager?: ActorContext }
         | undefined;
     return item?.default ?? item?.withTransactionManager;
