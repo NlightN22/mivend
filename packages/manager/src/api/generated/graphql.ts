@@ -10380,6 +10380,8 @@ export type TradingPoint = {
     contacts: Array<ContactPerson>;
     customerOwned: Scalars['Boolean']['output'];
     customerStatus: Scalars['String']['output'];
+    customerUsable: Scalars['Boolean']['output'];
+    defects: Array<Scalars['String']['output']>;
     deliveryComment: Maybe<Scalars['String']['output']>;
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -10499,8 +10501,6 @@ export type UpdateActiveAdministratorInput = {
     customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress?: InputMaybe<Scalars['String']['input']>;
     firstName?: InputMaybe<Scalars['String']['input']>;
-    customerUsable: Scalars['Boolean']['output'];
-    defects: Array<Scalars['String']['output']>;
     lastName?: InputMaybe<Scalars['String']['input']>;
     password?: InputMaybe<Scalars['String']['input']>;
 };
@@ -11936,6 +11936,8 @@ export type CustomerListItemFieldsFragment = {
         workingHours: string | null;
         deliveryComment: string | null;
         isActive: boolean;
+        defects: Array<string>;
+        customerUsable: boolean;
         contacts: Array<{
             name: string;
             phone: string | null;
@@ -11972,6 +11974,8 @@ export type CustomersPageQuery = {
                 workingHours: string | null;
                 deliveryComment: string | null;
                 isActive: boolean;
+                defects: Array<string>;
+                customerUsable: boolean;
                 contacts: Array<{
                     name: string;
                     phone: string | null;
@@ -12043,6 +12047,8 @@ export type HighUsageCustomersQuery = {
             workingHours: string | null;
             deliveryComment: string | null;
             isActive: boolean;
+            defects: Array<string>;
+            customerUsable: boolean;
             contacts: Array<{
                 name: string;
                 phone: string | null;
@@ -12055,8 +12061,6 @@ export type HighUsageCustomersQuery = {
 
 export type CustomerByIdQueryVariables = Exact<{
     id: Scalars['ID']['input'];
-        defects: Array<string>;
-        customerUsable: boolean;
 }>;
 
 export type CustomerByIdQuery = {
@@ -12080,6 +12084,8 @@ export type CustomerByIdQuery = {
             workingHours: string | null;
             deliveryComment: string | null;
             isActive: boolean;
+            defects: Array<string>;
+            customerUsable: boolean;
             contacts: Array<{
                 name: string;
                 phone: string | null;
@@ -12093,8 +12099,6 @@ export type CustomerByIdQuery = {
 export type CounterpartyShortNameQueryVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
-                defects: Array<string>;
-                customerUsable: boolean;
 
 export type CounterpartyShortNameQuery = { counterparty: { shortName: string } | null };
 
@@ -12166,8 +12170,6 @@ export type CustomerIdForCounterpartyQueryVariables = Exact<{
 
 export type CustomerIdForCounterpartyQuery = { customers: { items: Array<{ id: string }> } };
 
-            defects: Array<string>;
-            customerUsable: boolean;
 export type CustomerOrderItemFieldsFragment = {
     id: string;
     code: string;
@@ -12203,8 +12205,6 @@ export type CustomerOrdersQuery = {
             totalQuantity: number;
             customer: { firstName: string; lastName: string } | null;
             customFields: {
-            defects: Array<string>;
-            customerUsable: boolean;
                 latestFulfillmentState: string | null;
                 placedByAdministratorId: string | null;
                 reservationState: string | null;
@@ -14768,6 +14768,8 @@ export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
     workingHours
     deliveryComment
     isActive
+    defects
+    customerUsable
     contacts {
       name
       phone
@@ -14892,8 +14894,6 @@ export const NotificationFieldsFragmentDoc = new TypedDocumentString(
 ) as unknown as TypedDocumentString<NotificationFieldsFragment, unknown>;
 export const OrderCheckResultFieldsFragmentDoc = new TypedDocumentString(
     `
-    defects
-    customerUsable
     fragment OrderCheckResultFields on CheckResult {
   id
   checkCode
@@ -15965,6 +15965,8 @@ export const CustomersPageDocument = new TypedDocumentString(`
     workingHours
     deliveryComment
     isActive
+    defects
+    customerUsable
     contacts {
       name
       phone
@@ -16043,6 +16045,8 @@ export const HighUsageCustomersDocument = new TypedDocumentString(`
     workingHours
     deliveryComment
     isActive
+    defects
+    customerUsable
     contacts {
       name
       phone
@@ -16077,6 +16081,8 @@ export const CustomerByIdDocument = new TypedDocumentString(`
     workingHours
     deliveryComment
     isActive
+    defects
+    customerUsable
     contacts {
       name
       phone
@@ -16089,8 +16095,6 @@ export const CounterpartyShortNameDocument = new TypedDocumentString(`
     query CounterpartyShortName($id: ID!) {
   counterparty(id: $id) {
     shortName
-    defects
-    customerUsable
   }
 }
     `) as unknown as TypedDocumentString<
@@ -16169,8 +16173,6 @@ export const RejectTradingPointChangeDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RejectTradingPointChangeMutation,
     RejectTradingPointChangeMutationVariables
-    defects
-    customerUsable
 >;
 export const CustomerIdForCounterpartyDocument = new TypedDocumentString(`
     query CustomerIdForCounterparty($counterpartyId: String!) {
@@ -16205,8 +16207,6 @@ export const CustomerOrdersDocument = new TypedDocumentString(`
   createdAt
   totalQuantity
   customer {
-    defects
-    customerUsable
     firstName
     lastName
   }
