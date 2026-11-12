@@ -21,3 +21,8 @@ export { SettlementRetentionService } from './src/settlement-retention.service';
 export { SettlementReconcileService } from './src/settlement-reconcile.service';
 export { SettlementShopService } from './src/settlement-shop.service';
 export { capOverdue, paymentStatusOf } from './src/settlement-aging';
+export {
+    SALES_CORRECTION_DOCUMENT_TYPE,
+    TURNOVER_CATEGORIES,
+    movesTurnoverByDefault,
+} from './src/settlement-turnover';

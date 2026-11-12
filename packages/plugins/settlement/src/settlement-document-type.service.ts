@@ -5,6 +5,7 @@ import { withAggregateLock } from 'shared';
 import { SettlementDocumentType } from './entities/settlement-document-type.entity';
 import type { SettlementDocumentTypeInfo } from './settlement-admin.types';
 import type { SettlementApplyResult, SettlementDocumentTypeInput } from './types';
+import { movesTurnoverByDefault } from './settlement-turnover';
 import { shouldApplyDocument } from './version';
 
 export const documentTypeLockKey = (documentType: string): string =>
@@ -47,7 +48,10 @@ export class SettlementDocumentTypeService {
             sourceVersion: input.version,
         };
         if (existing) await repo.update(existing.id, fields);
-        else await repo.save(repo.create({ documentType: input.documentType, ...fields }));
+        else {
+            const movesTurnover = movesTurnoverByDefault(input.documentType, input.category);
+            await repo.save(repo.create({ documentType: input.documentType, ...fields, movesTurnover }));
+        }
         return 'applied';
     }
 

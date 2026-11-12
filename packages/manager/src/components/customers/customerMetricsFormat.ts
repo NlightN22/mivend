@@ -17,3 +17,6 @@ export function contractLabel(row: {
 }): string {
     return row.contractName ?? (row.contractErpId || 'No contract');
 }
+
+export const formatComputedAt = (iso: string): string =>
+    new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });

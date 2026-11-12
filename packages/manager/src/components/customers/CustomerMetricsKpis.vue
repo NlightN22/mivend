@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 import { MvKpiCard, MvKpiCarousel, MvPanel, MvSkeleton } from '@mivend/ui-kit';
 import { fetchCounterpartyMetrics, type CounterpartyMetrics } from '../../api/counterpartyMetrics';
 import { useCurrency } from '../../composables/useCurrency';
-import { balanceCaption, contractLabel, dynamicsText } from './customerMetricsFormat';
+import { balanceCaption, contractLabel, dynamicsText, formatComputedAt } from './customerMetricsFormat';
 
 const props = defineProps<{
     counterpartyId: string;
@@ -33,8 +33,11 @@ async function load(id: string): Promise<void> {
 
 watch(() => props.counterpartyId, load, { immediate: true });
 
-const computedAtText = (m: CounterpartyMetrics): string =>
-    new Date(m.computedAt).toLocaleString('ru-RU');
+const otherBalances = (m: CounterpartyMetrics): string =>
+    m.balances
+        .filter(b => b.currency !== m.currency)
+        .map(b => `${formatMinor(b.amountMinor)} ${b.currency}`)
+        .join(', ');
 </script>
 
 <template>
@@ -50,7 +53,7 @@ const computedAtText = (m: CounterpartyMetrics): string =>
                 v-if="metrics"
                 label="Balance (owed to us)"
                 :value="formatMinor(metrics.balanceMinor)"
-                :caption="balanceCaption(metrics.balanceMinor)"
+                :caption="`${balanceCaption(metrics.balanceMinor)}, ${metrics.currency}`"
                 :accent="metrics.balanceMinor < 0"
             />
             <MvKpiCard
@@ -59,13 +62,14 @@ const computedAtText = (m: CounterpartyMetrics): string =>
                 :value="formatMinor(metrics.salesLast30DaysMinor)"
                 :caption="
                     dynamicsText(metrics.salesLast30DaysMinor, metrics.salesPrev30DaysMinor) ??
-                    undefined
+                    metrics.currency
                 "
             />
             <MvKpiCard
                 v-if="metrics"
                 label="Turnover, 12 months"
                 :value="formatMinor(metrics.salesLast12MonthsMinor)"
+                :caption="metrics.currency"
             />
             <MvKpiCard
                 v-if="metrics"
@@ -83,6 +87,10 @@ const computedAtText = (m: CounterpartyMetrics): string =>
                 :value="formatWhole(availableCredit)"
             />
         </MvKpiCarousel>
+        <p v-if="!metrics" class="customer-metrics__note" role="status">Figures unavailable</p>
+        <p v-else-if="otherBalances(metrics)" class="customer-metrics__note">
+            Balance in other currencies: {{ otherBalances(metrics) }}
+        </p>
         <MvPanel v-if="metrics && metrics.contractBalances.length" class="customer-metrics__panel">
             <details>
                 <summary>Balance by contract ({{ metrics.contractBalances.length }})</summary>
@@ -98,7 +106,7 @@ const computedAtText = (m: CounterpartyMetrics): string =>
             </details>
         </MvPanel>
         <p v-if="metrics" class="customer-metrics__note">
-            Calculated {{ computedAtText(metrics) }}
+            Calculated {{ formatComputedAt(metrics.computedAt) }}
         </p>
     </template>
 </template>

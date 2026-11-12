@@ -1,3 +1,4 @@
+import { SALES_CORRECTION_DOCUMENT_TYPE, TURNOVER_CATEGORIES } from '@mivend/plugin-settlement';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class SettlementDocumentTypeMovesTurnover1791586000000 implements MigrationInterface {
@@ -7,11 +8,10 @@ export class SettlementDocumentTypeMovesTurnover1791586000000 implements Migrati
         await queryRunner.query(
             `ALTER TABLE "settlement_document_type" ADD "movesTurnover" boolean NOT NULL DEFAULT false`,
         );
-        // The ERP's sales correction (not its debt correction) moves turnover; the name is ERP data.
         await queryRunner.query(
             `UPDATE "settlement_document_type" SET "movesTurnover" = true
-             WHERE "category" IN ('sale', 'return')
-                OR ("category" = 'correction' AND "documentType" = 'КорректировкаРеализации')`,
+             WHERE "category" = ANY($1) OR ("category" = 'correction' AND "documentType" = $2)`,
+            [TURNOVER_CATEGORIES, SALES_CORRECTION_DOCUMENT_TYPE],
         );
     }
 
