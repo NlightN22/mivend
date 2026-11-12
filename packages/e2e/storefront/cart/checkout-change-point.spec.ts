@@ -54,13 +54,13 @@ test.describe('Checkout — change trading point', () => {
         await changeBtn(page).click();
 
         await expect(page.locator('.mv-modal')).toBeVisible({ timeout: 5000 });
-        await expect(page.locator('.ds-point-item')).toHaveCount(3, { timeout: 8000 });
+        await expect(page.locator('.ds-point-item')).toHaveCount(4, { timeout: 8000 });
     });
 
     test('modal shows seed trading points', async ({ page }) => {
         await openCheckout(page);
         await changeBtn(page).click();
-        await expect(page.locator('.ds-point-item')).toHaveCount(3, { timeout: 8000 });
+        await expect(page.locator('.ds-point-item')).toHaveCount(4, { timeout: 8000 });
 
         const modal = page.locator('.mv-modal');
         await expect(modal.getByText('E2E Trading Point')).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('Checkout — change trading point', () => {
         await openCheckout(page);
         await changeBtn(page).click();
         await expect(page.locator('.mv-modal')).toBeVisible({ timeout: 5000 });
-        await expect(page.locator('.ds-point-item')).toHaveCount(3, { timeout: 8000 });
+        await expect(page.locator('.ds-point-item')).toHaveCount(4, { timeout: 8000 });
 
         // Pick a point that is not currently active
         const items = page.locator('.ds-point-item');
@@ -85,7 +85,7 @@ test.describe('Checkout — change trading point', () => {
     test('selected point name appears in delivery card after change', async ({ page }) => {
         await openCheckout(page);
         await changeBtn(page).click();
-        await expect(page.locator('.ds-point-item')).toHaveCount(3, { timeout: 8000 });
+        await expect(page.locator('.ds-point-item')).toHaveCount(4, { timeout: 8000 });
 
         // Pick 'E2E Warehouse' which has a distinct address
         await page.locator('.ds-point-item').filter({ hasText: 'E2E Warehouse' }).click();
