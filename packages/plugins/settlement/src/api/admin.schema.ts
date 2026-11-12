@@ -68,7 +68,7 @@ export const adminApiExtensions = gql`
 
     """
     Real ledger figures of one counterparty. Positive balance = the counterparty owes us. Totals and turnover are in
-    `currency` (the currency with the largest absolute balance); `balances` lists every currency.
+    the currency field (the currency with the largest absolute balance); balances lists every currency.
     """
     type CounterpartyMetrics {
         currency: String!
