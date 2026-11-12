@@ -109,7 +109,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                         <strong>{{ tp.name }}</strong>
                         <div class="overview-tab__contact-meta">{{ tp.address }}</div>
                         <div v-if="tp.defects.length" class="overview-tab__tp-defects">
-                            <MvStatusBadge v-for="d in tp.defects" :key="d" variant="warning">
+                            <MvStatusBadge
+                                v-for="d in tp.defects.filter((x) => x !== 'INACTIVE')"
+                                :key="d"
+                                variant="warning"
+                            >
                                 {{ tradingPointDefectLabel(d) }}
                             </MvStatusBadge>
                             <div
