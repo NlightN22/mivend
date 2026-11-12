@@ -15,6 +15,7 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
         </div>
         <div v-for="(row, index) in contacts.rows" :key="index" class="tp-contacts__row">
             <MvFormField
+                class="tp-contacts__name"
                 :error="
                     row.touched.name && contacts.errors.value[index].name
                         ? CONTACT_ERROR_TEXT.name
@@ -23,8 +24,7 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
             >
                 <MvNameInput
                     v-model="row.name"
-                    size="sm"
-                    placeholder="Name"
+                    placeholder="Full name"
                     :error="row.touched.name && !!contacts.errors.value[index].name"
                     @blur="row.touched.name = true"
                 />
@@ -38,8 +38,6 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
             >
                 <MvPhoneInput
                     v-model="row.phone"
-                    size="sm"
-                    placeholder="Phone"
                     :error="row.touched.phone && !!contacts.errors.value[index].phone"
                     @blur="row.touched.phone = true"
                 />
@@ -53,14 +51,13 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
             >
                 <MvEmailInput
                     v-model="row.email"
-                    size="sm"
-                    placeholder="Email"
+                    placeholder="E-mail"
                     :error="row.touched.email && !!contacts.errors.value[index].email"
                     @blur="row.touched.email = true"
                 />
             </MvFormField>
             <button type="button" class="tp-contacts__remove" @click="contacts.remove(index)">
-                Remove
+                Remove contact
             </button>
         </div>
         <p v-if="!contacts.rows.length" class="tp-contacts__empty">No contacts</p>
@@ -71,50 +68,61 @@ defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
 .tp-contacts {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .tp-contacts__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 800;
-    color: var(--el-text-color-secondary);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .tp-contacts__add {
     background: none;
     border: none;
     color: var(--el-color-primary-dark-2);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
 
 .tp-contacts__row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
     align-items: start;
+    padding: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: var(--app-radius-md, 12px);
+}
+
+.tp-contacts__name,
+.tp-contacts__remove {
+    grid-column: 1 / -1;
 }
 
 .tp-contacts__remove {
+    justify-self: start;
     background: none;
     border: none;
     color: var(--el-color-danger);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    white-space: nowrap;
-    padding-top: 8px;
+    padding: 0;
 }
 
 .tp-contacts__empty {
     color: var(--el-text-color-secondary);
     font-size: 13px;
     margin: 0;
+}
+
+@media (max-width: 640px) {
+    .tp-contacts__row {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 </style>

@@ -186,7 +186,7 @@ test('editing a trading point via the real updateTradingPointDetails mutation up
 
     const row = page.locator('li', { hasText: 'E2E Trading Point' });
     await row.getByRole('button', { name: 'Edit' }).click();
-    const addressInput = page.getByRole('dialog').getByRole('textbox').nth(1);
+    const addressInput = page.locator('.tp-edit-form').getByRole('textbox').nth(1);
     await addressInput.fill(newAddress);
     await page.getByRole('button', { name: 'Save changes' }).click();
 
@@ -257,9 +257,9 @@ test('editing a trading point contact records a readable contacts diff (positive
     await page.getByRole('button', { name: '+ Add contact' }).click();
     // Prior runs may have already left a contact on this trading point (state persists across
     // test runs) — the newly added row is always the last one.
-    await page.getByRole('dialog').getByPlaceholder('Name').last().fill(contactName);
+    await page.locator('.tp-edit-form').getByPlaceholder('Full name').last().fill(contactName);
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 15000 });
+    await expect(page.locator('.tp-edit-form')).toHaveCount(0, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'History' }).click();
     await page
@@ -281,7 +281,7 @@ test('editing only the trading point address does not record a spurious contacts
 
     const row = page.locator('li', { hasText: 'E2E Trading Point' });
     await row.getByRole('button', { name: 'Edit' }).click();
-    const addressInput = page.getByRole('dialog').getByRole('textbox').nth(1);
+    const addressInput = page.locator('.tp-edit-form').getByRole('textbox').nth(1);
     await addressInput.fill(newAddress);
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByText(newAddress)).toBeVisible({ timeout: 15000 });

@@ -1,23 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { MvStatusBadge, MvModal } from '@mivend/ui-kit';
-import {
-    setTradingPointActive,
-    type CustomerListItem,
-    type CustomerCredit,
-    type TradingPointInfo,
-} from '../../api/customers';
+import type { CustomerListItem, CustomerCredit } from '../../api/customers';
 import { useCurrency } from '../../composables/useCurrency';
-import { tradingPointDefectLabel, visibleTradingPointDefects } from './tradingPointDefects';
-import TradingPointEditForm from './TradingPointEditForm.vue';
-import TradingPointPendingChange from './TradingPointPendingChange.vue';
-import EntityChangeJournal from '../change-journal/EntityChangeJournal.vue';
+import CustomerTradingPoints from './CustomerTradingPoints.vue';
 import type { ManagerOption } from '../../api/orders';
-import { CHANGE_JOURNAL_LABELS } from '../change-journal/changeJournalLabels';
-import { useAuthStore } from '../../stores/auth';
-import { usePendingTradingPointChanges } from '../../composables/usePendingTradingPointChanges';
 
-const props = withDefaults(
+withDefaults(
     defineProps<{
         customer: CustomerListItem;
         credit: CustomerCredit | null;
@@ -27,35 +14,7 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ changed: [] }>();
 
-const editingTradingPoint = ref<TradingPointInfo | null>(null);
-const authStore = useAuthStore();
-const canReadJournal = computed(() => authStore.hasPermission('ReadChangeJournal'));
-const reactivating = ref<string | null>(null);
-
 const { formatWhole } = useCurrency();
-const pending = usePendingTradingPointChanges(() => emit('changed'));
-
-function siblingOf(tp: TradingPointInfo): { latitude: number; longitude: number } | null {
-    const other = props.customer.tradingPoints.find(
-        p => p.id !== tp.id && p.latitude != null && p.longitude != null,
-    );
-    return other ? { latitude: other.latitude!, longitude: other.longitude! } : null;
-}
-
-function handleEdited(): void {
-    editingTradingPoint.value = null;
-    emit('changed');
-}
-
-async function reactivate(tp: TradingPointInfo): Promise<void> {
-    reactivating.value = tp.id;
-    try {
-        await setTradingPointActive(tp.id, true);
-        emit('changed');
-    } finally {
-        reactivating.value = null;
-    }
-}
 </script>
 
 <template>
@@ -101,114 +60,15 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
             </div>
         </dl>
 
-        <div class="overview-tab__trading-points">
-            <h3>Trading points</h3>
-            <ul v-if="customer.tradingPoints.length">
-                <li v-for="tp in customer.tradingPoints" :key="tp.id">
-                    <div>
-                        <strong>{{ tp.name }}</strong>
-                        <div class="overview-tab__contact-meta">{{ tp.address }}</div>
-                        <div v-if="tp.defects.length" class="overview-tab__tp-defects">
-                            <MvStatusBadge
-                                v-for="d in visibleTradingPointDefects(tp.defects)"
-                                :key="d"
-                                variant="warning"
-                            >
-                                {{ tradingPointDefectLabel(d) }}
-                            </MvStatusBadge>
-                            <div
-                                v-if="!tp.customerUsable"
-                                class="overview-tab__contact-meta overview-tab__no-location"
-                            >
-                                The customer cannot use this point
-                            </div>
-                        </div>
-                    </div>
-                    <div class="overview-tab__tp-actions">
-                        <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
-                            {{ tp.isActive ? 'Active' : 'Inactive' }}
-                        </MvStatusBadge>
-                        <button
-                            v-if="!tp.isActive"
-                            type="button"
-                            class="overview-tab__tp-btn"
-                            :disabled="reactivating === tp.id"
-                            @click="reactivate(tp)"
-                        >
-                            Reactivate
-                        </button>
-                        <button
-                            type="button"
-                            class="overview-tab__tp-btn"
-                            @click="editingTradingPoint = tp"
-                        >
-                            Edit
-                        </button>
-                    </div>
-                    <TradingPointPendingChange
-                        v-if="pending.byPoint.value.get(tp.id)"
-                        :change="pending.byPoint.value.get(tp.id)!"
-                        :busy="pending.busyId.value !== null"
-                        @accept="pending.accept(pending.byPoint.value.get(tp.id)!)"
-                        @reject="pending.reject(pending.byPoint.value.get(tp.id)!)"
-                    />
-                </li>
-            </ul>
-            <p v-if="pending.error.value" class="overview-tab__no-location">
-                {{ pending.error.value }}
-            </p>
-            <p v-else-if="!customer.tradingPoints.length" class="overview-tab__empty">
-                No trading points on file
-            </p>
-        </div>
-
-        <MvModal
-            v-if="editingTradingPoint"
-            title="Edit trading point"
-            @close="editingTradingPoint = null"
-        >
-            <TradingPointEditForm
-                :trading-point="editingTradingPoint"
-                :sibling-point="siblingOf(editingTradingPoint)"
-                @submitted="handleEdited"
-                @cancel="editingTradingPoint = null"
-            />
-            <section v-if="canReadJournal" class="overview-tab__journal">
-                <h3 class="overview-tab__journal-title">{{ CHANGE_JOURNAL_LABELS.tab }}</h3>
-                <EntityChangeJournal
-                    entity-type="TradingPoint"
-                    :entity-id="editingTradingPoint.id"
-                    :managers="managers"
-                />
-            </section>
-        </MvModal>
+        <CustomerTradingPoints
+            :customer="customer"
+            :managers="managers"
+            @changed="emit('changed')"
+        />
     </div>
 </template>
 
 <style scoped>
-.overview-tab__journal {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.overview-tab__journal-title {
-    margin: 0 0 12px;
-    font-size: 16px;
-}
-
-.overview-tab__tp-defects {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    align-items: center;
-}
-
-.overview-tab__no-location {
-    color: var(--el-color-warning-dark-2, var(--el-color-warning));
-    font-weight: 700;
-}
-
 .overview-tab {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -270,58 +130,5 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
 .overview-tab__facts dd {
     margin: 2px 0 0;
     font-size: 14px;
-}
-
-.overview-tab__trading-points {
-    grid-column: 1 / -1;
-}
-
-.overview-tab__trading-points h3 {
-    font-size: 13px;
-    margin: 0 0 10px;
-    color: var(--el-text-color-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.overview-tab__trading-points ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.overview-tab__trading-points li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border: 1px solid var(--el-border-color);
-    border-radius: 12px;
-}
-
-.overview-tab__tp-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.overview-tab__tp-btn {
-    background: none;
-    border: none;
-    color: var(--el-color-primary-dark-2);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.overview-tab__tp-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
 }
 </style>

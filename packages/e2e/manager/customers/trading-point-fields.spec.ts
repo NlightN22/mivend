@@ -48,14 +48,14 @@ test('the trading point form shows field errors after blur and does not save inv
     ).toBeVisible();
 
     await form.getByRole('button', { name: '+ Add contact' }).click();
-    await form.getByPlaceholder('Name').last().fill('Ivan');
-    await form.getByPlaceholder('Name').last().blur();
+    await form.getByPlaceholder('Full name').last().fill('Ivan');
+    await form.getByPlaceholder('Full name').last().blur();
     await expect(form.getByText('Enter the first and last name')).toBeVisible();
-    await form.getByPlaceholder('Phone').last().fill('+7 (91');
-    await form.getByPlaceholder('Phone').last().blur();
+    await form.getByPlaceholder('+7 900 000-00-00').last().fill('+7 (91');
+    await form.getByPlaceholder('+7 900 000-00-00').last().blur();
     await expect(form.getByText('Enter a full phone number')).toBeVisible();
-    await form.getByPlaceholder('Email').last().fill('not-an-email');
-    await form.getByPlaceholder('Email').last().blur();
+    await form.getByPlaceholder('E-mail').last().fill('not-an-email');
+    await form.getByPlaceholder('E-mail').last().blur();
     await expect(form.getByText('Enter a valid e-mail address')).toBeVisible();
 
     await form.getByRole('button', { name: 'Save changes' }).click();

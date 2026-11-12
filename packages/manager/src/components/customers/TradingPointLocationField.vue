@@ -82,11 +82,8 @@ function onPicked(point: GeoPoint): void {
 }
 
 .tp-loc__label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 800;
-    color: var(--el-text-color-secondary);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .tp-loc__preview {

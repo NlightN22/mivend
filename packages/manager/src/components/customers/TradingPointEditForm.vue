@@ -117,34 +117,21 @@ async function submit(): Promise<void> {
 
 <template>
     <div class="tp-edit-form">
-        <div class="tp-edit-form__grid">
-            <MvFormField label="Name" :error="shown('name')" required>
-                <MvInput
-                    v-model="form.name"
-                    size="sm"
-                    :error="!!shown('name')"
-                    @focusout="touched.name = true"
-                />
-            </MvFormField>
-            <MvFormField label="Address" :error="shown('address')" required>
-                <MvAddressInput
-                    v-model="form.address"
-                    size="sm"
-                    :fetch-suggestions="suggestAddress"
-                    :error="!!shown('address')"
-                    @blur="touched.address = true"
-                />
-            </MvFormField>
-            <MvFormField label="Working hours" :error="shown('workingHours')">
-                <MvWorkingHoursInput
-                    v-model="form.workingHours"
-                    :presets="HOURS_PRESETS"
-                    size="sm"
-                    :error="!!shown('workingHours')"
-                    @blur="touched.workingHours = true"
-                />
-            </MvFormField>
-        </div>
+        <MvFormField label="Name" :error="shown('name')" required>
+            <MvInput
+                v-model="form.name"
+                :error="!!shown('name')"
+                @focusout="touched.name = true"
+            />
+        </MvFormField>
+        <MvFormField label="Address" :error="shown('address')" required>
+            <MvAddressInput
+                v-model="form.address"
+                :fetch-suggestions="suggestAddress"
+                :error="!!shown('address')"
+                @blur="touched.address = true"
+            />
+        </MvFormField>
 
         <TradingPointLocationField
             v-model="form.location"
@@ -153,10 +140,18 @@ async function submit(): Promise<void> {
             :legacy="tradingPoint.latitude == null || tradingPoint.longitude == null"
         />
 
-        <label class="tp-edit-form__comment">
-            Delivery comment
-            <textarea v-model="form.deliveryComment" rows="2" />
-        </label>
+        <MvFormField label="Working hours" :error="shown('workingHours')">
+            <MvWorkingHoursInput
+                v-model="form.workingHours"
+                :presets="HOURS_PRESETS"
+                :error="!!shown('workingHours')"
+                @blur="touched.workingHours = true"
+            />
+        </MvFormField>
+
+        <MvFormField label="Delivery comment">
+            <textarea v-model="form.deliveryComment" class="tp-edit-form__comment" rows="2" />
+        </MvFormField>
 
         <TradingPointContactRows :contacts="contacts" />
 
@@ -180,33 +175,15 @@ async function submit(): Promise<void> {
     gap: 14px;
 }
 
-.tp-edit-form__grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    align-items: start;
-}
-
 .tp-edit-form__comment {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 800;
-    color: var(--el-text-color-secondary);
-}
-
-.tp-edit-form__comment textarea {
+    width: 100%;
     border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
     padding: 10px 12px;
     font-family: inherit;
     font-size: 14px;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: normal;
+    color: var(--el-text-color-primary);
+    background: var(--el-bg-color);
     resize: vertical;
 }
 

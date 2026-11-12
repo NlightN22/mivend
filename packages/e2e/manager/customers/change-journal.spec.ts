@@ -51,13 +51,13 @@ test('a trading point edit shows up in its Журнал изменений and i
             .locator('li', { hasText: 'E2E Trading Point' })
             .getByRole('button', { name: 'Edit' })
             .click();
-        const modal = page.getByRole('dialog');
+        const modal = page.locator('li').filter({ has: page.locator('.tp-edit-form') });
         await expect(modal.getByRole('heading', { name: 'Журнал изменений' })).toBeVisible();
         const latest = modal.getByTestId('change-journal').getByRole('listitem').first();
         await expect(latest).toContainText('Изменение', { timeout: 15000 });
         await expect(latest).toContainText('Администратор:');
         await expect(latest.getByRole('row', { name: /latitude/ })).toContainText(/10\.50*/);
-        await modal.getByRole('button', { name: 'Close' }).click();
+        await modal.getByRole('button', { name: 'Cancel' }).click();
         await expect(page.getByRole('link', { name: 'Журнал изменений' })).toBeVisible();
 
         await page.goto('/change-journal?entityType=TradingPoint');
@@ -79,7 +79,7 @@ test('the journal in the trading point card, the menu item and the page are hidd
         .locator('li', { hasText: 'E2E Trading Point' })
         .getByRole('button', { name: 'Edit' })
         .click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.locator('.tp-edit-form')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Журнал изменений' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Журнал изменений' })).toHaveCount(0);
 
