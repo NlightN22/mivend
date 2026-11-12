@@ -6,6 +6,8 @@ import type { DateRangeFilterValue, SelectOption } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import SettlementBalanceCards from './SettlementBalanceCards.vue';
 import SettlementHiddenNotice from './SettlementHiddenNotice.vue';
+import SettlementCoverageNotice from './SettlementCoverageNotice.vue';
+import { unexplainedByCurrency } from './settlementCoverage';
 import SettlementFilters from './SettlementFilters.vue';
 import SettlementTable from './SettlementTable.vue';
 import { totalsByCurrency, useSettlementDocuments } from './useSettlementDocuments';
@@ -65,15 +67,15 @@ const organizationOptions = computed(() =>
     ),
 );
 
-const totals = computed(() =>
-    totalsByCurrency(
-        balances.value.filter(
-            b =>
-                (!contract.value || b.contractId === contract.value) &&
-                (!organization.value || b.organizationId === organization.value),
-        ),
+const visibleBalances = computed(() =>
+    balances.value.filter(
+        b =>
+            (!contract.value || b.contractId === contract.value) &&
+            (!organization.value || b.organizationId === organization.value),
     ),
 );
+const totals = computed(() => totalsByCurrency(visibleBalances.value));
+const coverageGaps = computed(() => unexplainedByCurrency(visibleBalances.value));
 
 const CATEGORY_CHIPS = ['sale', 'payment', 'return', 'correction', 'bonus', 'other'];
 
@@ -111,6 +113,7 @@ onMounted(() => {
 
             <SettlementBalanceCards :totals="totals" />
             <SettlementHiddenNotice :summary="hidden" />
+            <SettlementCoverageNotice :gaps="coverageGaps" />
 
             <SettlementFilters
                 v-model:chip="chip"

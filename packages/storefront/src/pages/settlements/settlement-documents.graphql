@@ -41,5 +41,6 @@ query SettlementBalances($contractId: String, $organizationId: String) {
         openingBalance
         currentBalance
         overdue
+        unexplained
     }
 }
