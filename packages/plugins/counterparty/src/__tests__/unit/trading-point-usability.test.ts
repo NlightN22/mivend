@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tradingPointDefects } from '../../trading-point-usability';
+import { tradingPointCustomerUsable, tradingPointDefects } from '../../trading-point-usability';
 
 const ok = { address: 'Addr 1', latitude: 10, longitude: 20, isActive: true };
 
@@ -25,5 +25,17 @@ describe('tradingPointDefects', () => {
         expect(
             tradingPointDefects({ address: '', latitude: null, longitude: null, isActive: false }),
         ).toEqual(['NO_ADDRESS', 'NO_LOCATION', 'INACTIVE']);
+    });
+});
+
+describe('tradingPointCustomerUsable', () => {
+    it('is true for a complete point and for one that only lacks coordinates', () => {
+        expect(tradingPointCustomerUsable(ok)).toBe(true);
+        expect(tradingPointCustomerUsable({ ...ok, latitude: null, longitude: null })).toBe(true);
+    });
+
+    it('is false without an address or when inactive', () => {
+        expect(tradingPointCustomerUsable({ ...ok, address: '' })).toBe(false);
+        expect(tradingPointCustomerUsable({ ...ok, isActive: false })).toBe(false);
     });
 });

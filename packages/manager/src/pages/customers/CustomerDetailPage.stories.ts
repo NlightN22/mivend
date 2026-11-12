@@ -87,6 +87,7 @@ function mockCustomerDetailData(): void {
                     deliveryComment: null,
                     isActive: true,
                     defects: [],
+                    customerUsable: true,
                     contacts: [
                         {
                             name: 'Ivan Petrov',

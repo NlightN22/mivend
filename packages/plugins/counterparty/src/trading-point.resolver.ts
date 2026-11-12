@@ -16,7 +16,7 @@ import { CounterpartyService } from './counterparty.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { ctxQuery } from 'shared';
-import { tradingPointDefects } from './trading-point-usability';
+import { tradingPointCustomerUsable, tradingPointDefects } from './trading-point-usability';
 import { resolveTradingPointLocation } from './trading-point-location';
 
 @Resolver('Customer')
@@ -57,6 +57,11 @@ export class TradingPointResolver {
     @ResolveField()
     defects(@Parent() point: TradingPoint): string[] {
         return tradingPointDefects(point);
+    }
+
+    @ResolveField()
+    customerUsable(@Parent() point: TradingPoint): boolean {
+        return tradingPointCustomerUsable(point);
     }
 
     @ResolveField()

@@ -39,6 +39,7 @@ export const tradingPointFields = gql`
         contacts: [ContactPerson!]!
         pendingChange: TradingPointChange
         defects: [String!]!
+        customerUsable: Boolean!
     }
 `;
 

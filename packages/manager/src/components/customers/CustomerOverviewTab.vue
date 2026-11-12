@@ -112,7 +112,10 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                             <MvStatusBadge v-for="d in tp.defects" :key="d" variant="warning">
                                 {{ tradingPointDefectLabel(d) }}
                             </MvStatusBadge>
-                            <div class="overview-tab__contact-meta overview-tab__no-location">
+                            <div
+                                v-if="!tp.customerUsable"
+                                class="overview-tab__contact-meta overview-tab__no-location"
+                            >
                                 The customer cannot use this point
                             </div>
                         </div>

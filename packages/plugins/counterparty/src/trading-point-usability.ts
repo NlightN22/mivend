@@ -15,3 +15,8 @@ export function tradingPointDefects(point: {
     if (!point.isActive) defects.push('INACTIVE');
     return defects;
 }
+
+// Missing coordinates only keep a point off the map; no shop flow needs them.
+export function tradingPointCustomerUsable(point: Parameters<typeof tradingPointDefects>[0]): boolean {
+    return tradingPointDefects(point).every(d => d === 'NO_LOCATION');
+}
