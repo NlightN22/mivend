@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { OrderDetail } from '../../api/orderDetail';
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import OrderContractPanel from './OrderContractPanel.vue';
 import OrderDeliveryPanel from './OrderDeliveryPanel.vue';
 import OrderErpRegistration from './OrderErpRegistration.vue';
 
+const { t } = useI18n();
 defineProps<{
     order: OrderDetail;
     contractLocked: boolean;
@@ -17,7 +19,7 @@ defineEmits<{ changed: [] }>();
 <template>
     <dl class="order-fields">
         <div class="order-fields__cell">
-            <dt>Contract</dt>
+            <dt>{{ t('orderDetail.fields.contract') }}</dt>
             <dd>
                 <OrderContractPanel
                     :order-id="order.id"
@@ -28,7 +30,7 @@ defineEmits<{ changed: [] }>();
             </dd>
         </div>
         <div class="order-fields__cell">
-            <dt>Delivery</dt>
+            <dt>{{ t('orderDetail.fields.delivery') }}</dt>
             <dd>
                 <OrderDeliveryPanel
                     :order-id="order.id"
@@ -42,13 +44,13 @@ defineEmits<{ changed: [] }>();
             </dd>
         </div>
         <div class="order-fields__cell">
-            <dt>Price type</dt>
+            <dt>{{ t('orderDetail.fields.priceType') }}</dt>
             <dd data-testid="order-price-type">
                 {{ order.counterparty?.priceType ?? '—' }}
             </dd>
         </div>
         <div class="order-fields__cell">
-            <dt>ERP registration</dt>
+            <dt>{{ t('orderDetail.fields.erpRegistration') }}</dt>
             <dd>
                 <OrderErpRegistration
                     :not-registered="isNotRegisteredInErp(order.customFields)"

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvNotice } from '@mivend/ui-kit';
 import type { SplitOutcome } from '../../api/orderLineEdit';
 
+const { t } = useI18n();
 defineProps<{
     error: string;
     split: SplitOutcome[];
@@ -13,10 +15,10 @@ defineProps<{
     <div class="edit-bar">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <MvNotice v-else-if="alreadyWithinStock" variant="info">
-            Already within available stock; nothing to cut.
+            {{ t('orderLines.editBar.withinStock') }}
         </MvNotice>
         <MvNotice v-else-if="split.length" variant="info">
-            Cut {{ split.length }} line(s); the part stock could not cover is recorded as shortfall.
+            {{ t('orderLines.editBar.cut', { n: split.length }) }}
         </MvNotice>
     </div>
 </template>

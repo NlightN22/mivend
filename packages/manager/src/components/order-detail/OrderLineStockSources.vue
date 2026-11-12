@@ -1,24 +1,30 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { OrderLineAvailability } from '../../api/orderLineEdit';
 
+const { t } = useI18n();
 defineProps<{ availability: OrderLineAvailability }>();
 </script>
 
 <template>
     <div class="sources">
         <p class="sources__head">
-            Needed {{ availability.needed }}, fits now {{ availability.fitting }}
+            {{
+                t('orderLines.line.neededFits', {
+                    needed: availability.needed,
+                    fitting: availability.fitting,
+                })
+            }}
         </p>
         <p v-if="availability.limitedBy" class="sources__limit">
-            Limited by
             {{
                 availability.limitedBy === 'organization'
-                    ? 'the selling organization'
-                    : 'the warehouse'
+                    ? t('orderLines.line.limitedByOrganization')
+                    : t('orderLines.line.limitedByWarehouse')
             }}
         </p>
         <ul v-if="availability.warehouses.length" class="sources__list">
-            <li class="sources__title">Warehouses (free)</li>
+            <li class="sources__title">{{ t('orderLines.line.warehousesFree') }}</li>
             <li v-for="w in availability.warehouses" :key="w.warehouseErpId">
                 <span>{{ w.name ?? w.warehouseErpId }}</span>
                 <span :class="{ sources__bad: w.free < availability.needed }">
@@ -27,13 +33,13 @@ defineProps<{ availability: OrderLineAvailability }>();
             </li>
         </ul>
         <ul v-if="availability.organizations.length" class="sources__list">
-            <li class="sources__title">Organizations (stock)</li>
+            <li class="sources__title">{{ t('orderLines.line.organizationsStock') }}</li>
             <li
                 v-for="o in availability.organizations"
                 :key="o.id"
                 :class="{ sources__sell: o.selling }"
             >
-                <span>{{ o.name ?? o.id }}<em v-if="o.selling"> · sells this line</em></span>
+                <span>{{ o.name ?? o.id }}<em v-if="o.selling"> · {{ t('orderLines.line.sellsThisLine') }}</em></span>
                 <span :class="{ sources__bad: o.selling && o.stock < availability.needed }">
                     {{ o.stock }}<template v-if="o.selling"> / {{ availability.needed }}</template>
                 </span>

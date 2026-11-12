@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { formatDateTime } from '../../i18n/format';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconCheck } from '@tabler/icons-vue';
 import type { OrderDetail } from '../../api/orderDetail';
 
+const { t } = useI18n();
 const props = defineProps<{ history: OrderDetail['statusHistory'] }>();
 
 const entries = computed(() => [...props.history].reverse());
@@ -15,7 +17,7 @@ function date(iso: string): string {
 
 <template>
     <section v-if="entries.length" class="order-history" data-testid="order-history">
-        <h2 class="order-history__title">History</h2>
+        <h2 class="order-history__title">{{ t('orderDetail.history.title') }}</h2>
         <ol class="order-history__list">
             <li v-for="entry in entries" :key="entry.uuid" class="order-history__item">
                 <span class="order-history__dot"><IconCheck :size="14" /></span>

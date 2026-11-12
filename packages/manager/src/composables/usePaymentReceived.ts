@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { adminApi } from '../api/client';
 import { ConfirmPaymentReceivedDocument } from '../api/generated/graphql';
@@ -28,7 +29,7 @@ export function usePaymentReceived(
             return true;
         } catch (e) {
             console.error('[usePaymentReceived]', e);
-            error.value = 'Failed to confirm the payment. Try again later.';
+            error.value = tr('orderDetail.paymentConfirmFailed');
             return false;
         } finally {
             confirming.value = false;

@@ -1,3 +1,5 @@
+import { tr } from './lazyLabels';
+
 // Unit price and discount percent are two views of one value, measured from the customer's reference price.
 export function referencePrice(
     effectiveMinor: number,
@@ -41,8 +43,8 @@ export function capHint(
     if (deepening && !Number.isNaN(percent) && percent > max) {
         return {
             kind: 'approval',
-            text: `Over your limit of ${max}%: will be sent for approval`,
+            text: tr('orderLines.line.limitOver', { max }),
         };
     }
-    return { kind: 'limit', text: `Your limit: ${max}%` };
+    return { kind: 'limit', text: tr('orderLines.line.limit', { max }) };
 }

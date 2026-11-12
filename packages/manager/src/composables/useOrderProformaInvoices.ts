@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { adminApi } from '../api/client';
 import {
@@ -33,7 +34,7 @@ export function useOrderProformaInvoices(orderId: () => string): UseOrderProform
             proformaInvoices.value = result.proformaInvoicesForOrder;
         } catch (e) {
             console.error('[useOrderProformaInvoices]', e);
-            error.value = 'Failed to load proforma invoices.';
+            error.value = tr('orderDetail.proformas.loadFailed');
         }
     }
 
@@ -45,7 +46,7 @@ export function useOrderProformaInvoices(orderId: () => string): UseOrderProform
             await load();
         } catch (e) {
             console.error('[useOrderProformaInvoices]', e);
-            error.value = 'Failed to request proforma invoices. Try again later.';
+            error.value = tr('orderDetail.proformas.requestFailed');
         } finally {
             requesting.value = false;
         }
@@ -59,7 +60,7 @@ export function useOrderProformaInvoices(orderId: () => string): UseOrderProform
         } catch (e) {
             console.error('[useOrderProformaInvoices]', e);
             error.value =
-                e instanceof Error ? e.message : 'Failed to withdraw the proforma invoice.';
+                e instanceof Error ? e.message : tr('orderDetail.proformas.withdrawFailed');
         }
     }
 

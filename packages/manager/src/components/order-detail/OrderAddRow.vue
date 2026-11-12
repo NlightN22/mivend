@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconCheck, IconSearch, IconX } from '@tabler/icons-vue';
 import { MvDocumentSuffixInput, MvQtyStepper } from '@mivend/ui-kit';
 import { quantityUnitHint } from '../../utils/quantityUnit';
 import type { useOrderLineAdd } from '../../composables/useOrderLineAdd';
 
+const { t } = useI18n();
 const props = defineProps<{
     add: ReturnType<typeof useOrderLineAdd>;
     busy: boolean;
@@ -25,8 +27,8 @@ const unitHint = computed(() =>
                     class="add-row__input"
                     :value="add.query.value"
                     :disabled="busy"
-                    placeholder="Article or product name..."
-                    aria-label="Article or product name"
+                    :placeholder="t('orderLines.addRow.placeholder')"
+                    :aria-label="t('orderLines.addRow.search')"
                     data-testid="add-row-search"
                     @input="add.search(($event.target as HTMLInputElement).value)"
                 />
@@ -52,8 +54,8 @@ const unitHint = computed(() =>
             <MvDocumentSuffixInput
                 :model-value="add.price.value"
                 :suffix="currencySymbol"
-                placeholder="Price"
-                label="Price"
+                :placeholder="t('orderLines.addRow.price')"
+                :label="t('orderLines.addRow.price')"
                 :disabled="busy"
                 @update:model-value="add.setPrice"
             />
@@ -61,7 +63,7 @@ const unitHint = computed(() =>
                 :model-value="add.discount.value"
                 suffix="%"
                 placeholder="—"
-                label="Discount percent"
+                :label="t('orderLines.addRow.discountPercent')"
                 :disabled="busy"
                 @update:model-value="add.setDiscount"
             />
@@ -69,7 +71,7 @@ const unitHint = computed(() =>
                 <button
                     type="button"
                     class="add-row__btn add-row__btn--ok"
-                    aria-label="Add position"
+                    :aria-label="t('orderLines.addRow.add')"
                     data-testid="add-row-confirm"
                     :disabled="busy || !add.quote.value"
                     @click="add.submit()"
@@ -79,7 +81,7 @@ const unitHint = computed(() =>
                 <button
                     type="button"
                     class="add-row__btn"
-                    aria-label="Cancel adding"
+                    :aria-label="t('orderLines.addRow.cancel')"
                     data-testid="add-row-cancel"
                     @click="add.cancel()"
                 >
@@ -102,7 +104,7 @@ const unitHint = computed(() =>
         >
             {{ add.error.value || add.multipleError.value }}
         </p>
-        <p v-else class="add-row__hint">Price and discount start at the customer price.</p>
+        <p v-else class="add-row__hint">{{ t('orderLines.addRow.hint') }}</p>
     </div>
 </template>
 

@@ -1,3 +1,4 @@
+import { tr } from './lazyLabels';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../api/orderDetail';
 import type { OrderLineAvailability } from '../api/orderLineEdit';
 import type { OrderReservation } from '../api/reservation';
@@ -49,13 +50,13 @@ function adjustmentsByLine(
         if (!lineId) continue;
         if (request.status === 'pending') {
             map.set(lineId, {
-                label: 'Pending approval',
+                label: tr('orderLines.adjustment.pending'),
                 variant: 'warning',
                 approvalRequestId: request.id,
             });
         } else if (request.status === 'approved' && !map.has(lineId)) {
             map.set(lineId, {
-                label: 'Approved adjustment',
+                label: tr('orderLines.adjustment.approved'),
                 variant: 'success',
                 approvalRequestId: request.id,
             });
@@ -64,7 +65,7 @@ function adjustmentsByLine(
     for (const line of lines) {
         if (!map.has(line.id) && line.customFields.manualUnitPrice !== null) {
             map.set(line.id, {
-                label: 'Self-service adjustment',
+                label: tr('orderLines.adjustment.selfService'),
                 variant: 'info',
                 approvalRequestId: null,
             });

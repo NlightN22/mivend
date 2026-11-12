@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvNotice, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
@@ -8,6 +9,7 @@ import {
 } from '../../api/proforma-invoices';
 import { useOrderProformaInvoices } from '../../composables/useOrderProformaInvoices';
 
+const { t } = useI18n();
 const props = defineProps<{ orderId: string; cancelled: boolean }>();
 const { proformaInvoices, allowed, requesting, error, load, request, withdraw } =
     useOrderProformaInvoices(() => props.orderId);
@@ -24,8 +26,10 @@ onMounted(() => void load());
 </script>
 
 <template>
-    <MvPanel title="Proforma invoices">
-        <p v-if="!proformaInvoices.length" class="pi-empty">No proforma invoices issued yet.</p>
+    <MvPanel :title="t('orderDetail.proformaPanel.title')">
+        <p v-if="!proformaInvoices.length" class="pi-empty">
+            {{ t('orderDetail.proformaPanel.empty') }}
+        </p>
         <div v-for="proformaInvoice in proformaInvoices" :key="proformaInvoice.id" class="pi-row">
             <div class="pi-main">
                 <RouterLink
@@ -51,7 +55,11 @@ onMounted(() => void load());
                 }}</span>
             </div>
             <div class="pi-meta">
-                Seller: {{ proformaInvoice.seller?.legalName ?? proformaInvoice.organizationId }}
+                {{
+                    t('orderDetail.proformaPanel.seller', {
+                        name: proformaInvoice.seller?.legalName ?? proformaInvoice.organizationId,
+                    })
+                }}
                 <a
                     v-if="
                         proformaInvoice.document?.status === 'ready' &&
@@ -64,33 +72,55 @@ onMounted(() => void load());
                 >
             </div>
             <div class="pi-meta">
-                Issued {{ date(proformaInvoice.issuedAt) }}, pay by
-                {{ date(proformaInvoice.dueDate) }}
+                {{
+                    t('orderDetail.proformaPanel.issued', {
+                        issued: date(proformaInvoice.issuedAt),
+                        due: date(proformaInvoice.dueDate),
+                    })
+                }}
                 <template v-if="proformaInvoice.kind === 'by-shipment'">
-                    · by shipment<template v-if="proformaInvoice.salesInvoiceNumber">
-                        (realization № {{ proformaInvoice.salesInvoiceNumber }})</template
+                    · {{ t('orderDetail.proformaPanel.byShipment')
+                    }}<template v-if="proformaInvoice.salesInvoiceNumber">
+                        ({{
+                            t('orderDetail.proformaPanel.realization', {
+                                number: proformaInvoice.salesInvoiceNumber,
+                            })
+                        }})</template
                     ></template
                 >
             </div>
             <div v-if="proformaInvoice.supersededBy" class="pi-meta">
-                There is a newer version v{{ proformaInvoice.supersededBy.version }} (№
-                {{ proformaInvoice.supersededBy.number }})
+                {{
+                    t('orderDetail.proformaPanel.newer', {
+                        version: proformaInvoice.supersededBy.version,
+                        number: proformaInvoice.supersededBy.number,
+                    })
+                }}
             </div>
             <div v-else-if="proformaInvoice.supersedes" class="pi-meta">
-                Version {{ proformaInvoice.version }}, follows №
-                {{ proformaInvoice.supersedes.number }}
+                {{
+                    t('orderDetail.proformaPanel.follows', {
+                        version: proformaInvoice.version,
+                        number: proformaInvoice.supersedes.number,
+                    })
+                }}
             </div>
             <MvButton
                 v-if="allowed && proformaInvoice.displayStatus === 'current'"
                 variant="secondary"
                 size="sm"
                 @click="withdraw(proformaInvoice.id)"
-                >Withdraw</MvButton
+                >{{ t('orderDetail.proformaPanel.withdraw') }}</MvButton
             >
             <MvNotice v-if="proformaInvoice.orderChangedDifference != null" variant="warning">
-                Order changed after payment, difference
-                {{ money(proformaInvoice.orderChangedDifference, proformaInvoice.currencyCode) }}.
-                Settled through the ERP.
+                {{
+                    t('orderDetail.proformaPanel.changed', {
+                        amount: money(
+                            proformaInvoice.orderChangedDifference,
+                            proformaInvoice.currencyCode,
+                        ),
+                    })
+                }}
             </MvNotice>
         </div>
         <MvButton
@@ -98,7 +128,7 @@ onMounted(() => void load());
             variant="secondary"
             :loading="requesting"
             @click="request"
-            >Request proforma invoices</MvButton
+            >{{ t('orderDetail.proformaPanel.request') }}</MvButton
         >
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
     </MvPanel>

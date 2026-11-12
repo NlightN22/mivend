@@ -1,3 +1,5 @@
+import { tr } from './lazyLabels';
+
 // Muted hint after a quantity: the ERP unit and, for a pack rule, the multiple; nothing without unit data.
 export function quantityUnitHint(unitName: string | null | undefined, multiple = 1): string {
     const unit = unitName?.trim() ?? '';
@@ -6,7 +8,7 @@ export function quantityUnitHint(unitName: string | null | undefined, multiple =
 }
 
 export function multipleMessage(sku: string, multiple: number): string {
-    return `${sku} must be ordered in multiples of ${multiple}`;
+    return tr('orderLines.multipleMessage', { sku, multiple });
 }
 
 export function notMultiple(quantity: number, multiple: number): boolean {

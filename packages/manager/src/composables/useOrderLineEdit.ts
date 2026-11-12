@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { ref, type Ref } from 'vue';
 import { fetchLineDiscountLimits, type LineDiscountLimit } from '../api/discountLimits';
 import {
@@ -23,7 +24,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
             if (seq === loadSeq) availability.value = new Map(rows.map(r => [r.orderLineId, r]));
         } catch (e) {
             if (seq === loadSeq)
-                error.value = e instanceof Error ? e.message : 'Could not load stock';
+                error.value = e instanceof Error ? e.message : tr('orderLines.lineEdit.stockFailed');
         }
     }
 
@@ -42,7 +43,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
             onChanged();
             return true;
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'The change was not applied';
+            error.value = e instanceof Error ? e.message : tr('orderLines.lineEdit.notApplied');
             return false;
         } finally {
             busy.value = false;

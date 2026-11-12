@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { CustomerCredit, CustomerOrderItem } from '../../api/customers';
 import type { CounterpartyOverdue } from '../../api/counterpartyOverdue';
 import type { OutstandingBalance } from '../../api/proforma-invoices';
 import { useCurrency } from '../../composables/useCurrency';
 import { customerKpis } from '../../utils/customerKpis';
 
+const { t } = useI18n();
 const props = defineProps<{
     orders: Pick<CustomerOrderItem, 'state' | 'orderPlacedAt' | 'totalWithTax'>[];
     credit: CustomerCredit | null;
@@ -29,14 +31,14 @@ function display(kind: 'minor' | 'whole' | 'count', value: number): string | num
             <dd>{{ display(kpi.kind, kpi.value) }}</dd>
         </div>
         <div v-if="overdue" class="customer-summary__item" data-testid="order-summary-overdue">
-            <dt>Overdue</dt>
+            <dt>{{ t('orderDetail.summary.overdue') }}</dt>
             <dd :class="{ 'customer-summary__overdue': overdue.amount > 0 }">
                 {{ formatMinor(overdue.amount) }}
                 <span
                     v-if="overdue.oldestDays !== null && overdue.amount > 0"
                     class="customer-summary__days"
                 >
-                    {{ overdue.oldestDays }} d
+                    {{ t('orderDetail.summary.days', { n: overdue.oldestDays }) }}
                 </span>
             </dd>
         </div>

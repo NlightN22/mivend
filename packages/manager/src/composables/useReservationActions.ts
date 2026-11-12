@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, onMounted, reactive, ref, watch, type Ref } from 'vue';
 import {
     confirmOrder,
@@ -64,23 +65,23 @@ export function useReservationActions(options: {
     async function confirm(): Promise<boolean> {
         const days = positiveDays(
             form.days,
-            'Reservation period must be a positive number of days',
+            tr('orderDetail.reservation.daysInvalid'),
         );
         if (days === null) return false;
-        return run(() => confirmOrder(options.orderId(), days), 'Could not confirm the order');
+        return run(() => confirmOrder(options.orderId(), days), tr('orderDetail.reservation.confirmFailed'));
     }
 
     async function extend(): Promise<boolean> {
-        const days = positiveDays(form.extendDays, 'Extension must be a positive number of days');
+        const days = positiveDays(form.extendDays, tr('orderDetail.reservation.extendInvalid'));
         if (days === null) return false;
         return run(
             () => extendOrderReservation(options.orderId(), days),
-            'Could not extend the reservation',
+            tr('orderDetail.reservation.extendFailed'),
         );
     }
 
     const release = (): Promise<boolean> =>
-        run(() => releaseOrderReservation(options.orderId()), 'Could not release the reservation');
+        run(() => releaseOrderReservation(options.orderId()), tr('orderDetail.reservation.releaseFailed'));
 
     return {
         form,

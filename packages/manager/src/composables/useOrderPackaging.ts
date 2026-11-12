@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 interface PackagingLine {
     quantity: number;
     productVariant: {
@@ -57,9 +58,11 @@ export function packagingGaps(lines: PackagingLine[]): PackagingGaps {
 }
 
 export function formatWeightKg(weightKg: number): string {
-    return `${weightKg.toFixed(1)} kg`;
+    return tr('orderLines.units.kg', { value: weightKg.toFixed(1) });
 }
 
 export function formatVolumeM3(volumeM3: number): string {
-    return volumeM3 > 0 && volumeM3 < 0.001 ? '< 0.001 m³' : `${volumeM3.toFixed(3)} m³`;
+    return volumeM3 > 0 && volumeM3 < 0.001
+        ? tr('orderLines.units.m3Less')
+        : tr('orderLines.units.m3', { value: volumeM3.toFixed(3) });
 }

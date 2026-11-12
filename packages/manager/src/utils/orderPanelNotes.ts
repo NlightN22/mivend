@@ -1,4 +1,5 @@
 import { formatDateTime } from '../i18n/format';
+import { tr } from './lazyLabels';
 import type { OrderLineShortfallRow } from '../api/orderLineEdit';
 import { RESERVATION_FAILURE_LABEL } from '../api/orders';
 import type { ProblemTone } from './orderLineProblems';
@@ -24,9 +25,9 @@ export interface LineNotes {
     available: Note[];
 }
 
-const LIMITED_BY_LABEL: Record<string, string> = {
-    warehouse: 'warehouse stock',
-    organization: "the selling organization's stock",
+const LIMITED_BY_KEY: Record<string, string> = {
+    warehouse: 'limitWarehouse',
+    organization: 'limitOrganization',
 };
 
 function segments(failure: ReservationFailure): string[] {
@@ -39,20 +40,30 @@ function segments(failure: ReservationFailure): string[] {
 function failureNotes(failure: ReservationFailure, parts: string[]): Note[] {
     const when = failure.failedAt ? formatDateTime(failure.failedAt) : null;
     const texts = [
-        `Reservation failed: ${RESERVATION_FAILURE_LABEL[failure.reason] ?? failure.reason}`,
+        tr('orderLines.notes.reservationFailed', {
+            reason: RESERVATION_FAILURE_LABEL[failure.reason] ?? failure.reason,
+        }),
         ...parts,
         ...(when ? [when] : []),
-        'The automatic reserve did not go through. Fix the cause and confirm the order.',
+        tr('orderLines.notes.autoReserveFailed'),
     ];
     return texts.map(text => ({ tone: 'danger', text }));
 }
 
 function shortfallNote(row: OrderLineShortfallRow): string {
+    const key = row.limitedBy ? LIMITED_BY_KEY[row.limitedBy] : undefined;
     const limit = row.limitedBy
-        ? `, limited by ${LIMITED_BY_LABEL[row.limitedBy] ?? row.limitedBy}`
+        ? `, ${tr('orderLines.notes.limitedBy', {
+              what: key ? tr(`orderLines.notes.${key}`) : row.limitedBy,
+          })}`
         : '';
-    const when = formatDateTime(row.createdAt);
-    return `Cut for lack of stock: ${row.requestedQuantity} requested, ${row.keptQuantity} kept, ${row.shortfallQuantity} cut${limit} (${when}). Kept for demand statistics only.`;
+    return tr('orderLines.notes.cut', {
+        requested: row.requestedQuantity,
+        kept: row.keptQuantity,
+        cut: row.shortfallQuantity,
+        limit,
+        when: formatDateTime(row.createdAt),
+    });
 }
 
 export function lineNotes(src: PanelNotes, sku: string): LineNotes {
@@ -77,7 +88,10 @@ export function orderNotes(src: PanelNotes, skus: string[]): Note[] {
         if (row.sku && skus.includes(row.sku)) continue;
         notes.push({
             tone: 'warning',
-            text: `${row.sku ?? 'Unknown product'}: ${shortfallNote(row)}`,
+            text: tr('orderLines.notes.unknownProductNote', {
+                sku: row.sku ?? tr('orderLines.notes.unknownProduct'),
+                note: shortfallNote(row),
+            }),
         });
     }
     return notes;

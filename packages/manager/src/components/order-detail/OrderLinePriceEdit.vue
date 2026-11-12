@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvDocumentSuffixInput } from '@mivend/ui-kit';
 
+const { t } = useI18n();
 defineProps<{
     price: string;
     justification: string;
@@ -16,7 +18,7 @@ defineEmits<{ 'update:price': [value: string]; 'update:justification': [value: s
         <MvDocumentSuffixInput
             :model-value="price"
             :suffix="symbol"
-            label="Unit price"
+            :label="t('orderLines.line.unitPrice')"
             :disabled="disabled"
             @update:model-value="$emit('update:price', $event)"
         />
@@ -25,8 +27,8 @@ defineEmits<{ 'update:price': [value: string]; 'update:justification': [value: s
             class="price-edit__reason"
             :value="justification"
             :disabled="disabled"
-            placeholder="Reason for approval"
-            aria-label="Reason for approval"
+            :placeholder="t('orderLines.line.reasonForApproval')"
+            :aria-label="t('orderLines.line.reasonForApproval')"
             data-testid="price-reason"
             @input="$emit('update:justification', ($event.target as HTMLInputElement).value)"
         />

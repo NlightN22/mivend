@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvQtyStepper } from '@mivend/ui-kit';
 import OrderLineUnit from './OrderLineUnit.vue';
 
+const { t } = useI18n();
 defineProps<{
     quantity: number;
     text: string;
@@ -27,7 +29,9 @@ defineEmits<{ 'update:quantity': [value: number] }>();
             :disabled="disabled"
             @update:model-value="$emit('update:quantity', $event)"
         />
-        <small v-if="quantity === 0" class="qty-cell__hint">Line will be removed</small>
+        <small v-if="quantity === 0" class="qty-cell__hint">{{
+            t('orderLines.line.willBeRemoved')
+        }}</small>
         <OrderLineUnit :unit="unit" />
     </template>
     <template v-else>

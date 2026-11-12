@@ -1,10 +1,15 @@
+import { tr } from './lazyLabels';
+
 interface PaymentWithPlacement {
     metadata?: { placement?: { confirmationHold?: boolean; confirmationCase?: string } } | null;
 }
 
-const TERMS_LABEL: Record<string, string> = {
-    deferred: 'deferred terms',
-    'no-terms': 'no deferred terms',
+const PART_KEYS: Record<string, string> = {
+    deferred: 'deferred',
+    'no-terms': 'noTerms',
+    cash: 'cash',
+    pickup: 'pickup',
+    courier: 'courier',
 };
 
 // "payment.confirmation.cash.pickup.no-terms" -> "cash, pickup, no deferred terms".
@@ -12,7 +17,9 @@ export function confirmationCaseLabel(code: string): string {
     return code
         .replace(/^payment\.confirmation\./, '')
         .split('.')
-        .map(part => TERMS_LABEL[part] ?? part.replace(/-/g, ' '))
+        .map(part =>
+            PART_KEYS[part] ? tr(`orderDetail.holdCase.${PART_KEYS[part]}`) : part.replace(/-/g, ' '),
+        )
         .join(', ');
 }
 

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvNotice, MvSelect } from '@mivend/ui-kit';
 import { DELIVERY_METHOD_OPTIONS, type DeliveryMethod } from '../../api/deliveryMethods';
 import { setOrderDelivery } from '../../api/orderDelivery';
 
+const { t } = useI18n();
 const props = defineProps<{
     orderId: string;
     shippingCodes: string[];
@@ -69,7 +71,7 @@ async function save(): Promise<void> {
         );
         emit('changed');
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not change the delivery';
+        error.value = e instanceof Error ? e.message : t('orderDetail.delivery.changeFailed');
     } finally {
         saving.value = false;
     }
@@ -79,7 +81,7 @@ async function save(): Promise<void> {
 <template>
     <div class="order-delivery">
         <p v-if="!canEdit" class="order-delivery__current">
-            {{ currentMethod === 'courier' ? 'Courier delivery' : 'Self-pickup' }}
+            {{ t(`orderDetail.delivery.${currentMethod}`) }}
             <template v-if="deliveryAddress"> — {{ deliveryAddress }}</template>
         </p>
         <template v-else>
@@ -98,7 +100,9 @@ async function save(): Promise<void> {
                 :disabled="saving"
                 @update:model-value="pointId = $event"
             />
-            <MvButton :disabled="!canSave" @click="save">Save delivery</MvButton>
+            <MvButton :disabled="!canSave" @click="save">{{
+                t('orderDetail.delivery.save')
+            }}</MvButton>
         </template>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
     </div>

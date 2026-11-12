@@ -1,3 +1,4 @@
+import { tr } from './lazyLabels';
 import type { OrderCheckFinding } from './orderCheckMessages';
 import { buildPolicyRows, type PolicyRow } from './checkPolicyRows';
 import type { CheckDefinition, CheckPolicy } from '../api/checkPolicies';
@@ -10,18 +11,23 @@ export interface FindingConsequence {
     holdsConfirmation: boolean;
 }
 
-const LABELS: Record<string, { label: string; variant: StatusBadgeVariant }> = {
-    info: { label: 'Info', variant: 'info' },
-    warn: { label: 'Warning', variant: 'warning' },
-    hold: { label: 'Holds confirmation', variant: 'danger' },
-    block: { label: 'Blocks', variant: 'danger' },
-    'require-approval': { label: 'Needs approval', variant: 'danger' },
+const LABELS: Record<string, { key: string; variant: StatusBadgeVariant }> = {
+    info: { key: 'info', variant: 'info' },
+    warn: { key: 'warn', variant: 'warning' },
+    hold: { key: 'hold', variant: 'danger' },
+    block: { key: 'block', variant: 'danger' },
+    'require-approval': { key: 'requireApproval', variant: 'danger' },
 };
 const STOPPING = new Set(['hold', 'block', 'require-approval']);
 
 export function describeConsequence(consequence: string): FindingConsequence {
-    const entry = LABELS[consequence] ?? { label: consequence, variant: 'neutral' as const };
-    return { consequence, ...entry, holdsConfirmation: STOPPING.has(consequence) };
+    const entry = LABELS[consequence];
+    return {
+        consequence,
+        label: entry ? tr(`orderLines.consequence.${entry.key}`) : consequence,
+        variant: entry?.variant ?? 'neutral',
+        holdsConfirmation: STOPPING.has(consequence),
+    };
 }
 
 function rowFor(rows: PolicyRow[], finding: OrderCheckFinding): PolicyRow | undefined {

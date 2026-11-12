@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPopover, MvStatusBadge } from '@mivend/ui-kit';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
+const { t } = useI18n();
 const props = defineProps<{
     notRegistered: boolean;
     erpStatus: string | null;
@@ -17,10 +19,10 @@ void statuses.load();
 const rejected = computed(() => statuses.isRejected(props.rawErpStatus));
 const details = computed(() =>
     [
-        ['Document number', props.documentNumber],
-        ['Registration status', props.erpStatus],
-        ['Reason code', props.rejectionCode],
-        ['Reason', props.rejectionText],
+        [t('orderDetail.erp.documentNumber'), props.documentNumber],
+        [t('orderDetail.erp.registrationStatus'), props.erpStatus],
+        [t('orderDetail.erp.reasonCode'), props.rejectionCode],
+        [t('orderDetail.erp.reason'), props.rejectionText],
     ].filter((row): row is [string, string] => !!row[1]),
 );
 </script>
@@ -31,14 +33,16 @@ const details = computed(() =>
             <button
                 type="button"
                 class="erp-registration"
-                aria-label="Show ERP registration details"
+                :aria-label="t('orderDetail.erp.showDetails')"
             >
-                <MvStatusBadge v-if="rejected" variant="danger">Rejected by ERP</MvStatusBadge>
+                <MvStatusBadge v-if="rejected" variant="danger">{{
+                    t('orderDetail.erp.rejected')
+                }}</MvStatusBadge>
                 <MvStatusBadge v-else-if="notRegistered" variant="warning">
-                    Not registered in the ERP
+                    {{ t('orderDetail.erp.notRegistered') }}
                 </MvStatusBadge>
                 <MvStatusBadge v-else variant="success">{{
-                    erpStatus ?? 'Registered'
+                    erpStatus ?? t('orderDetail.erp.registered')
                 }}</MvStatusBadge>
             </button>
         </template>
@@ -46,12 +50,14 @@ const details = computed(() =>
             <span class="erp-registration__label">{{ label }}</span>
             <span>{{ value }}</span>
         </div>
-        <span v-if="rejected && !details.length">The ERP did not accept this order.</span>
+        <span v-if="rejected && !details.length">{{ t('orderDetail.erp.notAccepted') }}</span>
     </MvPopover>
-    <MvStatusBadge v-else-if="notRegistered" variant="warning"
-        >Not registered in the ERP</MvStatusBadge
-    >
-    <MvStatusBadge v-else variant="success">{{ erpStatus ?? 'Registered' }}</MvStatusBadge>
+    <MvStatusBadge v-else-if="notRegistered" variant="warning">{{
+        t('orderDetail.erp.notRegistered')
+    }}</MvStatusBadge>
+    <MvStatusBadge v-else variant="success">{{
+        erpStatus ?? t('orderDetail.erp.registered')
+    }}</MvStatusBadge>
 </template>
 
 <style scoped>

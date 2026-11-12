@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFlagChip, MvNotice, MvPopover, MvSelect, MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
@@ -11,6 +12,7 @@ import {
 const props = defineProps<{ orderId: string; locked: boolean; blockedSkus: string[] }>();
 const emit = defineEmits<{ changed: [] }>();
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const options = ref<OrderContractOption[]>([]);
 const saving = ref(false);
@@ -29,7 +31,7 @@ async function load(): Promise<void> {
     try {
         options.value = await fetchOrderContracts(props.orderId);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load contracts';
+        error.value = e instanceof Error ? e.message : t('orderDetail.contract.loadFailed');
     }
 }
 
@@ -40,7 +42,7 @@ async function change(contractId: string): Promise<void> {
         options.value = await setOrderContract(props.orderId, contractId);
         emit('changed');
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not change the contract';
+        error.value = e instanceof Error ? e.message : t('orderDetail.contract.changeFailed');
     } finally {
         saving.value = false;
     }
@@ -52,7 +54,7 @@ watch(() => props.orderId, load, { immediate: true });
 <template>
     <div class="order-contract">
         <MvNotice v-if="!options.length && !error" variant="warning">
-            No active contract: the order cannot be registered in the ERP.
+            {{ t('orderDetail.contract.none') }}
         </MvNotice>
         <template v-else-if="options.length">
             <div class="order-contract__select">
@@ -66,16 +68,18 @@ watch(() => props.orderId, load, { immediate: true });
                     <template #trigger>
                         <MvFlagChip
                             tone="danger"
-                            label="Show which lines the contract does not allow"
+                            :label="t('orderDetail.contract.showBlocked')"
                         />
                     </template>
-                    These lines cannot be sent under this contract: {{ blockedSkus.join(', ') }}
+                    {{ t('orderDetail.contract.blocked', { skus: blockedSkus.join(', ') }) }}
                 </MvPopover>
             </div>
             <div class="order-contract__meta">
-                <MvStatusBadge v-if="selected?.isMain" variant="info">Main contract</MvStatusBadge>
+                <MvStatusBadge v-if="selected?.isMain" variant="info">{{
+                    t('orderDetail.contract.main')
+                }}</MvStatusBadge>
                 <span v-if="locked" class="order-contract__hint">
-                    Release the reservation to change the contract.
+                    {{ t('orderDetail.contract.locked') }}
                 </span>
             </div>
         </template>

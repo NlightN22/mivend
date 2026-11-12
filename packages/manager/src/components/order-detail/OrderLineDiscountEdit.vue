@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvDocumentSuffixInput } from '@mivend/ui-kit';
 import type { CapHint } from '../../utils/lineValueModel';
 
+const { t } = useI18n();
 defineProps<{ percent: string; hint: CapHint; disabled: boolean }>();
 defineEmits<{ 'update:percent': [value: string] }>();
 </script>
@@ -11,7 +13,7 @@ defineEmits<{ 'update:percent': [value: string] }>();
         <MvDocumentSuffixInput
             :model-value="percent"
             suffix="%"
-            label="Discount percent"
+            :label="t('orderLines.line.discountPercent')"
             :invalid="hint.kind === 'approval'"
             :disabled="disabled"
             @update:model-value="$emit('update:percent', $event)"

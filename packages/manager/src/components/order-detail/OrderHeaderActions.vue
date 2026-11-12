@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvActionMenu, MvButton, MvInput, MvModal, MvNotice, MvPopover } from '@mivend/ui-kit';
 import type { RelatedDocument } from '../../api/orderDetail';
 import type { OrderHeaderCommands } from '../../composables/useOrderHeaderCommands';
@@ -8,6 +9,7 @@ import OrderConfirmForm from './OrderConfirmForm.vue';
 import OrderDocumentsModal from './OrderDocumentsModal.vue';
 import OrderProformaModal from './OrderProformaModal.vue';
 
+const { t } = useI18n();
 const props = defineProps<{
     orderId: string;
     orderCode: string;
@@ -52,7 +54,9 @@ function onMenu(key: string): void {
     <div class="header-actions">
         <MvPopover v-if="actions.confirm" v-model:open="confirmOpen">
             <template #trigger>
-                <MvButton aria-label="Confirm order">Confirm</MvButton>
+                <MvButton :aria-label="t('orderDetail.actions.confirmOrder')">{{
+                    t('orderDetail.actions.confirm')
+                }}</MvButton>
             </template>
             <OrderConfirmForm
                 v-model:days="reservation.form.days"
@@ -63,10 +67,10 @@ function onMenu(key: string): void {
         <MvButton
             v-if="actions.cancel"
             variant="secondary"
-            aria-label="Cancel order"
+            :aria-label="t('orderDetail.actions.cancelOrder')"
             @click="cancelOpen = true"
         >
-            Cancel
+            {{ t('orderDetail.actions.cancel') }}
         </MvButton>
         <MvActionMenu :items="actions.menu" @select="onMenu" />
     </div>
@@ -84,17 +88,27 @@ function onMenu(key: string): void {
         :documents="documents"
         @close="documentsOpen = false"
     />
-    <MvModal v-if="mobile && confirmOpen" title="Confirm order" @close="confirmOpen = false">
+    <MvModal
+        v-if="mobile && confirmOpen"
+        :title="t('orderDetail.actions.confirmOrder')"
+        @close="confirmOpen = false"
+    >
         <OrderConfirmForm
             v-model:days="reservation.form.days"
             :submitting="reservation.submitting.value"
             @submit="submitConfirm"
         />
     </MvModal>
-    <MvModal v-if="extendOpen" title="Extend reservation" @close="extendOpen = false">
+    <MvModal
+        v-if="extendOpen"
+        :title="t('orderDetail.actions.extendReservation')"
+        @close="extendOpen = false"
+    >
         <div class="header-actions__extend">
             <label class="header-actions__label">
-                Extend by (days, up to {{ reservation.extensionMaxDays.value }})
+                {{
+                    t('orderDetail.actions.extendBy', { max: reservation.extensionMaxDays.value })
+                }}
                 <MvInput
                     size="sm"
                     type="number"
@@ -103,16 +117,22 @@ function onMenu(key: string): void {
                 />
             </label>
             <MvButton :loading="reservation.submitting.value" @click="submitExtend">
-                Extend reservation
+                {{ t('orderDetail.actions.extendReservation') }}
             </MvButton>
         </div>
     </MvModal>
-    <MvModal v-if="cancelOpen" title="Cancel order?" @close="cancelOpen = false">
-        <p>The order will be cancelled. This cannot be undone.</p>
+    <MvModal
+        v-if="cancelOpen"
+        :title="t('orderDetail.actions.cancelTitle')"
+        @close="cancelOpen = false"
+    >
+        <p>{{ t('orderDetail.actions.cancelText') }}</p>
         <div class="header-actions__row">
-            <MvButton variant="secondary" @click="cancelOpen = false">Keep order</MvButton>
+            <MvButton variant="secondary" @click="cancelOpen = false">{{
+                t('orderDetail.actions.keepOrder')
+            }}</MvButton>
             <MvButton variant="danger" :loading="cancelFlow.cancelling.value" @click="submitCancel">
-                Yes, cancel
+                {{ t('orderDetail.actions.yesCancel') }}
             </MvButton>
         </div>
     </MvModal>

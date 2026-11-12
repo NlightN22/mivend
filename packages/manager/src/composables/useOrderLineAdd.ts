@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref, watch } from 'vue';
 import {
     addOrderLineBySku,
@@ -106,7 +107,7 @@ export function useOrderLineAdd(
         } catch (e) {
             if (mine === quoteSeq) {
                 quote.value = null;
-                error.value = e instanceof Error ? e.message : 'No price found';
+                error.value = e instanceof Error ? e.message : tr('orderLines.lineAdd.noPrice');
             }
         }
     }
@@ -148,17 +149,17 @@ export function useOrderLineAdd(
         if (minor === quote.value?.customerPrice) return;
         try {
             if (price.value.trim() === '' || Number.isNaN(minor) || minor < 0) {
-                throw new Error('enter a valid price');
+                throw new Error(tr('orderLines.lineAdd.enterValidPrice'));
             }
             const line = await findOrderLineBySku(orderId(), sku);
-            if (!line) throw new Error('the new line was not found');
+            if (!line) throw new Error(tr('orderLines.lineAdd.lineNotFound'));
             const outcome = await requestPriceAdjustment(orderId(), line.id, minor);
             if (outcome.decision === 'requires-approval') {
-                notice.value = `${sku} added; the price was sent for approval.`;
+                notice.value = tr('orderLines.lineAdd.addedForApproval', { sku });
             }
         } catch (e) {
-            const why = e instanceof Error ? e.message : 'the price was not applied';
-            notice.value = `${sku} added, but the price was not applied: ${why}`;
+            const why = e instanceof Error ? e.message : tr('orderLines.lineAdd.priceNotApplied');
+            notice.value = tr('orderLines.lineAdd.addedPriceNotApplied', { sku, why });
         }
     }
 
@@ -174,7 +175,7 @@ export function useOrderLineAdd(
             return false;
         }
         if (!chosen || !quote.value) {
-            error.value = error.value || 'Choose a product first';
+            error.value = error.value || tr('orderLines.lineAdd.chooseProduct');
             return false;
         }
         let failed = false;
@@ -185,7 +186,7 @@ export function useOrderLineAdd(
                 await addOrderLineBySku(orderId(), chosen.sku, quantity.value);
             } catch (e) {
                 failed = true;
-                error.value = e instanceof Error ? e.message : 'The position was not added';
+                error.value = e instanceof Error ? e.message : tr('orderLines.lineAdd.notAdded');
                 return;
             }
             await applyChangedPrice(chosen.sku);

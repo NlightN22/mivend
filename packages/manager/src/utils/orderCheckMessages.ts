@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { tr } from './lazyLabels';
 
 export interface OrgRef {
     id: string;
@@ -37,37 +38,43 @@ export interface OrderCheckFinding {
     stale: boolean;
 }
 
-const TITLES: Record<string, string> = {
-    'erp.contract-with-storage-organization.missing':
-        'No contract with the organization that sells this line',
-    'erp.organization-stock.short':
-        'The organization that sells this line has less stock than needed',
-    'order.line-without-organization.missing': 'This item has no seller organization',
-    'order.contract-unresolved.missing': 'The buyer has no usable contract to register this order',
-    'erp.export-data-missing.customer': 'The buyer has no ERP counterparty',
-    'erp.export-data-missing.product': 'This product has no ERP id',
-    'erp.export-data-missing.warehouse': 'No ERP warehouse is resolved for this order',
-    'delivery.freight-trading-point.missing': 'Freight delivery needs an active trading point',
-    'order.multiplicity.violated': 'The quantity is not a multiple of the pack size',
-    'credit.limit.exceeded': "The order exceeds the buyer's available credit",
-    'order.below-floor-price.below-floor': 'The unit price is below the floor price',
-    'order.discount-over-limit.over-limit': 'The discount is above your limit',
+const TITLE_KEYS: Record<string, string> = {
+    'erp.contract-with-storage-organization.missing': 'contractMissing',
+    'erp.organization-stock.short': 'stockShort',
+    'order.line-without-organization.missing': 'lineWithoutOrganization',
+    'order.contract-unresolved.missing': 'contractUnresolved',
+    'erp.export-data-missing.customer': 'customerExportMissing',
+    'erp.export-data-missing.product': 'productExportMissing',
+    'erp.export-data-missing.warehouse': 'warehouseExportMissing',
+    'delivery.freight-trading-point.missing': 'freightTradingPointMissing',
+    'order.multiplicity.violated': 'multiplicityViolated',
+    'credit.limit.exceeded': 'creditLimitExceeded',
+    'order.below-floor-price.below-floor': 'belowFloor',
+    'order.discount-over-limit.over-limit': 'discountOverLimit',
 };
 
 // The facts that explain a finding in one line, for the list in the header card and under a line.
 export function findingDetail(f: OrderCheckFinding): string | null {
     const { facts } = f;
     if (f.messageKey === 'order.multiplicity.violated') {
-        return `${facts.sku ?? 'Line'}: ${facts.quantity} is not a multiple of ${facts.requiredMultiple}`;
+        return tr('orderLines.checkDetail.multiplicity', {
+            sku: facts.sku ?? tr('orderLines.checkDetail.line'),
+            quantity: facts.quantity,
+            multiple: facts.requiredMultiple,
+        });
     }
     if (f.messageKey === 'credit.limit.exceeded') {
-        return `Order ${facts.orderAmount}, available credit ${facts.availableCredit}`;
+        return tr('orderLines.checkDetail.credit', {
+            amount: facts.orderAmount,
+            credit: facts.availableCredit,
+        });
     }
     return facts.sku ? String(facts.sku) : null;
 }
 
 export function findingTitle(messageKey: string): string {
-    return TITLES[messageKey] ?? messageKey;
+    const key = TITLE_KEYS[messageKey];
+    return key ? tr(`orderLines.checkTitles.${key}`) : messageKey;
 }
 
 export function severityVariant(severity: string): StatusBadgeVariant {

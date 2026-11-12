@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref } from 'vue';
 import { startActingSession } from '../api/actingSession';
 import { useAuthStore } from '../stores/auth';
@@ -20,7 +21,7 @@ export function useActAsCustomer(counterpartyId: () => string) {
             else window.open(url, '_blank');
         } catch (e) {
             tab?.close();
-            error.value = e instanceof Error ? e.message : 'Could not start acting as the customer';
+            error.value = e instanceof Error ? e.message : tr('orderDetail.actAsFailed');
         } finally {
             starting.value = false;
         }

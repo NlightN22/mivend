@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvDocumentCell, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { NON_EDITABLE_ORDER_STATES } from '../../api/orderDetail';
@@ -24,6 +25,7 @@ import OrderHistory from '../../components/order-detail/OrderHistory.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import OrderLinesTotals from '../../components/order-detail/OrderLinesTotals.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const route = useRoute();
 const data = useOrderDetail(() => route.params.code as string);
@@ -117,8 +119,8 @@ watch([orderId, reservations], () => {
 
 <template>
     <div v-if="data.notFound.value" class="order-detail__not-found">
-        <h1>Order not found</h1>
-        <RouterLink to="/orders">Back to orders</RouterLink>
+        <h1>{{ t('orderDetail.page.notFound') }}</h1>
+        <RouterLink to="/orders">{{ t('orderDetail.page.backToOrders') }}</RouterLink>
     </div>
 
     <div v-else-if="order" class="order-detail">
@@ -186,7 +188,7 @@ watch([orderId, reservations], () => {
         <div class="order-detail__below">
             <OrderHistory :history="order.statusHistory" />
             <section v-if="data.adjustmentRequests.value.length">
-                <h2 class="order-detail__heading">Approvals</h2>
+                <h2 class="order-detail__heading">{{ t('orderDetail.page.approvals') }}</h2>
                 <OrderApprovalsPanel
                     :requests="data.adjustmentRequests.value"
                     :lines="order.lines"

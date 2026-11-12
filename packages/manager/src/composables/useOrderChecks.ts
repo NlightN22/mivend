@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref, type Ref } from 'vue';
 import { fetchOrderChecks, recomputeOrderChecks } from '../api/orderChecks';
 import { findingsByLine, type OrderCheckFinding } from '../utils/orderCheckMessages';
@@ -18,7 +19,7 @@ export function useOrderChecks(orderId: Ref<string>) {
         try {
             findings.value = await fetchOrderChecks(orderId.value);
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load ERP requirement checks';
+            error.value = e instanceof Error ? e.message : tr('orderDetail.checks.loadFailed');
         } finally {
             loading.value = false;
         }
@@ -30,7 +31,7 @@ export function useOrderChecks(orderId: Ref<string>) {
         try {
             findings.value = await recomputeOrderChecks(orderId.value);
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not recompute the checks';
+            error.value = e instanceof Error ? e.message : tr('orderDetail.checks.recomputeFailed');
         } finally {
             recomputing.value = false;
         }

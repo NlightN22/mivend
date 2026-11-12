@@ -1,14 +1,15 @@
+import { lazyLabels, tr } from '../utils/lazyLabels';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { adminApi } from '../api/client';
 import { CancelOrderAsStaffDocument } from '../api/generated/graphql';
 import { useAuthStore } from '../stores/auth';
 
-export const REFUSAL_TEXT: Record<string, string> = {
-    SHIPPED: 'The order has already shipped and cannot be cancelled.',
-    IN_PROGRESS: 'The order is already in progress and cannot be cancelled.',
-    PAID: 'The order is paid; cancellation is not possible.',
-    REGISTRATION_REJECTED: 'The order registration was rejected; cancellation is unavailable.',
-};
+export const REFUSAL_TEXT = lazyLabels('orderDetail.refusal', [
+    'SHIPPED',
+    'IN_PROGRESS',
+    'PAID',
+    'REGISTRATION_REJECTED',
+]);
 
 export interface UseCancelOrderAsStaff {
     allowed: ComputedRef<boolean>;
@@ -41,7 +42,7 @@ export function useCancelOrderAsStaff(
             return true;
         } catch (e) {
             console.error('[useCancelOrderAsStaff]', e);
-            error.value = 'Failed to cancel the order. Try again later.';
+            error.value = tr('orderDetail.cancelFailed');
             return false;
         } finally {
             cancelling.value = false;

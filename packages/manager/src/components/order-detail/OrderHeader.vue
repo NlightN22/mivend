@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconCalendar, IconUser, IconUserCircle } from '@tabler/icons-vue';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { ORDER_STATE_BADGE_VARIANT, ORDER_STATE_LABEL } from '../../api/orders';
@@ -12,6 +13,7 @@ import OrderHeaderFields from './OrderHeaderFields.vue';
 import { heldConfirmationCase } from '../../utils/confirmationHold';
 import PaymentReceivedPanel from './PaymentReceivedPanel.vue';
 
+const { t } = useI18n();
 const props = defineProps<{
     order: OrderDetail;
     managerName: string | null;
@@ -40,19 +42,19 @@ const customerName = computed(() => {
 <template>
     <header class="order-header">
         <div class="order-header__breadcrumb">
-            <RouterLink to="/orders">Orders</RouterLink> / {{ formatDocumentNumber(order.code) }}
+            <RouterLink to="/orders">{{ t('orderDetail.common.orders') }}</RouterLink> / {{ formatDocumentNumber(order.code) }}
         </div>
         <div class="order-header__row">
             <h1 class="order-header__title">
-                Order {{ formatDocumentNumber(order.code) }}
+                {{ t('orderDetail.header.order', { number: formatDocumentNumber(order.code) }) }}
                 <MvStatusBadge :variant="ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral'">
                     {{ ORDER_STATE_LABEL[order.state] ?? order.state }}
                 </MvStatusBadge>
                 <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning">
-                    Credit limit exceeded
+                    {{ t('orderDetail.header.creditLimitExceeded') }}
                 </MvStatusBadge>
                 <MvStatusBadge v-if="heldCase" variant="warning">
-                    Awaiting confirmation: {{ heldCase }}
+                    {{ t('orderDetail.header.awaitingConfirmation', { case: heldCase }) }}
                 </MvStatusBadge>
                 <PaymentReceivedPanel
                     :order-id="order.id"
@@ -74,7 +76,7 @@ const customerName = computed(() => {
         <div class="order-header__meta">
             <span v-if="customerName" class="order-header__item">
                 <IconUser :size="16" />
-                Customer:
+                {{ t('orderDetail.header.customer') }}
                 <RouterLink
                     v-if="order.counterparty"
                     :to="`/customers/${order.counterparty.id}`"
@@ -86,11 +88,11 @@ const customerName = computed(() => {
             </span>
             <span v-if="managerName" class="order-header__item">
                 <IconUserCircle :size="16" />
-                Manager: <strong>{{ managerName }}</strong>
+                {{ t('orderDetail.header.manager') }} <strong>{{ managerName }}</strong>
             </span>
             <span class="order-header__item">
                 <IconCalendar :size="16" />
-                Created:
+                {{ t('orderDetail.header.created') }}
                 <strong>{{ formatDate(order.createdAt) }}</strong>
             </span>
         </div>

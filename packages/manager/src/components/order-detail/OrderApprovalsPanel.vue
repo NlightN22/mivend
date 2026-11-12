@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 
+const { t } = useI18n();
 const props = defineProps<{
     requests: PriceAdjustmentRequestSummary[];
     lines: OrderDetailLine[];
 }>();
+
+const STATUS_TEXT = ['approved', 'rejected'];
 
 function variant(status: string): 'success' | 'danger' | 'warning' {
     if (status === 'approved') return 'success';
@@ -17,9 +21,13 @@ function variant(status: string): 'success' | 'danger' | 'warning' {
 
 function statusText(request: PriceAdjustmentRequestSummary): string {
     if (request.status === 'pending') {
-        return request.currentStepRole ? `Waiting on ${request.currentStepRole}` : 'Pending';
+        return request.currentStepRole
+            ? t('orderDetail.approvals.waitingOn', { role: request.currentStepRole })
+            : t('orderDetail.approvals.pending');
     }
-    return request.status;
+    return STATUS_TEXT.includes(request.status)
+        ? t(`orderDetail.approvals.${request.status}`)
+        : request.status;
 }
 
 function lineName(payload: string): string | null {
@@ -38,7 +46,11 @@ const rows = computed(() => props.requests.map(r => ({ request: r, line: lineNam
     <ul class="approvals">
         <li v-for="{ request, line } in rows" :key="request.id" class="approvals__item">
             <RouterLink :to="`/approvals/${request.id}`" class="approvals__link">
-                Price: {{ line ?? `request #${request.id}` }}
+                {{
+                    t('orderDetail.approvals.price', {
+                        line: line ?? t('orderDetail.approvals.requestNumber', { id: request.id }),
+                    })
+                }}
                 <span class="approvals__meta">
                     {{ formatDate(request.createdAt) }}
                 </span>
@@ -48,7 +60,9 @@ const rows = computed(() => props.requests.map(r => ({ request: r, line: lineNam
             }}</MvStatusBadge>
         </li>
     </ul>
-    <p v-if="!requests.length" class="approvals__empty">No approval requests for this order.</p>
+    <p v-if="!requests.length" class="approvals__empty">
+        {{ t('orderDetail.approvals.empty') }}
+    </p>
 </template>
 
 <style scoped>

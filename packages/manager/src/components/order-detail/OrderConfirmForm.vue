@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvInput } from '@mivend/ui-kit';
 
+const { t } = useI18n();
 defineProps<{ days: string; submitting: boolean }>();
 const emit = defineEmits<{ 'update:days': [value: string]; submit: [] }>();
 </script>
@@ -8,7 +10,7 @@ const emit = defineEmits<{ 'update:days': [value: string]; submit: [] }>();
 <template>
     <div class="confirm-form">
         <label class="confirm-form__label">
-            Reservation period (days)
+            {{ t('orderDetail.confirm.period') }}
             <MvInput
                 size="sm"
                 type="number"
@@ -16,7 +18,7 @@ const emit = defineEmits<{ 'update:days': [value: string]; submit: [] }>();
                 @update:model-value="emit('update:days', $event)"
             />
         </label>
-        <MvButton :loading="submitting" @click="emit('submit')">Confirm</MvButton>
+        <MvButton :loading="submitting" @click="emit('submit')">{{ t('orderDetail.actions.confirm') }}</MvButton>
     </div>
 </template>
 

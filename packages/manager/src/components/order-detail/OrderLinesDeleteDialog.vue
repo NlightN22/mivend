@@ -1,19 +1,23 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvModal } from '@mivend/ui-kit';
 
+const { t } = useI18n();
 defineProps<{ count: number; busy: boolean }>();
 defineEmits<{ close: []; confirm: [] }>();
 </script>
 
 <template>
-    <MvModal title="Delete positions?" @close="$emit('close')">
+    <MvModal :title="t('orderLines.delete.title')" @close="$emit('close')">
         <p>
-            {{ count }} {{ count === 1 ? 'position' : 'positions' }} will be removed from the order.
+            {{ t('orderLines.delete.text', { n: count }, count) }}
         </p>
         <div class="delete-dialog__actions">
-            <MvButton variant="secondary" @click="$emit('close')">Keep</MvButton>
+            <MvButton variant="secondary" @click="$emit('close')">{{
+                t('orderLines.delete.keep')
+            }}</MvButton>
             <MvButton variant="danger" :loading="busy" @click="$emit('confirm')">
-                Delete {{ count }} {{ count === 1 ? 'position' : 'positions' }}
+                {{ t('orderLines.delete.confirm', { n: count }, count) }}
             </MvButton>
         </div>
     </MvModal>

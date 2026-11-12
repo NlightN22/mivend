@@ -1,3 +1,4 @@
+import { tr } from './lazyLabels';
 import type { DocFlag, DocFlagAction, DocRow } from '@mivend/ui-kit';
 import type { FindingConsequence } from './findingConsequence';
 import { findingDetail, findingTitle } from './orderCheckMessages';
@@ -19,9 +20,9 @@ export function toDocFlag(problem: CellProblem, caps: OrderFlagCaps): DocFlag {
         f => caps.consequences.get(f.id)?.consequence === 'block',
     );
     const actions: DocFlagAction[] = [];
-    if (caps.canConfirm && !blocked) actions.push({ key: 'confirm', label: 'Confirm' });
+    if (caps.canConfirm && !blocked) actions.push({ key: 'confirm', label: tr('orderLines.flag.confirm') });
     if (caps.canReject)
-        actions.push({ key: 'reject', label: 'Reject', variant: 'secondary' as const });
+        actions.push({ key: 'reject', label: tr('orderLines.flag.reject'), variant: 'secondary' as const });
     return {
         tone: problem.tone,
         actions,

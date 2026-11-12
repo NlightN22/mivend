@@ -1,3 +1,4 @@
+import { tr } from './lazyLabels';
 import type { FindingConsequence } from './findingConsequence';
 import type { OrderCheckFinding } from './orderCheckMessages';
 import {
@@ -70,7 +71,10 @@ export function lineProblems(
             ? [
                   {
                       tone: 'danger' as const,
-                      text: `Not enough stock: ${row.view.available ?? 0} available, ${row.view.needed} needed`,
+                      text: tr('orderLines.problems.notEnoughStock', {
+                          available: row.view.available ?? 0,
+                          needed: row.view.needed,
+                      }),
                   },
               ]
             : [];
@@ -88,7 +92,10 @@ export function lineProblems(
                     ? [
                           {
                               tone: 'warning' as const,
-                              text: `Reserved ${row.reserved} of ${row.view.needed}; stock for the rest is not held`,
+                              text: tr('orderLines.problems.reservedPartly', {
+                                  reserved: row.reserved,
+                                  needed: row.view.needed,
+                              }),
                           },
                       ]
                     : []),
@@ -100,11 +107,11 @@ export function lineProblems(
             cell(
                 of([BELOW_FLOOR_CODE]),
                 consequences,
-                row.adjustment?.label === 'Pending approval'
+                row.adjustment?.label === tr('orderLines.adjustment.pending')
                     ? [
                           {
                               tone: 'orange',
-                              text: 'Requires approval: the price change waits for the approvers',
+                              text: tr('orderLines.problems.approvalPrice'),
                           },
                       ]
                     : [],
@@ -119,7 +126,9 @@ export function lineProblems(
                     ? [
                           {
                               tone: 'orange',
-                              text: `Requires approval: the discount is above the allowed maximum (max ${row.maxDiscountPercent}%)`,
+                              text: tr('orderLines.problems.approvalDiscount', {
+                                  max: row.maxDiscountPercent,
+                              }),
                           },
                       ]
                     : [],

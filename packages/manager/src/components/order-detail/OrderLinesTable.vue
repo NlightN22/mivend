@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconTrash } from '@tabler/icons-vue';
-import {
-    MvButton,
-    MvDocumentLines,
-    MvNotice,
-    useLineSelection,
-    type DocColumn,
-} from '@mivend/ui-kit';
+import { MvButton, MvDocumentLines, MvNotice, useLineSelection } from '@mivend/ui-kit';
 import { removeOrderLine } from '../../api/orderLineEdit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 import type { OrderReservation } from '../../api/reservation';
@@ -24,6 +19,7 @@ import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { toDocRow, type OrderDocRow } from '../../utils/orderDocFlags';
 import { lineProblems } from '../../utils/orderLineProblems';
 import { buildLineRows } from '../../utils/orderLineRows';
+import { orderLineColumns } from '../../utils/orderLineColumns';
 import { lineNotes, type PanelNotes } from '../../utils/orderPanelNotes';
 import OrderAddRow from './OrderAddRow.vue';
 import OrderLineDiscount from './OrderLineDiscount.vue';
@@ -40,6 +36,7 @@ import OrderLinesEditBar from './OrderLinesEditBar.vue';
 
 const MAX_LINE_QUANTITY = 1_000_000;
 
+const { t } = useI18n();
 const props = defineProps<{
     orderId: string;
     edit: ReturnType<typeof useOrderLineEdit>;
@@ -93,16 +90,7 @@ const symbol = computed(
             .find(p => p.type === 'currency')?.value ?? props.currencyCode,
 );
 
-const columns = computed<DocColumn[]>(() => [
-    { key: 'product', label: 'Product' },
-    { key: 'qty', label: 'Qty', inputWhenEditing: true },
-    { key: 'available', label: 'Available' },
-    { key: 'reserve', label: 'Reserve' },
-    { key: 'price', label: 'Price', inputWhenEditing: true },
-    { key: 'discount', label: 'Discount', inputWhenEditing: true },
-    { key: 'retro', label: 'Retro bonus', hidden: !props.retro },
-    { key: 'total', label: 'Total' },
-]);
+const columns = computed(() => orderLineColumns(!!props.retro));
 const rows = computed<OrderDocRow[]>(() =>
     buildLineRows({
         lines: props.lines,
@@ -159,12 +147,12 @@ async function confirmDelete(): Promise<void> {
 
 <template>
     <MvDocumentLines
-        title="Order lines"
+        :title="t('orderLines.lines.title')"
         :columns="columns"
         :rows="rows"
         :selection="caps.canRemove ? selection : undefined"
         :adding="adder.open.value"
-        :add-label="canEditLines ? 'Add position' : undefined"
+        :add-label="canEditLines ? t('orderLines.lines.add') : undefined"
         :editing-id="editing.editingId.value"
         :saving-id="editing.savingId.value"
         :errors="editing.errors.value"
@@ -188,7 +176,7 @@ async function confirmDelete(): Promise<void> {
                 :disabled="edit.busy.value || count >= lines.length || !count"
                 @click="pendingDelete = [...selection.selected.value]"
             >
-                <IconTrash :size="14" /> Delete
+                <IconTrash :size="14" /> {{ t('orderLines.lines.delete') }}
             </MvButton>
         </template>
         <template #notices>
@@ -257,7 +245,7 @@ async function confirmDelete(): Promise<void> {
                     v-if="editing.edit.sentForApproval.value && editing.lastId.value === row.id"
                     class="lines__hint"
                 >
-                    Sent for approval
+                    {{ t('orderLines.lines.sentForApproval') }}
                 </span>
             </template>
         </template>

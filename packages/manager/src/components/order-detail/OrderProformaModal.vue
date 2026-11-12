@@ -1,20 +1,22 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvModal } from '@mivend/ui-kit';
 import ProformaInvoicesPanel from './ProformaInvoicesPanel.vue';
 
+const { t } = useI18n();
 defineProps<{ orderId: string; orderCode: string; cancelled: boolean }>();
 defineEmits<{ close: [] }>();
 </script>
 
 <template>
-    <MvModal title="Proforma invoices" @close="$emit('close')">
+    <MvModal :title="t('orderDetail.actions.proformas')" @close="$emit('close')">
         <ProformaInvoicesPanel :order-id="orderId" :cancelled="cancelled" />
         <RouterLink
             :to="{ path: '/proforma-invoices', query: { search: orderCode } }"
             class="proforma-modal__link"
             @click="$emit('close')"
         >
-            Open in the list
+            {{ t('orderDetail.actions.openInList') }}
         </RouterLink>
     </MvModal>
 </template>

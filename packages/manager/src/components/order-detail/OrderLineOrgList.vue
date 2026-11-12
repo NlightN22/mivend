@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { OrgRow } from '../../utils/orderLineChecks';
 
+const { t } = useI18n();
 defineProps<{ rows: OrgRow[]; mode: 'stock' | 'contract' }>();
 </script>
 
@@ -13,11 +15,11 @@ defineProps<{ rows: OrgRow[]; mode: 'stock' | 'contract' }>();
                 :class="{ 'org-list__dot--bad': !row.hasContract }"
             ></span>
             <span class="org-list__name">
-                {{ row.name }}<em v-if="row.selling"> · sells this line</em>
+                {{ row.name }}<em v-if="row.selling"> · {{ t('orderLines.line.sellsThisLine') }}</em>
             </span>
             <span v-if="mode === 'stock'" class="org-list__value">{{ row.stock }}</span>
             <span v-else class="org-list__value">
-                {{ row.hasContract ? 'contract' : 'no contract' }}
+                {{ row.hasContract ? t('orderLines.line.contract') : t('orderLines.line.noContract') }}
             </span>
         </li>
     </ul>
