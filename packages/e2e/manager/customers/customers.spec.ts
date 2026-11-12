@@ -83,7 +83,7 @@ test('customer detail Overview tab shows contacts, price type and trading points
     await expect(page.getByText('E2E North Depot')).toBeVisible();
     await expect(page.getByText('E2E Warehouse')).toBeVisible();
 
-    await expect(page.getByText('Sales last 30 days')).toBeVisible();
+    await expect(page.getByText('Turnover, 30 days')).toBeVisible();
     await expect(page.getByText('Open orders')).toBeVisible();
 });
 
