@@ -392,12 +392,12 @@ describe('settlement shop queries (real Postgres)', () => {
         await balance('cp-1', 'ct-unknown', 0, -300);
         const cards = await shop.balanceCards(ctx, '1');
         expect(cards.map(c => [c.contractId, c.currentBalance]).sort()).toEqual([
-            ['1', 100],
-            [null, -300],
-            [null, 500],
+            ['1', 10000],
+            [null, -30000],
+            [null, 50000],
         ]);
         expect(await shop.balanceCards(ctx, '1', { contractId: '2' })).toEqual([]);
-        expect(cards.reduce((sum, c) => sum + c.currentBalance, 0)).toBe(300);
+        expect(cards.reduce((sum, c) => sum + c.currentBalance, 0)).toBe(30000);
         expect(cards.filter(c => c.contractId === null).every(c => c.overdue === 0)).toBe(true);
     });
 
@@ -422,12 +422,15 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(n).toBe(1);
     });
 
-    it('always hides entries and balances whose contract is not imported', async () => {
+    it('hides the entries of a contract that is not imported but still counts its balance without the contract', async () => {
         h.contracts.delete('ct-1');
         await balance('cp-1', 'ct-1', 0, 100);
         await doc('d-1', { number: '1', entries: [entry()] });
         expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
-        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
+        const cards = await shop.balanceCards(ctx, '1');
+        expect(cards.map(c => [c.contractId, c.contractName, c.currentBalance])).toEqual([
+            [null, null, 10000],
+        ]);
     });
 
     describe('accounting visibility', () => {
