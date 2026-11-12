@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { formatDate } from '../../i18n/format';
 import { MvCopyButton, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { PaymentCardData } from '../../api/payments';
 import { channelLabel, listLinkFor, statusLabel, statusVariant } from './paymentCardModel';
 
 defineProps<{ payment: PaymentCardData; amount: string }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <header class="payment-card-header">
         <div class="payment-card-header__breadcrumb">
-            <RouterLink to="/payments">Payments</RouterLink> /
+            <RouterLink to="/payments">{{ t('payments.card.breadcrumb') }}</RouterLink> /
             {{ formatDocumentNumber(payment.number) }}
         </div>
         <div class="payment-card-header__row">
@@ -21,21 +23,21 @@ defineProps<{ payment: PaymentCardData; amount: string }>();
                 }}</MvStatusBadge>
             </h1>
             <div class="payment-card-header__actions">
-                <MvCopyButton :value="payment.number" label="Copy payment number" />
+                <MvCopyButton :value="payment.number" :label="t('payments.card.copyNumber')" />
                 <RouterLink class="payment-card-header__action" :to="listLinkFor(payment)"
-                    >Show in list</RouterLink
+                    >{{ t('payments.card.showInList') }}</RouterLink
                 >
                 <RouterLink
                     v-if="payment.order"
                     class="payment-card-header__action"
                     :to="`/orders/${payment.order.code}`"
-                    >Open order</RouterLink
+                    >{{ t('payments.card.openOrder') }}</RouterLink
                 >
             </div>
         </div>
         <p class="payment-card-header__subtitle">
-            <strong>{{ amount }}</strong> · {{ channelLabel(payment.channel) }} · Created
-            {{ formatDate(payment.createdAt) }}
+            <strong>{{ amount }}</strong> · {{ channelLabel(payment.channel) }} ·
+            {{ t('payments.card.created', { date: formatDate(payment.createdAt) }) }}
         </p>
     </header>
 </template>

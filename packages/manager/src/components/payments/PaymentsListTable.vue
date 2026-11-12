@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
@@ -20,8 +21,11 @@ import { PAYMENTS_URL_DEFAULTS } from '../../composables/paymentsListUrl';
 import { sortFromState, sortToState } from './paymentsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { PAYMENTS_COLUMNS as COLUMNS } from './paymentsColumns';
+import { buildPaymentsColumns } from './paymentsColumns';
 import type { PaymentRow } from './paymentsRows';
+
+const { t } = useI18n();
+const COLUMNS = buildPaymentsColumns();
 
 const props = defineProps<{
     rows: PaymentRow[];
@@ -149,10 +153,10 @@ function applyView(state: TableViewState): void {
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :search="{ filterKey: 'search', placeholder: t('payments.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="{ search: BLANK_PAYMENTS_FILTERS.search }"
-        empty-message="No payments match your filters"
+        :empty-message="t('payments.list.empty')"
         @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -162,11 +166,11 @@ function applyView(state: TableViewState): void {
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load payments"
-                message="Check the connection and try again."
+                :title="t('payments.list.loadFailedTitle')"
+                :message="t('payments.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No payments match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('payments.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>

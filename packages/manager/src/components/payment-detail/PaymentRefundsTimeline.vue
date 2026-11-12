@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvDateTimeCell, MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { formatPaymentAmount, type PaymentCardData } from '../../api/payments';
 import { refundLabel, refundVariant } from './paymentCardModel';
 
 defineProps<{ payment: PaymentCardData }>();
+const { t } = useI18n();
 </script>
 
 <template>
-    <MvPanel v-if="payment.refunds.length" title="Refunds">
+    <MvPanel v-if="payment.refunds.length" :title="t('payments.card.refunds')">
         <ol class="payment-refunds">
             <li v-for="refund in payment.refunds" :key="refund.id" class="payment-refunds__item">
                 <div class="payment-refunds__head">

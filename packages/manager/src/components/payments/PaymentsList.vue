@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFilterChips, MvWarningBanner, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { usePaymentsList } from '../../composables/usePaymentsList';
@@ -12,6 +13,7 @@ import {
 import PaymentsListTable from './PaymentsListTable.vue';
 import { toPaymentRows } from './paymentsRows';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const list = usePaymentsList();
 const rows = computed(() => toPaymentRows(list.items.value));
@@ -37,10 +39,14 @@ function clearFilters(): void {
 <template>
     <MvWarningBanner
         v-if="list.counterpartyId.value"
-        action-text="Show all customers"
+        :action-text="t('payments.list.showAllCustomers')"
         @action="list.counterpartyId.value = ''"
     >
-        Filtered to one customer{{ rows[0] ? ` (${rows[0].customer})` : '' }}.
+        {{
+            rows[0]
+                ? t('payments.list.filteredToCustomerNamed', { customer: rows[0].customer })
+                : t('payments.list.filteredToCustomer')
+        }}
     </MvWarningBanner>
     <PaymentsListTable
         :rows="rows"

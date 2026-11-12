@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     PaymentCardDocument,
@@ -8,6 +9,19 @@ import {
     type PaymentCardQuery,
     type PaymentListItemFieldsFragment,
 } from './generated/graphql';
+
+// Labels resolve on read so a language switch reaches module-level option lists.
+function lazyOptions(
+    prefix: string,
+    values: readonly string[],
+): { value: string; readonly label: string }[] {
+    return values.map(value => ({
+        value,
+        get label(): string {
+            return i18n.global.t(`${prefix}.${value || 'any'}`);
+        },
+    }));
+}
 
 export type PaymentListItem = PaymentListItemFieldsFragment;
 export type PaymentCardData = NonNullable<PaymentCardQuery['payment']>;
@@ -31,18 +45,18 @@ export const DEFAULT_PAYMENT_FILTERS: PaymentFilters = {
 
 // PaymentAttempt.paymentStatus is a fixed internal state machine, not ERP-sourced business
 // data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS.
-export const PAYMENT_STATUS_OPTIONS = [
-    { value: '', label: 'All statuses' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'authorized', label: 'Authorized' },
-    { value: 'captured', label: 'Captured' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'canceled', label: 'Canceled' },
-    { value: 'partiallyRefunded', label: 'Partially refunded' },
-    { value: 'refunded', label: 'Refunded' },
-    { value: 'disputed', label: 'Disputed' },
-    { value: 'chargeback', label: 'Chargeback' },
-] as const;
+export const PAYMENT_STATUS_OPTIONS = lazyOptions('payments.status', [
+    '',
+    'pending',
+    'authorized',
+    'captured',
+    'failed',
+    'canceled',
+    'partiallyRefunded',
+    'refunded',
+    'disputed',
+    'chargeback',
+]);
 
 // Single source of truth for PaymentAttempt status badge variants; mirrors
 // ORDER_STATE_BADGE_VARIANT in api/orders.ts. Keep the two in sync.
@@ -58,12 +72,12 @@ export const PAYMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = 
     chargeback: 'danger',
 };
 
-export const PAYMENT_CHANNEL_OPTIONS = [
-    { value: '', label: 'All sources' },
-    { value: 'online-acquiring', label: 'Online' },
-    { value: 'branch-kassa', label: 'Branch kassa' },
-    { value: 'bank-transfer-erp', label: 'Bank transfer (ERP)' },
-] as const;
+export const PAYMENT_CHANNEL_OPTIONS = lazyOptions('payments.channel', [
+    '',
+    'online-acquiring',
+    'branch-kassa',
+    'bank-transfer-erp',
+]);
 
 export interface PaymentViewCounts {
     all: number;

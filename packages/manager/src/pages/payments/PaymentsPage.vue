@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import PaymentsList from '../../components/payments/PaymentsList.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="payments-page">
         <div class="payments-page__header">
-            <div class="payments-page__breadcrumb">Workspace / Payments</div>
-            <h1 class="payments-page__title">Payments</h1>
+            <div class="payments-page__breadcrumb">{{ t('payments.page.breadcrumb') }}</div>
+            <h1 class="payments-page__title">{{ t('payments.page.title') }}</h1>
         </div>
 
         <PaymentsList />

@@ -3,6 +3,7 @@ import {
     sanitizeConditions,
     type FilterCondition,
 } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import { PaymentsPageDocument, type PaymentSortParameter } from './generated/graphql';
 import { PAYMENTS_FILTER_COLUMNS, conditionsToPaymentsFilter } from './paymentsFilter';
@@ -11,13 +12,14 @@ import { PAYMENT_STATUS_BADGE_VARIANT, type PaymentListItem } from './payments';
 export type PaymentsView = 'all' | 'captured' | 'pending' | 'failed' | 'refunded';
 
 // Mirrors the chips of the customer card's payments tab.
-export const PAYMENTS_VIEWS: { key: PaymentsView; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'captured', label: 'Captured' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'failed', label: 'Failed' },
-    { key: 'refunded', label: 'Refunded' },
-];
+export const PAYMENTS_VIEWS: { key: PaymentsView; readonly label: string }[] = (
+    ['all', 'captured', 'pending', 'failed', 'refunded'] as const
+).map(key => ({
+    key,
+    get label(): string {
+        return i18n.global.t(`payments.list.views.${key}`);
+    },
+}));
 
 // Same colors as the row status badges the view stands for.
 export const PAYMENTS_VIEW_VARIANT: Partial<Record<PaymentsView, StatusBadgeVariant>> = {

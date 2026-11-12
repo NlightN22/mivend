@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { formatDate } from '../../i18n/format';
 import { MvDateTimeCell, MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import { formatPaymentAmount, type PaymentCardData } from '../../api/payments';
@@ -14,56 +15,57 @@ import {
 } from './paymentCardModel';
 
 defineProps<{ payment: PaymentCardData }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="payment-card-panels">
-        <MvPanel title="Payment">
+        <MvPanel :title="t('payments.card.panels.payment')">
             <dl class="payment-card-panels__list">
-                <dt>Amount</dt>
+                <dt>{{ t('payments.card.fields.amount') }}</dt>
                 <dd>{{ formatPaymentAmount(payment.amount, payment.currencyCode) }}</dd>
-                <dt>Currency</dt>
+                <dt>{{ t('payments.card.fields.currency') }}</dt>
                 <dd>{{ payment.currencyCode }}</dd>
-                <dt>Status</dt>
+                <dt>{{ t('payments.card.fields.status') }}</dt>
                 <dd>
                     <MvStatusBadge :variant="statusVariant(payment.paymentStatus)">{{
                         statusLabel(payment.paymentStatus)
                     }}</MvStatusBadge>
                 </dd>
-                <dt>Source</dt>
+                <dt>{{ t('payments.card.fields.source') }}</dt>
                 <dd>{{ channelLabel(payment.channel) }}</dd>
-                <dt>Provider reference</dt>
+                <dt>{{ t('payments.card.fields.providerReference') }}</dt>
                 <dd class="payment-card-panels__mono">{{ payment.providerPaymentId }}</dd>
-                <dt>Created</dt>
+                <dt>{{ t('payments.card.fields.created') }}</dt>
                 <dd><MvDateTimeCell :value="payment.createdAt" /></dd>
             </dl>
         </MvPanel>
 
-        <MvPanel title="Customer">
+        <MvPanel :title="t('payments.card.panels.customer')">
             <dl v-if="payment.customer" class="payment-card-panels__list">
-                <dt>Name</dt>
+                <dt>{{ t('payments.card.fields.name') }}</dt>
                 <dd>
                     <RouterLink :to="`/customers/${payment.customer.id}`">{{
                         payment.customer.shortName ?? '—'
                     }}</RouterLink>
                 </dd>
-                <dt>INN</dt>
+                <dt>{{ t('payments.card.fields.inn') }}</dt>
                 <dd>{{ payment.customer.inn ?? '—' }}</dd>
             </dl>
-            <p v-else class="payment-card-panels__empty">No customer</p>
+            <p v-else class="payment-card-panels__empty">{{ t('payments.card.noCustomer') }}</p>
         </MvPanel>
 
-        <MvPanel title="Proforma invoice">
+        <MvPanel :title="t('payments.card.panels.proformaInvoice')">
             <dl v-if="payment.proformaInvoice" class="payment-card-panels__list">
-                <dt>Number</dt>
+                <dt>{{ t('payments.card.fields.number') }}</dt>
                 <dd>
                     <RouterLink :to="proformaLinkFor(payment.proformaInvoice.number)">{{
                         formatDocumentNumber(payment.proformaInvoice.number)
                     }}</RouterLink>
                 </dd>
-                <dt>Version</dt>
+                <dt>{{ t('payments.card.fields.version') }}</dt>
                 <dd>{{ payment.proformaInvoice.version }}</dd>
-                <dt>Amount</dt>
+                <dt>{{ t('payments.card.fields.amount') }}</dt>
                 <dd>
                     {{
                         formatPaymentAmount(
@@ -72,9 +74,9 @@ defineProps<{ payment: PaymentCardData }>();
                         )
                     }}
                 </dd>
-                <dt>Due date</dt>
+                <dt>{{ t('payments.card.fields.dueDate') }}</dt>
                 <dd>{{ formatDate(payment.proformaInvoice.dueDate) }}</dd>
-                <dt>Status</dt>
+                <dt>{{ t('payments.card.fields.status') }}</dt>
                 <dd>
                     <MvStatusBadge
                         :variant="proformaStatusVariant(payment.proformaInvoice.displayStatus)"
@@ -84,29 +86,31 @@ defineProps<{ payment: PaymentCardData }>();
                     >
                 </dd>
             </dl>
-            <p v-else class="payment-card-panels__empty">No proforma invoice</p>
+            <p v-else class="payment-card-panels__empty">
+                {{ t('payments.card.noProformaInvoice') }}
+            </p>
         </MvPanel>
 
-        <MvPanel title="Order">
+        <MvPanel :title="t('payments.card.panels.order')">
             <dl v-if="payment.order" class="payment-card-panels__list">
-                <dt>Number</dt>
+                <dt>{{ t('payments.card.fields.number') }}</dt>
                 <dd>
                     <RouterLink :to="`/orders/${payment.order.code}`">{{
                         formatDocumentNumber(payment.order.code)
                     }}</RouterLink>
                 </dd>
-                <dt>Status</dt>
+                <dt>{{ t('payments.card.fields.status') }}</dt>
                 <dd>
                     <MvStatusBadge :variant="orderStateVariant(payment.order.state)">{{
                         orderStateLabel(payment.order.state)
                     }}</MvStatusBadge>
                 </dd>
-                <dt>Total</dt>
+                <dt>{{ t('payments.card.fields.total') }}</dt>
                 <dd>
                     {{ formatPaymentAmount(payment.order.orderTotal, payment.order.currencyCode) }}
                 </dd>
             </dl>
-            <p v-else class="payment-card-panels__empty">No order</p>
+            <p v-else class="payment-card-panels__empty">{{ t('payments.card.noOrder') }}</p>
         </MvPanel>
     </div>
 </template>

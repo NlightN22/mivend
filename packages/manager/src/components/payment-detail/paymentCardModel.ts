@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../../i18n';
 import { ORDER_STATE_BADGE_VARIANT, ORDER_STATE_LABEL } from '../../api/orders';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
@@ -27,12 +28,9 @@ export const proformaStatusLabel = (status: string): string =>
 export const proformaStatusVariant = (status: string): StatusBadgeVariant =>
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT[status] ?? 'neutral';
 
-const REFUND_LABEL: Record<string, string> = {
-    pending: 'Pending',
-    succeeded: 'Succeeded',
-    failed: 'Failed',
-};
-export const refundLabel = (status: string): string => REFUND_LABEL[status] ?? status;
+const REFUND_STATUSES = ['pending', 'succeeded', 'failed'];
+export const refundLabel = (status: string): string =>
+    REFUND_STATUSES.includes(status) ? i18n.global.t(`payments.refundStatus.${status}`) : status;
 
 const REFUND_VARIANT: Record<string, StatusBadgeVariant> = {
     pending: 'warning',

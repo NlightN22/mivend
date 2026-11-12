@@ -1,15 +1,19 @@
+import { i18n } from '../../i18n';
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
 import { PAYMENT_CHANNEL_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../api/payments';
+
+const col = (field: string): string => i18n.global.t(`payments.list.columns.${field}`);
 
 const NOT_FILTERED = { type: 'none' } as const;
 const TEXT_OPERATORS = ['contains', 'notContains', 'eq', 'notEq', 'isNull', 'notNull'] as const;
 
 // Low-priority columns drop first on a narrow page; no starts/ends-with (the server has no regex).
 // Filtering is the toolbar Filter builder; the search box covers number, customer and INN.
-export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
+export function buildPaymentsColumns(): AdvancedDataTableColumn[] {
+    return [
     {
         field: 'number',
-        header: 'Payment #',
+        header: col('number'),
         sortField: 'number',
         width: 150,
         priority: 10,
@@ -22,7 +26,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'date',
-        header: 'Date',
+        header: col('date'),
         sortField: 'createdAt',
         width: 120,
         priority: 6,
@@ -33,7 +37,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'customer',
-        header: 'Customer',
+        header: col('customer'),
         sortField: 'customer',
         width: 170,
         priority: 9,
@@ -44,7 +48,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'proformaInvoice',
-        header: 'Proforma invoice',
+        header: col('proformaInvoice'),
         width: 175,
         priority: 4,
         minWidth: 175,
@@ -55,7 +59,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'order',
-        header: 'Order',
+        header: col('order'),
         width: 120,
         priority: 5,
         minWidth: 120,
@@ -66,7 +70,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'channel',
-        header: 'Source',
+        header: col('channel'),
         sortField: 'channel',
         width: 160,
         priority: 3,
@@ -79,7 +83,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'status',
-        header: 'Status',
+        header: col('status'),
         sortField: 'status',
         width: 150,
         priority: 7,
@@ -92,7 +96,7 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'amount',
-        header: 'Amount',
+        header: col('amount'),
         sortField: 'amount',
         width: 140,
         priority: 8,
@@ -103,3 +107,4 @@ export const PAYMENTS_COLUMNS: AdvancedDataTableColumn[] = [
         filterScale: 100,
     },
 ];
+}
