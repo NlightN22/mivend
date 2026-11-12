@@ -7,7 +7,11 @@ import { PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import type { SelectQueryBuilder } from 'typeorm';
 
-import { DiscountSetup, DiscountSetupProduct, DiscountSetupRecipient } from './discount-setup.entity';
+import {
+    DiscountSetup,
+    DiscountSetupProduct,
+    DiscountSetupRecipient,
+} from './discount-setup.entity';
 import { scopedSetups, withStatus, type SetupScope } from './discount-setup-list.query';
 import {
     DISCOUNT_SETUP_STATUSES,
