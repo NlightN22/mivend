@@ -157,6 +157,10 @@ source id `INTEGRATION_RESYNC_SOURCE_SYSTEM`; both it and `INTEGRATION_SERVICE_B
 
 Deliberate omissions of #264 (see #291): authorized-staff checks run as superadmin because no seeded role other than superadmin holds `UpdateCatalog`; search and suggestions are not covered on the access stand (the external search backend is dead there); the hidden-category products rule (owner decision, `docs/category-hierarchy.md`) is covered by the `visibility-storefront` and `visibility-manager` category specs (16, 15) and the access stand `category-products.test.ts` (browse path only, text search is covered by unit/parity tests).
 
+## Picking groups from a diff
+
+`infrastructure/scripts/e2e-map.sh [base] [head]` prints the groups a diff touches (a spec directory maps to its own registry row; portal, plugin and shared code map to a conservative set). Without a base it diffs against the last green sha; `e2e-map.sh --green [sha]` records a fully green run in `~/.mivend-e2e-last-green`. Run the printed groups with `make e2e-groups G="..."`; the full suite stays audit/owner-only.
+
 ## Picker seed (#312)
 
 `fixtures/seed-picker.ts` adds 510 filler counterparties named `Zza Picker Filler NNNN` plus `Zzz Picker Target` (with a
