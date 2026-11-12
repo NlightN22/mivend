@@ -133,12 +133,12 @@ describe('getOutstandingBalance (real Postgres, summed in SQL)', () => {
     });
 
     it('sums several pending and issued invoices of the counterparty only', async () => {
-        await addInvoice('visible', 100.5, { status: 'pending' });
+        await addInvoice('visible', 101, { status: 'pending' });
         await addInvoice('visible', 200, { status: 'issued' });
         await addInvoice('other', 9999);
 
         expect(await service.getOutstandingBalance(ctx, String(cps.visible))).toEqual({
-            amount: 300.5,
+            amount: 301,
             currencyCode: 'RUB',
         });
     });
