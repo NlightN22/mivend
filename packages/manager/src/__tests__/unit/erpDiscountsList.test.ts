@@ -47,6 +47,12 @@ describe('ERP discount rows', () => {
         });
     });
 
+    it('never says All customers for an inactive setup, its recipients are not kept', () => {
+        const cell = row({ recipientCount: 0, counterparties: [], status: 'inactive' }).customer;
+        expect(cell.label).toBe('—');
+        expect(cell.title).toContain('not kept');
+    });
+
     it('says All customers when the setup names nobody', () => {
         expect(row({ recipientCount: 0, counterparties: [] }).customer.label).toBe('All customers');
     });

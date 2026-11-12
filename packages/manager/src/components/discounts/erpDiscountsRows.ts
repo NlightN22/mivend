@@ -14,7 +14,7 @@ export interface ErpCustomerCell {
     title: string | null;
 }
 
-export interface ErpDiscountRow {
+export type ErpDiscountRow = {
     id: string;
     number: string;
     validFrom: string;
@@ -28,7 +28,7 @@ export interface ErpDiscountRow {
     statusLabel: string;
     statusVariant: StatusBadgeVariant;
     inactiveReason: string | null;
-}
+};
 
 const STATUS_LABEL = new Map(ERP_DISCOUNTS_VIEWS.map(v => [v.key as string, v.label]));
 
@@ -40,6 +40,14 @@ function plural(count: number, one: string, many: string): string {
 export function customerCell(item: ErpDiscountItem): ErpCustomerCell {
     const total = item.recipientCount;
     const visible = item.counterparties;
+    if (total === 0 && item.status === 'inactive') {
+        return {
+            label: '—',
+            href: null,
+            suffix: '',
+            title: 'Recipients are not kept for an inactive document',
+        };
+    }
     if (total === 0) return { label: 'All customers', href: null, suffix: '', title: null };
     if (visible.length === 1) {
         const [only] = visible;
