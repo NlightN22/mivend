@@ -1,4 +1,5 @@
 import { innSeedRecords } from './seed-inn';
+import { longFieldsSeedRecords } from './seed-long-fields';
 import { markupSeedRecords } from './seed-markup';
 import { SEED_LOCATION } from './seed-location';
 
@@ -386,5 +387,6 @@ export const seedRecords = [
         },
     },
     ...innSeedRecords,
+    ...longFieldsSeedRecords,
     ...markupSeedRecords,
 ];
