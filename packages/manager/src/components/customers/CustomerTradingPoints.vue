@@ -57,6 +57,13 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
             <li v-for="tp in customer.tradingPoints" :key="tp.id">
                 <template v-if="editingId === tp.id">
                     <h4 class="tp-list__edit-title">Edit trading point</h4>
+                    <TradingPointPendingChange
+                        v-if="pending.byPoint.value.get(tp.id)"
+                        :change="pending.byPoint.value.get(tp.id)!"
+                        :busy="pending.busyId.value !== null"
+                        @accept="pending.accept(pending.byPoint.value.get(tp.id)!)"
+                        @reject="pending.reject(pending.byPoint.value.get(tp.id)!)"
+                    />
                     <TradingPointEditForm
                         :trading-point="tp"
                         :sibling-point="siblingOf(tp)"
@@ -103,7 +110,12 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                             >
                                 Reactivate
                             </button>
-                            <button type="button" class="tp-list__btn" @click="editingId = tp.id">
+                            <button
+                                type="button"
+                                class="tp-list__btn"
+                                :disabled="editingId !== null"
+                                @click="editingId = tp.id"
+                            >
                                 Edit
                             </button>
                         </div>
