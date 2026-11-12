@@ -136,25 +136,47 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             expect(mockTpRepo.save).toHaveBeenCalled();
         });
 
-        // address is required, never fabricated (audit LOW: deferred-create must warn, not verbose).
-        it('does not create a row when address is missing and none exists yet, and warns', async () => {
+        it('creates the point with an empty address when none exists yet, so staff still see it', async () => {
             mockTpRepo.findOne.mockResolvedValue(null);
-            const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+            mockTpRepo.create.mockReturnValue({ erpId: 'pos-1', contacts: [] });
 
             await service.upsertFromStream(mockCtx, 'pos-1', {
                 name: 'Kiosk A',
                 counterpartyId: 'cp1',
                 servicingBranchId: null,
                 isActive: true,
+                latitude: 90,
+                longitude: 99.999999,
+            });
+
+            expect(mockTpRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({ address: '', latitude: null, longitude: null }),
+            );
+            expect(mockTpRepo.save).toHaveBeenCalled();
+        });
+
+        it('fills an empty address on the same row when a later event carries one', async () => {
+            const row = {
+                erpId: 'pos-1',
+                name: 'Kiosk A',
+                address: '',
+                isActive: true,
+                counterpartyId: 'cp1',
+                contacts: [],
+            };
+            mockTpRepo.findOne.mockResolvedValue(row);
+            mockTpRepo.save.mockResolvedValue(row);
+
+            await service.upsertFromStream(mockCtx, 'pos-1', {
+                name: 'Kiosk A',
+                counterpartyId: 'cp1',
+                servicingBranchId: null,
+                isActive: true,
+                address: 'Addr 1',
             });
 
             expect(mockTpRepo.create).not.toHaveBeenCalled();
-            expect(mockTpRepo.save).not.toHaveBeenCalled();
-            expect(warnSpy).toHaveBeenCalledWith(
-                expect.stringContaining('no address yet'),
-                expect.any(String),
-            );
-            warnSpy.mockRestore();
+            expect(row.address).toBe('Addr 1');
         });
 
         it('does not create a row for a deletion tombstone (no name) when none exists yet', async () => {
