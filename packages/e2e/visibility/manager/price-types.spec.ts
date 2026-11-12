@@ -74,7 +74,7 @@ test.describe('05: manager-a (branch A) sees only allowed price types', () => {
     test('the discounts filter offers exactly the allowed types', async ({ browser }) => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
-            await s.page.goto('/discounts');
+            await s.page.goto('/discounts?source=requests');
             await s.page.getByRole('heading', { name: 'Discounts', exact: true }).waitFor();
             await s.page
                 .getByRole('button', { name: /Filter/ })
@@ -97,7 +97,7 @@ test.describe('07: discount grants of hidden price types', () => {
     test('the "New discount grant" form offers only the allowed codes', async ({ browser }) => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
-            await s.page.goto('/discounts');
+            await s.page.goto('/discounts?source=requests');
             await s.page.getByRole('button', { name: 'New discount grant' }).click();
             const form = s.page.locator('.discount-grant-form');
             const select = form.locator('label', { hasText: 'Price type' }).locator('select');

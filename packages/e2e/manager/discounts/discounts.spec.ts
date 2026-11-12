@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 const ROWS = '.mv-advanced-data-table__grid tbody tr';
 
-// The list reads the DiscountRegistryEntry projection, filtered and sorted by the shared list engine.
+// The requests side of the page; the ERP discounts are in erp-discounts.spec.ts.
 test('the page is titled Discounts and the first column is the numeric number @on:manager-operator @read-only', async ({
     page,
 }) => {
-    await page.goto('/discounts');
+    await page.goto('/discounts?source=requests');
     await expect(page.getByRole('heading', { name: 'Discounts', exact: true })).toBeVisible({
         timeout: 15000,
     });
@@ -31,7 +31,7 @@ test('the menu says Discounts, not Discount requests @on:manager-operator @read-
 test('search on the number narrows the list on the server and lives in the URL @on:manager-operator @read-only', async ({
     page,
 }) => {
-    await page.goto('/discounts');
+    await page.goto('/discounts?source=requests');
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator(`${ROWS} td`).first()).toHaveText(/\S/, { timeout: 15000 });
     const number = (await page.locator(`${ROWS} td`).first().innerText()).trim();
@@ -49,10 +49,8 @@ test('search on the number narrows the list on the server and lives in the URL @
 test('status chips carry counts, live in the URL and filter on the server @on:manager-operator @read-only', async ({
     page,
 }) => {
-    await page.goto('/discounts');
-    const chips = page.locator('.mv-filter-chip');
-    await expect(chips.first()).toContainText('All', { timeout: 15000 });
-    await expect(chips.first()).toContainText(/\d+$/);
+    await page.goto('/discounts?source=requests');
+    await expect(page.getByRole('button', { name: /^All \d+$/ })).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('button', { name: /^Pending approval \d+$/ }).click();
     await expect(page).toHaveURL(/view=pending/);
@@ -65,7 +63,7 @@ test('status chips carry counts, live in the URL and filter on the server @on:ma
 test('the Filter builder narrows the list and the condition lives in the URL @on:manager-operator @read-only', async ({
     page,
 }) => {
-    await page.goto('/discounts');
+    await page.goto('/discounts?source=requests');
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
     await page
         .getByRole('button', { name: /Filter/ })
@@ -80,7 +78,7 @@ test('the Filter builder narrows the list and the condition lives in the URL @on
 });
 
 test('a row click opens the discount request @on:manager-operator @read-only', async ({ page }) => {
-    await page.goto('/discounts?view=pending');
+    await page.goto('/discounts?source=requests&view=pending');
     const row = page.locator(ROWS).first();
     await expect(row).toBeVisible({ timeout: 15000 });
     await row.locator('td').nth(2).click();
@@ -89,7 +87,7 @@ test('a row click opens the discount request @on:manager-operator @read-only', a
 
 test('on a phone each discount is a card @on:manager-operator @read-only', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/discounts');
+    await page.goto('/discounts?source=requests');
     await expect(page.getByRole('columnheader').first()).toBeHidden({ timeout: 15000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         390,
@@ -100,7 +98,7 @@ test('the list paginates on the server and keeps the page in the URL @on:manager
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 500 });
-    await page.goto('/discounts');
+    await page.goto('/discounts?source=requests');
     const nextButton = page.getByRole('button', { name: 'Next Page' });
     await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 15000 });
     await expect(nextButton).toBeEnabled();

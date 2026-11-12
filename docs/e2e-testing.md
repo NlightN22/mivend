@@ -126,7 +126,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin manager/catalog` |
 | `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/customers` |
 | `manager-dashboard` | dev | dashboard KPIs per role | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/dashboard` |
-| `manager-discounts` | dev | discounts list: number first, search, status chips, Filter builder, row opens the request, phone cards | `--project=manager-operator manager/discounts` |
+| `manager-discounts` | dev | discounts page: ERP discounts list (columns, counted chips, search, markup, source switch, customer card tab, phone cards) and the portal requests list (search, chips, Filter builder, row opens the request) | `--project=manager-operator manager/discounts` |
 | `manager-layout` | dev | mobile nav, pagination scroll, no nested vertical scrollbar | `--project=manager-operator --project=manager-portal-admin manager/layout` |
 | `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |

@@ -130,6 +130,7 @@ test('customer detail Discounts tab shows a grant scoped to this customer (posit
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Discounts' }).click();
+    await page.getByRole('button', { name: 'Requests', exact: true }).click();
     // The 8% grant goes through the real request/decide workflow, not a DB bypass.
     // That workflow's side effects are needed; see DiscountGrantService.decideAndApply.
     await expect(
@@ -145,6 +146,7 @@ test('customer detail Discounts tab does not leak a grant scoped to another cust
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Discounts' }).click();
+    await page.getByRole('button', { name: 'Requests', exact: true }).click();
     await expect(
         page.getByRole('row').filter({ hasText: 'Personal' }).getByText('8%').first(),
     ).toBeVisible({
