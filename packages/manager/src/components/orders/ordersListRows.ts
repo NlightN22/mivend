@@ -1,3 +1,4 @@
+import { tr } from '../../utils/lazyLabels';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import {
     ORDER_RESERVATION_STATE_BADGE_VARIANT,
@@ -62,19 +63,19 @@ function placedByLabel(order: OrderListItem, managers: ManagerOption[]): string 
 function flagsFor(order: OrderListItem, ctx: OrderRowContext): OrderFlag[] {
     const flags: OrderFlag[] = [];
     if (order.creditLimitExceeded)
-        flags.push({ label: 'Credit limit exceeded', variant: 'warning' });
+        flags.push({ label: tr('orders.flags.creditLimitExceeded'), variant: 'warning' });
     if (ctx.isRejected(order.customFields?.erpStatus))
-        flags.push({ label: 'Rejected by ERP', variant: 'danger' });
+        flags.push({ label: tr('orders.flags.rejectedByErp'), variant: 'danger' });
     if (order.customFields?.reservationFailureReason)
-        flags.push({ label: 'Reserve failed', variant: 'warning' });
+        flags.push({ label: tr('orders.flags.reserveFailed'), variant: 'warning' });
     if (order.customFields?.hasCheckFindings)
-        flags.push({ label: 'ERP requirements', variant: 'warning' });
+        flags.push({ label: tr('orders.flags.erpRequirements'), variant: 'warning' });
     return flags;
 }
 
 function attentionFor(order: OrderListItem, ctx: OrderRowContext): string {
-    if (ctx.pendingApprovalOrderIds.has(order.id)) return 'Price limit exceeded';
-    return order.state === 'PaymentSettled' ? 'Shipment overdue' : '';
+    if (ctx.pendingApprovalOrderIds.has(order.id)) return tr('orders.attention.priceLimitExceeded');
+    return order.state === 'PaymentSettled' ? tr('orders.attention.shipmentOverdue') : '';
 }
 
 export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): OrderListRow[] {
@@ -99,11 +100,11 @@ export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): Order
             }).format(order.totalWithTax / 100),
             currencyCode: order.currencyCode,
             placedBy: placedByLabel(order, ctx.managers),
-            placedByMeta: order.customFields?.placedByAdministratorId ? '' : 'customer',
+            placedByMeta: order.customFields?.placedByAdministratorId ? '' : tr('orders.list.placedByCustomer'),
             reservation: reservationRaw
                 ? (ORDER_RESERVATION_STATE_OPTIONS.find(o => o.value === reservationRaw)?.label ??
                   reservationRaw)
-                : 'None',
+                : tr('orders.reservation.none'),
             reservationVariant: ORDER_RESERVATION_STATE_BADGE_VARIANT[reservationRaw] ?? 'neutral',
             attention: attentionFor(order, ctx),
         };

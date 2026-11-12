@@ -1,4 +1,5 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
+import { tr } from '../../utils/lazyLabels';
 import { ORDER_STATE_OPTIONS, ORDER_RESERVATION_STATE_OPTIONS } from '../../api/orders';
 
 const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
@@ -9,10 +10,9 @@ const NOT_FILTERED = { type: 'none' } as const;
 // Widths are the widest realistic cell text + 32px padding; sum 1080 fits a 1360px page (1088px table).
 // Filtering is the toolbar Filter builder (`filterType`); the search box covers order, company, INN
 // and phone. Customer, branch and attention have no server-side filter.
-export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const COLUMNS: Omit<AdvancedDataTableColumn, 'header'>[] = [
     {
         field: 'code',
-        header: 'Order #',
         sortField: 'code',
         width: 140,
         priority: 10,
@@ -25,7 +25,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'date',
-        header: 'Date',
         sortField: 'createdAt',
         width: 130,
         priority: 7,
@@ -36,7 +35,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'customer',
-        header: 'Customer',
         width: 200,
         priority: 9,
         minWidth: 170,
@@ -44,7 +42,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'manager',
-        header: 'Manager',
         width: 130,
         minWidth: 100,
         priority: 6,
@@ -55,19 +52,17 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'state',
-        header: 'Status',
         sortField: 'state',
         width: 180,
         priority: 5,
         minWidth: 180,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
-        filterOptions: NON_BLANK_STATES.map(o => ({ value: o.value, label: o.label })),
+        filterOptions: [],
         mobile: { badge: true },
     },
     {
         field: 'total',
-        header: 'Total',
         sortField: 'totalWithTax',
         width: 180,
         priority: 8,
@@ -79,7 +74,6 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'placedBy',
-        header: 'Placed by',
         width: 120,
         minWidth: 100,
         priority: 4,
@@ -92,17 +86,15 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'reservationState',
-        header: 'Reservation',
         width: 160,
         priority: 3,
         filterConfig: NOT_FILTERED,
         filterType: 'select',
-        filterOptions: NON_BLANK_RESERVATIONS.map(o => ({ value: o.value, label: o.label })),
+        filterOptions: [],
         mobile: { hidden: true },
     },
     {
         field: 'branch',
-        header: 'Branch',
         width: 140,
         priority: 2,
         filterConfig: NOT_FILTERED,
@@ -110,13 +102,28 @@ export const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'attention',
-        header: 'Attention',
         width: 170,
         priority: 1,
         filterConfig: NOT_FILTERED,
         mobile: { hidden: true },
     },
 ];
+
+const LAZY_OPTIONS: Record<string, () => { value: string; label: string }[]> = {
+    state: () => NON_BLANK_STATES.map(o => ({ value: o.value, label: o.label })),
+    reservationState: () => NON_BLANK_RESERVATIONS.map(o => ({ value: o.value, label: o.label })),
+};
+
+// Headers and option labels resolve on read, so the table follows a language switch.
+export const ALL_COLUMNS: AdvancedDataTableColumn[] = COLUMNS.map(column => {
+    const lazy = Object.defineProperty({ ...column }, 'header', {
+        enumerable: true,
+        get: () => tr(`orders.columns.${column.field}`),
+    }) as AdvancedDataTableColumn;
+    const options = LAZY_OPTIONS[column.field];
+    if (options) Object.defineProperty(lazy, 'filterOptions', { enumerable: true, get: options });
+    return lazy;
+});
 
 // Opens without these; the column settings bring them back.
 export const DEFAULT_HIDDEN_COLUMNS = ['reservationState', 'branch', 'attention'];

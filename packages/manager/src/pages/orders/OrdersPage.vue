@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useDepartmentName } from '../../composables/useDepartmentName';
 import OrdersList from '../../components/orders/OrdersList.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const departmentName = useDepartmentName();
 </script>
@@ -12,8 +14,8 @@ const departmentName = useDepartmentName();
     <div class="orders-page">
         <div class="orders-page__header">
             <div>
-                <div class="orders-page__breadcrumb">Workspace / Orders</div>
-                <h1 class="orders-page__title">Orders</h1>
+                <div class="orders-page__breadcrumb">{{ t('orders.page.breadcrumb') }}</div>
+                <h1 class="orders-page__title">{{ t('orders.page.title') }}</h1>
             </div>
             <div class="orders-page__context">
                 <MvStatusBadge variant="info">{{

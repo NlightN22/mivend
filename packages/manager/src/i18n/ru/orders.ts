@@ -1,0 +1,88 @@
+import type en from '../en/orders';
+
+const orders: typeof en = {
+    page: {
+        breadcrumb: 'Рабочее место / Заказы',
+        title: 'Заказы',
+    },
+    views: {
+        awaitingConfirmation: 'Ждут подтверждения',
+        all: 'Все',
+        processing: 'В обработке',
+        awaitingShipment: 'Ждут отгрузки',
+        overdue: 'Просроченные',
+        rejectedByErp: 'Отклонены ERP',
+        reservationFailed: 'Резерв не удался',
+        erpRequirements: 'Заблокированы требованиями ERP',
+    },
+    columns: {
+        code: 'Заказ №',
+        date: 'Дата',
+        customer: 'Клиент',
+        manager: 'Менеджер',
+        state: 'Статус',
+        total: 'Сумма',
+        placedBy: 'Оформил',
+        reservationState: 'Резерв',
+        branch: 'Филиал',
+        attention: 'Внимание',
+    },
+    reservation: {
+        any: 'Любое состояние резерва',
+        none: 'Нет',
+        NOT_REQUIRED: 'Не требуется',
+        AWAITING_CONFIRMATION: 'Ждёт подтверждения',
+        RESERVED: 'Зарезервирован',
+        EXPIRED: 'Истёк',
+        RELEASED: 'Снят',
+        FAILED: 'Не удался',
+    },
+    reservationFailure: {
+        INSUFFICIENT_STOCK: 'Недостаточно остатка',
+        ERP_EXPORT_DATA_MISSING: 'Не хватает данных для ERP',
+        NOT_ELIGIBLE: 'Заказ нельзя зарезервировать',
+        UNEXPECTED: 'Непредвиденная ошибка',
+    },
+    state: {
+        any: 'Все статусы',
+        AddingItems: 'Черновик (корзина витрины)',
+        Draft: 'Черновик (ввод заказа)',
+        ArrangingPayment: 'Оформление оплаты',
+        PaymentAuthorized: 'В обработке',
+        PaymentSettled: 'Ожидает отгрузки',
+        PartiallyShipped: 'Частично отгружен',
+        Shipped: 'Отгружен',
+        PartiallyDelivered: 'Частично доставлен',
+        Delivered: 'Доставлен',
+        Cancelled: 'Отменён',
+    },
+    fulfillment: {
+        notStarted: 'Не начата',
+        Pending: 'Ожидает',
+        Shipped: 'Отгружена',
+        Delivered: 'Доставлена',
+        Cancelled: 'Отменена',
+    },
+    flags: {
+        creditLimitExceeded: 'Превышен кредитный лимит',
+        rejectedByErp: 'Отклонён ERP',
+        reserveFailed: 'Резерв не удался',
+        erpRequirements: 'Требования ERP',
+    },
+    attention: {
+        priceLimitExceeded: 'Превышен лимит цены',
+        shipmentOverdue: 'Отгрузка просрочена',
+    },
+    list: {
+        placedByCustomer: 'клиент',
+        inn: 'ИНН {inn}',
+        customerSelf: 'Клиент (сам)',
+        search: 'Поиск заказов…',
+        empty: 'Нет заказов, подходящих под фильтры',
+        loadFailedTitle: 'Не удалось загрузить заказы',
+        loadFailedMessage: 'Проверьте соединение и попробуйте снова.',
+        also: 'Также: {flags}',
+    },
+};
+
+export default orders;

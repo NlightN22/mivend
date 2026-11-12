@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
@@ -54,12 +55,13 @@ const emit = defineEmits<{
     retry: [];
 }>();
 
+const { t } = useI18n();
 const priceTypes = usePriceTypeNames();
 onMounted(() => void priceTypes.load());
 
 const managerOptions = computed(() => props.managers.map(m => ({ value: m.id, label: m.name })));
 const placedByOptions = computed(() => [
-    { value: PLACED_BY_CUSTOMER_VALUE, label: 'Customer (self)' },
+    { value: PLACED_BY_CUSTOMER_VALUE, label: t('orders.list.customerSelf') },
     ...managerOptions.value,
 ]);
 
@@ -160,6 +162,8 @@ function applyView(state: TableViewState): void {
     emit('update:filters', restoreOrdersFilters(state.filters));
 }
 
+const flagLabels = (row: OrderListRow): string => row.flags.map(flag => flag.label).join(', ');
+
 const router = useRouter();
 function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void {
     const target = event.originalEvent.target;
@@ -182,10 +186,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
         data-key="code"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'code', placeholder: 'Search orders…' }"
+        :search="{ filterKey: 'code', placeholder: t('orders.list.search') }"
         :conditions="filters.conditions"
         :default-filters="BLANK_TABLE_FILTERS"
-        empty-message="No orders match your filters"
+        :empty-message="t('orders.list.empty')"
         @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -195,11 +199,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load orders"
-                message="Check the connection and try again."
+                :title="t('orders.list.loadFailedTitle')"
+                :message="t('orders.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No orders match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('orders.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
@@ -259,8 +263,8 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
                     v-if="(data as OrderListRow).flags.length"
                     class="mv-cell-more"
                     role="note"
-                    :aria-label="`Also: ${(data as OrderListRow).flags.map(flag => flag.label).join(', ')}`"
-                    :title="(data as OrderListRow).flags.map(flag => flag.label).join(', ')"
+                    :aria-label="t('orders.list.also', { flags: flagLabels(data as OrderListRow) })"
+                    :title="flagLabels(data as OrderListRow)"
                     >+{{ (data as OrderListRow).flags.length }}</span
                 >
             </div>

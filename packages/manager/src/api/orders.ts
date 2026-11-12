@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { lazyLabels, lazyOptions, tr } from '../utils/lazyLabels';
 import { adminApi } from './client';
 import {
     BranchesDocument,
@@ -10,15 +11,15 @@ export type OrderListItem = OrderListItemFieldsFragment;
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic (see
 // plugin-reservation/src/types.ts), not ERP business data, same carve-out as ORDER_STATE_OPTIONS.
-export const ORDER_RESERVATION_STATE_OPTIONS = [
-    { value: '', label: 'Any reservation state' },
-    { value: 'NOT_REQUIRED', label: 'Not required' },
-    { value: 'AWAITING_CONFIRMATION', label: 'Awaiting confirmation' },
-    { value: 'RESERVED', label: 'Reserved' },
-    { value: 'EXPIRED', label: 'Expired' },
-    { value: 'RELEASED', label: 'Released' },
-    { value: 'FAILED', label: 'Failed' },
-] as const;
+export const ORDER_RESERVATION_STATE_OPTIONS = lazyOptions('orders.reservation', [
+    '',
+    'NOT_REQUIRED',
+    'AWAITING_CONFIRMATION',
+    'RESERVED',
+    'EXPIRED',
+    'RELEASED',
+    'FAILED',
+] as const);
 
 // Single source of truth for the Reservation badge color — same reasoning/precedent as
 // ORDER_STATE_BADGE_VARIANT/FULFILLMENT_STATE_BADGE_VARIANT above.
@@ -32,29 +33,30 @@ export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVa
 
 // Order.customFields.reservationFailureReason (plugin-reservation/src/types.ts) — why the last
 // automatic reserve failed; set means "needs staff attention", cleared by a successful reserve (#199).
-export const RESERVATION_FAILURE_LABEL: Record<string, string> = {
-    INSUFFICIENT_STOCK: 'Not enough stock',
-    ERP_EXPORT_DATA_MISSING: 'Missing data for the ERP',
-    NOT_ELIGIBLE: 'The order cannot be reserved',
-    UNEXPECTED: 'Unexpected error',
-};
+export const RESERVATION_FAILURE_LABEL = lazyLabels('orders.reservationFailure', [
+    'INSUFFICIENT_STOCK',
+    'ERP_EXPORT_DATA_MISSING',
+    'NOT_ELIGIBLE',
+    'UNEXPECTED',
+]);
+
+const ORDER_STATES = [
+    'AddingItems',
+    'Draft',
+    'ArrangingPayment',
+    'PaymentAuthorized',
+    'PaymentSettled',
+    'PartiallyShipped',
+    'Shipped',
+    'PartiallyDelivered',
+    'Delivered',
+    'Cancelled',
+] as const;
 
 // Vendure's own OrderProcess states, not ERP business data; a const list is intentional here.
 // Documented carve-out for internal technical states in backend-plugin-rules.
-export const ORDER_STATE_OPTIONS = [
-    { value: '', label: 'All statuses' },
-    { value: 'AddingItems', label: 'Draft (storefront cart)' },
-    // 'Draft' (capitalized) is the admin draft-order state, distinct from a customer's AddingItems cart.
-    { value: 'Draft', label: 'Draft (order entry)' },
-    { value: 'ArrangingPayment', label: 'Arranging payment' },
-    { value: 'PaymentAuthorized', label: 'Processing' },
-    { value: 'PaymentSettled', label: 'Awaiting shipment' },
-    { value: 'PartiallyShipped', label: 'Partially shipped' },
-    { value: 'Shipped', label: 'Shipped' },
-    { value: 'PartiallyDelivered', label: 'Partially delivered' },
-    { value: 'Delivered', label: 'Delivered' },
-    { value: 'Cancelled', label: 'Cancelled' },
-] as const;
+// 'Draft' (capitalized) is the admin draft-order state, distinct from a customer's AddingItems cart.
+export const ORDER_STATE_OPTIONS = lazyOptions('orders.state', ['', ...ORDER_STATES] as const);
 
 // Must use real Vendure OrderSortParameter keys: DataTable column fields don't map 1:1
 // (e.g. 'total' -> totalWithTax), so callers map through this before building sort.
@@ -62,18 +64,7 @@ export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt'
 
 // Shared by every order list and the customer KPI strip — the same Order.state values must
 // read the same everywhere in the manager portal.
-export const ORDER_STATE_LABEL: Record<string, string> = {
-    AddingItems: 'Draft (storefront cart)',
-    Draft: 'Draft (order entry)',
-    ArrangingPayment: 'Arranging payment',
-    PaymentAuthorized: 'Processing',
-    PaymentSettled: 'Awaiting shipment',
-    PartiallyShipped: 'Partially shipped',
-    Shipped: 'Shipped',
-    PartiallyDelivered: 'Partially delivered',
-    Delivered: 'Delivered',
-    Cancelled: 'Cancelled',
-};
+export const ORDER_STATE_LABEL = lazyLabels('orders.state', ORDER_STATES);
 
 // Keyed by raw Order.state, not the label, so relabeling ORDER_STATE_LABEL can't break colors.
 // All Commercial-state badges must use this map, not a local variant.
@@ -101,12 +92,14 @@ export const FULFILLMENT_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant>
 
 // Must stay in sync with the badge map keys above; 'Not started' is synthetic, not a Vendure state.
 export const FULFILLMENT_STATE_OPTIONS = [
-    { value: 'Not started', label: 'Not started' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Shipped', label: 'Shipped' },
-    { value: 'Delivered', label: 'Delivered' },
-    { value: 'Cancelled', label: 'Cancelled' },
-] as const;
+    {
+        value: 'Not started',
+        get label(): string {
+            return tr('orders.fulfillment.notStarted');
+        },
+    },
+    ...lazyOptions('orders.fulfillment', ['Pending', 'Shipped', 'Delivered', 'Cancelled'] as const),
+];
 
 // Not a quantity ratio: one fulfillment covering all lines reads 100% whatever its state.
 // 'Cancelled' is off the sequence; callers must branch on it before looking up here.

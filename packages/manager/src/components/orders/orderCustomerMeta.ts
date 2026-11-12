@@ -1,3 +1,4 @@
+import { tr } from '../../utils/lazyLabels';
 import type { OrderListRow } from './ordersListRows';
 
 // A name that merely repeats the code adds nothing, so only a real display name is shown.
@@ -11,6 +12,6 @@ export function customerMetaText(
     row: Pick<OrderListRow, 'inn' | 'priceTypeCode'>,
     priceTypes: Map<string, string>,
 ): string {
-    const parts = [row.inn ? `INN ${row.inn}` : '', priceTypeName(row.priceTypeCode, priceTypes)];
+    const parts = [row.inn ? tr('orders.list.inn', { inn: row.inn }) : '', priceTypeName(row.priceTypeCode, priceTypes)];
     return parts.filter(Boolean).join(' · ');
 }

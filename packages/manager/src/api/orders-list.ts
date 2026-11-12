@@ -3,6 +3,7 @@ import {
     sanitizeConditions,
     type FilterCondition,
 } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
+import { tr } from '../utils/lazyLabels';
 import { adminApi } from './client';
 import { OrdersPageDocument } from './generated/graphql';
 import {
@@ -23,16 +24,25 @@ export type OrdersView =
     | 'erp-requirements'
     | 'overdue';
 
-export const ORDERS_VIEWS: { key: OrdersView; label: string }[] = [
-    { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
-    { key: 'all', label: 'All' },
-    { key: 'processing', label: 'Processing' },
-    { key: 'awaiting-shipment', label: 'Awaiting shipment' },
-    { key: 'overdue', label: 'Overdue' },
-    { key: 'rejected-by-erp', label: 'Rejected by ERP' },
-    { key: 'reservation-failed', label: 'Reservation failed' },
-    { key: 'erp-requirements', label: 'Blocked by ERP requirements' },
-];
+const VIEW_LABEL_KEY: Record<OrdersView, string> = {
+    'awaiting-confirmation': 'awaitingConfirmation',
+    all: 'all',
+    processing: 'processing',
+    'awaiting-shipment': 'awaitingShipment',
+    overdue: 'overdue',
+    'rejected-by-erp': 'rejectedByErp',
+    'reservation-failed': 'reservationFailed',
+    'erp-requirements': 'erpRequirements',
+};
+
+export const ORDERS_VIEWS: { key: OrdersView; readonly label: string }[] = (
+    Object.keys(VIEW_LABEL_KEY) as OrdersView[]
+).map(key => ({
+    key,
+    get label(): string {
+        return tr(`orders.views.${VIEW_LABEL_KEY[key]}`);
+    },
+}));
 
 // Same colors as the row badges and flags the view stands for.
 export const ORDERS_VIEW_VARIANT: Partial<Record<OrdersView, StatusBadgeVariant>> = {
