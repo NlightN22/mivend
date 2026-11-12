@@ -274,6 +274,7 @@ describe('discountSetups status, counts, sort, paging', () => {
     });
 
     it('counts under a counterparty filter use the same scope rules', async () => {
-        expect((await service.counts(ctx, '1')).all).toBe(6);
+        // The two inactive setups keep no recipients, so they are not "for everyone" under a counterparty filter.
+        expect((await service.counts(ctx, '1')).all).toBe(4);
     });
 });
