@@ -2466,6 +2466,17 @@ export type Discount = {
     type: AdjustmentType;
 };
 
+export type DiscountFacetOption = {
+    code: Scalars['String']['output'];
+    name: Scalars['String']['output'];
+    values: Array<DiscountFacetValueOption>;
+};
+
+export type DiscountFacetValueOption = {
+    code: Scalars['String']['output'];
+    name: Scalars['String']['output'];
+};
+
 export type DiscountGrant = {
     counterparties: Array<DiscountGrantCounterparty>;
     discountRuleId: Scalars['ID']['output'];
@@ -8377,6 +8388,7 @@ export type Query = {
     deactivatedAdministrators: AdministratorList;
     departmentBranchOverview: Array<DepartmentBranchNode>;
     departments: Array<Department>;
+    discountFacetOptions: Array<DiscountFacetOption>;
     discountGrantsForCounterparty: DiscountGrantForCustomerList;
     /** Selectable manufacturers or categories for a limit row; refs looks up names of known ids. */
     discountLimitScopeOptions: Array<DiscountLimitScopeOption>;
@@ -12811,15 +12823,14 @@ export type PriceTypeCodesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PriceTypeCodesQuery = { priceTypeCodes: Array<string> };
 
-export type DiscountFacetsQueryVariables = Exact<{
-    skip: Scalars['Int']['input'];
-}>;
+export type DiscountFacetsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DiscountFacetsQuery = {
-    facets: {
-        totalItems: number;
-        items: Array<{ code: string; name: string; values: Array<{ code: string; name: string }> }>;
-    };
+    discountFacetOptions: Array<{
+        code: string;
+        name: string;
+        values: Array<{ code: string; name: string }>;
+    }>;
 };
 
 export type RequestDiscountGrantMutationVariables = Exact<{
@@ -16942,16 +16953,13 @@ export const PriceTypeCodesDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<PriceTypeCodesQuery, PriceTypeCodesQueryVariables>;
 export const DiscountFacetsDocument = new TypedDocumentString(`
-    query DiscountFacets($skip: Int!) {
-  facets(options: {skip: $skip, take: 50}) {
-    totalItems
-    items {
+    query DiscountFacets {
+  discountFacetOptions {
+    code
+    name
+    values {
       code
       name
-      values {
-        code
-        name
-      }
     }
   }
 }

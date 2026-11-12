@@ -95,3 +95,29 @@ query DiscountFacets {
         }
     }
 }
+
+mutation RequestDiscountGrant($input: DiscountGrantInput!) {
+    requestDiscountGrant(input: $input) {
+        id
+    }
+}
+
+query ExpiringDiscountGrants($withinDays: Int!) {
+    expiringDiscountGrants(withinDays: $withinDays) {
+        id
+        validTo
+        counterparties {
+            id
+            legalName
+        }
+    }
+}
+
+query DiscountCounterpartySearch($search: String!) {
+    counterparties(options: { search: $search, take: 20 }) {
+        items {
+            id
+            legalName
+        }
+    }
+}
