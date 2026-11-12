@@ -62,7 +62,11 @@ export class SettlementBalanceService {
             contractId: refs.contracts.get(input.contractErpId) ?? null,
             currency: input.currency,
             openingDate: input.openingDate,
-            openingBalance: toMinorUnits(input.openingBalance),
+            ...(input.openingBalance === undefined
+                ? existing
+                    ? {}
+                    : { openingBalance: 0 }
+                : { openingBalance: toMinorUnits(input.openingBalance) }),
             closingBalance: toMinorUnits(input.closingBalance),
             isDeleted: false,
             sourceVersion: input.version,

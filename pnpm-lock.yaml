@@ -1129,8 +1129,8 @@ importers:
         specifier: ^11.0.0
         version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
       '@nlightn22/event-contracts':
-        specifier: ^0.86.0
-        version: 0.86.0
+        specifier: ^0.87.0
+        version: 0.87.0
       dataloader:
         specifier: 2.2.3
         version: 2.2.3
@@ -4458,8 +4458,8 @@ packages:
       rxjs: ^7.2.0
       typeorm: ^0.3.0 || ^1.0.0-dev
 
-  '@nlightn22/event-contracts@0.86.0':
-    resolution: {integrity: sha512-MGfgf/mw3gJJzeLaYXwVX2pYCLASkXXCLRdDfKNYO+qVw5eb+/3Zp10ZdVkBJyAzWvAbuMlKV/Rsqr9ts5EOWA==, tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.86.0/0c3c1c176d465c633fec77cdb437c348516d00ee}
+  '@nlightn22/event-contracts@0.87.0':
+    resolution: {integrity: sha512-xs5yA6iUSbv9anAo0GhpPPamqPwEWN4lC8KDNKzTObhs24FUfWnaoQPHmNp8oYb5JUkOmr5GtiqmU4sr5VHinA==, tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.87.0/21e73ccf7b878c2767764085ad5e23937b6cabc1}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -9008,6 +9008,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-addon-api@8.8.0:
     resolution: {integrity: sha512-c5Ko1fZJIJmzhFIkhRN76WTq+fC6tWnGy9CXA0fA+XygsWZmEwG8vmbkNqxMyoaa0Tin4djul49NzdVcJJcjeA==}
@@ -13790,7 +13791,7 @@ snapshots:
       rxjs: 7.8.2
       typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
 
-  '@nlightn22/event-contracts@0.86.0':
+  '@nlightn22/event-contracts@0.87.0':
     dependencies:
       '@bufbuild/protobuf': 2.13.0
 

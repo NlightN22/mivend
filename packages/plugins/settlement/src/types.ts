@@ -39,7 +39,7 @@ export interface SettlementBalanceInput {
     contractErpId: string;
     currency: string;
     openingDate: Date | null;
-    openingBalance: number;
+    openingBalance?: number;
     closingBalance: number;
 }
 

@@ -65,6 +65,22 @@ describe('SettlementBalanceService (real Postgres)', () => {
         expect((await rows())[0].closingBalance).toBe(700);
     });
 
+    it('keeps the stored opening balance when a newer version omits it, and stores 0 for a new key', async () => {
+        await h.balances.apply(ctx, balance());
+        await h.balances.apply(
+            ctx,
+            balance({ version: '2026-10-02T10:00:00Z', openingBalance: undefined, closingBalance: 5 }),
+        );
+        await h.balances.apply(
+            ctx,
+            balance({ key: 'org-1:cp-2:ct-2', counterpartyErpId: 'cp-2', contractErpId: 'ct-2', openingBalance: undefined }),
+        );
+
+        const byKey = Object.fromEntries((await rows()).map(r => [r.balanceKey, r]));
+        expect(byKey['org-1:cp-1:ct-1']).toMatchObject({ openingBalance: 10000, closingBalance: 500 });
+        expect(byKey['org-1:cp-2:ct-2'].openingBalance).toBe(0);
+    });
+
     it('stores a closing balance that disagrees with opening plus documents without complaint', async () => {
         await h.balances.apply(ctx, balance({ openingBalance: 100, closingBalance: 0 }));
 

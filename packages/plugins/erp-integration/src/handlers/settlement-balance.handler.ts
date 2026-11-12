@@ -21,8 +21,11 @@ export class SettlementBalanceStreamHandler implements InboundStreamHandler {
         const organizationErpId = String(payload.organizationId ?? '');
         const counterpartyErpId = String(payload.counterpartyId ?? '');
         const contractErpId = String(payload.contractId ?? '');
-        // Plain proto3 doubles: a legitimate zero is omitted, so absent means 0.
-        const openingBalance = Number(payload.openingBalance ?? 0);
+        // opening_balance is optional on the wire: absent keeps the stored value, a sent 0 overwrites it.
+        const openingBalance =
+            payload.openingBalance === undefined || payload.openingBalance === null
+                ? undefined
+                : Number(payload.openingBalance);
         const closingBalance = Number(payload.closingBalance ?? 0);
         if (
             !entityId ||
@@ -30,7 +33,7 @@ export class SettlementBalanceStreamHandler implements InboundStreamHandler {
             !organizationErpId ||
             !counterpartyErpId ||
             !contractErpId ||
-            !Number.isFinite(openingBalance) ||
+            (openingBalance !== undefined && !Number.isFinite(openingBalance)) ||
             !Number.isFinite(closingBalance)
         ) {
             return inboundNoop(`settlement-balance ${entityId}: missing/invalid field, skipping`);

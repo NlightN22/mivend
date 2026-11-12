@@ -172,7 +172,7 @@ describe('SettlementBalanceStreamHandler', () => {
         expect(apply.mock.calls[0][1]).toMatchObject({ openingBalance: 100, closingBalance: 40 });
     });
 
-    it('reads absent proto3 doubles as zero', async () => {
+    it('passes an absent opening balance as undefined and an absent closing balance as zero', async () => {
         const apply = vi.fn().mockResolvedValue('applied');
         const handler = new SettlementBalanceStreamHandler({ apply } as never);
 
@@ -182,7 +182,17 @@ describe('SettlementBalanceStreamHandler', () => {
             closingBalance: undefined,
         });
 
-        expect(apply.mock.calls[0][1]).toMatchObject({ openingBalance: 0, closingBalance: 0 });
+        expect(apply.mock.calls[0][1].openingBalance).toBeUndefined();
+        expect(apply.mock.calls[0][1]).toMatchObject({ closingBalance: 0 });
+    });
+
+    it('passes a sent zero opening balance through as zero', async () => {
+        const apply = vi.fn().mockResolvedValue('applied');
+        const handler = new SettlementBalanceStreamHandler({ apply } as never);
+
+        await handler.apply(ctx, 'k', { ...payload, openingBalance: 0 });
+
+        expect(apply.mock.calls[0][1].openingBalance).toBe(0);
     });
 
     it('skips a balance missing a triple id', async () => {
