@@ -52,7 +52,7 @@ describe('SettlementDocumentTypeService.listAll (real Postgres)', () => {
         await register('Old', 'Old label', true);
 
         expect(await h.types.listAll(ctx)).toEqual([
-            { documentType: 'Sale', label: 'Sale label', category: 'sale', movesTurnover: false },
+            { documentType: 'Sale', label: 'Sale label', category: 'sale', movesTurnover: true },
         ]);
     });
 
@@ -65,7 +65,7 @@ describe('SettlementDocumentTypeService.listAll (real Postgres)', () => {
         await doc('d5', 'Zeta', 'Zeta label');
 
         expect(await h.types.listAll(ctx)).toEqual([
-            { documentType: 'Sale', label: 'Sale label', category: 'sale', movesTurnover: false },
+            { documentType: 'Sale', label: 'Sale label', category: 'sale', movesTurnover: true },
             { documentType: 'Unlisted', label: 'Unlisted label', category: null, movesTurnover: false },
             { documentType: 'Zeta', label: 'Zeta label', category: null, movesTurnover: false },
         ]);

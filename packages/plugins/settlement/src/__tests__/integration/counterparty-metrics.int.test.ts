@@ -114,7 +114,7 @@ describe('CounterpartyMetricsService (real Postgres)', () => {
         await balance('cp-1', 'ct-gone', 999, { isDeleted: true });
         await balance('cp-2', 'ct-1', 5000);
         const m = await service.metrics(ctx, '1', NOW);
-        expect(m.balanceMinor).toBe(700);
+        expect(m.balanceMinor).toBe(70000);
         expect(m.currency).toBe('RUB');
         expect(m.contractBalances.map(r => r.contractErpId).sort()).toEqual(['ct-1', 'ct-unknown']);
         const unlinked = m.contractBalances.find(r => r.contractErpId === 'ct-unknown');
@@ -132,10 +132,10 @@ describe('CounterpartyMetricsService (real Postgres)', () => {
         await doc('u1', 'Supply', '2026-11-11T15:00:00Z', -400);
         await doc('x1', 'Sale', '2026-11-11T16:00:00Z', 9999, { isDeleted: true });
         const m = await service.metrics(ctx, '1', NOW);
-        expect(m.salesLast30DaysMinor).toBe(1250);
-        expect(m.salesLast12MonthsMinor).toBe(1250);
+        expect(m.salesLast30DaysMinor).toBe(125000);
+        expect(m.salesLast12MonthsMinor).toBe(125000);
         expect(m.saleDocumentsLast12Months).toBe(2);
-        expect(m.averageCheckMinor).toBe(625);
+        expect(m.averageCheckMinor).toBe(62500);
     });
 
     it('window boundaries: today is inside, the 30-day edge and the previous window split on local midnight', async () => {
@@ -148,9 +148,9 @@ describe('CounterpartyMetricsService (real Postgres)', () => {
         await doc('year-in', 'Sale', '2025-11-13T00:00:00Z', 100000000);
         await doc('year-out', 'Sale', '2025-11-12T23:59:00Z', 1000000000);
         const m = await service.metrics(ctx, '1', NOW);
-        expect(m.salesLast30DaysMinor).toBe(11);
-        expect(m.salesPrev30DaysMinor).toBe(1100);
-        expect(m.salesLast12MonthsMinor).toBe(100000000 + 11 + 1100 + 10000);
+        expect(m.salesLast30DaysMinor).toBe(1100);
+        expect(m.salesPrev30DaysMinor).toBe(110000);
+        expect(m.salesLast12MonthsMinor).toBe((100000000 + 11 + 1100 + 10000) * 100);
     });
 
     it('isolates counterparties and gives a null average check with no sale documents', async () => {
@@ -161,7 +161,7 @@ describe('CounterpartyMetricsService (real Postgres)', () => {
         expect(m.saleDocumentsLast12Months).toBe(0);
         expect(m.averageCheckMinor).toBeNull();
         const other = await service.metrics(ctx, '2', NOW);
-        expect(other.salesLast30DaysMinor).toBe(4000);
+        expect(other.salesLast30DaysMinor).toBe(400000);
     });
 
     it('counts open orders of the counterparty only, excluding carts, drafts and closed states', async () => {
