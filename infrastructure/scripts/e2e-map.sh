@@ -24,4 +24,4 @@ while IFS= read -r f; do
     Makefile|package.json|pnpm-lock.yaml|infrastructure/*) add smoke ;;
   esac
 done < <(git diff --name-only "$BASE" "$HEAD_REF")
-printf '%s\n' $groups | grep -v '^$' | sort -u | tr '\n' ' '; echo
+printf '%s\n' $groups | { grep -v '^$' || true; } | sort -u | tr '\n' ' '; echo

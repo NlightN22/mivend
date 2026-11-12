@@ -392,9 +392,9 @@ describe('settlement shop queries (real Postgres)', () => {
         await balance('cp-1', 'ct-unknown', 0, -300);
         const cards = await shop.balanceCards(ctx, '1');
         expect(cards.map(c => [c.contractId, c.currentBalance]).sort()).toEqual([
-            ['1', 10000],
             [null, -30000],
             [null, 50000],
+            ['1', 10000],
         ]);
         expect(await shop.balanceCards(ctx, '1', { contractId: '2' })).toEqual([]);
         expect(cards.reduce((sum, c) => sum + c.currentBalance, 0)).toBe(30000);
