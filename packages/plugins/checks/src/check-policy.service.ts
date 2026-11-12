@@ -142,14 +142,6 @@ export class CheckPolicyService {
 
     async list(ctx: RequestContext, subjectType?: string): Promise<CheckPolicy[]> {
         const providers = this.registry.listChecks(subjectType);
-        const stages = [...new Set(providers.flatMap(p => p.stages))];
-        for (const stage of stages) {
-            await this.ensureForStage(
-                ctx,
-                providers.filter(p => p.stages.includes(stage)),
-                stage,
-            );
-        }
         if (providers.length === 0) {
             return [];
         }

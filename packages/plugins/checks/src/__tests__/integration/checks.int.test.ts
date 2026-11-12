@@ -276,6 +276,18 @@ describe('checks framework (real Postgres)', () => {
         });
     });
 
+    it('listing the policies writes nothing; a saved row is listed', async () => {
+        expect(await policies.list(ctx)).toEqual([]);
+        expect(await dataSource.query('SELECT 1 FROM check_policy')).toHaveLength(0);
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'warn',
+            enabled: true,
+        });
+        expect(await policies.list(ctx)).toHaveLength(1);
+    });
+
     it('two concurrent first updates of one branch override end in exactly one row', async () => {
         const input = {
             checkCode: 'demo.rule',
