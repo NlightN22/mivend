@@ -58,6 +58,29 @@ Concept for the figures on the customer card and, later, the dashboard. Issue #3
 - Trading points: about 650 of about 7,300 sent points have an empty address and about 100 carry latitude exactly 90, so
   "incomplete point" is a normal state to show, not an exception.
 
+## Facts from the ERP side (2026-11-12, read from its configuration, not measured on data)
+
+- The balance is read from the settlements register with no filter by organization, contract or deletion mark, so the
+  sum of all balance rows is the register balance of the counterparty. Sign: positive means the counterparty owes us
+  (a sale adds), negative means we owe the counterparty (a supplier, or a customer's advance or overpayment).
+- A sales correction writes both the goods turnover (the sales register, pointing at the corrected sale, or at the
+  previous correction) and the settlements. Its amount is the settlements change. The corrected document can be in any
+  earlier period; positive corrections exist (price or quantity increase). A debt correction writes settlements only,
+  never the sales register. This confirms the `movesTurnover` flag: sales, sales corrections, returns.
+- The "reflected in settlements" accounting flag exists only on sales and receipts and is not a posting flag. A document
+  counts if it is posted and wrote register movements; unposting sends `isDeleted`. The accounting flags only mark which
+  accountings reflect the document.
+- The ERP card figures "average monthly sales" come from the sales register by code; "maximum debt" is a manually entered
+  counterparty limit, not a computed history maximum; "average check for the year" is not in the configuration code.
+  Our own figures are computed from documents. An ERP sales-register turnover for 30 days and 12 months could later be
+  sent as a reference value for reconciliation; it is not in the exchange today.
+- Trading point coordinates are free-text attributes with no default. Latitude 90 with longitude 99.999999 are entered
+  placeholder values: treat such coordinates as invalid. A point without an address is a normal working point, never
+  junk.
+- Planned on the ERP side (not yet built): the balances stream is replaced by balances inside document entries
+  (`openingBalance`, `closingBalance`, `balanceAsOf`), the key snapshot stays. The balance rule must be re-checked
+  against that change when it lands.
+
 ## Metrics
 
 | Metric | Definition |
