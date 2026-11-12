@@ -331,9 +331,17 @@ Both are reversible by `down`. Stop the workers before the migration (the usual 
 Before the fix, a `point-of-sale` event without an address and without an existing row was marked applied and the point was never created. After deploying the fix, request a re-send of those points once (no new machinery; the replay API of the Integration Service, same as above):
 
 ```sql
-SELECT DISTINCT i."entityId" FROM integration_inbox_event i
-WHERE i.stream = 'point-of-sale' AND i.status = 'processed'
-  AND NOT EXISTS (SELECT 1 FROM trading_point tp WHERE tp."erpId" = i."entityId");
+SELECT latest.entity_id FROM (
+    SELECT DISTINCT ON (entity_id) entity_id, payload
+    FROM integration_inbox_event
+    WHERE stream = 'point-of-sale' AND status = 'processed' AND payload <> '{}'::jsonb
+      AND (outcome = 'applied' OR outcome IS NULL)
+    ORDER BY entity_id, id DESC) latest
+WHERE latest.payload->>'isActive' = 'true'
+  AND coalesce(latest.payload->>'isDeleted', 'false') <> 'true'
+  AND btrim(coalesce(latest.payload->>'name', '')) <> ''
+  AND NOT EXISTS (SELECT 1 FROM trading_point t WHERE t."erpId" = latest.entity_id)
+  AND EXISTS (SELECT 1 FROM counterparty c WHERE c."erpId" = latest.payload->>'counterpartyId');
 ```
 
 ```bash
@@ -342,4 +350,4 @@ curl -X POST "$INTEGRATION_SERVICE_BASE_URL/api/resync/v1/replay" \
   -d '{"aggregateType":"pointOfSale","sourceSystem":"'"$INTEGRATION_RESYNC_SOURCE_SYSTEM"'","entityIds":["<erpId>", "..."]}'
 ```
 
-Send the ids in batches. Each replay arrives as a new inbox row and the handler now creates the point (empty address when the ERP has none). Afterwards the first query must return 0 rows (tombstoned points with no name excepted). Points without an address or coordinates show on the manager customer card with the defect named and are hidden from the customer.
+Send the ids in batches. Each replay arrives as a new inbox row and the handler now creates the point (empty address when the ERP has none). The list uses the latest applied event per point, as the reconciliation count does, so tombstones are not listed. Afterwards the query must return 0 rows. Points without an address or coordinates show on the manager customer card with the defect named and are hidden from the customer.
