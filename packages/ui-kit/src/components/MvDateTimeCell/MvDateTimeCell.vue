@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useUiLocale } from '../../utils/uiLocale';
 
 // The manager portal's standard rendering for a "base date" table cell (manager-table-standard
 // skill's "identifying number first, creation date second" column) — the date on its own line,
@@ -8,10 +9,15 @@ import { computed } from 'vue';
 // time is purely informational, for a user who needs to tell apart same-day rows precisely.
 const props = defineProps<{ value: string }>();
 
+const locale = useUiLocale();
 const date = computed(() => new Date(props.value));
-const dateLabel = computed(() => date.value.toLocaleDateString('en-US'));
+const dateLabel = computed(() => date.value.toLocaleDateString(locale.value, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }));
 const timeLabel = computed(() =>
-    date.value.toLocaleTimeString('en-US', {
+    date.value.toLocaleTimeString(locale.value, {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',

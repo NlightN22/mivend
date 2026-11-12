@@ -299,6 +299,7 @@ export type { FontSizeToken } from './tokens/typography';
 
 export { formatDocumentNumber } from './utils/documentNumber';
 export { formatCompactCount, formatExactCount } from './utils/compactCount';
+export { UI_LOCALE_KEY, useUiLocale } from './utils/uiLocale';
 export { COMPACT_NAV_BREAKPOINT } from './styles/breakpoints';
 
 export { default as MvCaptchaWidget } from './components/MvCaptchaWidget/MvCaptchaWidget.vue';

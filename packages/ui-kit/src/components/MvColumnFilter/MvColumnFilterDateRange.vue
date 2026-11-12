@@ -4,11 +4,13 @@
 // composite condition, same reasoning as amount-range).
 import { computed, ref, watch } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
+import { useUiLocale } from '../../utils/uiLocale';
 import MvDatePicker from '../MvDatePicker/MvDatePicker.vue';
 import { DATE_RANGE_PRESETS, resolveDateRangePreset } from './dateRangePresets';
 import type { DateRangeFilterConfig, DateRangeFilterValue } from './columnFilterTypes';
 
 const props = defineProps<{ config: DateRangeFilterConfig; modelValue: DateRangeFilterValue }>();
+const locale = useUiLocale();
 const emit = defineEmits<{ 'update:modelValue': [value: DateRangeFilterValue]; close: [] }>();
 
 const presets = computed(() => props.config.presets ?? DATE_RANGE_PRESETS);
@@ -126,7 +128,7 @@ function selectAllOnFocus(event: FocusEvent): void {
 
 function formatDisplayDate(iso: string): string {
     if (!iso) return '';
-    return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(locale.value, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',

@@ -1,4 +1,4 @@
-import { createApp } from 'vue';
+import { computed, createApp } from 'vue';
 import { createPinia } from 'pinia';
 import ElementPlus from 'element-plus';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
@@ -23,9 +23,12 @@ import {
     layers,
     reloadOnStaleChunk,
     initTheme,
+    UI_LOCALE_KEY,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
+import { i18n, initLocale } from './i18n';
+import { activeTag } from './i18n/format';
 import { router } from './router';
 
 reloadOnStaleChunk();
@@ -50,6 +53,11 @@ app.component('MvCard', MvCard);
 app.component('MvBreadcrumbs', MvBreadcrumbs);
 
 app.use(createPinia());
+app.use(i18n);
+app.provide(
+    UI_LOCALE_KEY,
+    computed(() => activeTag()),
+);
 app.use(router);
 app.use(ElementPlus, { zIndex: layers.popover });
 // PrimeVue is scoped to the Orders desktop table only; element-plus/ui-kit remain the rest of the app.
@@ -67,4 +75,4 @@ app.use(PrimeVue, {
     },
 });
 
-app.mount('#app');
+initLocale().finally(() => app.mount('#app'));

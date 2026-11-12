@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Masked DD.MM.YYYY input plus calendar grid; use this instead of <input type="date"> or a library.
+import { useUiLocale } from '../../utils/uiLocale';
 import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
@@ -32,10 +33,10 @@ const props = withDefaults(
     {
         hideInput: false,
         hideClear: false,
-        locale: 'en-US',
         labels: () => ({}),
     },
 );
+const uiLocale = useUiLocale();
 const text = computed<DatePickerLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 // `pick` fires only on a calendar click, so callers can auto-advance without closing mid-typing.
 const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [value: string] }>();
@@ -106,7 +107,7 @@ function onTextInput(event: Event): void {
 }
 
 const monthLabel = computed(() =>
-    viewMonth.value.toLocaleDateString(props.locale, { month: 'long', year: 'numeric' }),
+    viewMonth.value.toLocaleDateString(props.locale ?? uiLocale.value, { month: 'long', year: 'numeric' }),
 );
 
 interface DayCell {

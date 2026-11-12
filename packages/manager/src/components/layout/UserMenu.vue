@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { IconLogout, IconSettings } from '@tabler/icons-vue';
 import { MvAvatar } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import UserMenuLanguage from './UserMenuLanguage.vue';
 import UserMenuTheme from './UserMenuTheme.vue';
 import { USER_MENU_ITEMS, systemSettingsPath } from './userMenuItems';
 
@@ -54,6 +55,7 @@ function onKeydown(event: KeyboardEvent): void {
             {{ item.label }}
         </RouterLink>
         <UserMenuTheme />
+        <UserMenuLanguage />
         <RouterLink v-if="settingsPath" :to="settingsPath" class="user-menu__item" role="menuitem">
             <IconSettings :size="18" aria-hidden="true" />
             System settings
