@@ -38,8 +38,12 @@ function createMockReservationRepo(): {
         save: vi.fn(async (x: unknown) => x),
         createQueryBuilder: vi.fn(() => ({
             select: vi.fn().mockReturnThis(),
+            addSelect: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
+            groupBy: vi.fn().mockReturnThis(),
+            addGroupBy: vi.fn().mockReturnThis(),
+            getRawMany: vi.fn(async () => [] as unknown[]),
             getRawOne: vi.fn(async () => ({ max: null })),
             update: vi.fn().mockReturnThis(),
             set: vi.fn().mockReturnThis(),
