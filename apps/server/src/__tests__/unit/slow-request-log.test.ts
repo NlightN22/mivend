@@ -6,6 +6,7 @@ import {
     envMs,
     formatSlowOperation,
     isSlow,
+    requestContextOf,
 } from '../../slow-request-log/slow-request-log';
 
 describe('slow request decision', () => {
@@ -42,6 +43,20 @@ describe('actor and operation labels', () => {
         expect(formatSlowOperation('shop', 'x {a:"secret@mail"}', 900, 'customer')).not.toContain(
             'secret',
         );
+    });
+});
+
+describe('request context lookup', () => {
+    it('unwraps the item Vendure stores on the request', () => {
+        const ctx = { apiType: 'admin', session: { user: { isSuperAdmin: false } } };
+        const value = { req: { vendureRequestContext: { default: ctx } } };
+        expect(requestContextOf(value)).toBe(ctx);
+        expect(actorLabel(requestContextOf(value))).toBe('staff');
+    });
+
+    it('returns undefined when no context was stored', () => {
+        expect(requestContextOf(undefined)).toBeUndefined();
+        expect(requestContextOf({ req: {} })).toBeUndefined();
     });
 });
 

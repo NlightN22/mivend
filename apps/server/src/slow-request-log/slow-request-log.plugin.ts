@@ -7,17 +7,13 @@ import {
     envMs,
     formatSlowOperation,
     isSlow,
+    requestContextOf,
     type ActorContext,
 } from './slow-request-log';
 
 type ApolloServerPlugin = NonNullable<ApiOptions['apolloServerPlugins']>[number];
 
 const loggerCtx = 'slow-request';
-
-function requestContextOf(contextValue: unknown): ActorContext | undefined {
-    const req = (contextValue as { req?: Record<string, unknown> } | undefined)?.req;
-    return req?.['vendureRequestContext'] as ActorContext | undefined;
-}
 
 function slowRequestApolloPlugin(thresholdMs: number): ApolloServerPlugin {
     return {
