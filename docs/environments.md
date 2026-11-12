@@ -225,7 +225,7 @@ silently defaulting to on.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `SLOW_REQUEST_LOG_MS` | `500` | A GraphQL operation (admin-api or shop-api) slower than this logs one warn line with the API, operation name, duration and role codes (`anonymous`/`customer` otherwise); never variables or the document. |
+| `SLOW_REQUEST_LOG_MS` | `500` | A GraphQL operation (admin-api or shop-api) slower than this logs one warn line with the API, operation name, duration and actor kind (`anonymous`, `customer`, `staff` or `super-admin`, never a user id); never variables or the document. |
 | `EVENT_LOOP_LAG_LOG_MS` | `1000` | A one-second timer that fires later than this logs one warn line with the lag, at most one per 10 s. |
 
 Read both in the server log by the `slow-request` context. A stall line with no slow operation near it points at CPU-bound work blocking the main thread; the pool-wait sample is not implemented (the pg pool is not exposed without reaching into TypeORM internals).

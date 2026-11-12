@@ -1,5 +1,6 @@
 export interface ActorContext {
-    session?: { user?: { channelPermissions?: { code: string }[] } } | null;
+    apiType?: string;
+    session?: { user?: { isSuperAdmin?: boolean } | null } | null;
 }
 
 export function isSlow(durationMs: number, thresholdMs: number): boolean {
@@ -7,10 +8,10 @@ export function isSlow(durationMs: number, thresholdMs: number): boolean {
 }
 
 export function actorLabel(ctx: ActorContext | undefined): string {
-    const codes = ctx?.session?.user?.channelPermissions?.map(p => p.code) ?? [];
-    if (!ctx?.session?.user) return 'anonymous';
-    const unique = [...new Set(codes.map(c => (c === '__customer_role__' ? 'customer' : c)))];
-    return unique.length > 0 ? unique.sort().join(',') : 'customer';
+    const user = ctx?.session?.user;
+    if (!user) return 'anonymous';
+    if (user.isSuperAdmin) return 'super-admin';
+    return ctx?.apiType === 'admin' ? 'staff' : 'customer';
 }
 
 export function formatSlowOperation(

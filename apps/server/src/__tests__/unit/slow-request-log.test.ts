@@ -22,19 +22,16 @@ describe('slow request decision', () => {
 });
 
 describe('actor and operation labels', () => {
-    it('labels anonymous, customer and staff roles without ids', () => {
+    it('labels anonymous, super-admin, staff and customer without ids', () => {
         expect(actorLabel(undefined)).toBe('anonymous');
         expect(actorLabel({ session: { user: undefined } })).toBe('anonymous');
-        expect(
-            actorLabel({
-                session: { user: { channelPermissions: [{ code: '__customer_role__' }] } },
-            }),
-        ).toBe('customer');
-        expect(
-            actorLabel({
-                session: { user: { channelPermissions: [{ code: 'sales' }, { code: 'sales' }] } },
-            }),
-        ).toBe('sales');
+        expect(actorLabel({ apiType: 'admin', session: { user: { isSuperAdmin: true } } })).toBe(
+            'super-admin',
+        );
+        expect(actorLabel({ apiType: 'admin', session: { user: { isSuperAdmin: false } } })).toBe(
+            'staff',
+        );
+        expect(actorLabel({ apiType: 'shop', session: { user: {} } })).toBe('customer');
     });
 
     it('prints only a sane operation name', () => {

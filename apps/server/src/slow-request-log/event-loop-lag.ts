@@ -19,10 +19,10 @@ export function startLagMonitor(
     log: (lagMs: number) => void,
     intervalMs = 1000,
 ): LagMonitor {
-    let expected = Date.now() + intervalMs;
+    let expected = performance.now() + intervalMs;
     let lastLogged: number | null = null;
     const timer = setInterval(() => {
-        const now = Date.now();
+        const now = performance.now();
         const lag = now - expected;
         expected = now + intervalMs;
         if (shouldLogLag(lag, thresholdMs, now, lastLogged)) {

@@ -22,10 +22,10 @@ function requestContextOf(contextValue: unknown): ActorContext | undefined {
 function slowRequestApolloPlugin(thresholdMs: number): ApolloServerPlugin {
     return {
         async requestDidStart() {
-            const startedAt = Date.now();
+            const startedAt = performance.now();
             return {
                 async willSendResponse(rc) {
-                    const duration = Date.now() - startedAt;
+                    const duration = performance.now() - startedAt;
                     if (!isSlow(duration, thresholdMs)) return;
                     const ctx = requestContextOf(rc.contextValue);
                     const api = (ctx as { apiType?: string } | undefined)?.apiType ?? 'graphql';
