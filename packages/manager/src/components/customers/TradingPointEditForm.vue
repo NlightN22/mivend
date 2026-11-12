@@ -1,14 +1,34 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
-import { MvInput, MvButton, MvNotice, type GeoPoint } from '@mivend/ui-kit';
+import { computed, reactive, ref } from 'vue';
+import {
+    MvAddressInput,
+    MvButton,
+    MvFormField,
+    MvInput,
+    MvNotice,
+    MvWorkingHoursInput,
+    tradingPointFieldErrors,
+    type GeoPoint,
+    type TradingPointFieldValues,
+} from '@mivend/ui-kit';
 import { updateTradingPointDetails, type TradingPointInfo } from '../../api/customers';
+import { suggestAddress } from '../../api/geo';
+import { useContactRows } from '../../composables/useContactRows';
+import TradingPointContactRows from './TradingPointContactRows.vue';
 import TradingPointLocationField from './TradingPointLocationField.vue';
 
 const props = defineProps<{ tradingPoint: TradingPointInfo; siblingPoint?: GeoPoint | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
+const FIELD_ERROR_TEXT = {
+    name: 'Enter the trading point name',
+    address: 'Enter a full address with a street and building number',
+    workingHours: 'Enter working hours with a time, e.g. Mon-Fri 9:00-18:00',
+} as const;
+
 const submitting = ref(false);
 const error = ref('');
+const touched = reactive({ name: false, address: false, workingHours: false });
 
 const form = reactive({
     name: props.tradingPoint.name,
@@ -22,31 +42,46 @@ const form = reactive({
             : null,
     workingHours: props.tradingPoint.workingHours ?? '',
     deliveryComment: props.tradingPoint.deliveryComment ?? '',
-    contacts: props.tradingPoint.contacts.map(c => ({ ...c })),
 });
+const contacts = useContactRows(props.tradingPoint.contacts);
 
-function addContact(): void {
-    form.contacts.push({ name: '', phone: '', email: '', isPrimary: false });
-}
+const originalValues: TradingPointFieldValues = {
+    name: props.tradingPoint.name,
+    address: props.tradingPoint.address,
+    contactName: '',
+    contactPhone: '',
+    workingHours: props.tradingPoint.workingHours ?? '',
+    latitude: props.tradingPoint.latitude,
+    longitude: props.tradingPoint.longitude,
+};
+const errors = computed(() =>
+    tradingPointFieldErrors(
+        {
+            ...originalValues,
+            name: form.name,
+            address: form.address,
+            workingHours: form.workingHours,
+            latitude: form.location?.latitude ?? null,
+            longitude: form.location?.longitude ?? null,
+        },
+        originalValues,
+    ),
+);
 
-function removeContact(index: number): void {
-    form.contacts.splice(index, 1);
+function shown(key: keyof typeof FIELD_ERROR_TEXT): string | undefined {
+    return touched[key] && errors.value[key] ? FIELD_ERROR_TEXT[key] : undefined;
 }
 
 async function submit(): Promise<void> {
     error.value = '';
-    if (!form.name.trim() || !form.address.trim()) {
-        error.value = 'Name and address are required';
-        return;
-    }
+    Object.assign(touched, { name: true, address: true, workingHours: true });
+    contacts.touchAll();
+    if (errors.value.name || errors.value.address || errors.value.workingHours) return;
     if (!form.location) {
         error.value = 'Pick the trading point location on the map';
         return;
     }
-    if (form.contacts.some(c => !c.name.trim())) {
-        error.value = 'Every contact needs a name (remove the row instead of leaving it blank)';
-        return;
-    }
+    if (!contacts.valid.value) return;
     submitting.value = true;
     try {
         await updateTradingPointDetails(props.tradingPoint.id, {
@@ -56,10 +91,10 @@ async function submit(): Promise<void> {
             longitude: form.location.longitude,
             workingHours: form.workingHours.trim() || null,
             deliveryComment: form.deliveryComment.trim() || null,
-            contacts: form.contacts.map(c => ({
+            contacts: contacts.rows.map(c => ({
                 name: c.name.trim(),
-                phone: c.phone?.trim() || null,
-                email: c.email?.trim() || null,
+                phone: c.phone.trim() || null,
+                email: c.email.trim() || null,
                 isPrimary: c.isPrimary,
             })),
         });
@@ -75,30 +110,31 @@ async function submit(): Promise<void> {
 <template>
     <div class="tp-edit-form">
         <div class="tp-edit-form__grid">
-            <label>
-                Name
+            <MvFormField label="Name" :error="shown('name')" required>
                 <MvInput
+                    v-model="form.name"
                     size="sm"
-                    :model-value="form.name"
-                    @update:model-value="form.name = $event"
+                    :error="!!shown('name')"
+                    @focusout="touched.name = true"
                 />
-            </label>
-            <label>
-                Address
-                <MvInput
+            </MvFormField>
+            <MvFormField label="Address" :error="shown('address')" required>
+                <MvAddressInput
+                    v-model="form.address"
                     size="sm"
-                    :model-value="form.address"
-                    @update:model-value="form.address = $event"
+                    :fetch-suggestions="suggestAddress"
+                    :error="!!shown('address')"
+                    @blur="touched.address = true"
                 />
-            </label>
-            <label>
-                Working hours
-                <MvInput
+            </MvFormField>
+            <MvFormField label="Working hours" :error="shown('workingHours')">
+                <MvWorkingHoursInput
+                    v-model="form.workingHours"
                     size="sm"
-                    :model-value="form.workingHours"
-                    @update:model-value="form.workingHours = $event"
+                    :error="!!shown('workingHours')"
+                    @blur="touched.workingHours = true"
                 />
-            </label>
+            </MvFormField>
         </div>
 
         <TradingPointLocationField
@@ -113,42 +149,7 @@ async function submit(): Promise<void> {
             <textarea v-model="form.deliveryComment" rows="2" />
         </label>
 
-        <div class="tp-edit-form__contacts">
-            <div class="tp-edit-form__contacts-head">
-                <span>Contacts</span>
-                <button type="button" class="tp-edit-form__add" @click="addContact">
-                    + Add contact
-                </button>
-            </div>
-            <div
-                v-for="(contact, index) in form.contacts"
-                :key="index"
-                class="tp-edit-form__contact-row"
-            >
-                <MvInput
-                    size="sm"
-                    placeholder="Name"
-                    :model-value="contact.name"
-                    @update:model-value="contact.name = $event"
-                />
-                <MvInput
-                    size="sm"
-                    placeholder="Phone"
-                    :model-value="contact.phone ?? ''"
-                    @update:model-value="contact.phone = $event"
-                />
-                <MvInput
-                    size="sm"
-                    placeholder="Email"
-                    :model-value="contact.email ?? ''"
-                    @update:model-value="contact.email = $event"
-                />
-                <button type="button" class="tp-edit-form__remove" @click="removeContact(index)">
-                    Remove
-                </button>
-            </div>
-            <p v-if="!form.contacts.length" class="tp-edit-form__empty">No contacts</p>
-        </div>
+        <TradingPointContactRows :contacts="contacts" />
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
@@ -174,9 +175,9 @@ async function submit(): Promise<void> {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
+    align-items: start;
 }
 
-.tp-edit-form__grid label,
 .tp-edit-form__comment {
     display: flex;
     flex-direction: column;
@@ -198,55 +199,6 @@ async function submit(): Promise<void> {
     text-transform: none;
     letter-spacing: normal;
     resize: vertical;
-}
-
-.tp-edit-form__contacts {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.tp-edit-form__contacts-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 800;
-    color: var(--el-text-color-secondary);
-}
-
-.tp-edit-form__add {
-    background: none;
-    border: none;
-    color: var(--el-color-primary-dark-2);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.tp-edit-form__contact-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 8px;
-    align-items: center;
-}
-
-.tp-edit-form__remove {
-    background: none;
-    border: none;
-    color: var(--el-color-danger);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.tp-edit-form__empty {
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-    margin: 0;
 }
 
 .tp-edit-form__actions {

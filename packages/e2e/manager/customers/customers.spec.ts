@@ -246,7 +246,9 @@ test('History tab is absent for non-leadership roles (negative) @on:manager-oper
 test('editing a trading point contact records a readable contacts diff (positive) @on:manager-department-head', async ({
     page,
 }) => {
-    const contactName = `QA Contact ${Date.now()}`;
+    // The name input accepts letters only (#352), so the run suffix is spelled in letters.
+    const suffix = [...String(Date.now())].map(d => String.fromCharCode(97 + Number(d))).join('');
+    const contactName = `Qa Contact ${suffix[0].toUpperCase()}${suffix.slice(1)}`;
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');
 

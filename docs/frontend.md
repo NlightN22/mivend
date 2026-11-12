@@ -94,6 +94,24 @@ src/pages/orders/orders.operations.graphql
 
 Codegen picks them up via glob and generates typed composables into `src/api/generated/`.
 
+## Field standards (#352)
+
+One behaviour per field type in both portals; never a bare `MvInput` for these:
+
+| Field | Component | Rule (`ui-kit/src/utils/fieldValidation.ts`) |
+| --- | --- | --- |
+| Person name | `MvNameInput` | letters only, capitalised, two words |
+| Phone | `MvPhoneInput` | masked, full number |
+| Address | `MvAddressInput` (fetcher injected) | 10+ characters with a digit |
+| Location | `MvLocationPicker` | required |
+| E-mail | `MvEmailInput` | no spaces, `a@b.c` shape |
+| Working hours | `MvWorkingHoursInput` | plain text, preset suggestions, needs a digit, 200 characters max |
+
+Forms show an error only after the field was touched (blur) or a submit was tried, and an ERP value that
+was not edited is not re-validated. Each portal maps the shared error keys to its own messages
+(storefront: i18n keys, manager: English text). The manager fetches suggestions through the admin
+`suggestAddress` query.
+
 ## Home widgets
 
 "New arrivals", "On sale" and "Popular" take ids from `newArrivalProductIds`, `saleProductIds` and `popularProductIds`

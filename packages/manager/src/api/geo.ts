@@ -4,6 +4,7 @@ import {
     GeoConfigDocument,
     ReverseGeocodeDocument,
     SearchAddressDocument,
+    SuggestAddressDocument,
 } from './generated/graphql';
 
 let cachedConfig: Promise<GeoConfig> | null = null;
@@ -35,4 +36,9 @@ export async function searchAddress(
 export async function reverseGeocode(point: GeoPoint, provider: string): Promise<string | null> {
     const result = await adminApi(ReverseGeocodeDocument, { ...point, provider });
     return result.reverseGeocode ?? null;
+}
+
+export async function suggestAddress(query: string): Promise<string[]> {
+    const result = await adminApi(SuggestAddressDocument, { query });
+    return result.suggestAddress;
 }

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { MvButton, MvCheckbox, MvModal, MvSelect, MvInput } from '@mivend/ui-kit';
+import {
+    MvButton,
+    MvCheckbox,
+    MvFormField,
+    MvModal,
+    MvPhoneInput,
+    MvSelect,
+    isValidPhone,
+} from '@mivend/ui-kit';
 import {
     fetchCounterpartyTeam,
     addCounterpartyTeamMember,
@@ -63,6 +71,8 @@ const addOpen = ref(false);
 const newAdministratorId = ref('');
 const newRole = ref<CounterpartyTeamMemberRole>('backup');
 const newPhone = ref('');
+const phoneTouched = ref(false);
+const phoneInvalid = computed(() => !!newPhone.value && !isValidPhone(newPhone.value));
 const saving = ref(false);
 
 const availableManagerOptions = computed(() => [
@@ -95,11 +105,13 @@ function openAdd(): void {
     newAdministratorId.value = '';
     newRole.value = 'backup';
     newPhone.value = '';
+    phoneTouched.value = false;
     addOpen.value = true;
 }
 
 async function handleAdd(): Promise<void> {
-    if (!newAdministratorId.value) return;
+    phoneTouched.value = true;
+    if (!newAdministratorId.value || phoneInvalid.value) return;
     saving.value = true;
     error.value = '';
     try {
@@ -207,7 +219,19 @@ const rows = computed<TeamRow[]>(() => {
                     :disabled="saving"
                 />
                 <MvSelect v-model="newRole" :options="ROLE_OPTIONS" :disabled="saving" />
-                <MvInput v-model="newPhone" placeholder="Phone (optional)" :disabled="saving" />
+                <MvFormField
+                    :error="
+                        phoneTouched && phoneInvalid ? 'Enter a full phone number' : undefined
+                    "
+                >
+                    <MvPhoneInput
+                        v-model="newPhone"
+                        placeholder="Phone (optional)"
+                        :disabled="saving"
+                        :error="phoneTouched && phoneInvalid"
+                        @blur="phoneTouched = true"
+                    />
+                </MvFormField>
                 <MvButton :disabled="!newAdministratorId || saving" @click="handleAdd"
                     >Add member</MvButton
                 >
