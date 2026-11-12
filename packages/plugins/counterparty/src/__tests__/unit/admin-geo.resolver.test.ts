@@ -3,6 +3,7 @@ import { PERMISSIONS_METADATA_KEY } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminGeoResolver } from '../../geo/admin-geo.resolver';
+import { AddressSuggestService } from '../../address-suggest.service';
 import { GeoService } from '../../geo/geo.service';
 
 function build() {
@@ -17,12 +18,25 @@ function build() {
             defaultZoom: 7.4,
         }),
     };
-    return { geo, resolver: new AdminGeoResolver(geo as unknown as GeoService) };
+    const suggestions = { suggest: vi.fn().mockResolvedValue(['Street 1, 10']) };
+    return {
+        geo,
+        suggestions,
+        resolver: new AdminGeoResolver(
+            geo as unknown as GeoService,
+            suggestions as unknown as AddressSuggestService,
+        ),
+    };
 }
 
 describe('AdminGeoResolver', () => {
-    it('uses the read gate of the trading point mutations on all three queries', () => {
-        for (const name of ['searchAddress', 'reverseGeocode', 'geoConfig'] as const) {
+    it('uses the read gate of the trading point mutations on all four queries', () => {
+        for (const name of [
+            'searchAddress',
+            'suggestAddress',
+            'reverseGeocode',
+            'geoConfig',
+        ] as const) {
             const meta = Reflect.getMetadata(
                 PERMISSIONS_METADATA_KEY,
                 AdminGeoResolver.prototype[name],
@@ -32,6 +46,14 @@ describe('AdminGeoResolver', () => {
                 CustomPermission.ReadCounterparty.Permission,
             ]);
         }
+    });
+
+    it('returns the address suggestions for a staff query', async () => {
+        const { suggestions, resolver } = build();
+        expect(await resolver.suggestAddress({} as never, { query: 'Street' })).toEqual([
+            'Street 1, 10',
+        ]);
+        expect(suggestions.suggest).toHaveBeenCalledWith('Street');
     });
 
     it('maps search results and drops an out-of-range bias', async () => {

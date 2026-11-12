@@ -33,3 +33,7 @@ query SearchAddress(
 query ReverseGeocode($latitude: Float!, $longitude: Float!, $provider: String) {
     reverseGeocode(latitude: $latitude, longitude: $longitude, provider: $provider)
 }
+
+query SuggestAddress($query: String!) {
+    suggestAddress(query: $query)
+}

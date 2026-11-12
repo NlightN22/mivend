@@ -3,12 +3,16 @@ import { Permission } from '@vendure/common/lib/generated-types';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { Allow, Ctx, RequestContext } from '@vendure/core';
 
+import { AddressSuggestService } from '../address-suggest.service';
 import { isCoordinate } from './geo.resolver';
 import { GeoService } from './geo.service';
 
 @Resolver()
 export class AdminGeoResolver {
-    constructor(private geo: GeoService) {}
+    constructor(
+        private geo: GeoService,
+        private suggestions: AddressSuggestService,
+    ) {}
 
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
@@ -29,6 +33,15 @@ export class AdminGeoResolver {
                 : undefined;
         const found = await this.geo.search(args.query, bias, args.provider);
         return found.map(s => ({ address: s.address, latitude: s.lat, longitude: s.lng }));
+    }
+
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    suggestAddress(
+        @Ctx() _ctx: RequestContext,
+        @Args() args: { query: string },
+    ): Promise<string[]> {
+        return this.suggestions.suggest(args.query);
     }
 
     @Query()

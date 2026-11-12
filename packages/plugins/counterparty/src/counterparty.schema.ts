@@ -160,6 +160,7 @@ export const adminApiSchema = gql`
     }
 
     extend type Query {
+        suggestAddress(query: String!): [String!]!
         counterparties(options: CounterpartyListOptions): CounterpartyList!
         counterparty(id: ID!): Counterparty
         counterpartySummary: CounterpartySummary!
