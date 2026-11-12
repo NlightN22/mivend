@@ -96,3 +96,44 @@ describe('settlementDocumentTypes permission', () => {
         expect(meta).toContain(CustomPermission.ReadSettlementDocument.Permission);
     });
 });
+
+describe('SettlementDocumentTypeService movesTurnover on create (real Postgres)', () => {
+    const flagOf = async (documentType: string): Promise<boolean> =>
+        (
+            await h.dataSource.query(
+                `SELECT "movesTurnover" FROM settlement_document_type WHERE "documentType" = $1`,
+                [documentType],
+            )
+        )[0].movesTurnover;
+
+    const apply = (documentType: string, category: string, version: string): Promise<unknown> =>
+        h.types.apply(ctx, {
+            documentType,
+            version,
+            isDeleted: false,
+            label: documentType,
+            category,
+            customerVisible: false,
+            sortOrder: null,
+        });
+
+    it('derives the flag from the category and the sales-correction name', async () => {
+        await apply('NewSale', 'sale', '2026-10-01T10:00:00Z');
+        await apply('Pay', 'payment', '2026-10-01T10:00:00Z');
+        await apply('КорректировкаРеализации', 'correction', '2026-10-01T10:00:00Z');
+        await apply('КорректировкаДолга', 'correction', '2026-10-01T10:00:00Z');
+        expect(await flagOf('NewSale')).toBe(true);
+        expect(await flagOf('Pay')).toBe(false);
+        expect(await flagOf('КорректировкаРеализации')).toBe(true);
+        expect(await flagOf('КорректировкаДолга')).toBe(false);
+    });
+
+    it('keeps a manually changed flag when the type is updated', async () => {
+        await apply('NewSale', 'sale', '2026-10-01T10:00:00Z');
+        await h.dataSource.query(
+            `UPDATE settlement_document_type SET "movesTurnover" = false WHERE "documentType" = 'NewSale'`,
+        );
+        await apply('NewSale', 'sale', '2026-10-02T10:00:00Z');
+        expect(await flagOf('NewSale')).toBe(false);
+    });
+});
