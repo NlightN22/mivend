@@ -186,3 +186,15 @@ describe('VisibilityGrantService.revoke', () => {
         await expect(service.revoke(ctx, 1)).resolves.toBeDefined();
     });
 });
+
+describe('VisibilityGrantService.assertLiveAdministrators', () => {
+    it('reads nothing for an empty list, since an empty where would match every administrator', async () => {
+        const { service, ctx, repo } = setup({});
+        await (
+            service as unknown as {
+                assertLiveAdministrators(c: RequestContext, ids: string[]): Promise<void>;
+            }
+        ).assertLiveAdministrators(ctx, []);
+        expect(repo.find).not.toHaveBeenCalled();
+    });
+});

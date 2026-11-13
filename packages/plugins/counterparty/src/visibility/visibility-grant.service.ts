@@ -148,6 +148,7 @@ export class VisibilityGrantService {
     }
 
     private async assertLiveAdministrators(ctx: RequestContext, ids: string[]): Promise<void> {
+        if (ids.length === 0) return;
         const live = await findBounded(
             this.connection.getRepository(ctx, Administrator),
             { where: ids.map(id => ({ id, deletedAt: IsNull() })), select: ['id'] },
