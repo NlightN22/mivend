@@ -116,7 +116,7 @@ describe('VersioningService', () => {
             ]);
 
             expect(qb.where).toHaveBeenCalledWith(
-                '(v.entityName = :name0 AND v.entityId IN (:...ids0)) OR (v.entityName = :name1 AND v.entityId IN (:...ids1))',
+                '((v.entityName = :name0 AND v.entityId IN (:...ids0)) OR (v.entityName = :name1 AND v.entityId IN (:...ids1)))',
                 {
                     name0: 'TradingPoint',
                     ids0: ['tp-1', 'tp-2'],
@@ -125,6 +125,29 @@ describe('VersioningService', () => {
                 },
             );
             expect(qb.orderBy).toHaveBeenCalledWith('v.createdAt', 'DESC');
+        });
+
+        it('keeps the filters outside the OR of the entity groups', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [
+                    { entityName: 'Counterparty', entityId: 'cp-1' },
+                    { entityName: 'TradingPoint', entityId: 'tp-1' },
+                ],
+                { action: 'update' },
+            );
+
+            const scope = qb.where.mock.calls[0][0] as string;
+            expect(scope.startsWith('(') && scope.endsWith(')')).toBe(true);
+            expect(scope.match(/ OR /g)).toHaveLength(1);
+            expect(qb.andWhere).toHaveBeenCalledWith('v.action = :actionFilter', {
+                actionFilter: 'update',
+            });
         });
 
         it('bounds the query at 50 by default', async () => {

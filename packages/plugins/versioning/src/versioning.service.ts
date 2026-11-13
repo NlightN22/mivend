@@ -100,7 +100,8 @@ export class VersioningService {
             params[`ids${i}`] = entityIds;
             i += 1;
         }
-        qb.where(clauses.join(' OR '), params);
+        // Parenthesised so the AND filters below apply to every entity group, not just the last one.
+        qb.where(`(${clauses.join(' OR ')})`, params);
 
         if (options.entityName) {
             qb.andWhere('v.entityName = :entityNameFilter', {
