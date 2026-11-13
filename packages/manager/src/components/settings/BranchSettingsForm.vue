@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvFormField,
     MvInput,
@@ -12,6 +13,7 @@ import {
 import type { SelectOption } from '@mivend/ui-kit';
 import type { BranchSettings, PriceTypeOption, Warehouse } from '../../api/branchSettings';
 
+const { t } = useI18n();
 const props = defineProps<{
     settings: BranchSettings | null;
     priceTypes: PriceTypeOption[];
@@ -44,9 +46,7 @@ const form = reactive({
     proformaPaymentTermDays: 3,
 });
 
-// Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
-// required fields have no sensible default value to fall back to, they start empty and block
-// save until the user picks something (issue #66 acceptance criterion).
+// Re-seeds on every branch switch; the two required selects start empty and block save.
 watch(
     () => props.settings,
     settings => {
@@ -69,11 +69,11 @@ const warehouseOptions = computed<SelectOption[]>(() =>
 );
 
 const priceTypeSelectOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'Select a price type…' },
+    { value: '', label: t('settingsAccess.branches.form.selectPriceType') },
     ...priceTypeOptions.value,
 ]);
 const warehouseSelectOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'Select a warehouse…' },
+    { value: '', label: t('settingsAccess.branches.form.selectWarehouse') },
     ...warehouseOptions.value,
 ]);
 
@@ -96,52 +96,65 @@ function onSave(): void {
 <template>
     <form class="branch-settings-form" @submit.prevent="onSave">
         <section class="branch-settings-form__section">
-            <h3 class="branch-settings-form__section-title">Defaults</h3>
+            <h3 class="branch-settings-form__section-title">
+                {{ t('settingsAccess.branches.form.defaults') }}
+            </h3>
 
-            <MvFormField label="Default price type" required>
+            <MvFormField :label="t('settingsAccess.branches.form.defaultPriceType')" required>
                 <MvSelect v-model="form.defaultPriceTypeId" :options="priceTypeSelectOptions" />
             </MvFormField>
 
-            <MvFormField label="Default warehouse" required>
+            <MvFormField :label="t('settingsAccess.branches.form.defaultWarehouse')" required>
                 <MvSelect v-model="form.defaultWarehouseId" :options="warehouseSelectOptions" />
             </MvFormField>
         </section>
 
         <section class="branch-settings-form__section">
-            <h3 class="branch-settings-form__section-title">Visibility</h3>
+            <h3 class="branch-settings-form__section-title">
+                {{ t('settingsAccess.branches.form.visibility') }}
+            </h3>
 
-            <MvFormField label="Visible price types">
+            <MvFormField :label="t('settingsAccess.branches.form.visiblePriceTypes')">
                 <MvMultiSelect v-model="form.visiblePriceTypeIds" :options="priceTypeOptions" />
-                <p class="branch-settings-form__hint">Leave empty to allow every price type.</p>
+                <p class="branch-settings-form__hint">
+                    {{ t('settingsAccess.branches.form.allPriceTypes') }}
+                </p>
             </MvFormField>
 
-            <MvFormField label="Visible warehouses">
+            <MvFormField :label="t('settingsAccess.branches.form.visibleWarehouses')">
                 <MvMultiSelect v-model="form.visibleWarehouseIds" :options="warehouseOptions" />
-                <p class="branch-settings-form__hint">Leave empty to allow every warehouse.</p>
+                <p class="branch-settings-form__hint">
+                    {{ t('settingsAccess.branches.form.allWarehouses') }}
+                </p>
             </MvFormField>
         </section>
 
         <section class="branch-settings-form__section">
-            <h3 class="branch-settings-form__section-title">Sales</h3>
+            <h3 class="branch-settings-form__section-title">
+                {{ t('settingsAccess.branches.form.sales') }}
+            </h3>
 
-            <MvFormField label="Packages only">
-                <MvSwitch v-model="form.packagesOnly" label="Enabled" />
+            <MvFormField :label="t('settingsAccess.branches.form.packagesOnly')">
+                <MvSwitch
+                    v-model="form.packagesOnly"
+                    :label="t('settingsAccess.branches.form.enabled')"
+                />
                 <p class="branch-settings-form__hint">
-                    When on, products whose default sales unit is a package are sold only in whole
-                    packages. When off, they can also be sold by the piece.
+                    {{ t('settingsAccess.branches.form.packagesHint') }}
                 </p>
             </MvFormField>
 
             <p class="branch-settings-form__hint">
-                Pack multiplicity and exceeding the credit limit are controls: set them per branch
-                under Settings, Controls and policies.
+                {{ t('settingsAccess.branches.form.controlsHint') }}
             </p>
         </section>
 
         <section class="branch-settings-form__section">
-            <h3 class="branch-settings-form__section-title">Credit</h3>
+            <h3 class="branch-settings-form__section-title">
+                {{ t('settingsAccess.branches.form.credit') }}
+            </h3>
 
-            <MvFormField label="Prepayment reserve (days)">
+            <MvFormField :label="t('settingsAccess.branches.form.reserveDays')">
                 <MvInput
                     :model-value="String(form.prepaymentReserveDays)"
                     type="number"
@@ -149,12 +162,11 @@ function onSave(): void {
                     @update:model-value="form.prepaymentReserveDays = Number($event)"
                 />
                 <p class="branch-settings-form__hint">
-                    How long stock stays reserved for an order that is waiting for payment (no
-                    credit terms) before it is cancelled automatically.
+                    {{ t('settingsAccess.branches.form.reserveHint') }}
                 </p>
             </MvFormField>
 
-            <MvFormField label="Proforma invoice payment term (days)">
+            <MvFormField :label="t('settingsAccess.branches.form.termDays')">
                 <MvInput
                     :model-value="String(form.proformaPaymentTermDays)"
                     type="number"
@@ -163,20 +175,19 @@ function onSave(): void {
                     @update:model-value="form.proformaPaymentTermDays = Number($event)"
                 />
                 <p class="branch-settings-form__hint">
-                    Each proforma invoice version is payable until its issue date plus this many
-                    days.
+                    {{ t('settingsAccess.branches.form.termHint') }}
                 </p>
             </MvFormField>
         </section>
 
         <MvNotice v-if="missingRequired" variant="warning">
-            Default price type and default warehouse are required before saving.
+            {{ t('settingsAccess.branches.form.required') }}
         </MvNotice>
         <MvNotice v-if="saveError" variant="error">{{ saveError }}</MvNotice>
 
         <div class="branch-settings-form__actions">
             <MvButton native-type="submit" :disabled="missingRequired || saving" :loading="saving">
-                Save branch settings
+                {{ t('settingsAccess.branches.form.save') }}
             </MvButton>
         </div>
     </form>

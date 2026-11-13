@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import { useLatestRequest } from '@mivend/ui-kit';
@@ -20,6 +21,7 @@ import {
     type Warehouse,
 } from '../../api/branchSettings';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const branches = ref<BranchOption[]>([]);
@@ -28,14 +30,7 @@ const warehouses = ref<Warehouse[]>([]);
 const loadError = ref('');
 const loading = ref(true);
 
-// Warehouses are a bounded ERP org-structure list (a few dozen at most, one per physical/
-// logical warehouse) — exempt from server pagination per the backend-plugin-rules skill's Pagination section
-// ("exempt only if genuinely, structurally bounded"), same exemption class as
-// TeamDirectoryTable's department roster. Still rendered via MvAdvancedDataTable
-// (manager-table-standard point 6: an exempt table still gets the standard rendering/mobile-
-// card-view, just without real server skip/take) — page/pageSize are threaded through and the
-// full filtered list is sliced client-side to feed it. The search is still a real, user-facing
-// filter someone may want to share/bookmark, so it (and the page number) stay URL-synced.
+// A bounded warehouse list, exempt from server pagination: filtered and sliced client-side, search URL-synced.
 const warehouseSearch = ref('');
 const warehousePage = ref(1);
 const warehousePageSize = ref(20);
@@ -92,7 +87,7 @@ async function loadAll(): Promise<void> {
             fetchWarehouses(),
         ]);
     } catch (e) {
-        loadError.value = e instanceof Error ? e.message : 'Could not load branch settings data';
+        loadError.value = e instanceof Error ? e.message : t('settingsAccess.branches.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -114,7 +109,8 @@ async function onReassign(payload: {
         const index = warehouses.value.findIndex(w => w.id === updated.id);
         if (index !== -1) warehouses.value[index] = updated;
     } catch (e) {
-        reassignError.value = e instanceof Error ? e.message : 'Could not update warehouse';
+        reassignError.value =
+            e instanceof Error ? e.message : t('settingsAccess.branches.warehouseFailed');
     } finally {
         savingWarehouseId.value = null;
     }
@@ -152,7 +148,7 @@ watch(
             await runFetchSettings(branchId);
         } catch (e) {
             settingsLoadError.value =
-                e instanceof Error ? e.message : 'Could not load branch settings';
+                e instanceof Error ? e.message : t('settingsAccess.branches.settingsLoadFailed');
         }
     },
     { immediate: true },
@@ -189,7 +185,7 @@ async function onSave(payload: {
             proformaPaymentTermDays: payload.proformaPaymentTermDays,
         });
     } catch (e) {
-        saveError.value = e instanceof Error ? e.message : 'Could not save branch settings';
+        saveError.value = e instanceof Error ? e.message : t('settingsAccess.branches.saveFailed');
     } finally {
         saving.value = false;
     }
@@ -203,22 +199,20 @@ onMounted(loadAll);
         v-if="!authStore.hasPermission('ManageAccessControl')"
         class="branch-settings-page__not-authorized"
     >
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage branch settings.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.branches.denied') }}</p>
     </div>
 
     <div v-else class="branch-settings-page">
-        <div class="branch-settings-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="branch-settings-page__title">Branches</h1>
+        <div class="branch-settings-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="branch-settings-page__title">{{ t('settingsAccess.branches.title') }}</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
-        <MvPanel title="Warehouse assignment">
+        <MvPanel :title="t('settingsAccess.branches.warehousePanel')">
             <template #subheader>
                 <p class="branch-settings-page__description">
-                    Confirm which branch each warehouse belongs to and whether it counts toward that
-                    branch's available-to-promise stock — the ERP's own branch/isActive values are
-                    shown as read-only reference and are not always reliable.
+                    {{ t('settingsAccess.branches.warehouseLead') }}
                 </p>
             </template>
 
@@ -240,10 +234,10 @@ onMounted(loadAll);
             />
         </MvPanel>
 
-        <MvPanel title="Branch settings">
+        <MvPanel :title="t('settingsAccess.branches.settingsPanel')">
             <template #subheader>
                 <p class="branch-settings-page__description">
-                    Set defaults and visibility for the selected branch.
+                    {{ t('settingsAccess.branches.settingsLead') }}
                 </p>
             </template>
 

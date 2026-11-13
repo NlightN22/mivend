@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvSelect,
@@ -12,17 +13,8 @@ import {
 } from '@mivend/ui-kit';
 import type { BranchOption, Warehouse } from '../../api/branchSettings';
 
-// See manager-table-standard skill for the checklist this follows. `name` is the identifying/
-// required column (a warehouse's own human-readable name is what someone types first — the ERP
-// id is a secondary reference value, not what a person searches by), backed by a real toolbar
-// search + funnel filter. The search is client-side (see BranchSettingsPage.vue's own doc
-// comment on why this table is exempt from server pagination) and, to preserve the previous
-// behavior, matches against `name` OR `erpId` — still a "real filter", just not a server one.
-// `erpId`/`erpIsActive` are the ERP's own suggested values, shown read-only next to the
-// human-curated `assignedBranch`/`includedInBranchAtp` columns — neither is filterable, since
-// there's no operational reason to filter by them and the backend `warehouses` query has no
-// filter args at all. No `createdAt` column: `warehouses` doesn't expose it (a static ERP
-// reference list, not an activity feed — not worth a schema change for this migration).
+// The client-side search matches `name` or `erpId`; the ERP columns are read-only reference values.
+const { t } = useI18n();
 const props = defineProps<{
     warehouses: Warehouse[];
     branches: BranchOption[];
@@ -42,51 +34,48 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
 }>();
 
-// Leading blank option (issue #80 follow-up): a Warehouse can now exist with no branch at all
-// (its ERP-reported branch never resolved, or there simply wasn't one yet when it synced) — see
-// WarehouseService.upsert's own comment. Without this option the native <select> falls back to
-// silently showing its first real branch as if selected, even though nothing has been assigned.
+// The blank option keeps the native <select> from showing the first branch for an unassigned warehouse.
 const branchOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'Unassigned' },
+    { value: '', label: t('settingsAccess.warehouses.unassigned') },
     ...props.branches.map(b => ({ value: b.id, label: b.name })),
 ]);
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'name',
-        header: 'Warehouse',
+        header: t('settingsAccess.warehouses.columns.warehouse'),
         width: 220,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Name or ERP id contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.warehouses.filters.name') },
         mobile: { primary: true },
     },
     {
         field: 'erpId',
-        header: 'ERP id',
+        header: t('settingsAccess.warehouses.columns.erpId'),
         width: 140,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
     {
         field: 'erpIsActive',
-        header: 'ERP isActive',
+        header: t('settingsAccess.warehouses.columns.erpActive'),
         width: 130,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
     {
         field: 'assignedBranchId',
-        header: 'Assigned branch',
+        header: t('settingsAccess.warehouses.columns.branch'),
         width: 220,
         filterConfig: { type: 'none' },
     },
     {
         field: 'includedInBranchAtp',
-        header: 'Included in branch ATP',
+        header: t('settingsAccess.warehouses.columns.atp'),
         width: 190,
         filterConfig: { type: 'none' },
     },
-];
+]);
 
 interface WarehouseFilterState {
     [key: string]: unknown;
@@ -97,21 +86,19 @@ const BLANK_FILTERS: WarehouseFilterState = { name: '' };
 const { state: tableState } = useDataTableState<WarehouseFilterState>(
     `warehouse-curation-datatable:${props.administratorId || 'anonymous'}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { name: props.searchFilter },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
-            c => c.field,
-        ),
-        // `name` (search) and `pageSize` are BranchSettingsPage's own concern — it owns the
-        // filtering/slicing — so always seed from its current prop values, never stale
-        // localStorage (same reasoning as CustomerProformaInvoicesDataTable.vue).
+        columns: ALL_COLUMNS.value,
+        allowedFilterKeys: ALL_COLUMNS.value
+            .filter(c => c.filterConfig.type !== 'none')
+            .map(c => c.field),
+        // The page owns the filtering and slicing, so seed from its props, never stale localStorage.
         externallyOwned: { pageSize: true, filterKeys: ['name'] },
     },
 );
@@ -174,14 +161,18 @@ const rows = computed<WarehouseRow[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'name', placeholder: 'Search warehouses…' }"
-        empty-message="No warehouses match your search"
+        :search="{ filterKey: 'name', placeholder: t('settingsAccess.warehouses.search') }"
+        :empty-message="t('settingsAccess.warehouses.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
         <template #cell-erpIsActive="{ data }">
             <MvStatusBadge :variant="(data as WarehouseRow).erpIsActiveVariant">
-                {{ (data as WarehouseRow).erpIsActive ? 'Active' : 'Inactive' }}
+                {{
+                    (data as WarehouseRow).erpIsActive
+                        ? t('settingsAccess.warehouses.active')
+                        : t('settingsAccess.warehouses.inactive')
+                }}
             </MvStatusBadge>
         </template>
         <template #cell-assignedBranchId="{ data }">
