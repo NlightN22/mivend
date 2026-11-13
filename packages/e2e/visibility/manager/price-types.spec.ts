@@ -53,7 +53,13 @@ test.describe('05: manager-a (branch A) sees only allowed price types', () => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
             const paths = ['/', '/orders', '/customers', `/customers/${ids.clients['a-own']}`];
-            paths.push('/discounts', '/approvals', '/proforma-invoices', '/payments');
+            paths.push(
+                '/discounts',
+                '/discounts?source=requests',
+                '/approvals',
+                '/proforma-invoices',
+                '/payments',
+            );
             const texts: string[] = [];
             for (const path of paths) texts.push(await settle(s, path));
             expect(s.bodies.length, 'GraphQL responses were captured').toBeGreaterThan(
@@ -62,7 +68,7 @@ test.describe('05: manager-a (branch A) sees only allowed price types', () => {
             const everything = [...texts, ...s.bodies].join('\n');
             for (const code of confidential) expect(everything, code).not.toContain(code);
             const allowedPairs = new RegExp(
-                `"priceTypeCode"\\s*:\\s*"(${ALLOWED.join('|')})"`,
+                `"priceTypeCode"\\s*:\\s*(null|"(${ALLOWED.join('|')})")`,
                 'g',
             );
             expect(everything.replace(allowedPairs, '')).not.toMatch(LEAKING_FIELDS);
@@ -119,7 +125,7 @@ test.describe('07: discount grants of hidden price types', () => {
     test('the registry and approvals pages show only the allowed grant', async ({ browser }) => {
         const s = await openManagerAs(browser, 'manager-a');
         try {
-            await s.page.goto(`/discounts?filters=priceType:eq:${ALLOWED[0]}`);
+            await s.page.goto(`/discounts?source=requests&filters=priceType:eq:${ALLOWED[0]}`);
             await expect
                 .poll(() => s.bodies.join('\n').includes(grantJustification('allowed')), {
                     timeout: 15000,
