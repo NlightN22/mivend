@@ -18,7 +18,8 @@ import {
     type CounterpartyTeamMemberRole,
 } from '../../api/counterpartyTeam';
 import type { ManagerOption } from '../../api/orders';
-import CustomerTeamDataTable, { type TeamRow } from './CustomerTeamDataTable.vue';
+import CustomerTeamDataTable from './CustomerTeamDataTable.vue';
+import type { TeamRow } from './customerTeamColumns';
 import { useAuthStore } from '../../stores/auth';
 
 // Recent-changes history for this customer is owned exclusively by the customer-detail page's

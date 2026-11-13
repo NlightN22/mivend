@@ -1,40 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvStatusBadge,
     MvAdvancedDataTable,
     MvDateTimeCell,
+    MvFilterChips,
     useDataTableState,
-    type AdvancedDataTableColumn,
-    type StatusBadgeVariant,
+    useUrlSyncedState,
+    type FilterChip,
 } from '@mivend/ui-kit';
+import TableViewsMenu from '../TableViewsMenu.vue';
+import type { TableViewState } from '../../composables/tableViewState';
+import { buildTeamColumns, ROLE_BADGE_VARIANT, type TeamRow } from './customerTeamColumns';
 
-// Sixth consumer of @mivend/ui-kit's MvAdvancedDataTable — see manager-table-standard skill.
-// Unlike every other customer-detail table, a counterparty's team is a genuinely bounded list
-// (Owner + a handful of backup/observer members, see CounterpartyTeamFieldResolver's own doc
-// comment on `teamMembers` — the same backend-plugin-rules skill "Pagination" exemption as a customer's own trading
-// points) — there is no backend list query to page/filter against, `rows` already holds every
-// row. Filtering and pagination below are therefore done entirely client-side against the full
-// `rows` prop, not a stand-in for real server support that's missing — this is the deliberate
-// exempt shape, still using the real MvAdvancedDataTable machinery for layout/mobile-card-view
-// consistency (point 6 of the skill).
-export interface TeamRow {
-    [key: string]: unknown;
-    id: string;
-    member: string;
-    role: string;
-    isPrimary: boolean;
-    primaryContact: string;
-    email: string;
-    phone: string;
-    createdAt: string | null;
-    status: string;
-    administratorId: string | null;
-    isOwner: boolean;
-}
-
+// A counterparty team is a bounded list (owner plus a few members), so search, role chips and
+// paging run client-side over the full rows.
 const props = defineProps<{
     rows: TeamRow[];
     loading: boolean;
@@ -46,131 +29,86 @@ const props = defineProps<{
 const emit = defineEmits<{ remove: [administratorId: string] }>();
 const { t, te } = useI18n();
 
-// Single source of truth for the Role column's badge color, reused by both the row cell and the
-// column's own status-filter checklist (manager-table-standard skill point 4/4a) — never a
-// bespoke per-cell color choice.
-const ROLE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
-    primary: 'info',
-    backup: 'neutral',
-    'accounting-contact': 'neutral',
-    observer: 'neutral',
-};
 const roleLabel = (role: string): string =>
     te(`customers.team.roles.${role}`) ? t(`customers.team.roles.${role}`) : role;
 
-function buildColumns(): AdvancedDataTableColumn[] {
-    const roleOptions = Object.keys(ROLE_BADGE_VARIANT).map(role => ({
-        value: role,
-        label: roleLabel(role),
-        variant: ROLE_BADGE_VARIANT[role],
-    }));
-    const col = (field: string): string => t(`customers.team.columns.${field}`);
-    return [
-        {
-            field: 'member',
-            header: col('member'),
-            width: 200,
-            required: true,
-            filterConfig: { type: 'text', placeholder: t('customers.team.memberFilter') },
-            mobile: { primary: true },
-        },
-        // The Owner row is synthetic (assembled from Counterparty.assignedManagerId, not a real
-        // CounterpartyTeamMember row) and has no creation timestamp of its own — rendered as a dash.
-        { field: 'createdAt', header: col('createdAt'), width: 140, filterConfig: { type: 'none' } },
-        {
-            field: 'role',
-            header: col('role'),
-            width: 170,
-            filterConfig: {
-                type: 'status',
-                placeholder: t('customers.team.allRoles'),
-                options: roleOptions,
-            },
-            mobile: { badge: true },
-        },
-        {
-            field: 'primaryContact',
-            header: col('primaryContact'),
-            width: 130,
-            filterConfig: { type: 'none' },
-        },
-        { field: 'email', header: col('email'), width: 220, filterConfig: { type: 'none' } },
-        {
-            field: 'phone',
-            header: col('phone'),
-            width: 150,
-            filterConfig: { type: 'none' },
-            mobile: { hidden: true },
-        },
-        // Always "Active" today — no real per-row lifecycle exists yet for a team membership, so a
-        // filter here would have exactly one value and mislead the user into thinking it does
-        // something. Revisit once team membership has a real status (AGENTS.md's "What not to do" — no hardcoded enums).
-        {
-            field: 'status',
-            header: col('status'),
-            width: 110,
-            filterConfig: { type: 'none' },
-            mobile: { hidden: true },
-        },
-        { field: 'actions', header: col('actions'), width: 110, filterConfig: { type: 'none' } },
-    ];
-}
-const ALL_COLUMNS = buildColumns();
-const columns = computed(buildColumns);
+const columns = computed(() =>
+    buildTeamColumns(f => t(`customers.team.columns.${f}`), t('customers.team.search')),
+);
+const baseColumns = columns.value;
 
-interface TeamFilterState {
-    [key: string]: unknown;
-    role: string;
-    member: string;
-}
-const BLANK_FILTERS: TeamFilterState = { role: '', member: '' };
-
-const { state: tableState } = useDataTableState<TeamFilterState>(
+const SORT = { field: 'createdAt', dir: 'ASC' } as const;
+const { state: tableState } = useDataTableState<{ [key: string]: unknown; member: string }>(
     `customer-team-datatable:${props.administratorId || 'anonymous'}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: baseColumns.map(c => c.field),
+        columnWidths: Object.fromEntries(baseColumns.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
-        filters: BLANK_FILTERS,
+        filters: { member: '' },
         pageSize: 20,
     },
-    {
-        columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
-            c => c.field,
-        ),
-    },
+    { columns: baseColumns, allowedFilterKeys: [] },
 );
 
-// No backend fetch to trigger — filtering/paging happens entirely below against `props.rows`.
-// Any filter change still resets to page 1, same invariant as every other table (see
-// MvAdvancedDataTable's own doc comment on this).
-// Local page cursor — kept out of tableState (which is persisted to localStorage) since a
-// stale saved page number for a list this small is never useful across sessions.
+const urlDefaults = { search: '', role: '' };
+const { fromQuery, toQuery } = useUrlSyncedState(urlDefaults, 'team.');
 const page = ref(1);
-watch(
-    () => tableState.value.filters,
-    () => {
-        page.value = 1;
-    },
-    { deep: true },
-);
+const url = { ...urlDefaults };
+fromQuery(url, page);
+const role = ref(url.role);
+tableState.value.filters.member = url.search;
+const route = useRoute();
+const openedWithLink = !!(route.query['team.search'] || route.query['team.role']);
 
+watch([() => tableState.value.filters.member, role], () => {
+    page.value = 1;
+});
+watch([() => tableState.value.filters.member, role, page], () => {
+    toQuery({ search: String(tableState.value.filters.member), role: role.value }, page);
+});
+
+const query = computed(() => String(tableState.value.filters.member).trim().toLowerCase());
 const filteredRows = computed(() =>
-    props.rows.filter(row => {
-        const memberQuery = (tableState.value.filters.member as string).trim().toLowerCase();
-        if (memberQuery && !row.member.toLowerCase().includes(memberQuery)) return false;
-        const roleFilter = tableState.value.filters.role as string;
-        if (roleFilter && row.role !== roleFilter) return false;
-        return true;
-    }),
+    props.rows.filter(
+        r =>
+            (!query.value || r.member.toLowerCase().includes(query.value)) &&
+            (!role.value || r.role === role.value),
+    ),
 );
-
 const pagedRows = computed(() => {
     const start = (page.value - 1) * tableState.value.pageSize;
     return filteredRows.value.slice(start, start + tableState.value.pageSize);
 });
+
+const chips = computed<FilterChip[]>(() => [
+    { key: 'all', label: t('customers.team.allRoles'), count: props.rows.length },
+    ...Object.keys(ROLE_BADGE_VARIANT).map(r => ({
+        key: r,
+        label: roleLabel(r),
+        variant: ROLE_BADGE_VARIANT[r],
+        count: props.rows.filter(row => row.role === r).length,
+    })),
+]);
+
+function captureView(): TableViewState {
+    return {
+        filters: {
+            search: String(tableState.value.filters.member),
+            view: role.value || 'all',
+            conditions: [],
+        },
+        sort: { ...SORT },
+        columnOrder: [...tableState.value.columnOrder],
+        hiddenColumns: [...tableState.value.hiddenColumns],
+    };
+}
+function applyView(state: TableViewState): void {
+    tableState.value.filters.member = state.filters.search;
+    role.value = state.filters.view === 'all' ? '' : state.filters.view;
+    tableState.value.columnOrder = [...state.columnOrder];
+    tableState.value.hiddenColumns = [...state.hiddenColumns];
+}
 </script>
 
 <template>
@@ -184,14 +122,29 @@ const pagedRows = computed(() => {
         data-key="id"
         :row-height-px="49"
         :header-height-px="65"
-        :default-filters="BLANK_FILTERS"
+        :default-filters="{ member: '' }"
         :search="{ filterKey: 'member', placeholder: t('customers.team.search') }"
         :empty-message="t('customers.team.empty')"
         @update:page="p => (page = p)"
         @reset-page="page = 1"
+        @clear-filters="role = ''"
     >
+        <template #toolbar-start>
+            <MvFilterChips
+                :chips="chips"
+                :active="role || 'all'"
+                @select="role = $event === 'all' ? '' : $event"
+            />
+        </template>
         <template #toolbar-end>
             <slot name="toolbar-end" />
+            <TableViewsMenu
+                views-key="customer-team"
+                :owner-key="administratorId"
+                :capture="captureView"
+                :apply="applyView"
+                :skip-restore="() => openedWithLink"
+            />
         </template>
 
         <template #cell-createdAt="{ data }">
