@@ -11,8 +11,20 @@ fragment ChangeJournalEntryFields on ChangeJournalEntry {
     changes
 }
 
-query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
-    changeJournalForEntity(entityType: $entityType, entityId: $entityId, skip: $skip, take: $take) {
+query ChangeJournalForEntity(
+    $entityType: String!
+    $entityId: ID!
+    $filter: ChangeJournalFilter
+    $skip: Int
+    $take: Int
+) {
+    changeJournalForEntity(
+        entityType: $entityType
+        entityId: $entityId
+        filter: $filter
+        skip: $skip
+        take: $take
+    ) {
         items {
             ...ChangeJournalEntryFields
         }

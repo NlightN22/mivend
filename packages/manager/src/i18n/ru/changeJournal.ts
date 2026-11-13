@@ -65,6 +65,18 @@ const changeJournal: typeof en = {
         userUnknown: 'пользователь не указан',
         acting: '{admin} от имени клиента ({user})',
     },
+    tab: {
+        searchPlaceholder: 'Изменённое поле или значение…',
+        noMatch: 'Нет изменений под выбранные фильтры',
+        columns: {
+            summary: 'Изменения',
+            occurredAt: 'Когда',
+            action: 'Действие',
+            actor: 'Кто изменил',
+            administrator: 'Администратор',
+            source: 'Источник',
+        },
+    },
     history: {
         action: {
             create: 'Создание',

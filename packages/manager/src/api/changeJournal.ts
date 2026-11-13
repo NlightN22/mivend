@@ -20,14 +20,17 @@ export interface PageRequest {
 }
 
 // Requires ReadChangeJournal; an entity outside the viewer's scope is refused with ForbiddenError.
+// The filter only narrows the entity's own entries.
 export async function fetchChangeJournalForEntity(
     entityType: string,
     entityId: string,
     page: PageRequest,
+    filter?: ChangeJournalFilter,
 ): Promise<ChangeJournalPage> {
     const result = await adminApi(ChangeJournalForEntityDocument, {
         entityType,
         entityId,
+        filter,
         ...page,
     });
     return result.changeJournalForEntity;

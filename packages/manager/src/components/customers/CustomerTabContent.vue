@@ -16,7 +16,7 @@ import SettlementsList from '../settlements/SettlementsList.vue';
 import CustomerTeamTab from './CustomerTeamTab.vue';
 import CustomerPortalUsersTab from './CustomerPortalUsersTab.vue';
 import EntityHistoryPanel from '../history/EntityHistoryPanel.vue';
-import EntityChangeJournal from '../change-journal/EntityChangeJournal.vue';
+import EntityChangeJournalTable from '../change-journal/EntityChangeJournalTable.vue';
 
 const props = defineProps<{
     tab: CustomerDetailTab;
@@ -92,7 +92,7 @@ const historyEntityLabels = computed(() => ({
         :counterparty-id="customer.id"
         :can-manage="canManagePortalAccess"
     />
-    <EntityChangeJournal
+    <EntityChangeJournalTable
         v-else-if="tab === 'changeJournal'"
         entity-type="Counterparty"
         :entity-id="customer.id"

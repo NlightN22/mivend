@@ -63,6 +63,18 @@ export default {
         userUnknown: 'user not specified',
         acting: '{admin} on behalf of the customer ({user})',
     },
+    tab: {
+        searchPlaceholder: 'Changed field or value…',
+        noMatch: 'No changes match your filters',
+        columns: {
+            summary: 'Changes',
+            occurredAt: 'When',
+            action: 'Action',
+            actor: 'Changed by',
+            administrator: 'Administrator',
+            source: 'Source',
+        },
+    },
     history: {
         action: {
             create: 'Created',
