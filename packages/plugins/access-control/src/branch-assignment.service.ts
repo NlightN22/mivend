@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { In } from 'typeorm';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { DEFAULT_READ_CEILING, ctxQuery, findBounded, withAggregateLock } from 'shared';
 
 import { BranchAssignmentRetryEvent, SkippedRows } from './branch-assignment-retry.event';
 import {
@@ -200,12 +200,10 @@ export class BranchAssignmentService {
     private async loadTree(
         ctx: RequestContext,
     ): Promise<{ parentOf: Map<string, string | null>; mapping: Map<string, number> }> {
-        // unbounded-ok: department tree of the ERP org structure, tens of rows
-        const departments = await this.connection
-            .getRepository(ctx, Department)
-            .find({ select: ['erpId', 'parentErpId'] });
-        // unbounded-ok: department-to-branch mapping, one row per department
-        const rows = await this.connection.getRepository(ctx, DepartmentBranchMapping).find();
+        const departments = await findBounded(this.connection.getRepository(ctx, Department), {
+            select: ['erpId', 'parentErpId'],
+        });
+        const rows = await findBounded(this.connection.getRepository(ctx, DepartmentBranchMapping));
         return {
             parentOf: new Map(departments.map(d => [d.erpId, d.parentErpId])),
             mapping: new Map(rows.map(r => [r.departmentErpId, r.branchId])),
@@ -219,13 +217,16 @@ export class BranchAssignmentService {
         filter: { ids?: string[]; departments: Set<string> | null },
     ): Promise<string[]> {
         const repo = this.connection.getRepository(ctx, Administrator);
-        // unbounded-ok: administrators of staff accounts, a few tens, ids only
-        const candidates = await repo.find({
-            where: filter.ids ? { id: In(filter.ids) } : {},
-            select: ['id'],
-            withDeleted: true,
-            loadEagerRelations: false,
-        });
+        const candidates = await findBounded(
+            repo,
+            {
+                where: filter.ids ? { id: In(filter.ids) } : {},
+                select: ['id'],
+                withDeleted: true,
+                loadEagerRelations: false,
+            },
+            filter.ids ? Math.max(filter.ids.length, 1) : DEFAULT_READ_CEILING,
+        );
         if (candidates.length === 0) return [];
         // A locked row is skipped and reported: its writer's commit may predate this pass's mapping.
         const admins = await repo.find({

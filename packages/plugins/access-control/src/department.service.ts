@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 
 import { BranchAssignmentService } from './branch-assignment.service';
 import { Department } from './entities/department.entity';
@@ -60,7 +61,8 @@ export class DepartmentService {
     }
 
     async findAll(ctx: RequestContext): Promise<Department[]> {
-        // unbounded-ok: department registry of the org structure, tens of rows
-        return this.connection.getRepository(ctx, Department).find({ order: { name: 'ASC' } });
+        return findBounded(this.connection.getRepository(ctx, Department), {
+            order: { name: 'ASC' },
+        });
     }
 }

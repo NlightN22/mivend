@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, Role, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { DEFAULT_ROLES } from './default-roles';
@@ -40,10 +41,11 @@ export class RoleScopeConfigService {
         resource: string,
     ): Promise<AccessScopeKind> {
         if (roles.length === 0) return 'own';
-        // unbounded-ok: scope rows of the caller roles, one per role
-        const rows = await this.connection.getRepository(ctx, RoleAccessScope).find({
-            where: { roleCode: In(roles.map(role => role.code)) },
-        });
+        const rows = await findBounded(
+            this.connection.getRepository(ctx, RoleAccessScope),
+            { where: { roleCode: In(roles.map(role => role.code)) } },
+            roles.length,
+        );
         let best: AccessScopeKind = 'own';
         for (const row of rows) {
             const config = parseAccessScopeConfig(row);
@@ -60,8 +62,7 @@ export class RoleScopeConfigService {
         resource: string,
         kind: AccessScopeKind,
     ): Promise<string[]> {
-        // unbounded-ok: one scope row per role, a handful of roles
-        const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, RoleAccessScope));
         return rows
             .filter(row => parseAccessScopeConfig(row)?.[resource] === kind)
             .map(row => row.roleCode);
@@ -80,8 +81,7 @@ export class RoleScopeConfigService {
     async getProvisioningStatus(
         ctx: RequestContext,
     ): Promise<Array<{ roleCode: string; missing: boolean }>> {
-        // unbounded-ok: one scope row per role, a handful of roles
-        const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, RoleAccessScope));
         const rowByCode = new Map(rows.map(row => [row.roleCode, row]));
         return DEFAULT_ROLES.map(definition => {
             const row = rowByCode.get(definition.code);

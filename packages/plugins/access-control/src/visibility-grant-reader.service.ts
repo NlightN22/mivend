@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { getRawManyBounded } from 'shared';
 import { Brackets } from 'typeorm';
 
 import { VisibilityGrant } from './entities/visibility-grant.entity';
@@ -15,8 +16,7 @@ export class VisibilityGrantReader {
         granteeAdministratorId: string,
         now: Date = new Date(),
     ): Promise<string[]> {
-        // unbounded-ok: distinct staff subject refs holding grants, bounded by the staff count
-        const rows = await this.connection
+        const query = this.connection
             .getRepository(ctx, VisibilityGrant)
             .createQueryBuilder('g')
             .select('DISTINCT g.subjectRef', 'subjectRef')
@@ -32,8 +32,8 @@ export class VisibilityGrantReader {
                 new Brackets(qb =>
                     qb.where('g.validTo IS NULL').orWhere('g.validTo > :now', { now }),
                 ),
-            )
-            .getRawMany<{ subjectRef: string }>();
+            );
+        const rows = await getRawManyBounded<{ subjectRef: string }>(query);
         return rows.map(row => row.subjectRef);
     }
 }

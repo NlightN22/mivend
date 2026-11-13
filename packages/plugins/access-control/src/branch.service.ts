@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 
 import { Branch } from './entities/branch.entity';
 import { loggerCtx } from './types';
@@ -31,8 +32,9 @@ export class BranchService {
     }
 
     async findAll(ctx: RequestContext): Promise<Branch[]> {
-        // unbounded-ok: branch registry, a handful of rows
-        return this.connection.getRepository(ctx, Branch).find({ order: { name: 'ASC' } });
+        return findBounded(this.connection.getRepository(ctx, Branch), {
+            order: { name: 'ASC' },
+        });
     }
 
     // Kafka-only contours never run erp-import's REST sync, leaving Branch empty and the picker blocked.

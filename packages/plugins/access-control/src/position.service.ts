@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 
 import { ErpPosition } from './entities/erp-position.entity';
 import { loggerCtx } from './types';
@@ -49,7 +50,8 @@ export class PositionService {
     }
 
     async findAll(ctx: RequestContext): Promise<ErpPosition[]> {
-        // unbounded-ok: position registry of the org structure, tens of rows
-        return this.connection.getRepository(ctx, ErpPosition).find({ order: { name: 'ASC' } });
+        return findBounded(this.connection.getRepository(ctx, ErpPosition), {
+            order: { name: 'ASC' },
+        });
     }
 }

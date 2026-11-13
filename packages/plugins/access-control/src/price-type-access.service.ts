@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ForbiddenError, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 import { PriceType } from '@mivend/plugin-customer-pricing';
 
 import { AccessScopeService } from './access-scope.service';
@@ -96,10 +97,10 @@ export class PriceTypeAccessService {
     }
 
     private async loadBase(ctx: RequestContext): Promise<PriceTypeBase> {
-        // unbounded-ok: price type registry, a handful of rows
-        const found = await this.connection
-            .getRepository(ctx, PriceType)
-            .find({ select: ['id', 'code', 'externalId', 'visibility'], order: { code: 'ASC' } });
+        const found = await findBounded(this.connection.getRepository(ctx, PriceType), {
+            select: ['id', 'code', 'externalId', 'visibility'],
+            order: { code: 'ASC' },
+        });
         const rows: AccessiblePriceType[] = found.map(row => ({
             id: String(row.id),
             code: row.code,

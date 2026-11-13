@@ -5,7 +5,7 @@ import { In } from 'typeorm';
 import { Branch } from './entities/branch.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { loggerCtx } from './types';
-import { ctxQuery } from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 
 export interface WarehouseRecordInput {
     erpId: string;
@@ -61,8 +61,9 @@ export class WarehouseService {
     }
 
     async findAll(ctx: RequestContext): Promise<Warehouse[]> {
-        // unbounded-ok: warehouse registry, tens of rows
-        return this.connection.getRepository(ctx, Warehouse).find({ order: { name: 'ASC' } });
+        return findBounded(this.connection.getRepository(ctx, Warehouse), {
+            order: { name: 'ASC' },
+        });
     }
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<Warehouse | null> {

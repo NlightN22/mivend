@@ -1,6 +1,6 @@
 import type { Injector, OrderProcess, OrderState, OrderTransitionData } from '@vendure/core';
 import { TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded } from 'shared';
 
 import { HiddenCategoryProductsService } from './hidden-category-products.service';
 
@@ -27,14 +27,15 @@ export class HiddenCategoryOrderProcess implements OrderProcess<OrderState> {
             fromState === 'ArrangingPayment' &&
             (toState === 'PaymentAuthorized' || toState === 'PaymentSettled');
         if (ctx.apiType !== 'shop' || (!placement && !payment)) return undefined;
-        // unbounded-ok: distinct products of the lines of one order
-        const rows = await ctxQuery<Array<{ productId: number }>>(
+        // Distinct products of one order's lines; 10000 is far above any real cart.
+        const rows = await ctxQueryBounded<{ productId: number }>(
             this.connection,
             ctx,
             `SELECT DISTINCT pv."productId" FROM order_line ol
              JOIN product_variant pv ON pv.id = ol."productVariantId"
              WHERE ol."orderId" = $1`,
             [order.id],
+            10000,
         );
         const blocked = await this.hidden.hiddenProductIds(
             ctx,

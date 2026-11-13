@@ -42,7 +42,7 @@ describe('BranchService', () => {
 
     it('findAll returns rows ordered by name', async () => {
         await service.findAll(ctx);
-        expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' } });
+        expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' }, take: 1001 });
     });
 
     it('createManual generates a prefixed erpId that can never collide with a real ERP GUID', async () => {

@@ -6,6 +6,7 @@ import {
     excludeCategoryIdsFor,
     type HiddenCategoryRow,
     ctxQuery,
+    ctxQueryBounded,
     productInHiddenCategorySql,
 } from 'shared';
 
@@ -40,13 +41,15 @@ export class HiddenCategoryProductsService {
     }
 
     private async readHiddenCategoryErpIds(ctx: RequestContext): Promise<string[]> {
-        // unbounded-ok: private categories only, a few category nodes
-        const rows = await ctxQuery<HiddenCategoryRow[]>(
+        // Hidden category nodes only; 5000 leaves room for a large private tree.
+        const rows = await ctxQueryBounded<HiddenCategoryRow>(
             this.connection,
             ctx,
             `SELECT col.id, col."parentId", ct.slug FROM collection col
              JOIN collection_translation ct ON ct."baseId" = col.id
              WHERE col."isPrivate" = true AND ct.slug LIKE '${CATEGORY_SLUG_PREFIX}%'`,
+            [],
+            5000,
         );
         return excludeCategoryIdsFor(rows);
     }

@@ -6,7 +6,7 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
-import { CtxLoader, ctxQuery } from 'shared';
+import { CtxLoader, ctxQueryBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { dropPrivateAncestors } from './shop-collection-breadcrumbs';
@@ -79,8 +79,7 @@ export class ShopCollectionBreadcrumbsLoader {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Map<string, string[]>> {
-        // unbounded-ok: ancestor chains of the collection ids passed in, depth capped by MAX_DEPTH
-        const rows = await ctxQuery<Array<{ leaf: number; node: number }>>(
+        const rows = await ctxQueryBounded<{ leaf: number; node: number }>(
             this.connection,
             ctx,
             `WITH RECURSIVE chain AS (
@@ -93,6 +92,7 @@ export class ShopCollectionBreadcrumbsLoader {
              )
              SELECT leaf, node FROM chain ORDER BY leaf, depth DESC`,
             [keys.map(Number)],
+            Math.max(keys.length, 1) * (MAX_DEPTH + 1),
         );
         const chains = new Map<string, string[]>();
         for (const { leaf, node } of rows) {

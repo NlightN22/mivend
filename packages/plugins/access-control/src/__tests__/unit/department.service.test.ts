@@ -85,6 +85,6 @@ describe('DepartmentService', () => {
 
     it('findAll returns rows ordered by name', async () => {
         await service.findAll(ctx);
-        expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' } });
+        expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' }, take: 1001 });
     });
 });

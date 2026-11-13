@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, ctxQueryBounded, findBounded } from 'shared';
 
 import { BranchAssignmentService } from './branch-assignment.service';
 import { resolveDepartmentBranch } from './department-branch-resolver';
@@ -99,12 +99,10 @@ export class DepartmentBranchMappingService {
     }
 
     async overview(ctx: RequestContext): Promise<DepartmentBranchNode[]> {
-        // unbounded-ok: department registry of the org structure, tens of rows
-        const departments = await this.connection
-            .getRepository(ctx, Department)
-            .find({ order: { name: 'ASC' } });
-        // unbounded-ok: department-to-branch mapping, one row per department
-        const rows = await this.connection.getRepository(ctx, DepartmentBranchMapping).find();
+        const departments = await findBounded(this.connection.getRepository(ctx, Department), {
+            order: { name: 'ASC' },
+        });
+        const rows = await findBounded(this.connection.getRepository(ctx, DepartmentBranchMapping));
         const mapping = new Map(rows.map(r => [r.departmentErpId, r.branchId]));
         const parentOf = new Map(departments.map(d => [d.erpId, d.parentErpId]));
         const users = await this.countBy(ctx, 'erp_user', 'departmentId');
@@ -134,8 +132,7 @@ export class DepartmentBranchMappingService {
         table: 'erp_user' | 'counterparty',
         column: 'departmentId',
     ): Promise<Map<string, number>> {
-        // unbounded-ok: grouped by department, one row per department
-        const rows = await ctxQuery<Array<{ department: string; total: string }>>(
+        const rows = await ctxQueryBounded<Array<{ department: string; total: string }>>(
             this.connection,
             ctx,
             `SELECT "${column}" AS department, count(*) AS total FROM ${table}
