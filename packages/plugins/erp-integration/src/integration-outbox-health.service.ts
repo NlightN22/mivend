@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionalConnection } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded } from 'shared';
 
 import { HELD_SKIP_REASON } from './order-checks/order-send-hold.service';
 import { mergeOutboxHealth } from './outbox-health';
@@ -12,8 +12,7 @@ export class IntegrationOutboxHealthService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async getHealthByEventType(ctx: RequestContext): Promise<OutboxHealthByEventType[]> {
-        // unbounded-ok: grouped by event type, one row per event type
-        const rows = await ctxQuery<OutboxHealthByEventType[]>(
+        const rows = await ctxQueryBounded<OutboxHealthByEventType>(
             this.connection,
             ctx,
             `

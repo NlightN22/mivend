@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
-import { lockAggregates } from 'shared';
+import { findBounded, lockAggregates } from 'shared';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -362,8 +362,7 @@ export class IntegrationInboxProcessorService {
         // Compared in JS (isVersionNewer): SQL `>` on the varchar version is lexicographic.
         // Only `version` is selected — never the jsonb payload of every historical row.
         const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
-        // unbounded-ok: processed versions of one stream entity, version column only
-        const processedRows = await repo.find({
+        const processedRows = await findBounded(repo, {
             select: { version: true },
             where: { stream: row.stream, entityId: row.entityId, status: 'processed' },
         });

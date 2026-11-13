@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionalConnection } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded, getRawManyBounded } from 'shared';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { IntegrationInboxEventStatus } from './entities/integration-inbox-event.entity';
@@ -32,34 +32,34 @@ export class IntegrationInboxHealthService {
     // Unprocessed inbox rows per stream: Postgres-side backlog, deliberately a different number
     // from Kafka lag (docs/integration-health.md).
     async getBacklogByStream(ctx: RequestContext): Promise<IntegrationInboxBacklogByStream[]> {
-        // unbounded-ok: grouped by stream and status, a few rows per stream
-        const rows = await this.connection
-            .getRepository(ctx, IntegrationInboxEvent)
-            .createQueryBuilder('event')
-            .select('event.stream', 'stream')
-            .addSelect('event.status', 'status')
-            .addSelect('COUNT(*)', 'count')
-            .addSelect(
-                `MIN(CASE WHEN event.status = 'pending' THEN event.createdAt END)`,
-                'oldestPending',
-            )
-            .where('event.status IN (:...statuses)', {
-                statuses: [
-                    'pending',
-                    'processing',
-                    'failed',
-                    'dependency_missing',
-                    'replay_requested',
-                ],
-            })
-            .groupBy('event.stream')
-            .addGroupBy('event.status')
-            .getRawMany<{
-                stream: InboundStream;
-                status: IntegrationInboxEventStatus;
-                count: string;
-                oldestPending: Date | null;
-            }>();
+        const rows = await getRawManyBounded<{
+            stream: InboundStream;
+            status: IntegrationInboxEventStatus;
+            count: string;
+            oldestPending: Date | null;
+        }>(
+            this.connection
+                .getRepository(ctx, IntegrationInboxEvent)
+                .createQueryBuilder('event')
+                .select('event.stream', 'stream')
+                .addSelect('event.status', 'status')
+                .addSelect('COUNT(*)', 'count')
+                .addSelect(
+                    `MIN(CASE WHEN event.status = 'pending' THEN event.createdAt END)`,
+                    'oldestPending',
+                )
+                .where('event.status IN (:...statuses)', {
+                    statuses: [
+                        'pending',
+                        'processing',
+                        'failed',
+                        'dependency_missing',
+                        'replay_requested',
+                    ],
+                })
+                .groupBy('event.stream')
+                .addGroupBy('event.status'),
+        );
 
         const byStream = new Map<InboundStream, IntegrationInboxBacklogByStream>();
         for (const row of rows) {
@@ -84,8 +84,7 @@ export class IntegrationInboxHealthService {
 
     // Processed rows whose handler recorded a no-op in the last 24 h, per stream (#200).
     async getNoopSummaryByStream(ctx: RequestContext): Promise<IntegrationInboxNoopByStream[]> {
-        // unbounded-ok: grouped by stream, one row per stream
-        return ctxQuery<IntegrationInboxNoopByStream[]>(
+        return ctxQueryBounded<IntegrationInboxNoopByStream>(
             this.connection,
             ctx,
             `
@@ -103,8 +102,7 @@ export class IntegrationInboxHealthService {
     async getContactFailureSummaryByStream(
         ctx: RequestContext,
     ): Promise<IntegrationInboxNoopByStream[]> {
-        // unbounded-ok: grouped by stream, one row per stream
-        return ctxQuery<IntegrationInboxNoopByStream[]>(
+        return ctxQueryBounded<IntegrationInboxNoopByStream>(
             this.connection,
             ctx,
             `

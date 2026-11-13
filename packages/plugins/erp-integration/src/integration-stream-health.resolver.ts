@@ -22,6 +22,7 @@ import { buildStreamHealthRows, lagByConsumedStream } from './stream-health';
 import type { StreamHealthRow } from './stream-health';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
+import { findBounded } from 'shared';
 
 export interface IntegrationStreamHealthReport {
     contractVersion: string;
@@ -49,8 +50,7 @@ export class IntegrationStreamHealthResolver {
         @Ctx() ctx: RequestContext,
     ): Promise<IntegrationStreamHealthReport> {
         const [lagRows, backlog, noops, contactFailures] = await Promise.all([
-            // unbounded-ok: one lag row per topic partition, tens of rows
-            this.connection.getRepository(ctx, KafkaConsumerLagEntry).find(),
+            findBounded(this.connection.getRepository(ctx, KafkaConsumerLagEntry)),
             this.inbox.getBacklogByStream(ctx),
             this.inbox.getNoopSummaryByStream(ctx),
             this.inbox.getContactFailureSummaryByStream(ctx),

@@ -3,6 +3,7 @@ import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
+import { findBounded } from 'shared';
 
 export interface KafkaTopicLagPartition {
     partition: number;
@@ -62,8 +63,7 @@ export class KafkaLagResolver {
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     async kafkaConsumerLag(@Ctx() ctx: RequestContext): Promise<KafkaTopicLag[]> {
-        // unbounded-ok: one lag row per topic partition, tens of rows
-        const rows = await this.connection.getRepository(ctx, KafkaConsumerLagEntry).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, KafkaConsumerLagEntry));
         return groupLagRowsByTopic(rows);
     }
 }

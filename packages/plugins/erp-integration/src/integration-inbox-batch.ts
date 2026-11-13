@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery, lockAggregates } from 'shared';
+import { ctxQueryBounded, lockAggregates } from 'shared';
 
 import type { NonRetryableInboundError } from './non-retryable-inbound-error';
 import type { BatchInboundStreamHandler } from './handlers/inbound-stream-handler';
@@ -10,6 +10,7 @@ import type { ProcessedMark } from './integration-inbox-settle';
 import { loggerCtx } from './types';
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
+import { INBOX_VERSIONS_CEILING } from './read-ceilings';
 
 export interface InboxBatchResult {
     settled: number;
@@ -28,13 +29,13 @@ async function newestProcessedVersions(
     stream: InboundStream,
     entityIds: string[],
 ): Promise<Map<string, string>> {
-    // unbounded-ok: processed versions of the entity ids of one inbox batch
-    const rows = await ctxQuery<Array<{ entity_id: string; version: string }>>(
+    const rows = await ctxQueryBounded<{ entity_id: string; version: string }>(
         connection,
         ctx,
         `SELECT entity_id, version FROM integration_inbox_event
           WHERE stream = $1 AND entity_id = ANY($2::text[]) AND status = 'processed'`,
         [stream, entityIds],
+        INBOX_VERSIONS_CEILING,
     );
     const newest = new Map<string, string>();
     for (const row of rows) {

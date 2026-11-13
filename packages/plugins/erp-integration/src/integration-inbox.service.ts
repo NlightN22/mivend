@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { PaginatedList, RequestContext } from '@vendure/core';
 import { Logger, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'crypto';
-import { ctxQuery, getPageAndCount } from 'shared';
+import { ctxQuery, getManyBounded, getPageAndCount } from 'shared';
 import { In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
@@ -119,20 +119,21 @@ export class IntegrationInboxService {
             const ids = await this.findClaimCandidateIds(txCtx, limit, streams);
             if (ids.length === 0) return [];
 
-            // unbounded-ok: rows of the inbox ids passed in, bounded by that list
-            const rows = await repo
-                .createQueryBuilder('event')
-                .where('event.id IN (:...ids)', { ids })
-                .andWhere(
-                    `(event.status IN ('pending', 'dependency_missing') OR (event.status = 'processing' AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval))`,
-                    { staleMs: STUCK_PROCESSING_THRESHOLD_MS },
-                )
-                .andWhere('event.eligibleAt <= now()')
-                .orderBy('event.eligibleAt', 'ASC')
-                .addOrderBy('event.id', 'ASC')
-                .setLock('pessimistic_write')
-                .setOnLocked('skip_locked')
-                .getMany();
+            const rows = await getManyBounded(
+                repo
+                    .createQueryBuilder('event')
+                    .where('event.id IN (:...ids)', { ids })
+                    .andWhere(
+                        `(event.status IN ('pending', 'dependency_missing') OR (event.status = 'processing' AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval))`,
+                        { staleMs: STUCK_PROCESSING_THRESHOLD_MS },
+                    )
+                    .andWhere('event.eligibleAt <= now()')
+                    .orderBy('event.eligibleAt', 'ASC')
+                    .addOrderBy('event.id', 'ASC')
+                    .setLock('pessimistic_write')
+                    .setOnLocked('skip_locked'),
+                ids.length,
+            );
             if (rows.length === 0) return [];
             const claimToken = randomUUID();
             for (const row of rows) {
