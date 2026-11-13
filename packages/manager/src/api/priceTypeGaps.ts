@@ -3,16 +3,17 @@ import {
     PriceTypeGapCounterpartiesDocument,
     type PriceTypeGapCounterpartiesQuery,
 } from './generated/graphql';
+import { lazyLabels } from '../utils/lazyLabels';
 
 export type PriceTypeGapRow =
     PriceTypeGapCounterpartiesQuery['priceTypeGapCounterparties']['items'][number];
 
-export const PRICE_TYPE_GAP_REASONS: Record<string, string> = {
-    'no-main-contract': 'No main contract in the ERP',
-    'contract-not-found': 'Main contract not received from the ERP',
-    'contract-inactive': 'Main contract is inactive in the ERP',
-    'price-type-not-synced': 'Contract price type not received from the ERP',
-};
+export const PRICE_TYPE_GAP_REASONS = lazyLabels('settingsPanels.priceTypeGaps.reasons', [
+    'no-main-contract',
+    'contract-not-found',
+    'contract-inactive',
+    'price-type-not-synced',
+]);
 
 export async function fetchPriceTypeGaps(args: {
     skip: number;

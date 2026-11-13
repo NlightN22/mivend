@@ -1,5 +1,8 @@
 import type { AdvancedDataTableColumn } from '@mivend/ui-kit';
+import { tr } from '../../utils/lazyLabels';
 import { settlementSuggest } from '../../api/settlementsSuggest';
+
+const col = (field: string): string => tr(`settlements.list.columns.${field}`);
 
 const NOT_FILTERED = { type: 'none' } as const;
 export const TEXT_OPERATORS = [
@@ -16,7 +19,9 @@ export const TEXT_OPERATORS = [
 export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'number',
-        header: 'Number',
+        get header() {
+            return col('number');
+        },
         sortField: 'number',
         width: 130,
         priority: 10,
@@ -30,7 +35,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'date',
-        header: 'Date',
+        get header() {
+            return col('date');
+        },
         sortField: 'date',
         width: 100,
         priority: 6,
@@ -40,7 +47,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'type',
-        header: 'Type',
+        get header() {
+            return col('type');
+        },
         sortField: 'typeLabel',
         width: 170,
         priority: 8,
@@ -53,7 +62,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'customer',
-        header: 'Customer',
+        get header() {
+            return col('customer');
+        },
         sortField: 'customer',
         width: 200,
         priority: 9,
@@ -65,7 +76,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'contract',
-        header: 'Contract',
+        get header() {
+            return col('contract');
+        },
         width: 130,
         priority: 3,
         minWidth: 110,
@@ -76,7 +89,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'organization',
-        header: 'Organization',
+        get header() {
+            return col('organization');
+        },
         width: 200,
         priority: 2,
         minWidth: 150,
@@ -87,7 +102,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'order',
-        header: 'Order',
+        get header() {
+            return col('order');
+        },
         width: 130,
         priority: 5,
         minWidth: 120,
@@ -98,7 +115,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'proformaInvoice',
-        header: 'Proforma invoice',
+        get header() {
+            return col('proformaInvoice');
+        },
         width: 140,
         priority: 4,
         minWidth: 140,
@@ -110,7 +129,9 @@ export const SETTLEMENTS_COLUMNS: AdvancedDataTableColumn[] = [
     },
     {
         field: 'amount',
-        header: 'Amount',
+        get header() {
+            return col('amount');
+        },
         sortField: 'amount',
         width: 160,
         priority: 11,

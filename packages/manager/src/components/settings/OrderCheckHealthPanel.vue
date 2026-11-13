@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvStatusBadge } from '@mivend/ui-kit';
 import { fetchOrderCheckHealth, type OrderCheckHealthRow } from '../../api/integration-health';
 
+const { t } = useI18n();
 const rows = ref<OrderCheckHealthRow[]>([]);
 const loaded = ref(false);
 const error = ref('');
@@ -11,7 +13,8 @@ onMounted(async () => {
     try {
         rows.value = await fetchOrderCheckHealth();
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load ERP requirement counters';
+        error.value =
+            e instanceof Error ? e.message : t('settingsPanels.orderCheckHealth.loadFailed');
     } finally {
         loaded.value = true;
     }
@@ -22,7 +25,7 @@ onMounted(async () => {
     <div class="check-health">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <p v-else-if="loaded && !rows.length" class="check-health__empty">
-            No orders currently fail an ERP requirement.
+            {{ t('settingsPanels.orderCheckHealth.empty') }}
         </p>
         <ul v-else class="check-health__list">
             <li v-for="r in rows" :key="`${r.checkCode}:${r.reason}`" class="check-health__row">
@@ -31,10 +34,16 @@ onMounted(async () => {
                     <span v-if="r.reason" class="check-health__reason"> · {{ r.reason }}</span>
                 </span>
                 <span class="check-health__counts">
-                    <MvStatusBadge variant="warning">{{ r.orderCount }} orders</MvStatusBadge>
-                    <MvStatusBadge v-if="r.staleOrderCount" variant="neutral"
-                        >{{ r.staleOrderCount }} out of date</MvStatusBadge
-                    >
+                    <MvStatusBadge variant="warning">{{
+                        t(
+                            'settingsPanels.orderCheckHealth.orders',
+                            { count: r.orderCount },
+                            r.orderCount,
+                        )
+                    }}</MvStatusBadge>
+                    <MvStatusBadge v-if="r.staleOrderCount" variant="neutral">{{
+                        t('settingsPanels.orderCheckHealth.outOfDate', { count: r.staleOrderCount })
+                    }}</MvStatusBadge>
                 </span>
             </li>
         </ul>

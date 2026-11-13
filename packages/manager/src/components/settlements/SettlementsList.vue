@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useDocumentTypeCodes } from '../../composables/useDocumentTypeCodes';
 import { documentTypeVariant } from '../../utils/documentTypeVariant';
 import { MvFilterChips, MvWarningBanner, type FilterChip } from '@mivend/ui-kit';
@@ -15,6 +16,7 @@ const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: st
     urlPrefix: '',
 });
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const list = useSettlementsList(props.counterpartyId, props.urlPrefix);
 const { codes: typeCodes, ensureLoaded } = useDocumentTypeCodes();
@@ -33,7 +35,12 @@ const chips = computed<FilterChip[]>(() => {
             ? [{ key: active, label: active, count: 0, countLoading: loading }]
             : [];
     return [
-        { key: ALL_SETTLEMENT_TYPES, label: 'All', count: total, countLoading: loading },
+        {
+            key: ALL_SETTLEMENT_TYPES,
+            label: t('settlements.list.all'),
+            count: total,
+            countLoading: loading,
+        },
         ...(counts ?? []).map(c => ({
             key: c.documentType,
             label: c.label,
@@ -56,10 +63,14 @@ function clearFilters(): void {
 <template>
     <MvWarningBanner
         v-if="!props.counterpartyId && list.counterpartyId.value"
-        action-text="Show all customers"
+        :action-text="t('settlements.list.showAllCustomers')"
         @action="list.counterpartyId.value = ''"
     >
-        Filtered to one customer{{ rows[0] ? ` (${rows[0].customer})` : '' }}.
+        {{
+            rows[0]
+                ? t('settlements.list.filteredToCustomerNamed', { customer: rows[0].customer })
+                : t('settlements.list.filteredToCustomer')
+        }}
     </MvWarningBanner>
     <SettlementsListTable
         :rows="rows"

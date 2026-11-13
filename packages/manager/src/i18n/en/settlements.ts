@@ -1,0 +1,30 @@
+export default {
+    page: {
+        breadcrumb: 'Workspace / Settlements',
+        title: 'Settlements',
+        paymentsLink: 'Online payments',
+    },
+    list: {
+        searchPlaceholder: 'Number, customer or order…',
+        empty: 'No settlement documents match your filters',
+        loadFailedTitle: 'Could not load settlement documents',
+        loadFailedMessage: 'Check the connection and try again.',
+        droppedFilter: 'A filter that no longer applies was removed.',
+        alsoOrders: 'Also orders: {orders}',
+        all: 'All',
+        showAllCustomers: 'Show all customers',
+        filteredToCustomer: 'Filtered to one customer.',
+        filteredToCustomerNamed: 'Filtered to one customer ({customer}).',
+        columns: {
+            number: 'Number',
+            date: 'Date',
+            type: 'Type',
+            customer: 'Customer',
+            contract: 'Contract',
+            organization: 'Organization',
+            order: 'Order',
+            proformaInvoice: 'Proforma invoice',
+            amount: 'Amount',
+        },
+    },
+};

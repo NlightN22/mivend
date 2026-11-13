@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import SettlementsList from '../../components/settlements/SettlementsList.vue';
 import { useAuthStore } from '../../stores/auth';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const canReadPayments = computed(() => authStore.hasPermission('ReadPayment'));
 </script>
@@ -10,15 +12,15 @@ const canReadPayments = computed(() => authStore.hasPermission('ReadPayment'));
 <template>
     <div class="settlements-page">
         <div class="settlements-page__header">
-            <div class="settlements-page__breadcrumb">Workspace / Settlements</div>
+            <div class="settlements-page__breadcrumb">{{ t('settlements.page.breadcrumb') }}</div>
             <div class="settlements-page__title-row">
-                <h1 class="settlements-page__title">Settlements</h1>
+                <h1 class="settlements-page__title">{{ t('settlements.page.title') }}</h1>
                 <RouterLink
                     v-if="canReadPayments"
                     to="/payments"
                     class="settlements-page__payments-link"
                 >
-                    Online payments
+                    {{ t('settlements.page.paymentsLink') }}
                 </RouterLink>
             </div>
         </div>

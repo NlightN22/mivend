@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useDroppedFilterNotice } from '../../composables/useDroppedFilterNotice';
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -24,6 +25,8 @@ import TableViewsMenu from '../TableViewsMenu.vue';
 import type { FilterOption } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 import { SETTLEMENTS_COLUMNS, SETTLEMENTS_DEFAULT_HIDDEN } from './settlementsColumns';
 import type { SettlementRow } from './settlementsRows';
+
+const { t } = useI18n();
 
 const props = defineProps<{
     rows: SettlementRow[];
@@ -190,10 +193,10 @@ function applyView(state: TableViewState): void {
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Number, customer or order…' }"
+        :search="{ filterKey: 'search', placeholder: t('settlements.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="{ search: BLANK_SETTLEMENTS_FILTERS.search }"
-        empty-message="No settlement documents match your filters"
+        :empty-message="t('settlements.list.empty')"
         @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -202,19 +205,17 @@ function applyView(state: TableViewState): void {
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load settlement documents"
-                message="Check the connection and try again."
+                :title="t('settlements.list.loadFailedTitle')"
+                :message="t('settlements.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{
-                loading ? '' : 'No settlement documents match your filters'
-            }}</template>
+            <template v-else>{{ loading ? '' : t('settlements.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
             <slot name="view-chips" />
             <MvNotice v-if="droppedFilter" variant="warning">
-                A filter that no longer applies was removed.
+                {{ t('settlements.list.droppedFilter') }}
             </MvNotice>
         </template>
 
@@ -267,7 +268,14 @@ function applyView(state: TableViewState): void {
                     v-if="(data as SettlementRow).orderCodes.length > 1"
                     class="mv-cell-more"
                     role="note"
-                    :aria-label="`Also orders: ${(data as SettlementRow).orderCodes.slice(1).map(formatDocumentNumber).join(', ')}`"
+                    :aria-label="
+                        t('settlements.list.alsoOrders', {
+                            orders: (data as SettlementRow).orderCodes
+                                .slice(1)
+                                .map(formatDocumentNumber)
+                                .join(', '),
+                        })
+                    "
                     :title="(data as SettlementRow).orderCodes.map(formatDocumentNumber).join(', ')"
                     >+{{ (data as SettlementRow).orderCodes.length - 1 }}</span
                 >

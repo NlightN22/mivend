@@ -1,32 +1,35 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { SubmittedApproval } from '../../api/dashboard';
 
-const REQUEST_TYPE_LABEL: Record<string, string> = {
-    priceAdjustmentApproval: 'Price adjustment request',
-    discountGrantApproval: 'Discount request',
-    creditTermApproval: 'Payment term request',
-};
-
 defineProps<{ approvals: SubmittedApproval[] }>();
 const router = useRouter();
+const { t, te } = useI18n();
 
 function typeLabel(requestType: string): string {
-    return REQUEST_TYPE_LABEL[requestType] ?? requestType;
+    const key = `dashboardParts.approvalStatus.requestType.${requestType}`;
+    return te(key) ? t(key) : requestType;
 }
 
 function statusText(approval: SubmittedApproval): string {
     if (approval.status === 'pending') {
-        return approval.currentStepRole ? `Waiting on ${approval.currentStepRole}` : 'Pending';
+        return approval.currentStepRole
+            ? t('dashboardParts.approvalStatus.waitingOn', { role: approval.currentStepRole })
+            : t('dashboardParts.approvalStatus.pending');
     }
-    return approval.status === 'approved' ? 'Approved' : 'Rejected';
+    return t(
+        `dashboardParts.approvalStatus.${approval.status === 'approved' ? 'approved' : 'rejected'}`,
+    );
 }
 </script>
 
 <template>
     <ul class="approval-list">
-        <li v-if="!approvals.length" class="approval-list__empty">No submitted requests yet</li>
+        <li v-if="!approvals.length" class="approval-list__empty">
+            {{ t('dashboardParts.approvalStatus.empty') }}
+        </li>
         <li
             v-for="approval in approvals"
             :key="approval.id"

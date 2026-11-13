@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     useDataTableState,
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
+import { tr } from '../../utils/lazyLabels';
 import { PRICE_TYPE_GAP_REASONS, type PriceTypeGapRow } from '../../api/priceTypeGaps';
+
+const { t } = useI18n();
 
 // Server-side paginated: counterparties whose price type cannot be resolved. shortName is the searched column.
 const props = defineProps<{
@@ -26,17 +30,40 @@ const emit = defineEmits<{
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'shortName',
-        header: 'Counterparty',
+        get header() {
+            return tr('settingsPanels.priceTypeGaps.columns.counterparty');
+        },
         width: 240,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Name or tax id contains…' },
+        get filterConfig() {
+            return {
+                type: 'text' as const,
+                placeholder: tr('settingsPanels.priceTypeGaps.filterPlaceholder'),
+            };
+        },
         mobile: { primary: true },
     },
-    { field: 'inn', header: 'Tax id', width: 140, filterConfig: { type: 'none' } },
-    { field: 'reasonLabel', header: 'Reason', width: 320, filterConfig: { type: 'none' } },
+    {
+        field: 'inn',
+        get header() {
+            return tr('settingsPanels.priceTypeGaps.columns.taxId');
+        },
+        width: 140,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'reasonLabel',
+        get header() {
+            return tr('settingsPanels.priceTypeGaps.columns.reason');
+        },
+        width: 320,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'mainContractId',
-        header: 'Main contract',
+        get header() {
+            return tr('settingsPanels.priceTypeGaps.columns.mainContract');
+        },
         width: 220,
         filterConfig: { type: 'none' },
     },
@@ -88,8 +115,11 @@ const rows = computed(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="{ shortName: '' }"
-        :search="{ filterKey: 'shortName', placeholder: 'Search counterparties…' }"
-        empty-message="Every counterparty has a resolved price type"
+        :search="{
+            filterKey: 'shortName',
+            placeholder: t('settingsPanels.priceTypeGaps.searchPlaceholder'),
+        }"
+        :empty-message="t('settingsPanels.priceTypeGaps.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     />

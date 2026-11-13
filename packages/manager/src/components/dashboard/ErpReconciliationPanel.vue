@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { formatDateTime } from '../../i18n/format';
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvStatusBadge } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { runErpReconciliation } from '../../api/integration-health';
+
+const { t } = useI18n();
 
 defineProps<{ notifications: NotificationItem[] }>();
 const emit = defineEmits<{ refresh: [] }>();
@@ -17,12 +20,17 @@ async function handleRunNow(): Promise<void> {
     runError.value = null;
     try {
         const result = await runErpReconciliation();
-        lastRunSummary.value = `Checked ${result.checked}, found ${result.issuesFound}${
-            result.skipped.length ? ` (skipped: ${result.skipped.join(', ')})` : ''
-        }`;
+        const counts = { checked: result.checked, found: result.issuesFound };
+        lastRunSummary.value = result.skipped.length
+            ? t('settingsPanels.erpReconciliation.summarySkipped', {
+                  ...counts,
+                  skipped: result.skipped.join(', '),
+              })
+            : t('settingsPanels.erpReconciliation.summary', counts);
         emit('refresh');
     } catch (e) {
-        runError.value = e instanceof Error ? e.message : 'Reconciliation run failed';
+        runError.value =
+            e instanceof Error ? e.message : t('settingsPanels.erpReconciliation.runFailed');
     } finally {
         running.value = false;
     }
@@ -33,7 +41,7 @@ async function handleRunNow(): Promise<void> {
     <div class="erp-reconciliation">
         <div class="erp-reconciliation__actions">
             <MvButton size="sm" variant="secondary" :loading="running" @click="handleRunNow">
-                Run reconciliation now
+                {{ t('settingsPanels.erpReconciliation.run') }}
             </MvButton>
             <span v-if="lastRunSummary" class="erp-reconciliation__summary">{{
                 lastRunSummary
@@ -43,7 +51,7 @@ async function handleRunNow(): Promise<void> {
 
         <ul class="erp-reconciliation__list">
             <li v-if="!notifications.length" class="erp-reconciliation__empty">
-                No open ERP discrepancies
+                {{ t('settingsPanels.erpReconciliation.empty') }}
             </li>
             <li
                 v-for="notification in notifications.slice(0, 5)"
@@ -53,8 +61,12 @@ async function handleRunNow(): Promise<void> {
                 <div class="erp-reconciliation__main">
                     <span class="erp-reconciliation__title">{{ notification.title }}</span>
                     <span class="erp-reconciliation__detail">
-                        {{ notification.message }} · detected
-                        {{ formatDateTime(notification.createdAt) }}
+                        {{
+                            t('settingsPanels.erpReconciliation.detected', {
+                                message: notification.message,
+                                date: formatDateTime(notification.createdAt),
+                            })
+                        }}
                     </span>
                 </div>
                 <MvStatusBadge variant="warning">{{ notification.status }}</MvStatusBadge>
