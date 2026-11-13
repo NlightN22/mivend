@@ -15,6 +15,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const failed = ref(false);
+const emailNotVerified = ref(false);
 const code = String(route.query.code ?? '');
 const state = String(route.query.state ?? '');
 
@@ -22,12 +23,12 @@ onMounted(async () => {
     // The one-time code is read once above; clearing the query keeps it out of the address bar and history.
     await router.replace({ query: {} });
     try {
-        if (
-            !code ||
-            !state ||
-            !consumeOidcState(state) ||
-            !(await completeOidcSignIn(code, state))
-        ) {
+        const result =
+            code && state && consumeOidcState(state)
+                ? await completeOidcSignIn(code, state)
+                : 'FAILED';
+        if (result !== 'OK') {
+            emailNotVerified.value = result === 'EMAIL_NOT_VERIFIED';
             failed.value = true;
         } else if (await openOidcSession(state)) {
             await authStore.completeSignIn();
@@ -47,7 +48,9 @@ onMounted(async () => {
             <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
             <div class="oidc-card">
                 <template v-if="failed">
-                    <MvNotice variant="error">{{ t('auth.oidc.failed') }}</MvNotice>
+                    <MvNotice variant="error">{{
+                        t(emailNotVerified ? 'auth.oidc.emailNotVerified' : 'auth.oidc.failed')
+                    }}</MvNotice>
                     <MvButton variant="primary" size="lg" @click="router.push('/login')">
                         {{ t('auth.oidc.backToLogin') }}
                     </MvButton>

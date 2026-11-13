@@ -5,6 +5,7 @@ import {
     OidcSignInDocument,
     PrepareOidcSignOutDocument,
     StartOidcSignInDocument,
+    type OidcSignInResult,
 } from './generated/graphql';
 
 export async function fetchOidcSignIn(): Promise<{ host: string; iconUrl: string } | null> {
@@ -17,12 +18,12 @@ export async function fetchAuthorizationUrl(): Promise<string> {
     return startOidcSignIn.authorizationUrl;
 }
 
-export async function completeOidcSignIn(code: string, state: string): Promise<boolean> {
-    const { completeOidcSignIn: verified } = await adminApi(CompleteOidcSignInDocument, {
+export async function completeOidcSignIn(code: string, state: string): Promise<OidcSignInResult> {
+    const { completeOidcSignIn: result } = await adminApi(CompleteOidcSignInDocument, {
         code,
         state,
     });
-    return verified;
+    return result;
 }
 
 export async function openOidcSession(state: string): Promise<boolean> {

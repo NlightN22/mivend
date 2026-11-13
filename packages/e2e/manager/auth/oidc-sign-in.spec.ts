@@ -4,8 +4,13 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 const MOCK_URL = process.env.MOCK_OIDC_URL ?? 'http://localhost:3995';
 const OPERATOR_EMAIL = 'ivan.operator@mivend.dev';
 
-async function actAs(request: APIRequestContext, sub: string, email: string | null): Promise<void> {
-    const res = await request.post(`${MOCK_URL}/_control`, { data: { sub, email } });
+async function actAs(
+    request: APIRequestContext,
+    sub: string,
+    email: string | null,
+    emailVerified?: boolean,
+): Promise<void> {
+    const res = await request.post(`${MOCK_URL}/_control`, { data: { sub, email, emailVerified } });
     expect(res.ok()).toBe(true);
 }
 
@@ -36,6 +41,20 @@ test.describe('Manager sign-in through the corporate account', () => {
         await page.getByTestId('oidc-sign-in').click();
         await expect(page.locator('.mv-notice--error')).toBeVisible();
         expect(page.url()).toContain('/oidc/callback');
+        await page.goto('/orders');
+        await page.waitForURL(url => url.pathname.includes('/login'));
+    });
+
+    test('an unverified provider e-mail is refused with its own message and no session', async ({
+        page,
+        request,
+    }) => {
+        await actAs(request, 'sub-unverified', OPERATOR_EMAIL, false);
+        await page.goto('/login');
+        await page.getByTestId('oidc-sign-in').click();
+        await expect(page.locator('.mv-notice--error')).toContainText(
+            'Your corporate account e-mail is not confirmed',
+        );
         await page.goto('/orders');
         await page.waitForURL(url => url.pathname.includes('/login'));
     });

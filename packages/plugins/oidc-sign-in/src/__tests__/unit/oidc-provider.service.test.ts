@@ -92,7 +92,7 @@ describe('OidcProviderService', () => {
         stubProvider(() => token({ sub: 'u1', email: ' A@Example.com ', nonce: 'n1' }));
         const claims = await new OidcProviderService(OPTIONS).exchange('code', 'ver', 'n1');
         expect(claims).toMatchObject({ sub: 'u1', email: 'A@Example.com' });
-        expect(claims?.idToken.split('.')).toHaveLength(3);
+        expect((claims as { idToken: string }).idToken.split('.')).toHaveLength(3);
         expect(tokenRequest?.body).toContain('code_verifier=ver');
         expect(tokenRequest?.authorization).toMatch(/^Basic /);
     });
@@ -105,19 +105,23 @@ describe('OidcProviderService', () => {
         ],
         ['wrong audience', () => token({ sub: 'u1', nonce: 'n1' }, { aud: 'client-b' })],
         ['expired', () => token({ sub: 'u1', nonce: 'n1' }, { exp: '-1m' })],
-        [
-            'unverified e-mail',
-            () => token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: false }),
-        ],
-        [
-            'unverified e-mail as a string',
-            () => token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: 'False' }),
-        ],
         ['no sub', () => token({ nonce: 'n1' })],
     ])('refuses a token with %s', async (_name, make) => {
         stubProvider(make);
         expect(await new OidcProviderService(OPTIONS).exchange('code', 'ver', 'n1')).toBeNull();
     });
+
+    it.each([false, 'False'])(
+        'names the unverified e-mail (email_verified=%s) as its own refusal',
+        async verified => {
+            stubProvider(() =>
+                token({ sub: 'u1', nonce: 'n1', email: 'a@b.c', email_verified: verified }),
+            );
+            expect(await new OidcProviderService(OPTIONS).exchange('code', 'ver', 'n1')).toBe(
+                'EMAIL_NOT_VERIFIED',
+            );
+        },
+    );
 
     it('refuses a token signed by an unknown key', async () => {
         const other = await generateKeyPair('RS256');

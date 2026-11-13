@@ -3,7 +3,12 @@ import { Logger } from '@vendure/core';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 import { s256Challenge } from './oidc-crypto';
-import { HTTP_TIMEOUT_MS, OIDC_PLUGIN_OPTIONS, loggerCtx } from './oidc.types';
+import {
+    EmailNotVerifiedError,
+    HTTP_TIMEOUT_MS,
+    OIDC_PLUGIN_OPTIONS,
+    loggerCtx,
+} from './oidc.types';
 import type { OidcClaims, OidcPluginOptions } from './oidc.types';
 
 interface Discovery {
@@ -99,14 +104,18 @@ export class OidcProviderService {
         }
     }
 
-    async exchange(code: string, verifier: string, nonce: string): Promise<OidcClaims | null> {
+    async exchange(
+        code: string,
+        verifier: string,
+        nonce: string,
+    ): Promise<OidcClaims | 'EMAIL_NOT_VERIFIED' | null> {
         try {
             const discovery = await this.discover();
             const idToken = await this.requestToken(discovery, code, verifier);
             return await this.verifyIdToken(discovery, idToken, nonce);
         } catch (error) {
             Logger.warn(`OIDC code exchange refused: ${(error as Error).message}`, loggerCtx);
-            return null;
+            return error instanceof EmailNotVerifiedError ? 'EMAIL_NOT_VERIFIED' : null;
         }
     }
 
@@ -160,7 +169,7 @@ export class OidcProviderService {
         });
         if (payload.nonce !== nonce) throw new Error('nonce mismatch');
         if (String(payload.email_verified).toLowerCase() === 'false')
-            throw new Error('e-mail not verified');
+            throw new EmailNotVerifiedError();
         if (typeof payload.sub !== 'string' || payload.sub === '') throw new Error('no sub');
         const email = typeof payload.email === 'string' ? payload.email.trim() : '';
         return { sub: payload.sub, email: email === '' ? null : email, idToken };

@@ -140,6 +140,8 @@ only skips the provider step, the local sign-out always happens. An unreachable 
 by a scheduled task (an hour after expiry); at most 500 unexpired requests may be pending (`startOidcSignIn` is public), beyond which starting a sign-in is refused. To move an administrator to another provider account, remove their `authentication_method` row with
 strategy `oidc`; the next sign-in links again by e-mail.
 
+Before the first portal sign-in, confirm the administrator's e-mail at the identity provider. A token with `email_verified=false` is refused (linking by e-mail must not trust an unverified address) and the callback page says that the e-mail is not confirmed.
+
 ## Sign-in protection (#278)
 
 Five layers, none of them a single point of failure.

@@ -25,6 +25,14 @@ export interface OidcClaims {
     idToken: string;
 }
 
+export type OidcSignInResult = 'OK' | 'FAILED' | 'EMAIL_NOT_VERIFIED';
+
+export class EmailNotVerifiedError extends Error {
+    constructor() {
+        super('e-mail not verified');
+    }
+}
+
 export type RequestStatus = 'PENDING' | 'EXCHANGING' | 'VERIFIED' | 'USED';
 
 export interface ExchangeRow {

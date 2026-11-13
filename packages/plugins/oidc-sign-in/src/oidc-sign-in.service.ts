@@ -15,7 +15,7 @@ import { OidcProviderService } from './oidc-provider.service';
 import { OidcRequestStoreService } from './oidc-request-store.service';
 import { OidcSessionTokenStoreService } from './oidc-session-token-store.service';
 import { loggerCtx } from './oidc.types';
-import type { OidcClaims } from './oidc.types';
+import type { OidcClaims, OidcSignInResult } from './oidc.types';
 
 // The provider decides its own factors (docs/access-control.md), so no local second step is asked here.
 @Injectable()
@@ -42,16 +42,20 @@ export class OidcSignInService {
         return this.provider.authorizationUrl(state, nonce, verifier);
     }
 
-    // False for every refusal, so a caller cannot tell a wrong state from an unknown account.
+    // Only the provider's own unverified e-mail is told apart; a wrong state and an unknown account stay one FAILED.
     // The provider is called between two short transactions, never inside one.
-    async complete(ctx: RequestContext, code: string, state: string): Promise<boolean> {
+    async complete(ctx: RequestContext, code: string, state: string): Promise<OidcSignInResult> {
         const request = await this.connection.withTransaction(ctx, tx =>
             this.requests.beginExchange(tx, state),
         );
-        if (!request) return false;
+        if (!request) return 'FAILED';
         const claims = await this.provider.exchange(code, request.codeVerifier, request.nonce);
-        if (!claims) return false;
-        return this.connection.withTransaction(ctx, tx => this.link(tx, request.id, claims));
+        if (claims === 'EMAIL_NOT_VERIFIED') return claims;
+        if (!claims) return 'FAILED';
+        const linked = await this.connection.withTransaction(ctx, tx =>
+            this.link(tx, request.id, claims),
+        );
+        return linked ? 'OK' : 'FAILED';
     }
 
     private async link(

@@ -12,6 +12,8 @@ export default {
         divider: 'or',
         checking: 'Checking your sign-in…',
         failed: 'Could not sign in with the corporate account. Try again or sign in with your username and password.',
+        emailNotVerified:
+            'Your corporate account e-mail is not confirmed. Ask your administrator to confirm it, then try again.',
         backToLogin: 'Back to sign-in',
         startFailed: 'Corporate account sign-in is unavailable right now.',
         button: 'Sign in with {host}',
@@ -42,8 +44,7 @@ export default {
         back: 'Back',
         lostAccess: 'I have no access to the app',
         enrolTitle: 'Set up two-factor protection',
-        enrolSubtitle:
-            'Sign-in is tied to your phone. Connect an authenticator app to continue.',
+        enrolSubtitle: 'Sign-in is tied to your phone. Connect an authenticator app to continue.',
         stepInstall: 'Install an authenticator app on your phone (see the list below).',
         stepScan: 'Scan the QR code in the app or enter the key manually.',
         stepCode: 'Enter the 6-digit code shown by the app.',
@@ -75,7 +76,8 @@ export default {
         recoveryPageSub:
             'Enter your password to confirm. The old device will be removed and you will set up a new one at your next sign-in.',
         recoveryComplete: 'Unlink the old device',
-        recoveryInvalid: 'The link is invalid or has expired. Request a new one on the sign-in page.',
+        recoveryInvalid:
+            'The link is invalid or has expired. Request a new one on the sign-in page.',
         recovered: 'The old device was removed. Sign in and set up a new one.',
         errors: {
             INVALID_CREDENTIALS: 'Wrong username or password.',

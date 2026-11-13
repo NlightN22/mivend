@@ -3,6 +3,7 @@ import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 
 import { OidcProviderService } from '../oidc-provider.service';
 import { OidcSignInService } from '../oidc-sign-in.service';
+import type { OidcSignInResult } from '../oidc.types';
 
 @Resolver()
 export class OidcResolver {
@@ -35,8 +36,8 @@ export class OidcResolver {
     completeOidcSignIn(
         @Ctx() ctx: RequestContext,
         @Args() args: { code: string; state: string },
-    ): Promise<boolean> {
-        if (!this.provider.enabled) return Promise.resolve(false);
+    ): Promise<OidcSignInResult> {
+        if (!this.provider.enabled) return Promise.resolve('FAILED');
         return this.signIn.complete(ctx, args.code, args.state);
     }
 }

@@ -68,7 +68,7 @@ function build(over: {
 describe('OidcSignInService', () => {
     it('verifies the request and asks for no local second step', async () => {
         const { service, requests, failures } = build({});
-        expect(await service.complete(ctx, 'code', 'state')).toBe(true);
+        expect(await service.complete(ctx, 'code', 'state')).toBe('OK');
         expect(requests.markVerified).toHaveBeenCalledWith(ctx, 1, '5');
         expect(failures).toEqual(['reset']);
     });
@@ -126,8 +126,16 @@ describe('OidcSignInService', () => {
         ['unverified account', { verification: true, verified: false }],
     ])('refuses %s', async (_n, over) => {
         const { service, requests } = build(over);
-        expect(await service.complete(ctx, 'code', 'state')).toBe(false);
+        expect(await service.complete(ctx, 'code', 'state')).toBe('FAILED');
         expect(requests.markVerified).not.toHaveBeenCalled();
+    });
+
+    it('answers an unverified provider e-mail with its own code and links nothing', async () => {
+        const { service, requests, tokens, failures } = build({ exchange: 'EMAIL_NOT_VERIFIED' });
+        expect(await service.complete(ctx, 'code', 'state')).toBe('EMAIL_NOT_VERIFIED');
+        expect(requests.markVerified).not.toHaveBeenCalled();
+        expect(tokens.save).not.toHaveBeenCalled();
+        expect(failures).toEqual([]);
     });
 
     it('counts a failed link towards the throttle', async () => {

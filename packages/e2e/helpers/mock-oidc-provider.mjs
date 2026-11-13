@@ -44,6 +44,9 @@ async function token(req, res) {
     }
     const claims = { sub: entry.identity.sub, nonce: entry.nonce };
     if (entry.identity.email) claims.email = entry.identity.email;
+    if (entry.identity.emailVerified !== undefined) {
+        claims.email_verified = entry.identity.emailVerified;
+    }
     const idToken = await new SignJWT(claims)
         .setProtectedHeader({ alg: 'RS256', kid: 'mock-1' })
         .setIssuer(issuer)

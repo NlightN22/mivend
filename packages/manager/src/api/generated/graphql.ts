@@ -4409,7 +4409,7 @@ export type Mutation = {
     /** Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment. */
     changeOrderLineQuantity: Scalars['Boolean']['output'];
     clearDepartmentBranch: Scalars['Boolean']['output'];
-    completeOidcSignIn: Scalars['Boolean']['output'];
+    completeOidcSignIn: OidcSignInResult;
     completeTwoFactorRecovery: CompleteTwoFactorRecoveryResult;
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
@@ -6268,6 +6268,8 @@ export type OidcSignInInfo = {
     host: Scalars['String']['output'];
     iconUrl: Scalars['String']['output'];
 };
+
+export type OidcSignInResult = 'EMAIL_NOT_VERIFIED' | 'FAILED' | 'OK';
 
 export type OidcSignInStart = {
     authorizationUrl: Scalars['String']['output'];
@@ -13165,7 +13167,7 @@ export type CompleteOidcSignInMutationVariables = Exact<{
     state: Scalars['String']['input'];
 }>;
 
-export type CompleteOidcSignInMutation = { completeOidcSignIn: boolean };
+export type CompleteOidcSignInMutation = { completeOidcSignIn: OidcSignInResult };
 
 export type AuthenticateOidcMutationVariables = Exact<{
     state: Scalars['String']['input'];

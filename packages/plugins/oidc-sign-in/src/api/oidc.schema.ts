@@ -1,6 +1,12 @@
 import gql from 'graphql-tag';
 
 export const oidcSchema = gql`
+    enum OidcSignInResult {
+        OK
+        FAILED
+        EMAIL_NOT_VERIFIED
+    }
+
     type OidcSignInInfo {
         host: String!
         iconUrl: String!
@@ -16,7 +22,7 @@ export const oidcSchema = gql`
 
     extend type Mutation {
         startOidcSignIn: OidcSignInStart!
-        completeOidcSignIn(code: String!, state: String!): Boolean!
+        completeOidcSignIn(code: String!, state: String!): OidcSignInResult!
         prepareOidcSignOut: String
     }
 `;
