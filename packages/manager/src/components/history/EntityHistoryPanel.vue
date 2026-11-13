@@ -1,363 +1,93 @@
 <script setup lang="ts">
-import { formatDateTime } from '../../i18n/format';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvDateTimeCell,
-    MvModal,
+    MvErrorState,
     MvStatusBadge,
-    useDataTableState,
-    type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
 } from '@mivend/ui-kit';
-import {
-    fetchEntityVersionsForRefs,
-    type EntityRef,
-    type EntityVersionRow,
-} from '../../api/history';
+import type { EntityRef, EntityVersionRow } from '../../api/history';
 import type { ManagerOption } from '../../api/orders';
+import { useAuthStore } from '../../stores/auth';
+import { useEntityHistoryList } from '../../composables/useEntityHistoryList';
+import { useCardTabTable } from '../../composables/useCardTabTable';
+import TableViewsMenu from '../TableViewsMenu.vue';
+import EntityHistoryDetailModal from './EntityHistoryDetailModal.vue';
+import { HISTORY_DEFAULT_SORT, buildHistoryColumns } from './historyColumns';
+import { SYSTEM_CHANGER } from './historyFilter';
+import { ACTION_BADGE_VARIANT, actionLabel, changeSummary } from './historyFormat';
 
-// Generic audit-trail widget — not Customer-specific. Any page that owns one or more
-// EntityVersion-tracked objects (Counterparty+TradingPoints today, Order/OrderLine later) can
-// drop this in with `refs` + `managers`. `entityLabels` lets the caller give each entityName a
-// human label without this component hardcoding business entity names.
-//
-// Seventh consumer of @mivend/ui-kit's MvAdvancedDataTable — see manager-table-standard skill.
-// An audit log has no natural "number" the way an order/proforma-invoice/discount does; `summary`
-// ("Changes") is the closest thing to an identifying column (what a reviewer scans first when
-// hunting for who changed what) and gets the required/search slot instead. Action/Object
-// type/Changed by/Date range are real EntityVersion columns pushed into
-// `entityVersionsForEntities` server-side (issue #39) — the one deliberate exception is the
-// toolbar search itself: it matches the JS-derived changed-fields summary/comment/joined display
-// names, which aren't SQL columns, so it only filters within the currently-loaded page (same
-// documented limitation as Approvals' search) and must NOT trigger a refetch/page reset the way
-// the other filters do.
-const { t, te } = useI18n();
-
+// An audit trail of every EntityVersion-tracked object in `refs`; entityLabels names each entityName.
+// Search, filters and paging are server-side on top of the scope-checked refs; the toolbar search
+// matches the changed field names and the comment.
 const props = withDefaults(
     defineProps<{
         refs: EntityRef[];
         managers: ManagerOption[];
         entityLabels?: Record<string, string>;
+        urlPrefix?: string;
     }>(),
-    { entityLabels: () => ({}) },
+    { entityLabels: () => ({}), urlPrefix: 'history.' },
 );
 
-function actionLabel(action: string): string {
-    const key = `changeJournal.history.action.${action}`;
-    return te(key) ? t(key) : action;
-}
+const { t } = useI18n();
+const authStore = useAuthStore();
+const list = useEntityHistoryList(() => props.refs, props.urlPrefix);
 
-const ACTION_BADGE_VARIANT: Record<string, 'success' | 'info' | 'danger' | 'neutral'> = {
-    create: 'success',
-    update: 'info',
-    deactivate: 'danger',
-    reactivate: 'success',
-};
-
-const dateRangeOptions = computed(() => [
-    { value: '', label: t('changeJournal.history.dateRange.all') },
-    { value: 'today', label: t('changeJournal.history.dateRange.today') },
-    { value: '7d', label: t('changeJournal.history.dateRange.last7') },
-    { value: '30d', label: t('changeJournal.history.dateRange.last30') },
-]);
-
-function entityLabel(entityName: string): string {
-    return props.entityLabels[entityName] ?? entityName;
-}
-
-function adminName(id: string | null): string {
+const entityLabel = (name: string): string => props.entityLabels[name] ?? name;
+const changedByName = (id: string | null): string => {
     if (!id) return t('changeJournal.history.system');
     return props.managers.find(m => m.id === id)?.name ?? t('changeJournal.history.unknown');
-}
-
-function parseChangedFields(row: EntityVersionRow): Record<string, { from: unknown; to: unknown }> {
-    if (!row.changedFields) return {};
-    try {
-        return JSON.parse(row.changedFields) as Record<string, { from: unknown; to: unknown }>;
-    } catch {
-        return {};
-    }
-}
-
-function summary(row: EntityVersionRow): string {
-    const fields = Object.keys(parseChangedFields(row));
-    return fields.length ? fields.join(', ') : '—';
-}
-
-// Contacts are logged as full { name, phone, email, isPrimary } snapshots (see
-// TradingPointService.updateDetails) — render them readably instead of dumping raw JSON, so a
-// reviewer can actually spot "who typed the wrong phone number" from the modal below.
-function formatDiffValue(field: string, value: unknown): string {
-    if (field === 'contacts' && Array.isArray(value)) {
-        if (value.length === 0) return t('changeJournal.history.none');
-        return value
-            .map((c: { name?: string; phone?: string | null }) =>
-                c.phone ? `${c.name} (${c.phone})` : String(c.name),
-            )
-            .join('; ');
-    }
-    if (value === null || value === undefined || value === '') {
-        return t('changeJournal.history.empty');
-    }
-    return String(value);
-}
-
-interface DiffLine {
-    field: string;
-    from: string;
-    to: string;
-}
-
-function diffLines(row: EntityVersionRow): DiffLine[] {
-    const fields = parseChangedFields(row);
-    return Object.entries(fields).map(([field, diff]) => ({
-        field,
-        from: formatDiffValue(field, diff.from),
-        to: formatDiffValue(field, diff.to),
-    }));
-}
-
-// Row selected for the detail modal — clicking a row (not just hovering) is what makes the
-// diff usable for scanning many entries in a row when hunting for who broke what.
-const selectedRow = ref<EntityVersionRow | null>(null);
-
-const page = ref(1);
-
-// Known upfront from `refs` — doesn't need loaded data, unlike the old fully-client-side version.
-const entityTypeOptions = computed(() => {
-    const names = Array.from(new Set(props.refs.map(r => r.entityName)));
-    return names.map(name => ({ value: name, label: entityLabel(name) }));
-});
-
-const actionOptions = computed(() =>
-    Object.keys(ACTION_BADGE_VARIANT).map(value => ({
-        value,
-        label: actionLabel(value),
-        variant: ACTION_BADGE_VARIANT[value],
-    })),
-);
-
-const changedByOptions = computed(() => [
-    { value: 'system', label: t('changeJournal.history.system') },
-    ...props.managers.map(m => ({ value: m.id, label: m.name })),
-]);
-
-function dateRangeToCreatedAfter(range: string): string | undefined {
-    const now = new Date();
-    switch (range) {
-        case 'today':
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        case '7d':
-            return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        case '30d':
-            return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        default:
-            return undefined;
-    }
-}
-
-interface HistoryFilterState {
-    [key: string]: unknown;
-    summary: string;
-    createdAt: string;
-    action: string;
-    entityName: string;
-    adminName: string;
-}
-const BLANK_FILTERS: HistoryFilterState = {
-    summary: '',
-    createdAt: '',
-    action: '',
-    entityName: '',
-    adminName: '',
 };
 
-const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
-    {
-        field: 'summary',
-        header: t('changeJournal.history.columns.summary'),
-        width: 260,
-        required: true,
-        filterConfig: { type: 'text', placeholder: t('changeJournal.history.filters.search') },
-        mobile: { primary: true },
-    },
-    {
-        field: 'createdAt',
-        header: t('changeJournal.history.columns.createdAt'),
-        width: 170,
-        filterConfig: {
-            type: 'select',
-            placeholder: t('changeJournal.history.dateRange.all'),
-            options: dateRangeOptions.value,
-        },
-    },
-    {
-        field: 'action',
-        header: t('changeJournal.history.columns.action'),
-        width: 130,
-        filterConfig: {
-            type: 'status',
-            placeholder: t('changeJournal.history.filters.allActions'),
-            options: actionOptions.value,
-        },
-        mobile: { badge: true },
-    },
-    // Only meaningful when this widget's refs actually span more than one entity type (e.g. a
-    // Counterparty plus its TradingPoints) — a single-type ref set has nothing to filter, so the
-    // column stays visible for layout consistency but its filter is disabled rather than shown
-    // with exactly one option. Real options spliced in by resolvedColumns below, once refs/
-    // managers are known — same shape as CustomerDocumentsDataTable.vue's Type column.
-    {
-        field: 'entityName',
-        header: t('changeJournal.history.columns.entityName'),
-        width: 140,
-        filterConfig: { type: 'none' },
-    },
-    {
-        field: 'adminName',
-        header: t('changeJournal.history.columns.adminName'),
-        width: 160,
-        filterConfig: {
-            type: 'select',
-            placeholder: t('changeJournal.history.filters.anyone'),
-            options: [],
-        },
-    },
-]);
-
-const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
-    ALL_COLUMNS.value.map(col => {
-        if (col.field === 'entityName') {
-            return entityTypeOptions.value.length > 1
-                ? {
-                      ...col,
-                      filterConfig: {
-                          type: 'select' as const,
-                          placeholder: t('changeJournal.history.filters.allObjects'),
-                          options: entityTypeOptions.value,
-                      },
-                  }
-                : col;
-        }
-        if (col.field === 'adminName' && col.filterConfig.type === 'select') {
-            return {
-                ...col,
-                filterConfig: { ...col.filterConfig, options: changedByOptions.value },
-            };
-        }
-        return col;
+const columns = computed(() =>
+    buildHistoryColumns({
+        actions: Object.keys(ACTION_BADGE_VARIANT).map(value => ({
+            value,
+            label: actionLabel(value),
+        })),
+        objects: Array.from(new Set(props.refs.map(r => r.entityName))).map(value => ({
+            value,
+            label: entityLabel(value),
+        })),
+        changedBy: [
+            { value: SYSTEM_CHANGER, label: t('changeJournal.history.system') },
+            ...props.managers.map(m => ({ value: m.id, label: m.name })),
+        ],
     }),
 );
+const baseColumns = buildHistoryColumns({ actions: [], objects: [], changedBy: [] });
 
-const { state: tableState } = useDataTableState<HistoryFilterState>(
-    'entity-history-datatable',
-    {
-        columnOrder: ALL_COLUMNS.value.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
-        hiddenColumns: [],
-        sort: [],
-        filters: BLANK_FILTERS,
-        pageSize: 20,
-    },
-    {
-        columns: ALL_COLUMNS.value,
-        // `entityName`'s filterConfig is 'none' in the static ALL_COLUMNS above (its real filter
-        // is spliced in reactively by resolvedColumns once refs are known) — included explicitly
-        // here so a saved filter value for it survives normalization regardless.
-        allowedFilterKeys: [
-            ...ALL_COLUMNS.value.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
-            'entityName',
-        ],
-    },
-);
-
-const rawRows = ref<EntityVersionRow[]>([]);
-const totalItems = ref(0);
-const loading = ref(true);
-
-async function load(): Promise<void> {
-    loading.value = true;
-    try {
-        const f = tableState.value.filters;
-        const result = await fetchEntityVersionsForRefs(props.refs, {
-            take: tableState.value.pageSize,
-            skip: (page.value - 1) * tableState.value.pageSize,
-            action: (f.action as string) || undefined,
-            entityName: (f.entityName as string) || undefined,
-            system: f.adminName === 'system' ? true : undefined,
-            administratorId:
-                f.adminName && f.adminName !== 'system' ? (f.adminName as string) : undefined,
-            createdAfter: dateRangeToCreatedAfter(f.createdAt as string),
-        });
-        rawRows.value = result.items;
-        totalItems.value = result.totalItems;
-    } finally {
-        loading.value = false;
-    }
-}
-
-// `summary` (the toolbar search) only narrows the already-loaded page (see this component's own
-// doc comment above) — deliberately excluded from this watcher so typing a search term doesn't
-// reset the page or trigger a refetch, unlike every real server-side filter.
-watch(
-    () => [
-        tableState.value.filters.createdAt,
-        tableState.value.filters.action,
-        tableState.value.filters.entityName,
-        tableState.value.filters.adminName,
-        tableState.value.pageSize,
-    ],
-    () => {
-        page.value = 1;
-        void load();
-    },
-);
-watch(page, () => void load());
-watch(
-    () => props.refs,
-    () => {
-        page.value = 1;
-        void load();
-    },
-);
-
-onMounted(load);
-
-interface HistoryRow {
-    [key: string]: unknown;
-    id: string;
-    createdAt: string;
-    action: string;
-    entityName: string;
-    adminName: string;
-    summary: string;
-}
-
-// Local-only narrowing against the currently-loaded page — see this component's doc comment.
-const filteredRows = computed<HistoryRow[]>(() => {
-    const term = (tableState.value.filters.summary as string).trim().toLowerCase();
-    const mapped = rawRows.value.map(row => ({
-        id: row.id,
-        createdAt: row.createdAt,
-        action: row.action,
-        entityName: entityLabel(row.entityName),
-        adminName: adminName(row.administratorId),
-        summary: summary(row),
-    }));
-    if (!term) return mapped;
-    return mapped.filter(
-        row =>
-            row.summary.toLowerCase().includes(term) ||
-            row.entityName.toLowerCase().includes(term) ||
-            row.adminName.toLowerCase().includes(term) ||
-            (rawRows.value.find(r => r.id === row.id)?.comment ?? '').toLowerCase().includes(term),
-    );
+const { tableState, captureView, applyView, openedWithLink } = useCardTabTable({
+    storageKey: `customer-history-v1:${authStore.administrator?.id ?? 'anonymous'}`,
+    columns: baseColumns,
+    list,
+    urlPrefix: props.urlPrefix,
+    defaultSort: HISTORY_DEFAULT_SORT,
 });
 
-function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
-    selectedRow.value = rawRows.value.find(row => row.id === event.row.id) ?? null;
+const rows = computed(() =>
+    list.items.value.map(row => ({
+        id: row.id,
+        summary: changeSummary(row),
+        createdAt: row.createdAt as string,
+        action: row.action,
+        entityName: entityLabel(row.entityName),
+        changedBy: changedByName(row.administratorId),
+        version: row,
+    })),
+);
+type Row = (typeof rows.value)[number];
+
+const selected = ref<EntityVersionRow | null>(null);
+function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
+    selected.value = event.row.version;
+}
+function clearFilters(): void {
+    list.search.value = '';
+    list.conditions.value = [];
 }
 </script>
 
@@ -365,137 +95,65 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
     <div class="entity-history">
         <MvAdvancedDataTable
             v-model:table-state="tableState"
-            :columns="resolvedColumns"
-            :rows="filteredRows"
-            :loading="loading"
-            :total-items="totalItems"
-            :page="page"
+            :columns="columns"
+            :rows="rows"
+            :loading="list.loading.value"
+            :total-items="list.totalItems.value"
+            :page="list.page.value"
             data-key="id"
             :row-height-px="49"
             :header-height-px="65"
-            :default-filters="BLANK_FILTERS"
             :search="{
-                filterKey: 'summary',
+                filterKey: 'search',
                 placeholder: t('changeJournal.history.filters.search'),
             }"
+            :conditions="list.conditions.value"
+            :default-filters="{ search: '' }"
             :empty-message="t('changeJournal.history.emptyTable')"
-            @update:page="p => (page = p)"
-            @reset-page="page = 1"
+            @update:conditions="list.conditions.value = $event"
+            @update:page="list.page.value = $event"
+            @reset-page="list.page.value = 1"
+            @clear-filters="clearFilters"
             @row-click="onRowClick"
         >
+            <template #empty>
+                <MvErrorState
+                    v-if="list.failed.value"
+                    :title="t('changeJournal.history.loadFailedTitle')"
+                    :message="t('changeJournal.history.loadFailedMessage')"
+                    @retry="list.reload"
+                />
+                <template v-else>{{
+                    list.loading.value ? '' : t('changeJournal.history.noMatch')
+                }}</template>
+            </template>
+
+            <template #toolbar-end>
+                <TableViewsMenu
+                    views-key="customer-history"
+                    :owner-key="authStore.administrator?.id ?? 'anonymous'"
+                    :capture="captureView"
+                    :apply="applyView"
+                    :skip-restore="() => openedWithLink"
+                />
+            </template>
+
             <template #cell-createdAt="{ data }">
-                <MvDateTimeCell :value="(data as HistoryRow).createdAt" />
+                <MvDateTimeCell :value="(data as Row).createdAt" />
             </template>
             <template #cell-action="{ data }">
-                <MvStatusBadge
-                    :variant="ACTION_BADGE_VARIANT[(data as HistoryRow).action] ?? 'neutral'"
-                >
-                    {{ actionLabel((data as HistoryRow).action) }}
+                <MvStatusBadge :variant="ACTION_BADGE_VARIANT[(data as Row).action] ?? 'neutral'">
+                    {{ actionLabel((data as Row).action) }}
                 </MvStatusBadge>
             </template>
         </MvAdvancedDataTable>
 
-        <MvModal
-            v-if="selectedRow"
-            :title="t('changeJournal.history.modal.title')"
-            @close="selectedRow = null"
-        >
-            <div class="entity-history__detail">
-                <dl class="entity-history__detail-meta">
-                    <dt>{{ t('changeJournal.history.modal.when') }}</dt>
-                    <dd>{{ formatDateTime(selectedRow.createdAt) }}</dd>
-                    <dt>{{ t('changeJournal.history.modal.action') }}</dt>
-                    <dd>{{ actionLabel(selectedRow.action) }}</dd>
-                    <dt>{{ t('changeJournal.history.modal.object') }}</dt>
-                    <dd>{{ entityLabel(selectedRow.entityName) }}</dd>
-                    <dt>{{ t('changeJournal.history.modal.changedBy') }}</dt>
-                    <dd>{{ adminName(selectedRow.administratorId) }}</dd>
-                </dl>
-
-                <table v-if="diffLines(selectedRow).length" class="entity-history__diff-table">
-                    <thead>
-                        <tr>
-                            <th>{{ t('changeJournal.history.modal.field') }}</th>
-                            <th>{{ t('changeJournal.history.modal.from') }}</th>
-                            <th>{{ t('changeJournal.history.modal.to') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="line in diffLines(selectedRow)" :key="line.field">
-                            <td>{{ line.field }}</td>
-                            <td>{{ line.from }}</td>
-                            <td>{{ line.to }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p v-else class="entity-history__no-diff">
-                    {{ t('changeJournal.history.modal.noDiff') }}
-                </p>
-
-                <p v-if="selectedRow.comment" class="entity-history__comment">
-                    {{ t('changeJournal.history.modal.comment', { text: selectedRow.comment }) }}
-                </p>
-            </div>
-        </MvModal>
+        <EntityHistoryDetailModal
+            v-if="selected"
+            :row="selected"
+            :object-label="entityLabel(selected.entityName)"
+            :changed-by="changedByName(selected.administratorId)"
+            @close="selected = null"
+        />
     </div>
 </template>
-
-<style scoped>
-.entity-history {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.entity-history__detail {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.entity-history__detail-meta {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 4px 12px;
-    margin: 0;
-    font-size: 13px;
-}
-
-.entity-history__detail-meta dt {
-    color: var(--el-text-color-secondary);
-    font-weight: 700;
-}
-
-.entity-history__detail-meta dd {
-    margin: 0;
-}
-
-.entity-history__diff-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.entity-history__diff-table th {
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--el-text-color-secondary);
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--el-border-color);
-}
-
-.entity-history__diff-table td {
-    padding: 8px;
-    border-bottom: 1px solid var(--el-border-color);
-    vertical-align: top;
-}
-
-.entity-history__no-diff,
-.entity-history__comment {
-    margin: 0;
-    font-size: 13px;
-    color: var(--el-text-color-secondary);
-}
-</style>

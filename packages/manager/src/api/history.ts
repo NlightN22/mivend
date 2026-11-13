@@ -23,7 +23,6 @@ export interface EntityRef {
 }
 
 // Mirrors the backend EntityVersionListOptions; these filters are pushed into SQL columns.
-// Free-text search is intentionally absent: EntityHistoryPanel.vue only filters the loaded page.
 export interface EntityVersionListOptions {
     take?: number;
     skip?: number;
@@ -32,6 +31,8 @@ export interface EntityVersionListOptions {
     administratorId?: string;
     system?: boolean;
     createdAfter?: string;
+    createdBefore?: string;
+    search?: string;
 }
 
 export interface EntityVersionPage {
