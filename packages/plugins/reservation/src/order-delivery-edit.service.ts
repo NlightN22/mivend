@@ -21,6 +21,7 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import {
     FREIGHT_SHIPPING_METHOD_CODE,
     PICKUP_SHIPPING_METHOD_CODE,
+    findBounded,
     withAggregateLock,
 } from 'shared';
 
@@ -124,10 +125,9 @@ export class OrderDeliveryEditService {
         if (rate !== undefined && Number(rate) !== 0) {
             throw new UserInputError(`Shipping method ${code} must be free but has a rate`);
         }
-        // unbounded-ok: shipping lines of one order
-        const lines = await this.connection
-            .getRepository(ctx, ShippingLine)
-            .find({ where: { order: { id: order.id } } });
+        const lines = await findBounded(this.connection.getRepository(ctx, ShippingLine), {
+            where: { order: { id: order.id } },
+        });
         if (lines.length === 0) throw new UserInputError('The order has no shipping line');
         await this.connection
             .getRepository(ctx, ShippingLine)

@@ -2,6 +2,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Ctx, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
+import { findBounded } from 'shared';
 
 import { erpStageFacts, isOrderCancellable } from './order-cancellation.decision';
 
@@ -15,10 +16,9 @@ export class OrderCancellableResolver {
     @ResolveField()
     async cancellable(@Ctx() ctx: RequestContext, @Parent() order: Order): Promise<boolean> {
         if (order.customFields.isExternal) return false;
-        // unbounded-ok: payments of one order
-        const payments = await this.connection
-            .getRepository(ctx, Payment)
-            .find({ where: { order: { id: order.id } } });
+        const payments = await findBounded(this.connection.getRepository(ctx, Payment), {
+            where: { order: { id: order.id } },
+        });
         const fields = order.customFields;
         const dictionary = await this.statuses.dictionary(ctx);
         return isOrderCancellable({

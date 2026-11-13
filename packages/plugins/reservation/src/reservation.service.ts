@@ -29,7 +29,7 @@ import {
     OrderNotEligibleError,
 } from './reservation-errors';
 import { OrderReservationState, ReservationCreationMethod } from './types';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 import { findErpExportGaps, findMultiplicityViolations } from './reservation-preflight';
 import { writeOrderReservationState } from './reservation-order-state';
 
@@ -80,8 +80,7 @@ export class ReservationService {
                 async txCtx => {
                     const reservationRepo = this.connection.getRepository(txCtx, Reservation);
 
-                    // unbounded-ok: active reservations of one order
-                    const existingActive = await reservationRepo.find({
+                    const existingActive = await findBounded(reservationRepo, {
                         where: { orderId: String(orderId), status: 'active' },
                     });
                     if (existingActive.length > 0) {
@@ -245,10 +244,10 @@ export class ReservationService {
     }
 
     async findForOrder(ctx: RequestContext, orderId: ID): Promise<Reservation[]> {
-        // unbounded-ok: reservations of one order
-        return this.connection
-            .getRepository(ctx, Reservation)
-            .find({ where: { orderId: String(orderId) }, order: { reservedAt: 'DESC' } });
+        return findBounded(this.connection.getRepository(ctx, Reservation), {
+            where: { orderId: String(orderId) },
+            order: { reservedAt: 'DESC' },
+        });
     }
 
     async setOrderReservationState(

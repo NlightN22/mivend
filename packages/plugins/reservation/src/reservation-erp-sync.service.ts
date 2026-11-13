@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
 import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
+import { findBounded } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 import { ReservationService } from './reservation.service';
@@ -32,8 +33,7 @@ export class ReservationErpSyncService {
         const dictionary = await this.statuses.dictionary(ctx);
         if (dictionary.has(status, 'reservationConfirmed')) {
             const repo = this.connection.getRepository(ctx, Reservation);
-            // unbounded-ok: active reservations of one order
-            const active = await repo.find({
+            const active = await findBounded(repo, {
                 where: { orderId: String(order.id), status: 'active' },
             });
             const unconfirmed = active.filter(r => !r.erpConfirmedAt);

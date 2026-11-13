@@ -1,4 +1,4 @@
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
@@ -60,9 +60,8 @@ export class ErpOrderReserveService {
     }
 
     findForOrder(ctx: RequestContext, orderId: ID): Promise<ErpOrderReserve[]> {
-        // unbounded-ok: erp reserve rows of one order
-        return this.connection
-            .getRepository(ctx, ErpOrderReserve)
-            .find({ where: { orderId: String(orderId) } });
+        return findBounded(this.connection.getRepository(ctx, ErpOrderReserve), {
+            where: { orderId: String(orderId) },
+        });
     }
 }

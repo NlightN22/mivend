@@ -20,7 +20,7 @@ export type {
     OrderChangedInput,
     OrderRegistrationResultInput,
 } from './reservation-write-off-sync.types';
-import { withAggregateLock, withOrderCancelLocks, ctxQuery } from 'shared';
+import { withAggregateLock, withOrderCancelLocks, ctxQuery, findBounded } from 'shared';
 
 // Bridges erp.order.events.v1 `registration-result` and `changed` into the reservation domain (#75).
 // Never publishes ReservationReleasedEvent: that would send a release command back to the ERP that just wrote off.
@@ -247,8 +247,7 @@ export class ReservationWriteOffSyncService {
         warehouseOrderExists = false,
     ): Promise<void> {
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
-        // unbounded-ok: held reservations of one order
-        const held = await reservationRepo.find({
+        const held = await findBounded(reservationRepo, {
             where: { orderId, status: In(['active', 'released']) },
         });
         const active = held.filter(r => r.status === 'active');

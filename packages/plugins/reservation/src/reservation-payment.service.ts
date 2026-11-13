@@ -7,7 +7,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import { PLACEMENT_KEY, type PlacementMetadata } from 'shared';
+import { PLACEMENT_KEY, findBounded, type PlacementMetadata } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 import { isExpectedReservationError } from './reservation-failure';
@@ -136,10 +136,9 @@ export class ReservationPaymentService {
     }
 
     private async loadPayments(ctx: RequestContext, order: Order): Promise<Payment[]> {
-        // unbounded-ok: payments of one order
-        return this.connection
-            .getRepository(ctx, Payment)
-            .find({ where: { order: { id: order.id } } });
+        return findBounded(this.connection.getRepository(ctx, Payment), {
+            where: { order: { id: order.id } },
+        });
     }
 
     private async loadPlacement(

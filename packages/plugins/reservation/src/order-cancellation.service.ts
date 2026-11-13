@@ -12,7 +12,7 @@ import {
 } from '@vendure/core';
 import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { NotificationService } from '@mivend/plugin-notification';
-import { withOrderCancelLocks } from 'shared';
+import { findBounded, withOrderCancelLocks } from 'shared';
 
 import { LessThanOrEqual } from 'typeorm';
 
@@ -98,10 +98,9 @@ export class OrderCancellationService {
     async cancelLocally(ctx: RequestContext, order: Order, reason: string): Promise<void> {
         await this.reservationService.releaseReservations(ctx, order.id);
 
-        // unbounded-ok: payments of one order
-        const payments = await this.connection
-            .getRepository(ctx, Payment)
-            .find({ where: { order: { id: order.id } } });
+        const payments = await findBounded(this.connection.getRepository(ctx, Payment), {
+            where: { order: { id: order.id } },
+        });
         for (const payment of payments.filter(p => p.state === 'Authorized')) {
             await this.paymentService.cancelPayment(ctx, payment.id);
         }
@@ -164,10 +163,9 @@ export class OrderCancellationService {
         order: Order,
         requestRegistered: boolean,
     ): Promise<CancelDecision> {
-        // unbounded-ok: payments of one order
-        const payments = await this.connection
-            .getRepository(ctx, Payment)
-            .find({ where: { order: { id: order.id } } });
+        const payments = await findBounded(this.connection.getRepository(ctx, Payment), {
+            where: { order: { id: order.id } },
+        });
         const fields = order.customFields;
         const dictionary = await this.statuses.dictionary(ctx);
         const facts = {

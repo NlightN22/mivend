@@ -7,7 +7,7 @@ import { pickOrderWarehouse } from './order-check-subject';
 import type { OrderCheckSubject } from './order-check-subject';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { pickLocationWithMostFreeStock } from './reservation-location-picker';
-import { ctxQuery } from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 
 @Injectable()
 export class OrderCheckSubjectLoader {
@@ -51,10 +51,9 @@ export class OrderCheckSubjectLoader {
 
     // Active reservations say where the stock actually sits; before them, the best candidate per line.
     private async resolveWarehouse(ctx: RequestContext, order: Order): Promise<string | null> {
-        // unbounded-ok: active reservations of one order
-        const reservations = await this.connection
-            .getRepository(ctx, Reservation)
-            .find({ where: { orderId: String(order.id), status: 'active' } });
+        const reservations = await findBounded(this.connection.getRepository(ctx, Reservation), {
+            where: { orderId: String(order.id), status: 'active' },
+        });
         const quantityByLocation = new Map<string, number>();
         if (reservations.length > 0) {
             for (const r of reservations) {

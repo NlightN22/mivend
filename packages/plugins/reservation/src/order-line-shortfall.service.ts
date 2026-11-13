@@ -7,6 +7,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
+import { findBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { OrderLineShortfall } from './entities/order-line-shortfall.entity';
@@ -37,10 +38,10 @@ export class OrderLineShortfallService {
         const order = await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId }).getOne();
         if (!order) throw new UserInputError('Order not found');
 
-        // unbounded-ok: shortfall rows of one order
-        const rows = await this.connection
-            .getRepository(ctx, OrderLineShortfall)
-            .find({ where: { orderId: String(orderId) }, order: { createdAt: 'ASC', id: 'ASC' } });
+        const rows = await findBounded(this.connection.getRepository(ctx, OrderLineShortfall), {
+            where: { orderId: String(orderId) },
+            order: { createdAt: 'ASC', id: 'ASC' },
+        });
         if (rows.length === 0) return [];
         const variants = await this.connection.getRepository(ctx, ProductVariant).find({
             where: { id: In([...new Set(rows.map(r => r.productVariantId))]) },
