@@ -5,7 +5,6 @@
         "packages/plugins/approval-workflow": 4,
         "packages/plugins/bulk-operations": 3,
         "packages/plugins/checks": 3,
-        "packages/plugins/counterparty": 15,
         "packages/plugins/cross-reference": 1,
         "packages/plugins/customer-pricing": 1,
         "packages/plugins/deferred-payment": 3,

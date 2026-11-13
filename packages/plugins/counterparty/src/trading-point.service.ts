@@ -27,7 +27,13 @@ import {
     isUsableLocation,
     resolveTradingPointLocation,
 } from './trading-point-location';
-import { ctxQuery, normalizePhone, validateTradingPointContact, type ContactField } from 'shared';
+import {
+    ctxQuery,
+    findBounded,
+    normalizePhone,
+    validateTradingPointContact,
+    type ContactField,
+} from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -379,8 +385,7 @@ export class TradingPointService {
     // Shop API callers (customer self-service) must never see a trading point staff deactivated
     // — only Admin API (manager portal) needs inactive ones visible, so staff can reactivate them.
     async findByCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<TradingPoint[]> {
-        // unbounded-ok: trading points of one counterparty
-        return this.connection.getRepository(ctx, TradingPoint).find({
+        return findBounded(this.connection.getRepository(ctx, TradingPoint), {
             where: {
                 counterpartyId: String(counterpartyId),
                 ...(ctx.apiType === 'admin' ? {} : { isActive: true, address: Not('') }),
@@ -496,8 +501,7 @@ export class TradingPointService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<TradingPoint[]> {
-        // unbounded-ok: active trading points of one counterparty
-        return this.connection.getRepository(ctx, TradingPoint).find({
+        return findBounded(this.connection.getRepository(ctx, TradingPoint), {
             where: {
                 counterpartyId: String(counterpartyId),
                 isActive: true,
@@ -513,8 +517,7 @@ export class TradingPointService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<TradingPoint[]> {
-        // unbounded-ok: hidden trading points of one counterparty
-        return this.connection.getRepository(ctx, TradingPoint).find({
+        return findBounded(this.connection.getRepository(ctx, TradingPoint), {
             where: {
                 counterpartyId: String(counterpartyId),
                 customerStatus: 'hidden',

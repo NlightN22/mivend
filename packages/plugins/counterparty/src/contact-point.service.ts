@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Administrator, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { FindOptionsWhere, ObjectType } from 'typeorm';
 import { In } from 'typeorm';
-import { withAggregateLock } from 'shared';
+import { ctxQueryBounded, findBounded, withAggregateLock } from 'shared';
 
 import { AdministratorContactPoint } from './entities/administrator-contact-point.entity';
 import { OrganizationContactPoint } from './entities/organization-contact-point.entity';
@@ -113,15 +113,15 @@ export class ContactPointService {
         ctx: RequestContext,
         counterpartyIds: readonly (number | string)[],
     ): Promise<Map<string, ChosenContact>> {
-        // unbounded-ok: contact channels of the counterparties passed in, bounded by that list
-        const rows: Array<{ id: number } & ChosenContact> = await this.connection
-            .getRepository(ctx, Counterparty)
-            .query(
-                `SELECT c.id, ${chosenChannelValueSql('email')} AS email,
+        const rows = await ctxQueryBounded<{ id: number } & ChosenContact>(
+            this.connection,
+            ctx,
+            `SELECT c.id, ${chosenChannelValueSql('email')} AS email,
                         ${chosenChannelValueSql('phone')} AS phone
                  FROM counterparty c WHERE c.id = ANY($1::int[])`,
-                [counterpartyIds.map(Number)],
-            );
+            [counterpartyIds.map(Number)],
+            Math.max(1, counterpartyIds.length),
+        );
         return new Map(rows.map(r => [String(r.id), { email: r.email, phone: r.phone }]));
     }
 
@@ -165,8 +165,7 @@ export class ContactPointService {
         const { entity, column, table } = LINKS[kind];
         const links = this.connection.getRepository(ctx, entity);
         const points = this.connection.getRepository(ctx, ContactPoint);
-        // unbounded-ok: contact point links of one owner
-        const owned = await links.find({
+        const owned = await findBounded(links, {
             where: { [column]: ownerId } as unknown as FindOptionsWhere<ContactPointLink>,
             relations: { contactPoint: true },
         });

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { getPageAndCount } from 'shared';
+import { getPageAndCount, getRawManyBounded } from 'shared';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
@@ -176,8 +176,7 @@ export class VisibilityGrantQueryService {
         if (!ctx.userHasPermissions([CustomPermission.ManageAccessControl.Permission])) {
             await this.restrictToCaller(ctx, qb);
         }
-        // unbounded-ok: visible subset of the grant ids passed in, ids only
-        const rows = await qb.getRawMany<{ id: number }>();
+        const rows = await getRawManyBounded<{ id: number }>(qb, numeric.length);
         return new Set(rows.map(r => String(r.id)));
     }
 

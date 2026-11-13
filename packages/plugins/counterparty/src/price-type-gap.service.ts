@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { getPageAndCount } from 'shared';
+import { getManyBounded, getPageAndCount } from 'shared';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { CounterpartyService } from './counterparty.service';
@@ -59,13 +59,14 @@ export class PriceTypeGapService {
         const contractIds = counterparties.flatMap(c =>
             c.mainContractId ? [c.mainContractId] : [],
         );
-        // unbounded-ok: contracts matched by the erp ids of one page of counterparties
         const contracts = contractIds.length
-            ? await this.connection
-                  .getRepository(ctx, Contract)
-                  .createQueryBuilder('k')
-                  .where('k.erpId IN (:...contractIds)', { contractIds })
-                  .getMany()
+            ? await getManyBounded(
+                  this.connection
+                      .getRepository(ctx, Contract)
+                      .createQueryBuilder('k')
+                      .where('k.erpId IN (:...contractIds)', { contractIds }),
+                  contractIds.length,
+              )
             : [];
         const contractByErpId = new Map(contracts.map(k => [k.erpId, k]));
 

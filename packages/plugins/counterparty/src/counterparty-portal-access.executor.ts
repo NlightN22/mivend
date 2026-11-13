@@ -14,6 +14,7 @@ import {
     type BulkUndoPlan,
 } from '@mivend/plugin-bulk-operations';
 
+import { getRawManyBounded } from 'shared';
 import { Counterparty } from './entities/counterparty.entity';
 import { findLinkedInnDuplicate, normalizeInn } from './counterparty-inn-guard';
 import { parseCounterpartyMatching, resolveCounterpartyIds } from './counterparty-bulk-matching';
@@ -158,15 +159,16 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         const numeric = [...new Set(targetIds.filter(id => /^\d+$/.test(id)))];
         const visible = new Set<string>();
         for (let i = 0; i < numeric.length; i += ID_CHUNK) {
+            const chunk = numeric.slice(i, i + ID_CHUNK);
             const qb = this.connection
                 .getRepository(ctx, Counterparty)
                 .createQueryBuilder('c')
                 .select('c.id', 'id')
-                .where('c.id IN (:...ids)', { ids: numeric.slice(i, i + ID_CHUNK) });
-            // unbounded-ok: ids selected from a chunk of ID_CHUNK ids passed in
-            const rows = await (
-                await applyCounterpartyVisibilityScope(this.accessScope, ctx, qb)
-            ).getRawMany<{ id: number }>();
+                .where('c.id IN (:...ids)', { ids: chunk });
+            const rows = await getRawManyBounded<{ id: number }>(
+                await applyCounterpartyVisibilityScope(this.accessScope, ctx, qb),
+                chunk.length,
+            );
             for (const row of rows) visible.add(String(row.id));
         }
         return visible;

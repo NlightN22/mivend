@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Logger, RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { AccessScopeService } from '@mivend/plugin-access-control';
+import { findBounded } from 'shared';
 import { QueryFailedError } from 'typeorm';
 
 import { Counterparty } from './entities/counterparty.entity';
@@ -22,8 +23,7 @@ export class CounterpartyTeamService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<CounterpartyTeamMember[]> {
-        // unbounded-ok: team members of one counterparty
-        return this.connection.getRepository(ctx, CounterpartyTeamMember).find({
+        return findBounded(this.connection.getRepository(ctx, CounterpartyTeamMember), {
             where: { counterpartyId: String(counterpartyId) },
             order: { createdAt: 'ASC' },
         });

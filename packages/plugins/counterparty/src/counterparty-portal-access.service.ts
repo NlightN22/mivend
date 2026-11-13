@@ -12,7 +12,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { loggerCtx } from './types';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, ctxQueryBounded, withAggregateLock } from 'shared';
 import { withInnBindingGuard } from './counterparty-inn-guard';
 import { ContactPointService } from './contact-point.service';
 import { PortalAccessPreconditionError } from './portal-access-precondition';
@@ -49,8 +49,7 @@ export class CounterpartyPortalAccessService {
 
         // Raw SQL: the link lives in a JSONB custom-field column, not a TypeORM-mapped relation.
         // QueryBuilder dot-path filters can't traverse it.
-        // unbounded-ok: portal customers of one counterparty, a handful of logins
-        const rows = await ctxQuery<Array<{ id: ID }>>(
+        const rows = await ctxQueryBounded<{ id: ID }>(
             this.connection,
             ctx,
             `SELECT cu.id AS id FROM customer cu

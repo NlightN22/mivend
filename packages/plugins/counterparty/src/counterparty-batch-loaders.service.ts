@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { CtxLoader, ctxQuery } from 'shared';
+import { CtxLoader, ctxQuery, findBounded, getManyBounded } from 'shared';
 import { In, Not } from 'typeorm';
 
 import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
@@ -9,6 +9,9 @@ import { ContactPointService, type ChosenContact } from './contact-point.service
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
+
+// Trading points are a handful per counterparty; a larger one fails loudly instead of truncating.
+const POINTS_PER_COUNTERPARTY = 100;
 
 const isRowId = (key: string): boolean => /^\d+$/.test(key);
 
@@ -68,8 +71,9 @@ export class CounterpartyBatchLoaders {
             .select('c.id')
             .where('c.id IN (:...ids)', { ids: keys });
         const visible = await applyCounterpartyVisibilityScope(this.accessScopeService, ctx, qb);
-        // unbounded-ok: visible subset of the counterparty ids passed in, ids only
-        const seen = new Set((await visible.getMany()).map(row => String(row.id)));
+        const seen = new Set(
+            (await getManyBounded(visible, keys.length)).map(row => String(row.id)),
+        );
         return keys.map(key => !seen.has(key));
     }
 
@@ -77,15 +81,18 @@ export class CounterpartyBatchLoaders {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<TradingPoint[][]> {
-        // unbounded-ok: trading points of the counterparties passed in, bounded by that list
-        const rows = await this.connection.getRepository(ctx, TradingPoint).find({
-            where: {
-                counterpartyId: In([...keys]),
-                ...(ctx.apiType === 'admin' ? {} : { isActive: true, address: Not('') }),
+        const rows = await findBounded(
+            this.connection.getRepository(ctx, TradingPoint),
+            {
+                where: {
+                    counterpartyId: In([...keys]),
+                    ...(ctx.apiType === 'admin' ? {} : { isActive: true, address: Not('') }),
+                },
+                relations: ['contacts'],
+                order: { name: 'ASC' },
             },
-            relations: ['contacts'],
-            order: { name: 'ASC' },
-        });
+            keys.length * POINTS_PER_COUNTERPARTY,
+        );
         return keys.map(key => rows.filter(row => String(row.counterpartyId) === key));
     }
 

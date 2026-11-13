@@ -5,7 +5,7 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Contract } from './entities/contract.entity';
 import { chooseOrderContract } from './order-contract-rule';
 import { loggerCtx } from './types';
-import { ctxQuery } from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 
 // Fields from the `contract` Kafka stream (ContractChanged, issue #105) — `undefined` means "not
 // sent, leave unchanged" on update, mirroring CounterpartyService.upsertActiveState.
@@ -100,8 +100,7 @@ export class ContractService {
     }
 
     async findActiveForCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<Contract[]> {
-        // unbounded-ok: active customer contracts of one counterparty
-        return this.connection.getRepository(ctx, Contract).find({
+        return findBounded(this.connection.getRepository(ctx, Contract), {
             where: { counterpartyId: String(counterpartyId), isActive: true },
             order: { name: 'ASC', erpId: 'ASC' },
         });
@@ -112,8 +111,7 @@ export class ContractService {
         ctx: RequestContext,
         counterpartyId: ID,
     ): Promise<Contract[]> {
-        // unbounded-ok: active customer contracts of one counterparty
-        return this.connection.getRepository(ctx, Contract).find({
+        return findBounded(this.connection.getRepository(ctx, Contract), {
             where: {
                 counterpartyId: String(counterpartyId),
                 isActive: true,

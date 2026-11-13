@@ -9,7 +9,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { IsNull } from 'typeorm';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 import {
     BranchAssignmentService,
     CustomPermission,
@@ -148,10 +148,11 @@ export class VisibilityGrantService {
     }
 
     private async assertLiveAdministrators(ctx: RequestContext, ids: string[]): Promise<void> {
-        // unbounded-ok: administrators matched by the ids passed in
-        const live = await this.connection
-            .getRepository(ctx, Administrator)
-            .find({ where: ids.map(id => ({ id, deletedAt: IsNull() })), select: ['id'] });
+        const live = await findBounded(
+            this.connection.getRepository(ctx, Administrator),
+            { where: ids.map(id => ({ id, deletedAt: IsNull() })), select: ['id'] },
+            Math.max(1, ids.length),
+        );
         if (live.length !== ids.length) throw new UserInputError('Administrator not found');
     }
 
