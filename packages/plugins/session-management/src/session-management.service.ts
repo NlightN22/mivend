@@ -9,6 +9,7 @@ import {
     TransactionalConnection,
     UserService,
 } from '@vendure/core';
+import { findBounded } from 'shared';
 
 import { ActingContextService } from './acting-context.service';
 import { labelForUserAgent, SessionSummary } from './session.types';
@@ -39,8 +40,7 @@ export class SessionManagementService {
             return [];
         }
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
-        // unbounded-ok: active sessions of one user
-        const sessions = await repo.find({
+        const sessions = await findBounded(repo, {
             where: { user: { id: userId }, invalidated: false },
             order: { createdAt: 'DESC' },
         });
@@ -71,8 +71,9 @@ export class SessionManagementService {
         }
         const currentToken = ctx.session?.token;
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
-        // unbounded-ok: active sessions of one user
-        const sessions = await repo.find({ where: { user: { id: userId }, invalidated: false } });
+        const sessions = await findBounded(repo, {
+            where: { user: { id: userId }, invalidated: false },
+        });
         for (const session of sessions.filter(isOwn)) {
             if (session.token !== currentToken) {
                 await this.invalidate(ctx, session);
@@ -100,8 +101,7 @@ export class SessionManagementService {
     // Core's deleteSessionsByUser also removes the acting sessions, which share the customer's user.
     async deleteOwnSessions(ctx: RequestContext, userId: ID): Promise<void> {
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
-        // unbounded-ok: sessions of one user
-        const own = (await repo.find({ where: { user: { id: userId } } })).filter(isOwn);
+        const own = (await findBounded(repo, { where: { user: { id: userId } } })).filter(isOwn);
         await repo.remove(own);
         for (const session of own) {
             await this.configService.authOptions.sessionCacheStrategy.delete(session.token);

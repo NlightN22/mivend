@@ -10,7 +10,7 @@ import {
 } from '@vendure/core';
 import {
     AWAITING_MANAGER_KEY,
-    ctxQuery,
+    ctxQueryBounded,
     CARD_AMOUNT_CHANGED_CODE,
     CREDIT_ACKNOWLEDGED_KEY,
     CREDIT_LIMIT_EXCEEDED_KEY,
@@ -133,8 +133,7 @@ export class CreditPlacementService {
         assessment: DeferredCreditAssessment,
     ): Promise<{ code: string; hold: boolean } | null> {
         if (form === 'card' || assessment.exceeded) return null;
-        // unbounded-ok: the shipping lines of one order
-        const methods = await ctxQuery<Array<{ code: string }>>(
+        const methods = await ctxQueryBounded<{ code: string }>(
             this.connection,
             ctx,
             `SELECT sm.code FROM shipping_line sl

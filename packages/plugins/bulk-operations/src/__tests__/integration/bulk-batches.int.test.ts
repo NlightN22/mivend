@@ -133,6 +133,28 @@ describe('draft minting (preview)', () => {
     });
 });
 
+describe('item read ceiling', () => {
+    it('lists a batch at MAX_SELECTION items and fails with QUERY_TOO_LARGE one over', async () => {
+        const stack = buildStack(
+            connectionFor(dataSource),
+            fakeExecutor(connectionFor(dataSource)),
+        );
+        const draft = await stack.batches.preview(actor, FAKE_TYPE, {}, ['1']);
+        const fill = (from: number, to: number) =>
+            dataSource.query(
+                `INSERT INTO bulk_batch_item ("batchId", "targetId", "previewOutcome")
+                 SELECT $1, 'x' || g, 'ok' FROM generate_series($2::int, $3::int) g`,
+                [draft.id, from, to],
+            );
+        await fill(1, MAX_SELECTION - 1);
+        await expect(stack.queries.items(actor, draft.uuid)).resolves.toBeDefined();
+        await fill(MAX_SELECTION, MAX_SELECTION + 1);
+        await expect(stack.queries.items(actor, draft.uuid)).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
+    });
+});
+
 describe('idempotency', () => {
     it('runs a batch twice, in parallel and again after it is done, with one effect per record', async () => {
         const executor = fakeExecutor(connectionFor(dataSource));

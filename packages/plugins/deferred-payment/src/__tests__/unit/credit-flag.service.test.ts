@@ -9,6 +9,7 @@ function visibleQuery(orders: unknown[]) {
     const qb = {
         alias: 'Order',
         andWhere: vi.fn().mockReturnThis(),
+        take: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue(orders),
     };
     return qb;
@@ -25,8 +26,23 @@ describe('CreditFlagService.flaggedCounterpartyIds', () => {
         const buildVisibleOrdersQuery = vi.fn().mockResolvedValue(qb);
         const service = new CreditFlagService({} as never, { buildVisibleOrdersQuery } as never);
         expect(await service.flaggedCounterpartyIds(ctx)).toEqual(['3', '4']);
-        expect(buildVisibleOrdersQuery).toHaveBeenCalledWith(ctx, expect.objectContaining({}));
+        expect(qb.take).toHaveBeenCalledWith(501);
         expect(qb.andWhere).toHaveBeenCalledTimes(3);
+    });
+
+    it('passes at the scan ceiling and fails one over, never truncating', async () => {
+        const run = (count: number) =>
+            new CreditFlagService(
+                {} as never,
+                {
+                    buildVisibleOrdersQuery: async () =>
+                        visibleQuery(Array.from({ length: count }, () => ({}))),
+                } as never,
+            ).flaggedCounterpartyIds(ctx);
+        await expect(run(500)).resolves.toEqual([]);
+        await expect(run(501)).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
     });
 
     it('returns nothing when no scoped order is flagged', async () => {
@@ -45,6 +61,7 @@ describe('CreditFlagService.isOrderFlagged', () => {
             distinct: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
             getRawMany: vi.fn().mockResolvedValue([{ orderId: 9 }]),
         };
         const service = new CreditFlagService(
@@ -58,5 +75,24 @@ describe('CreditFlagService.isOrderFlagged', () => {
         expect(qb.where).toHaveBeenCalledWith('p."orderId" IN (:...orderIds)', {
             orderIds: [9, 10, 11],
         });
+    });
+
+    it('fails when the read returns more rows than keys asked for', async () => {
+        const qb = {
+            select: vi.fn().mockReturnThis(),
+            distinct: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            getRawMany: vi.fn().mockResolvedValue([{ orderId: 9 }, { orderId: 10 }]),
+        };
+        const service = new CreditFlagService(
+            { getRepository: () => ({ createQueryBuilder: () => qb }) } as never,
+            {} as never,
+        );
+        await expect(service.isOrderFlagged({} as RequestContext, 9)).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
+        expect(qb.limit).toHaveBeenCalledWith(2);
     });
 });

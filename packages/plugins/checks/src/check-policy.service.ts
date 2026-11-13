@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'node:crypto';
 import { Branch } from '@mivend/plugin-access-control';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 import { In, IsNull, Repository } from 'typeorm';
 
 import { CheckRegistry } from './check-registry';
@@ -94,13 +94,17 @@ export class CheckPolicyService {
         if (providers.length === 0) return new Map();
         const repo = this.connection.getRepository(ctx, CheckPolicy);
         const codes = providers.map(p => p.code);
-        // unbounded-ok: policies of the check codes and stage passed in, one per code and branch
-        const rows = await repo.find({
-            where: [
-                { stage, checkCode: In(codes), branchId: IsNull() },
-                ...(branchId ? [{ stage, checkCode: In(codes), branchId }] : []),
-            ],
-        });
+        // Ceiling: one default and one branch policy per code.
+        const rows = await findBounded(
+            repo,
+            {
+                where: [
+                    { stage, checkCode: In(codes), branchId: IsNull() },
+                    ...(branchId ? [{ stage, checkCode: In(codes), branchId }] : []),
+                ],
+            },
+            codes.length * 2,
+        );
         const effective = new Map<string, EffectivePolicy>();
         for (const p of providers) {
             const forCode = rows.filter(r => r.checkCode === p.code);
@@ -145,11 +149,15 @@ export class CheckPolicyService {
         if (providers.length === 0) {
             return [];
         }
-        // unbounded-ok: policies of the registered check providers, one per code, stage and branch
-        return this.connection.getRepository(ctx, CheckPolicy).find({
-            where: { checkCode: In(providers.map(p => p.code)) },
-            order: { checkCode: 'ASC', stage: 'ASC', branchId: 'ASC' },
-        });
+        // Ceiling 2000: providers x stages x branches, far below it.
+        return findBounded(
+            this.connection.getRepository(ctx, CheckPolicy),
+            {
+                where: { checkCode: In(providers.map(p => p.code)) },
+                order: { checkCode: 'ASC', stage: 'ASC', branchId: 'ASC' },
+            },
+            2000,
+        );
     }
 
     async update(ctx: RequestContext, input: UpdateCheckPolicyInput): Promise<CheckPolicy> {

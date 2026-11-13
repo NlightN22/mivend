@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, findBounded, withAggregateLock } from 'shared';
 
 import { CheckPolicyService } from './check-policy.service';
 import { CheckRegistry } from './check-registry';
@@ -223,8 +223,7 @@ export class ChecksService {
         if (!ids.has(subjectId)) {
             return [];
         }
-        // unbounded-ok: check results of one subject
-        return this.connection.getRepository(ctx, CheckResult).find({
+        return findBounded(this.connection.getRepository(ctx, CheckResult), {
             where: { subjectType, subjectId },
             order: { id: 'ASC' },
         });

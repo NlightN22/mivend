@@ -6,13 +6,13 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, ctxQueryBounded } from 'shared';
 
 import { actorIdOf } from './actor-id';
 import { BulkExecutorRegistry } from './bulk-executor-registry';
 import { BATCH_COLUMNS, findBatch } from './bulk-batch.sql';
 import { buildBatchWhere, SORT_COLUMNS, type BatchListOptions } from './bulk-batch-list-filter';
-import { clampSkip, clampTake, type BulkBatchRow, type BulkItemRow } from './types';
+import { clampSkip, clampTake, MAX_SELECTION, type BulkBatchRow, type BulkItemRow } from './types';
 
 interface Extras {
     undoOfUuid: string | null;
@@ -136,12 +136,12 @@ export class BulkBatchQueryService {
     }
 
     private async allTargets(ctx: RequestContext, batchId: number): Promise<string[]> {
-        // unbounded-ok: items of one batch, a batch holds at most MAX_SELECTION (2000) targets
-        const rows = await ctxQuery<Array<{ targetId: string }>>(
+        const rows = await ctxQueryBounded<{ targetId: string }>(
             this.connection,
             ctx,
             `SELECT "targetId" FROM bulk_batch_item WHERE "batchId" = $1`,
             [batchId],
+            MAX_SELECTION,
         );
         return rows.map(r => r.targetId);
     }
@@ -152,14 +152,17 @@ export class BulkBatchQueryService {
         rows: Array<BulkBatchRow & Extras>,
     ): Promise<ScopedBatch[]> {
         if (rows.length === 0) return [];
-        // unbounded-ok: items of the listed batches, each at most MAX_SELECTION (2000) targets and a page of batches
-        const items = await ctxQuery<
-            Array<{ batchId: number; targetId: string; outcome: string | null }>
-        >(
+        // Ceiling: each listed batch holds at most MAX_SELECTION items.
+        const items = await ctxQueryBounded<{
+            batchId: number;
+            targetId: string;
+            outcome: string | null;
+        }>(
             this.connection,
             ctx,
             `SELECT "batchId", "targetId", outcome FROM bulk_batch_item WHERE "batchId" = ANY($1::int[])`,
             [rows.map(r => r.id)],
+            rows.length * MAX_SELECTION,
         );
         const visibleByType = new Map<string, Set<string>>();
         for (const type of new Set(rows.map(r => r.operationType))) {

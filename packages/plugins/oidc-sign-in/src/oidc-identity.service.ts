@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, ctxQueryBounded, withAggregateLock } from 'shared';
 
 import { OIDC_STRATEGY_NAME } from './oidc.types';
 import type { OidcClaims } from './oidc.types';
@@ -48,8 +48,8 @@ export class OidcIdentityService {
         ctx: RequestContext,
         sub: string,
     ): Promise<(AdminRow & { active: boolean }) | null> {
-        // unbounded-ok: one external identity per strategy and subject, only the first is used
-        const rows = await ctxQuery<Array<AdminRow & { active: boolean }>>(
+        // Ceiling 1: a second identity for one subject is ambiguous, so the sign-in fails.
+        const rows = await ctxQueryBounded<AdminRow & { active: boolean }>(
             this.connection,
             ctx,
             `SELECT m."userId"::text AS "userId", u.identifier,
@@ -58,6 +58,7 @@ export class OidcIdentityService {
              LEFT JOIN administrator a ON a."userId" = u.id
              WHERE m.type = 'ExternalAuthenticationMethod' AND m.strategy = $1 AND m."externalIdentifier" = $2`,
             [OIDC_STRATEGY_NAME, sub],
+            1,
         );
         return rows[0] ?? null;
     }

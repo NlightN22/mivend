@@ -1,19 +1,13 @@
 {
     "groups": {
         "apps/server": 2,
-        "packages/plugins/acting-session": 2,
-        "packages/plugins/bulk-operations": 3,
-        "packages/plugins/checks": 3,
         "packages/plugins/cross-reference": 1,
         "packages/plugins/customer-pricing": 1,
-        "packages/plugins/deferred-payment": 3,
         "packages/plugins/notification": 2,
-        "packages/plugins/oidc-sign-in": 1,
         "packages/plugins/order-identity": 1,
         "packages/plugins/price-entry": 14,
         "packages/plugins/retro-bonus": 2,
         "packages/plugins/saved-views": 1,
-        "packages/plugins/session-management": 3,
         "packages/plugins/sync": 2,
         "packages/shared": 2
     }

@@ -84,3 +84,28 @@ describe('linking by e-mail, then by sub', () => {
         expect((await fx.linkedSubs()).length).toBe(1);
     });
 });
+
+describe('duplicate identity rows for one subject', () => {
+    it('fails the sign-in with QUERY_TOO_LARGE instead of picking one', async () => {
+        const id = await fx.addAdmin('dup-sub@example.com');
+        await fx.dataSource.query('DROP INDEX uq_oidc_subject');
+        try {
+            await fx.dataSource.query(
+                `INSERT INTO authentication_method (type, strategy, "externalIdentifier", metadata, "userId")
+                 VALUES ('ExternalAuthenticationMethod', 'oidc', 'sd', '{}', $1::int),
+                        ('ExternalAuthenticationMethod', 'oidc', 'sd', '{}', $1::int)`,
+                [id],
+            );
+            await expect(
+                fx.identity.resolve(ctx, { sub: 'sd', email: null }),
+            ).rejects.toMatchObject({
+                extensions: { code: 'QUERY_TOO_LARGE' },
+            });
+        } finally {
+            await fx.reset();
+            await fx.dataSource.query(
+                `CREATE UNIQUE INDEX uq_oidc_subject ON authentication_method ("externalIdentifier") WHERE strategy = 'oidc'`,
+            );
+        }
+    });
+});

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { ID, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { CtxLoader } from 'shared';
+import { CtxLoader, getManyBounded, getRawManyBounded } from 'shared';
 
 import { UNCONFIRMED_ERP_STATUSES_SQL } from './open-deferred-exposure.service';
 
@@ -25,33 +25,34 @@ export class CreditFlagService {
     }
 
     private async loadFlagged(ctx: RequestContext, keys: readonly string[]): Promise<boolean[]> {
-        // unbounded-ok: grouped by order id of the batch keys passed in
-        const rows = await this.connection
+        const qb = this.connection
             .getRepository(ctx, Payment)
             .createQueryBuilder('p')
             .select('p."orderId"', 'orderId')
             .distinct(true)
             .where('p."orderId" IN (:...orderIds)', { orderIds: keys.map(Number) })
-            .andWhere(FLAGGED_PAYMENT_SQL)
-            .getRawMany<{ orderId: number | string }>();
+            .andWhere(FLAGGED_PAYMENT_SQL);
+        const rows = await getRawManyBounded<{ orderId: number | string }>(
+            qb,
+            Math.max(1, keys.length),
+        );
         const flagged = new Set(rows.map(row => String(row.orderId)));
         return keys.map(key => flagged.has(key));
     }
 
     // Counterparties of in-scope, still-unconfirmed orders that were placed over the limit.
     async flaggedCounterpartyIds(ctx: RequestContext): Promise<string[]> {
-        const qb = await this.orderVisibilityService.buildVisibleOrdersQuery(ctx, {
-            take: MAX_SCANNED_ORDERS,
-        });
+        const qb = await this.orderVisibilityService.buildVisibleOrdersQuery(ctx);
         const alias = `"${qb.alias}"`;
-        // unbounded-ok: order scan is capped at MAX_SCANNED_ORDERS by the visible orders query
-        const orders: Order[] = await qb
-            .andWhere(`${alias}.state <> 'Cancelled'`)
-            .andWhere(`${alias}."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})`)
-            .andWhere(
-                `EXISTS (SELECT 1 FROM payment p WHERE p."orderId" = ${alias}.id AND ${FLAGGED_PAYMENT_SQL})`,
-            )
-            .getMany();
+        const orders: Order[] = await getManyBounded(
+            qb
+                .andWhere(`${alias}.state <> 'Cancelled'`)
+                .andWhere(`${alias}."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})`)
+                .andWhere(
+                    `EXISTS (SELECT 1 FROM payment p WHERE p."orderId" = ${alias}.id AND ${FLAGGED_PAYMENT_SQL})`,
+                ),
+            MAX_SCANNED_ORDERS,
+        );
         const ids = orders
             .map(o => o.customer?.customFields as { counterpartyId?: string } | undefined)
             .map(cf => cf?.counterpartyId)

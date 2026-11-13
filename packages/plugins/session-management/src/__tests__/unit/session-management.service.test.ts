@@ -188,6 +188,19 @@ describe('SessionManagementService', () => {
         expect(deleteFromCache).toHaveBeenCalledWith('other-token-2');
     });
 
+    it('fails the sign-out of other sessions over the read ceiling, ending none', async () => {
+        const many = (n: number) =>
+            Array.from({ length: n }, (_, i) => makeSession({ id: `s-${i}`, token: `t-${i}` }));
+        repo.find.mockResolvedValue(many(1000));
+        await expect(service.endOtherSessions(ctxFor('user-1', 't-0'))).resolves.toBe(true);
+        repo.update.mockClear();
+        repo.find.mockResolvedValue(many(1001));
+        await expect(service.endOtherSessions(ctxFor('user-1', 't-0'))).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
+        expect(repo.update).not.toHaveBeenCalled();
+    });
+
     it("ends all the user's own sessions including the current one, but never an acting session", async () => {
         userService.getUserById.mockResolvedValue({ id: 'user-1' });
         const own = makeSession({ id: 'session-1', token: 'own-token' });

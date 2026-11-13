@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, ctxQueryBounded } from 'shared';
 
 import { ActingSessionLivenessService } from './acting-session-liveness.service';
 import {
@@ -31,8 +31,7 @@ export class ActingLimitService {
     async enforceManagerCap(ctx: RequestContext, administratorId: string): Promise<number> {
         await this.liveness.endDeadSessionsOfAdministrator(ctx, this.ttl(), administratorId);
         const now = new Date();
-        // unbounded-ok: open acting tickets and sessions of one administrator
-        const open = await ctxQuery<OpenItem[]>(
+        const open = await ctxQueryBounded<OpenItem>(
             this.connection,
             ctx,
             `SELECT kind, ref FROM (
@@ -54,8 +53,7 @@ export class ActingLimitService {
 
     async enforceCustomerCap(ctx: RequestContext, userId: string): Promise<number> {
         await this.liveness.endDeadSessionsOfUser(ctx, this.ttl(), userId);
-        // unbounded-ok: sessions of one customer user beyond the per-customer cap
-        const rows = await ctxQuery<Array<{ token: string }>>(
+        const rows = await ctxQueryBounded<{ token: string }>(
             this.connection,
             ctx,
             `SELECT token FROM session

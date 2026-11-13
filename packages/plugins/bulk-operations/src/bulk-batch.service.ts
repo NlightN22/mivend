@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, ctxQueryBounded, withAggregateLock } from 'shared';
 
 import type { BulkExecutor, BulkParameters } from './bulk-executor';
 import { BulkExecutorRegistry } from './bulk-executor-registry';
@@ -160,12 +160,12 @@ export class BulkBatchService {
         executor: BulkExecutor,
         batchId: number,
     ): Promise<string[]> {
-        // unbounded-ok: applied items of one batch, at most MAX_SELECTION (2000) targets
-        const rows = await ctxQuery<Array<{ targetId: string }>>(
+        const rows = await ctxQueryBounded<{ targetId: string }>(
             this.connection,
             ctx,
             `SELECT "targetId" FROM bulk_batch_item WHERE "batchId" = $1 AND outcome = 'applied'`,
             [batchId],
+            MAX_SELECTION,
         );
         const visible = await executor.visibleTargets(
             ctx,

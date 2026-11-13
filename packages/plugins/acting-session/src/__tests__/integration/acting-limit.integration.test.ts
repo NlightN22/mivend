@@ -167,6 +167,27 @@ describe('ActingLimitService (real Postgres)', () => {
         expect(cacheDelete).toHaveBeenCalledTimes(5);
     });
 
+    it('fails the start over the read ceiling and ends nothing, passing at the ceiling', async () => {
+        const seed = (n: number) =>
+            dataSource.query(
+                `INSERT INTO session (token, type, invalidated, expires, "customFieldsActingadministratorid", "customFieldsActingparentsessionid", "userId")
+                 SELECT 'bulk-' || g, 'AuthenticatedSession', false, now() + interval '1 day', '1', '10', 5
+                 FROM generate_series(1, $1::int) g`,
+                [n],
+            );
+        await seed(1000);
+        expect(await limits(10, 1).enforceCustomerCap(testRequestContext, '5')).toBe(1000);
+        await dataSource.query(`DELETE FROM session WHERE token LIKE 'bulk-%'`);
+        cacheDelete.mockClear();
+        await seed(1002);
+        await expect(
+            limits(10, 1).enforceCustomerCap(testRequestContext, '5'),
+        ).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
+        expect(cacheDelete).toHaveBeenCalledTimes(0);
+    });
+
     it('does not let a dead acting session (manager signed out) occupy a slot or evict a live one', async () => {
         await insertSession('live', true, 5);
         await insertSession('orphan', true, 5);
