@@ -33,8 +33,8 @@ describe('describeCategoryVisibility', () => {
             col('4', [], false, 'visible'),
             col('5', [], false),
         ]);
-        expect(info.get('2')?.hiddenReason).toBe('Own feed');
-        expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
+        expect(info.get('2')?.hiddenReason).toBe('feed');
+        expect(info.get('3')?.hiddenReason).toBe('ancestor');
         expect(info.get('4')?.hiddenReason).toBe('');
         expect(info.get('5')?.hiddenReason).toBe('');
     });
@@ -46,10 +46,10 @@ describe('describeCategoryVisibility', () => {
             col('4', ['2'], false, 'visible'),
             col('5', ['2'], true, 'hidden'),
         ]);
-        expect(info.get('2')?.hiddenReason).toBe('Manual override');
-        expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
+        expect(info.get('2')?.hiddenReason).toBe('manual');
+        expect(info.get('3')?.hiddenReason).toBe('ancestor');
         expect(info.get('4')?.hiddenReason).toBe('');
-        expect(info.get('5')?.hiddenReason).toBe('Manual override');
+        expect(info.get('5')?.hiddenReason).toBe('manual');
     });
 
     it('reports a hidden empty leaf under a hidden override parent as a hidden ancestor', () => {
@@ -57,7 +57,7 @@ describe('describeCategoryVisibility', () => {
             col('2', [], true, 'hidden'),
             col('3', ['2'], true),
         ]);
-        expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
+        expect(info.get('3')?.hiddenReason).toBe('ancestor');
     });
 
     it('flags rows with a hidden ancestor so the page can withhold the visible override', () => {

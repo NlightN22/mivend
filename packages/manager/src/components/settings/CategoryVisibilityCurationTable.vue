@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvSelect,
@@ -15,11 +16,8 @@ import {
 } from '../../api/categoryVisibility';
 import { buildCategoryTreeRows } from '../../utils/categoryVisibilityTree';
 
-// See manager-table-standard skill. `name` is the identifying/required column, backed by a
-// client-side toolbar search (same exemption reasoning as WarehouseCurationTable.vue — a bounded
-// ERP-sourced list, no server filter args on `collections` worth wiring for this). `isPrivate`
-// is the computed, feed-derived-or-overridden current state, shown read-only next to the
-// human-editable `visibilityOverride` control (issue #90).
+// Client-side search over a bounded list; `isPrivate` is the current state, `visibilityOverride` the editable one.
+const { t } = useI18n();
 const props = defineProps<{
     collections: CategoryVisibilityCollection[];
     loading: boolean;
@@ -31,57 +29,68 @@ const emit = defineEmits<{
     setOverride: [payload: { id: string; visibilityOverride: string | null }];
 }>();
 
-const OVERRIDE_OPTIONS: SelectOption[] = [
-    { value: '', label: 'Auto (follow feed)' },
-    { value: 'visible', label: 'Visible' },
-    { value: 'hidden', label: 'Hidden' },
-];
+const overrideOptions = computed<SelectOption[]>(() => [
+    { value: '', label: t('settingsAccess.categories.override.auto') },
+    { value: 'visible', label: t('settingsAccess.categories.override.visible') },
+    { value: 'hidden', label: t('settingsAccess.categories.override.hidden') },
+]);
 
-const HIDDEN_BY_PARENT = 'Hidden by parent: a hidden category hides everything below it';
-const LOCKED_OPTIONS: SelectOption[] = OVERRIDE_OPTIONS.filter(o => o.value !== 'visible');
-const STALE_VISIBLE_OPTIONS: SelectOption[] = OVERRIDE_OPTIONS.map(o =>
-    o.value === 'visible' ? { ...o, label: 'Visible (ignored: hidden by parent)' } : o,
+const hiddenByParent = computed(() => t('settingsAccess.categories.hiddenByParent'));
+const lockedOptions = computed<SelectOption[]>(() =>
+    overrideOptions.value.filter(o => o.value !== 'visible'),
+);
+const staleVisibleOptions = computed<SelectOption[]>(() =>
+    overrideOptions.value.map(o =>
+        o.value === 'visible'
+            ? { ...o, label: t('settingsAccess.categories.override.visibleIgnored') }
+            : o,
+    ),
 );
 
 function optionsFor(row: {
     hiddenByAncestor: boolean;
     visibilityOverride: string;
 }): SelectOption[] {
-    if (!row.hiddenByAncestor) return OVERRIDE_OPTIONS;
-    return row.visibilityOverride === 'visible' ? STALE_VISIBLE_OPTIONS : LOCKED_OPTIONS;
+    if (!row.hiddenByAncestor) return overrideOptions.value;
+    return row.visibilityOverride === 'visible' ? staleVisibleOptions.value : lockedOptions.value;
 }
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'name',
-        header: 'Category',
+        header: t('settingsAccess.categories.columns.category'),
         width: 340,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Name contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.categories.filters.name') },
         mobile: { primary: true },
     },
     {
         field: 'slug',
-        header: 'Slug',
+        header: t('settingsAccess.categories.columns.slug'),
         width: 140,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
     {
         field: 'isPrivate',
-        header: 'Current visibility',
+        header: t('settingsAccess.categories.columns.visibility'),
         width: 160,
         filterConfig: { type: 'none' },
     },
     {
         field: 'hiddenReason',
-        header: 'Hidden reason',
+        header: t('settingsAccess.categories.columns.hiddenReason'),
         width: 160,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
-    { field: 'visibilityOverride', header: 'Override', width: 200, filterConfig: { type: 'none' } },
-];
+    {
+        field: 'visibilityOverride',
+        header: t('settingsAccess.categories.columns.override'),
+        width: 200,
+        filterConfig: { type: 'none' },
+    },
+]);
 
 interface CategoryVisibilityFilterState {
     [key: string]: unknown;
@@ -92,18 +101,18 @@ const BLANK_FILTERS: CategoryVisibilityFilterState = { name: '' };
 const { state: tableState } = useDataTableState<CategoryVisibilityFilterState>(
     `category-visibility-curation-datatable:${props.administratorId || 'anonymous'}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: BLANK_FILTERS,
         pageSize: 25,
     },
     {
-        columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
-            c => c.field,
-        ),
+        columns: ALL_COLUMNS.value,
+        allowedFilterKeys: ALL_COLUMNS.value
+            .filter(c => c.filterConfig.type !== 'none')
+            .map(c => c.field),
     },
 );
 
@@ -128,6 +137,9 @@ function toggle(id: string): void {
     if (!next.delete(id)) next.add(id);
     expandedIds.value = next;
 }
+function hiddenReasonLabel(reason: string): string {
+    return reason ? t(`settingsAccess.categories.reason.${reason}`) : '—';
+}
 const rows = computed<CategoryVisibilityRow[]>(() =>
     buildCategoryTreeRows(
         props.collections,
@@ -140,7 +152,7 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         depth,
         hasChildren,
         expanded,
-        hiddenReason: visibilityInfo.value.get(c.id)?.hiddenReason || '—',
+        hiddenReason: hiddenReasonLabel(visibilityInfo.value.get(c.id)?.hiddenReason ?? ''),
         hiddenByAncestor: visibilityInfo.value.get(c.id)?.hiddenByAncestor ?? false,
         isPrivate: c.isPrivate,
         isPrivateVariant: c.isPrivate ? 'neutral' : 'success',
@@ -161,8 +173,8 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'name', placeholder: 'Search categories…' }"
-        empty-message="No categories match your search"
+        :search="{ filterKey: 'name', placeholder: t('settingsAccess.categories.search') }"
+        :empty-message="t('settingsAccess.categories.empty')"
     >
         <template #cell-name="{ data }">
             <span
@@ -174,7 +186,11 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
                     type="button"
                     class="category-tree__toggle"
                     :aria-expanded="(data as CategoryVisibilityRow).expanded"
-                    :aria-label="(data as CategoryVisibilityRow).expanded ? 'Collapse' : 'Expand'"
+                    :aria-label="
+                        (data as CategoryVisibilityRow).expanded
+                            ? t('settingsAccess.categories.collapse')
+                            : t('settingsAccess.categories.expand')
+                    "
                     @click="toggle((data as CategoryVisibilityRow).id)"
                 >
                     {{ (data as CategoryVisibilityRow).expanded ? '▾' : '▸' }}
@@ -185,13 +201,17 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         </template>
         <template #cell-isPrivate="{ data }">
             <MvStatusBadge :variant="(data as CategoryVisibilityRow).isPrivateVariant">
-                {{ (data as CategoryVisibilityRow).isPrivate ? 'Hidden' : 'Visible' }}
+                {{
+                    (data as CategoryVisibilityRow).isPrivate
+                        ? t('settingsAccess.categories.override.hidden')
+                        : t('settingsAccess.categories.override.visible')
+                }}
             </MvStatusBadge>
         </template>
         <template #cell-visibilityOverride="{ data }">
             <MvSelect
                 :title="
-                    (data as CategoryVisibilityRow).hiddenByAncestor ? HIDDEN_BY_PARENT : undefined
+                    (data as CategoryVisibilityRow).hiddenByAncestor ? hiddenByParent : undefined
                 "
                 :model-value="(data as CategoryVisibilityRow).visibilityOverride"
                 :options="optionsFor(data as CategoryVisibilityRow)"

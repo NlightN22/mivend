@@ -17,7 +17,7 @@ export async function fetchCategoryVisibilityCollections(): Promise<
     });
 }
 
-export type HiddenReason = 'Manual override' | 'Hidden ancestor' | 'Own feed' | '';
+export type HiddenReason = 'manual' | 'ancestor' | 'feed' | '';
 
 export interface CategoryVisibilityInfo {
     depth: number;
@@ -40,8 +40,8 @@ export function describeCategoryVisibility(
         const override = c.customFields?.visibilityOverride;
         let hiddenReason: HiddenReason = '';
         if (c.isPrivate) {
-            if (override === 'hidden') hiddenReason = 'Manual override';
-            else hiddenReason = parent?.isPrivate ? 'Hidden ancestor' : 'Own feed';
+            if (override === 'hidden') hiddenReason = 'manual';
+            else hiddenReason = parent?.isPrivate ? 'ancestor' : 'feed';
         }
         const hiddenByAncestor = crumbs
             .slice(1, -1)

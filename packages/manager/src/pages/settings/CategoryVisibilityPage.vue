@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import CategoryVisibilityCurationTable from '../../components/settings/CategoryVisibilityCurationTable.vue';
@@ -9,6 +10,7 @@ import {
     type CategoryVisibilityCollection,
 } from '../../api/categoryVisibility';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const collections = ref<CategoryVisibilityCollection[]>([]);
@@ -21,7 +23,8 @@ async function loadAll(): Promise<void> {
     try {
         collections.value = await fetchCategoryVisibilityCollections();
     } catch (e) {
-        loadError.value = e instanceof Error ? e.message : 'Could not load categories';
+        loadError.value =
+            e instanceof Error ? e.message : t('settingsAccess.categories.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -41,7 +44,8 @@ async function onSetOverride(payload: {
         const index = collections.value.findIndex(c => c.id === updated.id);
         if (index !== -1) collections.value[index] = updated;
     } catch (e) {
-        saveError.value = e instanceof Error ? e.message : 'Could not update category visibility';
+        saveError.value =
+            e instanceof Error ? e.message : t('settingsAccess.categories.saveFailed');
     } finally {
         savingCollectionId.value = null;
     }
@@ -51,32 +55,25 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <!-- Gated on UpdateCatalog, not ManageAccessControl (Settings' own sidebar-level gate) —
-    that's the permission setCategoryVisibilityOverride's updateCollection mutation actually
-    requires, per mivend.audit.90. Today portal-admin is the only role with either, but checking
-    the permission the page truly needs keeps this page correct if that ever changes. -->
+    <!-- Gated on UpdateCatalog, the permission the updateCollection mutation actually requires. -->
     <div
         v-if="!authStore.hasPermission('UpdateCatalog')"
         class="category-visibility-page__not-authorized"
     >
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage category visibility.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.categories.denied') }}</p>
     </div>
 
     <div v-else class="category-visibility-page">
-        <div class="category-visibility-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="category-visibility-page__title">Category visibility</h1>
+        <div class="category-visibility-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="category-visibility-page__title">{{ t('settingsAccess.categories.title') }}</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
-        <MvPanel title="Manual visibility overrides">
+        <MvPanel :title="t('settingsAccess.categories.panel')">
             <template #subheader>
                 <p class="category-visibility-page__description">
-                    Force a category's storefront visibility regardless of what the ERP feed
-                    reports. "Auto" follows the feed (hidden when the upstream category is inactive
-                    or deleted); "Hidden"/"Visible" pin the category and survive the next feed
-                    update. A hidden category always hides everything below it; "Visible" is not
-                    offered under a hidden parent.
+                    {{ t('settingsAccess.categories.description') }}
                 </p>
             </template>
 
