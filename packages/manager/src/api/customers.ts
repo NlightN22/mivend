@@ -32,9 +32,15 @@ import {
 export type ContactPersonInfo =
     CustomerListItemFieldsFragment['tradingPoints'][number]['contacts'][number];
 export type TradingPointInfo = CustomerListItemFieldsFragment['tradingPoints'][number];
-export type CustomerListItem = CustomerListItemFieldsFragment & { contacts: ContactPersonInfo[] };
+// portalReadiness comes only with the list query; the single-customer fetch leaves it out.
+export type CustomerListItem = CustomerListItemFieldsFragment & {
+    contacts: ContactPersonInfo[];
+    portalReadiness?: string;
+};
 
-function toCustomerListItem(c: CustomerListItemFieldsFragment): CustomerListItem {
+function toCustomerListItem(
+    c: CustomerListItemFieldsFragment & { portalReadiness?: string },
+): CustomerListItem {
     return { ...c, contacts: c.tradingPoints.flatMap(tp => tp.contacts) };
 }
 

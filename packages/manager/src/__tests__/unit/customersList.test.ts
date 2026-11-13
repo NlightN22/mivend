@@ -31,7 +31,7 @@ describe('customers list URL state', () => {
         const parsed = fromCustomersUrlState({
             ...CUSTOMERS_URL_DEFAULTS,
             view: 'x',
-            sortField: 'creditLimit',
+            sortField: 'noSuchField',
             pageSize: 'x',
         });
         expect(parsed.filters.view).toBe('all');
@@ -169,7 +169,7 @@ describe('customers list: manager source and credit, readiness filters', () => {
     it('builds server filters for credit and portal readiness', () => {
         expect(
             conditionsToCustomersFilter([
-                { columnKey: 'creditLimit', operator: 'gte', value: 100 },
+                { columnKey: 'creditLimit', operator: 'gte', value: '100' },
                 { columnKey: 'readiness', operator: 'eq', value: 'activated' },
             ]),
         ).toEqual({ creditLimit: { gte: 100 }, readiness: { eq: 'activated' } });

@@ -49,7 +49,7 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
             branch: src.branchName(c.branchId),
             group: c.erpGroupLabel ?? '',
             innStatus: c.innStatus,
-            readiness: readinessLabel(c.portalReadiness),
+            readiness: readinessLabel(c.portalReadiness ?? ''),
             contact: primaryContact?.name ?? '—',
             creditLimit: credit ? src.formatMoney(credit.creditLimit) : '—',
             creditBalance: credit ? src.formatMoney(credit.creditBalance) : '—',
