@@ -94,9 +94,10 @@ describe('SettlementEntryService.allocate', () => {
                     where: vi.fn(),
                     andWhere: vi.fn(),
                     groupBy: vi.fn(),
+                    limit: vi.fn(),
                     getRawMany: vi.fn(async () => []),
                 };
-                for (const k of ['select', 'addSelect', 'where', 'andWhere', 'groupBy'] as const) {
+                for (const k of ['select', 'addSelect', 'where', 'andWhere', 'groupBy', 'limit'] as const) {
                     qb[k].mockReturnValue(qb);
                 }
                 return qb;
@@ -337,6 +338,7 @@ describe('SettlementEntryService.getAdvanceBalance', () => {
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
             groupBy: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
             getRawMany: vi.fn(async () => [{ currencyCode: 'RUB', amount: '1500' }]),
         };
         const mockConnection = {

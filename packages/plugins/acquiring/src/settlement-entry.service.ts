@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { getRawManyBounded } from 'shared';
 
 import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
@@ -123,34 +124,35 @@ export class SettlementEntryService {
         documents: ProformaInvoice[],
     ): Promise<Map<number, number>> {
         if (documents.length === 0) return new Map();
-        // unbounded-ok: grouped by document id, one row per document passed in
-        const rows = await this.connection
-            .getRepository(ctx, SettlementEntry)
-            .createQueryBuilder('entry')
-            .select('entry.proformaInvoiceId', 'id')
-            .addSelect('SUM(entry.allocationAmount)', 'paid')
-            .where('entry.proformaInvoiceId IN (:...ids)', {
-                ids: documents.map(d => Number(d.id)),
-            })
-            .andWhere('entry.sourceType = :sourceType', { sourceType: 'payment.captured' })
-            .groupBy('entry.proformaInvoiceId')
-            .getRawMany<{ id: number; paid: string }>();
+        const rows = await getRawManyBounded<{ id: number; paid: string }>(
+            this.connection
+                .getRepository(ctx, SettlementEntry)
+                .createQueryBuilder('entry')
+                .select('entry.proformaInvoiceId', 'id')
+                .addSelect('SUM(entry.allocationAmount)', 'paid')
+                .where('entry.proformaInvoiceId IN (:...ids)', {
+                    ids: documents.map(d => Number(d.id)),
+                })
+                .andWhere('entry.sourceType = :sourceType', { sourceType: 'payment.captured' })
+                .groupBy('entry.proformaInvoiceId'),
+            documents.length,
+        );
         return new Map(rows.map(r => [Number(r.id), Number(r.paid)]));
     }
 
     // Nothing yet draws advances down against new proforma invoices; this only reports the balance.
     //
     async getAdvanceBalance(ctx: RequestContext, counterpartyId: number): Promise<MoneyAmount[]> {
-        // unbounded-ok: grouped by currency, a few rows per counterparty
-        const rows = await this.connection
-            .getRepository(ctx, SettlementEntry)
-            .createQueryBuilder('entry')
-            .select('entry.currencyCode', 'currencyCode')
-            .addSelect('SUM(entry.amount)', 'amount')
-            .where('entry.counterpartyId = :counterpartyId', { counterpartyId })
-            .andWhere('entry.proformaInvoiceId IS NULL')
-            .groupBy('entry.currencyCode')
-            .getRawMany<{ currencyCode: string; amount: string }>();
+        const rows = await getRawManyBounded<{ currencyCode: string; amount: string }>(
+            this.connection
+                .getRepository(ctx, SettlementEntry)
+                .createQueryBuilder('entry')
+                .select('entry.currencyCode', 'currencyCode')
+                .addSelect('SUM(entry.amount)', 'amount')
+                .where('entry.counterpartyId = :counterpartyId', { counterpartyId })
+                .andWhere('entry.proformaInvoiceId IS NULL')
+                .groupBy('entry.currencyCode'),
+        );
         return rows.map(row => ({ currencyCode: row.currencyCode, amount: Number(row.amount) }));
     }
 

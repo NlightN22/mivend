@@ -8,7 +8,7 @@ import {
     TranslatorService,
     UserInputError,
 } from '@vendure/core';
-import { DEFAULT_PROFORMA_PAYMENT_TERM_DAYS, withAggregateLock } from 'shared';
+import { DEFAULT_PROFORMA_PAYMENT_TERM_DAYS, findBounded, withAggregateLock } from 'shared';
 import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { NumberingService } from '@mivend/plugin-numbering';
@@ -117,8 +117,7 @@ export class ProformaInvoiceIssuingService {
         const repo = this.connection.getRepository(ctx, ProformaInvoice);
         const order = await this.loadOrder(ctx, orderId);
         // Row lock: a concurrent payment allocation cannot flip a head to paid between this read and the supersede.
-        // unbounded-ok: proforma invoices of one order, locked for issuing
-        const existing = await repo.find({
+        const existing = await findBounded(repo, {
             where: { orderId: Number(orderId) },
             lock: { mode: 'pessimistic_write' },
         });
@@ -183,8 +182,7 @@ export class ProformaInvoiceIssuingService {
             }
         }
 
-        // unbounded-ok: proforma invoices of one order
-        const current = await repo.find({
+        const current = await findBounded(repo, {
             where: { orderId: Number(orderId) },
             order: { number: 'ASC' },
         });

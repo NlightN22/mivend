@@ -87,10 +87,10 @@ export class ProformaInvoiceVisibilityService {
     async findOneVisible(ctx: RequestContext, id: string): Promise<ProformaInvoice | null> {
         if (!/^\d{1,9}$/.test(id)) return null;
         const scope = await this.resolveScope(ctx);
-        // unbounded-ok: single proforma invoice selected by primary key
         const { entities, raw } = await this.buildScopedQuery(ctx, scope)
             .andWhere('proformaInvoice.id = :id', { id: Number(id) })
             .addSelect('counterparty.shortName', 'counterpartyShortName')
+            .limit(1)
             .getRawAndEntities<{ counterpartyShortName: string | null }>();
         const found = entities[0];
         if (!found) return null;

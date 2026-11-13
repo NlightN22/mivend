@@ -29,7 +29,7 @@ describe('ProformaInvoiceService.findByOrderId', () => {
 
         const result = await service.findByOrderId(mockCtx, 5);
 
-        expect(mockRepo.find).toHaveBeenCalledWith({ where: { orderId: 5 } });
-        expect(result).toBe(proformaInvoices);
+        expect(mockRepo.find).toHaveBeenCalledWith({ where: { orderId: 5 }, take: 1001 });
+        expect(result).toEqual(proformaInvoices);
     });
 });

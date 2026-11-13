@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm, getPageAndCount } from 'shared';
+import { documentNumberSearchTerm, findBounded, getPageAndCount, getRawManyBounded } from 'shared';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentStatus } from './entities/payment-attempt.entity';
@@ -46,18 +46,19 @@ export class PaymentAttemptQueryService {
     ): Promise<Map<number, number>> {
         const result = new Map<number, number>();
         if (!orderIds.length) return result;
-        // unbounded-ok: grouped by order id, one row per order id passed in
-        const rows = await this.connection
-            .getRepository(ctx, PaymentAttempt)
-            .createQueryBuilder('payment')
-            .select('payment.orderId', 'orderId')
-            .addSelect('SUM(payment.amount)', 'capturedAmount')
-            .where('payment.orderId IN (:...orderIds)', { orderIds })
-            .andWhere('payment.paymentStatus = :status', {
-                status: 'captured' satisfies PaymentStatus,
-            })
-            .groupBy('payment.orderId')
-            .getRawMany<{ orderId: number; capturedAmount: string }>();
+        const rows = await getRawManyBounded<{ orderId: number; capturedAmount: string }>(
+            this.connection
+                .getRepository(ctx, PaymentAttempt)
+                .createQueryBuilder('payment')
+                .select('payment.orderId', 'orderId')
+                .addSelect('SUM(payment.amount)', 'capturedAmount')
+                .where('payment.orderId IN (:...orderIds)', { orderIds })
+                .andWhere('payment.paymentStatus = :status', {
+                    status: 'captured' satisfies PaymentStatus,
+                })
+                .groupBy('payment.orderId'),
+            orderIds.length,
+        );
         for (const row of rows) {
             result.set(row.orderId, Number(row.capturedAmount));
         }
@@ -123,10 +124,10 @@ export class PaymentAttemptQueryService {
         ctx: RequestContext,
         paymentAttemptId: number,
     ): Promise<PaymentAllocation[]> {
-        // unbounded-ok: settlement entries of one payment
-        const entries = await this.connection
-            .getRepository(ctx, SettlementEntry)
-            .find({ where: { sourcePaymentId: paymentAttemptId }, order: { id: 'ASC' } });
+        const entries = await findBounded(this.connection.getRepository(ctx, SettlementEntry), {
+            where: { sourcePaymentId: paymentAttemptId },
+            order: { id: 'ASC' },
+        });
         const allocations: PaymentAllocation[] = [];
         for (const entry of entries) {
             const proformaInvoice = entry.proformaInvoiceId

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { getManyBounded, withAggregateLock } from 'shared';
 import { In } from 'typeorm';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
@@ -17,15 +17,15 @@ export class ProformaInvoiceOrderCancelService {
             ctx,
             `proformaInvoices-for-order:${orderId}`,
             async txCtx => {
-                // unbounded-ok: proforma invoices of one order, locked for cancel
-                const invoices = await this.connection
-                    .getRepository(txCtx, ProformaInvoice)
-                    .createQueryBuilder('proformaInvoice')
-                    .where('proformaInvoice.orderId = :orderId', { orderId })
-                    .orderBy('proformaInvoice.createdAt', 'ASC')
-                    .addOrderBy('proformaInvoice.id', 'ASC')
-                    .setLock('pessimistic_write')
-                    .getMany();
+                const invoices = await getManyBounded(
+                    this.connection
+                        .getRepository(txCtx, ProformaInvoice)
+                        .createQueryBuilder('proformaInvoice')
+                        .where('proformaInvoice.orderId = :orderId', { orderId })
+                        .orderBy('proformaInvoice.createdAt', 'ASC')
+                        .addOrderBy('proformaInvoice.id', 'ASC')
+                        .setLock('pessimistic_write'),
+                );
                 const closable = invoices.filter(
                     i =>
                         ['pending', 'issued', 'paid'].includes(i.status) &&

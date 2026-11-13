@@ -66,6 +66,7 @@ describe('PaymentRefundService', () => {
         expect(mockRepo.find).toHaveBeenCalledWith({
             where: { paymentId: 42 },
             order: { createdAt: 'DESC' },
+            take: 1001,
         });
     });
 });

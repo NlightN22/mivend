@@ -2,7 +2,6 @@
     "groups": {
         "apps/server": 2,
         "packages/plugins/access-control": 19,
-        "packages/plugins/acquiring": 16,
         "packages/plugins/acting-session": 2,
         "packages/plugins/approval-workflow": 4,
         "packages/plugins/bulk-operations": 3,

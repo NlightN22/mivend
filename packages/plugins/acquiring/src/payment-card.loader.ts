@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { CtxLoader, ctxQuery } from 'shared';
+import { CtxLoader, ctxQuery, ctxQueryBounded } from 'shared';
 
 import type { ProformaInvoiceStatus } from './entities/proforma-invoice.entity';
 import { displayStatusOf } from './proforma-invoice-display';
@@ -61,9 +61,8 @@ export class PaymentCardLoader {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<CardRefund[][]> {
-        // unbounded-ok: capped per payment by the window rn <= $2
-        const rows = await ctxQuery<
-            Array<Omit<CardRefund, 'id'> & { id: number; paymentId: number }>
+        const rows = await ctxQueryBounded<
+            Omit<CardRefund, 'id'> & { id: number; paymentId: number }
         >(
             this.connection,
             ctx,
@@ -73,6 +72,7 @@ export class PaymentCardLoader {
                  FROM payment_refund r WHERE r."paymentId" = ANY($1::int[])
              ) ranked WHERE rn <= $2 ORDER BY "createdAt" DESC, id DESC`,
             [keys.map(Number), MAX_CARD_REFUNDS],
+            Math.max(1, keys.length) * MAX_CARD_REFUNDS,
         );
         const grouped = new Map<string, CardRefund[]>();
         for (const { paymentId, ...refund } of rows) {

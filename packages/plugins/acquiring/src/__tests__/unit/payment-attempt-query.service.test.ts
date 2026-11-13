@@ -1,4 +1,5 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
@@ -167,8 +168,10 @@ describe('PaymentAttemptQueryService', () => {
                 where: vi.fn(),
                 andWhere: vi.fn(),
                 groupBy: vi.fn(),
+                limit: vi.fn(),
                 getRawMany: vi.fn(),
             };
+            qb.limit.mockReturnValue(qb);
             qb.select.mockReturnValue(qb);
             qb.addSelect.mockReturnValue(qb);
             qb.where.mockReturnValue(qb);
@@ -210,6 +213,24 @@ describe('PaymentAttemptQueryService', () => {
             // Absent key means no captured rows, not a zero entry; callers must not assume the key exists.
             // AdminPaymentVisibilityResolver.orderPaymentSummaries converts absent to a displayed 0.
             expect(result.has(12)).toBe(false);
+        });
+
+        it('reads at most one row per order id and fails when the database returns more', async () => {
+            const qb = createMockAggregateQb();
+            qb.getRawMany.mockResolvedValue([
+                { orderId: 10, capturedAmount: '1' },
+                { orderId: 11, capturedAmount: '1' },
+            ]);
+            const mockConnection = {
+                getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
+            } as unknown as TransactionalConnection;
+            const service = new PaymentAttemptQueryService(mockConnection);
+
+            await service.sumCapturedAmountsByOrderIds(mockCtx, [10, 11]);
+            expect(qb.limit).toHaveBeenCalledWith(3);
+            await expect(service.sumCapturedAmountsByOrderIds(mockCtx, [10])).rejects.toBeInstanceOf(
+                QueryTooLargeError,
+            );
         });
     });
 });

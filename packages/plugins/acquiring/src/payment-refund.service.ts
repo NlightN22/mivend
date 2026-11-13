@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { NumberingService } from '@mivend/plugin-numbering';
+import { findBounded } from 'shared';
 
 import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.entity';
 
@@ -14,8 +15,7 @@ export class PaymentRefundService {
     ) {}
 
     async findByPaymentId(ctx: RequestContext, paymentId: number): Promise<PaymentRefund[]> {
-        // unbounded-ok: refunds of one payment
-        return this.connection.getRepository(ctx, PaymentRefund).find({
+        return findBounded(this.connection.getRepository(ctx, PaymentRefund), {
             where: { paymentId },
             order: { createdAt: 'DESC' },
         });

@@ -1,9 +1,14 @@
 import type { RequestContext } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { ProformaInvoiceDetailFieldResolver } from '../../proforma-invoice-detail.resolver';
-import { PAYMENTS_CAP, ProformaInvoiceDetailService } from '../../proforma-invoice-detail.service';
+import {
+    MAX_VERSIONS_PER_ORDER,
+    PAYMENTS_CAP,
+    ProformaInvoiceDetailService,
+} from '../../proforma-invoice-detail.service';
 import { ProformaInvoiceFieldResolver } from '../../proforma-invoice.resolver';
 
 describe('ProformaInvoiceFieldResolver.lines', () => {
@@ -87,8 +92,31 @@ describe('ProformaInvoiceDetailService.payments', () => {
         expect(PAYMENTS_CAP).toBe(50);
         expect(query).toHaveBeenCalledTimes(1);
         expect(query.mock.calls[0][1]).toEqual([[7, 8], 50]);
+        expect(query.mock.calls[0][0]).toMatch(/LIMIT 101$/);
         expect(first.map(p => p.id)).toEqual([1]);
         expect(second.map(p => p.id)).toEqual([2]);
+    });
+});
+
+describe('ProformaInvoiceDetailService bounds', () => {
+    it('fails when the ranked payment ids pass keys x cap, and when versions pass the per-order ceiling', async () => {
+        const rows = Array.from({ length: 101 }, (_, id) => ({ id }));
+        const payments = serviceWith(vi.fn().mockResolvedValue(rows), vi.fn()).payments(
+            {} as RequestContext,
+            7,
+        );
+        await expect(payments).rejects.toBeInstanceOf(QueryTooLargeError);
+        const versions = Array.from({ length: MAX_VERSIONS_PER_ORDER + 1 }, (_, id) => ({
+            id,
+            orderId: 5,
+            organizationId: 9,
+        }));
+        await expect(
+            serviceWith(vi.fn(), vi.fn().mockResolvedValue(versions)).versions(
+                {} as RequestContext,
+                { orderId: 5, organizationId: 9 } as ProformaInvoice,
+            ),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });
 

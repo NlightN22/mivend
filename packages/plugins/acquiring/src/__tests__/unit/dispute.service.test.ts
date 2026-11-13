@@ -1,4 +1,5 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DisputeService } from '../../dispute.service';
@@ -60,6 +61,16 @@ describe('DisputeService', () => {
         expect(mockRepo.find).toHaveBeenCalledWith({
             where: { paymentId: 42 },
             order: { openedAt: 'DESC' },
+            take: 1001,
         });
+    });
+
+    it('returns exactly the ceiling of disputes and fails one over', async () => {
+        mockRepo.find.mockResolvedValueOnce(Array.from({ length: 1000 }, (_, id) => ({ id })));
+        expect(await service.findByPaymentId(mockCtx, 42)).toHaveLength(1000);
+        mockRepo.find.mockResolvedValueOnce(Array.from({ length: 1001 }, (_, id) => ({ id })));
+        await expect(service.findByPaymentId(mockCtx, 42)).rejects.toBeInstanceOf(
+            QueryTooLargeError,
+        );
     });
 });

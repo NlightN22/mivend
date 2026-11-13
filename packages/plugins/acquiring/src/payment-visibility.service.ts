@@ -108,12 +108,12 @@ export class PaymentVisibilityService {
             'proformaInvoice',
             'counterparty',
         );
-        // unbounded-ok: single payment selected by primary key
         const { entities, raw } = await qb
             .addSelect('proformaInvoice.counterpartyId', 'proformaInvoice_counterpartyId')
             .addSelect('counterparty.shortName', 'counterpartyShortName')
             .addSelect('counterparty.inn', 'counterpartyInn')
             .addSelect(RESOLVED_ORDER_ID_SQL, 'resolvedOrderId')
+            .limit(1)
             .getRawAndEntities();
         if (!entities[0]) return null;
         return {

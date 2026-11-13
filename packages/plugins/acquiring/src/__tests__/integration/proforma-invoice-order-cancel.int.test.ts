@@ -4,6 +4,7 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
+    QueryTooLargeError,
     testDataSourceConnectionOptions,
     testSchemaOptions,
     withAggregateLock,
@@ -207,5 +208,28 @@ describe('ProformaInvoiceOrderCancelService (real Postgres)', () => {
 
         expect(await statusOf(id)).toBe('cancelled');
         expect(await advance()).toBe(1000);
+    });
+
+    it('cancels at the read ceiling and fails whole, changing nothing, one over it', async () => {
+        const seed = (n: number): Promise<unknown> =>
+            dataSource.query(
+                `INSERT INTO "proforma_invoice" ("orderId", "organizationId", "counterpartyId", "amount", "currencyCode", "status")
+                 SELECT 9, 1, 1, 1000, 'USD', 'issued' FROM generate_series(1, $1)`,
+                [n],
+            );
+        await seed(1000);
+        await cancel.closeForCancelledOrder(ctx, 9);
+        expect(
+            await dataSource.query(`SELECT 1 FROM "proforma_invoice" WHERE "status" = 'cancelled'`),
+        ).toHaveLength(1000);
+
+        await dataSource.query('TRUNCATE "proforma_invoice", "settlement_entry"');
+        await seed(1001);
+        await expect(cancel.closeForCancelledOrder(ctx, 9)).rejects.toBeInstanceOf(
+            QueryTooLargeError,
+        );
+        expect(
+            await dataSource.query(`SELECT 1 FROM "proforma_invoice" WHERE "status" <> 'issued'`),
+        ).toHaveLength(0);
     });
 });

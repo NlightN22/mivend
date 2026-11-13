@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { CtxLoader, ctxQuery } from 'shared';
+import { CtxLoader, ctxQueryBounded, findBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
+
+// Versions of one order and organization: a generous ceiling; past it the read fails loudly.
+export const MAX_VERSIONS_PER_ORDER = 100;
 
 // A document with hundreds of payments must not return an unbounded list.
 export const PAYMENTS_CAP = 50;
@@ -38,8 +41,7 @@ export class ProformaInvoiceDetailService {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<PaymentAttempt[][]> {
-        // unbounded-ok: capped per proforma invoice by the window rn <= $2
-        const rows = await ctxQuery<Array<{ id: number }>>(
+        const rows = await ctxQueryBounded<{ id: number }>(
             this.connection,
             ctx,
             `SELECT id FROM (
@@ -49,11 +51,16 @@ export class ProformaInvoiceDetailService {
                 FROM payment_attempt WHERE "proformaInvoiceId" = ANY($1::int[])
             ) ranked WHERE rn <= $2`,
             [keys.map(Number), PAYMENTS_CAP],
+            Math.max(1, keys.length) * PAYMENTS_CAP,
         );
-        const payments = await this.connection.getRepository(ctx, PaymentAttempt).find({
-            where: { id: In(rows.map(r => r.id)) },
-            order: { createdAt: 'DESC', id: 'DESC' },
-        });
+        const payments = await findBounded(
+            this.connection.getRepository(ctx, PaymentAttempt),
+            {
+                where: { id: In(rows.map(r => r.id)) },
+                order: { createdAt: 'DESC', id: 'DESC' },
+            },
+            Math.max(1, rows.length),
+        );
         return keys.map(key => payments.filter(p => String(p.proformaInvoiceId) === key));
     }
 
@@ -62,11 +69,11 @@ export class ProformaInvoiceDetailService {
         keys: readonly string[],
     ): Promise<ProformaInvoice[][]> {
         const orderIds = [...new Set(keys.map(key => Number(key.split(':')[0])))];
-        // unbounded-ok: proforma invoice versions of the orders passed in, a page of orders
-        const all = await this.connection.getRepository(ctx, ProformaInvoice).find({
-            where: { orderId: In(orderIds) },
-            order: { version: 'DESC' },
-        });
+        const all = await findBounded(
+            this.connection.getRepository(ctx, ProformaInvoice),
+            { where: { orderId: In(orderIds) }, order: { version: 'DESC' } },
+            Math.max(1, orderIds.length) * MAX_VERSIONS_PER_ORDER,
+        );
         return keys.map(key => {
             const [orderId, organizationId] = key.split(':').map(Number);
             return all.filter(v => v.orderId === orderId && v.organizationId === organizationId);

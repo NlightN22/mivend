@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { documentNumberSearchTerm, getPageAndCount } from 'shared';
+import { documentNumberSearchTerm, findBounded, getPageAndCount } from 'shared';
 
 import { applyStatusFilter } from './proforma-invoice-display';
 import type { ProformaInvoiceFilter, ProformaInvoiceSort } from './proforma-invoice-list-query';
@@ -25,8 +25,9 @@ export class ProformaInvoiceService {
     constructor(private connection: TransactionalConnection) {}
 
     async findByOrderId(ctx: RequestContext, orderId: number): Promise<ProformaInvoice[]> {
-        // unbounded-ok: proforma invoices of one order
-        return this.connection.getRepository(ctx, ProformaInvoice).find({ where: { orderId } });
+        return findBounded(this.connection.getRepository(ctx, ProformaInvoice), {
+            where: { orderId },
+        });
     }
 
     // Checkout-time, whole-order path: only moves unpaid `pending` snapshots, never a paid or superseded one.

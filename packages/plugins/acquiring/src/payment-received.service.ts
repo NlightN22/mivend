@@ -13,7 +13,7 @@ import {
     UserInputError,
     isGraphQlErrorResult,
 } from '@vendure/core';
-import { PLACEMENT_KEY, withAggregateLock } from 'shared';
+import { getManyBounded, PLACEMENT_KEY, withAggregateLock } from 'shared';
 
 import { CASH_METHOD_CODE } from './cash-handler';
 import { OFFLINE_TERMS_METHOD_CODE } from './offline-terms-handler';
@@ -43,13 +43,13 @@ export class PaymentReceivedService {
             `payment-received:${orderId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, Payment);
-                // unbounded-ok: manual payments of one order
                 const manual = (
-                    await repo
-                        .createQueryBuilder('p')
-                        .where('p."orderId" = :orderId', { orderId })
-                        .andWhere('p.method IN (:...methods)', { methods: MANUAL_METHODS })
-                        .getMany()
+                    await getManyBounded(
+                        repo
+                            .createQueryBuilder('p')
+                            .where('p."orderId" = :orderId', { orderId })
+                            .andWhere('p.method IN (:...methods)', { methods: MANUAL_METHODS }),
+                    )
                 ).filter(p => Boolean(p.metadata?.[PLACEMENT_KEY]));
                 const candidates = paymentId
                     ? manual.filter(p => String(p.id) === String(paymentId))
