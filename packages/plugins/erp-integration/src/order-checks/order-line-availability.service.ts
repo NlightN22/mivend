@@ -19,6 +19,7 @@ import {
     organizationStockControlled,
     storageUnitRatio,
 } from './order-check-data';
+import { findBounded } from 'shared';
 
 // The single stock-availability function for order lines (#233): the local free quantity of the branch
 // warehouses (the reserve's rule) capped by the stock of the line's own organization (the #237 rule).
@@ -113,8 +114,7 @@ export class OrderLineAvailabilityService
         locationIds: string[],
     ): Promise<Map<string, string>> {
         const wanted = new Set(locationIds);
-        // unbounded-ok: stock location registry, tens of rows
-        const rows = await this.connection.getRepository(ctx, StockLocation).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, StockLocation));
         return new Map(
             rows
                 .filter(l => wanted.has(String(l.id)) && l.customFields?.warehouseErpId)

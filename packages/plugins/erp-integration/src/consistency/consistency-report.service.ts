@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery, getPageAndCount } from 'shared';
+import { ctxQueryBounded, findBounded, getPageAndCount } from 'shared';
 
 import { ConsistencyReport } from './consistency-report.entity';
 import { ConsistencySourceState } from './consistency-source-state.entity';
@@ -47,14 +47,18 @@ export class ConsistencyReportService {
     }
 
     async sources(ctx: RequestContext): Promise<ConsistencySourceView[]> {
-        // unbounded-ok: one state row per consistency source, a handful of rows
-        const states = await this.connection
-            .getRepository(ctx, ConsistencySourceState)
-            .find({ order: { source: 'ASC' } });
-        // unbounded-ok: grouped by source, type and severity, tens of rows
-        const counts = await ctxQuery<
-            Array<{ source: string; type: string; severity: string; n: number }>
-        >(
+        const states = await findBounded(
+            this.connection.getRepository(ctx, ConsistencySourceState),
+            {
+                order: { source: 'ASC' },
+            },
+        );
+        const counts = await ctxQueryBounded<{
+            source: string;
+            type: string;
+            severity: string;
+            n: number;
+        }>(
             this.connection,
             ctx,
             `SELECT source, type, severity, count(*)::int AS n FROM consistency_report

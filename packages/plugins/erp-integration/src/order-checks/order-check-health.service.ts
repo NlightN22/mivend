@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionalConnection } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded } from 'shared';
 
 export const CHECK_RUN_FAILED = 'check-run-failed';
 const FAILURE_WINDOW_DAYS = 7;
@@ -19,8 +19,7 @@ export class OrderCheckHealthService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async getHealth(ctx: RequestContext): Promise<OrderCheckHealthRow[]> {
-        // unbounded-ok: grouped by check code and reason, tens of rows
-        const rows = await ctxQuery<OrderCheckHealthRow[]>(
+        const rows = await ctxQueryBounded<OrderCheckHealthRow>(
             this.connection,
             ctx,
             `
@@ -41,8 +40,7 @@ export class OrderCheckHealthService {
 
     // Orders whose check run errored recently and was skipped (fail-open): "a check did not run".
     private getRunFailures(ctx: RequestContext): Promise<OrderCheckHealthRow[]> {
-        // unbounded-ok: grouped by stage, a handful of rows
-        return ctxQuery<OrderCheckHealthRow[]>(
+        return ctxQueryBounded<OrderCheckHealthRow>(
             this.connection,
             ctx,
             `

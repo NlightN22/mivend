@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Contract } from '@mivend/plugin-counterparty';
 import { OrganizationRequisites } from '@mivend/plugin-documents';
-import { ctxQuery } from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 import type { OrderCheckSubject } from '@mivend/plugin-reservation';
 import { In } from 'typeorm';
 
@@ -11,6 +11,7 @@ import { StorageLocationAssignment } from '../entities/storage-location-assignme
 import { UnitRecord } from '../entities/unit-record.entity';
 import { StockOrganizationReadService } from '../stock-organization-read.service';
 import type { OrderCheckData } from './order-check-data';
+import { LIST_READ_CEILING } from '../read-ceilings';
 
 // ERP setting code (SettingChanged.code example); true = the ERP skips the organization stock check for all.
 export const ORGANIZATION_STOCK_IGNORE_SETTING = 'ignoreOrganizationStockCheckForAll';
@@ -67,10 +68,11 @@ export class OrderCheckDataService {
     ): Promise<Map<string, string[]>> {
         const result = new Map<string, string[]>();
         if (productErpIds.length === 0 || !warehouseErpId) return result;
-        // unbounded-ok: assignments of the products of one order in one warehouse
-        const rows = await this.connection.getRepository(ctx, StorageLocationAssignment).find({
-            where: { productId: In(productErpIds), warehouseId: warehouseErpId },
-        });
+        const rows = await findBounded(
+            this.connection.getRepository(ctx, StorageLocationAssignment),
+            { where: { productId: In(productErpIds), warehouseId: warehouseErpId } },
+            LIST_READ_CEILING,
+        );
         for (const row of rows) {
             const ids = result.get(row.productId) ?? [];
             if (!ids.includes(row.organizationErpId)) ids.push(row.organizationErpId);
@@ -85,8 +87,7 @@ export class OrderCheckDataService {
         counterpartyId: string | null,
     ): Promise<Set<string>> {
         if (!counterpartyId) return new Set();
-        // unbounded-ok: active customer contracts of one counterparty
-        const contracts = await this.connection.getRepository(ctx, Contract).find({
+        const contracts = await findBounded(this.connection.getRepository(ctx, Contract), {
             where: { counterpartyId, isActive: true, isCustomerContract: true },
         });
         return new Set(contracts.map(c => c.organizationId).filter(id => id.length > 0));
@@ -118,8 +119,7 @@ export class OrderCheckDataService {
             [productErpIds],
         );
         if (rows.length === 0) return new Map();
-        // unbounded-ok: units matched by the ids of one order
-        const units = await this.connection.getRepository(ctx, UnitRecord).find({
+        const units = await findBounded(this.connection.getRepository(ctx, UnitRecord), {
             where: { entityId: In([...new Set(rows.map(r => r.storageUnitId))]) },
         });
         const ratioByUnit = new Map(units.map(u => [u.entityId, u.ratioToBase]));

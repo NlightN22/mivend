@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, ctxQueryBounded } from 'shared';
 
 import { REPORT_UNAVAILABLE_ISSUE_ID, REPORT_UNAVAILABLE_TYPE } from './consistency-types';
 import type { ConsistencyHealth, ConsistencyIssue, ConsistencySummary } from './consistency-types';
@@ -104,18 +104,16 @@ export class ConsistencyReportStore {
     }
 
     async getState(ctx: RequestContext, source: string): Promise<StoredSourceState | null> {
-        // unbounded-ok: one state row per consistency source
-        const rows = await ctxQuery<
-            Array<{
-                health: ConsistencyHealth;
-                last_finished_at: Date | null;
-                watermark: Date | null;
-            }>
-        >(
+        const rows = await ctxQueryBounded<{
+            health: ConsistencyHealth;
+            last_finished_at: Date | null;
+            watermark: Date | null;
+        }>(
             this.connection,
             ctx,
             `SELECT health, last_finished_at, watermark FROM consistency_source_state WHERE source = $1`,
             [source],
+            1,
         );
         const row = rows[0];
         if (!row) return null;
