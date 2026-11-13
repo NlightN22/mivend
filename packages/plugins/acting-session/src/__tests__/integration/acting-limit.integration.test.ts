@@ -170,8 +170,8 @@ describe('ActingLimitService (real Postgres)', () => {
     it('fails the start over the read ceiling and ends nothing, passing at the ceiling', async () => {
         const seed = (n: number) =>
             dataSource.query(
-                `INSERT INTO session (token, type, invalidated, expires, "customFieldsActingadministratorid", "customFieldsActingparentsessionid", "userId")
-                 SELECT 'bulk-' || g, 'AuthenticatedSession', false, now() + interval '1 day', '1', '10', 5
+                `INSERT INTO session (id, token, type, invalidated, expires, "customFieldsActingadministratorid", "customFieldsActingparentsessionid", "userId")
+                 SELECT 1000000 + g, 'bulk-' || g, 'AuthenticatedSession', false, now() + interval '1 day', '1', '10', 5
                  FROM generate_series(1, $1::int) g`,
                 [n],
             );

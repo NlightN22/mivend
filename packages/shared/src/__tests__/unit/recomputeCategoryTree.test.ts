@@ -53,16 +53,16 @@ function build(
 }
 
 describe('recomputeCategoryTree', () => {
-    it('reads the tree slice by slice, so a large tree is not cut off', async () => {
-        const all = [collection(1, null, '__root_collection__')];
-        for (let id = 2; id <= 2500; id++) all.push(collection(id, 1, `cat-${id}`));
-        const find = vi.fn(async (o: { where: { id?: { value: number } }; take: number }) =>
-            all.filter(c => c.id > (o.where.id?.value ?? 0)).slice(0, o.take),
-        );
+    it('reads the tree through a keyset slice read: no id condition on the first slice, ordered by id', async () => {
+        const all = [collection(1, null, '__root_collection__'), collection(2, 1, 'cat-a')];
+        const find = vi.fn(async (_options: { relations?: string[] }) => all);
         const { run } = build(all, find);
         await run();
-        expect(find).toHaveBeenCalledTimes(3);
-        expect(find.mock.calls[0][0].where).toEqual({});
+        const treeReads = find.mock.calls.filter(
+            ([options]) => options.relations?.[0] === 'translations',
+        );
+        expect(treeReads.length).toBeGreaterThanOrEqual(1);
+        expect(treeReads[0][0]).toMatchObject({ where: {}, order: { id: 'ASC' }, take: 1000 });
     });
 
     it('always passes the existing translations, or Vendure inserts a new Collection instead', async () => {

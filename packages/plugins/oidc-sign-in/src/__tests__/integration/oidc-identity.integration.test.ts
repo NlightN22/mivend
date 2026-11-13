@@ -89,6 +89,7 @@ describe('duplicate identity rows for one subject', () => {
     it('fails the sign-in with QUERY_TOO_LARGE instead of picking one', async () => {
         const id = await fx.addAdmin('dup-sub@example.com');
         await fx.dataSource.query('DROP INDEX uq_oidc_subject');
+        await fx.dataSource.query('DROP INDEX uq_oidc_user');
         try {
             await fx.dataSource.query(
                 `INSERT INTO authentication_method (type, strategy, "externalIdentifier", metadata, "userId")
@@ -105,6 +106,9 @@ describe('duplicate identity rows for one subject', () => {
             await fx.reset();
             await fx.dataSource.query(
                 `CREATE UNIQUE INDEX uq_oidc_subject ON authentication_method ("externalIdentifier") WHERE strategy = 'oidc'`,
+            );
+            await fx.dataSource.query(
+                `CREATE UNIQUE INDEX uq_oidc_user ON authentication_method ("userId") WHERE strategy = 'oidc'`,
             );
         }
     });

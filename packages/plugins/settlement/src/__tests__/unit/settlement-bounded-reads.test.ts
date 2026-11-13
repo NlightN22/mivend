@@ -9,7 +9,7 @@ import { SettlementReferenceResolver } from '../../settlement-reference-resolver
 const ctx = {} as RequestContext;
 
 function queryReturning(n: number) {
-    const query = vi.fn(async () =>
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) =>
         Array.from({ length: n }, (_, i) => ({ id: i, erpOrderId: `o${i}`, uuid: null })),
     );
     return { query, connection: { getRepository: () => ({ query }) } };
@@ -28,11 +28,17 @@ describe('settlement reads are bounded', () => {
 
     it('reference resolver: the ceiling is the id count, one over throws', async () => {
         const ok = queryReturning(2);
-        await new SettlementReferenceResolver(ok.connection as never, erp as never).resolve(ctx, keys);
+        await new SettlementReferenceResolver(ok.connection as never, erp as never).resolve(
+            ctx,
+            keys,
+        );
         expect(ok.query.mock.calls[0][0]).toMatch(/LIMIT 3$/);
         const over = queryReturning(3);
         await expect(
-            new SettlementReferenceResolver(over.connection as never, erp as never).resolve(ctx, keys),
+            new SettlementReferenceResolver(over.connection as never, erp as never).resolve(
+                ctx,
+                keys,
+            ),
         ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 
@@ -57,7 +63,11 @@ describe('settlement reads are bounded', () => {
                 addOrderBy: () => qb,
                 limit: vi.fn(() => qb),
                 getRawMany: vi.fn(async () =>
-                    Array.from({ length: n }, (_, i) => ({ documentType: `t${i}`, label: 'l', count: 1 })),
+                    Array.from({ length: n }, (_, i) => ({
+                        documentType: `t${i}`,
+                        label: 'l',
+                        count: 1,
+                    })),
                 ),
             };
             const service = new SettlementAdminListService({} as never, {} as never);
@@ -67,6 +77,8 @@ describe('settlement reads are bounded', () => {
         const ok = build(1000);
         await expect(ok.service.typeCounts(ctx, {})).resolves.toHaveLength(1000);
         expect(ok.qb.limit).toHaveBeenCalledWith(1001);
-        await expect(build(1001).service.typeCounts(ctx, {})).rejects.toBeInstanceOf(QueryTooLargeError);
+        await expect(build(1001).service.typeCounts(ctx, {})).rejects.toBeInstanceOf(
+            QueryTooLargeError,
+        );
     });
 });
