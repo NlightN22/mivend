@@ -5,7 +5,13 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { ctxQuery, replaceFilterTerms, withAggregateLock } from 'shared';
+import {
+    ctxQuery,
+    ctxQueryBounded,
+    KEYSET_CEILING,
+    replaceFilterTerms,
+    withAggregateLock,
+} from 'shared';
 
 import { classifyRule } from './retro-bonus-rule-classify';
 import { loggerCtx } from './types';
@@ -39,13 +45,13 @@ export class RetroBonusRuleReclassifyService implements OnApplicationBootstrap {
             Logger.log(`retro-bonus: reclassified ${count} legacy filter rules`, loggerCtx);
     }
 
-    async reclassifyLegacy(ctx: RequestContext): Promise<number> {
-        // unbounded-ok: one-off reclassification of legacy rules, each processed under its own lock
-        const legacy = await ctxQuery<Array<{ erpId: string }>>(
+    async reclassifyLegacy(ctx: RequestContext, ceiling: number = KEYSET_CEILING): Promise<number> {
+        const legacy = await ctxQueryBounded<{ erpId: string }>(
             this.connection,
             ctx,
             `SELECT "erpId" FROM retro_bonus_rule WHERE "inactiveReason" = ANY($1::text[])`,
             [LEGACY_REASONS],
+            ceiling,
         );
         let done = 0;
         for (const { erpId } of legacy) {

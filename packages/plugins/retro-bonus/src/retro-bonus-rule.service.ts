@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     contentHash,
     evaluateCounterpartyTerms,
+    getManyBounded,
     loadFilterTerms,
     replaceFilterTerms,
     replaceMembership,
@@ -162,8 +163,7 @@ export class RetroBonusRuleService {
                 },
             );
         }
-        // unbounded-ok: retro bonus rules of one price type, a handful of rows
-        const candidates = await qb.orderBy('r.validFrom', 'DESC').getMany();
+        const candidates = await getManyBounded(qb.orderBy('r.validFrom', 'DESC'));
         const terms = await loadFilterTerms(
             this.connection,
             ctx,
