@@ -38,6 +38,9 @@ const adminApiSchema = gql`
         "True to filter to system-initiated changes only (administratorId IS NULL) — mutually exclusive with administratorId."
         system: Boolean
         createdAfter: DateTime
+        createdBefore: DateTime
+        "Case-insensitive match on the changed fields or the comment"
+        search: String
     }
 
     extend type Query {

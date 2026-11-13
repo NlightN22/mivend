@@ -15,6 +15,8 @@ interface EntityVersionListOptions {
     administratorId?: string;
     system?: boolean;
     createdAfter?: string;
+    createdBefore?: string;
+    search?: string;
 }
 
 @Resolver()

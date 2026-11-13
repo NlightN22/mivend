@@ -187,6 +187,42 @@ describe('VersioningService', () => {
             });
         });
 
+        it('binds an escaped search term and an upper date bound, never concatenated into SQL', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [{ entityName: 'Counterparty', entityId: 'cp-1' }],
+                { search: " 50%_x'; DROP TABLE y;-- ", createdBefore: '2026-02-01T00:00:00.000Z' },
+            );
+
+            expect(qb.andWhere).toHaveBeenCalledWith(
+                '(v.changedFields ILIKE :search OR v.comment ILIKE :search)',
+                { search: "%50\\%\\_x'; DROP TABLE y;--%" },
+            );
+            expect(qb.andWhere).toHaveBeenCalledWith('v.createdAt < :createdBefore', {
+                createdBefore: '2026-02-01T00:00:00.000Z',
+            });
+        });
+
+        it('adds no search clause for a blank term', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [{ entityName: 'Counterparty', entityId: 'cp-1' }],
+                { search: '   ' },
+            );
+
+            expect(qb.andWhere).not.toHaveBeenCalled();
+        });
+
         it('filters to system-initiated changes only when system:true', async () => {
             const qb = mockQueryBuilder();
             mockConnection.getRepository.mockReturnValueOnce({

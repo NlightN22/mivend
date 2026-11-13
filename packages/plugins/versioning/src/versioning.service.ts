@@ -52,7 +52,6 @@ export class VersioningService {
     }
 
     // Cap prevents e2e flakiness: a shared counterparty accumulates EntityVersion rows without bound.
-    // Filters stay client-side; several are derived from parsed JSON/joined names, not pushable to SQL.
     async findForEntity(
         ctx: RequestContext,
         entityName: string,
@@ -67,7 +66,7 @@ export class VersioningService {
     }
 
     // Refs grouped by entityName: one `entityId IN (...)` clause per entity type, not one OR per ref.
-    // Free-text search can't go to SQL (JS-derived summary, joined names); it filters only the page.
+    // Search matches the stored changed fields and the comment as one escaped, bound ILIKE term.
     async findForEntities(
         ctx: RequestContext,
         refs: EntityRef[],
@@ -79,6 +78,8 @@ export class VersioningService {
             administratorId?: string;
             system?: boolean;
             createdAfter?: string;
+            createdBefore?: string;
+            search?: string;
         } = {},
     ): Promise<PaginatedList<EntityVersion>> {
         if (refs.length === 0) return { items: [], totalItems: 0 };
@@ -118,6 +119,15 @@ export class VersioningService {
         }
         if (options.createdAfter) {
             qb.andWhere('v.createdAt >= :createdAfter', { createdAfter: options.createdAfter });
+        }
+        if (options.createdBefore) {
+            qb.andWhere('v.createdAt < :createdBefore', { createdBefore: options.createdBefore });
+        }
+        if (options.search?.trim()) {
+            const term = `%${options.search.trim().replace(/[\\%_]/g, '\\$&')}%`;
+            qb.andWhere('(v.changedFields ILIKE :search OR v.comment ILIKE :search)', {
+                search: term,
+            });
         }
         qb.orderBy('v.createdAt', 'DESC');
 
