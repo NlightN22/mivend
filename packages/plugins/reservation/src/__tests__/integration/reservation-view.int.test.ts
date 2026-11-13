@@ -66,6 +66,7 @@ beforeAll(async () => {
                     return qb;
                 },
                 select: () => qb,
+                take: () => qb,
                 getMany: async () =>
                     qb.ids.filter(id => visibleOrderIds.has(id)).map(id => ({ id })),
             };
