@@ -53,6 +53,7 @@ describe('ReservationViewService.holders', () => {
                     ids: [] as string[],
                     andWhere: (_s: string, p: { ids: string[] }) => ((qb.ids = p.ids), qb),
                     select: () => qb,
+                    take: () => qb,
                     getMany: async () => qb.ids.filter(id => visible.has(id)).map(id => ({ id })),
                 };
                 return qb;

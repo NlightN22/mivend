@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserInputError } from '@vendure/core';
 import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { QueryTooLargeError } from 'shared';
 import { ReservationService } from '../../reservation.service';
 import { lockStockLevelsInOrder } from '../../reservation-location-picker';
 import {
@@ -43,6 +44,7 @@ function createMockReservationRepo(): {
             andWhere: vi.fn().mockReturnThis(),
             groupBy: vi.fn().mockReturnThis(),
             addGroupBy: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
             getRawMany: vi.fn(async () => [] as unknown[]),
             getRawOne: vi.fn(async () => ({ max: null })),
             update: vi.fn().mockReturnThis(),
@@ -681,6 +683,34 @@ describe('ReservationService', () => {
             mockReleasedRows([]);
             const count = await service.releaseReservations(ctx, 'order-1');
             expect(count).toBe(0);
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('bounded reads', () => {
+        const rows = (n: number): unknown[] => Array.from({ length: n }, (_, i) => ({ id: i }));
+
+        it('findForOrder passes at the ceiling and throws one over', async () => {
+            reservationRepo.find.mockResolvedValueOnce(rows(1000));
+            expect(await service.findForOrder(ctx, 'order-1')).toHaveLength(1000);
+            expect(reservationRepo.find).toHaveBeenCalledWith(
+                expect.objectContaining({ take: 1001 }),
+            );
+
+            reservationRepo.find.mockResolvedValueOnce(rows(1001));
+            await expect(service.findForOrder(ctx, 'order-1')).rejects.toBeInstanceOf(
+                QueryTooLargeError,
+            );
+        });
+
+        it('reserveOrder fails whole when the active set is over the ceiling, writing nothing', async () => {
+            reservationRepo.find.mockResolvedValueOnce(rows(1001));
+
+            await expect(
+                service.reserveOrder(ctx, 'order-1', 3, 'auto-trust-rule'),
+            ).rejects.toBeInstanceOf(QueryTooLargeError);
+
+            expect(reservationRepo.save).not.toHaveBeenCalled();
             expect(eventBus.publish).not.toHaveBeenCalled();
         });
     });

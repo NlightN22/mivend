@@ -40,7 +40,15 @@ describe('RejectedOrderReleaseService.releaseDue', () => {
         candidateOrders = [{ id: 'order-9' }];
         const queryBuilder = (rows: () => unknown[]): Record<string, ReturnType<typeof vi.fn>> => {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
-            for (const method of ['setLock', 'where', 'andWhere', 'select', 'setParameter']) {
+            for (const method of [
+                'setLock',
+                'where',
+                'andWhere',
+                'select',
+                'setParameter',
+                'take',
+                'orderBy',
+            ]) {
                 qb[method] = vi.fn(() => qb);
             }
             qb.getQuery = vi.fn(() => 'SELECT 1');

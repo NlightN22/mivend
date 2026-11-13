@@ -17,7 +17,6 @@
         "packages/plugins/oidc-sign-in": 1,
         "packages/plugins/order-identity": 1,
         "packages/plugins/price-entry": 14,
-        "packages/plugins/reservation": 23,
         "packages/plugins/retro-bonus": 2,
         "packages/plugins/saved-views": 1,
         "packages/plugins/search": 7,

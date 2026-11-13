@@ -67,6 +67,7 @@ describe('ReservationAvailabilityService', () => {
                     addSelect: () => qb,
                     groupBy: () => qb,
                     addGroupBy: () => qb,
+                    limit: () => qb,
                     where: () => qb,
                     andWhere: (_sql: string, p: typeof params) => {
                         Object.assign(params, p);
