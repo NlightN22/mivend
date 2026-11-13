@@ -82,6 +82,20 @@ describe('describeValue', () => {
         expect(describeValue(config, ['paid'])).toBe('Paid');
     });
 
+    it('describes a select value by its option label, falling back to the raw value', () => {
+        const config: ColumnFilterConfig = {
+            type: 'select',
+            options: [{ value: 'dept-1', label: 'Sales' }],
+        };
+        expect(describeValue(config, 'dept-1')).toBe('Sales');
+        expect(describeValue(config, 'dept-2')).toBe('dept-2');
+    });
+
+    it('describes a boolean value by its configured or default label', () => {
+        expect(describeValue({ type: 'boolean' }, 'yes')).toBe('Yes');
+        expect(describeValue({ type: 'boolean', labels: { no: 'Missing' } }, 'no')).toBe('Missing');
+    });
+
     it('summarizes multiple selected status/enum values by count', () => {
         const config: ColumnFilterConfig = {
             type: 'status',

@@ -73,6 +73,12 @@ export function describeValue(config: ColumnFilterConfig, value: unknown): strin
             if (values.length > 1) return `${values.length} selected`;
             return config.options.find(o => o.value === values[0])?.label ?? String(values[0]);
         }
+        case 'select':
+            return config.options.find(o => o.value === value)?.label ?? String(value);
+        case 'boolean': {
+            const labels = config.labels;
+            return value === 'yes' ? (labels?.yes ?? 'Yes') : (labels?.no ?? 'No');
+        }
         case 'text':
             return `"${value as string}"`;
         case 'date-range': {
