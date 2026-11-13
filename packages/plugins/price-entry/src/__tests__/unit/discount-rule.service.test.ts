@@ -20,8 +20,11 @@ const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
     orderBy: vi.fn(),
+    addOrderBy: vi.fn(),
+    skip: vi.fn(),
     take: vi.fn(),
     getMany: vi.fn(),
+    getManyAndCount: vi.fn(),
 };
 mockQb.insert.mockReturnValue(mockQb);
 mockQb.into.mockReturnValue(mockQb);
@@ -30,6 +33,8 @@ mockQb.orUpdate.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.addOrderBy.mockReturnValue(mockQb);
+mockQb.skip.mockReturnValue(mockQb);
 mockQb.take.mockReturnValue(mockQb);
 
 const mockConnection = {
@@ -558,26 +563,21 @@ describe('DiscountRuleService', () => {
     });
 
     describe('findByPriceType', () => {
-        it('filters by priceTypeCode when provided, capped at 200 by default', async () => {
-            mockRepo.find.mockResolvedValue([]);
-            await service.findByPriceType(mockCtx, 'WHOLESALE');
-            expect(mockRepo.find).toHaveBeenCalledWith({
-                where: { priceTypeCode: 'WHOLESALE' },
-                order: { validTo: 'DESC' },
-                take: 200,
+        it('filters by priceTypeCode and pages with skip and take', async () => {
+            mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+            await service.findByPriceType(mockCtx, 'WHOLESALE', 50, undefined, 100);
+            expect(mockQb.andWhere).toHaveBeenCalledWith('dr.priceTypeCode = :priceTypeCode', {
+                priceTypeCode: 'WHOLESALE',
             });
+            expect(mockQb.skip).toHaveBeenCalledWith(100);
+            expect(mockQb.take).toHaveBeenCalledWith(50);
         });
 
-        it('returns every rule across all price types when omitted, bounded at 200 by default (issue #39), excluding promo rules', async () => {
-            mockQb.getMany.mockResolvedValue([]);
-            await service.findByPriceType(mockCtx);
+        it('returns items and total, excluding promo rules, 50 per page by default', async () => {
+            mockQb.getManyAndCount.mockResolvedValue([[{ id: 1 }], 7]);
+            const result = await service.findByPriceType(mockCtx);
+            expect(result).toEqual({ items: [{ id: 1 }], totalItems: 7 });
             expect(mockQb.where).toHaveBeenCalledWith('dr.triggerProductErpId IS NULL');
-            expect(mockQb.take).toHaveBeenCalledWith(200);
-        });
-
-        it('respects an explicit take override', async () => {
-            mockQb.getMany.mockResolvedValue([]);
-            await service.findByPriceType(mockCtx, undefined, 50);
             expect(mockQb.take).toHaveBeenCalledWith(50);
         });
     });

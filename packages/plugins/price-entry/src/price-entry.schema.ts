@@ -120,6 +120,17 @@ export const adminApiSchema: DocumentNode = gql`
         legalName: String!
     }
 
+    "take defaults to 50 and is capped at 200."
+    input DiscountListOptions {
+        take: Int
+        skip: Int
+    }
+
+    type DiscountRuleList {
+        items: [DiscountRule!]!
+        totalItems: Int!
+    }
+
     type ExpiringDiscountGrantList {
         items: [DiscountGrant!]!
         totalItems: Int!
@@ -250,7 +261,7 @@ export const adminApiSchema: DocumentNode = gql`
         # Restricted to ReadConfidentialPriceTypes — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Float
         floorPricesForVariants(variantIds: [ID!]!): [FloorPriceEntry!]!
-        discountRules(priceTypeCode: String): [DiscountRule!]!
+        discountRules(priceTypeCode: String, options: DiscountListOptions): DiscountRuleList!
         "Top soonest-expiring grants plus the total count, so an alert is not sized by the whole set."
         expiringDiscountGrants(withinDays: Int!): ExpiringDiscountGrantList!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —

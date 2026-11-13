@@ -6,6 +6,7 @@ import {
     Ctx,
     ForbiddenError,
     Order,
+    PaginatedList,
     RequestContext,
     Transaction,
     TransactionalConnection,
@@ -13,6 +14,7 @@ import {
 import { PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import { PriceEntryInput, PriceEntryService, PriceEntryView } from './price-entry.service';
+import { pageArgs, type ListOptions } from './read-batches';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { OrderLineContextService } from './order-line-context.service';
@@ -212,14 +214,21 @@ export class DiscountRuleAdminResolver {
     @Allow(Permission.ReadCatalog)
     async discountRules(
         @Ctx() ctx: RequestContext,
-        @Args() args: { priceTypeCode?: string },
-    ): Promise<DiscountRule[]> {
+        @Args() args: { priceTypeCode?: string; options?: ListOptions },
+    ): Promise<PaginatedList<DiscountRule>> {
+        const { take, skip } = pageArgs(args.options);
         if (args.priceTypeCode) {
             await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceTypeCode);
-            return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
+            return this.discountRuleService.findByPriceType(
+                ctx,
+                args.priceTypeCode,
+                take,
+                undefined,
+                skip,
+            );
         }
         const allowed = await this.priceTypeAccess.allowedCodes(ctx);
-        return this.discountRuleService.findByPriceType(ctx, undefined, 200, allowed);
+        return this.discountRuleService.findByPriceType(ctx, undefined, take, allowed, skip);
     }
 
     @Transaction()

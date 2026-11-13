@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
+import { getPageAndCount } from 'shared';
 
+import { collectKeyset, DEFAULT_LIST_TAKE } from './read-batches';
 import { LookupMemo, memoized } from './lookup-memo';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
@@ -80,24 +82,24 @@ export class DiscountRuleService {
     }
 
     // Promo rules (triggerProductErpId set) are excluded: they have no priceTypeCode to list under.
-    // Both branches are capped at `take` (default 200); /discounts no longer calls them that way.
     async findByPriceType(
         ctx: RequestContext,
         priceTypeCode?: string,
-        take = 200,
+        take = DEFAULT_LIST_TAKE,
         allowedCodes?: string[],
-    ): Promise<DiscountRule[]> {
-        const repo = this.connection.getRepository(ctx, DiscountRule);
-        if (priceTypeCode) {
-            return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' }, take });
-        }
-        // Promo rules are excluded: this listing only shows facet/priceType-threshold rules.
-        const qb = repo.createQueryBuilder('dr').where('dr.triggerProductErpId IS NULL');
+        skip = 0,
+    ): Promise<{ items: DiscountRule[]; totalItems: number }> {
+        const qb = this.connection
+            .getRepository(ctx, DiscountRule)
+            .createQueryBuilder('dr')
+            .where('dr.triggerProductErpId IS NULL');
+        if (priceTypeCode) qb.andWhere('dr.priceTypeCode = :priceTypeCode', { priceTypeCode });
         if (allowedCodes)
             qb.andWhere('dr.priceTypeCode IN (:...allowedCodes)', {
                 allowedCodes: allowedCodes.length ? allowedCodes : [''],
             });
-        return qb.orderBy('dr.validTo', 'DESC').take(take).getMany();
+        qb.orderBy('dr.validTo', 'DESC').addOrderBy('dr.id', 'ASC');
+        return getPageAndCount(qb, take, skip);
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {
@@ -148,13 +150,17 @@ export class DiscountRuleService {
         memo?: LookupMemo,
     ): Promise<DiscountRule[]> {
         return memoized(memo, `dr:${priceTypeCode}`, () =>
-            // unbounded-ok: pricing path, a cap would change prices; bounded by active rules of one price type, memoized per order
-            this.connection
-                .getRepository(ctx, DiscountRule)
-                .createQueryBuilder('dr')
-                .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
-                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-                .getMany(),
+            collectKeyset((lastId, take) =>
+                this.connection
+                    .getRepository(ctx, DiscountRule)
+                    .createQueryBuilder('dr')
+                    .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
+                    .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+                    .andWhere('dr.id > :lastId', { lastId })
+                    .orderBy('dr.id', 'ASC')
+                    .take(take)
+                    .getMany(),
+            ),
         );
     }
 

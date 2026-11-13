@@ -61,10 +61,13 @@ describe('PriceEntryAdminResolver price type access', () => {
 
 describe('DiscountRuleAdminResolver price type access', () => {
     it('an unfiltered list is narrowed to allowed codes; a hidden filter is Forbidden', async () => {
-        const rules = { findByPriceType: vi.fn(async () => []), upsert: vi.fn() };
+        const rules = {
+            findByPriceType: vi.fn(async () => ({ items: [], totalItems: 0 })),
+            upsert: vi.fn(),
+        };
         const resolver = new DiscountRuleAdminResolver(rules as never, access(['retail']) as never);
         await resolver.discountRules(ctx, {});
-        expect(rules.findByPriceType).toHaveBeenCalledWith(ctx, undefined, 200, ['retail']);
+        expect(rules.findByPriceType).toHaveBeenCalledWith(ctx, undefined, 50, ['retail'], 0);
         await expect(
             resolver.discountRules(ctx, { priceTypeCode: 'purchase' }),
         ).rejects.toBeInstanceOf(ForbiddenError);

@@ -60,7 +60,7 @@ it('the floor is denied to the manager and readable by the superadmin', async ()
 it('discount rules and the registry never list or filter by a confidential type', async () => {
     const rules = await admin(
         manager,
-        `query($t: String) { discountRules(priceTypeCode: $t) { id } }`,
+        `query($t: String) { discountRules(priceTypeCode: $t) { items { id } } }`,
         {
             t: PRICE_TYPES.purchase,
         },
@@ -68,7 +68,7 @@ it('discount rules and the registry never list or filter by a confidential type'
     expect(rules.errors.join()).toMatch(DENIED);
     const all = await admin(
         manager,
-        `{ discountRules { id priceTypeCode } discountRegistryPage(options: { take: 100 }) {
+        `{ discountRules { items { id priceTypeCode } } discountRegistryPage(options: { take: 100 }) {
             items { priceTypeCode } } }`,
     );
     expect(all.errors).toEqual([]);
