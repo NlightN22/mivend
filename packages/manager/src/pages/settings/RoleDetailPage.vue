@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvCheckbox,
@@ -21,20 +22,24 @@ import {
     fetchPermissionCatalog,
     KNOWN_ROLE_CODES,
     PERMISSION_CATEGORIES,
-    SCOPE_OPTIONS,
     SCOPE_RESOURCES,
-    SCOPE_RESOURCE_LABELS,
+    SCOPE_KINDS,
     type RoleDetail,
     type PermissionInfo,
     type ScopeKind,
 } from '../../api/settings';
 
+const { t } = useI18n();
 const route = useRoute();
 const authStore = useAuthStore();
 
 const code = computed(() => route.params.code as string);
 const notFound = computed(
     () => !KNOWN_ROLE_CODES.includes(code.value as (typeof KNOWN_ROLE_CODES)[number]),
+);
+
+const scopeOptions = computed(() =>
+    SCOPE_KINDS.map(value => ({ value, label: t(`settingsAccess.scopeKinds.${value}`) })),
 );
 
 const role = ref<RoleDetail | null>(null);
@@ -89,7 +94,8 @@ async function load(): Promise<void> {
         form.maxAmount = credit?.maxAmount != null ? String(credit.maxAmount) : '';
     } catch (e) {
         // Same cause as RolesListPage.vue's load() — surface it rather than leaving a blank page.
-        loadError.value = e instanceof Error ? e.message : 'Could not load this role';
+        loadError.value =
+            e instanceof Error ? e.message : t('settingsAccess.roleDetail.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -138,52 +144,53 @@ async function save(): Promise<void> {
 
 <template>
     <div v-if="!authStore.hasPermission('ManageAccessControl')" class="role-detail__not-authorized">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage roles and access.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.roles.denied') }}</p>
     </div>
 
     <div v-else-if="notFound" class="role-detail__not-authorized">
-        <h1>Role not found</h1>
-        <RouterLink to="/settings/roles">Back to roles</RouterLink>
+        <h1>{{ t('settingsAccess.roleDetail.notFound') }}</h1>
+        <RouterLink to="/settings/roles">{{ t('settingsAccess.roleDetail.back') }}</RouterLink>
     </div>
 
     <div v-else-if="!loading && loadError" class="role-detail__not-authorized">
-        <h1>Could not load this role</h1>
+        <h1>{{ t('settingsAccess.roleDetail.loadFailed') }}</h1>
         <MvNotice variant="error">{{ loadError }}</MvNotice>
-        <RouterLink to="/settings/roles">Back to roles</RouterLink>
+        <RouterLink to="/settings/roles">{{ t('settingsAccess.roleDetail.back') }}</RouterLink>
     </div>
 
     <div v-else-if="!loading && !role" class="role-detail__not-authorized">
-        <h1>Role not visible to your account</h1>
-        <RouterLink to="/settings/roles">Back to roles</RouterLink>
+        <h1>{{ t('settingsAccess.roleDetail.notVisible') }}</h1>
+        <RouterLink to="/settings/roles">{{ t('settingsAccess.roleDetail.back') }}</RouterLink>
     </div>
 
     <div v-else-if="!loading && role" class="role-detail">
         <div class="role-detail__breadcrumb">
-            <RouterLink to="/settings/roles">Settings / Roles</RouterLink> / {{ role.code }}
+            <RouterLink to="/settings/roles">{{ t('settingsAccess.roleDetail.crumb') }}</RouterLink>
+            / {{ role.code }}
         </div>
         <h1 class="role-detail__title">{{ role.code }}</h1>
         <p class="role-detail__description">{{ role.description }}</p>
 
-        <MvPanel title="Access scope">
+        <MvPanel :title="t('settingsAccess.roleDetail.scope')">
             <div class="role-detail__scope-grid">
                 <MvFormField
                     v-for="resource in SCOPE_RESOURCES"
                     :key="resource"
-                    :label="SCOPE_RESOURCE_LABELS[resource]"
+                    :label="t(`settingsAccess.scopeResources.${resource}`)"
                 >
                     <MvSelect
                         :model-value="form.scopeConfig[resource]"
-                        :options="SCOPE_OPTIONS"
+                        :options="scopeOptions"
                         @update:model-value="form.scopeConfig[resource] = $event as ScopeKind"
                     />
                 </MvFormField>
             </div>
         </MvPanel>
 
-        <MvPanel title="Credit term limit">
+        <MvPanel :title="t('settingsAccess.roleDetail.credit')">
             <div class="role-detail__credit-grid">
-                <MvFormField label="Max extra days" required>
+                <MvFormField :label="t('settingsAccess.roleDetail.maxExtraDays')" required>
                     <MvInput
                         size="sm"
                         type="number"
@@ -191,7 +198,7 @@ async function save(): Promise<void> {
                         @update:model-value="form.maxExtraDays = $event"
                     />
                 </MvFormField>
-                <MvFormField label="Max amount (optional)">
+                <MvFormField :label="t('settingsAccess.roleDetail.maxAmount')">
                     <MvInput
                         size="sm"
                         type="number"
@@ -202,14 +209,14 @@ async function save(): Promise<void> {
             </div>
         </MvPanel>
 
-        <MvPanel title="Permissions">
+        <MvPanel :title="t('settingsAccess.roleDetail.permissions')">
             <div class="role-detail__permission-categories">
                 <div
                     v-for="category in PERMISSION_CATEGORIES"
                     :key="category.key"
                     class="role-detail__permission-category"
                 >
-                    <h3>{{ category.label }}</h3>
+                    <h3>{{ t(`settingsAccess.permissionCategories.${category.key}`) }}</h3>
                     <div
                         v-for="name in category.permissionNames"
                         :key="name"
@@ -239,8 +246,10 @@ async function save(): Promise<void> {
             >
                 {{
                     saveResults.permissions.ok
-                        ? 'Permissions saved.'
-                        : `Permissions could not be saved: ${saveResults.permissions.message}`
+                        ? t('settingsAccess.roleDetail.saved.permissions')
+                        : t('settingsAccess.roleDetail.failed.permissions', {
+                              message: saveResults.permissions.message ?? '',
+                          })
                 }}
             </MvNotice>
             <MvNotice
@@ -249,8 +258,10 @@ async function save(): Promise<void> {
             >
                 {{
                     saveResults.scope.ok
-                        ? 'Access scope saved.'
-                        : `Access scope could not be saved: ${saveResults.scope.message}`
+                        ? t('settingsAccess.roleDetail.saved.scope')
+                        : t('settingsAccess.roleDetail.failed.scope', {
+                              message: saveResults.scope.message ?? '',
+                          })
                 }}
             </MvNotice>
             <MvNotice
@@ -259,13 +270,17 @@ async function save(): Promise<void> {
             >
                 {{
                     saveResults.credit.ok
-                        ? 'Credit term limit saved.'
-                        : `Credit term limit could not be saved: ${saveResults.credit.message}`
+                        ? t('settingsAccess.roleDetail.saved.credit')
+                        : t('settingsAccess.roleDetail.failed.credit', {
+                              message: saveResults.credit.message ?? '',
+                          })
                 }}
             </MvNotice>
         </div>
 
-        <MvButton :loading="saving" @click="save">Save changes</MvButton>
+        <MvButton :loading="saving" @click="save">{{
+            t('settingsAccess.roleDetail.saveChanges')
+        }}</MvButton>
     </div>
 </template>
 

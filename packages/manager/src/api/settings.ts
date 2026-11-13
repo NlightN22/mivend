@@ -1,4 +1,3 @@
-import type { SelectOption } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
     CreditTermLimitDocument,
@@ -65,17 +64,15 @@ export const KNOWN_ROLE_CODES = [
 
 // Mirrors the per-role permission arrays in seed-access-roles.mjs; keep the two in sync.
 // Vendure's auto-injected 'Authenticated' baseline permission is never shown as a checkbox.
-export const PERMISSION_CATEGORIES: { key: string; label: string; permissionNames: string[] }[] = [
+export const PERMISSION_CATEGORIES: { key: string; permissionNames: string[] }[] = [
     {
         key: 'orders',
-        label: 'Orders',
         permissionNames: ['ReadOrder', 'CreateOrder', 'UpdateOrder'],
     },
-    { key: 'catalog', label: 'Catalog', permissionNames: ['ReadCatalog'] },
-    { key: 'settlements', label: 'Settlements', permissionNames: ['ReadSettlementDocument'] },
+    { key: 'catalog', permissionNames: ['ReadCatalog'] },
+    { key: 'settlements', permissionNames: ['ReadSettlementDocument'] },
     {
         key: 'customers',
-        label: 'Customers & Counterparties',
         permissionNames: [
             'ReadCustomer',
             'ReadCounterparty',
@@ -85,7 +82,6 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
     },
     {
         key: 'pricing',
-        label: 'Pricing & Discounts',
         permissionNames: [
             'AdjustPriceWithinLimit',
             'ReadConfidentialPriceTypes',
@@ -100,7 +96,6 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
     },
     {
         key: 'admin',
-        label: 'Administration & Audit',
         permissionNames: [
             'ManageAccessControl',
             'ManageApprovalWorkflows',
@@ -114,20 +109,10 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
     },
 ];
 
-export const SCOPE_OPTIONS: SelectOption[] = [
-    { value: 'own', label: 'Own' },
-    { value: 'department', label: 'Department' },
-    { value: 'all', label: 'All' },
-];
+export const SCOPE_KINDS: ScopeKind[] = ['own', 'department', 'all'];
 
 // 'teamVisibility' is a scope resource, not a dedicated permission or flag, so it resolves via AccessScopeService.
 export const SCOPE_RESOURCES = ['counterparty', 'order', 'teamVisibility'] as const;
-
-export const SCOPE_RESOURCE_LABELS: Record<(typeof SCOPE_RESOURCES)[number], string> = {
-    counterparty: 'Counterparty visibility',
-    order: 'Order visibility',
-    teamVisibility: 'Team directory name visibility',
-};
 
 export async function fetchRoles(): Promise<RoleSummary[]> {
     const result = await adminApi(RolesDocument, { codes: [...KNOWN_ROLE_CODES] });

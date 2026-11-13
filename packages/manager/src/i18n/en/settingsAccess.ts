@@ -1,0 +1,48 @@
+export default {
+    breadcrumb: 'Workspace / System settings',
+    notAuthorized: 'Not authorized',
+    scopeKinds: { own: 'Own', department: 'Department', all: 'All' },
+    scopeResources: {
+        counterparty: 'Counterparty visibility',
+        order: 'Order visibility',
+        teamVisibility: 'Team directory name visibility',
+    },
+    permissionCategories: {
+        orders: 'Orders',
+        catalog: 'Catalog',
+        settlements: 'Settlements',
+        customers: 'Customers & Counterparties',
+        pricing: 'Pricing & Discounts',
+        admin: 'Administration & Audit',
+    },
+    roles: {
+        title: 'Roles & access',
+        panel: 'Roles',
+        empty: 'No roles visible to your account.',
+        denied: "You don't have permission to manage roles and access.",
+        loadFailed: 'Could not load roles',
+    },
+    roleDetail: {
+        crumb: 'Settings / Roles',
+        notFound: 'Role not found',
+        notVisible: 'Role not visible to your account',
+        loadFailed: 'Could not load this role',
+        back: 'Back to roles',
+        scope: 'Access scope',
+        credit: 'Credit term limit',
+        permissions: 'Permissions',
+        maxExtraDays: 'Max extra days',
+        maxAmount: 'Max amount (optional)',
+        saveChanges: 'Save changes',
+        saved: {
+            permissions: 'Permissions saved.',
+            scope: 'Access scope saved.',
+            credit: 'Credit term limit saved.',
+        },
+        failed: {
+            permissions: 'Permissions could not be saved: {message}',
+            scope: 'Access scope could not be saved: {message}',
+            credit: 'Credit term limit could not be saved: {message}',
+        },
+    },
+};

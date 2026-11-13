@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { fetchRoles, type RoleSummary } from '../../api/settings';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const roles = ref<RoleSummary[]>([]);
 const loading = ref(true);
@@ -20,7 +22,7 @@ async function load(): Promise<void> {
         // via Vendure's native `roles` query (RoleService.activeUserCanReadRole hides a Role
         // entirely from anyone who doesn't hold its full permission set) — surface the real
         // GraphQL error instead of silently rendering an empty list.
-        error.value = e instanceof Error ? e.message : 'Could not load roles';
+        error.value = e instanceof Error ? e.message : t('settingsAccess.roles.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -31,17 +33,17 @@ onMounted(load);
 
 <template>
     <div v-if="!authStore.hasPermission('ManageAccessControl')" class="roles-list__not-authorized">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage roles and access.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.roles.denied') }}</p>
     </div>
 
     <div v-else class="roles-list">
-        <div class="roles-list__breadcrumb">Workspace / System settings</div>
-        <h1 class="roles-list__title">Roles & access</h1>
+        <div class="roles-list__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="roles-list__title">{{ t('settingsAccess.roles.title') }}</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
-        <MvPanel v-if="!loading" title="Roles">
+        <MvPanel v-if="!loading" :title="t('settingsAccess.roles.panel')">
             <ul v-if="roles.length" class="roles-list__items">
                 <li v-for="role in roles" :key="role.id">
                     <RouterLink :to="`/settings/roles/${role.code}`" class="roles-list__row">
@@ -51,7 +53,7 @@ onMounted(load);
                 </li>
             </ul>
             <p v-else-if="!error" class="roles-list__description">
-                No roles visible to your account.
+                {{ t('settingsAccess.roles.empty') }}
             </p>
         </MvPanel>
     </div>
