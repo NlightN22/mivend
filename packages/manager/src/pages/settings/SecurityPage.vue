@@ -112,9 +112,9 @@ async function handleSignOutEverywhere(): Promise<void> {
                             }}
                             ·
                             {{
-                                t('settingsSystem.security.since').replace('{date}', () =>
-                                    formatDateTime(s.createdAt),
-                                )
+                                t('settingsSystem.security.since', {
+                                    date: formatDateTime(s.createdAt),
+                                })
                             }}
                         </span>
                     </div>

@@ -67,10 +67,7 @@ onMounted(limits.load);
 </script>
 
 <template>
-    <MvModal
-        :title="t('settingsSystem.discountLimits.title').replace('{name}', () => name)"
-        @close="$emit('close')"
-    >
+    <MvModal :title="t('settingsSystem.discountLimits.title', { name })" @close="$emit('close')">
         <p class="limits__hint">
             {{ t('settingsSystem.discountLimits.hint') }}
         </p>
