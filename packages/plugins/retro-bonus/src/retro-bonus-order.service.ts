@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ID, Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { In } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { lineRetroBonus, type OrderRetroBonus } from './retro-bonus-line-percent';
-import { RetroBonusRuleProduct } from './retro-bonus-rule-membership.entity';
+import { loadProductMembers } from './retro-bonus-membership-read';
 import { RetroBonusRuleService } from './retro-bonus-rule.service';
 
 const NONE: OrderRetroBonus = { hasRules: false, lines: [] };
@@ -29,14 +28,11 @@ export class RetroBonusOrderService {
         if (!counterparty) return NONE;
         const rules = await this.rules.findForCounterparty(ctx, counterparty.erpId);
         if (rules.length === 0) return NONE;
-        // unbounded-ok: pricing path, a cap would change bonuses; bounded by active business data of the matched rules
-        const rows = await this.connection
-            .getRepository(ctx, RetroBonusRuleProduct)
-            .find({ where: { ruleId: In(rules.map(r => r.id as number)) } });
-        const members = new Map<number, Set<string>>();
-        for (const row of rows) {
-            members.set(row.ruleId, (members.get(row.ruleId) ?? new Set()).add(row.productErpId));
-        }
+        const members = await loadProductMembers(
+            this.connection,
+            ctx,
+            rules.map(r => r.id as number),
+        );
         const now = new Date();
         const empty = new Set<string>();
         const lines = order.lines.flatMap(line => {
