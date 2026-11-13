@@ -39,6 +39,7 @@ export class OrderCheckSubjectRegistrar implements OnModuleInit {
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
         const rows = await getManyBounded(
             qb.andWhere(`${qb.alias}.id IN (:...ids)`, { ids: numeric }).select(`${qb.alias}.id`),
+            numeric.length,
         );
         return new Set(rows.map(o => String(o.id)));
     }

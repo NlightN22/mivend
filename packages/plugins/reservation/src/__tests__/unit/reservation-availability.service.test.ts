@@ -393,7 +393,7 @@ describe('ReservationAvailabilityService', () => {
         const free = (id: string): Map<string, Map<string, number>> =>
             new Map([[id, new Map([['location-1', 1]])]]);
 
-        it('reads 250 variants in chunks of 100 and merges the parts', async () => {
+        it('reads 250 variants across 30 locations in chunks of floor(5000 / 30) and merges the parts', async () => {
             const service = createService({});
             const chunk = vi
                 .spyOn(
@@ -408,9 +408,10 @@ describe('ReservationAvailabilityService', () => {
                 )
                 .mockImplementation(async (_c, ids) => free(ids[0]));
             const ids = Array.from({ length: 250 }, (_, i) => `v${i}`);
-            const result = await service.getFreeByLocation(ctx, ids, ['location-1']);
-            expect(chunk.mock.calls.map(call => call[1].length)).toEqual([100, 100, 50]);
-            expect([...result.keys()]).toEqual(['v0', 'v100', 'v200']);
+            const locations = Array.from({ length: 30 }, (_, i) => `location-${i}`);
+            const result = await service.getFreeByLocation(ctx, ids, locations);
+            expect(chunk.mock.calls.map(call => call[1].length)).toEqual([166, 84]);
+            expect([...result.keys()]).toEqual(['v0', 'v166']);
         });
 
         it('makes no read for an empty variant list', async () => {

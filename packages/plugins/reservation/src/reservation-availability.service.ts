@@ -13,7 +13,7 @@ import { WarehouseService } from '@mivend/plugin-access-control';
 
 import { sumActiveReservations } from './active-reservation-sums';
 import { freeQuantity } from './free-stock';
-import { FREE_STOCK_VARIANT_CHUNK, VARIANT_LOCATION_CEILING } from './reservation-read-ceiling';
+import { freeStockChunkSize, VARIANT_LOCATION_CEILING } from './reservation-read-ceiling';
 
 // ATP (available-to-promise) read queries — split out of ReservationService to keep that file
 // under AGENTS.md's ~300-line guideline. Pure reads, no reservation writes.
@@ -71,8 +71,9 @@ export class ReservationAvailabilityService {
         stockLocationIds: string[],
     ): Promise<Map<string, Map<string, number>>> {
         const result = new Map<string, Map<string, number>>();
-        for (let i = 0; i < variantIds.length; i += FREE_STOCK_VARIANT_CHUNK) {
-            const chunk = variantIds.slice(i, i + FREE_STOCK_VARIANT_CHUNK);
+        const chunkSize = freeStockChunkSize(stockLocationIds.length);
+        for (let i = 0; i < variantIds.length; i += chunkSize) {
+            const chunk = variantIds.slice(i, i + chunkSize);
             const part = await this.getFreeByLocationChunk(ctx, chunk, stockLocationIds);
             for (const [variantId, locations] of part) result.set(variantId, locations);
         }

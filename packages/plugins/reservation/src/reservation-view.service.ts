@@ -122,6 +122,7 @@ export class ReservationViewService {
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
         const rows = await getManyBounded(
             qb.andWhere(`${qb.alias}.id IN (:...ids)`, { ids }).select(`${qb.alias}.id`),
+            ids.length,
         );
         return new Set(rows.map(o => String(o.id)));
     }

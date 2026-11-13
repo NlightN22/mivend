@@ -55,6 +55,7 @@ export class VariantSalesUnitService {
                 .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
                 .addSelect('pv."customFieldsMultiplicity"', 'multiplicity')
                 .where('pv.id IN (:...ids)', { ids: numericIds }),
+            numericIds.length,
         );
         return new Map(
             rows.map(row => [
