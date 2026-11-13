@@ -19,6 +19,8 @@ import { loggerCtx } from './types';
 // when the reserve is still active this long after the shared deadline.
 const ERP_OWNED_GRACE_MS = 24 * 60 * 60 * 1000;
 
+const SWEEP_BATCH_SIZE = 200;
+
 // Called by the reservation-expiry ScheduledTask with a fresh RequestContext. Cancel flow: docs/order-contracts.md.
 @Injectable()
 export class ReservationExpiryService {
@@ -34,34 +36,60 @@ export class ReservationExpiryService {
     async expireDueReservations(): Promise<number> {
         const rejectedReleased = await this.rejectedRelease.releaseDue();
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
-        const { flagged, nonPrepaidDue } = await this.connection.withTransaction(ctx, txCtx =>
-            this.sweepDue(txCtx),
-        );
-        // Outside the sweep transaction: cancelling takes the order lock and writes the same
-        // reservation rows this sweep locked.
-        return rejectedReleased + flagged + (await this.expireNonPrepaid(ctx, nonPrepaidDue));
+        let total = rejectedReleased;
+        let firstError: unknown;
+        let afterId: string | null = null;
+        for (;;) {
+            const batch = await this.connection.withTransaction(ctx, txCtx =>
+                this.sweepBatch(txCtx, afterId),
+            );
+            total += batch.flagged;
+            // Outside the batch transaction: cancelling takes the order lock and writes the same
+            // reservation rows the batch locked.
+            try {
+                total += await this.expireNonPrepaid(ctx, batch.nonPrepaidDue);
+            } catch (error) {
+                firstError ??= error;
+            }
+            if (batch.size < SWEEP_BATCH_SIZE || batch.lastId === null) break;
+            afterId = batch.lastId;
+        }
+        if (firstError !== undefined) throw firstError;
+        return total;
     }
 
     // SKIP LOCKED: a concurrent sweep must skip rows another sweep already holds, or both fire the same side effects.
-    private async sweepDue(
+    // Keyset by id: rows that stay active after a batch (left to the ERP) are never re-read within one sweep.
+    private async sweepBatch(
         ctx: RequestContext,
-    ): Promise<{ flagged: number; nonPrepaidDue: Reservation[] }> {
-        // unbounded-ok: TRACKED #350 sweep loads every due reservation
-        const dueRows = await this.connection
+        afterId: string | null,
+    ): Promise<{
+        flagged: number;
+        nonPrepaidDue: Reservation[];
+        size: number;
+        lastId: string | null;
+    }> {
+        const query = this.connection
             .getRepository(ctx, Reservation)
             .createQueryBuilder('reservation')
             .setLock('pessimistic_write')
             .setOnLocked('skip_locked')
             .where('reservation.status = :status', { status: 'active' })
             .andWhere('reservation.expiresAt <= :now', { now: new Date() })
+            .andWhere('reservation.interventionFlaggedAt IS NULL');
+        if (afterId !== null) query.andWhere('reservation.id > :afterId', { afterId });
+        const dueRows = await query
+            .orderBy('reservation.id', 'ASC')
+            .limit(SWEEP_BATCH_SIZE)
             .getMany();
-        const nonPrepaidDue = dueRows.filter(
-            row => row.creationMethod !== 'auto-prepaid' && !row.interventionFlaggedAt,
-        );
-        const prepaidDue = dueRows.filter(
-            row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
-        );
-        return { flagged: await this.flagPrepaid(ctx, prepaidDue), nonPrepaidDue };
+        const nonPrepaidDue = dueRows.filter(row => row.creationMethod !== 'auto-prepaid');
+        const prepaidDue = dueRows.filter(row => row.creationMethod === 'auto-prepaid');
+        return {
+            flagged: await this.flagPrepaid(ctx, prepaidDue),
+            nonPrepaidDue,
+            size: dueRows.length,
+            lastId: dueRows.length > 0 ? String(dueRows[dueRows.length - 1]!.id) : null,
+        };
     }
 
     // A prepaid reserve is never expired automatically; staff are told once. The notification is

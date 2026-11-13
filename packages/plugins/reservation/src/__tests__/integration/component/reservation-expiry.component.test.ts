@@ -510,4 +510,39 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
             }
         });
     });
+
+    it('sweeps more due rows than one batch: flagged rows stay active, later rows are not starved', async () => {
+        cancellationShim.cancel.mockResolvedValue({ kind: 'cancelled', eventSent: false });
+        const repo = realDataSource.getRepository(TestReservation);
+        const flaggedOrder = await seedOrder('RESERVED');
+        const flaggedRows = Array.from({ length: 250 }, () =>
+            dueReservation({
+                orderId: flaggedOrder.id,
+                creationMethod: 'auto-prepaid',
+                interventionFlaggedAt: new Date(),
+            }),
+        );
+        const prepaidRows = Array.from({ length: 250 }, () =>
+            dueReservation({ orderId: flaggedOrder.id, creationMethod: 'auto-prepaid' }),
+        );
+        const manualOrder = await seedOrder('RESERVED');
+        const manualRows = Array.from({ length: 250 }, () =>
+            dueReservation({ orderId: manualOrder.id, creationMethod: 'manual' }),
+        );
+        await repo.save([...flaggedRows, ...prepaidRows, ...manualRows], { chunk: 100 });
+
+        const count = await service.expireDueReservations();
+
+        expect(count).toBe(250 + 250);
+        expect(notificationServiceShim.create).toHaveBeenCalledTimes(250);
+        expect(cancellationShim.cancel).toHaveBeenCalledWith(
+            expect.anything(),
+            manualOrder.id,
+            'reserve-expired',
+            expect.anything(),
+        );
+        expect(await repo.countBy({ status: 'active' })).toBe(750);
+        await service.expireDueReservations();
+        expect(notificationServiceShim.create).toHaveBeenCalledTimes(250);
+    });
 });

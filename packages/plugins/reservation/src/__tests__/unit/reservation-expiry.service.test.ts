@@ -27,6 +27,8 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             setOnLocked: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
             getMany: vi.fn(async () => dueRows),
         };
         const txReservationRepo = {
@@ -255,19 +257,15 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         );
     });
 
-    it('does not re-flag an auto-prepaid reservation already flagged', async () => {
-        const dueRows = [
-            {
-                id: 'res-1',
-                orderId: 'order-1',
-                creationMethod: 'auto-prepaid',
-                interventionFlaggedAt: new Date('2026-01-01'),
-            },
-        ];
-        const { service, txReservationRepo, notificationService } = createService(dueRows);
+    it('excludes already-flagged reservations in the query, so a flagged prepaid row is not re-flagged', async () => {
+        const { service, txReservationRepo, notificationService } = createService([]);
 
         const count = await service.expireDueReservations();
 
+        const builder = txReservationRepo.createQueryBuilder.mock.results[0]?.value as {
+            andWhere: ReturnType<typeof vi.fn>;
+        };
+        expect(builder.andWhere).toHaveBeenCalledWith('reservation.interventionFlaggedAt IS NULL');
         expect(count).toBe(0);
         expect(txReservationRepo.update).not.toHaveBeenCalled();
         expect(notificationService.create).not.toHaveBeenCalled();
