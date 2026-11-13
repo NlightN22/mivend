@@ -5,6 +5,7 @@ import { Brackets, ObjectLiteral, SelectQueryBuilder, WhereExpressionBuilder } f
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
+import { getPageAndCount } from 'shared';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import { escapeLike, parseFilter, parsePaging, parseSort } from './list-options';
@@ -114,8 +115,6 @@ function applyList(
     qb.orderBy(first.column, first.direction);
     for (const spec of rest) qb.addOrderBy(spec.column, spec.direction);
     qb.addOrderBy('e.id', 'DESC');
-    const { skip, take } = parsePaging(options);
-    qb.skip(skip).take(take);
 }
 
 // Read model for the integration-health drill-down pages. Never selects payloads.
@@ -154,10 +153,8 @@ export class IntegrationEventListService {
             column: 'e.updatedAt',
             direction: 'DESC',
         });
-        // unbounded-ok: paged by applyList, parsePaging clamps take
-        // eslint-disable-next-line pagination/no-unguarded-page-count -- parsePaging clamps take to >= 1
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
+        const { skip, take } = parsePaging(options);
+        return getPageAndCount(qb, take, skip);
     }
 
     async listOutboxProblems(
@@ -172,10 +169,9 @@ export class IntegrationEventListService {
             column: 'e.createdAt',
             direction: 'DESC',
         });
-        // unbounded-ok: paged by applyList, parsePaging clamps take
-        // eslint-disable-next-line pagination/no-unguarded-page-count -- parsePaging clamps take to >= 1
-        const [entries, totalItems] = await qb.getManyAndCount();
-        return { items: entries.map(toOutboxProblemRow), totalItems };
+        const { skip, take } = parsePaging(options);
+        const { items, totalItems } = await getPageAndCount(qb, take, skip);
+        return { items: items.map(toOutboxProblemRow), totalItems };
     }
 }
 
