@@ -257,7 +257,7 @@ rules can be edited or reissued from the ERP with the same identity.
   `manufacturer`, value code = ERP manufacturer id), or any other facet code. A **global** discount (both `facetCode`/`facetValueCode` null) exists but
   is rare; it applies to every variant for that price type.
 - If a variant matches multiple active rules, the **highest percent wins**. No stacking.
-- The `discountRules` listing is paginated (`findByPriceType`, take default 50, max 200, skip); price resolution is not paginated: it reads all active rules in keyset batches.
+- The `discountRules` listing is paginated (`findByPriceType`, take default 50, max 200, skip); price resolution is not paginated: it reads every active row (price type rules, discount setups, retro-bonus membership per rule) in keyset batches under the shared emergency ceiling of `readAllByKeyset` (10000 rows). Exceeding it fails the request with `QUERY_TOO_LARGE` and never truncates; a warning is logged at 80 percent of the ceiling. The real fix is selecting only the rules that match the cart's facets in SQL (tracked separately).
 - Discount periods (`validFrom`/`validTo`) are **always fully bounded** — the business
   never runs open-ended discounts, and ERP currently caps periods at ~3 months. Periods
   for the same facet/price-type combination don't overlap in practice.
