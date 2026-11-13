@@ -1,6 +1,6 @@
 import { FacetValue, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { characteristicFacetCode } from 'shared';
+import { characteristicFacetCode, getManyBounded } from 'shared';
 
 import type { ResolveQueryFacets } from './search-service.client';
 import { loggerCtx } from './types';
@@ -31,16 +31,18 @@ async function mapManufacturers(
     const manufacturers = facets?.manufacturer ?? [];
     if (manufacturers.length === 0) return [];
 
-    // unbounded-ok: facet values matched by the codes of one search response
-    const values = await connection
-        .getRepository(ctx, FacetValue)
-        .createQueryBuilder('fv')
-        .leftJoinAndSelect('fv.facet', 'facet')
-        .leftJoinAndSelect('fv.translations', 'translations')
-        .leftJoinAndSelect('facet.translations', 'facetTranslations')
-        .where('facet.code = :facetCode', { facetCode: 'manufacturer' })
-        .andWhere('fv.code IN (:...codes)', { codes: manufacturers.map(m => m.value) })
-        .getMany();
+    // One value per code within the manufacturer facet, so the code count is the ceiling.
+    const values = await getManyBounded(
+        connection
+            .getRepository(ctx, FacetValue)
+            .createQueryBuilder('fv')
+            .leftJoinAndSelect('fv.facet', 'facet')
+            .leftJoinAndSelect('fv.translations', 'translations')
+            .leftJoinAndSelect('facet.translations', 'facetTranslations')
+            .where('facet.code = :facetCode', { facetCode: 'manufacturer' })
+            .andWhere('fv.code IN (:...codes)', { codes: manufacturers.map(m => m.value) }),
+        manufacturers.length,
+    );
     const byCode = new Map(values.map(v => [v.code, v]));
 
     const result: ExternalFacetValueResult[] = [];
@@ -62,18 +64,20 @@ async function mapCharacteristics(
     const entries = (facets?.characteristics ?? []).filter(e => e.count > 0);
     if (entries.length === 0) return [];
 
-    // unbounded-ok: facet values matched by the codes of one search response
-    const values = await connection
-        .getRepository(ctx, FacetValue)
-        .createQueryBuilder('fv')
-        .leftJoinAndSelect('fv.facet', 'facet')
-        .leftJoinAndSelect('fv.translations', 'translations')
-        .leftJoinAndSelect('facet.translations', 'facetTranslations')
-        .where('facet.code IN (:...facetCodes)', {
-            facetCodes: [...new Set(entries.map(e => characteristicFacetCode(e.key)))],
-        })
-        .andWhere('fv.code IN (:...codes)', { codes: [...new Set(entries.map(e => e.normalized))] })
-        .getMany();
+    const facetCodes = [...new Set(entries.map(e => characteristicFacetCode(e.key)))];
+    const codes = [...new Set(entries.map(e => e.normalized))];
+    // At most one value per (facet, code) pair, so the cross product is the ceiling.
+    const values = await getManyBounded(
+        connection
+            .getRepository(ctx, FacetValue)
+            .createQueryBuilder('fv')
+            .leftJoinAndSelect('fv.facet', 'facet')
+            .leftJoinAndSelect('fv.translations', 'translations')
+            .leftJoinAndSelect('facet.translations', 'facetTranslations')
+            .where('facet.code IN (:...facetCodes)', { facetCodes })
+            .andWhere('fv.code IN (:...codes)', { codes }),
+        facetCodes.length * codes.length,
+    );
     const byKey = new Map(values.map(v => [`${v.facet.code}\u0000${v.code}`, v]));
 
     const result: ExternalFacetValueResult[] = [];

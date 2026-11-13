@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Product, RequestContext, TransactionalConnection } from '@vendure/core';
 import { andProductInStock } from '@mivend/plugin-reservation';
-import { productNotInHiddenCategorySql } from 'shared';
+import { getManyBounded, productNotInHiddenCategorySql } from 'shared';
 
 import { variantExistsSql } from './variant-exists-sql';
 
@@ -38,8 +38,8 @@ export class ProductLookupService {
                 .andWhere(variantExistsSql(true))
                 .andWhere(productNotInHiddenCategorySql());
         }
-        // unbounded-ok: products matched by the external ids passed in
-        const products = await query.getMany();
+        // One product per external id, so the id count is the ceiling.
+        const products = await getManyBounded(query, externalIds.length);
 
         for (const product of products) {
             const externalId = (product.customFields as { externalId?: string | null }).externalId;
@@ -93,16 +93,17 @@ export class ProductLookupService {
         const ids = rows.map(r => r.id);
         if (ids.length === 0) return { products: [], total };
 
-        // unbounded-ok: products of one page, ids from the paged query above
-        const loaded = await repo
-            .createQueryBuilder('product')
-            .leftJoinAndSelect('product.translations', 'translations')
-            .leftJoinAndSelect('product.featuredAsset', 'featuredAsset')
-            .leftJoinAndSelect('product.variants', 'variants')
-            .leftJoinAndSelect('variants.translations', 'variantTranslations')
-            .leftJoinAndSelect('variants.featuredAsset', 'variantFeaturedAsset')
-            .whereInIds(ids)
-            .getMany();
+        const loaded = await getManyBounded(
+            repo
+                .createQueryBuilder('product')
+                .leftJoinAndSelect('product.translations', 'translations')
+                .leftJoinAndSelect('product.featuredAsset', 'featuredAsset')
+                .leftJoinAndSelect('product.variants', 'variants')
+                .leftJoinAndSelect('variants.translations', 'variantTranslations')
+                .leftJoinAndSelect('variants.featuredAsset', 'variantFeaturedAsset')
+                .whereInIds(ids),
+            ids.length,
+        );
         const byId = new Map(loaded.map(p => [String(p.id), p]));
         return {
             products: ids.flatMap(id => byId.get(String(id)) ?? []),

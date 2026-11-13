@@ -20,7 +20,7 @@ function makeResolver(
 ) {
     const qbFor = (rows: unknown[]) => {
         const qb: Record<string, unknown> = {};
-        for (const m of ['leftJoinAndSelect', 'whereInIds']) qb[m] = () => qb;
+        for (const m of ['leftJoinAndSelect', 'whereInIds', 'take']) qb[m] = () => qb;
         qb.getMany = async () => rows;
         return qb;
     };

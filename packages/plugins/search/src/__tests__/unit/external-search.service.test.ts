@@ -376,7 +376,7 @@ describe('ExternalSearchService.search', () => {
         const facetValue = { id: 7, code: 'mfr-1', translations: [{ name: 'Acme' }] };
         const getMany = vi.fn().mockResolvedValue([facetValue]);
         const qb: Record<string, unknown> = {};
-        for (const m of ['leftJoinAndSelect', 'where', 'andWhere']) qb[m] = () => qb;
+        for (const m of ['leftJoinAndSelect', 'where', 'andWhere', 'take']) qb[m] = () => qb;
         qb.getMany = getMany;
         const db = { getRepository: () => ({ createQueryBuilder: () => qb }) };
         const service = new ExternalSearchService(

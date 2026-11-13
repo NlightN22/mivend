@@ -7,6 +7,7 @@ function connectionReturning(collections: unknown[]): TransactionalConnection {
     const qb = {
         leftJoinAndSelect: () => qb,
         where: () => qb,
+        take: () => qb,
         getMany: async () => collections,
     };
     return { getRepository: () => ({ createQueryBuilder: () => qb }) } as never;

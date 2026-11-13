@@ -8,6 +8,7 @@ function connectionReturning(values: unknown[]): TransactionalConnection {
         leftJoinAndSelect: () => qb,
         where: () => qb,
         andWhere: () => qb,
+        take: () => qb,
         getMany: async () => values,
     };
     return { getRepository: () => ({ createQueryBuilder: () => qb }) } as never;

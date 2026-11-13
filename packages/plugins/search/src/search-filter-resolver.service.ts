@@ -8,7 +8,7 @@ import {
 } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
 import { StockLevelService } from '@mivend/plugin-reservation';
-import { categoryErpIdFromSlug, characteristicKeyFromFacetCode } from 'shared';
+import { categoryErpIdFromSlug, characteristicKeyFromFacetCode, getManyBounded } from 'shared';
 
 import { loggerCtx, ShopSearchInput } from './types';
 
@@ -84,13 +84,14 @@ export class SearchFilterResolver {
         const slugs = [input.collectionSlug, ...(input.collectionSlugs ?? [])];
         const ids = [input.collectionId, ...(input.collectionIds ?? [])].filter(Boolean);
         if (ids.length > 0) {
-            // unbounded-ok: collections matched by the ids of one search input
-            const collections = await this.connection
-                .getRepository(ctx, Collection)
-                .createQueryBuilder('collection')
-                .leftJoinAndSelect('collection.translations', 't')
-                .whereInIds(ids)
-                .getMany();
+            const collections = await getManyBounded(
+                this.connection
+                    .getRepository(ctx, Collection)
+                    .createQueryBuilder('collection')
+                    .leftJoinAndSelect('collection.translations', 't')
+                    .whereInIds(ids),
+                ids.length,
+            );
             if (collections.length < new Set(ids.map(String)).size) unresolved = true;
             slugs.push(...collections.flatMap(c => c.translations.map(t => t.slug)));
         }
@@ -105,12 +106,14 @@ export class SearchFilterResolver {
 
     private async loadFacetValues(ctx: RequestContext, ids: ID[]): Promise<FacetValue[]> {
         if (ids.length === 0) return [];
-        // unbounded-ok: facet values matched by the ids of one search input
-        return this.connection
-            .getRepository(ctx, FacetValue)
-            .createQueryBuilder('fv')
-            .leftJoinAndSelect('fv.facet', 'facet')
-            .whereInIds([...new Set(ids)])
-            .getMany();
+        const unique = [...new Set(ids)];
+        return getManyBounded(
+            this.connection
+                .getRepository(ctx, FacetValue)
+                .createQueryBuilder('fv')
+                .leftJoinAndSelect('fv.facet', 'facet')
+                .whereInIds(unique),
+            unique.length,
+        );
     }
 }

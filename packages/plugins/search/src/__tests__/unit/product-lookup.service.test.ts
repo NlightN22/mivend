@@ -12,7 +12,7 @@ function makeService(products: unknown[]): {
 } {
     const andWhere = vi.fn();
     const qb: Record<string, unknown> = { andWhere, getMany: vi.fn().mockResolvedValue(products) };
-    for (const m of ['leftJoinAndSelect', 'innerJoin', 'where'])
+    for (const m of ['leftJoinAndSelect', 'innerJoin', 'where', 'take'])
         qb[m] = vi.fn().mockReturnValue(qb);
     andWhere.mockReturnValue(qb);
     const connection = {
