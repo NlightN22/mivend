@@ -16,6 +16,7 @@
     },
     "peerDependencies": {
         "@vendure/core": "^3.7.3",
+        "graphql": "^16.0.0",
         "typeorm": "^0.3.0"
     },
     "peerDependenciesMeta": {
@@ -24,10 +25,14 @@
         },
         "typeorm": {
             "optional": true
+        },
+        "graphql": {
+            "optional": true
         }
     },
     "devDependencies": {
         "@vendure/core": "^3.7.3",
+        "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0"
     }
