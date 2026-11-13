@@ -10,8 +10,8 @@ export async function findRejectedOrderIdsWithActiveReserve(
     rejectedCodes: string[],
     cutoff: Date,
 ): Promise<string[]> {
-    const orders = await readAllByKeyset<Order>((afterId, limit) =>
-        connection
+    const orders = await readAllByKeyset<Order>((afterId, limit) => {
+        const query = connection
             .getRepository(ctx, Order)
             .createQueryBuilder('o')
             .where('o.customFields.erpStatus IN (:...codes)', { codes: rejectedCodes })
@@ -25,11 +25,9 @@ export async function findRejectedOrderIdsWithActiveReserve(
                     .andWhere('r.orderId = CAST(o.id AS varchar)')
                     .getQuery()})`,
             )
-            .setParameter('active', 'active')
-            .andWhere('o.id > :afterId', { afterId: afterId ?? 0 })
-            .orderBy('o.id', 'ASC')
-            .take(limit)
-            .getMany(),
-    );
+            .setParameter('active', 'active');
+        if (afterId !== null) query.andWhere('o.id > :afterId', { afterId });
+        return query.orderBy('o.id', 'ASC').take(limit).getMany();
+    });
     return orders.map(order => String(order.id));
 }

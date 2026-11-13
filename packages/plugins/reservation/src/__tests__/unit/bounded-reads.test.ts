@@ -99,7 +99,7 @@ describe('readAllByKeyset: rejected-order sweep', () => {
     it('reads every batch up to the ceiling, continuing after the last id', async () => {
         const { run, afterIds } = sweep(10);
         expect(await run()).toHaveLength(10000);
-        expect(afterIds.slice(0, 2)).toEqual([0, 1000]);
+        expect(afterIds.slice(0, 2)).toEqual([1000, 2000]);
     });
 
     it('throws once the set passes the ceiling', async () => {
