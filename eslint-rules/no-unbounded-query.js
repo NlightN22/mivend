@@ -1,5 +1,7 @@
 // A read that can return every row of a table is a latent outage once the table grows.
-// Exception: `// unbounded-ok: <reason>` above the statement; see docs/testing-strategy.md.
+// Accepted: take/limit with a literal <= MAX_TAKE, a shared bounded helper (getManyBounded, findBounded,
+// ctxQueryBounded), a keyset batch, or a legacy `// unbounded-ok: <reason>` marker (ratchet: unbounded-ok-baseline.json).
+// Raw SQL is checked by regex (LIMIT/FETCH FIRST at the end), a heuristic: see docs/testing-strategy.md.
 // Not seen: SQL from a helper/concatenation; a trailing ${fragment} after an identifier is assumed to be a limit.
 const READ_METHODS = new Set(['find', 'findBy', 'findAndCount', 'findAndCountBy']);
 const QB_TERMINALS = new Set([
@@ -10,6 +12,8 @@ const QB_TERMINALS = new Set([
     'stream',
 ]);
 const BOUNDING = new Set(['take', 'limit']);
+// Largest literal page a single read may ask for; bigger sets go through a keyset batch.
+const MAX_TAKE = 1000;
 const QB_HINTS = new Set([
     'createQueryBuilder',
     'where',
@@ -59,6 +63,16 @@ function hasTake(objectNode) {
                         !(p.value.type === 'Literal' && p.value.value === 0)) ||
                         p.key.value === 'take')),
         )
+    );
+}
+
+function overMaxTake(valueNode) {
+    return valueNode?.type === 'Literal' && typeof valueNode.value === 'number' && valueNode.value > MAX_TAKE;
+}
+
+function optionsOverMax(objectNode) {
+    return objectNode.properties.some(
+        p => p.type === 'Property' && (p.key.name === 'take' || p.key.value === 'take') && overMaxTake(p.value),
     );
 }
 
@@ -206,6 +220,18 @@ export default {
                 }
                 if (callee.type !== 'MemberExpression' || callee.computed) return;
                 const name = callee.property.name;
+
+                const tooBig =
+                    (BOUNDING.has(name) && overMaxTake(node.arguments[0])) ||
+                    (READ_METHODS.has(name) &&
+                        node.arguments.some(a => a.type === 'ObjectExpression' && optionsOverMax(a)));
+                if (tooBig) {
+                    context.report({
+                        node,
+                        message: `A take/limit above ${MAX_TAKE} is not a bounded read. Page it, or read in keyset batches.`,
+                    });
+                    return;
+                }
 
                 if (QB_TERMINALS.has(name)) {
                     const { names, base } = chainInfo(node);
