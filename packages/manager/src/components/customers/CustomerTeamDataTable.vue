@@ -159,9 +159,6 @@ function applyView(state: TableViewState): void {
                 roleLabel((data as TeamRow).role)
             }}</MvStatusBadge>
         </template>
-        <template #cell-status="{ data }">
-            <MvStatusBadge variant="success">{{ (data as TeamRow).status }}</MvStatusBadge>
-        </template>
         <template #cell-actions="{ data }">
             <MvButton
                 v-if="!(data as TeamRow).isOwner && canManage && (data as TeamRow).administratorId"

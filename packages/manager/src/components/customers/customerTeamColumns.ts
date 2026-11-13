@@ -10,7 +10,6 @@ export interface TeamRow {
     email: string;
     phone: string;
     createdAt: string | null;
-    status: string;
     administratorId: string | null;
     isOwner: boolean;
 }
@@ -50,13 +49,6 @@ export function buildTeamColumns(
             field: 'phone',
             header: col('phone'),
             width: 150,
-            filterConfig: none,
-            mobile: { hidden: true },
-        },
-        {
-            field: 'status',
-            header: col('status'),
-            width: 110,
             filterConfig: none,
             mobile: { hidden: true },
         },

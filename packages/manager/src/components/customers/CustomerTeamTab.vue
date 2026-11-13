@@ -149,7 +149,6 @@ const rows = computed<TeamRow[]>(() => {
         email: manager(props.ownerId ?? '')?.email ?? '—',
         phone: '—',
         createdAt: null,
-        status: t('customers.team.statusActive'),
         administratorId: props.ownerId,
         isOwner: true,
     };
@@ -162,7 +161,6 @@ const rows = computed<TeamRow[]>(() => {
         email: manager(m.administratorId)?.email ?? '—',
         phone: m.phone ?? '—',
         createdAt: m.createdAt,
-        status: t('customers.team.statusActive'),
         administratorId: m.administratorId,
         isOwner: false,
     }));
@@ -189,7 +187,9 @@ const rows = computed<TeamRow[]>(() => {
         <p v-if="error" class="customer-team__error">{{ error }}</p>
 
         <div class="customer-team__panel customer-team__notifications-panel">
-            <h4 class="customer-team__panel-title">{{ t('customers.team.notifications.title') }}</h4>
+            <h4 class="customer-team__panel-title">
+                {{ t('customers.team.notifications.title') }}
+            </h4>
             <p class="customer-team__panel-subtitle">
                 {{ t('customers.team.notifications.subtitle') }}
             </p>
@@ -226,9 +226,9 @@ const rows = computed<TeamRow[]>(() => {
                         @blur="phoneTouched = true"
                     />
                 </MvFormField>
-                <MvButton :disabled="!newAdministratorId || saving" @click="handleAdd"
-                    >{{ t('customers.team.addButton') }}</MvButton
-                >
+                <MvButton :disabled="!newAdministratorId || saving" @click="handleAdd">{{
+                    t('customers.team.addButton')
+                }}</MvButton>
             </div>
         </MvModal>
     </div>
