@@ -152,6 +152,7 @@ export {
 } from './components/MvStockBadge/stock-variant';
 export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
 export type { QtyStepperLabels } from './components/MvQtyStepper/MvQtyStepper.vue';
+export { default as MvBlockError } from './components/MvBlockError/MvBlockError.vue';
 export { default as MvCard } from './components/MvCard/MvCard.vue';
 export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';
 export { default as MvIconButton } from './components/MvIconButton/MvIconButton.vue';
