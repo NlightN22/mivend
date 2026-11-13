@@ -47,7 +47,20 @@ describe('ChangeJournalResolver', () => {
         expect(registry.filterRefs).toHaveBeenCalledWith(ctx, [
             { entityName: 'TradingPoint', entityId: '5' },
         ]);
-        expect(journal.findForEntity).toHaveBeenCalledWith(ctx, 'TradingPoint', '5', args);
+        expect(journal.findForEntity).toHaveBeenCalledWith(ctx, 'TradingPoint', '5', args, {});
+    });
+
+    it('passes the narrowing filter to the journal after the scope check', async () => {
+        const { resolver, journal } = build(true, 'own');
+        const filter = { actorType: 'acting' };
+        await resolver.changeJournalForEntity(ctx, { entityType: 'Order', entityId: '1', filter });
+        expect(journal.findForEntity).toHaveBeenCalledWith(
+            ctx,
+            'Order',
+            '1',
+            { entityType: 'Order', entityId: '1', filter },
+            filter,
+        );
     });
 
     it.each(['own', 'department', 'all'] as const)(

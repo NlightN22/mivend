@@ -39,6 +39,8 @@ export const changeJournalAdminSchema = gql`
         changeJournalForEntity(
             entityType: String!
             entityId: ID!
+            "Narrows the entity's entries; its entityType is ignored"
+            filter: ChangeJournalFilter
             skip: Int
             take: Int
         ): ChangeJournalPage!

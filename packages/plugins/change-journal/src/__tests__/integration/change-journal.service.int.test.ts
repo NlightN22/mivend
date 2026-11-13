@@ -88,6 +88,19 @@ describe('ChangeJournalService reads (real Postgres)', () => {
         );
     });
 
+    it('narrows one entity by actor and time and never leaves the entity, even with a hostile filter', async () => {
+        await insertJournalEntry(ds, entry({ actorType: 'acting', administratorId: '4' }));
+        await insertJournalEntry(ds, entry({ actorType: 'system', administratorId: null }));
+        await insertJournalEntry(ds, entry({ entityId: '2', actorType: 'acting' }));
+        await insertJournalEntry(ds, entry({ entityType: 'Order', actorType: 'acting' }));
+        const only = (filter: object) => service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
+        expect((await only({ actorType: 'acting' })).totalItems).toBe(1);
+        expect((await only({ administratorId: '4' })).totalItems).toBe(1);
+        expect((await only({ occurredBefore: new Date(NOW.getTime() - 1000) })).totalItems).toBe(0);
+        expect((await only({ entityType: 'Order' })).totalItems).toBe(2);
+        expect((await only({ actorType: "x' OR '1'='1" })).totalItems).toBe(0);
+    });
+
     it('filters by actor, entity type and time, and caps take', async () => {
         await insertJournalEntry(
             ds,

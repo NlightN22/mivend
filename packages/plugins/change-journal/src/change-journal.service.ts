@@ -44,20 +44,46 @@ export const MAX_TAKE = 100;
 const COLUMNS = `id::text AS id, "occurredAt", "actorType", "userId", "administratorId", "source",
     "requestId", "sessionId", "entityType", "entityId", "entityUuid", "action", "changes"`;
 
+function filterClauses(
+    filter: ChangeJournalFilter,
+    offset: number,
+): { where: string[]; params: unknown[] } {
+    const where: string[] = [];
+    const params: unknown[] = [];
+    const add = (sql: string, value: unknown): void => {
+        if (value === undefined || value === null || value === '') return;
+        params.push(value);
+        where.push(sql.replace('?', `$${offset + params.length}`));
+    };
+    add('"entityType" = ?', filter.entityType);
+    add('"actorType" = ?', filter.actorType);
+    add('"userId" = ?', filter.userId != null ? String(filter.userId) : null);
+    add(
+        '"administratorId" = ?',
+        filter.administratorId != null ? String(filter.administratorId) : null,
+    );
+    add('"occurredAt" >= ?', filter.occurredAfter);
+    add('"occurredAt" < ?', filter.occurredBefore);
+    return { where, params };
+}
+
 @Injectable()
 export class ChangeJournalService {
     constructor(private connection: TransactionalConnection) {}
 
+    // The entity is fixed by the caller; a filter only narrows it and its entityType is ignored.
     findForEntity(
         ctx: RequestContext,
         entityType: string,
         entityId: string,
         page: PageArgs,
+        filter: ChangeJournalFilter = {},
     ): Promise<ChangeJournalPage> {
+        const extra = filterClauses({ ...filter, entityType: null }, 2);
         return this.page(
             ctx,
-            ['"entityType" = $1', '"entityId" = $2'],
-            [entityType, entityId],
+            ['"entityType" = $1', '"entityId" = $2', ...extra.where],
+            [entityType, entityId, ...extra.params],
             page,
         );
     }
@@ -67,22 +93,7 @@ export class ChangeJournalService {
         filter: ChangeJournalFilter,
         page: PageArgs,
     ): Promise<ChangeJournalPage> {
-        const where: string[] = [];
-        const params: unknown[] = [];
-        const add = (sql: string, value: unknown): void => {
-            if (value === undefined || value === null || value === '') return;
-            params.push(value);
-            where.push(sql.replace('?', `$${params.length}`));
-        };
-        add('"entityType" = ?', filter.entityType);
-        add('"actorType" = ?', filter.actorType);
-        add('"userId" = ?', filter.userId != null ? String(filter.userId) : null);
-        add(
-            '"administratorId" = ?',
-            filter.administratorId != null ? String(filter.administratorId) : null,
-        );
-        add('"occurredAt" >= ?', filter.occurredAfter);
-        add('"occurredAt" < ?', filter.occurredBefore);
+        const { where, params } = filterClauses(filter, 0);
         return this.page(ctx, where, params, page);
     }
 
