@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { ForbiddenError } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import {
@@ -29,6 +30,8 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) officialEmail!: string | null;
     @Column({ type: 'boolean', default: true }) isActive!: boolean;
     @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
+    @Column({ type: 'int', default: 0 }) creditLimit!: number;
+    @Column({ type: 'int', default: 0 }) creditBalance!: number;
 }
 
 @Entity('customer')
@@ -170,7 +173,7 @@ describe('counterparty bulk matching resolves exactly what the list shows', () =
                     parseCounterpartyMatching(matching),
                     10,
                 ),
-            ).rejects.toThrow();
+            ).rejects.toThrow(ForbiddenError);
             await expect(
                 resolveCounterpartyIds(
                     service,
