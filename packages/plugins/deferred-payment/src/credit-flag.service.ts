@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
-import { ID, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
+import { ID, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { CtxLoader, getManyBounded, getRawManyBounded } from 'shared';
+import { CtxLoader, getRawManyBounded } from 'shared';
 
 import { UNCONFIRMED_ERP_STATUSES_SQL } from './open-deferred-exposure.service';
 
-const MAX_SCANNED_ORDERS = 500;
+const MAX_COUNTERPARTIES = 5000;
 const FLAGGED_PAYMENT_SQL = `p.state IN ('Authorized', 'Settled')
     AND p.metadata::jsonb -> 'public' ->> 'creditLimitExceeded' = 'true'`;
 
@@ -44,19 +44,19 @@ export class CreditFlagService {
     async flaggedCounterpartyIds(ctx: RequestContext): Promise<string[]> {
         const qb = await this.orderVisibilityService.buildVisibleOrdersQuery(ctx);
         const alias = `"${qb.alias}"`;
-        const orders: Order[] = await getManyBounded(
+        const rows = await getRawManyBounded<{ counterpartyId: string }>(
             qb
+                .select('customer."customFieldsCounterpartyid"', 'counterpartyId')
+                .distinct(true)
+                .orderBy()
                 .andWhere(`${alias}.state <> 'Cancelled'`)
                 .andWhere(`${alias}."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})`)
+                .andWhere('customer."customFieldsCounterpartyid" IS NOT NULL')
                 .andWhere(
                     `EXISTS (SELECT 1 FROM payment p WHERE p."orderId" = ${alias}.id AND ${FLAGGED_PAYMENT_SQL})`,
                 ),
-            MAX_SCANNED_ORDERS,
+            MAX_COUNTERPARTIES,
         );
-        const ids = orders
-            .map(o => o.customer?.customFields as { counterpartyId?: string } | undefined)
-            .map(cf => cf?.counterpartyId)
-            .filter((id): id is string => Boolean(id));
-        return [...new Set(ids)];
+        return rows.map(row => row.counterpartyId).filter(id => id !== '');
     }
 }
