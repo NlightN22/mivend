@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel, MvSwitch } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useDepartmentBranch } from '../../composables/useDepartmentBranch';
 import DepartmentBranchTable from '../../components/settings/DepartmentBranchTable.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const {
     rows,
@@ -26,27 +28,27 @@ onMounted(() => {
 
 <template>
     <div v-if="!authStore.hasPermission('ManageAccessControl')" class="department-branch__denied">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage the department to branch mapping.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.departments.denied') }}</p>
     </div>
 
     <div v-else class="department-branch">
-        <div class="department-branch__breadcrumb">Workspace / System settings</div>
-        <h1 class="department-branch__title">Departments to branch</h1>
+        <div class="department-branch__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="department-branch__title">{{ t('settingsAccess.departments.title') }}</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
-        <MvPanel title="Branch of each department">
+        <MvPanel :title="t('settingsAccess.departments.panel')">
             <template #subheader>
                 <p class="department-branch__lead">
-                    A branch set on a department applies to all its sub-departments until a deeper
-                    one is set. Administrators and counterparties of an unmapped department get no
-                    branch, so branch-scoped roles do not see them. Changes apply right away.
+                    {{ t('settingsAccess.departments.lead') }}
                 </p>
             </template>
             <MvSwitch
                 v-model="onlyUnmapped"
-                :label="`Only unmapped departments with users or counterparties (${unmappedWithPeopleCount})`"
+                :label="
+                    t('settingsAccess.departments.onlyUnmapped', { count: unmappedWithPeopleCount })
+                "
             />
             <DepartmentBranchTable
                 :rows="rows"

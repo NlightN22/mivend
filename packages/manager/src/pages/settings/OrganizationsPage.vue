@@ -1,23 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import OrganizationsTable from '../../components/settings/OrganizationsTable.vue';
 import { fetchOrganizations, type OrganizationRequisites } from '../../api/organizations';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const organizations = ref<OrganizationRequisites[]>([]);
 const loadError = ref('');
 const loading = ref(true);
 
-// Organizations are a bounded set of the business's own legal entities (a handful at most) —
-// exempt from server pagination per the backend-plugin-rules skill's Pagination section, same
-// exemption class as BranchSettingsPage.vue's warehouse list. Still rendered via
-// MvAdvancedDataTable (manager-table-standard point 6) with client-side search — the search is
-// still a real, user-facing filter someone may want to share/bookmark, so it (and the page
-// number) stay URL-synced.
+// A bounded set of legal entities, exempt from server pagination; the client-side search stays URL-synced.
 const search = ref('');
 const page = ref(1);
 const pageSize = ref(20);
@@ -65,7 +62,8 @@ async function loadAll(): Promise<void> {
     try {
         organizations.value = await fetchOrganizations();
     } catch (e) {
-        loadError.value = e instanceof Error ? e.message : 'Could not load organizations';
+        loadError.value =
+            e instanceof Error ? e.message : t('settingsAccess.organizations.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -79,21 +77,20 @@ onMounted(loadAll);
         v-if="!authStore.hasPermission('ManageAccessControl')"
         class="organizations-page__not-authorized"
     >
-        <h1>Not authorized</h1>
-        <p>You don't have permission to view organizations.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.organizations.denied') }}</p>
     </div>
 
     <div v-else class="organizations-page">
-        <div class="organizations-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="organizations-page__title">Organizations</h1>
+        <div class="organizations-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="organizations-page__title">{{ t('settingsAccess.organizations.title') }}</h1>
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
-        <MvPanel title="Legal entities">
+        <MvPanel :title="t('settingsAccess.organizations.panel')">
             <template #subheader>
                 <p class="organizations-page__description">
-                    Read-only view of the business's own legal entities as reported by the ERP, and
-                    whether full legal requisites have arrived yet for each one.
+                    {{ t('settingsAccess.organizations.description') }}
                 </p>
             </template>
 

@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { computed, ref } from 'vue';
 import { fetchBranchOptions, type BranchOption } from '../api/branchSettings';
 import {
@@ -28,7 +29,8 @@ export function useDepartmentBranch() {
                 fetchBranchOptions(),
             ]);
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load departments';
+            error.value =
+                e instanceof Error ? e.message : tr('settingsAccess.departments.loadFailed');
         } finally {
             loading.value = false;
         }
@@ -43,7 +45,8 @@ export function useDepartmentBranch() {
             else await clearDepartmentBranch(departmentErpId);
             nodes.value = await fetchDepartmentBranchOverview();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not save the mapping';
+            error.value =
+                e instanceof Error ? e.message : tr('settingsAccess.departments.saveFailed');
         } finally {
             savingId.value = null;
         }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvStatusBadge,
@@ -10,15 +11,8 @@ import {
 } from '@mivend/ui-kit';
 import type { OrganizationRequisites } from '../../api/organizations';
 
-// See manager-table-standard skill for the checklist this follows. `legalName` is the
-// identifying/required column (a human types the legal entity's name, not its ERP guid), backed
-// by a real toolbar search + funnel filter. `organizationRequisites` takes no args (a bounded
-// reference list of the business's own legal entities, exempt from server pagination per the
-// backend-plugin-rules skill's Pagination section, same exemption class as
-// WarehouseCurationTable.vue) so the search/filter here is client-side, matching only
-// `legalName`. `erpId` is a read-only ERP reference value with no operational reason to filter by
-// it, so it stays `filterConfig: { type: 'none' }` like WarehouseCurationTable.vue's own `erpId`
-// column. This is a v1 read-only list (issue #88): no create/edit/delete action.
+// Bounded reference list, so the search over `legalName` is client-side; read-only, no row actions.
+const { t } = useI18n();
 const props = defineProps<{
     organizations: OrganizationRequisites[];
     loading: boolean;
@@ -35,43 +29,43 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'legalName',
-        header: 'Organization',
+        header: t('settingsAccess.organizations.columns.organization'),
         width: 260,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Legal name contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.organizations.filters.name') },
         mobile: { primary: true },
     },
     {
         field: 'createdAt',
-        header: 'Created',
+        header: t('settingsAccess.organizations.columns.created'),
         width: 140,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
     {
         field: 'erpId',
-        header: 'ERP id',
+        header: t('settingsAccess.organizations.columns.erpId'),
         width: 220,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
     {
         field: 'isActive',
-        header: 'Status',
+        header: t('settingsAccess.organizations.columns.status'),
         width: 120,
         filterConfig: { type: 'none' },
         mobile: { badge: true },
     },
     {
         field: 'hasCompleteRequisites',
-        header: 'Requisites',
+        header: t('settingsAccess.organizations.columns.requisites'),
         width: 140,
         filterConfig: { type: 'none' },
     },
-];
+]);
 
 interface OrganizationFilterState {
     [key: string]: unknown;
@@ -82,21 +76,19 @@ const BLANK_FILTERS: OrganizationFilterState = { legalName: '' };
 const { state: tableState } = useDataTableState<OrganizationFilterState>(
     `organizations-datatable:${props.administratorId || 'anonymous'}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { legalName: props.searchFilter },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
-            c => c.field,
-        ),
-        // `legalName` (search) and `pageSize` are OrganizationsPage's own concern — it owns the
-        // filtering/slicing — so always seed from its current prop values, never stale
-        // localStorage (same reasoning as WarehouseCurationTable.vue).
+        columns: ALL_COLUMNS.value,
+        allowedFilterKeys: ALL_COLUMNS.value
+            .filter(c => c.filterConfig.type !== 'none')
+            .map(c => c.field),
+        // The page owns the filtering and slicing, so seed from its props, never stale localStorage.
         externallyOwned: { pageSize: true, filterKeys: ['legalName'] },
     },
 );
@@ -161,8 +153,8 @@ const rows = computed<OrganizationRow[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'legalName', placeholder: 'Search organizations…' }"
-        empty-message="No organizations match your search"
+        :search="{ filterKey: 'legalName', placeholder: t('settingsAccess.organizations.search') }"
+        :empty-message="t('settingsAccess.organizations.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -171,12 +163,20 @@ const rows = computed<OrganizationRow[]>(() =>
         </template>
         <template #cell-isActive="{ data }">
             <MvStatusBadge :variant="(data as OrganizationRow).isActiveVariant">
-                {{ (data as OrganizationRow).isActive ? 'Active' : 'Inactive' }}
+                {{
+                    (data as OrganizationRow).isActive
+                        ? t('settingsAccess.organizations.active')
+                        : t('settingsAccess.organizations.inactive')
+                }}
             </MvStatusBadge>
         </template>
         <template #cell-hasCompleteRequisites="{ data }">
             <MvStatusBadge :variant="(data as OrganizationRow).hasCompleteRequisitesVariant">
-                {{ (data as OrganizationRow).hasCompleteRequisites ? 'Complete' : 'Incomplete' }}
+                {{
+                    (data as OrganizationRow).hasCompleteRequisites
+                        ? t('settingsAccess.organizations.complete')
+                        : t('settingsAccess.organizations.incomplete')
+                }}
             </MvStatusBadge>
         </template>
     </MvAdvancedDataTable>
