@@ -123,7 +123,7 @@ export class DiscountSetupRulesService {
         priceTypeCode: string | null,
         now: Date,
     ): Promise<LoadedDiscountSetup[]> {
-        // unbounded-ok: TRACKED #350 active discount setups on the pricing path are filtered, not bounded
+        // unbounded-ok: pricing path, a cap would change prices; filtered by date and condition, memoized per order
         const rows = await ctxQuery<SetupRow[]>(
             this.connection,
             ctx,

@@ -29,7 +29,7 @@ export class RetroBonusOrderService {
         if (!counterparty) return NONE;
         const rules = await this.rules.findForCounterparty(ctx, counterparty.erpId);
         if (rules.length === 0) return NONE;
-        // unbounded-ok: TRACKED #350 membership rows per matched rule are not capped
+        // unbounded-ok: pricing path, a cap would change bonuses; bounded by active business data of the matched rules
         const rows = await this.connection
             .getRepository(ctx, RetroBonusRuleProduct)
             .find({ where: { ruleId: In(rules.map(r => r.id as number)) } });
