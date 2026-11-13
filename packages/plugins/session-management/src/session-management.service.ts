@@ -9,7 +9,8 @@ import {
     TransactionalConnection,
     UserService,
 } from '@vendure/core';
-import { findBounded } from 'shared';
+import { MoreThan } from 'typeorm';
+import { findBounded, keysetBatches } from 'shared';
 
 import { ActingContextService } from './acting-context.service';
 import { labelForUserAgent, SessionSummary } from './session.types';
@@ -101,10 +102,23 @@ export class SessionManagementService {
     // Core's deleteSessionsByUser also removes the acting sessions, which share the customer's user.
     async deleteOwnSessions(ctx: RequestContext, userId: ID): Promise<void> {
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
-        const own = (await findBounded(repo, { where: { user: { id: userId } } })).filter(isOwn);
-        await repo.remove(own);
-        for (const session of own) {
-            await this.configService.authOptions.sessionCacheStrategy.delete(session.token);
+        const slices = keysetBatches<AuthenticatedSession>((afterId, limit) =>
+            repo.find({
+                where: {
+                    user: { id: userId },
+                    ...(afterId === null ? {} : { id: MoreThan(afterId) }),
+                },
+                order: { id: 'ASC' },
+                take: limit,
+            }),
+        );
+        for await (const slice of slices) {
+            const own = slice.filter(isOwn);
+            // delete by id: remove() would clear the ids the next slice's cursor reads.
+            if (own.length > 0) await repo.delete(own.map(session => session.id));
+            for (const session of own) {
+                await this.configService.authOptions.sessionCacheStrategy.delete(session.token);
+            }
         }
     }
 

@@ -38,6 +38,7 @@ describe('SessionManagementService', () => {
         findOne: ReturnType<typeof vi.fn>;
         update: ReturnType<typeof vi.fn>;
         remove: ReturnType<typeof vi.fn>;
+        delete: ReturnType<typeof vi.fn>;
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let deleteFromCache: ReturnType<typeof vi.fn>;
@@ -59,7 +60,13 @@ describe('SessionManagementService', () => {
     }
 
     beforeEach(() => {
-        repo = { find: vi.fn(), findOne: vi.fn(), update: vi.fn(), remove: vi.fn() };
+        repo = {
+            find: vi.fn(),
+            findOne: vi.fn(),
+            update: vi.fn(),
+            remove: vi.fn(),
+            delete: vi.fn(),
+        };
         connection = { getRepository: vi.fn(() => repo) };
         deleteFromCache = vi.fn();
         configService = {
@@ -141,7 +148,7 @@ describe('SessionManagementService', () => {
             }
 
             expect(repo.update).not.toHaveBeenCalled();
-            expect(repo.remove).not.toHaveBeenCalled();
+            expect(repo.delete).not.toHaveBeenCalled();
             expect(deleteFromCache).not.toHaveBeenCalled();
         },
     );
@@ -214,9 +221,34 @@ describe('SessionManagementService', () => {
         const ok = await service.endAllSessions(ctxFor('user-1', 'own-token'));
 
         expect(ok).toBe(true);
-        expect(repo.remove).toHaveBeenCalledWith([own]);
+        expect(repo.delete).toHaveBeenCalledWith([own.id]);
         expect(deleteFromCache).toHaveBeenCalledWith('own-token');
         expect(deleteFromCache).not.toHaveBeenCalledWith('acting-token');
+    });
+
+    it('drains more sessions than one slice holds, ending all with no ceiling error', async () => {
+        const all = Array.from({ length: 2500 }, (_, i) =>
+            makeSession({ id: String(i + 1) as never, token: `t-${i + 1}` }),
+        );
+        const reads: Array<{ afterId: number; take: number }> = [];
+        repo.find.mockImplementation(
+            async (options: {
+                where: { id?: { value: number } };
+                take: number;
+            }): Promise<FakeSession[]> => {
+                const afterId = options.where.id?.value ?? 0;
+                reads.push({ afterId, take: options.take });
+                return all.filter(s => Number(s.id) > afterId).slice(0, options.take);
+            },
+        );
+
+        await service.deleteOwnSessions(ctxFor('user-1'), 'user-1');
+
+        const removed = repo.delete.mock.calls.flatMap((call: [string[]]) => call[0]);
+        expect(removed).toHaveLength(2500);
+        expect(deleteFromCache).toHaveBeenCalledTimes(2500);
+        expect(reads.map(r => r.afterId)).toEqual([0, 1000, 2000]);
+        expect(reads.every(r => r.take === 1000)).toBe(true);
     });
 
     it('endAllSessions is a no-op when the user cannot be resolved', async () => {
@@ -225,7 +257,7 @@ describe('SessionManagementService', () => {
         const ok = await service.endAllSessions(ctxFor('user-1'));
 
         expect(ok).toBe(false);
-        expect(repo.remove).not.toHaveBeenCalled();
+        expect(repo.delete).not.toHaveBeenCalled();
     });
 
     it('deleteEndedSessions removes expired and invalidated sessions', async () => {
