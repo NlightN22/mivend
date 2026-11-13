@@ -76,6 +76,8 @@ export const adminApiSchema = gql`
     extend type Customer {
         counterparty: Counterparty
         preferredTradingPoint: TradingPoint
+        "False once portal access was deactivated (the customer is soft-deleted)"
+        active: Boolean!
     }
 
     type CounterpartyList implements PaginatedList {
