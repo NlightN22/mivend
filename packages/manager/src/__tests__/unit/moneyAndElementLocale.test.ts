@@ -18,7 +18,8 @@ describe('elementLocale', () => {
 describe('formatMoney', () => {
     it('keeps the en-US style in English', () => {
         expect(moneyTag('en')).toBe('en-US');
-        expect(formatMoney(123000, 'RUB', {}, moneyTag('en'))).toBe('RUB 1,230.00');
+        const text = formatMoney(123000, 'RUB', {}, moneyTag('en')).replace(/\s/g, ' ');
+        expect(text).toBe('RUB 1,230.00');
     });
 
     it('uses the ru-RU style in Russian', () => {
