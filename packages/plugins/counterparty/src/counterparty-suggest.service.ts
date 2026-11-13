@@ -22,8 +22,9 @@ export class CounterpartySuggestService {
         const take = clampSuggestLimit(limit);
         const qb = await this.counterparties.visibleFilteredQb(ctx, {});
         applySuggest(qb, spec, text, take);
-        // unbounded-ok: suggestion query is limited by applySuggest to the clamped take
-        const rows = await qb.getRawMany<{ value: string | null }>();
+        const rows = await qb
+            .limit(spec.repeats ? take * 2 : take)
+            .getRawMany<{ value: string | null }>();
         return dedupeSuggestions(rows, take);
     }
 }
