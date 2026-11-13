@@ -18,6 +18,7 @@ export { lockAggregates, withAggregateLock } from './aggregate-lock';
 export { withOrderCancelLocks } from './order-cancel-locks';
 export { withSavepoint } from './savepoint';
 export { ctxQuery } from './ctx-query';
+export * from './bounded-read';
 export { CtxLoader } from './ctx-loader';
 export { contentHash } from './content-hash';
 export { replaceMembership } from './replace-membership';
