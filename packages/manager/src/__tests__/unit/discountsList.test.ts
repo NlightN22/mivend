@@ -10,7 +10,7 @@ import {
     toDiscountsUrlState,
 } from '../../composables/discountsListUrl';
 import { conditionsToDiscountsFilter } from '../../api/discountsFilter';
-import { DISCOUNTS_COLUMNS } from '../../components/discounts/discountsColumns';
+import { buildDiscountsColumns } from '../../components/discounts/discountsColumns';
 import { toDiscountRows } from '../../components/discounts/discountsRows';
 
 describe('discounts list URL state', () => {
@@ -81,28 +81,35 @@ describe('conditionsToDiscountsFilter', () => {
 
 describe('discounts columns', () => {
     it('puts the required number first and the creation date second', () => {
-        expect(DISCOUNTS_COLUMNS[0]).toMatchObject({ field: 'number', required: true });
-        expect(DISCOUNTS_COLUMNS[1]).toMatchObject({ field: 'date', filterField: 'createdAt' });
+        expect(buildDiscountsColumns()[0]).toMatchObject({ field: 'number', required: true });
+        expect(buildDiscountsColumns()[1]).toMatchObject({
+            field: 'date',
+            filterField: 'createdAt',
+        });
     });
 
     it('has one primary and one badge column on the mobile card', () => {
-        expect(DISCOUNTS_COLUMNS.filter(c => c.mobile?.primary).map(c => c.field)).toEqual([
-            'number',
-        ]);
-        expect(DISCOUNTS_COLUMNS.filter(c => c.mobile?.badge).map(c => c.field)).toEqual([
-            'status',
-        ]);
+        expect(
+            buildDiscountsColumns()
+                .filter(c => c.mobile?.primary)
+                .map(c => c.field),
+        ).toEqual(['number']);
+        expect(
+            buildDiscountsColumns()
+                .filter(c => c.mobile?.badge)
+                .map(c => c.field),
+        ).toEqual(['status']);
     });
 
     it('sorts only by fields the server whitelists', () => {
-        for (const c of DISCOUNTS_COLUMNS.filter(c => c.sortField))
+        for (const c of buildDiscountsColumns().filter(c => c.sortField))
             expect(DISCOUNTS_SORT_FIELDS).toContain(c.sortField);
     });
 
     it('keeps every builder column on the server field name', () => {
-        const serverFields = DISCOUNTS_COLUMNS.filter(c => c.filterType).map(
-            c => c.filterField ?? c.field,
-        );
+        const serverFields = buildDiscountsColumns()
+            .filter(c => c.filterType)
+            .map(c => c.filterField ?? c.field);
         expect(serverFields).toEqual([
             'number',
             'createdAt',

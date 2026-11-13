@@ -1,5 +1,7 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
+import { camelKey } from './discounts';
 import {
     DiscountSetupCountsDocument,
     DiscountSetupsPageDocument,
@@ -16,14 +18,14 @@ export type ErpDiscountsView =
     | 'expired'
     | 'inactive';
 
-export const ERP_DISCOUNTS_VIEWS: { key: ErpDiscountsView; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'running', label: 'Running' },
-    { key: 'expiring-soon', label: 'Expiring soon' },
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'expired', label: 'Expired' },
-    { key: 'inactive', label: 'Inactive' },
-];
+export const ERP_DISCOUNTS_VIEWS: { key: ErpDiscountsView; readonly label: string }[] = (
+    ['all', 'running', 'expiring-soon', 'upcoming', 'expired', 'inactive'] as const
+).map(key => ({
+    key,
+    get label(): string {
+        return i18n.global.t(`discounts.erp.views.${camelKey(key)}`);
+    },
+}));
 
 // Single source for the row badges and the chips that stand for the same status.
 export const ERP_DISCOUNT_STATUS_VARIANT: Record<

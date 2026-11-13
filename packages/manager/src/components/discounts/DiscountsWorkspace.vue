@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFilterChips, MvPanel } from '@mivend/ui-kit';
 import { DISCOUNTS_SOURCES, useDiscountsSource } from '../../composables/useDiscountsSource';
 import DiscountsList from './DiscountsList.vue';
@@ -8,7 +9,8 @@ import DiscountGrantForm from './DiscountGrantForm.vue';
 import type { DiscountRow } from './discountsRows';
 
 // The ERP discounts and the portal requests behind one switch; a set counterpartyId fixes both to that customer.
-const props = withDefaults(defineProps<{ counterpartyId?: string; counterpartyName?: string; urlPrefix?: string }>(),
+const props = withDefaults(
+    defineProps<{ counterpartyId?: string; counterpartyName?: string; urlPrefix?: string }>(),
     {
         counterpartyId: '',
         counterpartyName: '',
@@ -16,6 +18,7 @@ const props = withDefaults(defineProps<{ counterpartyId?: string; counterpartyNa
     },
 );
 
+const { t } = useI18n();
 const source = useDiscountsSource(props.urlPrefix);
 const requests = ref<InstanceType<typeof DiscountsList> | null>(null);
 const showForm = ref(false);
@@ -41,11 +44,15 @@ function handleSubmitted(): void {
 
         <MvPanel
             v-if="showForm && source === 'requests'"
-            :title="renewFrom ? 'Renew discount grant' : 'New discount grant'"
+            :title="renewFrom ? t('discounts.form.renewTitle') : t('discounts.form.newTitle')"
         >
             <DiscountGrantForm
                 :renew-from="renewFrom"
-                :customer="props.counterpartyId ? { value: props.counterpartyId, label: props.counterpartyName } : null"
+                :customer="
+                    props.counterpartyId
+                        ? { value: props.counterpartyId, label: props.counterpartyName }
+                        : null
+                "
                 @submitted="handleSubmitted"
                 @cancel="showForm = false"
             />

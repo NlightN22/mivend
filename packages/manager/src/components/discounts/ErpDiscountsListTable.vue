@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import {
     MvAdvancedDataTable,
@@ -16,7 +17,7 @@ import {
 import { ERP_DISCOUNTS_URL_DEFAULTS } from '../../composables/erpDiscountsListUrl';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { ERP_DISCOUNTS_COLUMNS, ERP_DISCOUNTS_HIDDEN_BY_DEFAULT } from './erpDiscountsColumns';
+import { buildErpDiscountsColumns, ERP_DISCOUNTS_HIDDEN_BY_DEFAULT } from './erpDiscountsColumns';
 import type { ErpDiscountRow } from './erpDiscountsRows';
 import { erpSortFromState, erpSortToState } from './erpDiscountsSort';
 import { formatDate } from '../../i18n/format';
@@ -44,7 +45,8 @@ const emit = defineEmits<{
     retry: [];
 }>();
 
-const COLUMNS = ERP_DISCOUNTS_COLUMNS;
+const { t } = useI18n();
+const COLUMNS = buildErpDiscountsColumns();
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
     `erp-discounts-list-v1:${props.nested ? 'nested:' : ''}${props.administratorId}`,
@@ -139,9 +141,9 @@ const dateLabel = (value: string): string => formatDate(value);
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :search="{ filterKey: 'search', placeholder: t('discounts.list.searchPlaceholder') }"
         :default-filters="{ search: BLANK_ERP_DISCOUNTS_FILTERS.search }"
-        empty-message="No ERP discounts match your filters"
+        :empty-message="t('discounts.erp.list.empty')"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
         @clear-filters="emit('clear-filters')"
@@ -149,11 +151,11 @@ const dateLabel = (value: string): string => formatDate(value);
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load ERP discounts"
-                message="Check the connection and try again."
+                :title="t('discounts.erp.list.loadFailedTitle')"
+                :message="t('discounts.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No ERP discounts match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('discounts.erp.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
@@ -201,8 +203,8 @@ const dateLabel = (value: string): string => formatDate(value);
                 <MvStatusBadge
                     v-if="(data as ErpDiscountRow).markup"
                     variant="warning"
-                    title="A negative discount: the price goes up"
-                    >Markup</MvStatusBadge
+                    :title="t('discounts.erp.rows.markupTitle')"
+                    >{{ t('discounts.erp.rows.markup') }}</MvStatusBadge
                 >
             </span>
         </template>
@@ -210,7 +212,7 @@ const dateLabel = (value: string): string => formatDate(value);
         <template #cell-validTo="{ data }">{{
             (data as ErpDiscountRow).validTo
                 ? dateLabel((data as ErpDiscountRow).validTo as string)
-                : 'No end date'
+                : t('discounts.list.noEndDate')
         }}</template>
 
         <template #cell-status="{ data }">

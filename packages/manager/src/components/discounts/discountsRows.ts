@@ -5,6 +5,7 @@ import {
     type DiscountStatus,
 } from '../../api/discounts';
 import type { DiscountRegistryItem } from '../../api/discountsList';
+import { tr } from '../../utils/lazyLabels';
 
 export type DiscountRow = {
     id: string;
@@ -27,9 +28,6 @@ export type DiscountRow = {
     ruleErpId: string | null;
 };
 
-const ALL_CUSTOMERS_LABEL = 'All customers';
-const STATUS_LABEL = new Map(DISCOUNT_STATUS_OPTIONS.map(o => [o.value, o.label]));
-
 // Display-only copy of the server's threshold (EXPIRING_SOON_DAYS); the server alone filters by it.
 const EXPIRING_SOON_DAYS = 14;
 
@@ -41,14 +39,16 @@ function displayStatus(item: DiscountRegistryItem, now: number): DiscountStatus 
 }
 
 function customerLabel(ids: string[] | null, namesById: Map<string, string>): string {
-    if (!ids || ids.length === 0) return ALL_CUSTOMERS_LABEL;
+    if (!ids || ids.length === 0) return tr('discounts.rows.allCustomers');
     return ids.map(id => namesById.get(id) ?? id).join(', ');
 }
 
 // Personal means exactly one customer; any other set (or company-wide) reaches other customers too.
 function scopeLabel(ids: string[] | null): string {
-    if (!ids || ids.length === 0) return 'All customers';
-    return ids.length === 1 ? 'Personal' : `Shared with ${ids.length - 1} more`;
+    if (!ids || ids.length === 0) return tr('discounts.rows.allCustomers');
+    return ids.length === 1
+        ? tr('discounts.rows.personal')
+        : tr('discounts.rows.sharedWithMore', { count: ids.length - 1 });
 }
 
 // A portal rule's erpId is portal-<approval request id> (DiscountGrantService.decideAndApply).
@@ -67,12 +67,12 @@ export function toDiscountRows(
             scope: scopeLabel(item.counterpartyIds),
             shared: (item.counterpartyIds?.length ?? 0) !== 1,
             priceType: item.priceTypeCode,
-            productGroup: item.facetValueCode ?? 'All products',
+            productGroup: item.facetValueCode ?? tr('discounts.rows.allProducts'),
             percent: item.percent,
             validFrom: item.validFrom,
             validTo: item.validTo,
             status,
-            statusLabel: STATUS_LABEL.get(status) ?? status,
+            statusLabel: DISCOUNT_STATUS_OPTIONS.find(o => o.value === status)?.label ?? status,
             statusVariant: DISCOUNT_STATUS_BADGE_VARIANT[status],
             justification: item.justification,
             approvalRequestId: item.approvalRequestId,

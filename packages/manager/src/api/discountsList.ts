@@ -3,6 +3,7 @@ import {
     sanitizeConditions,
     type FilterCondition,
 } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     DiscountRegistryPageDocument,
@@ -13,19 +14,20 @@ import {
 } from './generated/graphql';
 import { DISCOUNTS_FILTER_COLUMNS, conditionsToDiscountsFilter } from './discountsFilter';
 import { fetchCounterpartyNames } from './customers';
-import { DISCOUNT_STATUS_BADGE_VARIANT } from './discounts';
+import { DISCOUNT_STATUS_BADGE_VARIANT, camelKey } from './discounts';
 
 export type DiscountRegistryItem = DiscountRegistryItemFieldsFragment;
 export type DiscountsView = 'all' | 'active' | 'expiring-soon' | 'pending' | 'rejected';
 
 // Only the operational shortcuts; Expired stays reachable through the Status filter.
-export const DISCOUNTS_VIEWS: { key: DiscountsView; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'active', label: 'Active' },
-    { key: 'expiring-soon', label: 'Expiring soon' },
-    { key: 'pending', label: 'Pending approval' },
-    { key: 'rejected', label: 'Rejected' },
-];
+export const DISCOUNTS_VIEWS: { key: DiscountsView; readonly label: string }[] = (
+    ['all', 'active', 'expiring-soon', 'pending', 'rejected'] as const
+).map(key => ({
+    key,
+    get label(): string {
+        return i18n.global.t(`discounts.views.${camelKey(key)}`);
+    },
+}));
 
 export const DISCOUNTS_VIEW_VARIANT: Partial<Record<DiscountsView, StatusBadgeVariant>> = {
     active: DISCOUNT_STATUS_BADGE_VARIANT.active,

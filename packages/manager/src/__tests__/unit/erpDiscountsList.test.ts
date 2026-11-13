@@ -11,7 +11,7 @@ import {
     fromErpDiscountsUrlState,
     toErpDiscountsUrlState,
 } from '../../composables/erpDiscountsListUrl';
-import { ERP_DISCOUNTS_COLUMNS } from '../../components/discounts/erpDiscountsColumns';
+import { buildErpDiscountsColumns } from '../../components/discounts/erpDiscountsColumns';
 import { toErpDiscountRows } from '../../components/discounts/erpDiscountsRows';
 import { erpSortFromState, erpSortToState } from '../../components/discounts/erpDiscountsSort';
 
@@ -193,20 +193,27 @@ describe('ERP discounts URL state', () => {
 describe('ERP discounts sort mapping', () => {
     it('maps the server sort fields to columns and back', () => {
         for (const field of ['documentNumber', 'validFrom', 'validTo', 'percent'] as const) {
-            const state = erpSortToState({ field, dir: 'ASC' }, ERP_DISCOUNTS_COLUMNS);
+            const state = erpSortToState({ field, dir: 'ASC' }, buildErpDiscountsColumns());
             expect(state).toHaveLength(1);
-            expect(erpSortFromState(state, ERP_DISCOUNTS_COLUMNS)).toEqual({ field, dir: 'ASC' });
+            expect(erpSortFromState(state, buildErpDiscountsColumns())).toEqual({
+                field,
+                dir: 'ASC',
+            });
         }
     });
 
     it('sorts only on columns the server sorts and falls back to the default otherwise', () => {
-        const sortable = ERP_DISCOUNTS_COLUMNS.filter(c => c.sortField).map(c => c.sortField);
+        const sortable = buildErpDiscountsColumns()
+            .filter(c => c.sortField)
+            .map(c => c.sortField);
         expect(sortable.sort()).toEqual(['documentNumber', 'percent', 'validFrom', 'validTo']);
-        expect(erpSortFromState([{ field: 'customer', order: 1 }], ERP_DISCOUNTS_COLUMNS)).toEqual({
+        expect(
+            erpSortFromState([{ field: 'customer', order: 1 }], buildErpDiscountsColumns()),
+        ).toEqual({
             field: 'validFrom',
             dir: 'DESC',
         });
-        expect(erpSortFromState([], ERP_DISCOUNTS_COLUMNS)).toEqual({
+        expect(erpSortFromState([], buildErpDiscountsColumns())).toEqual({
             field: 'validFrom',
             dir: 'DESC',
         });
@@ -215,12 +222,17 @@ describe('ERP discounts sort mapping', () => {
 
 describe('ERP discounts columns', () => {
     it('has the number first, valid from second, one required column and one badge', () => {
-        expect(ERP_DISCOUNTS_COLUMNS.map(c => c.field).slice(0, 2)).toEqual([
-            'number',
-            'validFrom',
-        ]);
-        expect(ERP_DISCOUNTS_COLUMNS.filter(c => c.required).map(c => c.field)).toEqual(['number']);
-        expect(ERP_DISCOUNTS_COLUMNS.filter(c => c.mobile?.primary)).toHaveLength(1);
-        expect(ERP_DISCOUNTS_COLUMNS.filter(c => c.mobile?.badge)).toHaveLength(1);
+        expect(
+            buildErpDiscountsColumns()
+                .map(c => c.field)
+                .slice(0, 2),
+        ).toEqual(['number', 'validFrom']);
+        expect(
+            buildErpDiscountsColumns()
+                .filter(c => c.required)
+                .map(c => c.field),
+        ).toEqual(['number']);
+        expect(buildErpDiscountsColumns().filter(c => c.mobile?.primary)).toHaveLength(1);
+        expect(buildErpDiscountsColumns().filter(c => c.mobile?.badge)).toHaveLength(1);
     });
 });

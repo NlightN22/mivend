@@ -1,4 +1,5 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     DiscountCounterpartySearchDocument,
@@ -10,13 +11,19 @@ import {
 
 export type DiscountStatus = 'active' | 'expiring-soon' | 'expired' | 'pending' | 'rejected';
 
-export const DISCOUNT_STATUS_OPTIONS: { value: DiscountStatus; label: string }[] = [
-    { value: 'active', label: 'Active' },
-    { value: 'expiring-soon', label: 'Expiring soon' },
-    { value: 'expired', label: 'Expired' },
-    { value: 'pending', label: 'Pending approval' },
-    { value: 'rejected', label: 'Rejected' },
-];
+export function camelKey(key: string): string {
+    return key.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+}
+
+// Labels resolve on read so a language switch reaches this module-level list.
+export const DISCOUNT_STATUS_OPTIONS: { value: DiscountStatus; readonly label: string }[] = (
+    ['active', 'expiring-soon', 'expired', 'pending', 'rejected'] as const
+).map(value => ({
+    value,
+    get label(): string {
+        return i18n.global.t(`discounts.status.${camelKey(value)}`);
+    },
+}));
 
 // Single source of truth for the row badges and the chips that stand for the same status.
 export const DISCOUNT_STATUS_BADGE_VARIANT: Record<DiscountStatus, StatusBadgeVariant> = {

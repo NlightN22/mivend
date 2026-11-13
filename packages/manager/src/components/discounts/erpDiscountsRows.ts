@@ -5,6 +5,7 @@ import {
     type ErpDiscountItem,
     type ErpDiscountsView,
 } from '../../api/erpDiscountsList';
+import { tr } from '../../utils/lazyLabels';
 
 export interface ErpCustomerCell {
     label: string;
@@ -30,12 +31,6 @@ export type ErpDiscountRow = {
     inactiveReason: string | null;
 };
 
-const STATUS_LABEL = new Map(ERP_DISCOUNTS_VIEWS.map(v => [v.key as string, v.label]));
-
-function plural(count: number, one: string, many: string): string {
-    return `${count} ${count === 1 ? one : many}`;
-}
-
 // The server returns only the recipients inside the caller's scope; recipientCount is the real total.
 export function customerCell(item: ErpDiscountItem): ErpCustomerCell {
     const total = item.recipientCount;
@@ -45,27 +40,31 @@ export function customerCell(item: ErpDiscountItem): ErpCustomerCell {
             label: '—',
             href: null,
             suffix: '',
-            title: 'Recipients are not kept for an inactive document',
+            title: tr('discounts.erp.rows.recipientsNotKept'),
         };
     }
-    if (total === 0) return { label: 'All customers', href: null, suffix: '', title: null };
+    if (total === 0)
+        return { label: tr('discounts.rows.allCustomers'), href: null, suffix: '', title: null };
     if (visible.length === 1) {
         const [only] = visible;
         return {
             label: only.name,
             href: only.id ? `/customers/${only.id}` : null,
-            suffix: total > 1 ? ` +${total - 1} more` : '',
+            suffix: total > 1 ? tr('discounts.erp.rows.plusMore', { count: total - 1 }) : '',
             title: null,
         };
     }
     const names = visible.map(c => c.name).join(', ');
     const hidden = total - visible.length;
-    const hiddenNote = hidden > 0 && names ? ` and ${hidden} more` : '';
+    const title =
+        hidden > 0 && names
+            ? tr('discounts.erp.rows.namesAndMore', { names, count: hidden })
+            : names;
     return {
-        label: plural(total, 'customer', 'customers'),
+        label: tr('discounts.erp.rows.customers', { count: total }, total),
         href: null,
         suffix: '',
-        title: names ? `${names}${hiddenNote}` : null,
+        title: title || null,
     };
 }
 
@@ -76,9 +75,9 @@ export function percentLabel(percent: number): string {
 }
 
 export function productsLabel(item: ErpDiscountItem): string {
-    if (item.allProducts) return 'All products';
-    if (item.productMode === 'filter') return 'By filter';
-    return plural(item.productCount, 'product', 'products');
+    if (item.allProducts) return tr('discounts.rows.allProducts');
+    if (item.productMode === 'filter') return tr('discounts.erp.rows.byFilter');
+    return tr('discounts.erp.rows.products', { count: item.productCount }, item.productCount);
 }
 
 export function toErpDiscountRows(items: ErpDiscountItem[]): ErpDiscountRow[] {
@@ -93,7 +92,7 @@ export function toErpDiscountRows(items: ErpDiscountItem[]): ErpDiscountRow[] {
         products: productsLabel(item),
         validTo: item.validTo ?? null,
         status: item.status,
-        statusLabel: STATUS_LABEL.get(item.status) ?? item.status,
+        statusLabel: ERP_DISCOUNTS_VIEWS.find(v => v.key === item.status)?.label ?? item.status,
         statusVariant:
             ERP_DISCOUNT_STATUS_VARIANT[item.status as Exclude<ErpDiscountsView, 'all'>] ??
             'neutral',

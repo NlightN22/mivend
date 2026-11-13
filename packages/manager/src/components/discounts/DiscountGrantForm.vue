@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvSelect, MvMultiSelect, MvInput, MvButton, MvNotice } from '@mivend/ui-kit';
 import {
     fetchPriceTypeCodes,
@@ -11,10 +12,15 @@ import {
 } from '../../api/discounts';
 import type { DiscountRow } from './discountsRows';
 import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
+import { formatDate } from '../../i18n/format';
 
-const props = defineProps<{ renewFrom: DiscountRow | null; customer?: CounterpartyOption | null }>();
+const props = defineProps<{
+    renewFrom: DiscountRow | null;
+    customer?: CounterpartyOption | null;
+}>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
+const { t } = useI18n();
 const priceTypes = ref<string[]>([]);
 const facets = ref<FacetOption[]>([]);
 const { term: customerSearch, results: customerMatches } = useDebouncedSearch(
@@ -38,9 +44,7 @@ const form = reactive({
 
 const isRenewal = computed(() => !!props.renewFrom);
 const justificationPlaceholder = computed(() =>
-    isRenewal.value
-        ? "Explain why this is being renewed — don't just repeat the previous justification"
-        : 'Required',
+    isRenewal.value ? t('discounts.form.renewJustification') : t('discounts.form.required'),
 );
 
 const facetValueOptions = computed(() => {
@@ -68,9 +72,7 @@ onMounted(async () => {
     if (props.renewFrom) {
         form.priceTypeCode = props.renewFrom.priceType;
         form.percent = String(props.renewFrom.percent);
-        // facetCode isn't carried on DiscountRow (only the resolved facetValueCode/name) — the
-        // approver still sees which product group via facetValueCode text; re-selecting the
-        // parent facet for a renewal is a minor manual step, not worth a second lookup query.
+        // facetCode isn't carried on DiscountRow, so a renewal re-selects the parent facet by hand.
     }
 });
 
@@ -90,7 +92,7 @@ async function submit(): Promise<void> {
         !form.validTo ||
         !form.justification.trim()
     ) {
-        error.value = 'Please fill in all required fields';
+        error.value = t('discounts.form.fillRequired');
         return;
     }
     if (
@@ -98,8 +100,7 @@ async function submit(): Promise<void> {
         props.renewFrom?.justification &&
         form.justification.trim() === props.renewFrom.justification.trim()
     ) {
-        error.value =
-            "Explain why this is being renewed — don't just repeat the previous justification";
+        error.value = t('discounts.form.renewJustification');
         return;
     }
     submitting.value = true;
@@ -117,7 +118,7 @@ async function submit(): Promise<void> {
         });
         emit('submitted');
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not submit the discount grant';
+        error.value = e instanceof Error ? e.message : t('discounts.form.submitFailed');
     } finally {
         submitting.value = false;
     }
@@ -127,47 +128,52 @@ async function submit(): Promise<void> {
 <template>
     <div class="discount-grant-form">
         <div v-if="isRenewal && renewFrom" class="discount-grant-form__history">
-            <h3>Renewal history</h3>
+            <h3>{{ t('discounts.form.renewalHistory') }}</h3>
             <div class="discount-grant-form__history-row">
                 <span>{{ renewFrom.percent }}%</span>
-                <span>until {{ new Date(renewFrom.validTo).toLocaleDateString('en-US') }}</span>
+                <span>{{
+                    t('discounts.form.until', { date: formatDate(renewFrom.validTo) })
+                }}</span>
                 <span v-if="renewFrom.justification">{{ renewFrom.justification }}</span>
             </div>
         </div>
 
         <div class="discount-grant-form__grid">
             <label>
-                Price type
+                {{ t('discounts.form.priceType') }}
                 <MvSelect
                     :model-value="form.priceTypeCode"
                     :options="[
-                        { value: '', label: 'Select a price type' },
+                        { value: '', label: t('discounts.form.selectPriceType') },
                         ...priceTypes.map(p => ({ value: p, label: p })),
                     ]"
                     @update:model-value="form.priceTypeCode = $event"
                 />
             </label>
             <label>
-                Product group / facet
+                {{ t('discounts.form.productGroup') }}
                 <MvSelect
                     :model-value="form.facetCode"
                     :options="[
-                        { value: '', label: 'All products' },
+                        { value: '', label: t('discounts.form.allProducts') },
                         ...facets.map(f => ({ value: f.code, label: f.name })),
                     ]"
                     @update:model-value="form.facetCode = $event"
                 />
             </label>
             <label v-if="facetValueOptions.length">
-                Value
+                {{ t('discounts.form.value') }}
                 <MvSelect
                     :model-value="form.facetValueCode"
-                    :options="[{ value: '', label: 'Any value' }, ...facetValueOptions]"
+                    :options="[
+                        { value: '', label: t('discounts.form.anyValue') },
+                        ...facetValueOptions,
+                    ]"
                     @update:model-value="form.facetValueCode = $event"
                 />
             </label>
             <label>
-                Discount % (negative = markup)
+                {{ t('discounts.form.percent') }}
                 <MvInput
                     size="sm"
                     type="number"
@@ -176,7 +182,7 @@ async function submit(): Promise<void> {
                 />
             </label>
             <label>
-                Valid from
+                {{ t('discounts.form.validFrom') }}
                 <MvInput
                     size="sm"
                     type="date"
@@ -185,7 +191,7 @@ async function submit(): Promise<void> {
                 />
             </label>
             <label>
-                Valid to
+                {{ t('discounts.form.validTo') }}
                 <MvInput
                     size="sm"
                     type="date"
@@ -196,14 +202,14 @@ async function submit(): Promise<void> {
         </div>
 
         <label class="discount-grant-form__customers">
-            Applies to
+            {{ t('discounts.form.appliesTo') }}
             <span class="discount-grant-form__hint">
-                Leave empty for a company-wide discount, or select specific customers
+                {{ t('discounts.form.appliesToHint') }}
             </span>
             <MvInput
                 size="sm"
                 :model-value="customerSearch"
-                placeholder="Search by company name or INN..."
+                :placeholder="t('discounts.form.customerSearch')"
                 @update:model-value="customerSearch = $event"
             />
             <MvMultiSelect
@@ -214,7 +220,7 @@ async function submit(): Promise<void> {
         </label>
 
         <label class="discount-grant-form__justification">
-            Justification
+            {{ t('discounts.form.justification') }}
             <textarea
                 v-model="form.justification"
                 rows="3"
@@ -225,9 +231,11 @@ async function submit(): Promise<void> {
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="discount-grant-form__actions">
-            <MvButton :loading="submitting" @click="submit">Submit for approval</MvButton>
+            <MvButton :loading="submitting" @click="submit">{{
+                t('discounts.form.submit')
+            }}</MvButton>
             <button type="button" class="discount-grant-form__cancel" @click="emit('cancel')">
-                Cancel
+                {{ t('discounts.form.cancel') }}
             </button>
         </div>
     </div>

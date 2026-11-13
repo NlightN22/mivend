@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import DiscountsWorkspace from '../../components/discounts/DiscountsWorkspace.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="discounts-page">
         <div class="discounts-page__header">
-            <div class="discounts-page__breadcrumb">Workspace / Discounts</div>
-            <h1 class="discounts-page__title">Discounts</h1>
+            <div class="discounts-page__breadcrumb">{{ t('discounts.page.breadcrumb') }}</div>
+            <h1 class="discounts-page__title">{{ t('discounts.page.title') }}</h1>
         </div>
 
         <DiscountsWorkspace />

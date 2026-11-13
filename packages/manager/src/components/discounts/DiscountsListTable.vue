@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useDroppedFilterNotice } from '../../composables/useDroppedFilterNotice';
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
@@ -25,8 +26,9 @@ import { DISCOUNTS_URL_DEFAULTS } from '../../composables/discountsListUrl';
 import { sortFromState, sortToState } from './discountsSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { DISCOUNTS_COLUMNS, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
+import { buildDiscountsColumns, DISCOUNTS_HIDDEN_BY_DEFAULT } from './discountsColumns';
 import type { DiscountRow } from './discountsRows';
+import { formatDate } from '../../i18n/format';
 
 const props = defineProps<{
     rows: DiscountRow[];
@@ -43,7 +45,10 @@ const props = defineProps<{
 }>();
 
 // Nested under a customer, the customer column is redundant; the scope column marks shared discounts.
-const COLUMNS = DISCOUNTS_COLUMNS.filter(c => c.field !== (props.nested ? 'customer' : 'scope'));
+const { t } = useI18n();
+const COLUMNS = buildDiscountsColumns().filter(
+    c => c.field !== (props.nested ? 'customer' : 'scope'),
+);
 
 const emit = defineEmits<{
     'update:filters': [filters: DiscountsListFilters];
@@ -205,7 +210,7 @@ function applyView(state: TableViewState): void {
     emit('update:filters', restoreDiscountsFilters(state.filters));
 }
 
-const dateLabel = (value: string): string => new Date(value).toLocaleDateString('en-US');
+const dateLabel = (value: string): string => formatDate(value);
 </script>
 
 <template>
@@ -219,10 +224,10 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :search="{ filterKey: 'search', placeholder: t('discounts.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="{ search: BLANK_DISCOUNTS_FILTERS.search }"
-        empty-message="No discounts match your filters"
+        :empty-message="t('discounts.list.empty')"
         @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -232,22 +237,22 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load discounts"
-                message="Check the connection and try again."
+                :title="t('discounts.list.loadFailedTitle')"
+                :message="t('discounts.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{ loading ? '' : 'No discounts match your filters' }}</template>
+            <template v-else>{{ loading ? '' : t('discounts.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>
             <slot name="view-chips" />
             <MvNotice v-if="droppedGroupFilter" variant="warning">
-                A product group filter that no longer applies was removed.
+                {{ t('discounts.list.droppedGroupFilter') }}
             </MvNotice>
         </template>
 
         <template #toolbar-end>
-            <MvButton size="sm" @click="emit('new')">New discount grant</MvButton>
+            <MvButton size="sm" @click="emit('new')">{{ t('discounts.list.newGrant') }}</MvButton>
             <TableViewsMenu
                 views-key="discounts"
                 :owner-key="administratorId"
@@ -304,7 +309,7 @@ const dateLabel = (value: string): string => new Date(value).toLocaleDateString(
                     variant="ghost"
                     class="discounts-list-table__renew"
                     @click="emit('renew', data as DiscountRow)"
-                    >Renew</MvButton
+                    >{{ t('discounts.list.renew') }}</MvButton
                 >
             </span>
         </template>
