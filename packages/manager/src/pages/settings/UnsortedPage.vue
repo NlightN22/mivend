@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUnsorted } from '../../composables/useUnsorted';
 import UnsortedAdministratorsTable from '../../components/settings/UnsortedAdministratorsTable.vue';
 import UnsortedCounterpartiesTable from '../../components/settings/UnsortedCounterpartiesTable.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const allowed =
     authStore.hasPermission('ManageVisibilityGrants') ||
@@ -28,22 +30,20 @@ onMounted(() => {
 
 <template>
     <div v-if="!allowed" class="unsorted-page__denied">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to see the unsorted list.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.unsorted.denied') }}</p>
     </div>
 
     <div v-else class="unsorted-page">
-        <div class="unsorted-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="unsorted-page__title">Unsorted</h1>
+        <div class="unsorted-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="unsorted-page__title">{{ t('settingsAccess.unsorted.title') }}</h1>
 
         <MvNotice variant="info">
-            These counterparties and administrators have no resolvable branch, so branch-scoped
-            roles do not see them. Map their department under Departments to branch, or set a branch
-            on the counterparty.
+            {{ t('settingsAccess.unsorted.info') }}
         </MvNotice>
         <MvNotice v-if="u.error.value" variant="error">{{ u.error.value }}</MvNotice>
 
-        <MvPanel title="Counterparties without a branch">
+        <MvPanel :title="t('settingsAccess.unsorted.counterpartiesPanel')">
             <UnsortedCounterpartiesTable
                 :items="u.counterparties.value"
                 :loading="u.counterpartiesLoading.value"
@@ -58,7 +58,7 @@ onMounted(() => {
             />
         </MvPanel>
 
-        <MvPanel title="Administrators without a branch">
+        <MvPanel :title="t('settingsAccess.unsorted.administratorsPanel')">
             <UnsortedAdministratorsTable
                 :items="u.administrators.value"
                 :loading="u.administratorsLoading.value"

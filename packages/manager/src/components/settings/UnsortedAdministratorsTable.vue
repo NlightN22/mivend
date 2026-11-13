@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     useDataTableState,
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
 import type { UnsortedAdministratorRow } from '../../api/visibilityGrants';
+
+const { t } = useI18n();
 
 // Server-side paginated: live administrators with no branch whose roles do not see everything.
 const props = defineProps<{
@@ -21,32 +24,47 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'emailAddress',
-        header: 'Email',
+        header: t('settingsAccess.unsorted.columns.email'),
         width: 240,
         required: true,
         // The backend lists in id order; there is no server-side search for this list.
         filterConfig: { type: 'none' },
         mobile: { primary: true },
     },
-    { field: 'name', header: 'Name', width: 200, filterConfig: { type: 'none' } },
-    { field: 'departmentId', header: 'ERP department', width: 200, filterConfig: { type: 'none' } },
-    { field: 'roles', header: 'Roles', width: 200, filterConfig: { type: 'none' } },
-];
+    {
+        field: 'name',
+        header: t('settingsAccess.unsorted.columns.name'),
+        width: 200,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'departmentId',
+        header: t('settingsAccess.unsorted.columns.department'),
+        width: 200,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'roles',
+        header: t('settingsAccess.unsorted.columns.roles'),
+        width: 200,
+        filterConfig: { type: 'none' },
+    },
+]);
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown }>(
     `unsorted-administrators-datatable:${props.administratorId}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: {},
         pageSize: props.pageSize,
     },
-    { columns: ALL_COLUMNS, allowedFilterKeys: [], externallyOwned: { pageSize: true } },
+    { columns: ALL_COLUMNS.value, allowedFilterKeys: [], externallyOwned: { pageSize: true } },
 );
 watch(
     () => tableState.value.pageSize,
@@ -74,7 +92,7 @@ const rows = computed(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="{}"
-        empty-message="No unsorted administrators"
+        :empty-message="t('settingsAccess.unsorted.emptyAdministrators')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     />

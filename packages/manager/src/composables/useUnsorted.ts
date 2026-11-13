@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import { ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import {
@@ -47,7 +48,7 @@ export function useUnsorted() {
         try {
             await run();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load the unsorted list';
+            error.value = e instanceof Error ? e.message : tr('settingsAccess.unsorted.loadFailed');
         }
     }
 
