@@ -122,6 +122,12 @@ export const adminApiSchema = gql`
         erpGroupLabel: StringOperators
         "ok | missing | duplicate, the same value as Counterparty.innStatus"
         innStatus: StringOperators
+        "ready | missing-data | inn-duplicate | erp-inactive | activated, the same value as Counterparty.portalReadiness"
+        readiness: StringOperators
+        "Needs ReadCounterpartyCredit"
+        creditLimit: NumberOperators
+        "Needs ReadCounterpartyCredit"
+        creditBalance: NumberOperators
         isActive: BooleanOperators
         _and: [CounterpartyFilterParameter!]
     }
@@ -149,7 +155,10 @@ export const adminApiSchema = gql`
         inn: SortOrder
         managerErpId: SortOrder
         phone: SortOrder
-        officialEmail: SortOrder
+        "Needs ReadCounterpartyCredit"
+        creditLimit: SortOrder
+        "Needs ReadCounterpartyCredit"
+        creditBalance: SortOrder
     }
 
     type CounterpartySummary {
@@ -163,6 +172,8 @@ export const adminApiSchema = gql`
 
     extend type Query {
         suggestAddress(query: String!): [String!]!
+        "Typeahead for the list filter: shortName | inn values among the counterparties the caller may list"
+        counterpartyFilterSuggestions(field: String!, prefix: String!, limit: Int): [String!]!
         counterparties(options: CounterpartyListOptions): CounterpartyList!
         counterparty(id: ID!): Counterparty
         counterpartySummary: CounterpartySummary!

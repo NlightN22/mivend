@@ -11,6 +11,8 @@ export interface CounterpartySortParameter {
     managerErpId?: 'ASC' | 'DESC' | null;
     phone?: 'ASC' | 'DESC' | null;
     officialEmail?: 'ASC' | 'DESC' | null;
+    creditLimit?: 'ASC' | 'DESC' | null;
+    creditBalance?: 'ASC' | 'DESC' | null;
 }
 
 export interface CounterpartyUpsertPayload {

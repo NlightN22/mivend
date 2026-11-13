@@ -11,6 +11,8 @@ const SORTABLE_COLUMNS: Record<keyof CounterpartySortParameter, string> = {
     managerErpId: 'c.managerErpId',
     phone: 'c.phone',
     officialEmail: 'c.officialEmail',
+    creditLimit: 'c.creditLimit',
+    creditBalance: 'c.creditBalance',
 };
 
 // Only the first non-null sort key applies: one active sort, matching MvAdvancedDataTable

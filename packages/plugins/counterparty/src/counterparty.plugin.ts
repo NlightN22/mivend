@@ -68,6 +68,7 @@ import {
 } from './trading-point.resolver';
 import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartySuggestService } from './counterparty-suggest.service';
 import { TradingPointService } from './trading-point.service';
 import { TradingPointChangeAdminResolver } from './trading-point-change.resolver';
 import { TradingPointChangeService } from './trading-point-change.service';
@@ -198,6 +199,7 @@ const adminResolvers = [
         TradingPointChangeService,
         TradingPointLocationReportService,
         AddressSuggestService,
+        CounterpartySuggestService,
         GeoService,
         TradingPointConsumer,
         CreditTermExtensionCheck,

@@ -26,6 +26,7 @@ import {
 import { selectHighUsage, summarizeCounterparties } from './counterparty-credit-queries';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { applyCounterpartySort } from './counterparty-sort';
+import { assertCreditListAccess } from './counterparty-credit-gate';
 import {
     applyCounterpartyFilterParameter,
     type CounterpartyFilterParameter,
@@ -182,6 +183,7 @@ export class CounterpartyService {
             sort?: CounterpartySortParameter;
         } = {},
     ): Promise<PaginatedList<Counterparty>> {
+        assertCreditListAccess(ctx, options.filter, options.sort);
         const qb = await this.visibleFilteredQb(ctx, options);
         applyCounterpartyFilterParameter(qb, options.filter);
         applyCounterpartySort(qb, options.sort);

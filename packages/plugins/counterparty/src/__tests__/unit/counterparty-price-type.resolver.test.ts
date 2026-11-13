@@ -37,6 +37,7 @@ describe('CounterpartyResolver.upsertCounterparty price type', () => {
                     throw new ForbiddenError();
                 }),
             } as never,
+            {} as never,
         );
         await expect(
             resolver.upsertCounterparty(ctx, { priceType: 'purchase' } as never),

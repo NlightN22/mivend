@@ -15,6 +15,7 @@ import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartySuggestService } from './counterparty-suggest.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { CounterpartySortParameter } from './types';
@@ -144,7 +145,17 @@ export class CounterpartyResolver {
         private counterpartyService: CounterpartyService,
         private managerAssignmentService: CounterpartyManagerAssignmentService,
         private priceTypeAccess: PriceTypeAccessService,
+        private suggestions: CounterpartySuggestService,
     ) {}
+
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    counterpartyFilterSuggestions(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { field: string; prefix: string; limit?: number },
+    ): Promise<string[]> {
+        return this.suggestions.suggest(ctx, args.field, args.prefix, args.limit);
+    }
 
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)

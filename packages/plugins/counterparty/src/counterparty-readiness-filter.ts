@@ -40,7 +40,7 @@ export function portalReadinessSql(readiness: string): string {
     return FRAGMENTS[readiness as PortalReadiness];
 }
 
-const READINESS_CASE_SQL = `CASE ${PORTAL_READINESS.map(r => `WHEN ${FRAGMENTS[r]} THEN '${r}'`).join(' ')} END`;
+export const READINESS_CASE_SQL = `CASE ${PORTAL_READINESS.map(r => `WHEN ${FRAGMENTS[r]} THEN '${r}'`).join(' ')} END`;
 
 export async function loadPortalReadiness(
     connection: Pick<TransactionalConnection, 'getRepository'>,
