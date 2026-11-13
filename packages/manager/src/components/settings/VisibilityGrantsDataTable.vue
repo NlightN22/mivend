@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '../../i18n/format';
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvButton,
@@ -11,14 +12,20 @@ import {
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
 import {
-    VISIBILITY_STATUS_OPTIONS,
+    VISIBILITY_STATUSES,
     VISIBILITY_STATUS_VARIANT,
     type VisibilityGrantRow,
 } from '../../api/visibilityGrants';
 import { describePeriod } from '../../utils/visibilityPeriod';
 
+const { t } = useI18n();
+
 // Server-side paginated: grants accumulate (revoked and expired rows are kept as the history).
 // Grantee is the identifying column; the search matches grantee or manager by name or email.
+function statusLabel(status: string): string {
+    return t(`settingsAccess.grants.status.${status}`);
+}
+
 const props = defineProps<{
     grants: VisibilityGrantRow[];
     loading: boolean;
@@ -36,31 +43,60 @@ const emit = defineEmits<{
     revoke: [grant: VisibilityGrantRow, reason: string];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'granteeName',
-        header: 'Administrator',
+        header: t('settingsAccess.grants.columns.grantee'),
         width: 200,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Administrator or manager contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.grants.filters.grantee') },
         mobile: { primary: true },
     },
-    { field: 'createdAt', header: 'Created', width: 130, filterConfig: { type: 'none' } },
-    { field: 'managerName', header: 'Sees clients of', width: 200, filterConfig: { type: 'none' } },
-    { field: 'period', header: 'Period', width: 190, filterConfig: { type: 'none' } },
+    {
+        field: 'createdAt',
+        header: t('settingsAccess.grants.columns.created'),
+        width: 130,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'managerName',
+        header: t('settingsAccess.grants.columns.manager'),
+        width: 200,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'period',
+        header: t('settingsAccess.grants.columns.period'),
+        width: 190,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'status',
-        header: 'Status',
+        header: t('settingsAccess.grants.columns.status'),
         width: 120,
         filterConfig: {
             type: 'status',
-            placeholder: 'All',
-            options: [...VISIBILITY_STATUS_OPTIONS],
+            placeholder: t('settingsAccess.grants.filters.allStatuses'),
+            options: VISIBILITY_STATUSES.map(value => ({
+                value,
+                label: statusLabel(value),
+                variant: VISIBILITY_STATUS_VARIANT[value],
+            })),
         },
         mobile: { badge: true },
     },
-    { field: 'reason', header: 'Reason', width: 240, filterConfig: { type: 'none' } },
-    { field: 'grantedByName', header: 'Granted by', width: 170, filterConfig: { type: 'none' } },
+    {
+        field: 'reason',
+        header: t('settingsAccess.grants.columns.reason'),
+        width: 240,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'grantedByName',
+        header: t('settingsAccess.grants.columns.grantedBy'),
+        width: 170,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'actions',
         header: '',
@@ -68,7 +104,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'none' },
         mobile: { hidden: false },
     },
-];
+]);
 
 interface Filters {
     [key: string]: unknown;
@@ -80,15 +116,15 @@ const BLANK_FILTERS: Filters = { status: '', granteeName: '' };
 const { state: tableState } = useDataTableState<Filters>(
     `visibility-grants-datatable:${props.administratorId}`,
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { status: props.statusFilter, granteeName: props.searchFilter },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
+        columns: ALL_COLUMNS.value,
         allowedFilterKeys: ['status', 'granteeName'],
         externallyOwned: { pageSize: true, filterKeys: ['status', 'granteeName'] },
     },
@@ -134,8 +170,8 @@ const revocable = (row: Row): boolean => row.status === 'active' || row.status =
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'granteeName', placeholder: 'Search by administrator or manager…' }"
-        empty-message="No visibility grants match your filters"
+        :search="{ filterKey: 'granteeName', placeholder: t('settingsAccess.grants.search') }"
+        :empty-message="t('settingsAccess.grants.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -153,7 +189,7 @@ const revocable = (row: Row): boolean => row.status === 'active' || row.status =
                     ] ?? 'neutral'
                 "
             >
-                {{ (data as Row).status }}
+                {{ statusLabel((data as Row).status) }}
             </MvStatusBadge>
         </template>
         <template #cell-actions="{ data }">
@@ -163,20 +199,32 @@ const revocable = (row: Row): boolean => row.status === 'active' || row.status =
                 size="sm"
                 @click="revokeTarget = data as Row"
             >
-                Revoke
+                {{ t('settingsAccess.grants.revoke') }}
             </MvButton>
         </template>
     </MvAdvancedDataTable>
 
-    <MvModal v-if="revokeTarget" title="Revoke grant?" @close="revokeTarget = null">
+    <MvModal
+        v-if="revokeTarget"
+        :title="t('settingsAccess.grants.revokeTitle')"
+        @close="revokeTarget = null"
+    >
         <p class="visibility-grants__confirm">
-            {{ revokeTarget.granteeName }} will no longer see the clients of
-            {{ revokeTarget.managerName }}. The grant stays in the list as revoked.
+            {{
+                t('settingsAccess.grants.revokeText', {
+                    grantee: revokeTarget.granteeName,
+                    manager: revokeTarget.managerName,
+                })
+            }}
         </p>
-        <MvInput v-model="revokeReason" placeholder="Reason (optional)" />
+        <MvInput v-model="revokeReason" :placeholder="t('settingsAccess.grants.reasonOptional')" />
         <div class="visibility-grants__actions">
-            <MvButton variant="secondary" @click="revokeTarget = null">Cancel</MvButton>
-            <MvButton variant="danger" @click="confirmRevoke">Revoke</MvButton>
+            <MvButton variant="secondary" @click="revokeTarget = null">{{
+                t('common.cancel')
+            }}</MvButton>
+            <MvButton variant="danger" @click="confirmRevoke">{{
+                t('settingsAccess.grants.revoke')
+            }}</MvButton>
         </div>
     </MvModal>
 </template>

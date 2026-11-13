@@ -34,12 +34,7 @@ export const VISIBILITY_STATUS_VARIANT = {
     revoked: 'neutral',
 } as const;
 
-export const VISIBILITY_STATUS_OPTIONS = [
-    { value: 'active', label: 'Active', variant: 'success' },
-    { value: 'scheduled', label: 'Scheduled', variant: 'info' },
-    { value: 'expired', label: 'Expired', variant: 'neutral' },
-    { value: 'revoked', label: 'Revoked', variant: 'neutral' },
-] as const;
+export const VISIBILITY_STATUSES = ['active', 'scheduled', 'expired', 'revoked'] as const;
 
 export async function fetchVisibilityGrants(
     args: PageArgs & { status?: string; search?: string },

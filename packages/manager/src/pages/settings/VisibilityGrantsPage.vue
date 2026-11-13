@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvNotice } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
@@ -8,6 +9,7 @@ import VisibilityGrantModal from '../../components/settings/VisibilityGrantModal
 import VisibilityGrantsDataTable from '../../components/settings/VisibilityGrantsDataTable.vue';
 import type { GrantInput } from '../../api/visibilityGrants';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const allowed =
     authStore.hasPermission('ManageVisibilityGrants') ||
@@ -50,18 +52,16 @@ onMounted(() => {
 
 <template>
     <div v-if="!allowed" class="visibility-grants-page__denied">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage visibility grants.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.grants.denied') }}</p>
     </div>
 
     <div v-else class="visibility-grants-page">
-        <div class="visibility-grants-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="visibility-grants-page__title">Visibility grants</h1>
+        <div class="visibility-grants-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="visibility-grants-page__title">{{ t('settingsAccess.grants.title') }}</h1>
 
         <MvNotice variant="info">
-            A grant adds the clients of one more manager to an administrator's own scope. It never
-            removes access. A grant without a period is permanent; every change is recorded in the
-            audit log.
+            {{ t('settingsAccess.grants.info') }}
         </MvNotice>
         <MvNotice v-if="error && !adding" variant="error">{{ error }}</MvNotice>
 
@@ -80,7 +80,9 @@ onMounted(() => {
             @revoke="(g, reason) => state.revoke(g.id, reason)"
         >
             <template #toolbar-end>
-                <MvButton size="sm" @click="adding = true">Add grant</MvButton>
+                <MvButton size="sm" @click="adding = true">{{
+                    t('settingsAccess.grants.add')
+                }}</MvButton>
             </template>
         </VisibilityGrantsDataTable>
 

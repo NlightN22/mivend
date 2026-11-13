@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvDatePicker,
@@ -12,6 +13,7 @@ import {
 import type { AdministratorOption, GrantInput } from '../../api/visibilityGrants';
 import { periodEndIso, periodStartIso } from '../../utils/visibilityPeriod';
 
+const { t } = useI18n();
 const props = defineProps<{
     administrators: AdministratorOption[];
     error: string;
@@ -25,7 +27,10 @@ const from = ref('');
 const until = ref('');
 const reason = ref('');
 
-const options = computed(() => [{ value: '', label: 'Select…' }, ...props.administrators]);
+const options = computed(() => [
+    { value: '', label: t('settingsAccess.grants.select') },
+    ...props.administrators,
+]);
 const invalid = computed(
     () =>
         !grantee.value || !manager.value || grantee.value === manager.value || !reason.value.trim(),
@@ -43,27 +48,34 @@ function save(): void {
 </script>
 
 <template>
-    <MvModal title="Add visibility grant" @close="emit('close')">
+    <MvModal :title="t('settingsAccess.grants.modalTitle')" @close="emit('close')">
         <div class="visibility-grant-form">
             <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
-            <MvFormField label="Administrator who gets access" required>
+            <MvFormField :label="t('settingsAccess.grants.fields.grantee')" required>
                 <MvSelect v-model="grantee" :options="options" />
             </MvFormField>
-            <MvFormField label="Manager whose clients become visible" required>
+            <MvFormField :label="t('settingsAccess.grants.fields.manager')" required>
                 <MvSelect v-model="manager" :options="options" />
             </MvFormField>
-            <MvFormField label="From (optional)">
+            <MvFormField :label="t('settingsAccess.grants.fields.from')">
                 <MvDatePicker v-model="from" />
             </MvFormField>
-            <MvFormField label="Until, inclusive (optional, empty means permanent)">
+            <MvFormField :label="t('settingsAccess.grants.fields.until')">
                 <MvDatePicker v-model="until" />
             </MvFormField>
-            <MvFormField label="Reason" required>
-                <MvInput v-model="reason" placeholder="Why this access is needed" />
+            <MvFormField :label="t('settingsAccess.grants.fields.reason')" required>
+                <MvInput
+                    v-model="reason"
+                    :placeholder="t('settingsAccess.grants.fields.reasonHint')"
+                />
             </MvFormField>
             <div class="visibility-grant-form__actions">
-                <MvButton variant="secondary" @click="emit('close')">Cancel</MvButton>
-                <MvButton :disabled="invalid" :loading="saving" @click="save">Add grant</MvButton>
+                <MvButton variant="secondary" @click="emit('close')">{{
+                    t('common.cancel')
+                }}</MvButton>
+                <MvButton :disabled="invalid" :loading="saving" @click="save">{{
+                    t('settingsAccess.grants.add')
+                }}</MvButton>
             </div>
         </div>
     </MvModal>

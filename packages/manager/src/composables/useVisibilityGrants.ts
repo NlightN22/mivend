@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
+import { tr } from '../utils/lazyLabels';
 import {
     fetchAdministratorOptions,
     fetchVisibilityGrants,
@@ -38,7 +39,7 @@ export function useVisibilityGrants() {
         try {
             await run();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load visibility grants';
+            error.value = e instanceof Error ? e.message : tr('settingsAccess.grants.loadFailed');
         }
     }
 
@@ -54,7 +55,7 @@ export function useVisibilityGrants() {
             await run();
             return true;
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not save the grant';
+            error.value = e instanceof Error ? e.message : tr('settingsAccess.grants.saveFailed');
             return false;
         }
     }
@@ -65,7 +66,7 @@ export function useVisibilityGrants() {
             await revokeVisibilityGrant(id, reason);
             await run();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not revoke the grant';
+            error.value = e instanceof Error ? e.message : tr('settingsAccess.grants.revokeFailed');
         }
     }
 
