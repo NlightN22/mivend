@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
-    MvButton,
+    MvBlockError,
     MvKpiCard,
     MvKpiCarousel,
-    MvNotice,
     MvPanel,
     MvStatusBadge,
     MvFilterChips,
     type FilterChip,
 } from '@mivend/ui-kit';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { buildActivityFeed, type DashboardSection } from '../../api/dashboard';
 import { getDashboardKpiCards } from '../../api/dashboard-config';
@@ -23,6 +23,7 @@ import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationI
 import ReservationReconciliationPanel from '../../components/dashboard/ReservationReconciliationPanel.vue';
 import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const {
     data,
@@ -32,18 +33,14 @@ const {
     failedInboxEvents,
     reservationIssues,
     paymentIssues,
+    grantsError,
+    inboxError,
+    notificationsError,
     loading,
     load,
 } = useDashboard();
 
 const failedSectionKeys = computed(() => Object.keys(failedSections.value) as DashboardSection[]);
-const failedSummary = computed(() =>
-    failedSectionKeys.value
-        .map(section => `${section}: ${failedSections.value[section]}`)
-        .join('; '),
-);
-const everySectionFailed = computed(() => failedSectionKeys.value.length === 3);
-
 const FILTER_CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
     { key: 'in-progress', label: 'In progress' },
@@ -120,26 +117,26 @@ onMounted(load);
             </div>
         </div>
 
-        <MvNotice
-            v-if="failedSectionKeys.length"
-            variant="error"
-            class="dashboard__error"
-            role="alert"
-        >
-            <div class="dashboard__error-row">
-                <span>
-                    {{
-                        everySectionFailed
-                            ? 'The dashboard data could not be loaded.'
-                            : 'Part of the dashboard data could not be loaded.'
-                    }}
-                    {{ failedSummary }}
-                </span>
-                <MvButton variant="secondary" :disabled="loading" @click="load">Retry</MvButton>
-            </div>
-        </MvNotice>
-
-        <ExpiringDiscountsBanner :discounts="expiringDiscounts" />
+        <div v-if="failedSectionKeys.length || grantsError" class="dashboard__errors">
+            <MvBlockError
+                v-for="section in failedSectionKeys"
+                :key="section"
+                :title="t('common.blockLoadFailed')"
+                :message="`${section}: ${failedSections[section]}`"
+                :retry-label="t('common.retry')"
+                :retrying="loading"
+                @retry="load"
+            />
+            <MvBlockError
+                v-if="grantsError"
+                :title="t('common.blockLoadFailed')"
+                :message="grantsError"
+                :retry-label="t('common.retry')"
+                :retrying="loading"
+                @retry="load"
+            />
+        </div>
+        <ExpiringDiscountsBanner v-if="!grantsError" :discounts="expiringDiscounts" />
 
         <MvKpiCarousel v-if="data && kpiCards.length" class="dashboard__kpis">
             <MvKpiCard
@@ -168,35 +165,60 @@ onMounted(load);
                             @select="activeFilter = $event"
                         />
                     </template>
-                    <RecentOrdersTable :orders="filteredOrders" />
+                    <MvBlockError
+                        v-if="failedSections.orders"
+                        :title="t('common.blockLoadFailed')"
+                        :message="failedSections.orders ?? ''"
+                    />
+                    <RecentOrdersTable v-else :orders="filteredOrders" />
                 </MvPanel>
 
                 <MvPanel title="My approval requests status">
                     <template #header-actions>
                         <RouterLink to="/approvals">Open submitted</RouterLink>
                     </template>
-                    <ApprovalStatusList :approvals="data.recentApprovals.slice(0, 5)" />
+                    <MvBlockError
+                        v-if="failedSections.approvals"
+                        :title="t('common.blockLoadFailed')"
+                        :message="failedSections.approvals ?? ''"
+                    />
+                    <ApprovalStatusList v-else :approvals="data.recentApprovals.slice(0, 5)" />
                 </MvPanel>
 
                 <MvPanel
                     v-if="authStore.hasPermission('ManageAccessControl')"
                     title="Integration inbox errors"
                 >
-                    <IntegrationInboxErrorsPanel :events="failedInboxEvents" />
+                    <MvBlockError
+                        v-if="inboxError"
+                        :title="t('common.blockLoadFailed')"
+                        :message="inboxError"
+                    />
+                    <IntegrationInboxErrorsPanel v-else :events="failedInboxEvents" />
                 </MvPanel>
 
                 <MvPanel
                     v-if="authStore.hasPermission('ReadOrder')"
                     title="Reservation reconciliation"
                 >
-                    <ReservationReconciliationPanel :notifications="reservationIssues" />
+                    <MvBlockError
+                        v-if="notificationsError"
+                        :title="t('common.blockLoadFailed')"
+                        :message="notificationsError"
+                    />
+                    <ReservationReconciliationPanel v-else :notifications="reservationIssues" />
                 </MvPanel>
 
                 <MvPanel
                     v-if="authStore.hasPermission('ReadPayment')"
                     title="Payment reconciliation"
                 >
-                    <PaymentReconciliationPanel :notifications="paymentIssues" />
+                    <MvBlockError
+                        v-if="notificationsError"
+                        :title="t('common.blockLoadFailed')"
+                        :message="notificationsError"
+                    />
+                    <PaymentReconciliationPanel v-else :notifications="paymentIssues" />
                 </MvPanel>
             </div>
 
@@ -246,16 +268,10 @@ onMounted(load);
     justify-content: flex-end;
 }
 
-.dashboard__error {
+.dashboard__errors {
+    display: grid;
+    gap: 8px;
     margin-bottom: 18px;
-}
-
-.dashboard__error-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
 }
 
 .dashboard__kpis {

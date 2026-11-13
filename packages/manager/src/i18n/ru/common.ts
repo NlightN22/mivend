@@ -6,6 +6,9 @@ const common: typeof en = {
     cancel: 'Отмена',
     queryTooLarge: 'Запрос слишком большой. Обратитесь к разработчикам.',
     requestId: 'ID запроса',
+    blockLoadFailed: 'Не удалось загрузить этот блок',
+    blockLoadUnknown: 'Неизвестная ошибка',
+    retry: 'Повторить',
 };
 
 export default common;
