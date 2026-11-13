@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { CounterpartyBatchLoaders } from '../../counterparty-batch-loaders.service';
-import { CustomerCounterpartyResolver } from '../../counterparty.resolver';
+import { CustomerPortalActiveResolver } from '../../customer-portal-active.resolver';
 
-describe('CustomerCounterpartyResolver.active', () => {
-    const resolver = new CustomerCounterpartyResolver({} as CounterpartyBatchLoaders);
+describe('CustomerPortalActiveResolver.active', () => {
+    const resolver = new CustomerPortalActiveResolver();
 
     it('is true for a live customer', () => {
         expect(resolver.active({ deletedAt: null })).toBe(true);

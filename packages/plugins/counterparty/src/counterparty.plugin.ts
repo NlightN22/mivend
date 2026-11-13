@@ -50,6 +50,7 @@ import {
     CounterpartyChosenContactResolver,
     CounterpartyCustomerLinkResolver,
 } from './counterparty.resolver';
+import { CustomerPortalActiveResolver } from './customer-portal-active.resolver';
 import {
     CounterpartyTeamFieldResolver,
     CounterpartyTeamMutationResolver,
@@ -114,6 +115,7 @@ const shopResolvers = [
 ];
 
 const adminResolvers = [
+    CustomerPortalActiveResolver,
     CounterpartyBranchOverrideResolver,
     CounterpartyPriceTypeResolver,
     CustomerCounterpartyResolver,

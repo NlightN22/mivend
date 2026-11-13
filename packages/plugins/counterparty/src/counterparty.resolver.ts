@@ -32,11 +32,6 @@ export class CustomerCounterpartyResolver {
     ): Promise<Counterparty | null> {
         return this.loaders.forCustomer(ctx, customer.id);
     }
-
-    @ResolveField()
-    active(@Parent() customer: { deletedAt?: Date | null }): boolean {
-        return customer.deletedAt == null;
-    }
 }
 
 // tradingPoints field is resolved by CounterpartyTradingPointResolver in trading-point.resolver.ts
