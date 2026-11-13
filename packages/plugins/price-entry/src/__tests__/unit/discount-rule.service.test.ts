@@ -558,12 +558,13 @@ describe('DiscountRuleService', () => {
     });
 
     describe('findByPriceType', () => {
-        it('filters by priceTypeCode when provided, unbounded (inherently small set)', async () => {
+        it('filters by priceTypeCode when provided, capped at 200 by default', async () => {
             mockRepo.find.mockResolvedValue([]);
             await service.findByPriceType(mockCtx, 'WHOLESALE');
             expect(mockRepo.find).toHaveBeenCalledWith({
                 where: { priceTypeCode: 'WHOLESALE' },
                 order: { validTo: 'DESC' },
+                take: 200,
             });
         });
 

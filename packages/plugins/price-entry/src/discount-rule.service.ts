@@ -80,7 +80,7 @@ export class DiscountRuleService {
     }
 
     // Promo rules (triggerProductErpId set) are excluded: they have no priceTypeCode to list under.
-    // Unfiltered calls (no priceTypeCode) are capped at 200; /discounts no longer calls them that way.
+    // Both branches are capped at `take` (default 200); /discounts no longer calls them that way.
     async findByPriceType(
         ctx: RequestContext,
         priceTypeCode?: string,
@@ -89,8 +89,7 @@ export class DiscountRuleService {
     ): Promise<DiscountRule[]> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
         if (priceTypeCode) {
-            // unbounded-ok: TRACKED #350 rules of one price type are not capped
-            return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
+            return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' }, take });
         }
         // Promo rules are excluded: this listing only shows facet/priceType-threshold rules.
         const qb = repo.createQueryBuilder('dr').where('dr.triggerProductErpId IS NULL');
@@ -149,7 +148,7 @@ export class DiscountRuleService {
         memo?: LookupMemo,
     ): Promise<DiscountRule[]> {
         return memoized(memo, `dr:${priceTypeCode}`, () =>
-            // unbounded-ok: TRACKED #350 rules active now for one price type are filtered, not bounded
+            // unbounded-ok: pricing path, a cap would change prices; bounded by active rules of one price type, memoized per order
             this.connection
                 .getRepository(ctx, DiscountRule)
                 .createQueryBuilder('dr')
