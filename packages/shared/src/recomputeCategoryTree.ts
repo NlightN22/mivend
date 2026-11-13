@@ -24,6 +24,8 @@ import {
     planCategoryVisibilityUpdates,
 } from './categoryCollectionFilter';
 
+// The whole category tree (321 in production); a ceiling far above that fails loudly on runaway growth.
+const TREE_CEILING = 50000;
 export interface CategoryTreeRecomputeDeps {
     connection: TransactionalConnection;
     collectionService: CollectionService;
@@ -127,13 +129,16 @@ async function planTree(
     const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
 
     const collectionRepo = deps.connection.getRepository(ctx, Collection);
-    const collections = await readAllByKeyset<Collection>((afterId, limit) =>
-        collectionRepo.find({
-            where: afterId === null ? {} : { id: MoreThan(afterId) },
-            relations: ['translations'],
-            order: { id: 'ASC' },
-            take: limit,
-        }),
+    const collections = await readAllByKeyset<Collection>(
+        (afterId, limit) =>
+            collectionRepo.find({
+                where: afterId === null ? {} : { id: MoreThan(afterId) },
+                relations: ['translations'],
+                order: { id: 'ASC' },
+                take: limit,
+            }),
+        undefined,
+        TREE_CEILING,
     );
     // Vendure's update inserts a new row instead of updating without `translations` and a native id.
     const nativeIdByString = new Map(collections.map(c => [String(c.id), c.id]));
