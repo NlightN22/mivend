@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 
+import { findBounded } from 'shared';
+
 import { WorkflowDefinition } from './entities/workflow-definition.entity';
 import { WorkflowStepDefinition } from './types';
 
@@ -36,8 +38,7 @@ export class WorkflowDefinitionService {
     // Pushes eligibility into SQL WHERE instead of checking each pending request row by row.
     // Stays cheap because requestTypes are few; the pair set is never per approval request.
     async getAllDefinitions(ctx: RequestContext): Promise<ParsedWorkflowDefinition[]> {
-        // unbounded-ok: one definition per request type, a handful of rows
-        const rows = await this.connection.getRepository(ctx, WorkflowDefinition).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, WorkflowDefinition));
         return rows.map(row => ({
             requestType: row.requestType,
             displayName: row.displayName,

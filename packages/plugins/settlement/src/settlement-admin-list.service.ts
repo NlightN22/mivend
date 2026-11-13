@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Brackets, type SelectQueryBuilder } from 'typeorm';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { clampSkip, clampTake } from 'shared';
+import { clampSkip, clampTake, getRawManyBounded } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
@@ -90,16 +90,16 @@ export class SettlementAdminListService {
     ): Promise<SettlementTypeCount[]> {
         if (counterpartyId && !isCounterpartyId(counterpartyId)) return [];
         const qb = await this.baseQuery(ctx, options, counterpartyId);
-        // unbounded-ok: grouped by document type, a handful of rows
-        const rows = await qb
+        const rows = await getRawManyBounded<Raw>(
+            qb
             .select('"d"."documentType"', 'documentType')
             .addSelect(`MIN(${TYPE_LABEL_SQL})`, 'label')
             .addSelect('COUNT(*)::int', 'count')
             .groupBy('"d"."documentType"')
             .orderBy('COUNT(*)', 'DESC')
             .addOrderBy(`MIN(${TYPE_LABEL_SQL})`, 'ASC')
-            .addOrderBy('"d"."documentType"', 'ASC')
-            .getRawMany<Raw>();
+            .addOrderBy('"d"."documentType"', 'ASC'),
+        );
         return rows.map(r => ({
             documentType: String(r.documentType),
             label: String(r.label),

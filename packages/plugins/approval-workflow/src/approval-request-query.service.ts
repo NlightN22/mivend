@@ -8,6 +8,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { getManyBounded, getRawManyBounded } from 'shared';
 import { Brackets, SelectQueryBuilder } from 'typeorm';
 
 import { ApprovalRequest } from './entities/approval-request.entity';
@@ -65,8 +66,8 @@ export class ApprovalRequestQueryService {
             .where('request.requestType = :type', { type: 'priceAdjustmentApproval' })
             .andWhere('request.status = :pending', { pending: 'pending' });
         await this.scope.apply(ctx, qb);
-        // unbounded-ok: pending price-adjustment requests, drained by the approvers and ids-only
-        const rows = await qb.getRawMany<{ orderId: string | null }>();
+        // Ceiling 5000: pending requests are at most about one per open order (~8k orders overall).
+        const rows = await getRawManyBounded<{ orderId: string | null }>(qb, 5000);
         return [...new Set(rows.map(r => r.orderId).filter((id): id is string => !!id))];
     }
 
@@ -82,8 +83,7 @@ export class ApprovalRequestQueryService {
             .andWhere(`${payloadField('orderId')} = :forOrderId`, { forOrderId: String(orderId) })
             .orderBy('request.createdAt', 'DESC');
         await this.scope.apply(ctx, qb);
-        // unbounded-ok: approval requests referencing one order
-        return qb.getMany();
+        return getManyBounded(qb);
     }
 
     // DiscountRule rows exist only after approval, so pending/rejected entries must come from here.

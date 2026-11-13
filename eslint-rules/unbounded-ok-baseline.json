@@ -2,7 +2,6 @@
     "groups": {
         "apps/server": 2,
         "packages/plugins/acting-session": 2,
-        "packages/plugins/approval-workflow": 4,
         "packages/plugins/bulk-operations": 3,
         "packages/plugins/checks": 3,
         "packages/plugins/cross-reference": 1,
@@ -15,7 +14,6 @@
         "packages/plugins/retro-bonus": 2,
         "packages/plugins/saved-views": 1,
         "packages/plugins/session-management": 3,
-        "packages/plugins/settlement": 4,
         "packages/plugins/sync": 2,
         "packages/shared": 2
     }

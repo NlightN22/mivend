@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { ctxQueryBounded, withAggregateLock } from 'shared';
 
 import { SettlementDocumentType } from './entities/settlement-document-type.entity';
 import type { SettlementDocumentTypeInfo } from './settlement-admin.types';
@@ -58,9 +58,10 @@ export class SettlementDocumentTypeService {
     // Registry rows plus types seen only on documents (label from the document); no counts, no scope.
     // The distinct types are walked through the documentType index, so the cost does not grow with the table.
     async listAll(ctx: RequestContext): Promise<SettlementDocumentTypeInfo[]> {
-        const rows: Array<{ documentType: string; label: string; category: string | null; movesTurnover: boolean }> =
-            // unbounded-ok: one row per document type from a loose index scan
-            await this.connection.getRepository(ctx, SettlementDocumentType).query(`
+        const rows = await ctxQueryBounded<SettlementDocumentTypeInfo>(
+            this.connection,
+            ctx,
+            `
                 WITH RECURSIVE seen("documentType") AS (
                     (SELECT "documentType" FROM "settlement_document" WHERE NOT "isDeleted"
                         ORDER BY "documentType" LIMIT 1)
@@ -81,7 +82,8 @@ export class SettlementDocumentTypeService {
                 WHERE s."documentType" IS NOT NULL AND NOT EXISTS (
                     SELECT 1 FROM "settlement_document_type" t
                         WHERE t."documentType" = s."documentType" AND NOT t."isDeleted")
-                ORDER BY 1`);
+                ORDER BY 1`,
+        );
         return rows;
     }
 }

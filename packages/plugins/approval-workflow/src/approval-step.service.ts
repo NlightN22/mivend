@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { findBounded } from 'shared';
+
 import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 
@@ -16,8 +18,7 @@ export class ApprovalStepService {
     }
 
     async findSteps(ctx: RequestContext, approvalRequestId: ID): Promise<ApprovalStep[]> {
-        // unbounded-ok: steps of one approval request, a few by workflow definition
-        return this.connection.getRepository(ctx, ApprovalStep).find({
+        return findBounded(this.connection.getRepository(ctx, ApprovalStep), {
             where: { approvalRequestId: String(approvalRequestId) },
             order: { stepIndex: 'ASC' },
         });

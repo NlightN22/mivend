@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ctxQueryBounded } from 'shared';
 import { ErpIdLookupService } from '@mivend/plugin-counterparty';
 
 export interface ResolvedReferences {
@@ -42,15 +43,17 @@ export class SettlementReferenceResolver {
         }
         const resolved = new Map<string, number>();
         if (erpIds.size === 0) return resolved;
-        const rows: Array<{ id: number; erpOrderId: string | null; uuid: string | null }> =
-            // unbounded-ok: orders matched by the references passed in
-            await this.connection.getRepository(ctx, Order).query(
-                `SELECT id, "customFieldsErporderid" AS "erpOrderId", "customFieldsUuid"::text AS uuid
+        const rows = await ctxQueryBounded<{ id: number; erpOrderId: string | null; uuid: string | null }>(
+            this.connection,
+            ctx,
+            `SELECT id, "customFieldsErporderid" AS "erpOrderId", "customFieldsUuid"::text AS uuid
                  FROM "order"
                  WHERE "customFieldsErporderid" = ANY($1::text[])
                     OR "customFieldsUuid"::text = ANY($2::text[])`,
-                [[...erpIds], [...uuids]],
-            );
+            [[...erpIds], [...uuids]],
+            // At most one order per erp id and per uuid passed in.
+            erpIds.size + uuids.size,
+        );
         for (const link of links) {
             const match =
                 rows.find(r => r.erpOrderId === link.orderErpId) ??
