@@ -257,6 +257,7 @@ rules can be edited or reissued from the ERP with the same identity.
   `manufacturer`, value code = ERP manufacturer id), or any other facet code. A **global** discount (both `facetCode`/`facetValueCode` null) exists but
   is rare; it applies to every variant for that price type.
 - If a variant matches multiple active rules, the **highest percent wins**. No stacking.
+- The registry listing of discount rules for one price type returns at most 200 rules (`findByPriceType`); it is a listing cap, not part of price resolution, which reads all active rules.
 - Discount periods (`validFrom`/`validTo`) are **always fully bounded** — the business
   never runs open-ended discounts, and ERP currently caps periods at ~3 months. Periods
   for the same facet/price-type combination don't overlap in practice.
