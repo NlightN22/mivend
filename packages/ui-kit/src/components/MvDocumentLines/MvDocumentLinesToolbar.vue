@@ -1,5 +1,16 @@
 <script setup lang="ts">
-defineProps<{ title: string; count: number }>();
+import { computed } from 'vue';
+import { useUiLabels } from '../../utils/uiLabels';
+import { useUiLocale } from '../../utils/uiLocale';
+
+const props = defineProps<{ title: string; count: number }>();
+const label = useUiLabels();
+const locale = useUiLocale();
+const word = computed(() => {
+    const category = new Intl.PluralRules(locale.value).select(props.count);
+    const key = `positions${category[0].toUpperCase()}${category.slice(1)}`;
+    return label(key, props.count === 1 ? 'position' : 'positions');
+});
 </script>
 
 <template>
@@ -7,7 +18,7 @@ defineProps<{ title: string; count: number }>();
         <h3 class="doc-toolbar__title">
             {{ title }}
             <span class="doc-toolbar__count" data-testid="doc-lines-count">
-                {{ count }} {{ count === 1 ? 'position' : 'positions' }}
+                {{ count }} {{ word }}
             </span>
         </h3>
         <div class="doc-toolbar__end"><slot name="toolbar" /></div>

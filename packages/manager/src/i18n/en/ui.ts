@@ -15,4 +15,8 @@ export default {
     onlyMe: 'Only me',
     team: 'Team',
     save: 'Save',
+    positionsOne: 'position',
+    positionsFew: 'positions',
+    positionsMany: 'positions',
+    positionsOther: 'positions',
 };

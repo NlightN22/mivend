@@ -10,7 +10,7 @@ const discounts: typeof en = {
         scope: 'Действует для',
         priceType: 'Тип цены',
         productGroup: 'Группа товаров',
-        percent: 'Скидка, %',
+        percent: 'Скидка',
         validFrom: 'Начало',
         validTo: 'Конец',
         status: 'Статус',

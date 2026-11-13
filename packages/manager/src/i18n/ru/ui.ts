@@ -17,6 +17,10 @@ const ui: typeof en = {
     onlyMe: 'Только я',
     team: 'Команда',
     save: 'Сохранить',
+    positionsOne: 'позиция',
+    positionsFew: 'позиции',
+    positionsMany: 'позиций',
+    positionsOther: 'позиции',
 };
 
 export default ui;
