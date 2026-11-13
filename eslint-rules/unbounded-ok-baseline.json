@@ -8,8 +8,6 @@
         "packages/plugins/cross-reference": 1,
         "packages/plugins/customer-pricing": 1,
         "packages/plugins/deferred-payment": 3,
-        "packages/plugins/documents": 9,
-        "packages/plugins/erp-order": 8,
         "packages/plugins/notification": 2,
         "packages/plugins/oidc-sign-in": 1,
         "packages/plugins/order-identity": 1,
