@@ -1,5 +1,30 @@
 export default {
-    status: { any: 'All statuses', current: 'Current', superseded: 'Superseded', cancelled: 'Cancelled' },
+    list: {
+        page: { breadcrumb: 'Workspace / Proforma invoices', title: 'Proforma invoices' },
+        searchPlaceholder: 'Number or customer…',
+        empty: 'No proforma invoices match your filters',
+        loadFailedTitle: 'Could not load proforma invoices',
+        loadFailedMessage: 'Check the connection and try again.',
+        filteredToCustomer: 'Filtered to one customer.',
+        filteredToCustomerNamed: 'Filtered to one customer ({customer}).',
+        showAllCustomers: 'Show all customers',
+        columns: {
+            number: 'Proforma invoice #',
+            date: 'Date',
+            customer: 'Customer',
+            order: 'Order',
+            status: 'Status',
+            amount: 'Amount',
+            dueDate: 'Due',
+        },
+        views: { all: 'All', current: 'Current', superseded: 'Superseded', cancelled: 'Cancelled' },
+    },
+    status: {
+        any: 'All statuses',
+        current: 'Current',
+        superseded: 'Superseded',
+        cancelled: 'Cancelled',
+    },
     kind: {
         'order-placed': 'Order placed',
         'order-changed': 'Order changed',

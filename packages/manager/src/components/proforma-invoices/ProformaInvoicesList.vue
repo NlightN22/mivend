@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFilterChips, MvWarningBanner, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useProformaInvoicesList } from '../../composables/useProformaInvoicesList';
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: st
     urlPrefix: '',
 });
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const list = useProformaInvoicesList(props.counterpartyId, props.urlPrefix);
 const rows = computed(() => toProformaInvoiceRows(list.items.value));
@@ -43,10 +45,14 @@ function clearFilters(): void {
 <template>
     <MvWarningBanner
         v-if="!props.counterpartyId && list.counterpartyId.value"
-        action-text="Show all customers"
+        :action-text="t('proformaInvoices.list.showAllCustomers')"
         @action="list.counterpartyId.value = ''"
     >
-        Filtered to one customer{{ rows[0] ? ` (${rows[0].customer})` : '' }}.
+        {{
+            rows[0]
+                ? t('proformaInvoices.list.filteredToCustomerNamed', { customer: rows[0].customer })
+                : t('proformaInvoices.list.filteredToCustomer')
+        }}
     </MvWarningBanner>
     <ProformaInvoicesListTable
         :rows="rows"

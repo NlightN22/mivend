@@ -3,6 +3,7 @@ import {
     sanitizeConditions,
     type FilterCondition,
 } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
+import { i18n } from '../i18n';
 import { adminApi } from './client';
 import {
     ProformaInvoicesPageDocument,
@@ -19,12 +20,14 @@ import {
 
 export type ProformaInvoicesView = 'all' | 'current' | 'superseded' | 'cancelled';
 
-export const PROFORMA_INVOICES_VIEWS: { key: ProformaInvoicesView; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'current', label: 'Current' },
-    { key: 'superseded', label: 'Superseded' },
-    { key: 'cancelled', label: 'Cancelled' },
-];
+export const PROFORMA_INVOICES_VIEWS: { key: ProformaInvoicesView; readonly label: string }[] = (
+    ['all', 'current', 'superseded', 'cancelled'] as const
+).map(key => ({
+    key,
+    get label(): string {
+        return i18n.global.t(`proformaInvoices.list.views.${key}`);
+    },
+}));
 
 // Same colors as the row status badges the view stands for.
 export const PROFORMA_INVOICES_VIEW_VARIANT: Partial<

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvStatusBadge,
@@ -20,8 +21,10 @@ import { PROFORMA_INVOICES_URL_DEFAULTS } from '../../composables/proformaInvoic
 import { sortFromState, sortToState } from './proformaInvoicesSort';
 import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
-import { PROFORMA_INVOICES_COLUMNS } from './proformaInvoicesColumns';
+import { buildProformaInvoicesColumns } from './proformaInvoicesColumns';
 import type { ProformaInvoiceRow } from './proformaInvoicesRows';
+
+const { t } = useI18n();
 
 const props = defineProps<{
     rows: ProformaInvoiceRow[];
@@ -38,9 +41,7 @@ const props = defineProps<{
 }>();
 
 // Nested under a customer, the customer column and filter are redundant.
-const COLUMNS = props.nested
-    ? PROFORMA_INVOICES_COLUMNS.filter(c => c.field !== 'customer')
-    : PROFORMA_INVOICES_COLUMNS;
+const COLUMNS = buildProformaInvoicesColumns().filter(c => !props.nested || c.field !== 'customer');
 
 const emit = defineEmits<{
     'update:filters': [filters: ProformaInvoicesListFilters];
@@ -158,10 +159,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         data-key="id"
         :row-height-px="64"
         :header-height-px="65"
-        :search="{ filterKey: 'search', placeholder: 'Number or customer…' }"
+        :search="{ filterKey: 'search', placeholder: t('proformaInvoices.list.searchPlaceholder') }"
         :conditions="filters.conditions"
         :default-filters="{ search: BLANK_PROFORMA_INVOICES_FILTERS.search }"
-        empty-message="No proforma invoices match your filters"
+        :empty-message="t('proformaInvoices.list.empty')"
         @update:conditions="onConditions"
         @update:page="emit('update:page', $event)"
         @reset-page="emit('update:page', 1)"
@@ -171,13 +172,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
         <template #empty>
             <MvErrorState
                 v-if="failed"
-                title="Could not load proforma invoices"
-                message="Check the connection and try again."
+                :title="t('proformaInvoices.list.loadFailedTitle')"
+                :message="t('proformaInvoices.list.loadFailedMessage')"
                 @retry="emit('retry')"
             />
-            <template v-else>{{
-                loading ? '' : 'No proforma invoices match your filters'
-            }}</template>
+            <template v-else>{{ loading ? '' : t('proformaInvoices.list.empty') }}</template>
         </template>
 
         <template #toolbar-start>

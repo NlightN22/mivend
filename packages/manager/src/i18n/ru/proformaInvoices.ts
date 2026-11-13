@@ -1,7 +1,37 @@
 import type en from '../en/proformaInvoices';
 
 const proformaInvoices: typeof en = {
-    status: { any: 'Все статусы', current: 'Действующий', superseded: 'Заменён', cancelled: 'Отменён' },
+    list: {
+        page: { breadcrumb: 'Рабочая область / Счета на оплату', title: 'Счета на оплату' },
+        searchPlaceholder: 'Номер или клиент…',
+        empty: 'Нет счетов на оплату по заданным фильтрам',
+        loadFailedTitle: 'Не удалось загрузить счета на оплату',
+        loadFailedMessage: 'Проверьте соединение и повторите попытку.',
+        filteredToCustomer: 'Показан один клиент.',
+        filteredToCustomerNamed: 'Показан один клиент ({customer}).',
+        showAllCustomers: 'Показать всех клиентов',
+        columns: {
+            number: 'Счёт №',
+            date: 'Дата',
+            customer: 'Клиент',
+            order: 'Заказ',
+            status: 'Статус',
+            amount: 'Сумма',
+            dueDate: 'Срок',
+        },
+        views: {
+            all: 'Все',
+            current: 'Действующие',
+            superseded: 'Заменённые',
+            cancelled: 'Отменённые',
+        },
+    },
+    status: {
+        any: 'Все статусы',
+        current: 'Действующий',
+        superseded: 'Заменён',
+        cancelled: 'Отменён',
+    },
     kind: {
         'order-placed': 'Заказ оформлен',
         'order-changed': 'Заказ изменён',

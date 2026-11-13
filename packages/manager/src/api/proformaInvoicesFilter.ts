@@ -1,10 +1,10 @@
 import { toVendureFilter } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import type { FilterCondition } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import { toFilterColumns } from '@mivend/ui-kit/src/components/MvAdvancedDataTable/advancedDataTableTypes';
-import { PROFORMA_INVOICES_COLUMNS } from '../components/proforma-invoices/proformaInvoicesColumns';
+import { buildProformaInvoicesColumns } from '../components/proforma-invoices/proformaInvoicesColumns';
 import type { ProformaInvoiceFilterParameter } from './generated/graphql';
 
-export const PROFORMA_INVOICES_FILTER_COLUMNS = toFilterColumns(PROFORMA_INVOICES_COLUMNS);
+export const PROFORMA_INVOICES_FILTER_COLUMNS = toFilterColumns(buildProformaInvoicesColumns());
 
 // The server takes the builder's own shape, so no field needs special handling.
 export function conditionsToProformaInvoicesFilter(

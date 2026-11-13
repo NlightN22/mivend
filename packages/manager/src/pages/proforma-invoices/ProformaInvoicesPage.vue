@@ -1,12 +1,19 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import ProformaInvoicesList from '../../components/proforma-invoices/ProformaInvoicesList.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="proforma-invoices-page">
         <div class="proforma-invoices-page__header">
-            <div class="proforma-invoices-page__breadcrumb">Workspace / Proforma invoices</div>
-            <h1 class="proforma-invoices-page__title">Proforma invoices</h1>
+            <div class="proforma-invoices-page__breadcrumb">
+                {{ t('proformaInvoices.list.page.breadcrumb') }}
+            </div>
+            <h1 class="proforma-invoices-page__title">
+                {{ t('proformaInvoices.list.page.title') }}
+            </h1>
         </div>
 
         <ProformaInvoicesList />
