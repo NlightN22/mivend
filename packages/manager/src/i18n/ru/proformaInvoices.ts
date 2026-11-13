@@ -2,7 +2,7 @@ import type en from '../en/proformaInvoices';
 
 const proformaInvoices: typeof en = {
     list: {
-        page: { breadcrumb: 'Рабочая область / Счета на оплату', title: 'Счета на оплату' },
+        page: { breadcrumb: 'Рабочее пространство / Счета на оплату', title: 'Счета на оплату' },
         searchPlaceholder: 'Номер или клиент…',
         empty: 'Нет счетов на оплату по заданным фильтрам',
         loadFailedTitle: 'Не удалось загрузить счета на оплату',
