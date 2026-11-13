@@ -11,12 +11,13 @@ import { NotificationService } from '@mivend/plugin-notification';
 import { withOrderCancelLocks, ctxQueryBounded, getManyBounded } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
-import { findRejectedOrderIdsWithActiveReserve } from './rejected-orders.query';
+import { readRejectedOrderIdBatch } from './rejected-orders.query';
 import { ReservationReleasedEvent } from './reservation.events';
 import { ReservationSettings } from './reservation-settings';
 import { loggerCtx } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REJECTED_RELEASE_BATCH = 500;
 
 // Releases the reserve of an order the ERP left REJECTED past the deadline (#204). Each order is
 // re-read under the cancel locks (proforma, reserve, order row), the same order a cancel takes.
@@ -42,25 +43,31 @@ export class RejectedOrderReleaseService {
         if (rejectedCodes.length === 0) return 0;
 
         const cutoff = new Date(Date.now() - this.settings.rejectedOrderReleaseDays() * DAY_MS);
-        const orderIds = await findRejectedOrderIdsWithActiveReserve(
-            this.connection,
-            ctx,
-            rejectedCodes,
-            cutoff,
-        );
-
         let released = 0;
         let firstError: unknown;
-        for (const orderId of orderIds) {
-            try {
-                released += await this.releaseOrder(ctx, orderId, rejectedCodes, cutoff);
-            } catch (error) {
-                Logger.error(
-                    `Rejected-order release of order ${orderId} failed: ${String(error)}`,
-                    loggerCtx,
-                );
-                firstError ??= error;
+        let afterId: string | null = null;
+        for (;;) {
+            const batch = await readRejectedOrderIdBatch(
+                this.connection,
+                ctx,
+                rejectedCodes,
+                cutoff,
+                afterId,
+                REJECTED_RELEASE_BATCH,
+            );
+            for (const orderId of batch) {
+                try {
+                    released += await this.releaseOrder(ctx, orderId, rejectedCodes, cutoff);
+                } catch (error) {
+                    Logger.error(
+                        `Rejected-order release of order ${orderId} failed: ${String(error)}`,
+                        loggerCtx,
+                    );
+                    firstError ??= error;
+                }
             }
+            if (batch.length < REJECTED_RELEASE_BATCH) break;
+            afterId = batch[batch.length - 1];
         }
         if (firstError !== undefined) throw firstError;
         return released;

@@ -3,7 +3,7 @@ import { QueryTooLargeError } from 'shared';
 
 import { sumActiveReservations } from '../../active-reservation-sums';
 import { RejectedOrderReleaseService } from '../../rejected-order-release.service';
-import { findRejectedOrderIdsWithActiveReserve } from '../../rejected-orders.query';
+import { readRejectedOrderIdBatch } from '../../rejected-orders.query';
 import { lockStockLevelsInOrder } from '../../reservation-location-picker';
 import { VARIANT_LOCATION_CEILING } from '../../reservation-read-ceiling';
 import { ReservationSettings } from '../../reservation-settings';
@@ -72,37 +72,36 @@ describe('ctxQueryBounded: rejected status codes', () => {
     });
 });
 
-describe('readAllByKeyset: rejected-order sweep', () => {
-    function sweep(batches: number): {
-        run: () => Promise<string[]>;
-        afterIds: unknown[];
+describe('readRejectedOrderIdBatch', () => {
+    function reader(): {
+        qb: ReturnType<typeof chain>;
+        read: (after: string | null) => Promise<string[]>;
     } {
-        const afterIds: unknown[] = [];
-        let call = 0;
         const qb = chain({});
-        qb.andWhere = vi.fn((sql: string, params?: { afterId?: number }) => {
-            if (params && 'afterId' in params) afterIds.push(params.afterId);
-            return qb;
-        });
-        qb.getMany = vi.fn(async () => {
-            call += 1;
-            return call <= batches ? rows(1000, (call - 1) * 1000) : [];
-        });
+        qb.andWhere = vi.fn(() => qb);
+        qb.take = vi.fn(() => qb);
+        qb.getMany = vi.fn(async () => rows(3));
         const connection = { getRepository: () => ({ createQueryBuilder: () => qb }) };
         return {
-            run: () =>
-                findRejectedOrderIdsWithActiveReserve(connection as never, ctx, ['R'], new Date()),
-            afterIds,
+            qb,
+            read: after =>
+                readRejectedOrderIdBatch(connection as never, ctx, ['R'], new Date(), after, 500),
         };
     }
 
-    it('reads every batch up to the ceiling, continuing after the last id', async () => {
-        const { run, afterIds } = sweep(10);
-        expect(await run()).toHaveLength(10000);
-        expect(afterIds.slice(0, 2)).toEqual([1000, 2000]);
+    it('applies no id condition on the first slice and takes one slice only', async () => {
+        const { qb, read } = reader();
+        expect(await read(null)).toHaveLength(3);
+        const idConditions = (qb.andWhere as ReturnType<typeof vi.fn>).mock.calls.filter(call =>
+            String(call[0]).includes('afterId'),
+        );
+        expect(idConditions).toHaveLength(0);
+        expect(qb.take).toHaveBeenCalledWith(500);
     });
 
-    it('throws once the set passes the ceiling', async () => {
-        await expect(sweep(11).run()).rejects.toBeInstanceOf(QueryTooLargeError);
+    it('continues after the last id of the previous slice', async () => {
+        const { qb, read } = reader();
+        await read('42');
+        expect(qb.andWhere).toHaveBeenCalledWith('o.id > :afterId', { afterId: '42' });
     });
 });
