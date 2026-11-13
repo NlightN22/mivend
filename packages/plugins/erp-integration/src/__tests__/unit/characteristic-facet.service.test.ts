@@ -33,7 +33,7 @@ function makeService(existingFacetValues: string[] = [], isServer = true, stored
         create: vi.fn().mockResolvedValue({}),
     };
     const qb: Record<string, unknown> = {};
-    for (const m of ['select', 'distinct']) qb[m] = () => qb;
+    for (const m of ['select', 'distinct', 'limit']) qb[m] = () => qb;
     qb.getRawMany = async () => stored;
     const connection = {
         getRepository: () => ({ createQueryBuilder: () => qb, query: vi.fn() }),

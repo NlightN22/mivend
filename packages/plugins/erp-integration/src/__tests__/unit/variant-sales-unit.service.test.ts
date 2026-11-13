@@ -12,6 +12,7 @@ function makeService(rows: unknown[]): {
         select: vi.fn().mockReturnThis(),
         addSelect: vi.fn().mockReturnThis(),
         where,
+        limit: vi.fn().mockReturnThis(),
         getRawMany: vi.fn(async () => rows),
     };
     const connection = {

@@ -12,6 +12,7 @@ function serviceReturning(rows: unknown[]): ProductPackagingLevelsService {
         where: () => builder,
         andWhere: () => builder,
         orderBy: () => builder,
+        limit: () => builder,
         getRawMany: async () => rows,
     };
     const connection = {
