@@ -517,6 +517,7 @@ describe('CounterpartyService', () => {
             qb.orderBy = vi.fn(() => qb);
             qb.where = vi.fn(() => qb);
             qb.andWhere = vi.fn(() => qb);
+            qb.take = vi.fn(() => qb);
             qb.getMany = vi.fn(async () => []);
             return qb;
         }

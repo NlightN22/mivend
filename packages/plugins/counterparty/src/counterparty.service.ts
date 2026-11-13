@@ -12,7 +12,7 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { clampSkip, clampTake, withAggregateLock, ctxQuery } from 'shared';
+import { clampSkip, clampTake, withAggregateLock, ctxQuery, getManyBounded } from 'shared';
 
 import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn-guard';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
@@ -167,10 +167,10 @@ export class CounterpartyService {
         return this.connection.getRepository(ctx, Counterparty).findOne({ where: { erpId } });
     }
 
-    /** @deprecated Loads every visible row; use visibleIdsSql() as a subquery or findVisiblePage(). */
-    async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
-        // unbounded-ok: deprecated, scoped by visibility; list paths use findVisiblePage()
-        return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
+    /** @deprecated Throws QueryTooLargeError above the ceiling; use visibleIdsSql() or findVisiblePage(). */
+    async findVisible(ctx: RequestContext, ceiling?: number): Promise<Counterparty[]> {
+        const qb = await this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx));
+        return getManyBounded(qb, ceiling);
     }
 
     // Paginated variant for direct display; findVisible() is unbounded, wrong for scope 'all'
