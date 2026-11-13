@@ -96,4 +96,9 @@ describe('readAllByKeyset', () => {
         expect(await readAllByKeyset(fetch, 7)).toHaveLength(7);
         expect(fetch).toHaveBeenCalledTimes(2);
     });
+
+    it('returns a set exactly at the ceiling and throws one row over', async () => {
+        expect(await readAllByKeyset(fetch, 3, 7)).toHaveLength(7);
+        await expect(readAllByKeyset(fetch, 3, 6)).rejects.toBeInstanceOf(QueryTooLargeError);
+    });
 });
