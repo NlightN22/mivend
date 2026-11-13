@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 
-import { withAggregateLock, ctxQuery } from 'shared';
+import { findBounded, withAggregateLock, ctxQuery } from 'shared';
 
 import { CUSTOMER_PRICING_PLUGIN_OPTIONS, loggerCtx } from './constants';
 import { CustomerPriceType } from './entities/customer-price-type.entity';
@@ -29,12 +29,12 @@ export class CustomerPricingService {
         @Inject(CUSTOMER_PRICING_PLUGIN_OPTIONS) private options: CustomerPricingPluginOptions,
     ) {}
 
-    async findAllPriceTypes(ctx: RequestContext): Promise<PriceType[]> {
-        // unbounded-ok: active price type registry, a handful of rows
-        return this.connection.getRepository(ctx, PriceType).find({
-            where: { isActive: true },
-            order: { name: 'ASC' },
-        });
+    async findAllPriceTypes(ctx: RequestContext, ceiling?: number): Promise<PriceType[]> {
+        return findBounded(
+            this.connection.getRepository(ctx, PriceType),
+            { where: { isActive: true }, order: { name: 'ASC' } },
+            ceiling,
+        );
     }
 
     async findPriceTypeByCode(ctx: RequestContext, code: string): Promise<PriceType | null> {

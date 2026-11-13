@@ -1,7 +1,5 @@
 {
     "groups": {
-        "packages/plugins/customer-pricing": 1,
-        "packages/plugins/price-entry": 14,
-        "packages/plugins/retro-bonus": 2
+        "packages/plugins/price-entry": 3
     }
 }
