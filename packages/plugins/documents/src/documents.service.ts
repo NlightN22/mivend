@@ -8,7 +8,13 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { SelectQueryBuilder } from 'typeorm';
-import { ctxQuery, documentNumberSearchTerm, getPageAndCount } from 'shared';
+import {
+    ctxQuery,
+    documentNumberSearchTerm,
+    findBounded,
+    getPageAndCount,
+    getRawManyBounded,
+} from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
@@ -117,12 +123,12 @@ export class DocumentsService {
 
     // Bounded server-side DISTINCT over the scoped rows (not fetch-all and dedupe in JS).
     async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {
-        // unbounded-ok: DISTINCT document types, bounded by the small ERP document-type vocabulary
-        const rows = await (await this.visibleDocumentsQb(ctx, counterpartyId))
-            .select('document.type', 'type')
-            .distinct(true)
-            .orderBy('document.type', 'ASC')
-            .getRawMany<{ type: string }>();
+        const rows = await getRawManyBounded<{ type: string }>(
+            (await this.visibleDocumentsQb(ctx, counterpartyId))
+                .select('document.type', 'type')
+                .distinct(true)
+                .orderBy('document.type', 'ASC'),
+        );
         return rows.map(r => r.type);
     }
 
@@ -211,8 +217,7 @@ export class DocumentsService {
     // Seed/admin-only: maps an ERP org erpId to the platform's auto-increment id, e.g. to fill
     // ProductVariant.customFields.organizationId before a real ERP export exists.
     async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
-        // unbounded-ok: organization requisites registry, a handful of legal entities
-        return this.connection.getRepository(ctx, OrganizationRequisites).find();
+        return findBounded(this.connection.getRepository(ctx, OrganizationRequisites));
     }
 
     // Takes the ERP's GUID (erpId), not the platform's auto-increment id; the two are not

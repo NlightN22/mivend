@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ContractProformaPurgeService } from '@mivend/plugin-acquiring';
+import { findBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { Document } from './entities/document.entity';
@@ -36,8 +37,8 @@ export class ContractProformaCleanupService {
                         type: 'proforma-invoice',
                         proformaInvoiceId: In(ids.map(String)),
                     };
-                    // unbounded-ok: documents of the proforma invoices of one contract, deleted in the same call
-                    const docs = await repo.find({ where });
+                    // A proforma invoice has one document; five per id leaves room for retries.
+                    const docs = await findBounded(repo, { where }, Math.max(ids.length * 5, 1));
                     for (const doc of docs) uuids.push(doc.uuid);
                     await repo.delete(where);
                 },

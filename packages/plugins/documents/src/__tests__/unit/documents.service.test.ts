@@ -11,6 +11,7 @@ const mockQb = {
     addOrderBy: vi.fn(),
     take: vi.fn(),
     skip: vi.fn(),
+    limit: vi.fn(),
     getManyAndCount: vi.fn(),
     getRawMany: vi.fn(),
 };
@@ -22,6 +23,7 @@ mockQb.orderBy.mockReturnValue(mockQb);
 mockQb.addOrderBy.mockReturnValue(mockQb);
 mockQb.take.mockReturnValue(mockQb);
 mockQb.skip.mockReturnValue(mockQb);
+mockQb.limit.mockReturnValue(mockQb);
 
 const mockRepo = {
     findOne: vi.fn(),

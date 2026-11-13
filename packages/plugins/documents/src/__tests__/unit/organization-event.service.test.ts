@@ -11,9 +11,11 @@ const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
     setParameter: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
     getRawMany: vi.fn(),
 };
-for (const k of ['select', 'where', 'andWhere', 'setParameter'] as const) {
+for (const k of ['select', 'where', 'andWhere', 'setParameter', 'orderBy', 'limit'] as const) {
     mockQb[k].mockReturnValue(mockQb);
 }
 const orgRepo = {

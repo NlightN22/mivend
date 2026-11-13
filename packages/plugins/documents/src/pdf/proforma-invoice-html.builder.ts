@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, Order, RequestContext, TaxRate, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
-import { isUnconfirmedTaxRateName } from 'shared';
+import { findBounded, getRawManyBounded, isUnconfirmedTaxRateName } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { ProformaInvoiceService } from '@mivend/plugin-acquiring';
 
@@ -182,14 +182,16 @@ export class ProformaInvoiceHtmlBuilder {
         variantIds: number[],
     ): Promise<Map<number, string>> {
         if (variantIds.length === 0) return new Map();
-        // unbounded-ok: variants of the lines of one proforma invoice
-        const rows = await this.connection
-            .getRepository(ctx, 'product_variant')
-            .createQueryBuilder('pv')
-            .select('pv.id', 'id')
-            .addSelect('pv."customFieldsUnitname"', 'unitName')
-            .where('pv.id IN (:...ids)', { ids: variantIds })
-            .getRawMany<{ id: number | string; unitName: string | null }>();
+        const ids = [...new Set(variantIds)];
+        const rows = await getRawManyBounded<{ id: number | string; unitName: string | null }>(
+            this.connection
+                .getRepository(ctx, 'product_variant')
+                .createQueryBuilder('pv')
+                .select('pv.id', 'id')
+                .addSelect('pv."customFieldsUnitname"', 'unitName')
+                .where('pv.id IN (:...ids)', { ids }),
+            ids.length,
+        );
         return new Map(rows.filter(r => r.unitName).map(r => [Number(r.id), r.unitName as string]));
     }
 
@@ -201,8 +203,7 @@ export class ProformaInvoiceHtmlBuilder {
             ...new Set(lines.filter(l => l.taxRate === null).map(l => l.taxCategoryName ?? '')),
         ].filter(Boolean);
         if (names.length === 0) return new Map();
-        // unbounded-ok: tax rates of the categories named on one proforma invoice, a few rows
-        const rates = await this.connection.getRepository(ctx, TaxRate).find({
+        const rates = await findBounded(this.connection.getRepository(ctx, TaxRate), {
             where: { enabled: true, category: { name: In(names) } },
             relations: { category: true },
         });

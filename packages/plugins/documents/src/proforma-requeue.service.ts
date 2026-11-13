@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
+import { keysetBatches } from 'shared';
+import type { SelectQueryBuilder } from 'typeorm';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
@@ -17,6 +19,12 @@ function metadataError(metadata: string | null): unknown {
     }
 }
 
+type FailedQb = SelectQueryBuilder<Document>;
+interface FailedRow {
+    id: string;
+    metadata?: string | null;
+}
+
 // Requeues failed proforma documents once what made them fail is fixed. The conditional
 // failed->pending update keeps two concurrent requeues from enqueuing the same document twice.
 @Injectable()
@@ -31,35 +39,46 @@ export class ProformaRequeueService {
         organizationId: number,
         label: string,
     ): Promise<void> {
-        // unbounded-ok: one-off requeue after a data fix, limited to failed proforma documents of one organization
-        const failed = await this.failedProformas(ctx)
-            .andWhere(qb => {
-                const sub = qb
-                    .subQuery()
-                    .select('CAST(pi.id AS varchar)')
-                    .from(ProformaInvoice, 'pi')
-                    .where('pi.organizationId = :organizationId')
-                    .getQuery();
-                return `document.proformaInvoiceId IN ${sub}`;
-            })
-            .setParameter('organizationId', organizationId)
-            .getRawMany<{ id: string }>();
-        await this.requeue(ctx, failed, `organization ${label}`);
+        for await (const failed of this.failedBatches(ctx, qb =>
+            qb
+                .andWhere(inner => {
+                    const sub = inner
+                        .subQuery()
+                        .select('CAST(pi.id AS varchar)')
+                        .from(ProformaInvoice, 'pi')
+                        .where('pi.organizationId = :organizationId')
+                        .getQuery();
+                    return `document.proformaInvoiceId IN ${sub}`;
+                })
+                .setParameter('organizationId', organizationId),
+        )) {
+            await this.requeue(ctx, failed, `organization ${label}`);
+        }
     }
 
     async requeueForUnconfirmedVat(ctx: RequestContext, categoryName: string): Promise<void> {
         const expected = unconfirmedVatError(categoryName);
-        // unbounded-ok: one-off requeue after a data fix, limited to failed proforma documents
-        const rows = await this.failedProformas(ctx)
-            .addSelect('document.metadata', 'metadata')
-            .getRawMany<{ id: string; metadata: string | null }>();
-        const failed = rows.filter(row => metadataError(row.metadata) === expected);
-        await this.requeue(ctx, failed, `VAT category ${categoryName}`);
+        for await (const rows of this.failedBatches(ctx, qb =>
+            qb.addSelect('document.metadata', 'metadata'),
+        )) {
+            const failed = rows.filter(row => metadataError(row.metadata ?? null) === expected);
+            await this.requeue(ctx, failed, `VAT category ${categoryName}`);
+        }
     }
 
-    private failedProformas(
+    // Slices by id so a large backlog is requeued in full, never cut off or refused.
+    private failedBatches(
         ctx: RequestContext,
-    ): ReturnType<ReturnType<TransactionalConnection['getRepository']>['createQueryBuilder']> {
+        refine: (qb: FailedQb) => FailedQb,
+    ): AsyncGenerator<FailedRow[]> {
+        return keysetBatches<FailedRow>(async (afterId, limit) => {
+            const qb = refine(this.failedProformas(ctx));
+            if (afterId !== null) qb.andWhere('document.id > :afterId', { afterId });
+            return qb.orderBy('document.id', 'ASC').limit(limit).getRawMany<FailedRow>();
+        });
+    }
+
+    private failedProformas(ctx: RequestContext): FailedQb {
         return this.connection
             .getRepository(ctx, Document)
             .createQueryBuilder('document')

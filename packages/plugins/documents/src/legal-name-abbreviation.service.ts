@@ -12,7 +12,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { getPageAndCount, withAggregateLock } from 'shared';
+import { findBounded, getPageAndCount, withAggregateLock } from 'shared';
 import { QueryFailedError } from 'typeorm';
 
 import { loggerCtx } from './constants';
@@ -81,8 +81,7 @@ export class LegalNameAbbreviationService implements OnApplicationBootstrap {
     }
 
     async findRules(ctx: RequestContext): Promise<LegalNameAbbreviationRule[]> {
-        // unbounded-ok: a few dozen staff-edited rows, loaded once per render
-        const rows = await this.connection.getRepository(ctx, LegalNameAbbreviation).find();
+        const rows = await findBounded(this.connection.getRepository(ctx, LegalNameAbbreviation));
         return rows.map(row => ({ phrase: row.phrase, abbreviation: row.abbreviation }));
     }
 

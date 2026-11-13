@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { CtxLoader } from 'shared';
+import { CtxLoader, findBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { Document } from './entities/document.entity';
@@ -43,11 +43,15 @@ export class ProformaDocumentLoaders {
         ctx: RequestContext,
         keys: readonly string[],
     ): Promise<Array<Document | null>> {
-        // unbounded-ok: documents of the proforma invoice ids passed in, bounded by that list
-        const rows = await this.connection.getRepository(ctx, Document).find({
-            where: { type: 'proforma-invoice', proformaInvoiceId: In([...keys]) },
-            order: { id: 'ASC' },
-        });
+        // One document per invoice normally; five per key leaves room for regenerated copies.
+        const rows = await findBounded(
+            this.connection.getRepository(ctx, Document),
+            {
+                where: { type: 'proforma-invoice', proformaInvoiceId: In([...keys]) },
+                order: { id: 'ASC' },
+            },
+            Math.max(keys.length * 5, 1),
+        );
         const byInvoice = new Map<string, Document>();
         for (const row of rows) {
             if (row.proformaInvoiceId && !byInvoice.has(row.proformaInvoiceId)) {
