@@ -19,7 +19,7 @@ function countMarkers(): number {
             ':!**/__tests__/**',
             ':!*.test.ts',
         ],
-        { encoding: 'utf8', cwd: new URL('..', import.meta.url) },
+        { encoding: 'utf8', cwd: new URL('../..', import.meta.url) },
     );
     return out.split('\n').filter(Boolean).length;
 }
