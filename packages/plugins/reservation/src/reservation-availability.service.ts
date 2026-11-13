@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
+import { findBounded } from 'shared';
 import { In } from 'typeorm';
 import {
     RequestContext,
@@ -12,6 +13,7 @@ import { WarehouseService } from '@mivend/plugin-access-control';
 
 import { sumActiveReservations } from './active-reservation-sums';
 import { freeQuantity } from './free-stock';
+import { VARIANT_LOCATION_CEILING } from './reservation-read-ceiling';
 
 // ATP (available-to-promise) read queries — split out of ReservationService to keep that file
 // under AGENTS.md's ~300-line guideline. Pure reads, no reservation writes.
@@ -70,13 +72,16 @@ export class ReservationAvailabilityService {
     ): Promise<Map<string, Map<string, number>>> {
         const result = new Map<string, Map<string, number>>();
         if (variantIds.length === 0 || stockLocationIds.length === 0) return result;
-        // unbounded-ok: stock levels of the variants and locations passed in, bounded by those lists
-        const stockLevels = await this.connection.getRepository(ctx, StockLevel).find({
-            where: {
-                productVariantId: In(variantIds),
-                stockLocationId: In(stockLocationIds),
+        const stockLevels = await findBounded(
+            this.connection.getRepository(ctx, StockLevel),
+            {
+                where: {
+                    productVariantId: In(variantIds),
+                    stockLocationId: In(stockLocationIds),
+                },
             },
-        });
+            VARIANT_LOCATION_CEILING,
+        );
         const reservedByKey = await sumActiveReservations(
             this.connection,
             ctx,
@@ -118,8 +123,7 @@ export class ReservationAvailabilityService {
         );
         if (warehouses.length === 0) return [];
         const warehouseErpIds = new Set(warehouses.map(w => w.erpId));
-        // unbounded-ok: stock location registry, tens of rows
-        const allLocations = await this.connection.getRepository(ctx, StockLocation).find();
+        const allLocations = await findBounded(this.connection.getRepository(ctx, StockLocation));
         return allLocations
             .filter(l => warehouseErpIds.has(l.customFields?.warehouseErpId ?? ''))
             .map(l => String(l.id))

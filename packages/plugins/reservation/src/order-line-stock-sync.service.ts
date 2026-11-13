@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ctxQueryBounded } from 'shared';
 import {
     Order,
     OrderLine,
@@ -82,14 +83,15 @@ export class OrderLineStockSyncService {
     }
 
     private async allocationOf(ctx: RequestContext, lineId: unknown): Promise<LineAllocation> {
-        const rows: Array<{ type: string; total: string; locations: string }> =
-            // unbounded-ok: grouped by movement type, at most three rows
-            await this.connection.getRepository(ctx, OrderLine).query(
-                `SELECT type, COALESCE(SUM(quantity), 0) AS total,
-                        COUNT(DISTINCT "stockLocationId") AS locations FROM stock_movement
-                  WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE', 'SALE') GROUP BY type`,
-                [lineId],
-            );
+        const rows = await ctxQueryBounded<{ type: string; total: string; locations: string }>(
+            this.connection,
+            ctx,
+            `SELECT type, COALESCE(SUM(quantity), 0) AS total,
+                    COUNT(DISTINCT "stockLocationId") AS locations FROM stock_movement
+              WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE', 'SALE') GROUP BY type`,
+            [lineId],
+            10,
+        );
         // Vendure stores a RELEASE row's full quantity once per location, so a split line would be miscounted: refuse.
         if (rows.some(r => Number(r.locations) > 1)) {
             throw new UserInputError(

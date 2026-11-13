@@ -1,6 +1,9 @@
 import { ID, RequestContext, StockLevel, TransactionalConnection } from '@vendure/core';
 
+import { getManyBounded } from 'shared';
+
 import { freeQuantity } from './free-stock';
+import { VARIANT_LOCATION_CEILING } from './reservation-read-ceiling';
 import { sumActiveReservations } from './active-reservation-sums';
 
 // Locks every StockLevel of the given variants and locations in ascending id order, so two orders with the
@@ -12,15 +15,14 @@ export async function lockStockLevelsInOrder(
     locationIds: string[],
 ): Promise<void> {
     if (productVariantIds.length === 0 || locationIds.length === 0) return;
-    // unbounded-ok: stock levels of the variants and locations passed in, locked in id order
-    await connection
+    const locked = connection
         .getRepository(ctx, StockLevel)
         .createQueryBuilder('stockLevel')
         .setLock('pessimistic_write')
         .where('stockLevel.productVariantId IN (:...variantIds)', { variantIds: productVariantIds })
         .andWhere('stockLevel.stockLocationId IN (:...locationIds)', { locationIds })
-        .orderBy('stockLevel.id', 'ASC')
-        .getMany();
+        .orderBy('stockLevel.id', 'ASC');
+    await getManyBounded(locked, VARIANT_LOCATION_CEILING);
 }
 
 // `held`: quantities per location of this variant already picked by the caller but not yet saved.

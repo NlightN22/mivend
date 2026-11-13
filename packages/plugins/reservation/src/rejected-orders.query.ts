@@ -1,4 +1,5 @@
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { readAllByKeyset } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 
@@ -9,22 +10,26 @@ export async function findRejectedOrderIdsWithActiveReserve(
     rejectedCodes: string[],
     cutoff: Date,
 ): Promise<string[]> {
-    // unbounded-ok: background sweep over rejected orders still holding an active reserve, drained by each pass
-    const orders = await connection
-        .getRepository(ctx, Order)
-        .createQueryBuilder('o')
-        .where('o.customFields.erpStatus IN (:...codes)', { codes: rejectedCodes })
-        .andWhere('o.customFields.erpStatusAt <= :cutoff', { cutoff })
-        .andWhere(
-            `EXISTS (${connection
-                .getRepository(ctx, Reservation)
-                .createQueryBuilder('r')
-                .select('1')
-                .where('r.status = :active')
-                .andWhere('r.orderId = CAST(o.id AS varchar)')
-                .getQuery()})`,
-        )
-        .setParameter('active', 'active')
-        .getMany();
+    const orders = await readAllByKeyset<{ id: number }>((afterId, limit) =>
+        connection
+            .getRepository(ctx, Order)
+            .createQueryBuilder('o')
+            .where('o.customFields.erpStatus IN (:...codes)', { codes: rejectedCodes })
+            .andWhere('o.customFields.erpStatusAt <= :cutoff', { cutoff })
+            .andWhere(
+                `EXISTS (${connection
+                    .getRepository(ctx, Reservation)
+                    .createQueryBuilder('r')
+                    .select('1')
+                    .where('r.status = :active')
+                    .andWhere('r.orderId = CAST(o.id AS varchar)')
+                    .getQuery()})`,
+            )
+            .setParameter('active', 'active')
+            .andWhere('o.id > :afterId', { afterId: afterId ?? 0 })
+            .orderBy('o.id', 'ASC')
+            .take(limit)
+            .getMany(),
+    );
     return orders.map(order => String(order.id));
 }

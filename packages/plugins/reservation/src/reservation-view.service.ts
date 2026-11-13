@@ -6,7 +6,7 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { distributeErpReserve } from './erp-reserve-distribution';
 import { batchedLineFlag } from './reservation-line-flags';
 import type { LineReservationFlag, RawQuery, Row } from './reservation-line-flags';
-import { ctxQuery } from 'shared';
+import { ctxQuery, getManyBounded } from 'shared';
 
 export type { LineReservationFlag } from './reservation-line-flags';
 
@@ -120,11 +120,9 @@ export class ReservationViewService {
     private async visibleIds(ctx: RequestContext, ids: string[]): Promise<Set<string>> {
         if (ids.length === 0) return new Set();
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
-        // unbounded-ok: visible subset of the reservation ids passed in, ids only
-        const rows = await qb
-            .andWhere(`${qb.alias}.id IN (:...ids)`, { ids })
-            .select(`${qb.alias}.id`)
-            .getMany();
+        const rows = await getManyBounded(
+            qb.andWhere(`${qb.alias}.id IN (:...ids)`, { ids }).select(`${qb.alias}.id`),
+        );
         return new Set(rows.map(o => String(o.id)));
     }
 }

@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { CheckRegistry } from '@mivend/plugin-checks';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
+import { getManyBounded } from 'shared';
 
 import { ORDER_CHECK_STAGES, ORDER_SUBJECT_TYPE, orderLockKey } from './order-check-subject';
 import type { OrderCheckSubject } from './order-check-subject';
@@ -36,11 +37,9 @@ export class OrderCheckSubjectRegistrar implements OnModuleInit {
         const numeric = ids.filter(id => /^\d+$/.test(id));
         if (numeric.length === 0) return new Set();
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
-        // unbounded-ok: visible subset of the order ids passed in, ids only
-        const rows = await qb
-            .andWhere(`${qb.alias}.id IN (:...ids)`, { ids: numeric })
-            .select(`${qb.alias}.id`)
-            .getMany();
+        const rows = await getManyBounded(
+            qb.andWhere(`${qb.alias}.id IN (:...ids)`, { ids: numeric }).select(`${qb.alias}.id`),
+        );
         return new Set(rows.map(o => String(o.id)));
     }
 }

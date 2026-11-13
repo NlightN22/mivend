@@ -8,7 +8,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { withOrderCancelLocks, ctxQuery } from 'shared';
+import { withOrderCancelLocks, ctxQueryBounded, getManyBounded } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 import { findRejectedOrderIdsWithActiveReserve } from './rejected-orders.query';
@@ -32,9 +32,8 @@ export class RejectedOrderReleaseService {
 
     async releaseDue(): Promise<number> {
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
-        // unbounded-ok: order status dictionary codes, tens of rows
         const rejectedCodes = (
-            await ctxQuery<Array<{ code: string }>>(
+            await ctxQueryBounded<{ code: string }>(
                 this.connection,
                 ctx,
                 `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
@@ -107,13 +106,13 @@ export class RejectedOrderReleaseService {
         }
 
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
-        // unbounded-ok: active reservations of one order, locked for release
-        const active = await reservationRepo
-            .createQueryBuilder('reservation')
-            .setLock('pessimistic_write')
-            .where('reservation.status = :status', { status: 'active' })
-            .andWhere('reservation.orderId = :orderId', { orderId })
-            .getMany();
+        const active = await getManyBounded(
+            reservationRepo
+                .createQueryBuilder('reservation')
+                .setLock('pessimistic_write')
+                .where('reservation.status = :status', { status: 'active' })
+                .andWhere('reservation.orderId = :orderId', { orderId }),
+        );
         if (active.length === 0) return { rows: [], orderCode: order.code };
 
         const releasedAt = new Date();
