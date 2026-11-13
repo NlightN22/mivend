@@ -132,7 +132,7 @@ export class DepartmentBranchMappingService {
         table: 'erp_user' | 'counterparty',
         column: 'departmentId',
     ): Promise<Map<string, number>> {
-        const rows = await ctxQueryBounded<Array<{ department: string; total: string }>>(
+        const rows = await ctxQueryBounded<{ department: string; total: string }>(
             this.connection,
             ctx,
             `SELECT "${column}" AS department, count(*) AS total FROM ${table}
