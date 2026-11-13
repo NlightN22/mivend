@@ -3,6 +3,7 @@ import type { CardTabSort } from '../composables/useCardTabList';
 import { dateConditionRange } from './dateConditionRange';
 
 export interface PortalUserRow {
+    [key: string]: unknown;
     id: string;
     name: string;
     email: string;
@@ -56,7 +57,10 @@ export function sortPortalUsers(rows: PortalUserRow[], sort: CardTabSort): Porta
     return [...rows].sort((a, b) => {
         const x = key(a);
         const y = key(b);
-        const cmp = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y));
+        const cmp =
+            typeof x === 'number' && typeof y === 'number'
+                ? x - y
+                : String(x).localeCompare(String(y));
         return cmp * direction || a.id.localeCompare(b.id);
     });
 }
