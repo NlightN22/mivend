@@ -1202,9 +1202,9 @@ export type CounterpartyFilterParameter = {
     _or?: InputMaybe<Array<CounterpartyFilterParameter>>;
     assignedManagerId?: InputMaybe<StringOperators>;
     branchId?: InputMaybe<StringOperators>;
-    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    /** Needs ReadCounterpartyCredit */
     creditBalance?: InputMaybe<NumberOperators>;
-    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    /** Needs ReadCounterpartyCredit */
     creditLimit?: InputMaybe<NumberOperators>;
     creditTermOverrideExtraDays?: InputMaybe<NumberOperators>;
     departmentId?: InputMaybe<StringOperators>;
@@ -1230,6 +1230,8 @@ export type CounterpartyFilterParameter = {
     portalReadiness?: InputMaybe<StringOperators>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<StringOperators>;
+    /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same value as Counterparty.portalReadiness */
+    readiness?: InputMaybe<StringOperators>;
     shortName?: InputMaybe<StringOperators>;
 };
 
@@ -1331,9 +1333,9 @@ export type CounterpartyPortalAccessChangeResult = {
 export type CounterpartySortParameter = {
     assignedManagerId?: InputMaybe<SortOrder>;
     branchId?: InputMaybe<SortOrder>;
-    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    /** Needs ReadCounterpartyCredit */
     creditBalance?: InputMaybe<SortOrder>;
-    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    /** Needs ReadCounterpartyCredit */
     creditLimit?: InputMaybe<SortOrder>;
     creditTermOverrideExtraDays?: InputMaybe<SortOrder>;
     departmentId?: InputMaybe<SortOrder>;
@@ -1352,6 +1354,7 @@ export type CounterpartySortParameter = {
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId?: InputMaybe<SortOrder>;
     managerErpId?: InputMaybe<SortOrder>;
+    /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
     officialEmail?: InputMaybe<SortOrder>;
     paymentDelayDays?: InputMaybe<SortOrder>;
     phone?: InputMaybe<SortOrder>;
@@ -2208,6 +2211,8 @@ export type CustomProductMappings = {
 };
 
 export type Customer = Node & {
+    /** False once portal access was deactivated (the customer is soft-deleted) */
+    active: Scalars['Boolean']['output'];
     addresses: Maybe<Array<Address>>;
     counterparty: Maybe<Counterparty>;
     createdAt: Scalars['DateTime']['output'];
@@ -2244,6 +2249,8 @@ export type CustomerCustomFields = {
 export type CustomerFilterParameter = {
     _and?: InputMaybe<Array<CustomerFilterParameter>>;
     _or?: InputMaybe<Array<CustomerFilterParameter>>;
+    /** False once portal access was deactivated (the customer is soft-deleted) */
+    active?: InputMaybe<BooleanOperators>;
     counterpartyId?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     emailAddress?: InputMaybe<StringOperators>;
@@ -8445,6 +8452,8 @@ export type Query = {
     consistencySources: Array<ConsistencySource>;
     counterparties: CounterpartyList;
     counterparty: Maybe<Counterparty>;
+    /** Typeahead for the list filter: shortName | inn values among the counterparties the caller may list */
+    counterpartyFilterSuggestions: Array<Scalars['String']['output']>;
     /** Balance, turnover and open orders of one counterparty; null when it is outside the caller's scope; needs the credit right. */
     counterpartyMetrics: Maybe<CounterpartyMetrics>;
     counterpartyOverdue: Maybe<CounterpartyOverdue>;
@@ -8811,6 +8820,12 @@ export type QueryCounterpartiesArgs = {
 
 export type QueryCounterpartyArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryCounterpartyFilterSuggestionsArgs = {
+    field: Scalars['String']['input'];
+    limit?: InputMaybe<Scalars['Int']['input']>;
+    prefix: Scalars['String']['input'];
 };
 
 export type QueryCounterpartyMetricsArgs = {
@@ -12253,6 +12268,7 @@ export type CustomerListItemFieldsFragment = {
     isActive: boolean;
     priceType: string | null;
     assignedManagerId: string | null;
+    managerErpId: string | null;
     branchId: string | null;
     erpGroupLabel: string | null;
     tradingPoints: Array<{
@@ -12283,6 +12299,7 @@ export type CustomersPageQuery = {
     counterparties: {
         totalItems: number;
         items: Array<{
+            portalReadiness: string;
             id: string;
             shortName: string;
             legalName: string;
@@ -12291,6 +12308,7 @@ export type CustomersPageQuery = {
             isActive: boolean;
             priceType: string | null;
             assignedManagerId: string | null;
+            managerErpId: string | null;
             branchId: string | null;
             erpGroupLabel: string | null;
             tradingPoints: Array<{
@@ -12314,6 +12332,13 @@ export type CustomersPageQuery = {
         }>;
     };
 };
+
+export type CustomerFilterSuggestionsQueryVariables = Exact<{
+    field: Scalars['String']['input'];
+    prefix: Scalars['String']['input'];
+}>;
+
+export type CustomerFilterSuggestionsQuery = { counterpartyFilterSuggestions: Array<string> };
 
 export type CustomersViewCountsQueryVariables = Exact<{
     all?: InputMaybe<CounterpartyListOptions>;
@@ -12364,6 +12389,7 @@ export type HighUsageCustomersQuery = {
         isActive: boolean;
         priceType: string | null;
         assignedManagerId: string | null;
+        managerErpId: string | null;
         branchId: string | null;
         erpGroupLabel: string | null;
         tradingPoints: Array<{
@@ -12401,6 +12427,7 @@ export type CustomerByIdQuery = {
         isActive: boolean;
         priceType: string | null;
         assignedManagerId: string | null;
+        managerErpId: string | null;
         branchId: string | null;
         erpGroupLabel: string | null;
         tradingPoints: Array<{
@@ -15053,6 +15080,7 @@ export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
   isActive
   priceType
   assignedManagerId
+  managerErpId
   branchId
   erpGroupLabel
   tradingPoints {
@@ -16293,6 +16321,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
   counterparties(options: $options) {
     items {
       ...CustomerListItemFields
+      portalReadiness
     }
     totalItems
   }
@@ -16306,6 +16335,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
   isActive
   priceType
   assignedManagerId
+  managerErpId
   branchId
   erpGroupLabel
   tradingPoints {
@@ -16327,6 +16357,14 @@ export const CustomersPageDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<CustomersPageQuery, CustomersPageQueryVariables>;
+export const CustomerFilterSuggestionsDocument = new TypedDocumentString(`
+    query CustomerFilterSuggestions($field: String!, $prefix: String!) {
+  counterpartyFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
+}
+    `) as unknown as TypedDocumentString<
+    CustomerFilterSuggestionsQuery,
+    CustomerFilterSuggestionsQueryVariables
+>;
 export const CustomersViewCountsDocument = new TypedDocumentString(`
     query CustomersViewCounts($all: CounterpartyListOptions, $active: CounterpartyListOptions, $inactive: CounterpartyListOptions) {
   all: counterparties(options: $all) {
@@ -16386,6 +16424,7 @@ export const HighUsageCustomersDocument = new TypedDocumentString(`
   isActive
   priceType
   assignedManagerId
+  managerErpId
   branchId
   erpGroupLabel
   tradingPoints {
@@ -16422,6 +16461,7 @@ export const CustomerByIdDocument = new TypedDocumentString(`
   isActive
   priceType
   assignedManagerId
+  managerErpId
   branchId
   erpGroupLabel
   tradingPoints {
