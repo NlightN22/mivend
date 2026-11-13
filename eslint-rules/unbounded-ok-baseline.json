@@ -1,1 +1,30 @@
-{ "count": 178 }
+{
+    "groups": {
+        "apps/server": 2,
+        "packages/plugins/access-control": 19,
+        "packages/plugins/acquiring": 16,
+        "packages/plugins/acting-session": 2,
+        "packages/plugins/approval-workflow": 4,
+        "packages/plugins/bulk-operations": 3,
+        "packages/plugins/checks": 3,
+        "packages/plugins/counterparty": 15,
+        "packages/plugins/cross-reference": 1,
+        "packages/plugins/customer-pricing": 1,
+        "packages/plugins/deferred-payment": 3,
+        "packages/plugins/documents": 9,
+        "packages/plugins/erp-integration": 30,
+        "packages/plugins/erp-order": 8,
+        "packages/plugins/notification": 2,
+        "packages/plugins/oidc-sign-in": 1,
+        "packages/plugins/order-identity": 1,
+        "packages/plugins/price-entry": 14,
+        "packages/plugins/reservation": 23,
+        "packages/plugins/retro-bonus": 2,
+        "packages/plugins/saved-views": 1,
+        "packages/plugins/search": 7,
+        "packages/plugins/session-management": 3,
+        "packages/plugins/settlement": 4,
+        "packages/plugins/sync": 2,
+        "packages/shared": 2
+    }
+}

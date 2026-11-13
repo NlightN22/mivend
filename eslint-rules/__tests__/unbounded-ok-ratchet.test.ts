@@ -1,35 +1,26 @@
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const baseline: { count: number } = JSON.parse(
+import { countMarkersByGroup } from '../unbounded-ok-count.mjs';
+
+const baseline: { groups: Record<string, number> } = JSON.parse(
     readFileSync(new URL('../unbounded-ok-baseline.json', import.meta.url), 'utf8'),
 );
 
-function countMarkers(): number {
-    const out = execFileSync(
-        'git',
-        [
-            'grep',
-            '-h',
-            'unbounded-ok:',
-            '--',
-            'apps',
-            'packages',
-            ':!**/__tests__/**',
-            ':!*.test.ts',
-        ],
-        { encoding: 'utf8', cwd: new URL('../..', import.meta.url) },
-    );
-    return out.split('\n').filter(Boolean).length;
-}
-
+// One line per plugin: parallel conversion branches edit different lines, so merges stay clean.
+// After removing markers run `node eslint-rules/unbounded-ok-count.mjs` to lower the baseline.
 describe('unbounded-ok ratchet', () => {
-    it('never exceeds the committed baseline', () => {
-        expect(countMarkers()).toBeLessThanOrEqual(baseline.count);
+    const actual = countMarkersByGroup();
+
+    it('never lets a group exceed its committed count, and a new group starts at zero', () => {
+        for (const [group, count] of Object.entries(actual)) {
+            expect(count, group).toBeLessThanOrEqual(baseline.groups[group] ?? 0);
+        }
     });
 
     it('keeps the baseline tight: lower it in the same commit that removes a marker', () => {
-        expect(countMarkers()).toBe(baseline.count);
+        for (const [group, count] of Object.entries(baseline.groups)) {
+            expect(actual[group] ?? 0, group).toBe(count);
+        }
     });
 });
