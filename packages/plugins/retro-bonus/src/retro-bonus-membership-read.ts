@@ -1,31 +1,36 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { MoreThan } from 'typeorm';
+import { KEYSET_BATCH_SIZE, KEYSET_CEILING, readAllByKeysetWarned } from 'shared';
 
 import { RetroBonusRuleProduct } from './retro-bonus-rule-membership.entity';
+import { loggerCtx } from './types';
 
-export const MEMBERSHIP_BATCH_SIZE = 1000;
+export const MEMBERSHIP_BATCH_SIZE = KEYSET_BATCH_SIZE;
 
 export async function loadProductMembers(
     connection: TransactionalConnection,
     ctx: RequestContext,
     ruleIds: number[],
+    batchSize: number = MEMBERSHIP_BATCH_SIZE,
+    ceiling: number = KEYSET_CEILING,
 ): Promise<Map<number, Set<string>>> {
     const repo = connection.getRepository(ctx, RetroBonusRuleProduct);
     const members = new Map<number, Set<string>>();
     for (const ruleId of ruleIds) {
-        const set = new Set<string>();
-        let last = '';
-        for (;;) {
-            const batch = await repo.find({
-                where: { ruleId, productErpId: MoreThan(last) },
-                order: { productErpId: 'ASC' },
-                take: MEMBERSHIP_BATCH_SIZE,
-            });
-            for (const row of batch) set.add(row.productErpId);
-            if (batch.length < MEMBERSHIP_BATCH_SIZE) break;
-            last = batch[batch.length - 1].productErpId;
-        }
-        members.set(ruleId, set);
+        const rows = await readAllByKeysetWarned<{ id: string }>(
+            async (afterId, take) =>
+                (
+                    await repo.find({
+                        where: { ruleId, productErpId: MoreThan(afterId ?? '') },
+                        order: { productErpId: 'ASC' },
+                        take,
+                    })
+                ).map(row => ({ id: row.productErpId })),
+            loggerCtx,
+            batchSize,
+            ceiling,
+        );
+        members.set(ruleId, new Set(rows.map(row => row.id)));
     }
     return members;
 }

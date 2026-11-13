@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { DiscountRuleService } from '../../discount-rule.service';
 import type { DiscountRegistryService } from '../../discount-registry.service';
 
@@ -580,5 +581,44 @@ describe('DiscountRuleService', () => {
             expect(mockQb.where).toHaveBeenCalledWith('dr.triggerProductErpId IS NULL');
             expect(mockQb.take).toHaveBeenCalledWith(50);
         });
+    });
+});
+
+describe('DiscountRuleService active rules read', () => {
+    interface Limits {
+        batchSize: number;
+        ceiling: number;
+    }
+    type ActiveRules = (
+        ctx: RequestContext,
+        priceTypeCode: string,
+        now: Date,
+        memo: undefined,
+        limits: Limits,
+    ) => Promise<Array<{ id: number }>>;
+    const table = Array.from({ length: 7 }, (_, i) => ({ id: i + 1 }));
+    const read = (limits: Limits): Promise<Array<{ id: number }>> => {
+        vi.clearAllMocks();
+        mockRepo.createQueryBuilder.mockReturnValue(mockQb);
+        mockQb.getMany.mockImplementation(async () => {
+            const lastId = mockQb.andWhere.mock.calls.at(-1)?.[1].lastId as number;
+            const take = mockQb.take.mock.calls.at(-1)?.[0] as number;
+            return table.filter(r => r.id > lastId).slice(0, take);
+        });
+        const service = new DiscountRuleService(
+            mockConnection as unknown as TransactionalConnection,
+            {} as unknown as DiscountRegistryService,
+        );
+        const activeRules = (service as unknown as { activeRules: ActiveRules }).activeRules;
+        return activeRules.call(service, mockCtx, 'WHOLESALE', now, undefined, limits);
+    };
+
+    it('returns the same rules over several batches as one batch would', async () => {
+        expect(await read({ batchSize: 3, ceiling: 100 })).toEqual(table);
+        expect(mockQb.getMany).toHaveBeenCalledTimes(3);
+    });
+
+    it('fails with QueryTooLargeError over the ceiling instead of truncating', async () => {
+        await expect(read({ batchSize: 3, ceiling: 6 })).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });

@@ -14,7 +14,7 @@ import {
 import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
 import { DiscountSetupService } from '../../discount-setup.service';
 import type { DiscountRecipientInput } from '../../discount-setup.service';
-import { READ_BATCH_SIZE } from '../../read-batches';
+import { QueryTooLargeError } from 'shared';
 import { LookupMemo } from '../../lookup-memo';
 import {
     AMOUNT_KIND,
@@ -282,10 +282,46 @@ describe('DiscountSetupRulesService matching (real Postgres)', () => {
         expect(queries).toBe(headerQueries + memberQueries);
     });
 
-    it('a setup past the first keyset batch still applies', async () => {
-        for (let i = 0; i < READ_BATCH_SIZE; i++) await seed({ percent: 1, products: ['p-other'] });
-        await seed({ percent: 33, allProducts: true });
+    describe('keyset batches and the emergency ceiling', () => {
+        interface Limits {
+            batchSize?: number;
+            ceiling?: number;
+        }
+        type LoadRules = (
+            ctx: unknown,
+            counterpartyErpId: string,
+            contractErpId: string,
+            priceTypeCode: string | null,
+            now: Date,
+            limits?: Limits,
+        ) => Promise<Array<{ id: number }>>;
+        const load = (limits?: Limits): Promise<Array<{ id: number }>> =>
+            (rules as unknown as { loadRules: LoadRules }).loadRules(
+                ctx,
+                'cp-1',
+                '',
+                'RETAIL',
+                now,
+                limits,
+            );
 
-        expect(await best()).toBe(33);
-    }, 120_000);
+        it('reads the same setups over several batches as in one batch', async () => {
+            for (let i = 0; i < 25; i++) await seed({ percent: i + 1, products: ['p-other'] });
+
+            const whole = await load({ batchSize: 1000 });
+            const batched = await load({ batchSize: 7 });
+
+            expect(whole).toHaveLength(25);
+            expect(batched).toEqual(whole);
+        }, 120_000);
+
+        it('fails with QueryTooLargeError over the ceiling and still reads at it', async () => {
+            for (let i = 0; i < 25; i++) await seed({ percent: i + 1, products: ['p-other'] });
+
+            await expect(load({ batchSize: 7, ceiling: 24 })).rejects.toBeInstanceOf(
+                QueryTooLargeError,
+            );
+            expect(await load({ batchSize: 7, ceiling: 25 })).toHaveLength(25);
+        }, 120_000);
+    });
 });

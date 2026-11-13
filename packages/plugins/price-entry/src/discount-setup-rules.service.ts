@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { ctxQuery } from 'shared';
+import { ctxQuery, readAllByKeysetWarned } from 'shared';
 
 import { bestSetupPercent } from './discount-setup-evaluation';
 import type { DiscountConditionMetric, LoadedDiscountSetup } from './discount-setup-evaluation';
@@ -12,7 +12,8 @@ import {
     resolveRefs,
 } from './discount-setup-filter-lookup';
 import { BatchLoader } from './batch-loader';
-import { collectKeyset } from './read-batches';
+import type { ReadLimits } from './read-batches';
+import { loggerCtx } from './types';
 import { LookupMemo, memoized } from './lookup-memo';
 
 interface SetupRow {
@@ -123,12 +124,14 @@ export class DiscountSetupRulesService {
         contractErpId: string,
         priceTypeCode: string | null,
         now: Date,
+        limits: ReadLimits = {},
     ): Promise<LoadedDiscountSetup[]> {
-        const rows = await collectKeyset(async (lastId, batch) =>
-            ctxQuery<SetupRow[]>(
-                this.connection,
-                ctx,
-                `SELECT s.id, s.percent, s."allProducts", s."productMode", s."conditionNumber", k.metric
+        const rows = await readAllByKeysetWarned<SetupRow>(
+            (afterId, batch) =>
+                ctxQuery<SetupRow[]>(
+                    this.connection,
+                    ctx,
+                    `SELECT s.id, s.percent, s."allProducts", s."productMode", s."conditionNumber", k.metric
              FROM discount_setup s
              LEFT JOIN discount_condition_kind k ON k."erpName" = s."conditionName"
              WHERE s.active = true
@@ -141,8 +144,11 @@ export class DiscountSetupRulesService {
                              AND r."counterpartyErpId" IN ('', $2) AND r."contractErpId" IN ('', $3))
                AND s.id > $5
              ORDER BY s.id LIMIT $6`,
-                [now, counterpartyErpId, contractErpId, priceTypeCode, lastId, batch],
-            ),
+                    [now, counterpartyErpId, contractErpId, priceTypeCode, afterId ?? 0, batch],
+                ),
+            loggerCtx,
+            limits.batchSize,
+            limits.ceiling,
         );
         return rows.map(row => ({ ...row, percent: Number(row.percent) }));
     }

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import type { TransactionalConnection } from '@vendure/core';
 import {
+    QueryTooLargeError,
     createTestConnection,
     createTestSchema,
     dropTestSchema,
@@ -56,5 +57,19 @@ describe('loadProductMembers (real Postgres)', () => {
         expect(members.get(3)).toEqual(new Set(['r-000000', 'r-000001']));
         expect(members.get(4)?.size).toBe(0);
         expect(members.get(1)?.has('q-000000')).toBe(false);
+    });
+
+    it('reads the same members over small batches as over one, and fails above the ceiling', async () => {
+        const repo = dataSource.getRepository(RetroBonusRuleProduct);
+        await repo.insert(products(25, 'z').map(productErpId => ({ ruleId: 9, productErpId })));
+
+        const whole = await loadProductMembers(connection, testRequestContext, [9]);
+        const batched = await loadProductMembers(connection, testRequestContext, [9], 4);
+        expect(batched.get(9)).toEqual(whole.get(9));
+        expect(batched.get(9)?.size).toBe(25);
+
+        await expect(
+            loadProductMembers(connection, testRequestContext, [9], 4, 24),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });

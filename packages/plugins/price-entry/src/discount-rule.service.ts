@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
-import { getPageAndCount } from 'shared';
+import { getPageAndCount, readAllByKeysetWarned } from 'shared';
 
-import { collectKeyset, DEFAULT_LIST_TAKE } from './read-batches';
+import { DEFAULT_LIST_TAKE, type ReadLimits } from './read-batches';
 import { LookupMemo, memoized } from './lookup-memo';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
@@ -148,18 +148,23 @@ export class DiscountRuleService {
         priceTypeCode: string,
         now: Date,
         memo?: LookupMemo,
+        limits: ReadLimits = {},
     ): Promise<DiscountRule[]> {
         return memoized(memo, `dr:${priceTypeCode}`, () =>
-            collectKeyset((lastId, take) =>
-                this.connection
-                    .getRepository(ctx, DiscountRule)
-                    .createQueryBuilder('dr')
-                    .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
-                    .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-                    .andWhere('dr.id > :lastId', { lastId })
-                    .orderBy('dr.id', 'ASC')
-                    .take(take)
-                    .getMany(),
+            readAllByKeysetWarned<DiscountRule>(
+                (afterId, take) =>
+                    this.connection
+                        .getRepository(ctx, DiscountRule)
+                        .createQueryBuilder('dr')
+                        .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
+                        .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+                        .andWhere('dr.id > :lastId', { lastId: afterId ?? 0 })
+                        .orderBy('dr.id', 'ASC')
+                        .take(take)
+                        .getMany(),
+                loggerCtx,
+                limits.batchSize,
+                limits.ceiling,
             ),
         );
     }
