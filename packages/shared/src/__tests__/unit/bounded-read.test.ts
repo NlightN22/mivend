@@ -71,6 +71,19 @@ describe('ctxQueryBounded', () => {
     it('throws above the ceiling', async () => {
         await expect(run(4).call()).rejects.toThrow(QueryTooLargeError);
     });
+
+    it('refuses SQL a bare LIMIT suffix cannot bound, and a bad ceiling', async () => {
+        const query = vi.fn(async () => rows(1));
+        const connection = { getRepository: () => ({ query }) };
+        const call = (sql: string, ceiling = 3) =>
+            ctxQueryBounded(connection as never, {} as RequestContext, sql, [], ceiling);
+        await expect(call('SELECT id FROM t -- note')).rejects.toThrow(/trailing comment/);
+        await expect(call('SELECT id FROM t LIMIT 5')).rejects.toThrow(/trailing comment/);
+        await expect(call('SELECT id FROM t FOR UPDATE')).rejects.toThrow(/trailing comment/);
+        await expect(call('SELECT id FROM t', 0)).rejects.toThrow(/positive integer/);
+        await expect(call('SELECT id FROM t', 2.5)).rejects.toThrow(/positive integer/);
+        expect(query).not.toHaveBeenCalled();
+    });
 });
 
 describe('readAllByKeyset', () => {

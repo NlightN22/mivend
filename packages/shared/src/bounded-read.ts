@@ -54,7 +54,18 @@ export async function ctxQueryBounded<T = Record<string, unknown>>(
     params: unknown[] = [],
     ceiling: number = DEFAULT_READ_CEILING,
 ): Promise<T[]> {
-    const text = `${sql.replace(/[\s;]+$/, '')} LIMIT ${ceiling + 1}`;
+    if (!Number.isInteger(ceiling) || ceiling < 1)
+        throw new Error('ceiling must be a positive integer');
+    const body = sql.replace(/[\s;]+$/, '');
+    if (
+        /--[^\n]*$/.test(body) ||
+        /\b(LIMIT\s+\S+|FOR\s+(UPDATE|SHARE|NO\s+KEY\s+UPDATE|KEY\s+SHARE))$/i.test(body)
+    ) {
+        throw new Error(
+            'ctxQueryBounded needs SQL without a trailing comment, LIMIT or FOR UPDATE/SHARE',
+        );
+    }
+    const text = `${body} LIMIT ${ceiling + 1}`;
     return assertWithinCeiling(await ctxQuery<T[]>(connection, ctx, text, params), ceiling);
 }
 
