@@ -55,13 +55,12 @@ test.describe('20: a point serviced by another branch', () => {
 });
 
 test.describe('22: the counterparty Team tab', () => {
-    test('an in-scope head sees the observer, an out-of-scope head gets "Customer not found"', async ({
-        browser,
-    }) => {
-        const path = `/customers/${ids.clients['b-team']}?tab=team`;
+    const teamPath = (): string => `/customers/${ids.clients['b-team']}?tab=team`;
+
+    test('an in-scope head sees the observer', async ({ browser }) => {
         const inScope = await openManagerAs(browser, 'head-b');
         try {
-            await inScope.page.goto(path);
+            await inScope.page.goto(teamPath());
             await expect(inScope.page.getByText('Observer', { exact: true }).first()).toBeVisible({
                 timeout: 15000,
             });
@@ -73,9 +72,12 @@ test.describe('22: the counterparty Team tab', () => {
         } finally {
             await inScope.context.close();
         }
+    });
+
+    test('an out-of-scope head gets "Customer not found"', async ({ browser }) => {
         const outOfScope = await openManagerAs(browser, 'head-a');
         try {
-            await outOfScope.page.goto(path);
+            await outOfScope.page.goto(teamPath());
             await expect(outOfScope.page.getByText('Customer not found')).toBeVisible({
                 timeout: 15000,
             });
@@ -88,13 +90,12 @@ test.describe('22: the counterparty Team tab', () => {
 });
 
 test.describe('263: the counterparty History tab', () => {
-    test('the owner head sees the history, the servicing head cannot open it', async ({
-        browser,
-    }) => {
-        const path = `/customers/${ids.clients['a-point']}?tab=history`;
+    const historyPath = (): string => `/customers/${ids.clients['a-point']}?tab=history`;
+
+    test('the owner head sees the history', async ({ browser }) => {
         const owner = await openManagerAs(browser, 'head-a');
         try {
-            await owner.page.goto(path);
+            await owner.page.goto(historyPath());
             const panel = owner.page.locator('.entity-history');
             await expect(panel.getByText('Trading point', { exact: true }).first()).toBeVisible({
                 timeout: 15000,
@@ -104,9 +105,12 @@ test.describe('263: the counterparty History tab', () => {
         } finally {
             await owner.context.close();
         }
+    });
+
+    test('the servicing head cannot open it', async ({ browser }) => {
         const servicing = await openManagerAs(browser, 'head-b');
         try {
-            await servicing.page.goto(path);
+            await servicing.page.goto(historyPath());
             await expect(servicing.page.getByText('Customer not found')).toBeVisible({
                 timeout: 15000,
             });
