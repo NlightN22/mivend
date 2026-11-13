@@ -267,7 +267,7 @@ describe('counterparty list filter (shared engine)', () => {
 
         it('rejects a field outside the whitelist', async () => {
             await expect(
-                erpIds({ creditLimit: { eq: '1' } } as unknown as CounterpartyFilterParameter),
+                erpIds({ noSuchField: { eq: '1' } } as unknown as CounterpartyFilterParameter),
             ).rejects.toThrow(/Unknown filter field/);
         });
 
