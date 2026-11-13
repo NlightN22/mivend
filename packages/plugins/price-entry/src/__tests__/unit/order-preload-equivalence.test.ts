@@ -35,6 +35,7 @@ function qb() {
         where: (_sql: string, p: Record<string, unknown>) => Object.assign(params, p) && builder,
         andWhere: (_sql: string, p?: Record<string, unknown>) =>
             Object.assign(params, p) && builder,
+        take: () => builder,
         getMany: async () => {
             const ids = (params.erpIds as string[] | undefined) ?? [params.productErpId as string];
             return rules.filter(

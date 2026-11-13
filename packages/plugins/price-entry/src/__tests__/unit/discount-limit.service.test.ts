@@ -29,6 +29,16 @@ describe('DiscountLimitService', () => {
         expect(connection.query).not.toHaveBeenCalled();
     });
 
+    it('fails loudly instead of truncating the limit list past the ceiling', async () => {
+        const find = vi.fn(async () => [{}, {}, {}]);
+        const connection = { getRepository: () => ({ find }) };
+        const service = new DiscountLimitService(connection as never, {} as never);
+        await expect(service.list(ctx, null, 2)).rejects.toMatchObject({
+            extensions: { code: 'QUERY_TOO_LARGE' },
+        });
+        expect(find).toHaveBeenCalledWith(expect.objectContaining({ take: 3 }));
+    });
+
     it('forbids setting a limit on the acting administrator themselves', async () => {
         const connection = { getRepository: vi.fn(), withTransaction: vi.fn() };
         const administrators = { findOneByUserId: vi.fn(async () => ({ id: 7 })) };

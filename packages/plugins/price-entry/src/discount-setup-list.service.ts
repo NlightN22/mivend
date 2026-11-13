@@ -172,7 +172,7 @@ export class DiscountSetupListService {
             .addSelect('COUNT(*)', 'count')
             .where('p."setupId" IN (:...ids)', { ids })
             .groupBy('p."setupId"')
-            // unbounded-ok: grouped by the page's setup ids
+            // unbounded-ok: GROUP BY setup id restricted to the page's ids, one row per id
             .getRawMany<{ setupId: number; count: string }>();
         return new Map(rows.map(r => [r.setupId, Number(r.count)]));
     }

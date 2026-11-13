@@ -10,7 +10,7 @@ import {
 } from '@vendure/core';
 import { activeAdministratorId } from '@mivend/plugin-approval-workflow';
 import { IsNull } from 'typeorm';
-import { withAggregateLock } from 'shared';
+import { findBounded, KEYSET_CEILING, withAggregateLock } from 'shared';
 
 import { DiscountLimit } from './discount-limit.entity';
 import { resolveCeiling } from './discount-limit-resolve';
@@ -24,12 +24,19 @@ export class DiscountLimitService {
         private administratorService: AdministratorService,
     ) {}
 
-    list(ctx: RequestContext, administratorId?: ID | null): Promise<DiscountLimit[]> {
-        // unbounded-ok: one limit row per administrator and scope, a few tens of rows
-        return this.connection.getRepository(ctx, DiscountLimit).find({
-            where: administratorId ? { administratorId: String(administratorId) } : {},
-            order: { administratorId: 'ASC', scopeKind: 'ASC', scopeRef: 'ASC' },
-        });
+    list(
+        ctx: RequestContext,
+        administratorId?: ID | null,
+        ceiling: number = KEYSET_CEILING,
+    ): Promise<DiscountLimit[]> {
+        return findBounded(
+            this.connection.getRepository(ctx, DiscountLimit),
+            {
+                where: administratorId ? { administratorId: String(administratorId) } : {},
+                order: { administratorId: 'ASC', scopeKind: 'ASC', scopeRef: 'ASC' },
+            },
+            ceiling,
+        );
     }
 
     actorAdministratorId(ctx: RequestContext): Promise<string | null> {
@@ -90,10 +97,9 @@ export class DiscountLimitService {
     ): Promise<Map<string, number>> {
         const ceilings = new Map<string, number>(productErpIds.map(id => [id, 0]));
         if (!administratorId || productErpIds.length === 0) return ceilings;
-        // unbounded-ok: limits of one administrator
-        const rows = await this.connection
-            .getRepository(ctx, DiscountLimit)
-            .find({ where: { administratorId } });
+        const rows = await findBounded(this.connection.getRepository(ctx, DiscountLimit), {
+            where: { administratorId },
+        });
         if (rows.length === 0) return ceilings;
         const attributes = await loadProductAttributes(this.connection, ctx, [
             ...new Set(productErpIds),

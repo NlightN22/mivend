@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
-import { getPageAndCount, readAllByKeysetWarned } from 'shared';
+import { findBounded, getPageAndCount, KEYSET_CEILING, readAllByKeysetWarned } from 'shared';
 
 import { DEFAULT_LIST_TAKE, type ReadLimits } from './read-batches';
 import { LookupMemo, memoized } from './lookup-memo';
@@ -216,11 +216,11 @@ export class DiscountRuleService {
         if (rules.length === 0) return rules;
         const ruleIds = rules.map(r => String(r.id));
         const grants = await memoized(memo, `grants:${ruleIds.join(',')}`, () =>
-            // unbounded-ok: grants of the rule ids passed in, bounded by that list
-            this.connection.getRepository(ctx, DiscountGrant).find({
-                where: { discountRuleId: In(ruleIds) },
-                relations: ['counterparties'],
-            }),
+            findBounded(
+                this.connection.getRepository(ctx, DiscountGrant),
+                { where: { discountRuleId: In(ruleIds) }, relations: ['counterparties'] },
+                KEYSET_CEILING,
+            ),
         );
         const grantByRuleId = new Map<string, DiscountGrant>();
         for (const grant of grants ?? []) {

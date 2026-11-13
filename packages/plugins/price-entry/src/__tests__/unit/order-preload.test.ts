@@ -27,6 +27,7 @@ function setup() {
     const qb = {
         where: vi.fn().mockReturnThis(),
         andWhere: vi.fn().mockReturnThis(),
+        take: vi.fn().mockReturnThis(),
         getMany: vi.fn(async () => rules),
     };
     const variantFind = vi.fn(async () => variants);

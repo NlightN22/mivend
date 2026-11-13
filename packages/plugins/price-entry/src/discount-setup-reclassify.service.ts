@@ -5,7 +5,14 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { classifySelectionFilter, ctxQuery, replaceFilterTerms, withAggregateLock } from 'shared';
+import {
+    classifySelectionFilter,
+    ctxQuery,
+    ctxQueryBounded,
+    KEYSET_CEILING,
+    replaceFilterTerms,
+    withAggregateLock,
+} from 'shared';
 
 import { loggerCtx } from './types';
 
@@ -37,13 +44,13 @@ export class DiscountSetupReclassifyService implements OnApplicationBootstrap {
             Logger.log(`discount-setup: reclassified ${count} legacy filter rows`, loggerCtx);
     }
 
-    async reclassifyLegacy(ctx: RequestContext): Promise<number> {
-        // unbounded-ok: one-off reclassification of legacy setups, each processed under its own lock
-        const legacy = await ctxQuery<Array<{ erpId: string }>>(
+    async reclassifyLegacy(ctx: RequestContext, ceiling: number = KEYSET_CEILING): Promise<number> {
+        const legacy = await ctxQueryBounded<{ erpId: string }>(
             this.connection,
             ctx,
             `SELECT "erpId" FROM discount_setup WHERE "inactiveReason" = $1`,
             [LEGACY_FILTER_REASON],
+            ceiling,
         );
         let done = 0;
         for (const { erpId } of legacy) {

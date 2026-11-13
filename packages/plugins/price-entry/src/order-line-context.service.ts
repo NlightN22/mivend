@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import DataLoader from 'dataloader';
 import { Order, OrderLine, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded, KEYSET_CEILING } from 'shared';
 import { In } from 'typeorm';
 
 import { LookupMemo } from './lookup-memo';
@@ -56,12 +57,13 @@ export class OrderLineContextService {
             .getRepository(ctx, OrderLine)
             .find({ where: { id: In([...ids]) }, relations: ['order'] });
         const orderIds = [...new Set(lines.map(l => l.order.id))];
-        // unbounded-ok: lines of the orders passed in, a page of orders
         const siblings =
             orderIds.length > 0
-                ? await this.connection
-                      .getRepository(ctx, OrderLine)
-                      .find({ where: { order: { id: In(orderIds) } }, relations: ['order'] })
+                ? await findBounded(
+                      this.connection.getRepository(ctx, OrderLine),
+                      { where: { order: { id: In(orderIds) } }, relations: ['order'] },
+                      KEYSET_CEILING,
+                  )
                 : [];
         const byOrder = new Map<string, OrderLine[]>();
         for (const line of siblings) {

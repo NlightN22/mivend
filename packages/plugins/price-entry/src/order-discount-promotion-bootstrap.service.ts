@@ -8,7 +8,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { findBounded, KEYSET_CEILING, withAggregateLock } from 'shared';
 
 import {
     ORDER_DISCOUNT_ACTION_CODE,
@@ -30,8 +30,11 @@ export class OrderDiscountPromotionBootstrapService implements OnApplicationBoot
         if (this.processContext.isWorker) return;
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         await withAggregateLock(this.connection, ctx, 'order-discount-promotion', async txCtx => {
-            // unbounded-ok: startup lookup of the promotion table, a handful of promotions
-            const promotions = await this.connection.getRepository(txCtx, Promotion).find();
+            const promotions = await findBounded(
+                this.connection.getRepository(txCtx, Promotion),
+                {},
+                KEYSET_CEILING,
+            );
             const existing = promotions.find(
                 p => !p.deletedAt && p.actions.some(a => a.code === ORDER_DISCOUNT_ACTION_CODE),
             );

@@ -8,6 +8,7 @@ import {
     Transaction,
     TransactionalConnection,
 } from '@vendure/core';
+import { findBounded, KEYSET_CEILING } from 'shared';
 import { ApprovalRequestQueryService } from '@mivend/plugin-approval-workflow';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
@@ -58,8 +59,11 @@ export class DiscountRegistryResolver {
     @Mutation()
     @Allow(CustomPermission.ManageApprovalWorkflows.Permission)
     async backfillDiscountRegistry(@Ctx() ctx: RequestContext): Promise<number> {
-        // unbounded-ok: one-off admin backfill mutation over the discount rule table
-        const rules = await this.connection.getRepository(ctx, DiscountRule).find();
+        const rules = await findBounded(
+            this.connection.getRepository(ctx, DiscountRule),
+            {},
+            KEYSET_CEILING,
+        );
 
         // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.
         // Fetch once and reuse it for the pending/rejected entries below.

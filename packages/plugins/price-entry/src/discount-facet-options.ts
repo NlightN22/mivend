@@ -1,5 +1,5 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded } from 'shared';
 
 export interface DiscountFacetOption {
     code: string;
@@ -31,6 +31,9 @@ LEFT JOIN LATERAL (
 ) vt ON true
 ORDER BY f.code, vt.name, fv.code`;
 
+// About 7.6k facet values in the largest catalog.
+const FACET_OPTIONS_CEILING = 30000;
+
 export function groupFacetOptionRows(rows: FacetOptionRow[]): DiscountFacetOption[] {
     const byCode = new Map<string, DiscountFacetOption>();
     for (const row of rows) {
@@ -50,12 +53,14 @@ export async function loadDiscountFacetOptions(
     connection: TransactionalConnection,
     ctx: RequestContext,
     defaultLanguage: string,
+    ceiling: number = FACET_OPTIONS_CEILING,
 ): Promise<DiscountFacetOption[]> {
-    // unbounded-ok: one row per facet value of the channel, about 7.6k values in the largest catalog
-    const rows = await ctxQuery<FacetOptionRow[]>(connection, ctx, FACET_OPTIONS_SQL, [
-        ctx.channelId,
-        ctx.languageCode,
-        defaultLanguage,
-    ]);
+    const rows = await ctxQueryBounded<FacetOptionRow>(
+        connection,
+        ctx,
+        FACET_OPTIONS_SQL,
+        [ctx.channelId, ctx.languageCode, defaultLanguage],
+        ceiling,
+    );
     return groupFacetOptionRows(rows);
 }

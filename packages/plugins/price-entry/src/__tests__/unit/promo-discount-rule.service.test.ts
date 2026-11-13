@@ -12,8 +12,10 @@ const mockRepo = {
 const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
+    take: vi.fn(),
     getMany: vi.fn(),
 };
+mockQb.take.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
 
@@ -97,6 +99,14 @@ describe('PromoDiscountRuleService (issue #107)', () => {
     });
 
     describe('getBestPromoPercent', () => {
+        it('fails loudly instead of truncating when a product matches over the ceiling of promo rules', async () => {
+            mockQb.getMany.mockResolvedValue(Array.from({ length: 1001 }, () => promoRule({})));
+            await expect(
+                service.getBestPromoPercent(mockCtx, 'p', now, new Map([['p', 1]])),
+            ).rejects.toMatchObject({ extensions: { code: 'QUERY_TOO_LARGE' } });
+            expect(mockQb.take).toHaveBeenCalledWith(1001);
+        });
+
         it('returns null with no order-line quantities (catalog display, never triggers a promo)', async () => {
             const result = await service.getBestPromoPercent(
                 mockCtx,

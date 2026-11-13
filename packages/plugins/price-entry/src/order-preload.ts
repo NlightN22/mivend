@@ -5,6 +5,7 @@ import {
     TransactionalConnection,
     translateEntity,
 } from '@vendure/core';
+import { getManyBounded } from 'shared';
 import { In } from 'typeorm';
 
 import { DiscountRule } from './discount-rule.entity';
@@ -104,19 +105,19 @@ export async function preloadOrderLookups(
 
     if (erpIds.size > 0) {
         const now = new Date();
-        // unbounded-ok: promo rules active now for the products of one order
-        const rules = await connection
-            .getRepository(ctx, DiscountRule)
-            .createQueryBuilder('dr')
-            .where(
-                '(dr.triggerProductErpId IN (:...erpIds) OR dr.giftProductErpId IN (:...erpIds))',
-                {
-                    erpIds: [...erpIds],
-                },
-            )
-            // NULL validTo (open-ended promo) never matches: such a rule is not applied
-            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-            .getMany();
+        const rules = await getManyBounded(
+            connection
+                .getRepository(ctx, DiscountRule)
+                .createQueryBuilder('dr')
+                .where(
+                    '(dr.triggerProductErpId IN (:...erpIds) OR dr.giftProductErpId IN (:...erpIds))',
+                    {
+                        erpIds: [...erpIds],
+                    },
+                )
+                // NULL validTo (open-ended promo) never matches: such a rule is not applied
+                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now }),
+        );
         for (const erpId of erpIds) {
             memo.set(
                 `promo:${erpId}`,

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { getManyBounded } from 'shared';
+
 import { DiscountRule, DiscountRuleOperationKind } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
@@ -93,17 +95,17 @@ export class PromoDiscountRuleService {
     ): Promise<number | null> {
         if (quantityInOrderByProductErpId.size === 0) return null;
         const rules = await memoized(memo, `promo:${productErpId}`, () =>
-            // unbounded-ok: promo rules active now for one product
-            this.connection
-                .getRepository(ctx, DiscountRule)
-                .createQueryBuilder('dr')
-                .where(
-                    '(dr.triggerProductErpId = :productErpId OR dr.giftProductErpId = :productErpId)',
-                    { productErpId },
-                )
-                // NULL validTo (open-ended promo) never matches: such a rule is not applied
-                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-                .getMany(),
+            getManyBounded(
+                this.connection
+                    .getRepository(ctx, DiscountRule)
+                    .createQueryBuilder('dr')
+                    .where(
+                        '(dr.triggerProductErpId = :productErpId OR dr.giftProductErpId = :productErpId)',
+                        { productErpId },
+                    )
+                    // NULL validTo (open-ended promo) never matches: such a rule is not applied
+                    .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now }),
+            ),
         );
 
         const matching = rules.filter(rule => {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { ctxQuery, readAllByKeysetWarned } from 'shared';
+import { ctxQuery, ctxQueryBounded, KEYSET_CEILING, readAllByKeysetWarned } from 'shared';
 
 import { bestSetupPercent } from './discount-setup-evaluation';
 import type { DiscountConditionMetric, LoadedDiscountSetup } from './discount-setup-evaluation';
@@ -165,15 +165,17 @@ export class DiscountSetupRulesService {
         const members = new Map<number, Set<string>>();
         const percents = new Map<number, Map<string, number>>();
         if (listRules.length === 0 || productErpIds.length === 0) return { members, percents };
-        // unbounded-ok: setup members for the setup and product lists passed in
-        const rows = await ctxQuery<
-            Array<{ setupId: number; productErpId: string; percent: number | null }>
-        >(
+        const rows = await ctxQueryBounded<{
+            setupId: number;
+            productErpId: string;
+            percent: number | null;
+        }>(
             this.connection,
             ctx,
             `SELECT "setupId", "productErpId", percent FROM discount_setup_product
              WHERE "setupId" = ANY($1::int[]) AND "productErpId" = ANY($2::text[])`,
             [listRules, productErpIds],
+            KEYSET_CEILING,
         );
         for (const row of rows) {
             const set = members.get(row.setupId) ?? new Set<string>();
