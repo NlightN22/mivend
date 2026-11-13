@@ -389,4 +389,38 @@ describe('ReservationAvailabilityService', () => {
         const result = await service.getAvailableToPromiseBatch(ctx, ['variant-1']);
         expect(result.get('variant-1')).toBe(4);
     });
+    describe('getFreeByLocation chunking', () => {
+        const free = (id: string): Map<string, Map<string, number>> =>
+            new Map([[id, new Map([['location-1', 1]])]]);
+
+        it('reads 250 variants in chunks of 100 and merges the parts', async () => {
+            const service = createService({});
+            const chunk = vi
+                .spyOn(
+                    service as unknown as {
+                        getFreeByLocationChunk: (
+                            c: RequestContext,
+                            v: string[],
+                            l: string[],
+                        ) => Promise<Map<string, Map<string, number>>>;
+                    },
+                    'getFreeByLocationChunk',
+                )
+                .mockImplementation(async (_c, ids) => free(ids[0]));
+            const ids = Array.from({ length: 250 }, (_, i) => `v${i}`);
+            const result = await service.getFreeByLocation(ctx, ids, ['location-1']);
+            expect(chunk.mock.calls.map(call => call[1].length)).toEqual([100, 100, 50]);
+            expect([...result.keys()]).toEqual(['v0', 'v100', 'v200']);
+        });
+
+        it('makes no read for an empty variant list', async () => {
+            const service = createService({});
+            const chunk = vi.spyOn(
+                service as unknown as { getFreeByLocationChunk: () => Promise<unknown> },
+                'getFreeByLocationChunk',
+            );
+            expect((await service.getFreeByLocation(ctx, [], ['location-1'])).size).toBe(0);
+            expect(chunk).not.toHaveBeenCalled();
+        });
+    });
 });
