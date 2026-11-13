@@ -129,6 +129,22 @@ describe('DiscountRegistryService list (integration, real Postgres)', () => {
         ).toBe(3);
     });
 
+    it('does not match another customer name in the search of a customer-scoped list', async () => {
+        const scope = { allowedPriceTypeCodes: ALLOWED, search: 'Customer Two' };
+        expect(await numbers({ ...scope, counterpartyId: 'cust-1' })).toEqual([]);
+        expect(await numbers(scope)).toEqual(['1000000002', '1000000005']);
+    });
+
+    it('compares a numeric customer id (as the ID codec yields it) with the stored string', async () => {
+        await seed('1000000099', WHOLESALE, 'materialized', days(90), 7, 'Customer Num', ['42']);
+        const numeric = 42 as unknown as string;
+        expect(await numbers({ allowedPriceTypeCodes: ALLOWED, counterpartyId: numeric })).toEqual([
+            '1000000003',
+            '1000000099',
+        ]);
+        await dataSource.getRepository(TestRegistryEntry).delete({ number: '1000000099' });
+    });
+
     it('treats the customer id as a bound value, never as SQL or a JSON fragment', async () => {
         const hostile = `cust-1"] OR 1=1 --`;
         expect(await numbers({ allowedPriceTypeCodes: ALLOWED, counterpartyId: hostile })).toEqual([

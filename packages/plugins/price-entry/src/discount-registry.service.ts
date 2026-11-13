@@ -233,8 +233,10 @@ export class DiscountRegistryService {
                     })
                         .orWhere('entry.priceTypeCode ILIKE :term', { term })
                         .orWhere('entry.facetValueCode ILIKE :term', { term })
-                        .orWhere('entry.facetCode ILIKE :term', { term })
-                        .orWhere('entry.customerNamesForSearch ILIKE :term', { term });
+                        .orWhere('entry.facetCode ILIKE :term', { term });
+                    if (!options.counterpartyId) {
+                        bqb.orWhere('entry.customerNamesForSearch ILIKE :term', { term });
+                    }
                 }),
             );
         }
