@@ -86,7 +86,7 @@ describe('linking by e-mail, then by sub', () => {
 });
 
 describe('duplicate identity rows for one subject', () => {
-    it('fails the sign-in with QUERY_TOO_LARGE instead of picking one', async () => {
+    it('fails the sign-in with a duplicate-identity error instead of picking one', async () => {
         const id = await fx.addAdmin('dup-sub@example.com');
         await fx.dataSource.query('DROP INDEX uq_oidc_subject');
         await fx.dataSource.query('DROP INDEX uq_oidc_user');
@@ -97,11 +97,9 @@ describe('duplicate identity rows for one subject', () => {
                         ('ExternalAuthenticationMethod', 'oidc', 'sd', '{}', $1::int)`,
                 [id],
             );
-            await expect(
-                fx.identity.resolve(ctx, { sub: 'sd', email: null }),
-            ).rejects.toMatchObject({
-                extensions: { code: 'QUERY_TOO_LARGE' },
-            });
+            await expect(fx.identity.resolve(ctx, { sub: 'sd', email: null })).rejects.toThrow(
+                'Duplicate sign-in identity for this subject',
+            );
         } finally {
             await fx.reset();
             await fx.dataSource.query(

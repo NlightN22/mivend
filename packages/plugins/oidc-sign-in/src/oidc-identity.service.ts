@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery, ctxQueryBounded, withAggregateLock } from 'shared';
+import {
+    ConfigService,
+    ForbiddenError,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
+import { ctxQuery, ctxQueryBounded, QueryTooLargeError, withAggregateLock } from 'shared';
 
 import { OIDC_STRATEGY_NAME } from './oidc.types';
 import type { OidcClaims } from './oidc.types';
@@ -10,6 +15,7 @@ interface AdminRow {
     identifier: string;
 }
 
+const DUPLICATE_IDENTITY = 'Duplicate sign-in identity for this subject; contact an administrator';
 const LOCK_TIMEOUT_MS = 15_000;
 const ACTIVE_ADMIN = `FROM administrator a JOIN "user" u ON u.id = a."userId"
     WHERE a."deletedAt" IS NULL AND u."deletedAt" IS NULL`;
@@ -49,7 +55,27 @@ export class OidcIdentityService {
         sub: string,
     ): Promise<(AdminRow & { active: boolean }) | null> {
         // Ceiling 1: a second identity for one subject is ambiguous, so the sign-in fails.
-        const rows = await ctxQueryBounded<AdminRow & { active: boolean }>(
+        const rows = await this.readBySub(ctx, sub);
+        return rows[0] ?? null;
+    }
+
+    private async readBySub(
+        ctx: RequestContext,
+        sub: string,
+    ): Promise<(AdminRow & { active: boolean })[]> {
+        try {
+            return await this.queryBySub(ctx, sub);
+        } catch (error) {
+            if (error instanceof QueryTooLargeError) throw new ForbiddenError(DUPLICATE_IDENTITY);
+            throw error;
+        }
+    }
+
+    private queryBySub(
+        ctx: RequestContext,
+        sub: string,
+    ): Promise<(AdminRow & { active: boolean })[]> {
+        return ctxQueryBounded<AdminRow & { active: boolean }>(
             this.connection,
             ctx,
             `SELECT m."userId"::text AS "userId", u.identifier,
@@ -60,7 +86,6 @@ export class OidcIdentityService {
             [OIDC_STRATEGY_NAME, sub],
             1,
         );
-        return rows[0] ?? null;
     }
 
     private async linkByEmail(
