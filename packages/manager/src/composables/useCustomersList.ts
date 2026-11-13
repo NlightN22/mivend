@@ -37,6 +37,7 @@ export interface CustomersListState {
     branches: Ref<BranchOption[]>;
     managers: Ref<ManagerOption[]>;
     managerOptions: Ref<FilterOption[]>;
+    managerLabels: Ref<Map<string, string>>;
     branchOptions: Ref<FilterOption[]>;
 }
 
@@ -116,6 +117,7 @@ export function useCustomersList(
     const branches = ref<BranchOption[]>([]);
     const managers = ref<ManagerOption[]>([]);
     const managerOptions = ref<FilterOption[]>([]);
+    const managerLabels = ref<Map<string, string>>(new Map());
     const branchOptions = ref<FilterOption[]>([]);
     onMounted(() => {
         reload();
@@ -139,6 +141,7 @@ export function useCustomersList(
                         byErpId.set(u.erpId, formatManagerName(u.erpId, lookup));
                     for (const a of lookup.administrators)
                         if (a.erpId) byErpId.set(a.erpId, a.name);
+                    managerLabels.value = byErpId;
                     managerOptions.value = [...byErpId]
                         .map(([value, label]) => ({ value, label }))
                         .sort((a, b) => a.label.localeCompare(b.label));
@@ -162,6 +165,7 @@ export function useCustomersList(
         branches,
         managers,
         managerOptions,
+        managerLabels,
         branchOptions,
     };
 }

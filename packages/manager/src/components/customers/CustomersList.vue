@@ -26,9 +26,12 @@ const { formatWhole } = useCurrency();
 const withManagerFilter = authStore.roleCode !== 'manager';
 const list = useCustomersList(() => props.fixedFilter, withManagerFilter, urlPrefix);
 
-function managerName(id: string | null): string {
-    if (!id) return '—';
-    return list.managers.value.find(m => m.id === id)?.name ?? '—';
+// The ERP manager id is the field the manager filter and sort use, so the column shows its name first.
+function managerName(id: string | null, erpId: string | null): string {
+    const byErpId = erpId ? list.managerLabels.value.get(erpId) : undefined;
+    if (byErpId) return byErpId;
+    const admin = id ? list.managers.value.find(m => m.id === id)?.name : undefined;
+    return admin ?? erpId ?? '—';
 }
 function branchName(id: string | null): string {
     if (!id) return '';

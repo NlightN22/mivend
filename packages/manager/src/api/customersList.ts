@@ -43,6 +43,8 @@ export const CUSTOMERS_SORT_FIELDS: CustomersSortField[] = [
     'managerErpId',
     'phone',
     'officialEmail',
+    'creditLimit',
+    'creditBalance',
 ];
 
 export const BLANK_CUSTOMERS_FILTERS: CustomersListFilters = {

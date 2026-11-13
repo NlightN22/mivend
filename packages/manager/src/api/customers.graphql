@@ -7,6 +7,7 @@ fragment CustomerListItemFields on Counterparty {
     isActive
     priceType
     assignedManagerId
+    managerErpId
     branchId
     erpGroupLabel
     tradingPoints {
@@ -33,9 +34,14 @@ query CustomersPage($options: CounterpartyListOptions) {
     counterparties(options: $options) {
         items {
             ...CustomerListItemFields
+            portalReadiness
         }
         totalItems
     }
+}
+
+query CustomerFilterSuggestions($field: String!, $prefix: String!) {
+    counterpartyFilterSuggestions(field: $field, prefix: $prefix, limit: 10)
 }
 
 query CustomersViewCounts(

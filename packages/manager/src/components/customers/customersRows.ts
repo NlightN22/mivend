@@ -11,6 +11,7 @@ export type CustomerRow = {
     branch: string;
     group: string;
     innStatus: string;
+    readiness: string;
     contact: string;
     creditLimit: string;
     creditBalance: string;
@@ -20,11 +21,17 @@ export type CustomerRow = {
     isActive: boolean;
 };
 
+const READINESS_KEYS = ['ready', 'missing-data', 'inn-duplicate', 'erp-inactive', 'activated'];
+
+function readinessLabel(value: string): string {
+    return READINESS_KEYS.includes(value) ? i18n.global.t(`customers.list.readiness.${value}`) : '';
+}
+
 export interface CustomerRowSources {
     credit: Map<string, CustomerCredit>;
     discountCounts: Map<string, number>;
     lastOrderDates: Map<string, string>;
-    managerName: (assignedManagerId: string | null) => string;
+    managerName: (assignedManagerId: string | null, managerErpId: string | null) => string;
     branchName: (branchId: string | null) => string;
     formatMoney: (value: number) => string;
 }
@@ -38,10 +45,11 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
             id: c.id,
             shortName: c.shortName,
             inn: c.inn ?? '',
-            manager: src.managerName(c.assignedManagerId),
+            manager: src.managerName(c.assignedManagerId, c.managerErpId ?? null),
             branch: src.branchName(c.branchId),
             group: c.erpGroupLabel ?? '',
             innStatus: c.innStatus,
+            readiness: readinessLabel(c.portalReadiness),
             contact: primaryContact?.name ?? '—',
             creditLimit: credit ? src.formatMoney(credit.creditLimit) : '—',
             creditBalance: credit ? src.formatMoney(credit.creditBalance) : '—',

@@ -14,6 +14,8 @@ export const ACTIVATION_SORT_FIELDS: ActivationSortField[] = [
     'managerErpId',
     'phone',
     'officialEmail',
+    'creditLimit',
+    'creditBalance',
 ];
 
 export const DEFAULT_ACTIVATION_SORT: ActivationSort = { field: 'shortName', dir: 'ASC' };

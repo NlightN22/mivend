@@ -143,3 +143,35 @@ describe('toCustomerRows', () => {
         expect(innStatusBadge('?').label).toBe('OK');
     });
 });
+
+describe('customers list: manager source and credit, readiness filters', () => {
+    it('passes the ERP manager id to the column so it matches the filter field', () => {
+        const item = {
+            id: 'c1',
+            shortName: 'customer-123',
+            assignedManagerId: 'm1',
+            managerErpId: 'erp-m1',
+            portalReadiness: 'ready',
+            contacts: [],
+        } as unknown as CustomerListItem;
+        const [row] = toCustomerRows([item], {
+            credit: new Map(),
+            discountCounts: new Map(),
+            lastOrderDates: new Map(),
+            managerName: (_id, erpId) => `name-of-${erpId}`,
+            branchName: () => '',
+            formatMoney: v => String(v),
+        });
+        expect(row.manager).toBe('name-of-erp-m1');
+        expect(row.readiness).toBe('Ready to activate');
+    });
+
+    it('builds server filters for credit and portal readiness', () => {
+        expect(
+            conditionsToCustomersFilter([
+                { columnKey: 'creditLimit', operator: 'gte', value: 100 },
+                { columnKey: 'readiness', operator: 'eq', value: 'activated' },
+            ]),
+        ).toEqual({ creditLimit: { gte: 100 }, readiness: { eq: 'activated' } });
+    });
+});

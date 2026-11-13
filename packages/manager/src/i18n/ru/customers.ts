@@ -39,6 +39,7 @@ const customers: typeof en = {
             branch: 'Филиал',
             group: 'Группа',
             innStatus: 'Проверка ИНН',
+            readiness: 'Доступ в портал',
             contact: 'Контактное лицо',
             creditLimit: 'Лимит',
             creditBalance: 'Баланс',
@@ -49,6 +50,13 @@ const customers: typeof en = {
         unassigned: 'Не назначен',
         status: { active: 'Активен', inactive: 'Неактивен' },
         innStatus: { ok: 'В порядке', missing: 'Не указан', duplicate: 'Дубль' },
+        readiness: {
+            ready: 'Готов к активации',
+            'missing-data': 'Нет данных',
+            'inn-duplicate': 'Дубликат ИНН',
+            'erp-inactive': 'Неактивен в ERP',
+            activated: 'Активирован',
+        },
         innStatusFilter: { ok: 'В порядке', missing: 'Не указан', duplicate: 'Дубль (ERP)' },
     },
     metrics: {

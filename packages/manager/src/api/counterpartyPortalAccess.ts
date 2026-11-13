@@ -28,6 +28,8 @@ export interface CounterpartySortParameter {
     managerErpId?: 'ASC' | 'DESC';
     phone?: 'ASC' | 'DESC';
     officialEmail?: 'ASC' | 'DESC';
+    creditLimit?: 'ASC' | 'DESC';
+    creditBalance?: 'ASC' | 'DESC';
 }
 
 export interface ActivationCandidatesOptions {

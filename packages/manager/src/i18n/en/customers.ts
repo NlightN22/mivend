@@ -36,6 +36,7 @@ export default {
             branch: 'Branch',
             group: 'Group',
             innStatus: 'INN check',
+            readiness: 'Portal access',
             contact: 'Contact person',
             creditLimit: 'Credit limit',
             creditBalance: 'Credit balance',
@@ -46,6 +47,13 @@ export default {
         unassigned: 'Unassigned',
         status: { active: 'Active', inactive: 'Inactive' },
         innStatus: { ok: 'OK', missing: 'Missing', duplicate: 'Duplicate' },
+        readiness: {
+            ready: 'Ready to activate',
+            'missing-data': 'Data missing',
+            'inn-duplicate': 'Duplicate INN',
+            'erp-inactive': 'Inactive in ERP',
+            activated: 'Activated',
+        },
         innStatusFilter: { ok: 'OK', missing: 'Missing', duplicate: 'Duplicate (ERP)' },
     },
     metrics: {
