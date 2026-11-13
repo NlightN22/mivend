@@ -487,6 +487,7 @@ function initials(name: string | null): string {
             <CustomerDiscountsTab
                 v-else-if="activeTab === 'discounts'"
                 :counterparty-id="customer.id"
+                :counterparty-name="customer.shortName || customer.inn || customer.id"
             />
             <CustomerDocumentsTab
                 v-else-if="activeTab === 'documents'"

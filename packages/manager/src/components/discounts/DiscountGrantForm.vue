@@ -12,7 +12,7 @@ import {
 import type { DiscountRow } from './discountsRows';
 import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
 
-const props = defineProps<{ renewFrom: DiscountRow | null }>();
+const props = defineProps<{ renewFrom: DiscountRow | null; customer?: CounterpartyOption | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
 const priceTypes = ref<string[]>([]);
@@ -61,6 +61,10 @@ function updateCustomers(ids: string[]): void {
 
 onMounted(async () => {
     [priceTypes.value, facets.value] = await Promise.all([fetchPriceTypeCodes(), fetchFacets()]);
+    if (props.customer) {
+        pickedCustomers.value.set(props.customer.value, props.customer);
+        form.counterpartyIds = [props.customer.value];
+    }
     if (props.renewFrom) {
         form.priceTypeCode = props.renewFrom.priceType;
         form.percent = String(props.renewFrom.percent);

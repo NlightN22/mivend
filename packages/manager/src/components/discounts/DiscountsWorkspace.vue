@@ -8,10 +8,13 @@ import DiscountGrantForm from './DiscountGrantForm.vue';
 import type { DiscountRow } from './discountsRows';
 
 // The ERP discounts and the portal requests behind one switch; a set counterpartyId fixes both to that customer.
-const props = withDefaults(defineProps<{ counterpartyId?: string; urlPrefix?: string }>(), {
-    counterpartyId: '',
-    urlPrefix: '',
-});
+const props = withDefaults(defineProps<{ counterpartyId?: string; counterpartyName?: string; urlPrefix?: string }>(),
+    {
+        counterpartyId: '',
+        counterpartyName: '',
+        urlPrefix: '',
+    },
+);
 
 const source = useDiscountsSource(props.urlPrefix);
 const requests = ref<InstanceType<typeof DiscountsList> | null>(null);
@@ -42,6 +45,7 @@ function handleSubmitted(): void {
         >
             <DiscountGrantForm
                 :renew-from="renewFrom"
+                :customer="props.counterpartyId ? { value: props.counterpartyId, label: props.counterpartyName } : null"
                 @submitted="handleSubmitted"
                 @cancel="showForm = false"
             />
