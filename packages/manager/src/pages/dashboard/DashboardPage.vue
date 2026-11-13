@@ -228,7 +228,7 @@ onMounted(load);
                 </MvPanel>
 
                 <MvPanel title="Activity feed">
-                    <ActivityFeed :items="activityItems" />
+                    <ActivityFeed :items="activityItems" :failed="failedSections" />
                 </MvPanel>
             </aside>
         </div>
