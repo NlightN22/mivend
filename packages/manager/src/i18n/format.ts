@@ -14,7 +14,26 @@ export function formatDate(value: string | number | Date, locale: string = activ
     }).format(new Date(value));
 }
 
-export function formatDateTime(value: string | number | Date, locale: string = activeTag()): string {
+// Money keeps the en-US style in English and the ru-RU style in Russian.
+export function moneyTag(locale: string = i18n.global.locale.value): string {
+    return locale === 'ru' ? 'ru-RU' : 'en-US';
+}
+
+export function formatMoney(
+    minor: number,
+    currency: string,
+    options: Intl.NumberFormatOptions = {},
+    locale: string = moneyTag(),
+): string {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, ...options }).format(
+        minor / 100,
+    );
+}
+
+export function formatDateTime(
+    value: string | number | Date,
+    locale: string = activeTag(),
+): string {
     return new Intl.DateTimeFormat(locale, {
         day: '2-digit',
         month: '2-digit',

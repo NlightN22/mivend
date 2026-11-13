@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney, moneyTag } from '../../i18n/format';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IconTrash } from '@tabler/icons-vue';
@@ -85,7 +86,7 @@ const draftTotal = computed(() =>
 );
 const symbol = computed(
     () =>
-        new Intl.NumberFormat('ru-RU', { style: 'currency', currency: props.currencyCode })
+        new Intl.NumberFormat(moneyTag(), { style: 'currency', currency: props.currencyCode })
             .formatToParts(0)
             .find(p => p.type === 'currency')?.value ?? props.currencyCode,
 );
@@ -118,10 +119,7 @@ watch(
     () => void Promise.all([edit.load(), edit.loadCeilings()]),
 );
 
-const money = (amount: number): string =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: props.currencyCode }).format(
-        amount / 100,
-    );
+const money = (amount: number): string => formatMoney(amount, props.currencyCode);
 
 const unitHint = (line: OrderDetailLine, step: number): string =>
     quantityUnitHint(line.productVariant.customFields?.unitName, step);

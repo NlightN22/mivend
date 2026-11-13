@@ -1,3 +1,4 @@
+import { formatMoney } from '../../i18n/format';
 import { tr } from '../../utils/lazyLabels';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import {
@@ -94,13 +95,12 @@ export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): Order
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
             flags: flagsFor(order, ctx),
-            total: new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: order.currencyCode,
-            }).format(order.totalWithTax / 100),
+            total: formatMoney(order.totalWithTax, order.currencyCode),
             currencyCode: order.currencyCode,
             placedBy: placedByLabel(order, ctx.managers),
-            placedByMeta: order.customFields?.placedByAdministratorId ? '' : tr('orders.list.placedByCustomer'),
+            placedByMeta: order.customFields?.placedByAdministratorId
+                ? ''
+                : tr('orders.list.placedByCustomer'),
             reservation: reservationRaw
                 ? (ORDER_RESERVATION_STATE_OPTIONS.find(o => o.value === reservationRaw)?.label ??
                   reservationRaw)

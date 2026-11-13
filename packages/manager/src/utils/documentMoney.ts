@@ -1,4 +1,5 @@
+import { formatMoney } from '../i18n/format';
+
 export function documentMoney(currencyCode: string): (minor: number) => string {
-    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
-    return minor => formatter.format(minor / 100);
+    return minor => formatMoney(minor, currencyCode);
 }

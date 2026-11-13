@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue';
 import { adminApi } from '../api/client';
 import { DefaultCurrencyDocument } from '../api/generated/graphql';
+import { moneyTag } from '../i18n/format';
 
 const currencyCode = ref<string | null>(null);
 let loading: Promise<void> | null = null;
@@ -23,7 +24,7 @@ function format(amount: number, code: string | null, fractionDigits = 0): string
         maximumFractionDigits: fractionDigits,
     };
     if (code) Object.assign(options, { style: 'currency', currency: code });
-    return new Intl.NumberFormat('ru-RU', options).format(amount);
+    return new Intl.NumberFormat(moneyTag(), options).format(amount);
 }
 
 export function useCurrency(): {

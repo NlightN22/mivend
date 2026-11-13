@@ -1,3 +1,4 @@
+import { moneyTag } from '../../i18n/format';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import type { SettlementListItem } from '../../api/settlements';
 import { documentTypeVariant } from '../../utils/documentTypeVariant';
@@ -19,7 +20,7 @@ export type SettlementRow = {
 
 // Signed: a plus raises the customer's debt (a sale), a minus lowers it (a payment, a return).
 export function formatSettlementAmount(minor: number, currency: string): string {
-    const value = new Intl.NumberFormat('en-US', {
+    const value = new Intl.NumberFormat(moneyTag(), {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
         signDisplay: 'exceptZero',

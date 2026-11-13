@@ -9,6 +9,7 @@ import {
     type PaymentCardQuery,
     type PaymentListItemFieldsFragment,
 } from './generated/graphql';
+import { formatMoney } from '../i18n/format';
 
 // Labels resolve on read so a language switch reaches module-level option lists.
 function lazyOptions(
@@ -127,9 +128,7 @@ export async function fetchPaymentsPage(
 }
 
 export function formatPaymentAmount(amount: number, currencyCode: string): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(
-        amount / 100,
-    );
+    return formatMoney(amount, currencyCode);
 }
 
 // The server returns null for a foreign, unknown or malformed id.

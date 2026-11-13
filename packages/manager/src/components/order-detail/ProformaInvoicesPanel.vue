@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatDate } from '../../i18n/format';
+import { formatDate, formatMoney } from '../../i18n/format';
 import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MvButton, MvNotice, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
@@ -19,7 +19,7 @@ function date(iso: string): string {
 }
 
 function money(cents: number, currency: string): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+    return formatMoney(cents, currency);
 }
 
 onMounted(() => void load());

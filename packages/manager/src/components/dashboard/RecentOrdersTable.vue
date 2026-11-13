@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatDate } from '../../i18n/format';
+import { formatDate, formatMoney } from '../../i18n/format';
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
@@ -39,10 +39,7 @@ const rows = computed<TableRow[]>(() =>
         customer: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : '—',
         state: ORDER_STATE_LABEL[order.state] ?? order.state,
         stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
-        total: new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: order.currencyCode,
-        }).format(order.totalWithTax / 100),
+        total: formatMoney(order.totalWithTax, order.currencyCode),
         date: formatDate(order.createdAt),
     })),
 );

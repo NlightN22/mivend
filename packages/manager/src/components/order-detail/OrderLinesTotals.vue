@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { MvDocumentTotals } from '@mivend/ui-kit';
 import type { LineDiscountLimit } from '../../api/discountLimits';
@@ -13,10 +14,7 @@ const props = defineProps<{
 }>();
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: props.order.currencyCode,
-    }).format(amount / 100);
+    return formatMoney(amount, props.order.currencyCode);
 }
 
 const rows = computed(() =>
