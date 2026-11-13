@@ -10,7 +10,7 @@ export async function findRejectedOrderIdsWithActiveReserve(
     rejectedCodes: string[],
     cutoff: Date,
 ): Promise<string[]> {
-    const orders = await readAllByKeyset<{ id: number }>((afterId, limit) =>
+    const orders = await readAllByKeyset<Order>((afterId, limit) =>
         connection
             .getRepository(ctx, Order)
             .createQueryBuilder('o')
