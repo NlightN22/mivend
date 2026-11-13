@@ -32,6 +32,8 @@ export interface ChangeJournalFilter {
     administratorId?: string | null;
     occurredAfter?: Date | null;
     occurredBefore?: Date | null;
+    action?: string | null;
+    search?: string | null;
 }
 
 export interface PageArgs {
@@ -64,6 +66,9 @@ function filterClauses(
     );
     add('"occurredAt" >= ?', filter.occurredAfter);
     add('"occurredAt" < ?', filter.occurredBefore);
+    add('"action" = ?', filter.action);
+    const term = filter.search?.trim();
+    add('"changes"::text ILIKE ?', term ? `%${term.replace(/[\\%_]/g, '\\$&')}%` : null);
     return { where, params };
 }
 

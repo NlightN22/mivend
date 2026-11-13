@@ -33,6 +33,9 @@ export const changeJournalAdminSchema = gql`
         administratorId: ID
         occurredAfter: DateTime
         occurredBefore: DateTime
+        action: String
+        "Case-insensitive match on the changed fields and their values"
+        search: String
     }
 
     extend type Query {
