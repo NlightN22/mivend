@@ -104,11 +104,14 @@ mutation RequestDiscountGrant($input: DiscountGrantInput!) {
 
 query ExpiringDiscountGrants($withinDays: Int!) {
     expiringDiscountGrants(withinDays: $withinDays) {
-        id
-        validTo
-        counterparties {
+        totalItems
+        items {
             id
-            legalName
+            validTo
+            counterparties {
+                id
+                legalName
+            }
         }
     }
 }

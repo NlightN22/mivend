@@ -2477,6 +2477,11 @@ export type DiscountFacetValueOption = {
     name: Scalars['String']['output'];
 };
 
+export type ExpiringDiscountGrantList = {
+    items: Array<DiscountGrant>;
+    totalItems: Scalars['Int']['output'];
+};
+
 export type DiscountGrant = {
     counterparties: Array<DiscountGrantCounterparty>;
     discountRuleId: Scalars['ID']['output'];
@@ -8468,7 +8473,7 @@ export type Query = {
     entityDuplicators: Array<EntityDuplicatorDefinition>;
     entityVersions: Array<EntityVersion>;
     entityVersionsForEntities: EntityVersionList;
-    expiringDiscountGrants: Array<DiscountGrant>;
+    expiringDiscountGrants: ExpiringDiscountGrantList;
     facet: Maybe<Facet>;
     facetValue: Maybe<FacetValue>;
     facetValues: FacetValueList;
@@ -12977,11 +12982,14 @@ export type ExpiringDiscountGrantsQueryVariables = Exact<{
 }>;
 
 export type ExpiringDiscountGrantsQuery = {
-    expiringDiscountGrants: Array<{
-        id: string;
-        validTo: any;
-        counterparties: Array<{ id: string; legalName: string }>;
-    }>;
+    expiringDiscountGrants: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            validTo: any;
+            counterparties: Array<{ id: string; legalName: string }>;
+        }>;
+    };
 };
 
 export type DiscountCounterpartySearchQueryVariables = Exact<{
@@ -17177,11 +17185,14 @@ export const RequestDiscountGrantDocument = new TypedDocumentString(`
 export const ExpiringDiscountGrantsDocument = new TypedDocumentString(`
     query ExpiringDiscountGrants($withinDays: Int!) {
   expiringDiscountGrants(withinDays: $withinDays) {
-    id
-    validTo
-    counterparties {
+    totalItems
+    items {
       id
-      legalName
+      validTo
+      counterparties {
+        id
+        legalName
+      }
     }
   }
 }

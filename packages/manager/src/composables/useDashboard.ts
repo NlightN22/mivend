@@ -53,7 +53,7 @@ export function useDashboard() {
                 optional(
                     'expiring discount grants',
                     () => fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
-                    [],
+                    { items: [], totalItems: 0 },
                 ),
                 authStore.hasPermission('ManageAccessControl')
                     ? optional(
@@ -81,7 +81,7 @@ export function useDashboard() {
                 .filter(n => n.sourceType === 'payment-reconciliation')
                 .slice(0, HEALTH_PANEL_TAKE);
             // One grant can list several customers: the banner shows one line per customer.
-            expiringDiscounts.value = grants.flatMap(grant =>
+            expiringDiscounts.value = grants.items.flatMap(grant =>
                 grant.counterparties.map(cp => ({
                     id: `${grant.id}-${cp.id}`,
                     customerName: cp.legalName,

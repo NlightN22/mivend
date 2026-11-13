@@ -27,6 +27,7 @@ function mockQueryBuilder(getManyResult: unknown[] = [], count = 0) {
         take: vi.fn(),
         getCount: vi.fn(async () => count),
         getMany: vi.fn(async () => getManyResult),
+        getManyAndCount: vi.fn(async () => [getManyResult, count] as [unknown[], number]),
     };
     qb.leftJoinAndSelect.mockReturnValue(qb);
     qb.where.mockReturnValue(qb);
@@ -386,9 +387,18 @@ describe('DiscountGrantService', () => {
                 customer: 'customer',
             });
             expect(qb.orderBy).toHaveBeenCalledWith('grant.validTo', 'ASC');
+            expect(qb.take).toHaveBeenCalledWith(50);
             expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('discount_rule'), {
                 allowedPriceTypeCodes: ['retail'],
             });
+        });
+
+        it('returns the top page together with the full count', async () => {
+            const topGrant = { id: 'g1' };
+            qb.getManyAndCount.mockResolvedValue([[topGrant], 120]);
+            const result = await service.findExpiringSoon(mockCtx([]), 14, ['retail']);
+
+            expect(result).toEqual({ items: [topGrant], totalItems: 120 });
         });
 
         it('hides grants of a price type the viewer cannot see (empty allow-list matches nothing)', async () => {

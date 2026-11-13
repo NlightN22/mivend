@@ -120,6 +120,11 @@ export const adminApiSchema: DocumentNode = gql`
         legalName: String!
     }
 
+    type ExpiringDiscountGrantList {
+        items: [DiscountGrant!]!
+        totalItems: Int!
+    }
+
     type DiscountGrant {
         id: ID!
         discountRuleId: ID!
@@ -246,7 +251,8 @@ export const adminApiSchema: DocumentNode = gql`
         floorPrice(variantId: ID!): Float
         floorPricesForVariants(variantIds: [ID!]!): [FloorPriceEntry!]!
         discountRules(priceTypeCode: String): [DiscountRule!]!
-        expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
+        "Top soonest-expiring grants plus the total count, so an alert is not sized by the whole set."
+        expiringDiscountGrants(withinDays: Int!): ExpiringDiscountGrantList!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
         # see DiscountGrantService.findForCounterparty. Real server-side pagination — this list
         # accumulates over the customer's lifetime (nothing removes an expired grant), it is not

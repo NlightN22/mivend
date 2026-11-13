@@ -113,7 +113,7 @@ describe('discount grant price type filter (integration, real Postgres)', () => 
 
         const result = await service.findExpiringSoon(ctx, 30, ['price-type-wholesale']);
 
-        expect(numbers(result)).toEqual(['1', '3']);
+        expect(numbers(result.items)).toEqual(['1', '3']);
     });
 
     it('an empty allowed list hides every typed rule but keeps the untyped one', async () => {
@@ -122,7 +122,7 @@ describe('discount grant price type filter (integration, real Postgres)', () => 
 
         const result = await service.findExpiringSoon(ctx, 30, []);
 
-        expect(numbers(result)).toEqual(['3']);
+        expect(numbers(result.items)).toEqual(['3']);
     });
 
     it('findForCounterparty applies the same filter', async () => {

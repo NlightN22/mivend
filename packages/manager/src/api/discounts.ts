@@ -68,7 +68,7 @@ export interface ExpiringDiscountGrant {
 
 export async function fetchExpiringDiscountGrants(
     withinDays: number,
-): Promise<ExpiringDiscountGrant[]> {
+): Promise<{ items: ExpiringDiscountGrant[]; totalItems: number }> {
     const result = await adminApi(ExpiringDiscountGrantsDocument, { withinDays });
     return result.expiringDiscountGrants;
 }

@@ -46,7 +46,7 @@ const activeClientsCount = computed(() => summary.value?.activeCount ?? 0);
 const canReadCredit = computed(() => summary.value?.totalCreditBalance != null);
 const totalCreditBalance = computed(() => summary.value?.totalCreditBalance ?? 0);
 const highUsageCount = computed(() => summary.value?.highUsageCount ?? 0);
-const expiringGrantsCount = computed(() => expiringGrantsByCustomerId.value.size);
+const expiringGrantsCount = ref(0);
 
 const attentionItems = computed<AttentionEntry[]>(() => {
     const highUsage: AttentionEntry[] = highUsageCustomers.value.map(c => {
@@ -93,7 +93,8 @@ onMounted(async () => {
         exceededIds.slice(0, ATTENTION_TOP_N),
     );
     const grantsMap = new Map<string, string>();
-    for (const grant of expiringGrants) {
+    expiringGrantsCount.value = expiringGrants.totalItems;
+    for (const grant of expiringGrants.items) {
         for (const cp of grant.counterparties) {
             if (!grantsMap.has(cp.id)) grantsMap.set(cp.id, grant.validTo);
         }

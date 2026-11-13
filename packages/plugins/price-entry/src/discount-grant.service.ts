@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { Brackets, In } from 'typeorm';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, getPageAndCount } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import {
@@ -34,6 +34,8 @@ import {
 
 // Unlike priceAdjustmentApproval, a discount grant always needs approval; no direct-apply tier.
 // See docs/ai/manager-portal-concept.md §4.1, item 2.
+const EXPIRING_SOON_TOP_N = 50;
+
 @Injectable()
 export class DiscountGrantService {
     constructor(
@@ -257,11 +259,10 @@ export class DiscountGrantService {
         ctx: RequestContext,
         withinDays: number,
         allowedPriceTypeCodes: string[],
-    ): Promise<DiscountGrant[]> {
+    ): Promise<{ items: DiscountGrant[]; totalItems: number }> {
         const now = new Date();
         const horizon = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
-        // unbounded-ok: TRACKED #350 expiring grants inside the horizon are not capped
-        return this.connection
+        const qb = this.connection
             .getRepository(ctx, DiscountGrant)
             .createQueryBuilder('grant')
             .leftJoinAndSelect('grant.counterparties', 'counterparty')
@@ -270,7 +271,7 @@ export class DiscountGrantService {
             .andWhere(RULE_PRICE_TYPE_ALLOWED_SQL, {
                 allowedPriceTypeCodes: allowedPriceTypeCodes.length ? allowedPriceTypeCodes : [''],
             })
-            .orderBy('grant.validTo', 'ASC')
-            .getMany();
+            .orderBy('grant.validTo', 'ASC');
+        return getPageAndCount(qb, EXPIRING_SOON_TOP_N);
     }
 }

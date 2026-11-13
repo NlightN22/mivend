@@ -24,5 +24,7 @@ export function registerDefaultMocks(): void {
 
     // Background call on most authenticated pages (dashboard, discounts) — empty by default so
     // an unrelated page's story doesn't need to know about it; override per-story if needed.
-    registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
+    registerMock('ExpiringDiscountGrants', () => ({
+        expiringDiscountGrants: { items: [], totalItems: 0 },
+    }));
 }

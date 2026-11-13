@@ -50,7 +50,7 @@ export class DiscountGrantResolver {
     async expiringDiscountGrants(
         @Ctx() ctx: RequestContext,
         @Args() args: { withinDays: number },
-    ): Promise<DiscountGrant[]> {
+    ): Promise<{ items: DiscountGrant[]; totalItems: number }> {
         return this.discountGrantService.findExpiringSoon(
             ctx,
             args.withinDays,

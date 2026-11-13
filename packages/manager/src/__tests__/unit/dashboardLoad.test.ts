@@ -104,7 +104,7 @@ describe('useDashboard', () => {
         expect(dashboard.loading.value).toBe(false);
 
         answer();
-        vi.mocked(fetchExpiringDiscountGrants).mockResolvedValue([]);
+        vi.mocked(fetchExpiringDiscountGrants).mockResolvedValue({ items: [], totalItems: 0 });
         await dashboard.load();
         expect(dashboard.failedSections.value).toEqual({});
     });

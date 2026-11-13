@@ -172,7 +172,9 @@ function mockCustomersData(): void {
             { id: '2', firstName: 'Nina', lastName: 'Director', roleCodes: ['general-director'] },
         ],
     }));
-    registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
+    registerMock('ExpiringDiscountGrants', () => ({
+        expiringDiscountGrants: { items: [], totalItems: 0 },
+    }));
     registerMock('ActiveDiscountCounts', () => ({ activeDiscountCounts: [] }));
     registerMock('LastOrderDates', () => ({ lastOrderDates: [] }));
 }
@@ -209,7 +211,9 @@ export const Empty: Story = {
             }));
             registerMock('Branches', () => ({ branches: [] }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
-            registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
+            registerMock('ExpiringDiscountGrants', () => ({
+                expiringDiscountGrants: { items: [], totalItems: 0 },
+            }));
             registerMock('ActiveDiscountCounts', () => ({ activeDiscountCounts: [] }));
             registerMock('LastOrderDates', () => ({ lastOrderDates: [] }));
             await router.push('/customers');
