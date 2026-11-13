@@ -180,7 +180,8 @@ describe('CounterpartyBatchLoaders', () => {
         const ctx2 = adminCtx('user-a');
         await Promise.all(ids(20).map(id => counterparties.findOneVisible(ctx2, id)));
         const perRow = counter.count;
-        expect(batched).toBe(2);
+        // The bounded points read takes root ids first (take with relations), then loads them: 1 + 2 queries.
+        expect(batched).toBe(3);
         expect(perRow).toBeGreaterThanOrEqual(20);
         counter.count = 0;
         const ctx3 = adminCtx('user-a');
