@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { getRawManyBounded } from 'shared';
 
 export interface VariantSalesUnitView {
     unitName: string | null;
@@ -40,21 +41,21 @@ export class VariantSalesUnitService {
     ): Promise<Map<string, VariantSalesUnitView>> {
         const numericIds = ids.filter(id => /^\d+$/.test(id));
         if (numericIds.length === 0) return new Map();
-        // unbounded-ok: variants matched by the ids passed in, bounded by that list
-        const rows = await this.connection
-            .getRepository(ctx, 'product_variant')
-            .createQueryBuilder('pv')
-            .select('pv.id', 'id')
-            .addSelect('pv."customFieldsUnitname"', 'unitName')
-            .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
-            .addSelect('pv."customFieldsMultiplicity"', 'multiplicity')
-            .where('pv.id IN (:...ids)', { ids: numericIds })
-            .getRawMany<{
-                id: string;
-                unitName: string | null;
-                unitRatioToBase: number | null;
-                multiplicity: number | null;
-            }>();
+        const rows = await getRawManyBounded<{
+            id: string;
+            unitName: string | null;
+            unitRatioToBase: number | null;
+            multiplicity: number | null;
+        }>(
+            this.connection
+                .getRepository(ctx, 'product_variant')
+                .createQueryBuilder('pv')
+                .select('pv.id', 'id')
+                .addSelect('pv."customFieldsUnitname"', 'unitName')
+                .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
+                .addSelect('pv."customFieldsMultiplicity"', 'multiplicity')
+                .where('pv.id IN (:...ids)', { ids: numericIds }),
+        );
         return new Map(
             rows.map(row => [
                 String(row.id),

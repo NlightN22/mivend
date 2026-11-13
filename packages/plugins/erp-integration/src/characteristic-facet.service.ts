@@ -10,7 +10,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { characteristicFacetCode, withAggregateLock } from 'shared';
+import { characteristicFacetCode, getRawManyBounded, withAggregateLock } from 'shared';
 
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import {
@@ -18,6 +18,7 @@ import {
     type ProductCharacteristicRow,
 } from './product-characteristics-mapper';
 import { loggerCtx } from './types';
+import { BACKFILL_CEILING } from './read-ceilings';
 
 const KNOWN_VALUES_TTL_MS = 60_000;
 
@@ -40,13 +41,16 @@ export class CharacteristicFacetService implements OnApplicationBootstrap {
         if (!this.processContext.isServer) return;
         try {
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
-            // unbounded-ok: one-off startup backfill, DISTINCT (key, value) pairs only
-            const rows = await this.connection
-                .getRepository(ctx, ProductCharacteristic)
-                .createQueryBuilder('c')
-                .select(['c.key AS key', 'c.normalizedValue AS "normalizedValue"'])
-                .distinct(true)
-                .getRawMany<Pick<ProductCharacteristicRow, 'key' | 'normalizedValue'>>();
+            const rows = await getRawManyBounded<
+                Pick<ProductCharacteristicRow, 'key' | 'normalizedValue'>
+            >(
+                this.connection
+                    .getRepository(ctx, ProductCharacteristic)
+                    .createQueryBuilder('c')
+                    .select(['c.key AS key', 'c.normalizedValue AS "normalizedValue"'])
+                    .distinct(true),
+                BACKFILL_CEILING,
+            );
             await this.ensureValues(ctx, rows as ProductCharacteristicRow[]);
         } catch (err) {
             Logger.error(`characteristic facet backfill failed: ${String(err)}`, loggerCtx);

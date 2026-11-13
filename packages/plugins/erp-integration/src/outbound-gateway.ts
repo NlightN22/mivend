@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, TransactionalConnection } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQueryBounded, withAggregateLock } from 'shared';
 
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
@@ -112,14 +112,14 @@ export class OutboundGateway {
     // Statuses of the order's confirmed events that still count: published ones were sent, pending
     // and failed ones never reached the broker.
     async confirmedStatusesForOrder(ctx: RequestContext, orderId: string): Promise<string[]> {
-        // unbounded-ok: DISTINCT outbox status of one order, at most three rows
-        const rows = await ctxQuery<Array<{ status: string }>>(
+        const rows = await ctxQueryBounded<{ status: string }>(
             this.connection,
             ctx,
             `SELECT DISTINCT status FROM integration_outbox
              WHERE event_type = 'order.confirmed' AND payload ->> 'orderId' = $1
                AND status IN ('pending', 'failed', 'published')`,
             [orderId],
+            3,
         );
         return rows.map(row => row.status);
     }

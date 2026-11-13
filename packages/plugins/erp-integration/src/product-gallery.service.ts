@@ -8,6 +8,8 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { In } from 'typeorm';
+import { findBounded } from 'shared';
+import { LIST_READ_CEILING } from './read-ceilings';
 
 const MAX_GALLERY_ITEMS = 10;
 
@@ -34,12 +36,15 @@ export class ProductGalleryService {
     }
 
     private async load(ctx: RequestContext, productIds: string[]): Promise<Map<string, string[]>> {
-        // unbounded-ok: assets of the products passed in, bounded by that list
-        const rows = await this.connection.getRepository(ctx, ProductAsset).find({
-            where: { productId: In(productIds) },
-            relations: { asset: true },
-            order: { position: 'ASC' },
-        });
+        const rows = await findBounded(
+            this.connection.getRepository(ctx, ProductAsset),
+            {
+                where: { productId: In(productIds) },
+                relations: { asset: true },
+                order: { position: 'ASC' },
+            },
+            LIST_READ_CEILING,
+        );
         const strategy = this.configService.assetOptions.assetStorageStrategy;
         const byProduct = new Map<string, string[]>();
         for (const row of rows) {

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { UnitRecord } from './entities/unit-record.entity';
+import { getRawManyBounded } from 'shared';
+import { LIST_READ_CEILING } from './read-ceilings';
 
 export interface PackagingLevelView {
     name: string;
@@ -24,19 +26,24 @@ export class ProductPackagingLevelsService {
     ): Promise<Map<string, PackagingLevelView[]>> {
         const byProduct = new Map<string, PackagingLevelView[]>();
         if (productIds.length === 0) return byProduct;
-        // unbounded-ok: packaging levels of the products passed in, bounded by that list
-        const rows = await this.connection
-            .getRepository(ctx, UnitRecord)
-            .createQueryBuilder('u')
-            .innerJoin('product', 'p', 'p."customFieldsExternalid" = u."ownerId"')
-            .select('p.id', 'productId')
-            .addSelect('u.name', 'name')
-            .addSelect('u."ratioToBase"', 'ratioToBase')
-            .where('p.id IN (:...productIds)', { productIds })
-            .andWhere('u."isDeleted" = false')
-            .andWhere('u."ratioToBase" > 0 AND u."ratioToBase" <> 1')
-            .orderBy('u."ratioToBase"', 'ASC')
-            .getRawMany<{ productId: string | number; name: string; ratioToBase: number }>();
+        const rows = await getRawManyBounded<{
+            productId: string | number;
+            name: string;
+            ratioToBase: number;
+        }>(
+            this.connection
+                .getRepository(ctx, UnitRecord)
+                .createQueryBuilder('u')
+                .innerJoin('product', 'p', 'p."customFieldsExternalid" = u."ownerId"')
+                .select('p.id', 'productId')
+                .addSelect('u.name', 'name')
+                .addSelect('u."ratioToBase"', 'ratioToBase')
+                .where('p.id IN (:...productIds)', { productIds })
+                .andWhere('u."isDeleted" = false')
+                .andWhere('u."ratioToBase" > 0 AND u."ratioToBase" <> 1')
+                .orderBy('u."ratioToBase"', 'ASC'),
+            LIST_READ_CEILING,
+        );
         for (const row of rows) {
             const key = String(row.productId);
             const levels = byProduct.get(key) ?? [];

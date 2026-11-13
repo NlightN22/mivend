@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
-import { ctxQuery } from 'shared';
+import { ctxQuery, ctxQueryBounded } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -130,13 +130,13 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         ctx: RequestContext,
         requestEntityId: string,
     ): Promise<string | null> {
-        // unbounded-ok: outbox row selected by its unique event id
-        const [row] = await ctxQuery<Array<{ orderId: string | null }>>(
+        const [row] = await ctxQueryBounded<{ orderId: string | null }>(
             this.connection,
             ctx,
             `SELECT outbox.payload->>'orderId' AS "orderId" FROM integration_outbox outbox
               WHERE outbox.event_id = $1`,
             [requestEntityId],
+            1,
         );
         return row?.orderId ?? null;
     }

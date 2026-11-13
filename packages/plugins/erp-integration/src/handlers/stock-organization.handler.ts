@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { OrderCheckStaleService } from '@mivend/plugin-reservation';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { StockOrganization } from '../entities/stock-organization.entity';
+import { LIST_READ_CEILING } from '../read-ceilings';
 
 // Applies `stock-organization`: a tombstone removes the row, stale versions are dropped by the inbox.
 // Rows reference product/organization by ERP id only, so an unknown one is stored, never retried.
@@ -38,8 +39,11 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
                 `stock-organization:${entityId}`,
                 async txCtx => {
                     const repo = this.connection.getRepository(txCtx, StockOrganization);
-                    // unbounded-ok: stock organization rows of one entity
-                    const rows = await repo.find({ where: { entityId } });
+                    const rows = await findBounded(
+                        repo,
+                        { where: { entityId } },
+                        LIST_READ_CEILING,
+                    );
                     if (rows.length === 0) return false;
                     await repo.delete({ entityId });
                     await this.orderCheckStale.requestForProducts(txCtx, [

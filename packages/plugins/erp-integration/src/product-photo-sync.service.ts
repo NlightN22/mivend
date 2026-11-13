@@ -20,7 +20,7 @@ import {
     PermanentPhotoError,
     photoFileName,
 } from './product-photo-download';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, findBounded, withAggregateLock } from 'shared';
 import { loggerCtx, MissingReferenceError } from './types';
 
 export const PRODUCT_PHOTO_SYNC_QUEUE = 'product-photo-sync';
@@ -79,8 +79,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         if (!productId) {
             throw new MissingReferenceError(`product ${productExternalId} not imported yet`);
         }
-        // unbounded-ok: photo rows of one product
-        const rows = await repo.find({ where: { productExternalId } });
+        const rows = await findBounded(repo, { where: { productExternalId } });
         let transientError: Error | undefined;
         for (const row of rows) {
             if (row.isDeleted || row.status !== 'pending') continue;
@@ -96,8 +95,11 @@ export class ProductPhotoSyncService implements OnModuleInit {
                 }
             }
         }
-        // unbounded-ok: photo rows of one product
-        await this.attach(ctx, productId, await repo.find({ where: { productExternalId } }));
+        await this.attach(
+            ctx,
+            productId,
+            await findBounded(repo, { where: { productExternalId } }),
+        );
         return transientError;
     }
 
