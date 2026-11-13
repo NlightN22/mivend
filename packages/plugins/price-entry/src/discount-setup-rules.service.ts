@@ -12,6 +12,7 @@ import {
     resolveRefs,
 } from './discount-setup-filter-lookup';
 import { BatchLoader } from './batch-loader';
+import { collectKeyset } from './read-batches';
 import { LookupMemo, memoized } from './lookup-memo';
 
 interface SetupRow {
@@ -123,11 +124,11 @@ export class DiscountSetupRulesService {
         priceTypeCode: string | null,
         now: Date,
     ): Promise<LoadedDiscountSetup[]> {
-        // unbounded-ok: pricing path, a cap would change prices; filtered by date and condition, memoized per order
-        const rows = await ctxQuery<SetupRow[]>(
-            this.connection,
-            ctx,
-            `SELECT s.id, s.percent, s."allProducts", s."productMode", s."conditionNumber", k.metric
+        const rows = await collectKeyset(async (lastId, batch) =>
+            ctxQuery<SetupRow[]>(
+                this.connection,
+                ctx,
+                `SELECT s.id, s.percent, s."allProducts", s."productMode", s."conditionNumber", k.metric
              FROM discount_setup s
              LEFT JOIN discount_condition_kind k ON k."erpName" = s."conditionName"
              WHERE s.active = true
@@ -137,8 +138,11 @@ export class DiscountSetupRulesService {
                     OR s."priceTypeErpId" = (SELECT pt."externalId" FROM price_type pt WHERE pt.code = $4))
                AND EXISTS (SELECT 1 FROM discount_setup_recipient r
                            WHERE r."setupId" = s.id
-                             AND r."counterpartyErpId" IN ('', $2) AND r."contractErpId" IN ('', $3))`,
-            [now, counterpartyErpId, contractErpId, priceTypeCode],
+                             AND r."counterpartyErpId" IN ('', $2) AND r."contractErpId" IN ('', $3))
+               AND s.id > $5
+             ORDER BY s.id LIMIT $6`,
+                [now, counterpartyErpId, contractErpId, priceTypeCode, lastId, batch],
+            ),
         );
         return rows.map(row => ({ ...row, percent: Number(row.percent) }));
     }

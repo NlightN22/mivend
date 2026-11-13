@@ -14,6 +14,7 @@ import {
 import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
 import { DiscountSetupService } from '../../discount-setup.service';
 import type { DiscountRecipientInput } from '../../discount-setup.service';
+import { READ_BATCH_SIZE } from '../../read-batches';
 import { LookupMemo } from '../../lookup-memo';
 import {
     AMOUNT_KIND,
@@ -280,4 +281,11 @@ describe('DiscountSetupRulesService matching (real Postgres)', () => {
         const memberQueries = 20;
         expect(queries).toBe(headerQueries + memberQueries);
     });
+
+    it('a setup past the first keyset batch still applies', async () => {
+        for (let i = 0; i < READ_BATCH_SIZE; i++) await seed({ percent: 1, products: ['p-other'] });
+        await seed({ percent: 33, allProducts: true });
+
+        expect(await best()).toBe(33);
+    }, 120_000);
 });
