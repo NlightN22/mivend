@@ -181,65 +181,6 @@ query CustomerOrders($customerId: ID!, $take: Int!) {
     }
 }
 
-query CustomerOrdersByPaymentView(
-    $customerId: ID!
-    $paymentView: String!
-    $options: OrderListOptions
-) {
-    customerOrdersByPaymentView(
-        customerId: $customerId
-        paymentView: $paymentView
-        options: $options
-    ) {
-        totalItems
-        items {
-            ...CustomerOrderItemFields
-        }
-    }
-}
-
-query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
-    visibleOrders(options: $options, customerId: $customerId) {
-        totalItems
-        items {
-            ...CustomerOrderItemFields
-        }
-    }
-}
-
-query CustomerOrderViewCounts($customerId: ID!) {
-    all: visibleOrders(customerId: $customerId, options: { take: 0 }) {
-        totalItems
-    }
-    cancelled: visibleOrders(
-        customerId: $customerId
-        options: { take: 0, filter: { state: { eq: "Cancelled" } } }
-    ) {
-        totalItems
-    }
-    unpaid: customerOrdersByPaymentView(
-        customerId: $customerId
-        paymentView: "unpaid"
-        options: { take: 0 }
-    ) {
-        totalItems
-    }
-    partial: customerOrdersByPaymentView(
-        customerId: $customerId
-        paymentView: "partial"
-        options: { take: 0 }
-    ) {
-        totalItems
-    }
-}
-
-query OrderPaymentSummaries($orderIds: [ID!]!) {
-    orderPaymentSummaries(orderIds: $orderIds) {
-        orderId
-        capturedAmount
-    }
-}
-
 query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
     documents(options: $options, counterpartyId: $counterpartyId) {
         totalItems
@@ -280,48 +221,6 @@ query ActiveDiscountCounts($counterpartyIds: [ID!]!) {
     activeDiscountCounts(counterpartyIds: $counterpartyIds) {
         counterpartyId
         count
-    }
-}
-
-query DiscountGrantViewCounts($counterpartyId: ID!) {
-    all: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0 }) {
-        totalItems
-    }
-    active: discountGrantsForCounterparty(
-        counterpartyId: $counterpartyId
-        options: { take: 0, status: "active" }
-    ) {
-        totalItems
-    }
-    expiringSoon: discountGrantsForCounterparty(
-        counterpartyId: $counterpartyId
-        options: { take: 0, status: "expiring-soon" }
-    ) {
-        totalItems
-    }
-    expired: discountGrantsForCounterparty(
-        counterpartyId: $counterpartyId
-        options: { take: 0, status: "expired" }
-    ) {
-        totalItems
-    }
-}
-
-query CustomerDiscountGrantsPage(
-    $counterpartyId: ID!
-    $options: DiscountGrantForCustomerListOptions
-) {
-    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
-        totalItems
-        items {
-            id
-            number
-            createdAt
-            percent
-            facetValueCode
-            validTo
-            status
-        }
     }
 }
 
