@@ -79,6 +79,8 @@ const ru: typeof en = {
         searchBlockedMessage: 'Попробуйте позже.',
         searchRefineTitle: 'Слишком много результатов',
         searchRefineMessage: 'Уточните запрос: добавьте слово, выберите категорию или фильтр.',
+        queryTooLargeTitle: 'Запрос слишком большой',
+        queryTooLargeMessage: 'Обратитесь к разработчикам.',
     },
     errorPages: {
         notFoundCode: '404 · Не найдено',

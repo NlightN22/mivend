@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { adminApi, ApiNetworkError } from '../../api/client';
+import { adminApi, AdminApiError, ApiNetworkError } from '../../api/client';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
     return {
@@ -30,6 +30,25 @@ describe('adminApi', () => {
 
         await expect(adminApi('{ ok }')).rejects.toThrow('Admin API error: 500');
         expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('turns QUERY_TOO_LARGE into the user-facing message with the request id', async () => {
+        const body = {
+            errors: [{ message: 'raw', extensions: { code: 'QUERY_TOO_LARGE', ceiling: 1000 } }],
+        };
+        const response = {
+            ...jsonResponse(body),
+            headers: new Headers({ 'x-request-id': 'req-1' }),
+        } as Response;
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+        const error = await adminApi('{ ok }').catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(AdminApiError);
+        expect((error as AdminApiError).code).toBe('QUERY_TOO_LARGE');
+        expect((error as AdminApiError).message).toBe(
+            'The request is too large. Contact the developers. (Request ID: req-1)',
+        );
     });
 
     it('retries a genuine network failure and eventually throws ApiNetworkError', async () => {

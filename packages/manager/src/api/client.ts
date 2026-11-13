@@ -1,6 +1,24 @@
 import { signInHeaders, signInUrl } from '@mivend/ui-kit/src/composables/signIn/signInRequest';
 
+import { i18n } from '../i18n';
+
 const ADMIN_API_URL = '/admin-api';
+const QUERY_TOO_LARGE_CODE = 'QUERY_TOO_LARGE';
+
+// GraphQL error from the server; `code` comes from the error extensions.
+export class AdminApiError extends Error {
+    readonly code?: string;
+
+    constructor(message: string, extensions?: Record<string, unknown>) {
+        super(message);
+        this.code = typeof extensions?.code === 'string' ? extensions.code : undefined;
+    }
+}
+
+function queryTooLargeMessage(requestId: string | null | undefined): string {
+    const text = i18n.global.t('common.queryTooLarge');
+    return requestId ? `${text} (${i18n.global.t('common.requestId')}: ${requestId})` : text;
+}
 
 // Portal auth is cookie-based, but Vendure echoes the bearer token in this header; the WS transport
 // has no cookie jar (graphql-ws uses connectionParams), so it reuses this token.
@@ -95,10 +113,21 @@ export async function adminApi<
         throw new Error(`Admin API error: ${response.status}`);
     }
 
-    const json = (await response.json()) as { data?: TResult; errors?: { message: string }[] };
+    const json = (await response.json()) as {
+        data?: TResult;
+        errors?: { message: string; extensions?: Record<string, unknown> }[];
+    };
 
     if (json.errors?.length) {
-        throw new Error(json.errors.map(e => e.message).join('; '));
+        const tooLarge = json.errors.find(e => e.extensions?.code === QUERY_TOO_LARGE_CODE);
+        if (tooLarge) {
+            const requestId = response.headers?.get('x-request-id');
+            throw new AdminApiError(queryTooLargeMessage(requestId), tooLarge.extensions);
+        }
+        throw new AdminApiError(
+            json.errors.map(e => e.message).join('; '),
+            json.errors[0].extensions,
+        );
     }
 
     return json.data as TResult;

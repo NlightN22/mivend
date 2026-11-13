@@ -21,6 +21,7 @@ const SEARCH_ERROR_KINDS: Record<string, string> = {
     SEARCH_RATE_LIMITED: 'searchRateLimited',
     SEARCH_END_USER_BLOCKED: 'searchBlocked',
     SEARCH_REFINE_QUERY: 'searchRefine',
+    QUERY_TOO_LARGE: 'queryTooLarge',
 };
 
 export function describeLoadError(err: unknown): LoadErrorText {

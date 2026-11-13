@@ -57,6 +57,14 @@ describe('describeLoadError search-service codes', () => {
         ).toBe('Too many results');
     });
 
+    it('explains a request that is too large', () => {
+        const text = describeLoadError(new ShopApiError('x', { code: 'QUERY_TOO_LARGE' }));
+        expect(text).toEqual({
+            title: 'The request is too large',
+            message: 'Contact the developers.',
+        });
+    });
+
     it('keeps an unknown GraphQL code generic', () => {
         expect(describeLoadError(new ShopApiError('x', { code: 'OTHER' })).title).toBe(
             'Something went wrong',

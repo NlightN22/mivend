@@ -77,6 +77,8 @@ export default {
         searchBlockedMessage: 'Please try again later.',
         searchRefineTitle: 'Too many results',
         searchRefineMessage: 'Refine your search: add a word or choose a category or filter.',
+        queryTooLargeTitle: 'The request is too large',
+        queryTooLargeMessage: 'Contact the developers.',
     },
     errorPages: {
         notFoundCode: '404 · Not found',
