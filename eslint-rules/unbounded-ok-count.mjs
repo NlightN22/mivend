@@ -1,4 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import process from 'node:process';
+import { URL } from 'node:url';
 
 // Marker counts per plugin or package, from git grep on tracked non-test files; run from any directory.
 export function countMarkersByGroup(cwd = new URL('..', import.meta.url)) {
@@ -34,13 +37,9 @@ export function countMarkersByGroup(cwd = new URL('..', import.meta.url)) {
 }
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {
-    const { writeFileSync } = await import('node:fs');
     const target = new URL('./unbounded-ok-baseline.json', import.meta.url);
     const groups = countMarkersByGroup();
     const lines = Object.entries(groups).map(([k, v]) => `        ${JSON.stringify(k)}: ${v}`);
     writeFileSync(target, `{\n    "groups": {\n${lines.join(',\n')}\n    }\n}\n`);
-    console.log(
-        'baseline written:',
-        Object.values(groups).reduce((a, b) => a + b, 0),
-    );
+    process.stdout.write(`baseline written: ${Object.values(groups).reduce((a, b) => a + b, 0)}\n`);
 }
