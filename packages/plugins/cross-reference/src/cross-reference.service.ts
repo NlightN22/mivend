@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { findBounded } from 'shared';
 
 import { ProductCrossReference } from './entities/product-cross-reference.entity';
 import { OemRef, loggerCtx } from './types';
@@ -12,10 +13,9 @@ export class CrossReferenceService {
         ctx: RequestContext,
         productId: number,
     ): Promise<ProductCrossReference[]> {
-        // unbounded-ok: cross references of one product
-        return this.connection
-            .getRepository(ctx, ProductCrossReference)
-            .find({ where: { productId } });
+        return findBounded(this.connection.getRepository(ctx, ProductCrossReference), {
+            where: { productId },
+        });
     }
 
     async upsertForProduct(ctx: RequestContext, productId: number, refs: OemRef[]): Promise<void> {

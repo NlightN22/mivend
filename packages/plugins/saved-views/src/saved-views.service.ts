@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 
 import { SavedTableView, SavedTableViewScope } from './entities/saved-table-view.entity';
 import {
@@ -47,8 +47,7 @@ export class SavedViewsService {
         pageKey: string,
     ): Promise<SavedTableView[]> {
         const administratorId = await this.requireAdministratorId(ctx);
-        // unbounded-ok: saved views of one administrator and page plus the shared ones for that page
-        return this.connection.getRepository(ctx, SavedTableView).find({
+        return findBounded(this.connection.getRepository(ctx, SavedTableView), {
             where: [
                 { administratorId, pageKey, scope: 'PERSONAL' },
                 { pageKey, scope: 'SHARED' },

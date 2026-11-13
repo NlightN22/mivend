@@ -12,7 +12,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { ctxQuery, getPageAndCount } from 'shared';
+import { ctxQuery, ctxQueryBounded, getPageAndCount } from 'shared';
 
 import { NotificationRetentionRule } from './entities/notification-retention-rule.entity';
 import {
@@ -74,8 +74,7 @@ export class NotificationRetentionRuleService implements OnApplicationBootstrap 
     }
 
     loadRows(ctx: RequestContext): Promise<RetentionRuleRow[]> {
-        // unbounded-ok: one row per notification source type, a small configuration table
-        return ctxQuery<RetentionRuleRow[]>(
+        return ctxQueryBounded<RetentionRuleRow>(
             this.connection,
             ctx,
             `SELECT "sourceType", "readDays", "unreadDays" FROM notification_retention_rule`,

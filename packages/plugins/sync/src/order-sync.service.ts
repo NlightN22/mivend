@@ -49,9 +49,8 @@ export class OrderSyncService {
         const { payload } = event;
         const orders = this.connection.getRepository(ctx, Order);
 
-        // unbounded-ok: order selected by its unique source order id
         const existing: Array<{ id: string }> = await orders.query(
-            `SELECT id FROM "order" WHERE "customFieldsSourceorderid" = $1`,
+            `SELECT id FROM "order" WHERE "customFieldsSourceorderid" = $1 LIMIT 1`,
             [payload.sourceOrderId],
         );
         if (existing[0]) return; // already applied — idempotent

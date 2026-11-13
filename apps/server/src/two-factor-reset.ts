@@ -17,9 +17,8 @@ export async function resetTwoFactor(
 ): Promise<ResetOutcome | null> {
     await client.query('BEGIN');
     try {
-        // unbounded-ok: lookup of one user by unique identifier, at most one row
         const users = await client.query(
-            `SELECT id FROM "user" WHERE identifier = $1 AND "deletedAt" IS NULL`,
+            `SELECT id FROM "user" WHERE identifier = $1 AND "deletedAt" IS NULL LIMIT 1`,
             [identifier],
         );
         const userId = users.rows[0] ? String(users.rows[0].id) : null;

@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
     User,
 } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 import type { SyncEventByType } from 'shared';
 
 // Correlate by customFields.sourceAdministratorId; native Administrator.id differs per database.
@@ -21,10 +21,14 @@ export class AdministratorSyncService {
         event: SyncEventByType<'administrator.created'> | SyncEventByType<'administrator.updated'>,
     ): Promise<void> {
         const { payload } = event;
-        // unbounded-ok: roles named in one synced administrator payload
-        const roles = await this.connection.getRepository(ctx, Role).find({
-            where: payload.roleCodes.map(code => ({ code })),
-        });
+        const roles =
+            payload.roleCodes.length === 0
+                ? []
+                : await findBounded(
+                      this.connection.getRepository(ctx, Role),
+                      { where: payload.roleCodes.map(code => ({ code })) },
+                      payload.roleCodes.length,
+                  );
 
         const existing = await ctxQuery<Array<{ id: string; userId: string }>>(
             this.connection,

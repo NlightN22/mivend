@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { getPageAndCount, likeTerm } from 'shared';
+import { findBounded, getPageAndCount, likeTerm } from 'shared';
 import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, IsNull, Not } from 'typeorm';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -258,8 +258,7 @@ export class NotificationService {
         resolution: string,
     ): Promise<Notification[]> {
         const repo = this.connection.getRepository(ctx, Notification);
-        // unbounded-ok: open notifications of one source
-        const open = await repo.find({
+        const open = await findBounded(repo, {
             where: {
                 sourceType: source.sourceType,
                 sourceId: source.sourceId,

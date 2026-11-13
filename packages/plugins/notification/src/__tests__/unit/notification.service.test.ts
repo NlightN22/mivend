@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { QueryTooLargeError } from 'shared';
+
 import { NotificationService } from '../../notification.service';
 import { Notification } from '../../entities/notification.entity';
 
@@ -319,6 +321,19 @@ describe('NotificationService.resolveBySource', () => {
         expect(result).toHaveLength(2);
         expect(result.map(n => n.recipientId).sort()).toEqual([null, 'admin-1'].sort());
         expect(result.every(n => n.status === 'resolved')).toBe(true);
+    });
+
+    it('fails loudly instead of resolving a truncated set', async () => {
+        const save = vi.fn();
+        const find = vi.fn().mockResolvedValue(new Array(1001).fill({ id: 'n' }));
+        const connection = { getRepository: () => ({ find, save }) };
+        const service = new NotificationService(connection as never, { publish: vi.fn() } as never);
+
+        await expect(
+            service.resolveBySource({} as never, { sourceType: 'a', sourceId: 'b' }, 'done'),
+        ).rejects.toThrow(QueryTooLargeError);
+        expect(find).toHaveBeenCalledWith(expect.objectContaining({ take: 1001 }));
+        expect(save).not.toHaveBeenCalled();
     });
 
     it('is a no-op when nothing open exists for the source', async () => {

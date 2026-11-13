@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import type { SyncEventByType } from 'shared';
 
 import { AdministratorSyncService } from '../../administrator-sync.service';
@@ -130,6 +131,32 @@ describe('AdministratorSyncService', () => {
             expect.objectContaining({ passwordHash: 'hashed-pw' }),
         );
         expect(adminRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('fails loudly when more roles match than the payload names', async () => {
+        const { em, roleRepo } = makeEm({ query: vi.fn(async () => []) });
+        roleRepo.find.mockResolvedValueOnce([{ code: 'operator' }, { code: 'operator' }]);
+        const event = {
+            eventType: 'administrator.created',
+            payload: upsertPayload,
+        } as unknown as SyncEventByType<'administrator.created'>;
+
+        await expect(new AdministratorSyncService(em).applyUpsert(ctx, event)).rejects.toThrow(
+            QueryTooLargeError,
+        );
+        expect(roleRepo.find).toHaveBeenCalledWith(expect.objectContaining({ take: 2 }));
+    });
+
+    it('does not read any role for a payload naming none', async () => {
+        const { em, roleRepo } = makeEm({ query: vi.fn(async () => []) });
+        const event = {
+            eventType: 'administrator.created',
+            payload: { ...upsertPayload, roleCodes: [] },
+        } as unknown as SyncEventByType<'administrator.created'>;
+
+        await new AdministratorSyncService(em).applyUpsert(ctx, event);
+
+        expect(roleRepo.find).not.toHaveBeenCalled();
     });
 
     it('soft-deletes the local replica by sourceAdministratorId on deactivation', async () => {

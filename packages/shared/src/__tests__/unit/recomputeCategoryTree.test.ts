@@ -18,7 +18,10 @@ const collection = (
     ...extra,
 });
 
-function build(collections: ReturnType<typeof collection>[]): {
+function build(
+    collections: ReturnType<typeof collection>[],
+    find: ReturnType<typeof vi.fn> = vi.fn().mockResolvedValue(collections),
+): {
     update: ReturnType<typeof vi.fn>;
     withTransaction: ReturnType<typeof vi.fn>;
     run: () => Promise<number>;
@@ -29,7 +32,7 @@ function build(collections: ReturnType<typeof collection>[]): {
         connection: {
             withTransaction,
             getRepository: () => ({
-                find: vi.fn().mockResolvedValue(collections),
+                find,
                 query: vi.fn().mockResolvedValue([{ previous: '0' }]),
             }),
         },
@@ -50,6 +53,18 @@ function build(collections: ReturnType<typeof collection>[]): {
 }
 
 describe('recomputeCategoryTree', () => {
+    it('reads the tree slice by slice, so a large tree is not cut off', async () => {
+        const all = [collection(1, null, '__root_collection__')];
+        for (let id = 2; id <= 2500; id++) all.push(collection(id, 1, `cat-${id}`));
+        const find = vi.fn(async (o: { where: { id?: { value: number } }; take: number }) =>
+            all.filter(c => c.id > (o.where.id?.value ?? 0)).slice(0, o.take),
+        );
+        const { run } = build(all, find);
+        await run();
+        expect(find).toHaveBeenCalledTimes(3);
+        expect(find.mock.calls[0][0].where).toEqual({});
+    });
+
     it('always passes the existing translations, or Vendure inserts a new Collection instead', async () => {
         const { update, run } = build([
             collection(1, null, '__root_collection__'),

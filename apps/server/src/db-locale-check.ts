@@ -16,9 +16,8 @@ export async function assertDatabaseLocale(): Promise<void> {
     const client = createDbClient();
     await client.connect();
     try {
-        // unbounded-ok: catalog query for the current database name, one row
         const result = await client.query<{ daticulocale: string | null }>(
-            'SELECT daticulocale FROM pg_database WHERE datname = current_database()',
+            'SELECT daticulocale FROM pg_database WHERE datname = current_database() LIMIT 1',
         );
         const actualLocale = result.rows[0]?.daticulocale;
         if (actualLocale !== expectedLocale) {

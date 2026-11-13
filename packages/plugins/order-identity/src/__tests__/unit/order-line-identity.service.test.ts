@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { QueryTooLargeError } from 'shared';
+
 import { OrderLineIdentityService } from '../../order-line-identity.service';
 
 const ctx = {} as RequestContext;
@@ -25,6 +27,21 @@ describe('OrderLineIdentityService.uuidsByLineId', () => {
                 ['2', 'uuid-2'],
             ]),
         );
+    });
+
+    it('bounds the read by the number of ids and fails past it', async () => {
+        const find = vi.fn().mockResolvedValue([
+            { orderLineId: 1, uuid: 'uuid-1' },
+            { orderLineId: 2, uuid: 'uuid-2' },
+        ]);
+        const connection = { getRepository: vi.fn(() => ({ find })) };
+        const service = new OrderLineIdentityService(
+            connection as unknown as TransactionalConnection,
+        );
+
+        await expect(service.uuidsByLineId(ctx, [1, 2])).resolves.toHaveProperty('size', 2);
+        expect(find).toHaveBeenCalledWith(expect.objectContaining({ take: 3 }));
+        await expect(service.uuidsByLineId(ctx, [1])).rejects.toThrow(QueryTooLargeError);
     });
 
     it('skips the query for an empty line list', async () => {

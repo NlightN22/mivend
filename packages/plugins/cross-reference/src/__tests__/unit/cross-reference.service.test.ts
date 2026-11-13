@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { CrossReferenceService } from '../../cross-reference.service';
 import { ProductCrossReference } from '../../entities/product-cross-reference.entity';
 
@@ -34,8 +35,14 @@ describe('CrossReferenceService', () => {
 
             const result = await service.findByProductId(mockCtx, 1);
 
-            expect(mockRepo.find).toHaveBeenCalledWith({ where: { productId: 1 } });
+            expect(mockRepo.find).toHaveBeenCalledWith({ where: { productId: 1 }, take: 1001 });
             expect(result).toEqual(refs);
+        });
+
+        it('fails loudly instead of truncating a product with too many refs', async () => {
+            mockRepo.find.mockResolvedValue(new Array(1001).fill({ productId: 1 }));
+
+            await expect(service.findByProductId(mockCtx, 1)).rejects.toThrow(QueryTooLargeError);
         });
 
         it('returns empty array when no refs exist', async () => {

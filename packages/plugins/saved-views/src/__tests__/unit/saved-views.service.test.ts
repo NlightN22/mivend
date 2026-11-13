@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { QueryTooLargeError } from 'shared';
+
 import { SavedViewsService } from '../../saved-views.service';
 
 function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
@@ -55,6 +57,14 @@ describe('SavedViewsService', () => {
                 ],
             }),
         );
+    });
+
+    it('fails loudly when the visible views pass the ceiling', async () => {
+        repo.find.mockResolvedValueOnce(new Array(1001).fill({}));
+        await expect(service.findForCurrentAdministrator(plain, 'orders')).rejects.toThrow(
+            QueryTooLargeError,
+        );
+        expect(repo.find).toHaveBeenCalledWith(expect.objectContaining({ take: 1001 }));
     });
 
     it('saves a personal view tagged with the current administrator, never as default', async () => {

@@ -8,7 +8,10 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { MoreThan } from 'typeorm';
+
 import { withAggregateLock } from './aggregate-lock';
+import { readAllByKeyset } from './bounded-read';
 import {
     CATEGORY_FACET_CODE,
     CategoryCollectionNode,
@@ -123,10 +126,15 @@ async function planTree(
     const facetValues = await deps.facetValueService.findByFacetId(ctx, facet.id);
     const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
 
-    // unbounded-ok: the whole category tree is the unit of recompute, run from a background job
-    const collections = await deps.connection
-        .getRepository(ctx, Collection)
-        .find({ relations: ['translations'] });
+    const collectionRepo = deps.connection.getRepository(ctx, Collection);
+    const collections = await readAllByKeyset<Collection>((afterId, limit) =>
+        collectionRepo.find({
+            where: afterId === null ? {} : { id: MoreThan(afterId) },
+            relations: ['translations'],
+            order: { id: 'ASC' },
+            take: limit,
+        }),
+    );
     // Vendure's update inserts a new row instead of updating without `translations` and a native id.
     const nativeIdByString = new Map(collections.map(c => [String(c.id), c.id]));
     const translationsById = new Map(

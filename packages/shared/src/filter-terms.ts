@@ -1,5 +1,6 @@
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { ctxQueryBounded } from './bounded-read';
 import { ctxQuery } from './ctx-query';
 import type { FilterTerm } from './selection-filter';
 
@@ -7,6 +8,9 @@ export interface FilterTermTable {
     table: string;
     ownerColumn: string;
 }
+
+// A filter with more terms than this is a defect; the read fails instead of truncating.
+const MAX_TERMS_PER_OWNER = 200;
 
 type Connection = Pick<TransactionalConnection, 'getRepository'>;
 
@@ -44,13 +48,13 @@ export async function loadFilterTerms(
 ): Promise<Map<number, FilterTerm[]>> {
     const byOwner = new Map<number, FilterTerm[]>();
     if (ownerIds.length === 0) return byOwner;
-    // unbounded-ok: filter terms of the owner ids passed in
-    const rows = await ctxQuery<Array<FilterTerm & { ownerId: number }>>(
+    const rows = await ctxQueryBounded<FilterTerm & { ownerId: number }>(
         connection,
         ctx,
         `SELECT "${spec.ownerColumn}" AS "ownerId", side, position, field, hierarchical, negated, refs
          FROM "${spec.table}" WHERE "${spec.ownerColumn}" = ANY($1::int[]) ORDER BY position`,
         [ownerIds],
+        ownerIds.length * MAX_TERMS_PER_OWNER,
     );
     for (const { ownerId, ...term } of rows) {
         const list = byOwner.get(ownerId) ?? [];
