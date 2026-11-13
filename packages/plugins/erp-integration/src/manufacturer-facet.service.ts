@@ -13,11 +13,14 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { MoreThan } from 'typeorm';
+
 import { Manufacturer } from './entities/manufacturer.entity';
 import { loggerCtx } from './types';
 
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
 const KNOWN_TTL_MS = 10 * 60_000;
+const BACKFILL_CHUNK = 1000;
 
 // Not assigned to variants: facet membership is answered by the external search backend,
 // not by Vendure's own index.
@@ -39,12 +42,21 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
         if (!this.processContext.isServer) return;
         try {
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
-            // unbounded-ok: TRACKED #350 facet sync reads every manufacturer
-            const manufacturers = await this.connection.getRepository(ctx, Manufacturer).find();
             const facet = await this.ensureFacet(ctx);
             const values = await this.facetValueService.findByFacetId(ctx, facet.id);
-            for (const m of manufacturers)
-                await this.syncValue(ctx, facet, values, m.externalId, m.name);
+            const repo = this.connection.getRepository(ctx, Manufacturer);
+            let afterId = 0;
+            for (;;) {
+                const chunk = await repo.find({
+                    where: { id: MoreThan(afterId) },
+                    order: { id: 'ASC' },
+                    take: BACKFILL_CHUNK,
+                });
+                for (const m of chunk)
+                    await this.syncValue(ctx, facet, values, m.externalId, m.name);
+                if (chunk.length < BACKFILL_CHUNK) break;
+                afterId = Number(chunk[chunk.length - 1]!.id);
+            }
         } catch (err) {
             Logger.error(`manufacturer facet backfill failed: ${String(err)}`, loggerCtx);
         }

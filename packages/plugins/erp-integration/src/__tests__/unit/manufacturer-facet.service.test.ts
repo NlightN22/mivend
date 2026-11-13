@@ -19,7 +19,9 @@ const ctx = {} as RequestContext;
 function setup(
     values: Array<{ id: number; code: string; name: string }>,
     isServer = true,
-    manufacturers = [{ externalId: 'm-1', name: 'A' }],
+    manufacturers: Array<{ id?: number; externalId: string; name: string }> = [
+        { externalId: 'm-1', name: 'A' },
+    ],
 ) {
     const facet = { id: 1 };
     const facetService = { findByCode: vi.fn().mockResolvedValue(facet), create: vi.fn() };
@@ -28,7 +30,10 @@ function setup(
         create: vi.fn().mockResolvedValue({ id: 99 }),
         update: vi.fn().mockResolvedValue(undefined),
     };
-    const connection = { getRepository: () => ({ find: async () => manufacturers }) };
+    const find = vi.fn(async (options: { where: { id: { value: number } }; take: number }) =>
+        manufacturers.filter(m => (m.id ?? 1) > options.where.id.value).slice(0, options.take),
+    );
+    const connection = { getRepository: () => ({ find }) };
     const service = new ManufacturerFacetService(
         facetService as never,
         facetValueService as never,
@@ -36,7 +41,7 @@ function setup(
         { create: async () => ctx } as never,
         { isServer } as never,
     );
-    return { service, facetValueService };
+    return { service, facetValueService, find };
 }
 
 describe('ManufacturerFacetService', () => {
@@ -92,5 +97,18 @@ describe('ManufacturerFacetService', () => {
         await service.onApplicationBootstrap();
         expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(1);
         expect(facetValueService.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('backfill reads manufacturers in keyset chunks of 1000', async () => {
+        const manufacturers = Array.from({ length: 2500 }, (_, i) => ({
+            id: i + 1,
+            externalId: `m-${i + 1}`,
+            name: `N${i + 1}`,
+        }));
+        const { service, facetValueService, find } = setup([], true, manufacturers);
+        await service.onApplicationBootstrap();
+        expect(find).toHaveBeenCalledTimes(3);
+        expect(find.mock.calls.map(([o]) => o.take)).toEqual([1000, 1000, 1000]);
+        expect(facetValueService.create).toHaveBeenCalledTimes(2500);
     });
 });
