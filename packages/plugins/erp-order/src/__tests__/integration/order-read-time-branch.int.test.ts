@@ -152,6 +152,24 @@ describe('order branch resolved at read time for department scope (#263, real Po
         expect(await visibleFor('branch-a')).toEqual(['A-NO-POINT', 'A-POINT-NONE']);
     });
 
+    it('treats a non-numeric, zero-padded or huge point id as no point, without failing', async () => {
+        await dataSource.getRepository(TestOrder).save(
+            ['abc', '0001', '99999999999999'].map((tradingPointId, i) => ({
+                code: `A-BAD-POINT-${i}`,
+                counterpartyId: cps.a,
+                tradingPointId,
+            })),
+        );
+
+        expect(await visibleFor('branch-a')).toEqual([
+            'A-BAD-POINT-0',
+            'A-BAD-POINT-1',
+            'A-BAD-POINT-2',
+            'A-NO-POINT',
+            'A-POINT-NONE',
+        ]);
+    });
+
     it('falls back to the global default branch when neither is set', async () => {
         expect(await visibleFor('branch-default')).toEqual(['NONE-DEFAULT']);
     });
