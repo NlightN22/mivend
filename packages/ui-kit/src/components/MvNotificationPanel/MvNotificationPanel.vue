@@ -304,6 +304,8 @@ function formatRelativeTime(value: string): string {
 
 .mv-notification-panel__row-header > .mv-notification-panel__row-message {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .mv-notification-panel__row-message {
