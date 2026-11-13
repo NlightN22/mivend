@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useLatestRequest, MvFilterChips, MvNotice, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import UsersDataTable from '../../components/settings/UsersDataTable.vue';
@@ -19,20 +20,20 @@ import {
     type PendingErpUserRow,
 } from '../../api/users';
 
-// Issue #119 Phase 2. Renamed from "Team" to "Users" per the concept notes: this page manages
-// manager-portal login accounts, not org structure (the org-structure directory lives at /team,
-// a separate route/page — see router/index.ts). "Users"/"Pending" is a compact dataset switcher,
-// not a second level of Settings tabs — see MvFilterChips reused here for exactly that, same
-// component the view-chip quick filters elsewhere use, just switching which query runs rather
-// than filtering one query's results.
+// Manages manager-portal login accounts; the org-structure directory is the separate /team page.
+// Users/Pending is a dataset switcher (which query runs), not a filter of one result set.
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 type ViewKey = 'users' | 'pending';
 const view = ref<ViewKey>('users');
 const counts = ref({ users: 0, pending: 0 });
 const viewChips = computed<FilterChip[]>(() => [
-    { key: 'users', label: `Users ${counts.value.users}` },
-    { key: 'pending', label: `Pending ${counts.value.pending}` },
+    { key: 'users', label: t('settingsAccess.users.chipUsers', { count: counts.value.users }) },
+    {
+        key: 'pending',
+        label: t('settingsAccess.users.chipPending', { count: counts.value.pending }),
+    },
 ]);
 
 const departments = ref<DepartmentOption[]>([]);
@@ -43,10 +44,6 @@ function departmentName(departmentId: string | null): string {
 
 const roles = ref<RoleSummary[]>([]);
 const savingRoleId = ref<string | null>(null);
-// Real incident this fixes: Create administrator/Activate-Deactivate/role-change all threw
-// silently on failure (e.g. a stale/incompatible admin-api schema) — the button's own loading
-// state cleared in `finally`, so the UI looked like nothing had happened at all instead of
-// surfacing an error.
 const actionError = ref('');
 const actionNotice = ref('');
 const resendingId = ref<string | null>(null);
@@ -143,23 +140,20 @@ async function loadCounts(): Promise<void> {
 watch([statusFilter, searchFilter, pageSize], () => {
     page.value = 1;
 });
-// useLatestRequest has no built-in error channel (see its own source) — every other table in
-// the manager portal shares this same gap (CustomerProformaInvoicesTab.vue etc. all call `void load()`
-// too), pre-existing and out of scope to fix broadly here; this page wraps its own calls so a
-// failed fetch is at least visible instead of leaving the table stuck on stale/empty data with
-// no explanation.
+// useLatestRequest has no error channel, so a failed fetch is surfaced here instead of leaving stale rows.
 async function safeLoadUsers(): Promise<void> {
     try {
         await loadUsers();
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not load users';
+        actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.loadFailed');
     }
 }
 async function safeLoadPending(): Promise<void> {
     try {
         await loadPending();
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not load pending users';
+        actionError.value =
+            e instanceof Error ? e.message : t('settingsAccess.users.loadPendingFailed');
     }
 }
 
@@ -191,7 +185,7 @@ async function onToggleActive(user: PortalUser, isActive: boolean): Promise<void
         await setAdministratorActive(user.id, isActive);
         await Promise.all([loadUsers(), loadCounts()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not update the account status';
+        actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.statusFailed');
     }
 }
 
@@ -201,9 +195,9 @@ async function onResendPasswordReset(user: PortalUser): Promise<void> {
     resendingId.value = user.id;
     try {
         await resendAdministratorPasswordReset(user.id);
-        actionNotice.value = `Password-reset link resent to ${user.emailAddress}.`;
+        actionNotice.value = t('settingsAccess.users.resent', { email: user.emailAddress });
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not resend the reset link';
+        actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.resendFailed');
     } finally {
         resendingId.value = null;
     }
@@ -216,7 +210,7 @@ async function onChangeRole(user: PortalUser, roleId: string): Promise<void> {
         await updateAdministratorRole(user.id, roleId);
         await loadUsers();
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not update the role';
+        actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.roleFailed');
     } finally {
         savingRoleId.value = null;
     }
@@ -229,7 +223,7 @@ async function onCreateAdministrator(erpId: string): Promise<void> {
         await createAdministratorFromErpUser(erpId);
         await Promise.all([loadPending(), loadCounts()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : 'Could not create the administrator';
+        actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.createFailed');
     } finally {
         creatingErpId.value = null;
     }
@@ -257,13 +251,13 @@ onMounted(async () => {
         v-if="!authStore.hasPermission('ManageAdministratorLifecycle')"
         class="users-page__not-authorized"
     >
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage users.</p>
+        <h1>{{ t('settingsAccess.notAuthorized') }}</h1>
+        <p>{{ t('settingsAccess.users.denied') }}</p>
     </div>
 
     <div v-else class="users-page">
-        <div class="users-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="users-page__title">Users</h1>
+        <div class="users-page__breadcrumb">{{ t('settingsAccess.breadcrumb') }}</div>
+        <h1 class="users-page__title">{{ t('settingsAccess.users.title') }}</h1>
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
         <MvNotice v-else-if="actionNotice" variant="success">{{ actionNotice }}</MvNotice>

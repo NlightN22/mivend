@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvModal,
@@ -14,10 +15,8 @@ import type { PortalUser } from '../../api/users';
 import type { RoleSummary } from '../../api/settings';
 import { useAuthStore } from '../../stores/auth';
 
-// Settings > Users (issue #119 Phase 2) — created manager-portal accounts. Server-side paginated
-// + filtered, same shape as CustomerProformaInvoicesDataTable.vue (manager-table-standard skill). Email
-// is the identifying/searched column (point 1): unique per Administrator, unlike Name, which can
-// collide and isn't guaranteed unique the way an order/proforma-invoice number is.
+// Email is the identifying/searched column: unique per administrator, unlike the name.
+const { t } = useI18n();
 const props = defineProps<{
     users: PortalUser[];
     loading: boolean;
@@ -27,8 +26,6 @@ const props = defineProps<{
     statusFilter: string;
     searchFilter: string;
     roles: RoleSummary[];
-    // Row-scoped async state, keyed by administrator id — mirrors CustomerTeamTab.vue's
-    // rowState shape for the same "saving one row at a time" concern.
     savingRoleId: string | null;
     resendingId: string | null;
     departmentName: (departmentId: string | null) => string;
@@ -46,40 +43,63 @@ const emit = defineEmits<{
 
 const canManageLimits = useAuthStore().hasPermission('ManageDiscountLimits');
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'name',
-        header: 'Name',
+        header: t('settingsAccess.users.columns.name'),
         width: 200,
         filterConfig: { type: 'none' },
         mobile: { primary: true },
     },
     {
         field: 'emailAddress',
-        header: 'Email',
+        header: t('settingsAccess.users.columns.email'),
         width: 220,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Email contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.users.filters.email') },
     },
-    { field: 'department', header: 'Department', width: 160, filterConfig: { type: 'none' } },
-    { field: 'role', header: 'Role', width: 190, filterConfig: { type: 'none' } },
+    {
+        field: 'department',
+        header: t('settingsAccess.users.columns.department'),
+        width: 160,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'role',
+        header: t('settingsAccess.users.columns.role'),
+        width: 190,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'status',
-        header: 'Status',
+        header: t('settingsAccess.users.columns.status'),
         width: 110,
         filterConfig: {
             type: 'status',
-            placeholder: 'All',
+            placeholder: t('settingsAccess.users.filters.allStatuses'),
             options: [
-                { value: 'active', label: 'Active', variant: 'success' },
-                { value: 'inactive', label: 'Inactive', variant: 'neutral' },
+                {
+                    value: 'active',
+                    label: t('settingsAccess.users.status.active'),
+                    variant: 'success',
+                },
+                {
+                    value: 'inactive',
+                    label: t('settingsAccess.users.status.inactive'),
+                    variant: 'neutral',
+                },
             ],
         },
         mobile: { badge: true },
     },
-    { field: 'active', header: 'Active', width: 90, filterConfig: { type: 'none' } },
+    {
+        field: 'active',
+        header: t('settingsAccess.users.columns.active'),
+        width: 90,
+        filterConfig: { type: 'none' },
+    },
     { field: 'actions', header: '', width: 260, filterConfig: { type: 'none' } },
-];
+]);
 
 interface UserFilterState {
     [key: string]: unknown;
@@ -91,18 +111,17 @@ const BLANK_FILTERS: UserFilterState = { status: '', emailAddress: '' };
 const { state: tableState } = useDataTableState<UserFilterState>(
     'settings-users-datatable',
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { status: props.statusFilter, emailAddress: props.searchFilter },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
+        columns: ALL_COLUMNS.value,
         allowedFilterKeys: ['status', 'emailAddress'],
-        // status/search/pageSize are owned by UsersPage.vue (the real fetch) — see
-        // CustomerProformaInvoicesDataTable.vue's identical `externallyOwned` for why.
+        // status/search/pageSize are owned by UsersPage.vue, which runs the real fetch.
         externallyOwned: { pageSize: true, filterKeys: ['status', 'emailAddress'] },
     },
 );
@@ -153,7 +172,9 @@ const rows = computed<UserRow[]>(() =>
         name: `${u.firstName} ${u.lastName}`.trim(),
         emailAddress: u.emailAddress,
         department: props.departmentName(u.departmentId),
-        role: props.roles.find(r => r.code === u.roleCodes[0])?.code ?? 'No role',
+        role:
+            props.roles.find(r => r.code === u.roleCodes[0])?.code ??
+            t('settingsAccess.users.noRole'),
         roleId: props.roles.find(r => r.code === u.roleCodes[0])?.id ?? '',
         status: u.isActive ? 'active' : 'inactive',
         isActive: u.isActive,
@@ -161,8 +182,7 @@ const rows = computed<UserRow[]>(() =>
     })),
 );
 
-// Confirmation is required only for deactivation (issue #119 Phase 2 concept notes) — flipping a
-// switch back on needs no modal, so this only ever gets opened by the OFF direction.
+// Only deactivation asks for confirmation, so the modal opens from the OFF direction only.
 const confirmTarget = ref<UserRow | null>(null);
 function onToggle(row: UserRow, next: boolean): void {
     if (!next) {
@@ -189,8 +209,8 @@ function confirmDeactivate(): void {
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'emailAddress', placeholder: 'Search by email…' }"
-        empty-message="No users match your filters"
+        :search="{ filterKey: 'emailAddress', placeholder: t('settingsAccess.users.search') }"
+        :empty-message="t('settingsAccess.users.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -208,7 +228,11 @@ function confirmDeactivate(): void {
         </template>
         <template #cell-status="{ data }">
             <MvStatusBadge :variant="(data as UserRow).isActive ? 'success' : 'neutral'">
-                {{ (data as UserRow).isActive ? 'Active' : 'Inactive' }}
+                {{
+                    (data as UserRow).isActive
+                        ? t('settingsAccess.users.status.active')
+                        : t('settingsAccess.users.status.inactive')
+                }}
             </MvStatusBadge>
         </template>
         <template #cell-active="{ data }">
@@ -224,7 +248,7 @@ function confirmDeactivate(): void {
                 :loading="resendingId === (data as UserRow).id"
                 @click="emit('resend-password-reset', (data as UserRow).user)"
             >
-                Resend reset link
+                {{ t('settingsAccess.users.resendLink') }}
             </MvButton>
             <MvButton
                 v-if="canManageLimits"
@@ -232,19 +256,26 @@ function confirmDeactivate(): void {
                 size="sm"
                 @click="emit('edit-limits', (data as UserRow).user)"
             >
-                Discount limits
+                {{ t('settingsAccess.users.discountLimits') }}
             </MvButton>
         </template>
     </MvAdvancedDataTable>
 
-    <MvModal v-if="confirmTarget" title="Deactivate user?" @close="confirmTarget = null">
+    <MvModal
+        v-if="confirmTarget"
+        :title="t('settingsAccess.users.deactivateTitle')"
+        @close="confirmTarget = null"
+    >
         <p class="users-table__confirm-text">
-            {{ confirmTarget.name }} will no longer be able to sign in to the manager portal. You
-            can activate the account again later.
+            {{ t('settingsAccess.users.deactivateText', { name: confirmTarget.name }) }}
         </p>
         <div class="users-table__confirm-actions">
-            <MvButton variant="secondary" @click="confirmTarget = null">Cancel</MvButton>
-            <MvButton variant="danger" @click="confirmDeactivate">Deactivate</MvButton>
+            <MvButton variant="secondary" @click="confirmTarget = null">{{
+                t('common.cancel')
+            }}</MvButton>
+            <MvButton variant="danger" @click="confirmDeactivate">{{
+                t('settingsAccess.users.deactivate')
+            }}</MvButton>
         </div>
     </MvModal>
 </template>

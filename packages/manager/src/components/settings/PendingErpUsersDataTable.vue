@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvButton,
     MvStatusBadge,
@@ -9,10 +10,8 @@ import {
 } from '@mivend/ui-kit';
 import type { PendingErpUserRow } from '../../api/users';
 
-// Settings > Users > Pending (issue #119 Phase 2) — ERP candidates with no manager-portal
-// account yet. Server-side paginated (manager-table-standard skill). No status filter/column: the
-// whole dataset is "Pending" by definition (see access-control.plugin.ts's ErpUser
-// entity), so a status filter would have exactly one value.
+// ERP candidates with no manager-portal account yet; no status filter, the whole dataset is pending.
+const { t } = useI18n();
 const props = defineProps<{
     users: PendingErpUserRow[];
     loading: boolean;
@@ -33,32 +32,51 @@ const emit = defineEmits<{
     create: [erpId: string];
 }>();
 
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
+const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
     {
         field: 'fullName',
-        header: 'Name',
+        header: t('settingsAccess.users.columns.name'),
         width: 200,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Name contains…' },
+        filterConfig: { type: 'text', placeholder: t('settingsAccess.pending.filters.name') },
         mobile: { primary: true },
     },
-    { field: 'email', header: 'Email', width: 220, filterConfig: { type: 'none' } },
-    { field: 'department', header: 'Department', width: 160, filterConfig: { type: 'none' } },
+    {
+        field: 'email',
+        header: t('settingsAccess.users.columns.email'),
+        width: 220,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'department',
+        header: t('settingsAccess.users.columns.department'),
+        width: 160,
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'position',
-        header: 'Position',
+        header: t('settingsAccess.pending.columns.position'),
         width: 180,
-        filterConfig: { type: 'select', placeholder: 'All positions', options: [] },
+        filterConfig: {
+            type: 'select',
+            placeholder: t('settingsAccess.pending.filters.allPositions'),
+            options: [],
+        },
     },
     {
         field: 'status',
-        header: 'Status',
+        header: t('settingsAccess.users.columns.status'),
         width: 110,
         filterConfig: { type: 'none' },
         mobile: { badge: true },
     },
-    { field: 'action', header: 'Action', width: 170, filterConfig: { type: 'none' } },
-];
+    {
+        field: 'action',
+        header: t('settingsAccess.pending.columns.action'),
+        width: 170,
+        filterConfig: { type: 'none' },
+    },
+]);
 
 interface PendingFilterState {
     [key: string]: unknown;
@@ -68,14 +86,17 @@ interface PendingFilterState {
 const BLANK_FILTERS: PendingFilterState = { fullName: '', position: '' };
 
 const columns = computed<AdvancedDataTableColumn[]>(() =>
-    ALL_COLUMNS.map(col =>
+    ALL_COLUMNS.value.map(col =>
         col.field === 'position'
             ? {
                   ...col,
                   filterConfig: {
                       type: 'select' as const,
-                      placeholder: 'All positions',
-                      options: [{ value: '', label: 'All positions' }, ...props.positionOptions],
+                      placeholder: t('settingsAccess.pending.filters.allPositions'),
+                      options: [
+                          { value: '', label: t('settingsAccess.pending.filters.allPositions') },
+                          ...props.positionOptions,
+                      ],
                   },
               }
             : col,
@@ -85,15 +106,15 @@ const columns = computed<AdvancedDataTableColumn[]>(() =>
 const { state: tableState } = useDataTableState<PendingFilterState>(
     'settings-pending-erp-users-datatable',
     {
-        columnOrder: ALL_COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
+        columnOrder: ALL_COLUMNS.value.map(c => c.field),
+        columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
         filters: { fullName: props.searchFilter, position: '' },
         pageSize: props.pageSize,
     },
     {
-        columns: ALL_COLUMNS,
+        columns: ALL_COLUMNS.value,
         allowedFilterKeys: ['fullName', 'position'],
         externallyOwned: { pageSize: true, filterKeys: ['fullName'] },
     },
@@ -132,7 +153,6 @@ interface Row {
     email: string;
     department: string;
     position: string;
-    status: string;
 }
 const rows = computed<Row[]>(() =>
     props.users.map(u => ({
@@ -142,7 +162,6 @@ const rows = computed<Row[]>(() =>
         email: u.email ?? '—',
         department: props.departmentName(u.departmentId),
         position: u.position ?? '—',
-        status: 'Pending',
     })),
 );
 </script>
@@ -159,8 +178,8 @@ const rows = computed<Row[]>(() =>
         :row-height-px="49"
         :header-height-px="65"
         :default-filters="BLANK_FILTERS"
-        :search="{ filterKey: 'fullName', placeholder: 'Search pending users…' }"
-        empty-message="No pending users"
+        :search="{ filterKey: 'fullName', placeholder: t('settingsAccess.pending.search') }"
+        :empty-message="t('settingsAccess.pending.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
     >
@@ -169,7 +188,9 @@ const rows = computed<Row[]>(() =>
         </template>
 
         <template #cell-status>
-            <MvStatusBadge variant="warning">Pending</MvStatusBadge>
+            <MvStatusBadge variant="warning">{{
+                t('settingsAccess.pending.status')
+            }}</MvStatusBadge>
         </template>
         <template #cell-action="{ data }">
             <MvButton
@@ -178,7 +199,7 @@ const rows = computed<Row[]>(() =>
                 :disabled="creatingErpId !== null && creatingErpId !== (data as Row).erpId"
                 @click="emit('create', (data as Row).erpId)"
             >
-                Create administrator
+                {{ t('settingsAccess.pending.create') }}
             </MvButton>
         </template>
     </MvAdvancedDataTable>
