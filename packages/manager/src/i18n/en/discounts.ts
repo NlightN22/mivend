@@ -46,6 +46,13 @@ export default {
         allProducts: 'All products',
     },
     erp: {
+        status: {
+            running: 'Running',
+            expiringSoon: 'Expiring soon',
+            upcoming: 'Upcoming',
+            expired: 'Expired',
+            inactive: 'Inactive',
+        },
         views: {
             all: 'All',
             running: 'Running',

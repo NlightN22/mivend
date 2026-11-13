@@ -48,6 +48,13 @@ const discounts: typeof en = {
         allProducts: 'Все товары',
     },
     erp: {
+        status: {
+            running: 'Действует',
+            expiringSoon: 'Скоро истекает',
+            upcoming: 'Предстоит',
+            expired: 'Истекла',
+            inactive: 'Неактивна',
+        },
         views: {
             all: 'Все',
             running: 'Действуют',

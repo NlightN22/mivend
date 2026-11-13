@@ -1,6 +1,6 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { camelKey } from '../../api/discounts';
 import {
-    ERP_DISCOUNTS_VIEWS,
     ERP_DISCOUNT_STATUS_VARIANT,
     type ErpDiscountItem,
     type ErpDiscountsView,
@@ -92,7 +92,7 @@ export function toErpDiscountRows(items: ErpDiscountItem[]): ErpDiscountRow[] {
         products: productsLabel(item),
         validTo: item.validTo ?? null,
         status: item.status,
-        statusLabel: ERP_DISCOUNTS_VIEWS.find(v => v.key === item.status)?.label ?? item.status,
+        statusLabel: tr(`discounts.erp.status.${camelKey(item.status)}`),
         statusVariant:
             ERP_DISCOUNT_STATUS_VARIANT[item.status as Exclude<ErpDiscountsView, 'all'>] ??
             'neutral',
