@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvInput, MvModal, MvNotice, MvSelect } from '@mivend/ui-kit';
 import { useDiscountLimits } from '../../composables/useDiscountLimits';
 
 const props = defineProps<{ administratorId: string; name: string }>();
 defineEmits<{ close: [] }>();
 
-const KINDS = [
-    { value: 'all', label: 'All products' },
-    { value: 'manufacturer', label: 'Manufacturer' },
-    { value: 'category', label: 'Category' },
-];
-const kindLabel = (kind: string): string => KINDS.find(k => k.value === kind)?.label ?? kind;
+const { t, te } = useI18n();
+const KINDS = computed(() =>
+    ['all', 'manufacturer', 'category'].map(value => ({
+        value,
+        label: t(`settingsSystem.discountLimits.kinds.${value}`),
+    })),
+);
+const kindLabel = (kind: string): string =>
+    te(`settingsSystem.discountLimits.kinds.${kind}`)
+        ? t(`settingsSystem.discountLimits.kinds.${kind}`)
+        : kind;
 
 const limits = useDiscountLimits(props.administratorId);
 const kind = ref('all');
@@ -61,11 +67,12 @@ onMounted(limits.load);
 </script>
 
 <template>
-    <MvModal :title="`Discount limits: ${name}`" @close="$emit('close')">
+    <MvModal
+        :title="t('settingsSystem.discountLimits.title').replace('{name}', () => name)"
+        @close="$emit('close')"
+    >
         <p class="limits__hint">
-            The deepest matching percent of the employee applies, measured from the customer's base
-            price. A product with no matching row has a 0% limit: any deeper manual price needs
-            approval.
+            {{ t('settingsSystem.discountLimits.hint') }}
         </p>
         <MvNotice v-if="limits.error.value" variant="error">{{ limits.error.value }}</MvNotice>
         <table v-if="limits.rows.value.length" class="limits__table">
@@ -86,7 +93,7 @@ onMounted(limits.load);
                                 percent = String(row.maxDiscountPercent);
                             "
                         >
-                            Edit
+                            {{ t('settingsSystem.discountLimits.edit') }}
                         </MvButton>
                         <MvButton
                             size="sm"
@@ -94,27 +101,38 @@ onMounted(limits.load);
                             :disabled="limits.busy.value"
                             @click="limits.remove(row)"
                         >
-                            Remove
+                            {{ t('settingsSystem.discountLimits.remove') }}
                         </MvButton>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <p v-else class="limits__hint">No limits set.</p>
+        <p v-else class="limits__hint">{{ t('settingsSystem.discountLimits.empty') }}</p>
         <div class="limits__form">
             <MvSelect :model-value="kind" :options="KINDS" @update:model-value="onKind" />
             <MvInput
                 v-model="search"
                 size="sm"
                 list="discount-limit-scope-options"
-                :placeholder="kind === 'all' ? 'Every product' : 'Type to search'"
+                :placeholder="
+                    kind === 'all'
+                        ? t('settingsSystem.discountLimits.everyProduct')
+                        : t('settingsSystem.discountLimits.typeToSearch')
+                "
                 :disabled="kind === 'all'"
             />
             <datalist id="discount-limit-scope-options">
                 <option v-for="o in limits.suggestions.value" :key="o.ref" :value="o.name" />
             </datalist>
-            <MvInput v-model="percent" size="sm" type="number" placeholder="Max %" />
-            <MvButton :disabled="!valid || limits.busy.value" @click="add">Save</MvButton>
+            <MvInput
+                v-model="percent"
+                size="sm"
+                type="number"
+                :placeholder="t('settingsSystem.discountLimits.maxPercent')"
+            />
+            <MvButton :disabled="!valid || limits.busy.value" @click="add">{{
+                t('settingsSystem.discountLimits.save')
+            }}</MvButton>
         </div>
     </MvModal>
 </template>

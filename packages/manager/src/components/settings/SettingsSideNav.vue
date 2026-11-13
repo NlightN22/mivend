@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvSelect } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { buildSettingsNav } from './settingsNav';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -20,7 +22,7 @@ const currentSection = computed(
 </script>
 
 <template>
-    <nav class="settings-side-nav" aria-label="Settings sections">
+    <nav class="settings-side-nav" :aria-label="t('settingsSystem.nav.ariaLabel')">
         <div class="settings-side-nav__mobile">
             <MvSelect
                 :model-value="currentSection"

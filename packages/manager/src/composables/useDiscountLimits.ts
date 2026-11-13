@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { tr } from '../utils/lazyLabels';
 import {
     fetchDiscountLimits,
     fetchScopeOptions,
@@ -41,7 +42,8 @@ export function useDiscountLimits(administratorId: string) {
             rows.value = await fetchDiscountLimits(administratorId);
             await loadNames();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'The change was not applied';
+            error.value =
+                e instanceof Error ? e.message : tr('settingsSystem.discountLimits.applyFailed');
         } finally {
             busy.value = false;
         }

@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { tr } from '../utils/lazyLabels';
 import {
     fetchCheckDefinitions,
     fetchCheckPolicies,
@@ -24,7 +25,7 @@ export function useCheckPolicies() {
             ]);
             rows.value = buildPolicyRows(defs, policies, branchId.value);
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load controls and policies';
+            error.value = e instanceof Error ? e.message : tr('settingsSystem.policies.loadFailed');
         } finally {
             loading.value = false;
         }
@@ -55,7 +56,7 @@ export function useCheckPolicies() {
                 enabled: updated.enabled,
             };
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not save the policy';
+            error.value = e instanceof Error ? e.message : tr('settingsSystem.policies.saveFailed');
         } finally {
             savingKey.value = null;
         }
@@ -69,7 +70,8 @@ export function useCheckPolicies() {
             await resetCheckPolicyOverride(row.checkCode, row.stage, row.branchId);
             await load();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not reset the override';
+            error.value =
+                e instanceof Error ? e.message : tr('settingsSystem.policies.resetFailed');
         } finally {
             savingKey.value = null;
         }

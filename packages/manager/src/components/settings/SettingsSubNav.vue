@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 
 // Shared tab bar between the Settings sub-pages (Roles & Access, Users, Branches) — styled like
@@ -19,6 +20,7 @@ defineProps<{
         | 'system-health'
         | 'check-policies';
 }>();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const canManageVisibility =
     authStore.hasPermission('ManageVisibilityGrants') ||
@@ -27,58 +29,60 @@ const canManageVisibility =
 
 <template>
     <div class="settings-sub-nav">
-        <RouterLink to="/settings/roles" :class="{ active: active === 'roles' }"
-            >Roles & access</RouterLink
-        >
-        <RouterLink to="/settings/users" :class="{ active: active === 'users' }">Users</RouterLink>
-        <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }"
-            >Branches</RouterLink
-        >
+        <RouterLink to="/settings/roles" :class="{ active: active === 'roles' }">{{
+            t('settingsSystem.nav.roles')
+        }}</RouterLink>
+        <RouterLink to="/settings/users" :class="{ active: active === 'users' }">{{
+            t('settingsSystem.nav.users')
+        }}</RouterLink>
+        <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }">{{
+            t('settingsSystem.nav.branches')
+        }}</RouterLink>
         <RouterLink
             v-if="authStore.hasPermission('ManageAccessControl')"
             to="/settings/department-branch"
             :class="{ active: active === 'department-branch' }"
-            >Departments to branch</RouterLink
+            >{{ t('settingsSystem.nav.departmentBranch') }}</RouterLink
         >
         <RouterLink
             v-if="canManageVisibility"
             to="/settings/visibility-grants"
             :class="{ active: active === 'visibility-grants' }"
-            >Visibility grants</RouterLink
+            >{{ t('settingsSystem.nav.visibilityGrants') }}</RouterLink
         >
         <RouterLink
             v-if="canManageVisibility"
             to="/settings/unsorted"
             :class="{ active: active === 'unsorted' }"
-            >Unsorted</RouterLink
+            >{{ t('settingsSystem.nav.unsorted') }}</RouterLink
         >
         <RouterLink
             v-if="authStore.hasPermission('ReadCounterparty')"
             to="/settings/price-type-gaps"
             :class="{ active: active === 'price-type-gaps' }"
-            >Price type gaps</RouterLink
+            >{{ t('settingsSystem.nav.priceTypeGaps') }}</RouterLink
         >
         <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
-            Organizations
+            {{ t('settingsSystem.nav.organizations') }}
         </RouterLink>
         <RouterLink
             to="/settings/category-visibility"
             :class="{ active: active === 'category-visibility' }"
         >
-            Category visibility
+            {{ t('settingsSystem.nav.categoryVisibility') }}
         </RouterLink>
         <RouterLink
             v-if="authStore.hasPermission('ManageCheckPolicies')"
             to="/settings/check-policies"
             :class="{ active: active === 'check-policies' }"
-            >Controls and policies</RouterLink
+            >{{ t('settingsSystem.nav.checkPolicies') }}</RouterLink
         >
-        <RouterLink to="/settings/security" :class="{ active: active === 'security' }"
-            >Security</RouterLink
-        >
-        <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }"
-            >System health</RouterLink
-        >
+        <RouterLink to="/settings/security" :class="{ active: active === 'security' }">{{
+            t('settingsSystem.nav.security')
+        }}</RouterLink>
+        <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }">{{
+            t('settingsSystem.nav.systemHealth')
+        }}</RouterLink>
     </div>
 </template>
 

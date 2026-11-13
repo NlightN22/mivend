@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDateTime } from '../../i18n/format';
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvFormField, MvNotice, MvPanel, MvPasswordInput } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
@@ -13,6 +14,7 @@ import { changeOwnPassword } from '../../api/account';
 import SecurityNewDeviceEmail from './SecurityNewDeviceEmail.vue';
 import SecurityTwoFactor from './SecurityTwoFactor.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const sessions = ref<SessionSummary[]>([]);
@@ -31,11 +33,11 @@ async function handleChangePassword(): Promise<void> {
     passwordError.value = '';
     passwordSuccess.value = false;
     if (newPassword.value.length < 8) {
-        passwordError.value = 'Пароль должен быть не короче 8 символов.';
+        passwordError.value = t('settingsSystem.security.passwordTooShort');
         return;
     }
     if (newPassword.value !== confirmPassword.value) {
-        passwordError.value = 'Пароли не совпадают.';
+        passwordError.value = t('settingsSystem.security.passwordMismatch');
         return;
     }
     passwordSubmitting.value = true;
@@ -48,8 +50,8 @@ async function handleChangePassword(): Promise<void> {
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         passwordError.value = message.includes('PASSWORD_BREACHED')
-            ? 'Этот пароль встречается в известных утечках данных. Выберите другой.'
-            : 'Не удалось изменить пароль';
+            ? t('settingsSystem.security.passwordBreached')
+            : t('settingsSystem.security.passwordFailed');
     } finally {
         passwordSubmitting.value = false;
     }
@@ -61,7 +63,7 @@ async function load(): Promise<void> {
     try {
         sessions.value = await fetchMySessions();
     } catch {
-        error.value = 'Не удалось загрузить сеансы';
+        error.value = t('settingsSystem.security.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -88,8 +90,8 @@ async function handleSignOutEverywhere(): Promise<void> {
 
 <template>
     <div class="security-page">
-        <div class="security-page__breadcrumb">Рабочее пространство / Настройки</div>
-        <h1 class="security-page__title">Безопасность</h1>
+        <div class="security-page__breadcrumb">{{ t('settingsSystem.security.breadcrumb') }}</div>
+        <h1 class="security-page__title">{{ t('settingsSystem.security.title') }}</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
@@ -97,17 +99,28 @@ async function handleSignOutEverywhere(): Promise<void> {
 
         <SecurityNewDeviceEmail />
 
-        <MvPanel v-if="!loading" title="Активные сеансы">
+        <MvPanel v-if="!loading" :title="t('settingsSystem.security.sessions')">
             <ul v-if="sessions.length" class="security-page__items">
                 <li v-for="s in sessions" :key="s.id" class="security-page__row">
                     <div class="security-page__identity">
                         <strong>{{ s.deviceLabel }}</strong>
                         <span class="security-page__meta">
-                            {{ s.current ? 'Текущий сеанс' : 'Вход выполнен' }} · с
-                            {{ formatDateTime(s.createdAt) }}
+                            {{
+                                s.current
+                                    ? t('settingsSystem.security.currentSession')
+                                    : t('settingsSystem.security.signedIn')
+                            }}
+                            ·
+                            {{
+                                t('settingsSystem.security.since').replace('{date}', () =>
+                                    formatDateTime(s.createdAt),
+                                )
+                            }}
                         </span>
                     </div>
-                    <span v-if="s.current" class="security-page__current">Текущий</span>
+                    <span v-if="s.current" class="security-page__current">{{
+                        t('settingsSystem.security.current')
+                    }}</span>
                     <MvButton
                         v-else
                         variant="secondary"
@@ -115,52 +128,57 @@ async function handleSignOutEverywhere(): Promise<void> {
                         :disabled="endingId === s.id"
                         @click="handleEndSession(s.id)"
                     >
-                        Завершить сеанс
+                        {{ t('settingsSystem.security.endSession') }}
                     </MvButton>
                 </li>
             </ul>
-            <p v-else class="security-page__empty">Нет активных сеансов.</p>
+            <p v-else class="security-page__empty">{{ t('settingsSystem.security.noSessions') }}</p>
         </MvPanel>
 
-        <MvPanel title="Смена пароля">
+        <MvPanel :title="t('settingsSystem.security.changePassword')">
             <MvNotice v-if="authStore.passwordChangeRequired" variant="warning">
-                Ваш текущий пароль встречается в известных утечках данных. Смените его сейчас.
+                {{ t('settingsSystem.security.breachedCurrent') }}
             </MvNotice>
             <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
-                Вы используете стандартную учётную запись <strong>superadmin</strong> с паролем по
-                умолчанию — задайте новый пароль ниже.
+                <i18n-t keypath="settingsSystem.security.defaultAccount" tag="span">
+                    <template #account><strong>superadmin</strong></template>
+                </i18n-t>
             </MvNotice>
             <form class="security-page__password-form" @submit.prevent="handleChangePassword">
-                <MvFormField label="Новый пароль" required>
+                <MvFormField :label="t('settingsSystem.security.newPassword')" required>
                     <MvPasswordInput
                         v-model="newPassword"
-                        placeholder="Не менее 8 символов"
-                        show-label="Показать"
-                        hide-label="Скрыть"
+                        :placeholder="t('settingsSystem.security.passwordPlaceholder')"
+                        :show-label="t('settingsSystem.security.show')"
+                        :hide-label="t('settingsSystem.security.hide')"
                     />
                 </MvFormField>
-                <MvFormField label="Повторите новый пароль" required>
+                <MvFormField :label="t('settingsSystem.security.confirmPassword')" required>
                     <MvPasswordInput
                         v-model="confirmPassword"
-                        placeholder="Повторите новый пароль"
-                        show-label="Показать"
-                        hide-label="Скрыть"
+                        :placeholder="t('settingsSystem.security.confirmPassword')"
+                        :show-label="t('settingsSystem.security.show')"
+                        :hide-label="t('settingsSystem.security.hide')"
                     />
                 </MvFormField>
                 <MvNotice v-if="passwordError" variant="error">{{ passwordError }}</MvNotice>
-                <MvNotice v-if="passwordSuccess" variant="success">Пароль изменён.</MvNotice>
+                <MvNotice v-if="passwordSuccess" variant="success">{{
+                    t('settingsSystem.security.passwordChanged')
+                }}</MvNotice>
                 <div class="security-page__password-actions">
-                    <MvButton native-type="submit" :loading="passwordSubmitting"
-                        >Сменить пароль</MvButton
-                    >
+                    <MvButton native-type="submit" :loading="passwordSubmitting">{{
+                        t('settingsSystem.security.changePassword')
+                    }}</MvButton>
                 </div>
             </form>
         </MvPanel>
 
-        <MvPanel v-if="!loading" title="Выход">
+        <MvPanel v-if="!loading" :title="t('settingsSystem.security.signOut')">
             <div class="security-page__danger">
-                <p>Выйти со всех устройств, включая это.</p>
-                <MvButton variant="danger" @click="handleSignOutEverywhere">Выйти везде</MvButton>
+                <p>{{ t('settingsSystem.security.signOutHint') }}</p>
+                <MvButton variant="danger" @click="handleSignOutEverywhere">{{
+                    t('settingsSystem.security.signOutEverywhere')
+                }}</MvButton>
             </div>
         </MvPanel>
     </div>

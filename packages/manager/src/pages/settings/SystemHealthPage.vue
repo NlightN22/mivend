@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvNotice, MvPanel } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { IconCircleCheck, IconAlertTriangle } from '@tabler/icons-vue';
@@ -13,6 +14,7 @@ import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliation
 // health panels before this moved here (issue #98).
 const HEALTH_PANEL_TAKE = 10;
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const checklist = ref<SystemHealthCheckItem[]>([]);
 const loading = ref(true);
@@ -58,22 +60,24 @@ onMounted(() => {
         "
         class="system-health-page__not-authorized"
     >
-        <h1>Not authorized</h1>
-        <p>You don't have permission to view system health.</p>
+        <h1>{{ t('settingsSystem.notAuthorized') }}</h1>
+        <p>{{ t('settingsSystem.health.denied') }}</p>
     </div>
 
     <div v-else class="system-health-page">
-        <div class="system-health-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="system-health-page__title">System health</h1>
+        <div class="system-health-page__breadcrumb">{{ t('settingsSystem.breadcrumb') }}</div>
+        <h1 class="system-health-page__title">{{ t('settingsSystem.health.title') }}</h1>
 
         <MvPanel
             v-if="authStore.hasPermission('ManageAccessControl') && !loading"
-            title="Store setup checklist"
+            :title="t('settingsSystem.health.checklist')"
         >
             <MvNotice v-if="checklistFailed" variant="error">
                 <div class="system-health-page__failure">
-                    <span>The store setup checklist could not be loaded.</span>
-                    <MvButton variant="secondary" @click="load">Retry</MvButton>
+                    <span>{{ t('settingsSystem.health.checklistFailed') }}</span>
+                    <MvButton variant="secondary" @click="load">{{
+                        t('settingsSystem.health.retry')
+                    }}</MvButton>
                 </div>
             </MvNotice>
             <ul v-else class="system-health-page__items">
@@ -98,12 +102,15 @@ onMounted(() => {
 
         <MvPanel
             v-if="authStore.hasPermission('ManageErpIntegration')"
-            title="Orders failing ERP requirements"
+            :title="t('settingsSystem.health.orderChecks')"
         >
             <OrderCheckHealthPanel />
         </MvPanel>
 
-        <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">
+        <MvPanel
+            v-if="authStore.hasPermission('ManageErpIntegration')"
+            :title="t('settingsSystem.health.reconciliation')"
+        >
             <ErpReconciliationPanel :notifications="erpIssues" @refresh="loadErpIssues" />
         </MvPanel>
     </div>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { usePriceTypeGaps } from '../../composables/usePriceTypeGaps';
 import PriceTypeGapsTable from '../../components/settings/PriceTypeGapsTable.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const g = usePriceTypeGaps();
 const administratorId = authStore.administrator?.id ?? 'anonymous';
@@ -16,17 +18,15 @@ onMounted(() => void g.load());
 
 <template>
     <div class="price-type-gaps-page">
-        <div class="price-type-gaps-page__breadcrumb">Workspace / System settings</div>
-        <h1 class="price-type-gaps-page__title">Price type gaps</h1>
+        <div class="price-type-gaps-page__breadcrumb">{{ t('settingsSystem.breadcrumb') }}</div>
+        <h1 class="price-type-gaps-page__title">{{ t('settingsSystem.priceTypeGaps.title') }}</h1>
 
         <MvNotice variant="info">
-            These counterparties fall back to the branch default price type because the price type
-            cannot be taken from their main contract. Fix the contract data in the ERP. A price type
-            set manually for a client is not taken into account here.
+            {{ t('settingsSystem.priceTypeGaps.notice') }}
         </MvNotice>
         <MvNotice v-if="g.error.value" variant="error">{{ g.error.value }}</MvNotice>
 
-        <MvPanel title="Counterparties without a resolved price type">
+        <MvPanel :title="t('settingsSystem.priceTypeGaps.panel')">
             <PriceTypeGapsTable
                 :items="g.items.value"
                 :loading="g.loading.value"

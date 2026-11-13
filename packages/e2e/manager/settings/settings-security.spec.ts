@@ -159,7 +159,7 @@ test.describe('Settings > Security page — UI', () => {
             const otherRow = page
                 .locator('.security-page__row')
                 .filter({ hasNot: page.locator('.security-page__current') });
-            await otherRow.getByRole('button', { name: 'Завершить сеанс' }).click();
+            await otherRow.getByRole('button', { name: 'End session' }).click();
             await expect(page.locator('.security-page__row')).toHaveCount(1, { timeout: 15000 });
 
             expect(await isSessionAlive(cookieB)).toBe(false);
@@ -176,7 +176,7 @@ test.describe('Settings > Security page — UI', () => {
         page,
     }) => {
         await page.goto('/settings/security');
-        await expect(page.getByRole('heading', { name: 'Безопасность' })).toBeVisible({
+        await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible({
             timeout: 15000,
         });
         await expect(page.locator('.settings-side-nav a.router-link-active')).toHaveText(
@@ -197,7 +197,7 @@ test.describe('Settings > Security page — UI', () => {
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/settings/security');
-            await page.getByRole('button', { name: 'Выйти везде' }).click();
+            await page.getByRole('button', { name: 'Sign out everywhere' }).click();
             await page.waitForURL(url => url.pathname.includes('/login'));
             expect(page.url()).toContain('/login');
         } finally {

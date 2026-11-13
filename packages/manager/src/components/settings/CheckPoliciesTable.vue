@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvButton, MvInput, MvSelect, MvStatusBadge, MvSwitch } from '@mivend/ui-kit';
 import { isRowDirty, policyCaption, type PolicyRow } from '../../utils/checkPolicyRows';
 
 defineProps<{ rows: PolicyRow[]; savingKey: string | null }>();
 defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
+const { t } = useI18n();
 </script>
 
 <template>
@@ -11,11 +13,11 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
         <table class="policies">
             <thead>
                 <tr>
-                    <th>Control</th>
-                    <th>Stage</th>
-                    <th>Consequence</th>
-                    <th>Recipient</th>
-                    <th>Enabled</th>
+                    <th>{{ t('settingsSystem.policies.columns.control') }}</th>
+                    <th>{{ t('settingsSystem.policies.columns.stage') }}</th>
+                    <th>{{ t('settingsSystem.policies.columns.consequence') }}</th>
+                    <th>{{ t('settingsSystem.policies.columns.recipient') }}</th>
+                    <th>{{ t('settingsSystem.policies.columns.enabled') }}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -28,10 +30,10 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
                     <td>
                         {{ row.stage }}
                         <MvStatusBadge v-if="row.branchId && row.inherited" variant="neutral">
-                            Global default
+                            {{ t('settingsSystem.policies.globalDefault') }}
                         </MvStatusBadge>
                         <MvStatusBadge v-else-if="row.branchId" variant="info">
-                            Branch override
+                            {{ t('settingsSystem.policies.branchOverride') }}
                         </MvStatusBadge>
                     </td>
                     <td>
@@ -43,7 +45,12 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
                             {{ policyCaption(row) }}
                         </div>
                     </td>
-                    <td><MvInput v-model="row.recipient" placeholder="Role or group" /></td>
+                    <td>
+                        <MvInput
+                            v-model="row.recipient"
+                            :placeholder="t('settingsSystem.policies.recipientPlaceholder')"
+                        />
+                    </td>
                     <td><MvSwitch v-model="row.enabled" /></td>
                     <td>
                         <MvButton
@@ -51,7 +58,7 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
                             :disabled="!isRowDirty(row) || savingKey === row.key"
                             @click="$emit('save', row)"
                         >
-                            Save
+                            {{ t('settingsSystem.policies.save') }}
                         </MvButton>
                         <MvButton
                             v-if="row.branchId && !row.inherited"
@@ -60,7 +67,7 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
                             :disabled="savingKey === row.key"
                             @click="$emit('reset', row)"
                         >
-                            Reset to global
+                            {{ t('settingsSystem.policies.resetToGlobal') }}
                         </MvButton>
                     </td>
                 </tr>

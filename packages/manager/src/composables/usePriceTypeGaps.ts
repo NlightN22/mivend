@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { tr } from '../utils/lazyLabels';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { fetchPriceTypeGaps, type PriceTypeGapRow } from '../api/priceTypeGaps';
 
@@ -27,7 +28,8 @@ export function usePriceTypeGaps() {
         try {
             await run();
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Could not load the list';
+            error.value =
+                e instanceof Error ? e.message : tr('settingsSystem.priceTypeGaps.loadFailed');
         }
     }
 

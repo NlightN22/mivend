@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel, MvSwitch } from '@mivend/ui-kit';
 import { fetchNewDeviceEmail, setNewDeviceEmail } from '../../api/sessions';
 
+const { t } = useI18n();
 const enabled = ref(true);
 const loaded = ref(false);
 const saving = ref(false);
@@ -13,7 +15,7 @@ onMounted(async () => {
         enabled.value = await fetchNewDeviceEmail();
         loaded.value = true;
     } catch {
-        error.value = 'Не удалось загрузить настройку';
+        error.value = t('settingsSystem.security.newDevice.loadFailed');
     }
 });
 
@@ -23,7 +25,7 @@ async function toggle(value: boolean): Promise<void> {
     try {
         enabled.value = await setNewDeviceEmail(value);
     } catch {
-        error.value = 'Не удалось сохранить настройку';
+        error.value = t('settingsSystem.security.newDevice.saveFailed');
     } finally {
         saving.value = false;
     }
@@ -31,12 +33,12 @@ async function toggle(value: boolean): Promise<void> {
 </script>
 
 <template>
-    <MvPanel title="Уведомления о входе">
+    <MvPanel :title="t('settingsSystem.security.newDevice.title')">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <MvSwitch
             :model-value="enabled"
             :disabled="!loaded || saving"
-            label="Писать мне на почту, когда в мою учётную запись входят с нового устройства"
+            :label="t('settingsSystem.security.newDevice.label')"
             @update:model-value="toggle"
         />
     </MvPanel>

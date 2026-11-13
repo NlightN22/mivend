@@ -1,3 +1,4 @@
+import { tr } from './lazyLabels';
 import type { CheckDefinition, CheckPolicy } from '../api/checkPolicies';
 
 export interface PolicyRow {
@@ -74,11 +75,11 @@ export function policyCaption(
 ): string | null {
     if (row.stage === 'placement' && row.checkCode.startsWith('payment.confirmation.')) {
         return row.consequence === 'hold'
-            ? 'hold: a manager confirms such an order before it goes on (when the credit limit is not exceeded)'
-            : 'such an order goes on to the ERP now (when the credit limit is not exceeded)';
+            ? tr('settingsSystem.policies.captionPlacementHold')
+            : tr('settingsSystem.policies.captionPlacementRelease');
     }
     if (row.checkCode !== 'credit.limit' || row.stage !== 'checkout') return null;
     return row.consequence === 'hold'
-        ? 'hold: the order is placed and waits for manager confirmation'
-        : 'the order goes on to the ERP now once the customer acknowledges the limit';
+        ? tr('settingsSystem.policies.captionCreditHold')
+        : tr('settingsSystem.policies.captionCreditRelease');
 }

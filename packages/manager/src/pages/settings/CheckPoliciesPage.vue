@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvFormField, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
 import { fetchBranchOptions, type BranchOption } from '../../api/branchSettings';
 import { useAuthStore } from '../../stores/auth';
 import { useCheckPolicies } from '../../composables/useCheckPolicies';
 import CheckPoliciesTable from '../../components/settings/CheckPoliciesTable.vue';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const { rows, branchId, loading, savingKey, error, load, selectBranch, save, reset } =
     useCheckPolicies();
@@ -14,7 +16,7 @@ const managerRows = computed(() => rows.value.filter(r => r.subjectType === 'man
 const branches = ref<BranchOption[]>([]);
 const GLOBAL = '';
 const scopeOptions = computed(() => [
-    { value: GLOBAL, label: 'All branches (global default)' },
+    { value: GLOBAL, label: t('settingsSystem.policies.allBranches') },
     ...branches.value.map(b => ({ value: b.id, label: b.name })),
 ]);
 const scope = computed({
@@ -28,38 +30,35 @@ onMounted(() => {
     void fetchBranchOptions()
         .then(list => (branches.value = list))
         .catch((e: unknown) => {
-            error.value = e instanceof Error ? e.message : 'Could not load branches';
+            error.value =
+                e instanceof Error ? e.message : t('settingsSystem.policies.branchesFailed');
         });
 });
 </script>
 
 <template>
     <div v-if="!authStore.hasPermission('ManageCheckPolicies')" class="check-policies__denied">
-        <h1>Not authorized</h1>
-        <p>You don't have permission to manage controls and policies.</p>
+        <h1>{{ t('settingsSystem.notAuthorized') }}</h1>
+        <p>{{ t('settingsSystem.policies.denied') }}</p>
     </div>
 
     <div v-else class="check-policies">
-        <div class="check-policies__breadcrumb">Workspace / System settings</div>
-        <h1 class="check-policies__title">Controls and policies</h1>
+        <div class="check-policies__breadcrumb">{{ t('settingsSystem.breadcrumb') }}</div>
+        <h1 class="check-policies__title">{{ t('settingsSystem.policies.title') }}</h1>
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
-        <MvPanel title="Order controls">
+        <MvPanel :title="t('settingsSystem.policies.orderControls')">
             <p class="check-policies__lead">
-                A control only describes a fact; its consequence is set here per stage. Orders are
-                always accepted: consequences stronger than hold are not available (a quantity may
-                be refused when it is added to the cart).
+                {{ t('settingsSystem.policies.orderLead') }}
             </p>
-            <MvFormField label="Scope">
+            <MvFormField :label="t('settingsSystem.policies.scope')">
                 <MvSelect v-model="scope" :options="scopeOptions" />
                 <p class="check-policies__lead">
-                    A branch row overrides the global default for orders of that branch and for
-                    actions of managers in it; the branch follows the global default until it is
-                    saved.
+                    {{ t('settingsSystem.policies.scopeLead') }}
                 </p>
             </MvFormField>
-            <p v-if="loading">Loading…</p>
+            <p v-if="loading">{{ t('settingsSystem.policies.loading') }}</p>
             <CheckPoliciesTable
                 v-else
                 :rows="orderRows"
@@ -69,14 +68,11 @@ onMounted(() => {
             />
         </MvPanel>
 
-        <MvPanel title="Manager controls">
+        <MvPanel :title="t('settingsSystem.policies.managerControls')">
             <p class="check-policies__lead">
-                Limits on a manager's own action: the consequence applies when the action is
-                requested. A per-role limit stays in the role editor; here you choose what happens
-                when it is exceeded. For a credit-term control the recipient is the role whose limit
-                decides the escalation.
+                {{ t('settingsSystem.policies.managerLead') }}
             </p>
-            <p v-if="loading">Loading…</p>
+            <p v-if="loading">{{ t('settingsSystem.policies.loading') }}</p>
             <CheckPoliciesTable
                 v-else
                 :rows="managerRows"
