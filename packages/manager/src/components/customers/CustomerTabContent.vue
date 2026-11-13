@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import type { CustomerListItem, CustomerCredit } from '../../api/customers';
@@ -8,15 +8,21 @@ import type { CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
 import type { CustomerDetailTab } from '../../composables/useCustomerDetailTabs';
 import CustomerOverviewTab from './CustomerOverviewTab.vue';
-import OrdersList from '../orders/OrdersList.vue';
-import CustomerDiscountsTab from './CustomerDiscountsTab.vue';
-import CustomerDocumentsTab from './CustomerDocumentsTab.vue';
-import ProformaInvoicesList from '../proforma-invoices/ProformaInvoicesList.vue';
-import SettlementsList from '../settlements/SettlementsList.vue';
-import CustomerTeamTab from './CustomerTeamTab.vue';
-import CustomerPortalUsersTab from './CustomerPortalUsersTab.vue';
-import EntityHistoryPanel from '../history/EntityHistoryPanel.vue';
-import EntityChangeJournalTable from '../change-journal/EntityChangeJournalTable.vue';
+
+// Only the open tab is loaded; the card shell and the not-found state stay light.
+const OrdersList = defineAsyncComponent(() => import('../orders/OrdersList.vue'));
+const CustomerDiscountsTab = defineAsyncComponent(() => import('./CustomerDiscountsTab.vue'));
+const CustomerDocumentsTab = defineAsyncComponent(() => import('./CustomerDocumentsTab.vue'));
+const ProformaInvoicesList = defineAsyncComponent(
+    () => import('../proforma-invoices/ProformaInvoicesList.vue'),
+);
+const SettlementsList = defineAsyncComponent(() => import('../settlements/SettlementsList.vue'));
+const CustomerTeamTab = defineAsyncComponent(() => import('./CustomerTeamTab.vue'));
+const CustomerPortalUsersTab = defineAsyncComponent(() => import('./CustomerPortalUsersTab.vue'));
+const EntityHistoryPanel = defineAsyncComponent(() => import('../history/EntityHistoryPanel.vue'));
+const EntityChangeJournalTable = defineAsyncComponent(
+    () => import('../change-journal/EntityChangeJournalTable.vue'),
+);
 
 const props = defineProps<{
     tab: CustomerDetailTab;
