@@ -201,6 +201,9 @@ const customers: typeof en = {
         },
     },
     portalUsers: {
+        searchPlaceholder: 'Имя или эл. почта…',
+        noMatch: 'Нет пользователей под выбранные фильтры',
+        loadFailedMessage: 'Проверьте соединение и повторите попытку.',
         columns: {
             name: 'Имя / эл. почта',
             portalRole: 'Роль в портале',

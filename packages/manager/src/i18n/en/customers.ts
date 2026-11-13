@@ -197,6 +197,9 @@ export default {
         },
     },
     portalUsers: {
+        searchPlaceholder: 'Name or email…',
+        noMatch: 'No portal users match your filters',
+        loadFailedMessage: 'Check the connection and try again.',
         columns: {
             name: 'Name / Email',
             portalRole: 'Portal role',

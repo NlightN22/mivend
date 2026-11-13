@@ -1,159 +1,128 @@
 <script setup lang="ts">
-import { formatDate } from '../../i18n/format';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvButton,
+    MvDateTimeCell,
+    MvErrorState,
     MvModal,
     MvStatusBadge,
-    useDataTableState,
-    type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
+import { toFilterColumns } from '@mivend/ui-kit/src/components/MvAdvancedDataTable/advancedDataTableTypes';
 import {
     deactivateCounterpartyPortalUser,
     fetchCounterpartyPortalUsers,
     type CounterpartyPortalUser,
 } from '../../api/counterpartyPortalAccess';
+import { useAuthStore } from '../../stores/auth';
+import { useCardTabList } from '../../composables/useCardTabList';
+import { useCardTabTable } from '../../composables/useCardTabTable';
+import {
+    PORTAL_USER_SORT_FIELDS,
+    PORTAL_USER_DEFAULT_SORT,
+    buildPortalUserColumns,
+} from './portalUsersColumns';
+import {
+    PORTAL_USER_STATUSES,
+    filterPortalUsers,
+    sortPortalUsers,
+    type PortalUserRow,
+} from '../../utils/portalUsersList';
+import TableViewsMenu from '../TableViewsMenu.vue';
 
-// Issue #120, Decision 5 — read-only list of Customer logins linked to this Counterparty, plus
-// Deactivate (native Customer soft-delete). No create/invite UI here (Decision 4 — self-service
-// sub-user creation is the counterparty's own storefront-side responsibility).
+// Read-only list of the customer logins linked to this Counterparty, plus Deactivate (native Customer
+// soft-delete). Exempt from server-side paging, search and filters: it is one customer's own portal
+// logins, a small set bounded by the four portal roles, so all of it loads once and is narrowed here.
+// Shown only to ManageCounterpartyPortalAccess (the tab itself is hidden otherwise).
 const props = defineProps<{
     counterpartyId: string;
     canManage: boolean;
+    urlPrefix?: string;
 }>();
 
 const { t, te } = useI18n();
+const authStore = useAuthStore();
+const prefix = props.urlPrefix ?? 'portalUsers.';
 const users = ref<CounterpartyPortalUser[]>([]);
 const loading = ref(false);
+const loadFailed = ref(false);
 const error = ref('');
 const deactivatingId = ref<string | null>(null);
 const confirmTarget = ref<CounterpartyPortalUser | null>(null);
 
-// This tab is exempt from server-side pagination (manager-table-standard point 6) — a
-// counterparty's own portal-user count is a small, structurally bounded set (client_admin/buyer/
-// accountant/observer roles), not something that accumulates unboundedly like orders/proforma-invoices.
 async function load(): Promise<void> {
     loading.value = true;
-    error.value = '';
+    loadFailed.value = false;
     try {
         users.value = await fetchCounterpartyPortalUsers(props.counterpartyId);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : t('customers.portalUsers.loadFailed');
+        loadFailed.value = true;
+        console.warn('[portal users] could not load the list:', e);
     } finally {
         loading.value = false;
     }
 }
-
 onMounted(load);
 watch(() => props.counterpartyId, load);
 
-function roleLabel(role: string): string {
-    return te(`customers.portalUsers.roles.${role}`) ? t(`customers.portalUsers.roles.${role}`) : role;
-}
+const roleLabel = (role: string): string =>
+    te(`customers.portalUsers.roles.${role}`) ? t(`customers.portalUsers.roles.${role}`) : role;
 
-function buildColumns(): AdvancedDataTableColumn[] {
-    const col = (field: string): string => t(`customers.portalUsers.columns.${field}`);
-    return [
-        {
-            field: 'name',
-            header: col('name'),
-            width: 240,
-            sortField: 'name',
-            filterConfig: { type: 'none' },
-            mobile: { primary: true },
-        },
-        {
-            field: 'portalRole',
-            header: col('portalRole'),
-            width: 150,
-            sortField: 'portalRole',
-            filterConfig: { type: 'none' },
-        },
-        // status is a binary active/inactive badge, not a column worth sorting by.
-        {
-            field: 'status',
-            header: col('status'),
-            width: 120,
-            filterConfig: { type: 'none' },
-            mobile: { badge: true },
-        },
-        {
-            field: 'createdAt',
-            header: col('createdAt'),
-            width: 130,
-            sortField: 'createdAt',
-            filterConfig: { type: 'none' },
-        },
-        { field: 'actions', header: col('actions'), width: 230, filterConfig: { type: 'none' } },
-    ];
-}
-const COLUMNS = buildColumns();
-const columns = computed(buildColumns);
-
-// No real filters (exempt table, see the pagination comment above) — useDataTableState is
-// still required by MvAdvancedDataTable's own props contract (tableState/defaultFilters).
-const BLANK_FILTERS: Record<string, unknown> = {};
-const { state: tableState } = useDataTableState(
-    'customer-portal-users-datatable',
-    {
-        columnOrder: COLUMNS.map(c => c.field),
-        columnWidths: Object.fromEntries(COLUMNS.map(c => [c.field, c.width])),
-        hiddenColumns: [],
-        sort: [],
-        filters: BLANK_FILTERS,
-        pageSize: 25,
-    },
-    { columns: COLUMNS, allowedFilterKeys: [] },
+const columns = computed(() =>
+    buildPortalUserColumns({
+        roles: [...new Set(users.value.map(u => u.portalRole).filter((r): r is string => !!r))].map(
+            value => ({ value, label: roleLabel(value) }),
+        ),
+        statuses: PORTAL_USER_STATUSES.map(value => ({
+            value,
+            label: t(`customers.portalUsers.${value}`),
+        })),
+    }),
 );
+const baseColumns = buildPortalUserColumns({ roles: [], statuses: [] });
 
-interface Row {
-    [key: string]: unknown;
-    id: string;
-    name: string;
-    email: string;
-    portalRole: string;
-    active: boolean;
-    createdAt: string;
-    // Real timestamp, kept alongside the locale-formatted `createdAt` display string above —
-    // sorting the display string lexically would give a wrong order across month/year
-    // boundaries (locale date formats aren't sortable text).
-    createdAtSortKey: number;
-}
-
-const rows = computed<Row[]>(() =>
-    users.value.map(u => ({
-        id: u.id,
-        name: `${u.firstName} ${u.lastName}`,
-        email: u.emailAddress,
-        portalRole: u.portalRole ? roleLabel(u.portalRole) : '—',
-        active: u.active,
-        createdAt: formatDate(u.createdAt),
-        createdAtSortKey: new Date(u.createdAt).getTime(),
-    })),
-);
-
-// This table is exempt from server-side pagination (see the comment on `load()` above) — sort
-// is applied client-side over the already-fully-loaded `rows`, driven by the same tableState.sort
-// MvAdvancedDataTable already tracks, rather than adding backend sort support for a bounded list
-// that never needs it.
-const sortedRows = computed<Row[]>(() => {
-    const active = tableState.value.sort[0];
-    if (!active) return rows.value;
-    const { field, order } = active;
-    return [...rows.value].sort((a, b) => {
-        const av = field === 'createdAt' ? a.createdAtSortKey : a[field as keyof Row];
-        const bv = field === 'createdAt' ? b.createdAtSortKey : b[field as keyof Row];
-        if (av === bv) return 0;
-        const cmp = av! < bv! ? -1 : 1;
-        return order === 1 ? cmp : -cmp;
-    });
+const list = useCardTabList({
+    urlPrefix: prefix,
+    filterColumns: toFilterColumns(baseColumns),
+    sortFields: PORTAL_USER_SORT_FIELDS,
+    defaultSort: PORTAL_USER_DEFAULT_SORT,
+    onChange: () => undefined,
+});
+const ownerKey = authStore.administrator?.id ?? 'anonymous';
+const { tableState, captureView, applyView, openedWithLink } = useCardTabTable({
+    storageKey: `customer-portal-users-v1:${ownerKey}`,
+    columns: baseColumns,
+    list,
+    urlPrefix: prefix,
+    defaultSort: PORTAL_USER_DEFAULT_SORT,
 });
 
-function openConfirm(row: Row): void {
-    const user = users.value.find(u => u.id === row.id);
-    if (user) confirmTarget.value = user;
+const allRows = computed<PortalUserRow[]>(() =>
+    users.value.map(u => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`.trim(),
+        email: u.emailAddress,
+        portalRole: u.portalRole,
+        active: u.active,
+        createdAt: u.createdAt,
+    })),
+);
+const matching = computed(() =>
+    sortPortalUsers(
+        filterPortalUsers(allRows.value, list.search.value, list.conditions.value),
+        list.sort.value,
+    ),
+);
+const rows = computed(() => {
+    const start = (list.page.value - 1) * list.pageSize.value;
+    return matching.value.slice(start, start + list.pageSize.value);
+});
+type Row = PortalUserRow;
+
+function clearFilters(): void {
+    list.search.value = '';
+    list.conditions.value = [];
 }
 
 async function handleDeactivate(): Promise<void> {
@@ -177,21 +146,62 @@ async function handleDeactivate(): Promise<void> {
         <MvAdvancedDataTable
             v-model:table-state="tableState"
             :columns="columns"
-            :rows="sortedRows"
+            :rows="rows"
             :loading="loading"
-            :total-items="rows.length"
-            :page="1"
+            :total-items="matching.length"
+            :page="list.page.value"
             data-key="id"
             :row-height-px="52"
-            :header-height-px="52"
-            :default-filters="BLANK_FILTERS"
+            :header-height-px="65"
+            :search="{
+                filterKey: 'search',
+                placeholder: t('customers.portalUsers.searchPlaceholder'),
+            }"
+            :conditions="list.conditions.value"
+            :default-filters="{ search: '' }"
             :empty-message="t('customers.portalUsers.empty')"
+            @update:conditions="list.conditions.value = $event"
+            @update:page="list.page.value = $event"
+            @reset-page="list.page.value = 1"
+            @clear-filters="clearFilters"
         >
+            <template #empty>
+                <MvErrorState
+                    v-if="loadFailed"
+                    :title="t('customers.portalUsers.loadFailed')"
+                    :message="t('customers.portalUsers.loadFailedMessage')"
+                    @retry="load"
+                />
+                <template v-else>{{
+                    loading
+                        ? ''
+                        : allRows.length
+                          ? t('customers.portalUsers.noMatch')
+                          : t('customers.portalUsers.empty')
+                }}</template>
+            </template>
+
+            <template #toolbar-end>
+                <TableViewsMenu
+                    views-key="customer-portal-users"
+                    :owner-key="ownerKey"
+                    :capture="captureView"
+                    :apply="applyView"
+                    :skip-restore="() => openedWithLink"
+                />
+            </template>
+
             <template #cell-name="{ data }">
                 <div>
                     <div class="customer-portal-users__name">{{ (data as Row).name }}</div>
                     <div class="customer-portal-users__email">{{ (data as Row).email }}</div>
                 </div>
+            </template>
+            <template #cell-createdAt="{ data }">
+                <MvDateTimeCell :value="(data as Row).createdAt" />
+            </template>
+            <template #cell-portalRole="{ data }">
+                {{ (data as Row).portalRole ? roleLabel((data as Row).portalRole!) : '—' }}
             </template>
             <template #cell-status="{ data }">
                 <MvStatusBadge :variant="(data as Row).active ? 'success' : 'danger'">
@@ -203,22 +213,15 @@ async function handleDeactivate(): Promise<void> {
                 </MvStatusBadge>
             </template>
             <template #cell-actions="{ data }">
-                <div class="customer-portal-users__actions">
-                    <MvButton
-                        v-if="canManage && (data as Row).active"
-                        size="sm"
-                        variant="danger"
-                        :loading="deactivatingId === (data as Row).id"
-                        @click="openConfirm(data as Row)"
-                    >
-                        {{ t('customers.portalUsers.deactivate') }}
-                    </MvButton>
-                    <span
-                        v-else-if="!(data as Row).active"
-                        class="customer-portal-users__deactivated"
-                        >{{ t('customers.portalUsers.deactivated') }}</span
-                    >
-                </div>
+                <MvButton
+                    v-if="canManage && (data as Row).active"
+                    size="sm"
+                    variant="danger"
+                    :loading="deactivatingId === (data as Row).id"
+                    @click="confirmTarget = users.find(u => u.id === (data as Row).id) ?? null"
+                >
+                    {{ t('customers.portalUsers.deactivate') }}
+                </MvButton>
             </template>
         </MvAdvancedDataTable>
         <p v-if="error" class="customer-portal-users__error">{{ error }}</p>
@@ -258,13 +261,6 @@ async function handleDeactivate(): Promise<void> {
     gap: 8px;
 }
 
-.customer-portal-users__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
 .customer-portal-users__name {
     font-weight: 600;
 }
@@ -272,11 +268,6 @@ async function handleDeactivate(): Promise<void> {
 .customer-portal-users__email {
     font-size: 12px;
     color: var(--el-text-color-secondary);
-}
-
-.customer-portal-users__deactivated {
-    color: var(--el-text-color-secondary);
-    font-size: 12px;
 }
 
 .customer-portal-users__error {
