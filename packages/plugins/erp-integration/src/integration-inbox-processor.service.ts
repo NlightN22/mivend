@@ -70,6 +70,7 @@ import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity
 import { MissingDependencyError, loggerCtx } from './types';
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
+import { INBOX_VERSIONS_CEILING } from './read-ceilings';
 
 // Kept apart from the BullMQ wiring so tests can call processPendingBatch directly.
 // Same split as IntegrationOutboxProcessorService (see docs/testing-strategy.md).
@@ -362,10 +363,14 @@ export class IntegrationInboxProcessorService {
         // Compared in JS (isVersionNewer): SQL `>` on the varchar version is lexicographic.
         // Only `version` is selected — never the jsonb payload of every historical row.
         const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
-        const processedRows = await findBounded(repo, {
-            select: { version: true },
-            where: { stream: row.stream, entityId: row.entityId, status: 'processed' },
-        });
+        const processedRows = await findBounded(
+            repo,
+            {
+                select: { version: true },
+                where: { stream: row.stream, entityId: row.entityId, status: 'processed' },
+            },
+            INBOX_VERSIONS_CEILING,
+        );
         return processedRows.some(processedRow =>
             isVersionNewer(processedRow.version, row.version),
         );
