@@ -154,4 +154,31 @@ describe('counterparty bulk matching resolves exactly what the list shows', () =
         await expect(resolve({ readiness: 'nope' })).rejects.toThrow(/Unknown readiness/);
         await expect(resolve({ search: 5 })).rejects.toThrow(/Invalid search/);
     });
+
+    it('refuses a credit filter without ReadCounterpartyCredit, so the matched set is no range oracle', async () => {
+        const withoutCredit = { userHasPermissions: () => false } as unknown as RequestContext;
+        const withCredit = { userHasPermissions: () => true } as unknown as RequestContext;
+        const creditFilters = [
+            { filter: { creditLimit: { gte: 1 } } },
+            { filter: { _and: [{ creditBalance: { lt: 5 } }] } },
+        ];
+        for (const matching of creditFilters) {
+            await expect(
+                resolveCounterpartyIds(
+                    service,
+                    withoutCredit,
+                    parseCounterpartyMatching(matching),
+                    10,
+                ),
+            ).rejects.toThrow();
+            await expect(
+                resolveCounterpartyIds(
+                    service,
+                    withCredit,
+                    parseCounterpartyMatching(matching),
+                    10,
+                ),
+            ).resolves.toBeDefined();
+        }
+    });
 });

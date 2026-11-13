@@ -5,6 +5,7 @@ import {
     applyCounterpartyFilterParameter,
     type CounterpartyFilterParameter,
 } from './counterparty-list-query';
+import { assertCreditListAccess } from './counterparty-credit-gate';
 import type { CounterpartyService } from './counterparty.service';
 
 const MATCHING_KEYS = ['search', 'readiness', 'filter'];
@@ -43,6 +44,7 @@ export async function resolveCounterpartyIds(
     matching: CounterpartyMatching,
     limit: number,
 ): Promise<string[]> {
+    assertCreditListAccess(ctx, matching.filter, undefined);
     const qb = await service.visibleFilteredQb(ctx, {
         search: matching.search,
         readiness: matching.readiness,

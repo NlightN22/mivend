@@ -1354,7 +1354,6 @@ export type CounterpartySortParameter = {
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId?: InputMaybe<SortOrder>;
     managerErpId?: InputMaybe<SortOrder>;
-    /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
     officialEmail?: InputMaybe<SortOrder>;
     paymentDelayDays?: InputMaybe<SortOrder>;
     phone?: InputMaybe<SortOrder>;

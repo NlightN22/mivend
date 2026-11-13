@@ -155,6 +155,7 @@ export const adminApiSchema = gql`
         inn: SortOrder
         managerErpId: SortOrder
         phone: SortOrder
+        officialEmail: SortOrder
         "Needs ReadCounterpartyCredit"
         creditLimit: SortOrder
         "Needs ReadCounterpartyCredit"
