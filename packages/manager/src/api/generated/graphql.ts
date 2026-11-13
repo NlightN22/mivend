@@ -712,11 +712,14 @@ export type ChangeJournalEntry = {
 };
 
 export type ChangeJournalFilter = {
+    action?: InputMaybe<Scalars['String']['input']>;
     actorType?: InputMaybe<Scalars['String']['input']>;
     administratorId?: InputMaybe<Scalars['ID']['input']>;
     entityType?: InputMaybe<Scalars['String']['input']>;
     occurredAfter?: InputMaybe<Scalars['DateTime']['input']>;
     occurredBefore?: InputMaybe<Scalars['DateTime']['input']>;
+    /** Case-insensitive match on the changed fields and their values */
+    search?: InputMaybe<Scalars['String']['input']>;
     userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -2813,7 +2816,10 @@ export type EntityVersionListOptions = {
     action?: InputMaybe<Scalars['String']['input']>;
     administratorId?: InputMaybe<Scalars['ID']['input']>;
     createdAfter?: InputMaybe<Scalars['DateTime']['input']>;
+    createdBefore?: InputMaybe<Scalars['DateTime']['input']>;
     entityName?: InputMaybe<Scalars['String']['input']>;
+    /** Case-insensitive match on the changed fields or the comment */
+    search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     /** True to filter to system-initiated changes only (administratorId IS NULL) — mutually exclusive with administratorId. */
     system?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8760,6 +8766,7 @@ export type QueryChangeJournalArgs = {
 export type QueryChangeJournalForEntityArgs = {
     entityId: Scalars['ID']['input'];
     entityType: Scalars['String']['input'];
+    filter?: InputMaybe<ChangeJournalFilter>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -12007,6 +12014,7 @@ export type ChangeJournalEntryFieldsFragment = {
 export type ChangeJournalForEntityQueryVariables = Exact<{
     entityType: Scalars['String']['input'];
     entityId: Scalars['ID']['input'];
+    filter?: InputMaybe<ChangeJournalFilter>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 }>;
@@ -16029,10 +16037,11 @@ export const SetCategoryVisibilityOverrideDocument = new TypedDocumentString(`
     SetCategoryVisibilityOverrideMutationVariables
 >;
 export const ChangeJournalForEntityDocument = new TypedDocumentString(`
-    query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $skip: Int, $take: Int) {
+    query ChangeJournalForEntity($entityType: String!, $entityId: ID!, $filter: ChangeJournalFilter, $skip: Int, $take: Int) {
   changeJournalForEntity(
     entityType: $entityType
     entityId: $entityId
+    filter: $filter
     skip: $skip
     take: $take
   ) {
