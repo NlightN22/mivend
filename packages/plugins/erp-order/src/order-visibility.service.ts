@@ -9,7 +9,7 @@ import {
 } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
-import { getPageAndCount, likeTerm, normalizeDocumentNumber } from 'shared';
+import { getManyBounded, getPageAndCount, likeTerm, normalizeDocumentNumber } from 'shared';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { orderBranchClause } from './order-branch-clause';
@@ -132,10 +132,10 @@ export class OrderVisibilityService {
     async visibleIds(ctx: RequestContext, orderIds: ID[]): Promise<Set<string>> {
         if (orderIds.length === 0) return new Set();
         const qb = await this.buildVisibleOrdersQuery(ctx);
-        // unbounded-ok: visible subset of the order ids passed in, bounded by that list
-        const rows = await qb
-            .andWhere(`${qb.alias}.id IN (:...scopeOrderIds)`, { scopeOrderIds: orderIds })
-            .getMany();
+        const rows = await getManyBounded(
+            qb.andWhere(`${qb.alias}.id IN (:...scopeOrderIds)`, { scopeOrderIds: orderIds }),
+            new Set(orderIds.map(String)).size,
+        );
         return new Set(rows.map(order => String(order.id)));
     }
 

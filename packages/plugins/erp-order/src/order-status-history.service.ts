@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { findBounded, withAggregateLock } from 'shared';
 
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 
@@ -33,9 +33,9 @@ export class OrderStatusHistoryService {
     }
 
     list(ctx: RequestContext, orderId: number | string): Promise<OrderStatusHistoryEntry[]> {
-        // unbounded-ok: status history of one order
-        return this.connection
-            .getRepository(ctx, OrderStatusHistoryEntry)
-            .find({ where: { orderId: Number(orderId) }, order: { occurredAt: 'ASC', id: 'ASC' } });
+        return findBounded(this.connection.getRepository(ctx, OrderStatusHistoryEntry), {
+            where: { orderId: Number(orderId) },
+            order: { occurredAt: 'ASC', id: 'ASC' },
+        });
     }
 }

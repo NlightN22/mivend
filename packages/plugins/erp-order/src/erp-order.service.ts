@@ -13,6 +13,7 @@ import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { ActingContextService } from '@mivend/plugin-session-management';
 import { HistoryEntryType } from '@vendure/common/lib/generated-types';
+import { getManyBounded } from 'shared';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { OrderStatusReferenceService } from './order-status-reference.service';
@@ -175,14 +176,14 @@ export class ErpOrderService {
         if (!full) return;
 
         for (const orderRef of full.orders) {
-            // unbounded-ok: fulfillments of one order
-            const orderFulfillments = await this.connection
-                .getRepository(ctx, Fulfillment)
-                .createQueryBuilder('fulfillment')
-                .innerJoin('fulfillment.orders', 'o')
-                .where('o.id = :orderId', { orderId: orderRef.id })
-                .orderBy('fulfillment.createdAt', 'ASC')
-                .getMany();
+            const orderFulfillments = await getManyBounded(
+                this.connection
+                    .getRepository(ctx, Fulfillment)
+                    .createQueryBuilder('fulfillment')
+                    .innerJoin('fulfillment.orders', 'o')
+                    .where('o.id = :orderId', { orderId: orderRef.id })
+                    .orderBy('fulfillment.createdAt', 'ASC'),
+            );
             const latestState = orderFulfillments[orderFulfillments.length - 1]?.state ?? null;
 
             const order = await this.connection.getRepository(ctx, Order).findOne({

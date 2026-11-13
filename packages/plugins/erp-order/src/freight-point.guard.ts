@@ -1,7 +1,7 @@
 import type { Injector, OrderProcess, OrderState } from '@vendure/core';
 import { AdministratorService, Order, ShippingLine, TransactionalConnection } from '@vendure/core';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
-import { hasFreightShippingLine } from 'shared';
+import { findBounded, hasFreightShippingLine } from 'shared';
 
 import './types';
 
@@ -30,8 +30,7 @@ export const freightPointGuard: OrderProcess<OrderState> = {
             fromState === 'ArrangingPayment' &&
             (toState === 'PaymentAuthorized' || toState === 'PaymentSettled');
         if (!placement && !payment) return;
-        // unbounded-ok: shipping lines of one order
-        const lines = await connection.getRepository(ctx, ShippingLine).find({
+        const lines = await findBounded(connection.getRepository(ctx, ShippingLine), {
             where: { order: { id: order.id } },
             relations: ['shippingMethod'],
         });

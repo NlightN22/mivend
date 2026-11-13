@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
+import { getRawManyBounded } from 'shared';
 
 import { OrderVisibilityService } from './order-visibility.service';
 
@@ -46,16 +47,17 @@ export class OrderVisibilityAggregatesService {
             throw new UserInputError(`At most ${MAX_COUNTERPARTY_IDS} counterparty ids per call`);
         }
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
-        // unbounded-ok: grouped by counterparty id of the ids passed in
-        const rows = await qb
-            .select('counterparty.id::text', 'counterpartyId')
-            .addSelect(`MAX(${qb.alias}.orderPlacedAt)`, 'lastOrderAt')
-            .andWhere('counterparty.id::text IN (:...lastOrderCounterpartyIds)', {
-                lastOrderCounterpartyIds: counterpartyIds.map(String),
-            })
-            .orderBy()
-            .groupBy('counterparty.id')
-            .getRawMany<{ counterpartyId: string; lastOrderAt: Date | null }>();
+        const rows = await getRawManyBounded<{ counterpartyId: string; lastOrderAt: Date | null }>(
+            qb
+                .select('counterparty.id::text', 'counterpartyId')
+                .addSelect(`MAX(${qb.alias}.orderPlacedAt)`, 'lastOrderAt')
+                .andWhere('counterparty.id::text IN (:...lastOrderCounterpartyIds)', {
+                    lastOrderCounterpartyIds: counterpartyIds.map(String),
+                })
+                .orderBy()
+                .groupBy('counterparty.id'),
+            counterpartyIds.length,
+        );
         return rows.flatMap(r =>
             r.lastOrderAt ? [{ counterpartyId: r.counterpartyId, lastOrderAt: r.lastOrderAt }] : [],
         );

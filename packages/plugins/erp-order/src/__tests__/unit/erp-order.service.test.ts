@@ -14,11 +14,13 @@ const mockFulfillmentQb = {
     innerJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
+    take: vi.fn(),
     getMany: vi.fn(),
 };
 mockFulfillmentQb.innerJoin.mockReturnValue(mockFulfillmentQb);
 mockFulfillmentQb.where.mockReturnValue(mockFulfillmentQb);
 mockFulfillmentQb.orderBy.mockReturnValue(mockFulfillmentQb);
+mockFulfillmentQb.take.mockReturnValue(mockFulfillmentQb);
 
 const mockFulfillmentRepo = {
     findOne: vi.fn(),
@@ -63,6 +65,7 @@ describe('ErpOrderService', () => {
         mockFulfillmentQb.innerJoin.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.where.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.orderBy.mockReturnValue(mockFulfillmentQb);
+        mockFulfillmentQb.take.mockReturnValue(mockFulfillmentQb);
         service = new ErpOrderService(
             mockConnection as never,
             mockEventBus as never,

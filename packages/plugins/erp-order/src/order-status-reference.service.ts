@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { shouldApplyDocument, withAggregateLock } from 'shared';
+import { findBounded, shouldApplyDocument, withAggregateLock } from 'shared';
 
 import { OrderStatusReference } from './entities/order-status-reference.entity';
 import { OrderStatusDictionary, type OrderStatusEntry } from './order-status-dictionary';
@@ -46,10 +46,10 @@ export class OrderStatusReferenceService {
     }
 
     async dictionary(ctx: RequestContext): Promise<OrderStatusDictionary> {
-        // unbounded-ok: order status dictionary, tens of rows
-        const rows = await this.connection
-            .getRepository(ctx, OrderStatusReference)
-            .find({ where: { isDeleted: false }, order: { rank: 'ASC', id: 'ASC' } });
+        const rows = await findBounded(this.connection.getRepository(ctx, OrderStatusReference), {
+            where: { isDeleted: false },
+            order: { rank: 'ASC', id: 'ASC' },
+        });
         return new OrderStatusDictionary(rows.map(toEntry));
     }
 

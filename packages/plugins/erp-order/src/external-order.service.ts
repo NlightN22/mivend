@@ -9,7 +9,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { ctxQueryBounded, findBounded, withAggregateLock } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { nextExternalErpStatus } from './external-order-state';
@@ -205,12 +205,13 @@ export class ExternalOrderService {
     ): Promise<Map<string, VariantTaxRef>> {
         const ids = [...new Set(input.lines.map(l => l.productVariantId))];
         if (ids.length === 0) return new Map();
-        // unbounded-ok: variants matched by the ids of one order
-        const rows: Array<{ id: string; taxCategoryId: string }> = await this.connection
-            .getRepository(ctx, Order)
-            .query(`SELECT id, "taxCategoryId" FROM product_variant WHERE id = ANY($1::int[])`, [
-                ids,
-            ]);
+        const rows = await ctxQueryBounded<{ id: string; taxCategoryId: string }>(
+            this.connection,
+            ctx,
+            `SELECT id, "taxCategoryId" FROM product_variant WHERE id = ANY($1::int[])`,
+            [ids],
+            ids.length,
+        );
         return new Map(
             rows.map(r => [
                 String(r.id),
@@ -241,8 +242,7 @@ export class ExternalOrderService {
         variants: Map<string, VariantTaxRef>,
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, OrderLine);
-        // unbounded-ok: lines of one order
-        const current = await repo.find({
+        const current = await findBounded(repo, {
             where: { order: { id: orderId } },
             order: { id: 'ASC' },
         });
