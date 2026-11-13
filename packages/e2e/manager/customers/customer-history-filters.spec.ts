@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Regression guard: PrimeVue's menu filter overlay swallows the next outside click after inner use.
-// E2E only: needs browser popover/event bubbling; History tab has always-enabled select filters.
-test.describe('customer History tab — column filter overlays @on:manager-portal-admin @read-only', () => {
+// The History tab filters through the shared Filter builder (#344); the header funnels are gone.
+test.describe('customer History tab — Filter builder @on:manager-portal-admin @read-only', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
         await page.goto('/customers?search=E2E%20Co');
         const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
@@ -10,57 +9,35 @@ test.describe('customer History tab — column filter overlays @on:manager-porta
         await row.getByRole('link', { name: /E2E Co/ }).click();
         await expect(page).toHaveURL(/\/customers\/.+/);
         await page.getByRole('button', { name: 'History' }).click();
-        await expect(page.locator('.p-datatable-column-filter-button').first()).toBeVisible({
-            timeout: 15000,
-        });
-        // The tab's load() replaces rows asynchronously on mount.
-        // PrimeVue's filter popover can fail to open reliably mid-remount, so wait for it to settle.
-        await page.waitForTimeout(1000);
+        await expect(page.getByTestId('filter-trigger')).toBeVisible({ timeout: 15000 });
     }
 
-    function filterButtonFor(
-        page: import('@playwright/test').Page,
-        columnHeader: string,
-    ): ReturnType<import('@playwright/test').Page['locator']> {
-        return page
-            .locator('.mv-advanced-data-table__grid thead th', { hasText: columnHeader })
-            .locator('button.p-datatable-column-filter-button');
-    }
-
-    test('opening a second column filter closes the first, even after interacting inside it', async ({
-        page,
-    }) => {
+    test('no column header funnels are left on the tab', async ({ page }) => {
         await openHistoryTab(page);
-
-        await filterButtonFor(page, 'When').click();
-        await expect(page.locator('.p-datatable-filter-overlay')).toHaveCount(1);
-
-        // Interact inside the open overlay (our own MvColumnFilterSelect's trigger) — this is
-        // exactly the step that poisoned PrimeVue's outside-click detection before the fix.
-        await page.locator('.p-datatable-filter-overlay .mv-column-filter-select__trigger').click();
-
-        await filterButtonFor(page, 'Changed by').click();
-
-        // Before the fix: 2 (the stale "When" overlay stacked with the new "Changed by" one).
-        await expect(page.locator('.p-datatable-filter-overlay')).toHaveCount(1);
-        await expect(page.locator('.p-datatable-filter-overlay')).toContainText('Anyone');
+        await expect(page.locator('.p-datatable-column-filter-button')).toHaveCount(0);
     });
 
-    test('a single outside click closes an overlay after interacting inside it', async ({
-        page,
-    }) => {
+    test('a condition shows a chip, survives a reload and can be removed', async ({ page }) => {
         await openHistoryTab(page);
 
-        await filterButtonFor(page, 'When').click();
-        await expect(page.locator('.p-datatable-filter-overlay')).toBeVisible();
-        await page.waitForTimeout(300);
-        await page.locator('.p-datatable-filter-overlay .mv-column-filter-select__trigger').click();
+        await page.getByTestId('filter-trigger').click();
+        await page.getByTestId('filter-column-summary').click();
+        await page.getByTestId('filter-operator').selectOption('contains');
+        await page.getByTestId('filter-value').fill('no-such-change-text');
+        await page.getByRole('button', { name: 'Apply filter' }).click();
 
-        // Before the fix: this first outside click was silently swallowed, requiring a second one.
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+        await expect(page).toHaveURL(/history\.filters=/);
+
+        await page.reload();
+        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+
         await page
-            .locator('h1, h3')
-            .first()
-            .click({ position: { x: 2, y: 2 } });
-        await expect(page.locator('.p-datatable-filter-overlay')).toHaveCount(0);
+            .getByTestId('filter-chip')
+            .getByRole('button', { name: /Remove/ })
+            .click();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(0);
+        await expect(page).not.toHaveURL(/history\.filters=/);
     });
 });
