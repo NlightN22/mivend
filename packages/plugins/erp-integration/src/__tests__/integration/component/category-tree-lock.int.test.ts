@@ -33,9 +33,10 @@ const connection = {
         dataSource.transaction(manager => work({ manager })),
     getRepository: (ctx: TestCtx) => ({
         query: (sql: string, params: unknown[]) => ctx.manager.query(sql, params),
-        find: async () => {
+        find: async (options: { where?: { id?: { value: number } }; take?: number } = {}) => {
             const rows: Row[] = await (ctx.manager ?? dataSource.manager).query(
-                'select * from category order by id',
+                'select * from category where id > $1 order by id limit $2',
+                [options.where?.id?.value ?? 0, options.take ?? 1_000_000],
             );
             return rows.map(r => ({
                 id: r.id,
