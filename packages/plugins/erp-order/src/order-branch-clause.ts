@@ -1,3 +1,7 @@
+// Compare the point id as an integer: a text cast on the key defeats the primary-key index and the
+// per-order subquery scans every trading point.
+const POINT_ID_PATTERN = "'^[1-9][0-9]{0,8}$'";
+
 type BranchClause = { sql: string; params: Record<string, string | null> };
 
 // Read-time branch (#263): the trading point's servicing branch, else the counterparty's, else the default.
@@ -8,7 +12,7 @@ export function readTimeBranchClause(
     defaultBranchId: string | null,
 ): BranchClause {
     return {
-        sql: `COALESCE((SELECT tp."servicingBranchId" FROM trading_point tp WHERE tp.id::text = ${tradingPointIdSql}), ${counterpartyAlias}."branchId", :orderDefaultBranchId) = :branchId`,
+        sql: `COALESCE((SELECT tp."servicingBranchId" FROM trading_point tp WHERE tp.id = CASE WHEN ${tradingPointIdSql} ~ ${POINT_ID_PATTERN} THEN ${tradingPointIdSql}::int END), ${counterpartyAlias}."branchId", :orderDefaultBranchId) = :branchId`,
         params: { branchId, orderDefaultBranchId: defaultBranchId },
     };
 }
