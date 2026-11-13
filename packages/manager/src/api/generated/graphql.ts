@@ -2477,11 +2477,6 @@ export type DiscountFacetValueOption = {
     name: Scalars['String']['output'];
 };
 
-export type ExpiringDiscountGrantList = {
-    items: Array<DiscountGrant>;
-    totalItems: Scalars['Int']['output'];
-};
-
 export type DiscountGrant = {
     counterparties: Array<DiscountGrantCounterparty>;
     discountRuleId: Scalars['ID']['output'];
@@ -2967,6 +2962,11 @@ export type ErrorCode =
 export type ErrorResult = {
     errorCode: ErrorCode;
     message: Scalars['String']['output'];
+};
+
+export type ExpiringDiscountGrantList = {
+    items: Array<DiscountGrant>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type Facet = Node & {
@@ -8473,6 +8473,7 @@ export type Query = {
     entityDuplicators: Array<EntityDuplicatorDefinition>;
     entityVersions: Array<EntityVersion>;
     entityVersionsForEntities: EntityVersionList;
+    /** Top soonest-expiring grants plus the total count, so an alert is not sized by the whole set. */
     expiringDiscountGrants: ExpiringDiscountGrantList;
     facet: Maybe<Facet>;
     facetValue: Maybe<FacetValue>;
@@ -12530,80 +12531,6 @@ export type CustomerOrdersQuery = {
     };
 };
 
-export type CustomerOrdersByPaymentViewQueryVariables = Exact<{
-    customerId: Scalars['ID']['input'];
-    paymentView: Scalars['String']['input'];
-    options?: InputMaybe<OrderListOptions>;
-}>;
-
-export type CustomerOrdersByPaymentViewQuery = {
-    customerOrdersByPaymentView: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            code: string;
-            state: string;
-            totalWithTax: any;
-            currencyCode: CurrencyCode;
-            orderPlacedAt: any | null;
-            createdAt: any;
-            totalQuantity: number;
-            customer: { firstName: string; lastName: string } | null;
-            customFields: {
-                latestFulfillmentState: string | null;
-                placedByAdministratorId: string | null;
-                reservationState: string | null;
-            } | null;
-        }>;
-    };
-};
-
-export type CustomerOrdersPageQueryVariables = Exact<{
-    customerId: Scalars['ID']['input'];
-    options?: InputMaybe<OrderListOptions>;
-}>;
-
-export type CustomerOrdersPageQuery = {
-    visibleOrders: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            code: string;
-            state: string;
-            totalWithTax: any;
-            currencyCode: CurrencyCode;
-            orderPlacedAt: any | null;
-            createdAt: any;
-            totalQuantity: number;
-            customer: { firstName: string; lastName: string } | null;
-            customFields: {
-                latestFulfillmentState: string | null;
-                placedByAdministratorId: string | null;
-                reservationState: string | null;
-            } | null;
-        }>;
-    };
-};
-
-export type CustomerOrderViewCountsQueryVariables = Exact<{
-    customerId: Scalars['ID']['input'];
-}>;
-
-export type CustomerOrderViewCountsQuery = {
-    all: { totalItems: number };
-    cancelled: { totalItems: number };
-    unpaid: { totalItems: number };
-    partial: { totalItems: number };
-};
-
-export type OrderPaymentSummariesQueryVariables = Exact<{
-    orderIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-}>;
-
-export type OrderPaymentSummariesQuery = {
-    orderPaymentSummaries: Array<{ orderId: string; capturedAmount: number }>;
-};
-
 export type CustomerDocumentsPageQueryVariables = Exact<{
     counterpartyId: Scalars['ID']['input'];
     options?: InputMaybe<DocumentListOptions>;
@@ -12655,37 +12582,6 @@ export type ActiveDiscountCountsQueryVariables = Exact<{
 
 export type ActiveDiscountCountsQuery = {
     activeDiscountCounts: Array<{ counterpartyId: string; count: number }>;
-};
-
-export type DiscountGrantViewCountsQueryVariables = Exact<{
-    counterpartyId: Scalars['ID']['input'];
-}>;
-
-export type DiscountGrantViewCountsQuery = {
-    all: { totalItems: number };
-    active: { totalItems: number };
-    expiringSoon: { totalItems: number };
-    expired: { totalItems: number };
-};
-
-export type CustomerDiscountGrantsPageQueryVariables = Exact<{
-    counterpartyId: Scalars['ID']['input'];
-    options?: InputMaybe<DiscountGrantForCustomerListOptions>;
-}>;
-
-export type CustomerDiscountGrantsPageQuery = {
-    discountGrantsForCounterparty: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            number: string;
-            createdAt: any;
-            percent: number;
-            facetValueCode: string | null;
-            validTo: any;
-            status: string;
-        }>;
-    };
 };
 
 export type LastOrderDatesQueryVariables = Exact<{
@@ -16661,110 +16557,6 @@ export const CustomerOrdersDocument = new TypedDocumentString(`
     reservationState
   }
 }`) as unknown as TypedDocumentString<CustomerOrdersQuery, CustomerOrdersQueryVariables>;
-export const CustomerOrdersByPaymentViewDocument = new TypedDocumentString(`
-    query CustomerOrdersByPaymentView($customerId: ID!, $paymentView: String!, $options: OrderListOptions) {
-  customerOrdersByPaymentView(
-    customerId: $customerId
-    paymentView: $paymentView
-    options: $options
-  ) {
-    totalItems
-    items {
-      ...CustomerOrderItemFields
-    }
-  }
-}
-    fragment CustomerOrderItemFields on Order {
-  id
-  code
-  state
-  totalWithTax
-  currencyCode
-  orderPlacedAt
-  createdAt
-  totalQuantity
-  customer {
-    firstName
-    lastName
-  }
-  customFields {
-    latestFulfillmentState
-    placedByAdministratorId
-    reservationState
-  }
-}`) as unknown as TypedDocumentString<
-    CustomerOrdersByPaymentViewQuery,
-    CustomerOrdersByPaymentViewQueryVariables
->;
-export const CustomerOrdersPageDocument = new TypedDocumentString(`
-    query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
-  visibleOrders(options: $options, customerId: $customerId) {
-    totalItems
-    items {
-      ...CustomerOrderItemFields
-    }
-  }
-}
-    fragment CustomerOrderItemFields on Order {
-  id
-  code
-  state
-  totalWithTax
-  currencyCode
-  orderPlacedAt
-  createdAt
-  totalQuantity
-  customer {
-    firstName
-    lastName
-  }
-  customFields {
-    latestFulfillmentState
-    placedByAdministratorId
-    reservationState
-  }
-}`) as unknown as TypedDocumentString<CustomerOrdersPageQuery, CustomerOrdersPageQueryVariables>;
-export const CustomerOrderViewCountsDocument = new TypedDocumentString(`
-    query CustomerOrderViewCounts($customerId: ID!) {
-  all: visibleOrders(customerId: $customerId, options: {take: 0}) {
-    totalItems
-  }
-  cancelled: visibleOrders(
-    customerId: $customerId
-    options: {take: 0, filter: {state: {eq: "Cancelled"}}}
-  ) {
-    totalItems
-  }
-  unpaid: customerOrdersByPaymentView(
-    customerId: $customerId
-    paymentView: "unpaid"
-    options: {take: 0}
-  ) {
-    totalItems
-  }
-  partial: customerOrdersByPaymentView(
-    customerId: $customerId
-    paymentView: "partial"
-    options: {take: 0}
-  ) {
-    totalItems
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CustomerOrderViewCountsQuery,
-    CustomerOrderViewCountsQueryVariables
->;
-export const OrderPaymentSummariesDocument = new TypedDocumentString(`
-    query OrderPaymentSummaries($orderIds: [ID!]!) {
-  orderPaymentSummaries(orderIds: $orderIds) {
-    orderId
-    capturedAmount
-  }
-}
-    `) as unknown as TypedDocumentString<
-    OrderPaymentSummariesQuery,
-    OrderPaymentSummariesQueryVariables
->;
 export const CustomerDocumentsPageDocument = new TypedDocumentString(`
     query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
   documents(options: $options, counterpartyId: $counterpartyId) {
@@ -16827,59 +16619,6 @@ export const ActiveDiscountCountsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ActiveDiscountCountsQuery,
     ActiveDiscountCountsQueryVariables
->;
-export const DiscountGrantViewCountsDocument = new TypedDocumentString(`
-    query DiscountGrantViewCounts($counterpartyId: ID!) {
-  all: discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: {take: 0}
-  ) {
-    totalItems
-  }
-  active: discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: {take: 0, status: "active"}
-  ) {
-    totalItems
-  }
-  expiringSoon: discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: {take: 0, status: "expiring-soon"}
-  ) {
-    totalItems
-  }
-  expired: discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: {take: 0, status: "expired"}
-  ) {
-    totalItems
-  }
-}
-    `) as unknown as TypedDocumentString<
-    DiscountGrantViewCountsQuery,
-    DiscountGrantViewCountsQueryVariables
->;
-export const CustomerDiscountGrantsPageDocument = new TypedDocumentString(`
-    query CustomerDiscountGrantsPage($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
-  discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: $options
-  ) {
-    totalItems
-    items {
-      id
-      number
-      createdAt
-      percent
-      facetValueCode
-      validTo
-      status
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CustomerDiscountGrantsPageQuery,
-    CustomerDiscountGrantsPageQueryVariables
 >;
 export const LastOrderDatesDocument = new TypedDocumentString(`
     query LastOrderDates($counterpartyIds: [ID!]!) {
