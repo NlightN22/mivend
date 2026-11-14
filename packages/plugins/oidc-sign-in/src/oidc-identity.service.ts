@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
     ConfigService,
-    ForbiddenError,
     RequestContext,
     TransactionalConnection,
+    UserInputError,
 } from '@vendure/core';
 import { ctxQuery, ctxQueryBounded, QueryTooLargeError, withAggregateLock } from 'shared';
 
@@ -66,7 +66,7 @@ export class OidcIdentityService {
         try {
             return await this.queryBySub(ctx, sub);
         } catch (error) {
-            if (error instanceof QueryTooLargeError) throw new ForbiddenError(DUPLICATE_IDENTITY);
+            if (error instanceof QueryTooLargeError) throw new UserInputError(DUPLICATE_IDENTITY);
             throw error;
         }
     }
