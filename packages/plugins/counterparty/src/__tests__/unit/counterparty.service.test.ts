@@ -515,6 +515,7 @@ describe('CounterpartyService', () => {
         function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
             qb.orderBy = vi.fn(() => qb);
+            qb.addOrderBy = vi.fn(() => qb);
             qb.where = vi.fn(() => qb);
             qb.andWhere = vi.fn(() => qb);
             qb.take = vi.fn(() => qb);
@@ -778,6 +779,7 @@ describe('CounterpartyService', () => {
             await service.findVisiblePage(mockCtx, { sort: { officialEmail: 'DESC' } });
 
             expect(qb.orderBy).toHaveBeenCalledWith('c.officialEmail', 'DESC');
+            expect(qb.addOrderBy).toHaveBeenCalledWith('c.id', 'ASC');
         });
 
         it('only applies the first non-null sort key when several are somehow set', async () => {
