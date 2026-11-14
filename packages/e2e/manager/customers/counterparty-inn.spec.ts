@@ -22,7 +22,9 @@ test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
         const footer = page.locator('footer');
         await footer.getByRole('button', { name: 'Next' }).click();
         await footer.getByRole('button', { name: 'Review' }).click();
-        await expect(page.getByText('Nothing would change')).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText('Nothing would change', { exact: true })).toBeVisible({
+            timeout: 15000,
+        });
 
         const table = page.locator('.mv-batch-result__table');
         await expect(table).toContainText('INN is used by another counterparty with portal access');
