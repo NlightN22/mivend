@@ -5,7 +5,8 @@ import { conditionsToCustomersFilter } from '../../api/customersFilter';
 import { CUSTOMERS_SORT_FIELDS } from '../../api/customersList';
 import type { CustomerListItem } from '../../api/customers';
 
-const lastOrderColumn = () => buildCustomersColumns().find(c => c.field === 'lastOrder');
+const lastOrderColumn = () =>
+    buildCustomersColumns({ managers: [] }).find(c => c.field === 'lastOrder');
 
 describe('customers list: last order column', () => {
     it('is a sortable date filter column keyed to lastOrderAt', () => {

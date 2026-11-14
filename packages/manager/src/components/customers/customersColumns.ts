@@ -180,6 +180,7 @@ export function buildCustomersColumns(
             field: 'lastOrder',
             header: col('lastOrder'),
             sortField: 'lastOrderAt',
+            filterField: 'lastOrderAt',
             width: 110,
             minWidth: 100,
             priority: 4,
