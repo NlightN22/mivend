@@ -12,6 +12,7 @@ import { findBounded, KEYSET_CEILING } from 'shared';
 import { ApprovalRequestQueryService } from '@mivend/plugin-approval-workflow';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
+import { loadAllRequestsOfType } from './discount-registry-requests';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 import { DiscountRegistryListOptions, DiscountRegistryService } from './discount-registry.service';
@@ -67,10 +68,10 @@ export class DiscountRegistryResolver {
 
         // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.
         // Fetch once and reuse it for the pending/rejected entries below.
-        const { items: requests } = await this.approvalRequestQueryService.findByRequestType(
+        const requests = await loadAllRequestsOfType(
             ctx,
+            this.approvalRequestQueryService,
             DISCOUNT_GRANT_REQUEST_TYPE,
-            { take: 10000 },
         );
         const requestById = new Map(requests.map(r => [String(r.id), r]));
 
