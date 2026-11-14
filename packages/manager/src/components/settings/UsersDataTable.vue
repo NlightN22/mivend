@@ -48,7 +48,7 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
         field: 'name',
         header: t('settingsAccess.users.columns.name'),
         width: 200,
-        priority: 8,
+        priority: 6,
         minWidth: 140,
         filterConfig: { type: 'none' },
         mobile: { primary: true },
@@ -74,7 +74,7 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
         field: 'role',
         header: t('settingsAccess.users.columns.role'),
         width: 190,
-        priority: 7,
+        priority: 9,
         minWidth: 160,
         filterConfig: { type: 'none' },
     },
@@ -262,22 +262,24 @@ function confirmDeactivate(): void {
             />
         </template>
         <template #cell-actions="{ data }">
-            <MvButton
-                variant="secondary"
-                size="sm"
-                :loading="resendingId === (data as UserRow).id"
-                @click="emit('resend-password-reset', (data as UserRow).user)"
-            >
-                {{ t('settingsAccess.users.resendLink') }}
-            </MvButton>
-            <MvButton
-                v-if="canManageLimits"
-                variant="secondary"
-                size="sm"
-                @click="emit('edit-limits', (data as UserRow).user)"
-            >
-                {{ t('settingsAccess.users.discountLimits') }}
-            </MvButton>
+            <div class="users-table__actions">
+                <MvButton
+                    variant="secondary"
+                    size="sm"
+                    :loading="resendingId === (data as UserRow).id"
+                    @click="emit('resend-password-reset', (data as UserRow).user)"
+                >
+                    {{ t('settingsAccess.users.resendLink') }}
+                </MvButton>
+                <MvButton
+                    v-if="canManageLimits"
+                    variant="secondary"
+                    size="sm"
+                    @click="emit('edit-limits', (data as UserRow).user)"
+                >
+                    {{ t('settingsAccess.users.discountLimits') }}
+                </MvButton>
+            </div>
         </template>
     </MvAdvancedDataTable>
 
@@ -306,6 +308,12 @@ function confirmDeactivate(): void {
     font-size: 13px;
     color: var(--el-text-color-secondary);
     line-height: 1.5;
+}
+
+.users-table__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .users-table__confirm-actions {
