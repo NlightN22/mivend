@@ -15,7 +15,7 @@ export interface UseNotifications {
     // The fetched page is capped, so counting it locally silently undercounts.
     unreadCount: ComputedRef<number>;
     loading: Ref<boolean>;
-    // Reason of the last failed load, null after a success; background loads never throw.
+    // Reason of the last failed list load, cleared only when the list loads again; background loads never throw.
     error: Ref<string | null>;
     markRead: (id: string) => Promise<void>;
     resolve: (id: string, resolution: string) => Promise<void>;
@@ -46,7 +46,6 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
     async function refreshUnreadTotal(): Promise<void> {
         const page = await transport.fetch({ status: 'unread', take: 0 });
         unreadTotal.value = page.totalItems;
-        error.value = null;
     }
 
     async function refresh(): Promise<void> {

@@ -251,3 +251,42 @@ describe('useNotifications load failures', () => {
         expect(store.error.value).toBeNull();
     });
 });
+
+describe('useNotifications list error versus the unread count', () => {
+    const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+    const listFails = (transport: ReturnType<typeof makeTransport>): void => {
+        (transport.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+            async (opts?: NotificationFetchOptions) => {
+                if (opts?.status === 'unread') return { items: [], totalItems: 3 };
+                throw new Error('list too large');
+            },
+        );
+    };
+
+    it('keeps the list error when the unread count of the same refresh succeeds', async () => {
+        const transport = makeTransport([]);
+        listFails(transport);
+        const store = useNotifications(transport);
+        await settle();
+        expect(store.error.value).toBe('list too large');
+        expect(store.unreadCount.value).toBe(3);
+    });
+
+    it('keeps the list error when a later live event refreshes the unread count', async () => {
+        const transport = makeTransport([]);
+        listFails(transport);
+        const store = useNotifications(transport);
+        await settle();
+        transport.emit(makeItem({ id: 'live' }));
+        await settle();
+        expect(store.error.value).toBe('list too large');
+        (transport.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+            async (opts?: NotificationFetchOptions) =>
+                opts?.status === 'unread'
+                    ? { items: [], totalItems: 1 }
+                    : { items: [makeItem()], totalItems: 1 },
+        );
+        await store.refresh();
+        expect(store.error.value).toBeNull();
+    });
+});
