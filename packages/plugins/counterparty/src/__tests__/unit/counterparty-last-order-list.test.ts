@@ -9,8 +9,17 @@ function fakeQb() {
     const andWhere = vi.fn<(sql: string, params?: Record<string, unknown>) => unknown>();
     const addSelect = vi.fn<(sql: string, alias: string) => unknown>();
     const orderBy = vi.fn<(key: string, order: string, nulls?: string) => unknown>();
+    const addOrderBy = vi.fn<(key: string, order: string) => unknown>();
     const leftJoin = vi.fn<(...args: unknown[]) => unknown>();
-    const qb = { andWhere, addSelect, orderBy, leftJoin, expressionMap: { joinAttributes: [] } };
+    const qb = {
+        andWhere,
+        addSelect,
+        orderBy,
+        addOrderBy,
+        leftJoin,
+        expressionMap: { joinAttributes: [] },
+    };
+    addOrderBy.mockReturnValue(qb);
     leftJoin.mockReturnValue(qb);
     andWhere.mockReturnValue(qb);
     addSelect.mockReturnValue(qb);
@@ -20,6 +29,7 @@ function fakeQb() {
         andWhere,
         addSelect,
         orderBy,
+        addOrderBy,
         leftJoin,
     };
 }
@@ -54,9 +64,10 @@ describe('counterparty lastOrderAt list mapping', () => {
     });
 
     it.each(['ASC', 'DESC'] as const)('sorts %s with never-ordered last', order => {
-        const { qb, addSelect, orderBy } = fakeQb();
+        const { qb, addSelect, orderBy, addOrderBy } = fakeQb();
         applyCounterpartySort(qb, { lastOrderAt: order });
         expect(addSelect).toHaveBeenCalledOnce();
         expect(orderBy).toHaveBeenCalledWith('last_order_sort', order, 'NULLS LAST');
+        expect(addOrderBy).toHaveBeenCalledWith('c.id', 'ASC');
     });
 });

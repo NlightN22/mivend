@@ -176,6 +176,33 @@ describe('counterparty lastOrderAt sort', () => {
     });
 });
 
+describe('counterparty lastOrderAt sort with many equal keys', () => {
+    it('pages 65 rows in small pages without repeating or skipping any', async () => {
+        await dataSource.getRepository(TestCounterparty).save(
+            Array.from({ length: 60 }, (_, i) => ({
+                legalName: 'L',
+                erpId: `tie-${i}`,
+                shortName: `Tied ${String(i).padStart(2, '0')}`,
+                branchId: 'branch-a',
+            })),
+        );
+        const seen: string[] = [];
+        for (const sort of ['ASC', 'DESC'] as const) {
+            seen.length = 0;
+            for (let skip = 0; skip < 80; skip += 7) {
+                const page = await service.findVisiblePage(ctx, {
+                    sort: { lastOrderAt: sort },
+                    take: 7,
+                    skip,
+                });
+                seen.push(...page.items.map(c => c.shortName));
+            }
+            expect(seen).toHaveLength(65);
+            expect(new Set(seen).size).toBe(65);
+        }
+    });
+});
+
 describe('loadLastOrderDates', () => {
     const connection = {
         getRepository: () => dataSource.getRepository(TestCounterparty),

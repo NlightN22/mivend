@@ -39,6 +39,8 @@ export function applyCounterpartySort(
         } else {
             qb.orderBy(SORTABLE_COLUMNS[field], order);
         }
+        // Equal keys (never-ordered, same manager, empty phone) need one stable order, or pages repeat and skip rows.
+        qb.addOrderBy('c.id', 'ASC');
         return;
     }
 }
