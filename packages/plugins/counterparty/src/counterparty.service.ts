@@ -259,7 +259,8 @@ export class CounterpartyService {
         return this.connection
             .getRepository(ctx, Counterparty)
             .createQueryBuilder('c')
-            .orderBy('c.shortName', 'ASC');
+            .orderBy('c.shortName', 'ASC')
+            .addOrderBy('c.id', 'ASC');
     }
 
     private applyVisibilityScope(

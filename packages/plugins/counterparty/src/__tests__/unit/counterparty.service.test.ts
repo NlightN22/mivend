@@ -814,6 +814,7 @@ describe('CounterpartyService', () => {
         it("counts unassigned counterparties within the caller's access scope", async () => {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
             qb.orderBy = vi.fn(() => qb);
+            qb.addOrderBy = vi.fn(() => qb);
             qb.andWhere = vi.fn(() => qb);
             qb.getCount = vi.fn(async () => 3);
             mockConnection.getRepository.mockReturnValueOnce({
