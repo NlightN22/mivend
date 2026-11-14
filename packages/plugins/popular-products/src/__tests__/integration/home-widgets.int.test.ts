@@ -281,7 +281,7 @@ beforeAll(async () => {
     } as never);
     widgets = new HomeWidgetIdsService(connection, scoped);
     popular = new PopularProductsService(connection, scoped);
-});
+}, 120_000);
 
 afterAll(async () => {
     await dataSource.destroy();

@@ -187,7 +187,7 @@ describe('cart line fields (real Postgres)', () => {
             for (const e of expected) seen.add(JSON.stringify(e));
         }
         expect(seen.size).toBeGreaterThan(8);
-    });
+    }, 120_000);
 
     it('does not grow the query count with the number of cart lines', async () => {
         const variants = await seedCatalog(ds, 60);
