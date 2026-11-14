@@ -173,14 +173,14 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 
 | Item | Content | Status |
 | --- | --- | --- |
-| Dashboard | KPI and widgets | exists, redesign deferred |
+| Dashboard | KPI and widgets | exists; charts and redesign: #365 |
 | Customers | list, card with tabs: orders, proforma invoices, settlements (payments and sales documents), discounts | list in the standard shape (`CustomersList`: filter builder, All/Active/Inactive chips with counts, URL state, saved views, uniform rows, page scroll). The Orders, Proforma invoices, Settlements and Discounts tabs are the standard lists nested with a fixed counterparty (see "Customer card tabs"); `CustomersList` takes an optional `fixedFilter` for the same purpose |
 | Documents (group) | Orders, Proforma invoices, Discounts (the registry of discount grants, formerly "Discount requests") | exists; the Payments entry is removed (sidebar and More sheet) |
 | Settlements | one list of the ERP documents that move a customer's settlement; its own entry right after Documents, shown only with `ReadSettlementDocument` (desktop sidebar and the mobile More sheet) | exists |
 | Approvals | list and card (awaiting approval is a quick filter or counter) | exists |
 | Team | users and managers | exists |
 | Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
-| Analytics | placeholder | not implemented yet |
+| Analytics | placeholder | not implemented yet (#363) |
 | System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, renamed System settings; the security page (password, two-factor) is also linked from the user menu |
 | User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built: identity block, "Password and security", compact menu with an icon-only theme control in one row with its label (Light / Dark / Auto, kept per browser), "System settings" when permitted, Log out last in the danger role; same component in the desktop dropdown and the phone bottom sheet; profile and language not built (the manager has no i18n) |
 | Mobile header | <=800px: logo mark, round search button (the field takes over the header row; the panel below shows recent queries and quick links, or grouped results from 2 characters; cross or Escape closes), notification bell with unread badge, round avatar button opening the user menu card | built on the global search; quick links are the user's accessible lists (saved views are per list and cannot be listed across lists) |
@@ -197,7 +197,7 @@ or tab is decided when the settlement document card is built. Until then the Set
 **System settings are not user settings.** The sidebar entry "Settings" becomes "System settings" and holds only
 system-level things (roles, branches, policies and so on). Everything personal (profile, password, two-factor,
 language, the light/dark theme switch) moves to the user menu that opens when the user block in the header is clicked,
-next to "Log out". The dark theme itself and this menu come in the later stage of #320.
+next to "Log out". The dark theme and the menu exist; moving the personal pages out of system settings into a profile page is #361.
 
 ## Approvals
 
@@ -327,8 +327,16 @@ always the real total, never filtered by contracts or document visibility.
 
 ## Not implemented yet
 
-Analytics, manager card (plan/fact, dynamics, tasks), tasks and "My tasks", dashboard charts,
-quick article entry, change-of-assignment action, dashboard redesign (a separate step), the profile, language and theme switch items of the user menu.
+Tracked as separate issues, outside #320:
+
+- Profile page with all personal settings, moved out of system settings: #361.
+- Manager card (plan/fact, dynamics, statistics): #362.
+- Analytics: #363.
+- Tasks and "My tasks" (most likely a separate service): #364.
+- Dashboard charts and redesign: #365.
+- Change of customer assignment (reassign the responsible manager): #366.
+
+Quick article entry is the add-position row of the order card (`OrderAddRow`).
 
 Follow-ups:
 
