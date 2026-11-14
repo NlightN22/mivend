@@ -8,8 +8,8 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { cancelTestOrder } from '../../helpers/manager-order';
 import { openStorefrontAs } from '../../visibility/session';
 
-// Seed: product A is stocked only at branch A's warehouse, product B only at branch B's.
-// Products are new and on sale; Popular needs sales, so each customer buys its branch's product.
+// Seed: product A only at branch A's warehouse, B only at branch B's; customer-a/customer-b are in A/B.
+// Popular needs sales, so each buys its branch's product; one case per widget and viewer, API ids plus home UI.
 
 type Side = 'a' | 'b';
 const SIDES: { side: Side; customer: CustomerKey; other: Side }[] = [

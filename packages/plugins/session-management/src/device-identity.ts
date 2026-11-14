@@ -31,8 +31,8 @@ function sessionCookieWillBeWritten(session: unknown): boolean {
     );
 }
 
-// cookie-session sets its cookie inside the head write with no wrappable handle, so we decide
-// just before that write; the id is pre-generated so the sign-in request can use it.
+// cookie-session sets its cookie in the head write with no wrappable handle: we decide just before it and
+// append to its header; the id is pre-generated for the sign-in request. Acting traffic is skipped.
 export function deviceCookieMiddleware(secure: boolean) {
     return (req: Request, res: Response, next: NextFunction): void => {
         if (

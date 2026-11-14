@@ -23,8 +23,8 @@ function isGiftKind(kind: DiscountRuleOperationKind): boolean {
 // Gift rules map to a near-100 int percent, never 100: the business wants a nominal non-zero charge
 const GIFT_TYPE_PERCENT = 99;
 
-// Absent effective_to is stored as NULL and never applied: queries filter validTo >= now.
-// Absent is_active means inactive by design; an inactive/deleted event removes the stored rule.
+// Absent effective_to is NULL, never applied (validTo >= now); absent is_active = inactive; inactive/deleted removes the rule.
+// warehouse_id, min_positions_count deferred (docs/ai/erp-streams-map.md).
 @Injectable()
 export class PromoRuleStreamHandler implements InboundStreamHandler {
     constructor(private readonly promoDiscountRuleService: PromoDiscountRuleService) {}

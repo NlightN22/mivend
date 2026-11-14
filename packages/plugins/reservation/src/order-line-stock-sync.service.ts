@@ -14,8 +14,8 @@ interface LineAllocation {
     net: number;
 }
 
-// Staff edits write lines directly, bypassing Vendure's order-modification hooks; sync allocation.
-// Read allocation per line from its movement rows. ALLOCATION/RELEASE store +qty, SALE stores -qty.
+// Staff edits write lines directly, bypassing Vendure's order-modification hooks; sync allocation from movement rows.
+// ALLOCATION/RELEASE store +qty; SALE stores -qty and takes q out of stockAllocated AND stockOnHand (core 3.7.3).
 @Injectable()
 export class OrderLineStockSyncService {
     constructor(

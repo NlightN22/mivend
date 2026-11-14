@@ -6,8 +6,8 @@ const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
 const NON_BLANK_RESERVATIONS = ORDER_RESERVATION_STATE_OPTIONS.filter(o => o.value);
 const NOT_FILTERED = { type: 'none' } as const;
 
-// No starts/ends-with on the code column: the server has no regex operator.
-// Customer, branch, attention: no server-side filter; search covers order, company, INN, phone.
+// No starts/ends-with on the code column (no server regex operator); customer, branch, attention are unfiltered.
+// Widths: widest cell text + 32px padding, sum 1080 fits a 1360px page; search covers order, company, INN, phone.
 const COLUMNS: Omit<AdvancedDataTableColumn, 'header'>[] = [
     {
         field: 'code',
