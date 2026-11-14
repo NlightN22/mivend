@@ -86,6 +86,14 @@ const dashboardParts: typeof en = {
             discountGrantApproval: 'Заявка на скидку',
             creditTermApproval: 'Заявка на срок оплаты',
         },
+        requestTypeCount: {
+            priceAdjustmentApproval:
+                '{count} заявка на корректировку цены | {count} заявки на корректировку цены | {count} заявок на корректировку цены',
+            discountGrantApproval:
+                '{count} заявка на скидку | {count} заявки на скидку | {count} заявок на скидку',
+            creditTermApproval:
+                '{count} заявка на срок оплаты | {count} заявки на срок оплаты | {count} заявок на срок оплаты',
+        },
         waitingOn: 'Ожидает: {role}',
         pending: 'На рассмотрении',
         approved: 'Согласована',

@@ -93,8 +93,8 @@ const pendingBreakdown = computed(() => {
     if (!counts.size) return '';
     return [...counts.entries()]
         .map(([type, count]) => {
-            const key = `dashboardParts.approvalStatus.requestType.${type}`;
-            return `${count} ${te(key) ? t(key) : type}`;
+            const key = `dashboardParts.approvalStatus.requestTypeCount.${type}`;
+            return te(key) ? t(key, { count }, count) : `${count} ${type}`;
         })
         .join(', ');
 });

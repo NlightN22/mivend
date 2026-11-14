@@ -84,6 +84,12 @@ export default {
             discountGrantApproval: 'Discount request',
             creditTermApproval: 'Payment term request',
         },
+        requestTypeCount: {
+            priceAdjustmentApproval:
+                '{count} price adjustment request | {count} price adjustment requests',
+            discountGrantApproval: '{count} discount request | {count} discount requests',
+            creditTermApproval: '{count} payment term request | {count} payment term requests',
+        },
         waitingOn: 'Waiting on {role}',
         pending: 'Pending',
         approved: 'Approved',
