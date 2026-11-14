@@ -21,7 +21,11 @@ export class ChangeJournalResolver {
     async changeJournalForEntity(
         @Ctx() ctx: RequestContext,
         @Args()
-        args: { entityType: string; entityId: string; filter?: ChangeJournalFilter | null } & PageArgs,
+        args: {
+            entityType: string;
+            entityId: string;
+            filter?: ChangeJournalFilter | null;
+        } & PageArgs,
     ): Promise<ChangeJournalPage> {
         const ref = { entityName: args.entityType, entityId: String(args.entityId) };
         const allowed = await this.scopeRegistry.filterRefs(ctx, [ref]);

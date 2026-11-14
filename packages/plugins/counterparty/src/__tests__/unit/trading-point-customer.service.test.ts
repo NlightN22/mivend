@@ -72,7 +72,12 @@ describe('TradingPointService — customer methods', () => {
 
             expect(mockTpRepo.find).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    where: { counterpartyId: 'cp1', isActive: true, address: Not(''), customerStatus: 'active' },
+                    where: {
+                        counterpartyId: 'cp1',
+                        isActive: true,
+                        address: Not(''),
+                        customerStatus: 'active',
+                    },
                 }),
             );
         });

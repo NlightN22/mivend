@@ -45,7 +45,8 @@ export function useBulkBatchFlow(type: string): BulkBatchFlow {
             try {
                 if (batch.value) batch.value = await fetchBulkBatch(batch.value.uuid);
             } catch (e) {
-                error.value = e instanceof Error ? e.message : i18n.global.t('bulkOperations.refreshFailed');
+                error.value =
+                    e instanceof Error ? e.message : i18n.global.t('bulkOperations.refreshFailed');
             }
             poll();
         }, POLL_MS);
@@ -59,7 +60,8 @@ export function useBulkBatchFlow(type: string): BulkBatchFlow {
             poll();
             return true;
         } catch (e) {
-            error.value = e instanceof Error ? e.message : i18n.global.t('bulkOperations.requestFailed');
+            error.value =
+                e instanceof Error ? e.message : i18n.global.t('bulkOperations.requestFailed');
             return false;
         } finally {
             busy.value = false;

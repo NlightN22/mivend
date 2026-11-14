@@ -26,7 +26,9 @@ function variant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
                 {{ doc.type }} · {{ formatDocumentNumber(doc.number) }}
             </RouterLink>
             <MvStatusBadge :variant="variant(doc.status)">{{
-                STATUS_KEYS.includes(doc.status) ? t(`orderDetail.documents.status.${doc.status}`) : doc.status
+                STATUS_KEYS.includes(doc.status)
+                    ? t(`orderDetail.documents.status.${doc.status}`)
+                    : doc.status
             }}</MvStatusBadge>
         </li>
     </ul>

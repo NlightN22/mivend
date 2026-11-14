@@ -5,7 +5,9 @@ defineProps<{ counterpartyId: string; counterpartyName: string }>();
 </script>
 
 <template>
-    <DiscountsWorkspace :counterparty-id="counterpartyId"
+    <DiscountsWorkspace
+        :counterparty-id="counterpartyId"
         :counterparty-name="counterpartyName"
-        url-prefix="discounts." />
+        url-prefix="discounts."
+    />
 </template>

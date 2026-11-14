@@ -66,10 +66,7 @@ watch(() => props.orderId, load, { immediate: true });
                 />
                 <MvPopover v-if="blockedSkus.length">
                     <template #trigger>
-                        <MvFlagChip
-                            tone="danger"
-                            :label="t('orderDetail.contract.showBlocked')"
-                        />
+                        <MvFlagChip tone="danger" :label="t('orderDetail.contract.showBlocked')" />
                     </template>
                     {{ t('orderDetail.contract.blocked', { skus: blockedSkus.join(', ') }) }}
                 </MvPopover>

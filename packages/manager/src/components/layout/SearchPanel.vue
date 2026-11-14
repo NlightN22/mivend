@@ -45,11 +45,15 @@ defineEmits<{
                 :active-key="activeKey"
                 @select="(kind, hit) => $emit('select', kind, hit)"
             />
-            <p v-if="state.pending" class="search-panel__note" role="status">{{ t('shell.search.pending') }}</p>
+            <p v-if="state.pending" class="search-panel__note" role="status">
+                {{ t('shell.search.pending') }}
+            </p>
             <p v-else-if="state.failed" class="search-panel__note" role="alert">
                 {{ t('shell.search.failed') }}
             </p>
-            <p v-else-if="state.empty" class="search-panel__note" role="status">{{ t('shell.search.empty') }}</p>
+            <p v-else-if="state.empty" class="search-panel__note" role="status">
+                {{ t('shell.search.empty') }}
+            </p>
         </template>
         <template v-else>
             <section v-if="recent.length" :aria-label="t('shell.search.recent')">

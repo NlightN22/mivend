@@ -106,9 +106,7 @@ function onMenu(key: string): void {
     >
         <div class="header-actions__extend">
             <label class="header-actions__label">
-                {{
-                    t('orderDetail.actions.extendBy', { max: reservation.extensionMaxDays.value })
-                }}
+                {{ t('orderDetail.actions.extendBy', { max: reservation.extensionMaxDays.value }) }}
                 <MvInput
                     size="sm"
                     type="number"

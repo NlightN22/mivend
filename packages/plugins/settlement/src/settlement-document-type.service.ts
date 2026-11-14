@@ -50,7 +50,9 @@ export class SettlementDocumentTypeService {
         if (existing) await repo.update(existing.id, fields);
         else {
             const movesTurnover = movesTurnoverByDefault(input.documentType, input.category);
-            await repo.save(repo.create({ documentType: input.documentType, ...fields, movesTurnover }));
+            await repo.save(
+                repo.create({ documentType: input.documentType, ...fields, movesTurnover }),
+            );
         }
         return 'applied';
     }

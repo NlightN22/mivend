@@ -86,7 +86,11 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
         header: t('team.columns.roles'),
         width: 200,
         filterConfig: props.roleOptions.length
-            ? { type: 'select', placeholder: t('team.filters.allRoles'), options: props.roleOptions }
+            ? {
+                  type: 'select',
+                  placeholder: t('team.filters.allRoles'),
+                  options: props.roleOptions,
+              }
             : { type: 'none' },
     },
     {

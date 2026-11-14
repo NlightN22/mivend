@@ -87,8 +87,7 @@ export default {
         limitNotCovered:
             'Your discount limit does not cover this request, so you can reject it but not approve it.',
         approveOnly: 'You can approve this request but not reject it.',
-        notAllowed:
-            'Only {role} (or the person this step was escalated to) can decide step {n}.',
+        notAllowed: 'Only {role} (or the person this step was escalated to) can decide step {n}.',
         currentApprover: 'the current approver',
         recordFailed: 'Could not record the decision',
         escalateFailed: 'Could not escalate the request',

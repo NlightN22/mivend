@@ -97,7 +97,12 @@ function pick(id: string): void {
         >
             <Collection class="mv-table-views__icon" />
             <span class="mv-table-views__label">{{ activeName || label('views', 'Views') }}</span>
-            <span v-if="dirty" class="mv-table-views__dirty" :title="label('unsavedChanges', 'Unsaved changes')">*</span>
+            <span
+                v-if="dirty"
+                class="mv-table-views__dirty"
+                :title="label('unsavedChanges', 'Unsaved changes')"
+                >*</span
+            >
         </MvButton>
         <Teleport to="body">
             <div v-if="open && isMobile" class="mv-table-views__backdrop" @click="open = false" />
@@ -157,11 +162,16 @@ function pick(id: string): void {
                             variant="primary"
                             :disabled="busy"
                             @click="emit('update')"
-                            >{{ label('update', 'Update "{name}"').replace('{name}', () => activeName ?? '') }}</MvButton
+                            >{{
+                                label('update', 'Update "{name}"').replace(
+                                    '{name}',
+                                    () => activeName ?? '',
+                                )
+                            }}</MvButton
                         >
-                        <MvButton size="sm" variant="ghost" @click="emit('reset')"
-                            >{{ label('discard', 'Discard') }}</MvButton
-                        >
+                        <MvButton size="sm" variant="ghost" @click="emit('reset')">{{
+                            label('discard', 'Discard')
+                        }}</MvButton>
                     </div>
                     <div class="mv-table-views__new">
                         <input

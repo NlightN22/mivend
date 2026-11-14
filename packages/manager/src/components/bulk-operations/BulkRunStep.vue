@@ -58,7 +58,9 @@ async function downloadReport(): Promise<void> {
 <template>
     <div class="bulk-run-step">
         <div class="bulk-run-step__head">
-            <span class="bulk-run-step__title">{{ t('bulkOperations.run.batch', { number: batch.number }) }}</span>
+            <span class="bulk-run-step__title">{{
+                t('bulkOperations.run.batch', { number: batch.number })
+            }}</span>
             <MvStatusBadge :variant="BATCH_STATUS_VARIANT[batch.status] ?? 'neutral'">
                 {{ batchStatusLabel(batch.status) }}
             </MvStatusBadge>

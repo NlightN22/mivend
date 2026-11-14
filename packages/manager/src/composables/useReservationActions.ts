@@ -63,12 +63,12 @@ export function useReservationActions(options: {
     }
 
     async function confirm(): Promise<boolean> {
-        const days = positiveDays(
-            form.days,
-            tr('orderDetail.reservation.daysInvalid'),
-        );
+        const days = positiveDays(form.days, tr('orderDetail.reservation.daysInvalid'));
         if (days === null) return false;
-        return run(() => confirmOrder(options.orderId(), days), tr('orderDetail.reservation.confirmFailed'));
+        return run(
+            () => confirmOrder(options.orderId(), days),
+            tr('orderDetail.reservation.confirmFailed'),
+        );
     }
 
     async function extend(): Promise<boolean> {
@@ -81,7 +81,10 @@ export function useReservationActions(options: {
     }
 
     const release = (): Promise<boolean> =>
-        run(() => releaseOrderReservation(options.orderId()), tr('orderDetail.reservation.releaseFailed'));
+        run(
+            () => releaseOrderReservation(options.orderId()),
+            tr('orderDetail.reservation.releaseFailed'),
+        );
 
     return {
         form,

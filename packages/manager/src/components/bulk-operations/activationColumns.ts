@@ -64,7 +64,10 @@ export function buildActivationColumns(
             filterField: 'branchId',
             filterOperators: ['eq', 'notEq'],
             filterOptions: [
-                { value: UNASSIGNED_BRANCH, label: i18n.global.t('bulkOperations.activation.unassigned') },
+                {
+                    value: UNASSIGNED_BRANCH,
+                    label: i18n.global.t('bulkOperations.activation.unassigned'),
+                },
                 ...branches.map(b => ({ value: b.id, label: b.name })),
             ],
         },

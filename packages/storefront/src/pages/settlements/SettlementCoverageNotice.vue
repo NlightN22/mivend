@@ -10,7 +10,11 @@ defineProps<{ gaps: readonly CoverageGap[] }>();
 <template>
     <div v-if="gaps.length" class="settlement-coverage">
         <MvNotice v-for="g in gaps" :key="g.currency" variant="info">
-            {{ $t('settlements.coverage.text', { amount: formatMoney(toMajor(g.unexplained), g.currency) }) }}
+            {{
+                $t('settlements.coverage.text', {
+                    amount: formatMoney(toMajor(g.unexplained), g.currency),
+                })
+            }}
         </MvNotice>
     </div>
 </template>

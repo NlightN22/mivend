@@ -101,7 +101,14 @@ describe('createClientNotification in an acting-as-customer session', () => {
                 token,
                 ACTING,
             );
-            const listed = await gql<Listed>(url, 'shop-api', LIST, { s: actingMarker }, token, ACTING);
+            const listed = await gql<Listed>(
+                url,
+                'shop-api',
+                LIST,
+                { s: actingMarker },
+                token,
+                ACTING,
+            );
 
             expect(created.errors).toEqual([]);
             expect(created.data!.createClientNotification).toBeNull();

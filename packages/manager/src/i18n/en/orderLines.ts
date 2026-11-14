@@ -67,7 +67,8 @@ export default {
         notEnoughStock: 'Not enough stock: {available} available, {needed} needed',
         reservedPartly: 'Reserved {reserved} of {needed}; stock for the rest is not held',
         approvalPrice: 'Requires approval: the price change waits for the approvers',
-        approvalDiscount: 'Requires approval: the discount is above the allowed maximum (max {max}%)',
+        approvalDiscount:
+            'Requires approval: the discount is above the allowed maximum (max {max}%)',
     },
     delete: {
         title: 'Delete positions?',
@@ -125,7 +126,8 @@ export default {
     },
     notes: {
         reservationFailed: 'Reservation failed: {reason}',
-        autoReserveFailed: 'The automatic reserve did not go through. Fix the cause and confirm the order.',
+        autoReserveFailed:
+            'The automatic reserve did not go through. Fix the cause and confirm the order.',
         limitedBy: 'limited by {what}',
         limitWarehouse: 'warehouse stock',
         limitOrganization: "the selling organization's stock",

@@ -12,7 +12,11 @@ let service: CounterpartyMetricsService;
 const NOW = new Date('2026-11-12T12:00:00Z');
 const TZ = process.env.TZ;
 
-const type = async (documentType: string, category: string, movesTurnover: boolean): Promise<void> => {
+const type = async (
+    documentType: string,
+    category: string,
+    movesTurnover: boolean,
+): Promise<void> => {
     await h.types.apply(ctx, {
         documentType,
         version: '2026-10-01T10:00:00Z',
@@ -55,7 +59,12 @@ const doc = (
         } as Partial<SettlementDocumentInput>),
     );
 
-const balance = (cp: string, ct: string, closing: number, over: { isDeleted?: boolean } = {}): Promise<unknown> =>
+const balance = (
+    cp: string,
+    ct: string,
+    closing: number,
+    over: { isDeleted?: boolean } = {},
+): Promise<unknown> =>
     h.balances.apply(ctx, {
         key: `org-1:${cp}:${ct}`,
         version: '2026-10-01T10:00:00Z',
@@ -72,10 +81,10 @@ const balance = (cp: string, ct: string, closing: number, over: { isDeleted?: bo
 beforeAll(async () => {
     process.env.TZ = 'UTC';
     h = await createHarness('counterparty_metrics');
+    await h.dataSource.query(`ALTER TABLE "order" ADD COLUMN "customFieldsCounterpartyid" varchar`);
     await h.dataSource.query(
-        `ALTER TABLE "order" ADD COLUMN "customFieldsCounterpartyid" varchar`,
+        `CREATE TABLE contract (id serial primary key, "erpId" varchar, name varchar)`,
     );
-    await h.dataSource.query(`CREATE TABLE contract (id serial primary key, "erpId" varchar, name varchar)`);
     await h.dataSource.query(
         `CREATE TABLE organization_requisites (id serial primary key, "erpId" varchar, "legalName" varchar)`,
     );
@@ -98,7 +107,9 @@ beforeEach(async () => {
     h.counterparties.set('cp-1', 1);
     h.counterparties.set('cp-2', 2);
     h.contracts.set('ct-1', 1);
-    await h.dataSource.query(`INSERT INTO contract ("erpId", name) VALUES ('ct-1', 'Main contract')`);
+    await h.dataSource.query(
+        `INSERT INTO contract ("erpId", name) VALUES ('ct-1', 'Main contract')`,
+    );
     await type('Sale', 'sale', true);
     await type('Ret', 'return', true);
     await type('SaleFix', 'correction', true);
@@ -119,7 +130,9 @@ describe('CounterpartyMetricsService (real Postgres)', () => {
         expect(m.contractBalances.map(r => r.contractErpId).sort()).toEqual(['ct-1', 'ct-unknown']);
         const unlinked = m.contractBalances.find(r => r.contractErpId === 'ct-unknown');
         expect(unlinked?.contractName).toBeNull();
-        expect(m.contractBalances.find(r => r.contractErpId === 'ct-1')?.contractName).toBe('Main contract');
+        expect(m.contractBalances.find(r => r.contractErpId === 'ct-1')?.contractName).toBe(
+            'Main contract',
+        );
     });
 
     it('turnover counts flagged types only: returns and sales corrections reduce it, payments and suppliers do not', async () => {

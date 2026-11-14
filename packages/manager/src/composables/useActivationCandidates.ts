@@ -175,7 +175,10 @@ export function useActivationCandidates(): ActivationCandidatesState {
         branches,
         managerOptions,
         managerName: id => formatManagerName(id, managerLookup.value),
-        branchName: id => (id ? (branches.value.find(b => b.id === id)?.name ?? id) : i18n.global.t('bulkOperations.activation.unassigned')),
+        branchName: id =>
+            id
+                ? (branches.value.find(b => b.id === id)?.name ?? id)
+                : i18n.global.t('bulkOperations.activation.unassigned'),
         reload,
     };
 }

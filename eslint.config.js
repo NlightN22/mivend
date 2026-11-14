@@ -297,7 +297,11 @@ export default [
         rules: { 'pagination/no-unguarded-page-count': 'error' },
     },
     {
-        files: ['packages/plugins/*/src/**/*.ts', 'packages/shared/src/**/*.ts', 'apps/server/src/**/*.ts'],
+        files: [
+            'packages/plugins/*/src/**/*.ts',
+            'packages/shared/src/**/*.ts',
+            'apps/server/src/**/*.ts',
+        ],
         ignores: [
             '**/*.test.ts',
             '**/__tests__/**',

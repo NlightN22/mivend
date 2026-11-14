@@ -18,9 +18,7 @@ const { card, notFound } = useProformaCard(() => String(route.params.id));
 <template>
     <div v-if="notFound" class="pf-detail__not-found">
         <h1>{{ t('proformaInvoices.card.notFound') }}</h1>
-        <RouterLink to="/proforma-invoices">{{
-            t('proformaInvoices.card.backToList')
-        }}</RouterLink>
+        <RouterLink to="/proforma-invoices">{{ t('proformaInvoices.card.backToList') }}</RouterLink>
     </div>
 
     <div v-else-if="card" class="pf-detail" data-testid="proforma-card">

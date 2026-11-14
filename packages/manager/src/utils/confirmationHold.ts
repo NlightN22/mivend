@@ -18,7 +18,9 @@ export function confirmationCaseLabel(code: string): string {
         .replace(/^payment\.confirmation\./, '')
         .split('.')
         .map(part =>
-            PART_KEYS[part] ? tr(`orderDetail.holdCase.${PART_KEYS[part]}`) : part.replace(/-/g, ' '),
+            PART_KEYS[part]
+                ? tr(`orderDetail.holdCase.${PART_KEYS[part]}`)
+                : part.replace(/-/g, ' '),
         )
         .join(', ');
 }

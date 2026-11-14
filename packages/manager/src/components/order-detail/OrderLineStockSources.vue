@@ -39,7 +39,10 @@ defineProps<{ availability: OrderLineAvailability }>();
                 :key="o.id"
                 :class="{ sources__sell: o.selling }"
             >
-                <span>{{ o.name ?? o.id }}<em v-if="o.selling"> · {{ t('orderLines.line.sellsThisLine') }}</em></span>
+                <span
+                    >{{ o.name ?? o.id
+                    }}<em v-if="o.selling"> · {{ t('orderLines.line.sellsThisLine') }}</em></span
+                >
                 <span :class="{ sources__bad: o.selling && o.stock < availability.needed }">
                     {{ o.stock }}<template v-if="o.selling"> / {{ availability.needed }}</template>
                 </span>

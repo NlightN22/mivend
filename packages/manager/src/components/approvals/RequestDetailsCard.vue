@@ -146,7 +146,8 @@ const rows = computed<DetailRow[]>(() => {
         <div class="request-details__line-product">
             <div class="request-details__line-name">{{ orderLine.productName }}</div>
             <div class="request-details__line-sku">
-                {{ orderLine.sku }} · {{ t('approvals.details.quantity', { n: orderLine.quantity }) }}
+                {{ orderLine.sku }} ·
+                {{ t('approvals.details.quantity', { n: orderLine.quantity }) }}
             </div>
         </div>
         <div class="request-details__line-prices">

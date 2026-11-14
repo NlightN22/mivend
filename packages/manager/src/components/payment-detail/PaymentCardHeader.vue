@@ -24,9 +24,9 @@ const { t } = useI18n();
             </h1>
             <div class="payment-card-header__actions">
                 <MvCopyButton :value="payment.number" :label="t('payments.card.copyNumber')" />
-                <RouterLink class="payment-card-header__action" :to="listLinkFor(payment)"
-                    >{{ t('payments.card.showInList') }}</RouterLink
-                >
+                <RouterLink class="payment-card-header__action" :to="listLinkFor(payment)">{{
+                    t('payments.card.showInList')
+                }}</RouterLink>
                 <RouterLink
                     v-if="payment.order"
                     class="payment-card-header__action"

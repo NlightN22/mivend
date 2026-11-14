@@ -130,9 +130,7 @@ describe('readinessText', () => {
     const full = { phone: '1', officialEmail: 'a@example.test', inn: '7700000001' };
 
     it('names exactly what is missing', () => {
-        expect(readinessText('missing-data', { ...full, phone: null })).toBe(
-            'Missing phone (ERP)',
-        );
+        expect(readinessText('missing-data', { ...full, phone: null })).toBe('Missing phone (ERP)');
         expect(readinessText('missing-data', { ...full, officialEmail: '' })).toBe(
             'Missing email (ERP)',
         );

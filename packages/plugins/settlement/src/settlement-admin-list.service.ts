@@ -92,13 +92,13 @@ export class SettlementAdminListService {
         const qb = await this.baseQuery(ctx, options, counterpartyId);
         const rows = await getRawManyBounded<Raw>(
             qb
-            .select('"d"."documentType"', 'documentType')
-            .addSelect(`MIN(${TYPE_LABEL_SQL})`, 'label')
-            .addSelect('COUNT(*)::int', 'count')
-            .groupBy('"d"."documentType"')
-            .orderBy('COUNT(*)', 'DESC')
-            .addOrderBy(`MIN(${TYPE_LABEL_SQL})`, 'ASC')
-            .addOrderBy('"d"."documentType"', 'ASC'),
+                .select('"d"."documentType"', 'documentType')
+                .addSelect(`MIN(${TYPE_LABEL_SQL})`, 'label')
+                .addSelect('COUNT(*)::int', 'count')
+                .groupBy('"d"."documentType"')
+                .orderBy('COUNT(*)', 'DESC')
+                .addOrderBy(`MIN(${TYPE_LABEL_SQL})`, 'ASC')
+                .addOrderBy('"d"."documentType"', 'ASC'),
         );
         return rows.map(r => ({
             documentType: String(r.documentType),

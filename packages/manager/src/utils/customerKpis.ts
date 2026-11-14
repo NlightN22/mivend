@@ -52,7 +52,12 @@ export function customerKpis(
                 kind: 'whole',
                 value: credit.creditLimit - credit.creditBalance,
             },
-            { key: 'creditLimit', label: label('creditLimit'), kind: 'whole', value: credit.creditLimit },
+            {
+                key: 'creditLimit',
+                label: label('creditLimit'),
+                kind: 'whole',
+                value: credit.creditLimit,
+            },
         );
     }
     return kpis;

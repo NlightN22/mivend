@@ -16,7 +16,8 @@ const orderLines: typeof en = {
         notApplied: 'Изменение не применено',
     },
     totals: {
-        positionsWithoutData: '{n} позиция без данных | {n} позиции без данных | {n} позиций без данных',
+        positionsWithoutData:
+            '{n} позиция без данных | {n} позиции без данных | {n} позиций без данных',
         positions: 'Позиций',
         weightTotal: 'Общий вес',
         volumeTotal: 'Общий объём',
@@ -67,7 +68,8 @@ const orderLines: typeof en = {
     },
     problems: {
         notEnoughStock: 'Недостаточно остатка: доступно {available}, нужно {needed}',
-        reservedPartly: 'Зарезервировано {reserved} из {needed}; остаток под остальное не удерживается',
+        reservedPartly:
+            'Зарезервировано {reserved} из {needed}; остаток под остальное не удерживается',
         approvalPrice: 'Нужно согласование: изменение цены ждёт согласующих',
         approvalDiscount: 'Нужно согласование: скидка выше допустимого максимума (максимум {max}%)',
     },
@@ -127,7 +129,8 @@ const orderLines: typeof en = {
     },
     notes: {
         reservationFailed: 'Резерв не удался: {reason}',
-        autoReserveFailed: 'Автоматический резерв не прошёл. Устраните причину и подтвердите заказ.',
+        autoReserveFailed:
+            'Автоматический резерв не прошёл. Устраните причину и подтвердите заказ.',
         limitedBy: 'ограничено: {what}',
         limitWarehouse: 'остаток склада',
         limitOrganization: 'остаток организации-продавца',

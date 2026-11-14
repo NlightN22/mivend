@@ -12,6 +12,9 @@ export function customerMetaText(
     row: Pick<OrderListRow, 'inn' | 'priceTypeCode'>,
     priceTypes: Map<string, string>,
 ): string {
-    const parts = [row.inn ? tr('orders.list.inn', { inn: row.inn }) : '', priceTypeName(row.priceTypeCode, priceTypes)];
+    const parts = [
+        row.inn ? tr('orders.list.inn', { inn: row.inn }) : '',
+        priceTypeName(row.priceTypeCode, priceTypes),
+    ];
     return parts.filter(Boolean).join(' · ');
 }

@@ -14,7 +14,9 @@ export const PORTAL_USER_SORT_FIELDS = ['name', 'createdAt', 'portalRole'];
 export const PORTAL_USER_DEFAULT_SORT = { field: 'createdAt', dir: 'DESC' } as const;
 
 // Identifying column first, creation date second.
-export function buildPortalUserColumns(options: PortalUserColumnOptions): AdvancedDataTableColumn[] {
+export function buildPortalUserColumns(
+    options: PortalUserColumnOptions,
+): AdvancedDataTableColumn[] {
     return [
         {
             field: 'name',

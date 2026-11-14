@@ -7,7 +7,11 @@ import { useI18n } from 'vue-i18n';
 const route = useRoute();
 const { t } = useI18n();
 const TABS = computed(() => [
-    { name: 'bulk-operations', label: t('bulkOperations.tabs.operations'), path: '/bulk-operations' },
+    {
+        name: 'bulk-operations',
+        label: t('bulkOperations.tabs.operations'),
+        path: '/bulk-operations',
+    },
     {
         name: 'bulk-operations-history',
         label: t('bulkOperations.tabs.history'),

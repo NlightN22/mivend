@@ -20,7 +20,11 @@ const groups = computed(() => groupOperations(filterOperations(props.operations,
 
 <template>
     <div class="bulk-catalog">
-        <MvInput v-if="searchable(operations)" v-model="query" :placeholder="t('bulkOperations.catalog.search')" />
+        <MvInput
+            v-if="searchable(operations)"
+            v-model="query"
+            :placeholder="t('bulkOperations.catalog.search')"
+        />
         <MvSkeleton v-if="loading" height="64px" />
         <MvErrorState
             v-else-if="failed"

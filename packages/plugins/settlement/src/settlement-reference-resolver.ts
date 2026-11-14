@@ -43,7 +43,11 @@ export class SettlementReferenceResolver {
         }
         const resolved = new Map<string, number>();
         if (erpIds.size === 0) return resolved;
-        const rows = await ctxQueryBounded<{ id: number; erpOrderId: string | null; uuid: string | null }>(
+        const rows = await ctxQueryBounded<{
+            id: number;
+            erpOrderId: string | null;
+            uuid: string | null;
+        }>(
             this.connection,
             ctx,
             `SELECT id, "customFieldsErporderid" AS "erpOrderId", "customFieldsUuid"::text AS uuid

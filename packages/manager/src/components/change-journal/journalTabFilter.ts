@@ -93,7 +93,10 @@ export function buildJournalColumns(options: JournalColumnOptions): AdvancedData
     ];
 }
 
-export function toJournalFilter(search: string, conditions: FilterCondition[]): ChangeJournalFilter {
+export function toJournalFilter(
+    search: string,
+    conditions: FilterCondition[],
+): ChangeJournalFilter {
     const range = dateConditionRange(conditions, 'occurredAt');
     return {
         search: search.trim() || undefined,

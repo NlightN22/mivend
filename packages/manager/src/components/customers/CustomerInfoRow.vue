@@ -28,9 +28,7 @@ const backupManagerName = computed(() => {
     const backup = props.teamMembers.find(m => m.role === 'backup');
     return backup ? managerName(backup.administratorId) : null;
 });
-const observerCount = computed(
-    () => props.teamMembers.filter(m => m.role === 'observer').length,
-);
+const observerCount = computed(() => props.teamMembers.filter(m => m.role === 'observer').length);
 
 // Counterparty.branchId is a mivend Branch.id, never Branch.erpId.
 const branchName = computed(() =>
@@ -52,7 +50,9 @@ function initials(name: string | null): string {
         <div class="customer-detail__info-item">
             <Location class="customer-detail__info-icon" />
             <div class="customer-detail__info-text">
-                <span class="customer-detail__info-label">{{ t('customers.detail.location') }}</span>
+                <span class="customer-detail__info-label">{{
+                    t('customers.detail.location')
+                }}</span>
                 <span class="customer-detail__info-value">{{ branchName ?? '—' }}</span>
             </div>
         </div>

@@ -34,7 +34,13 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-    <div ref="menu" class="user-menu" role="menu" :aria-label="t('shell.userMenu.account')" @keydown="onKeydown">
+    <div
+        ref="menu"
+        class="user-menu"
+        role="menu"
+        :aria-label="t('shell.userMenu.account')"
+        @keydown="onKeydown"
+    >
         <div class="user-menu__identity">
             <MvAvatar :name="authStore.fullName" size="sm" />
             <div class="user-menu__who">

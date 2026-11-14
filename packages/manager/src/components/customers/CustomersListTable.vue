@@ -187,9 +187,9 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-end>
-            <MvButton size="sm" variant="secondary" @click="emit('export')"
-                >{{ t('customers.list.exportPage') }}</MvButton
-            >
+            <MvButton size="sm" variant="secondary" @click="emit('export')">{{
+                t('customers.list.exportPage')
+            }}</MvButton>
             <TableViewsMenu
                 views-key="customers"
                 :owner-key="administratorId"
@@ -285,7 +285,11 @@ function applyView(state: TableViewState): void {
 
         <template #cell-isActive="{ data }">
             <MvStatusBadge :variant="(data as CustomerRow).isActive ? 'success' : 'neutral'">{{
-                t((data as CustomerRow).isActive ? 'customers.list.status.active' : 'customers.list.status.inactive')
+                t(
+                    (data as CustomerRow).isActive
+                        ? 'customers.list.status.active'
+                        : 'customers.list.status.inactive',
+                )
             }}</MvStatusBadge>
         </template>
     </MvAdvancedDataTable>

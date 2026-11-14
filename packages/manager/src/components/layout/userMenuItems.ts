@@ -10,7 +10,11 @@ export interface UserMenuItem {
 
 // Only personal pages that exist; the security page hosts the password change and two-factor setup.
 export const USER_MENU_ITEMS: UserMenuItem[] = [
-    { labelKey: 'shell.userMenu.passwordAndSecurity', to: '/settings/security', icon: IconShieldLock },
+    {
+        labelKey: 'shell.userMenu.passwordAndSecurity',
+        to: '/settings/security',
+        icon: IconShieldLock,
+    },
 ];
 
 export const THEME_CHOICES: { value: ThemePreference; labelKey: string; icon: Component }[] = [

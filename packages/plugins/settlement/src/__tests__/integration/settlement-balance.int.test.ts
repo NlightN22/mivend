@@ -69,15 +69,27 @@ describe('SettlementBalanceService (real Postgres)', () => {
         await h.balances.apply(ctx, balance());
         await h.balances.apply(
             ctx,
-            balance({ version: '2026-10-02T10:00:00Z', openingBalance: undefined, closingBalance: 5 }),
+            balance({
+                version: '2026-10-02T10:00:00Z',
+                openingBalance: undefined,
+                closingBalance: 5,
+            }),
         );
         await h.balances.apply(
             ctx,
-            balance({ key: 'org-1:cp-2:ct-2', counterpartyErpId: 'cp-2', contractErpId: 'ct-2', openingBalance: undefined }),
+            balance({
+                key: 'org-1:cp-2:ct-2',
+                counterpartyErpId: 'cp-2',
+                contractErpId: 'ct-2',
+                openingBalance: undefined,
+            }),
         );
 
         const byKey = Object.fromEntries((await rows()).map(r => [r.balanceKey, r]));
-        expect(byKey['org-1:cp-1:ct-1']).toMatchObject({ openingBalance: 10000, closingBalance: 500 });
+        expect(byKey['org-1:cp-1:ct-1']).toMatchObject({
+            openingBalance: 10000,
+            closingBalance: 500,
+        });
         expect(byKey['org-1:cp-2:ct-2'].openingBalance).toBe(0);
     });
 

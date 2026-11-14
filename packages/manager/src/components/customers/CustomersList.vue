@@ -67,9 +67,15 @@ function clearFilters(): void {
 function exportCsv(): void {
     downloadCsv(
         'customers.csv',
-        ['shortName', 'inn', 'creditLimit', 'creditBalance', 'discounts', 'lastOrder', 'isActive'].map(
-            field => t(`customers.list.columns.${field}`),
-        ),
+        [
+            'shortName',
+            'inn',
+            'creditLimit',
+            'creditBalance',
+            'discounts',
+            'lastOrder',
+            'isActive',
+        ].map(field => t(`customers.list.columns.${field}`)),
         rows.value.map(r => [
             r.shortName,
             r.inn,

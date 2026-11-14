@@ -71,9 +71,9 @@ function handleEscalate(): void {
                 @click="emit('approve', comment)"
                 >{{ t('approvals.decision.approve') }}</MvButton
             >
-            <MvButton variant="danger" :disabled="!canReject || busy" @click="handleReject"
-                >{{ t('approvals.decision.reject') }}</MvButton
-            >
+            <MvButton variant="danger" :disabled="!canReject || busy" @click="handleReject">{{
+                t('approvals.decision.reject')
+            }}</MvButton>
             <button
                 v-if="escalationCandidates.length"
                 type="button"
@@ -93,9 +93,9 @@ function handleEscalate(): void {
                     ...escalationCandidates,
                 ]"
             />
-            <MvButton size="sm" :disabled="!escalateToId" @click="handleEscalate"
-                >{{ t('approvals.decision.confirmEscalation') }}</MvButton
-            >
+            <MvButton size="sm" :disabled="!escalateToId" @click="handleEscalate">{{
+                t('approvals.decision.confirmEscalation')
+            }}</MvButton>
         </div>
     </div>
 </template>

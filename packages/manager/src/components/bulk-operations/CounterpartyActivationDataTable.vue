@@ -103,7 +103,9 @@ const rows = computed(() =>
             branch: list.branchName(c.branchId),
             phone: c.phone ?? '—',
             officialEmail: c.officialEmail ?? '—',
-            isActive: c.isActive ? t('bulkOperations.activation.yes') : t('bulkOperations.activation.no'),
+            isActive: c.isActive
+                ? t('bulkOperations.activation.yes')
+                : t('bulkOperations.activation.no'),
             readiness,
             readinessText: readinessText(readiness, c),
         };
@@ -163,7 +165,10 @@ function applyView(state: TableViewState): void {
         data-key="id"
         :row-height-px="52"
         :header-height-px="65"
-        :search="{ filterKey: 'shortName', placeholder: t('bulkOperations.activation.searchPlaceholder') }"
+        :search="{
+            filterKey: 'shortName',
+            placeholder: t('bulkOperations.activation.searchPlaceholder'),
+        }"
         :conditions="list.filters.value.conditions"
         :default-filters="{ shortName: '' }"
         :empty-message="t('bulkOperations.activation.empty')"

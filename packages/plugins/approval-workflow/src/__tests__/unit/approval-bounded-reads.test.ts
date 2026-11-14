@@ -45,9 +45,9 @@ describe('approval reads are bounded', () => {
         expect(steps).toHaveLength(1000);
         expect(ok.find).toHaveBeenCalledWith(expect.objectContaining({ take: 1001 }));
         const over = repoReturning(1001);
-        await expect(new ApprovalStepService(over.connection).findSteps(ctx, 1)).rejects.toBeInstanceOf(
-            QueryTooLargeError,
-        );
+        await expect(
+            new ApprovalStepService(over.connection).findSteps(ctx, 1),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 
     it('workflow definitions: one over the ceiling throws', async () => {
@@ -59,7 +59,9 @@ describe('approval reads are bounded', () => {
 
     it('pending order ids: 5000 pass after the scope, 5001 throws', async () => {
         const ok = queryService(5000);
-        await expect(ok.service.findPendingPriceAdjustmentOrderIds(ctx)).resolves.toHaveLength(5000);
+        await expect(ok.service.findPendingPriceAdjustmentOrderIds(ctx)).resolves.toHaveLength(
+            5000,
+        );
         expect(ok.qb.limit).toHaveBeenCalledWith(5001);
         expect(ok.scope.apply).toHaveBeenCalled();
         const over = queryService(5001);
@@ -70,10 +72,12 @@ describe('approval reads are bounded', () => {
 
     it('requests of one order: the ceiling passes, one over throws', async () => {
         const ok = queryService(1000);
-        await expect(ok.service.findPriceAdjustmentRequestsForOrder(ctx, 7)).resolves.toHaveLength(1000);
-        const over = queryService(1001);
-        await expect(over.service.findPriceAdjustmentRequestsForOrder(ctx, 7)).rejects.toBeInstanceOf(
-            QueryTooLargeError,
+        await expect(ok.service.findPriceAdjustmentRequestsForOrder(ctx, 7)).resolves.toHaveLength(
+            1000,
         );
+        const over = queryService(1001);
+        await expect(
+            over.service.findPriceAdjustmentRequestsForOrder(ctx, 7),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });

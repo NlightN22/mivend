@@ -228,9 +228,9 @@ describe('PaymentAttemptQueryService', () => {
 
             await service.sumCapturedAmountsByOrderIds(mockCtx, [10, 11]);
             expect(qb.limit).toHaveBeenCalledWith(3);
-            await expect(service.sumCapturedAmountsByOrderIds(mockCtx, [10])).rejects.toBeInstanceOf(
-                QueryTooLargeError,
-            );
+            await expect(
+                service.sumCapturedAmountsByOrderIds(mockCtx, [10]),
+            ).rejects.toBeInstanceOf(QueryTooLargeError);
         });
     });
 });

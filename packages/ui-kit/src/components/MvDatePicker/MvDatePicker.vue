@@ -107,7 +107,10 @@ function onTextInput(event: Event): void {
 }
 
 const monthLabel = computed(() =>
-    viewMonth.value.toLocaleDateString(props.locale ?? uiLocale.value, { month: 'long', year: 'numeric' }),
+    viewMonth.value.toLocaleDateString(props.locale ?? uiLocale.value, {
+        month: 'long',
+        year: 'numeric',
+    }),
 );
 
 interface DayCell {

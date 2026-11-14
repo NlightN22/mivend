@@ -58,7 +58,9 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
         <ul v-if="customer.tradingPoints.length">
             <li v-for="tp in customer.tradingPoints" :key="tp.id">
                 <template v-if="editingId === tp.id">
-                    <h4 class="tp-list__edit-title">{{ t('customers.tradingPoints.editTitle') }}</h4>
+                    <h4 class="tp-list__edit-title">
+                        {{ t('customers.tradingPoints.editTitle') }}
+                    </h4>
                     <TradingPointPendingChange
                         v-if="pending.byPoint.value.get(tp.id)"
                         :change="pending.byPoint.value.get(tp.id)!"

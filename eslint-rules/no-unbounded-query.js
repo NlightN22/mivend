@@ -67,12 +67,19 @@ function hasTake(objectNode) {
 }
 
 function overMaxTake(valueNode) {
-    return valueNode?.type === 'Literal' && typeof valueNode.value === 'number' && valueNode.value > MAX_TAKE;
+    return (
+        valueNode?.type === 'Literal' &&
+        typeof valueNode.value === 'number' &&
+        valueNode.value > MAX_TAKE
+    );
 }
 
 function optionsOverMax(objectNode) {
     return objectNode.properties.some(
-        p => p.type === 'Property' && (p.key.name === 'take' || p.key.value === 'take') && overMaxTake(p.value),
+        p =>
+            p.type === 'Property' &&
+            (p.key.name === 'take' || p.key.value === 'take') &&
+            overMaxTake(p.value),
     );
 }
 
@@ -224,7 +231,9 @@ export default {
                 const tooBig =
                     (BOUNDING.has(name) && overMaxTake(node.arguments[0])) ||
                     (READ_METHODS.has(name) &&
-                        node.arguments.some(a => a.type === 'ObjectExpression' && optionsOverMax(a)));
+                        node.arguments.some(
+                            a => a.type === 'ObjectExpression' && optionsOverMax(a),
+                        ));
                 if (tooBig) {
                     context.report({
                         node,

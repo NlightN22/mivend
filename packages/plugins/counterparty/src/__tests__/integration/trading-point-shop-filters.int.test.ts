@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
@@ -18,7 +26,9 @@ class TestCustomer {
     @PrimaryGeneratedColumn('increment') id!: number;
     @Column({ type: 'int', nullable: true }) userId!: number | null;
     @Column({ type: 'varchar', nullable: true }) customFieldsCounterpartyid!: string | null;
-    @Column({ type: 'varchar', nullable: true }) customFieldsPreferredtradingpointid!: string | null;
+    @Column({ type: 'varchar', nullable: true }) customFieldsPreferredtradingpointid!:
+        | string
+        | null;
 }
 
 @Entity('trading_point')
@@ -105,7 +115,9 @@ async function seedPoint(name: string, patch: Partial<PointRow> = {}): Promise<n
 
 beforeEach(async () => {
     update.mockReset();
-    await dataSource.query('TRUNCATE "contact_person", "trading_point", "customer" RESTART IDENTITY CASCADE');
+    await dataSource.query(
+        'TRUNCATE "contact_person", "trading_point", "customer" RESTART IDENTITY CASCADE',
+    );
     ids = {
         ok: await seedPoint('b-ok'),
         noAddress: await seedPoint('a-no-address', { address: '' }),
@@ -114,17 +126,22 @@ beforeEach(async () => {
         noCoords: await seedPoint('e-no-coords', { latitude: null, longitude: null }),
     };
     customerId = (
-        await dataSource.getRepository(TestCustomer).save({ userId: 7, customFieldsCounterpartyid: '1' })
+        await dataSource
+            .getRepository(TestCustomer)
+            .save({ userId: 7, customFieldsCounterpartyid: '1' })
     ).id;
 });
 
-const idsOf = (rows: Array<{ id: number | string }>): number[] => rows.map(r => Number(r.id)).sort((a, b) => a - b);
+const idsOf = (rows: Array<{ id: number | string }>): number[] =>
+    rows.map(r => Number(r.id)).sort((a, b) => a - b);
 
 describe('shop-side trading point filters (real Postgres)', () => {
     it('findByCounterparty: shop sees active points with an address, admin sees all', async () => {
         const forShop = await service.findByCounterparty(shop, '1');
         const forAdmin = await service.findByCounterparty(admin, '1');
-        expect(idsOf(forShop)).toEqual(idsOf([{ id: ids.ok }, { id: ids.hidden }, { id: ids.noCoords }]));
+        expect(idsOf(forShop)).toEqual(
+            idsOf([{ id: ids.ok }, { id: ids.hidden }, { id: ids.noCoords }]),
+        );
         expect(idsOf(forAdmin)).toHaveLength(5);
     });
 
@@ -148,14 +165,19 @@ describe('shop-side trading point filters (real Postgres)', () => {
     it('batch loader behind Counterparty.tradingPoints: shop vs admin', async () => {
         const forShop = await loaders.tradingPoints({ ...shop } as RequestContext, 1);
         const forAdmin = await loaders.tradingPoints({ ...admin } as RequestContext, 1);
-        expect(idsOf(forShop)).toEqual(idsOf([{ id: ids.ok }, { id: ids.hidden }, { id: ids.noCoords }]));
+        expect(idsOf(forShop)).toEqual(
+            idsOf([{ id: ids.ok }, { id: ids.hidden }, { id: ids.noCoords }]),
+        );
         expect(idsOf(forAdmin)).toHaveLength(5);
     });
 
     it('getPreferredForCustomer skips a stored address-less preferred point for the first addressed one', async () => {
         await dataSource
             .getRepository(TestCustomer)
-            .update({ id: customerId }, { customFieldsPreferredtradingpointid: String(ids.noAddress) });
+            .update(
+                { id: customerId },
+                { customFieldsPreferredtradingpointid: String(ids.noAddress) },
+            );
         const picked = await service.getPreferredForCustomer(shop, customerId);
         expect(picked && Number(picked.id)).toBe(ids.ok);
     });

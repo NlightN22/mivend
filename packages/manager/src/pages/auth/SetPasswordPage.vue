@@ -147,9 +147,9 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                                 :error="mismatchError"
                             />
                         </MvFormField>
-                        <MvNotice v-if="mismatchError" variant="error"
-                            >{{ t('auth.setPassword.mismatch') }}</MvNotice
-                        >
+                        <MvNotice v-if="mismatchError" variant="error">{{
+                            t('auth.setPassword.mismatch')
+                        }}</MvNotice>
 
                         <p class="set-password-card__rules">
                             {{ t('auth.setPassword.rules', { min: MIN_PASSWORD_LENGTH }) }}
@@ -191,11 +191,13 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                         </div>
                     </div>
 
-                    <p role="status">{{ t('auth.setPassword.redirect', { seconds: remaining }) }}</p>
+                    <p role="status">
+                        {{ t('auth.setPassword.redirect', { seconds: remaining }) }}
+                    </p>
 
-                    <MvButton variant="primary" size="lg" @click="goToSignIn"
-                        >{{ t('auth.setPassword.toSignIn') }}</MvButton
-                    >
+                    <MvButton variant="primary" size="lg" @click="goToSignIn">{{
+                        t('auth.setPassword.toSignIn')
+                    }}</MvButton>
                 </div>
 
                 <div v-else class="set-password-state set-password-state--error">
@@ -218,9 +220,9 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
                         </div>
                     </div>
 
-                    <MvButton variant="secondary" size="lg" @click="goToSignIn"
-                        >{{ t('auth.setPassword.backToSignIn') }}</MvButton
-                    >
+                    <MvButton variant="secondary" size="lg" @click="goToSignIn">{{
+                        t('auth.setPassword.backToSignIn')
+                    }}</MvButton>
                 </div>
             </div>
         </div>

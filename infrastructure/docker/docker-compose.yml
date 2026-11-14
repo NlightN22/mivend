@@ -306,7 +306,7 @@ services:
             - -c
             - track_activity_query_size=4096
             - -c
-            - log_line_prefix=%m [%p] %a 
+            - log_line_prefix=%m [%p] %a
             - -c
             - jit_above_cost=1000000
             - -c

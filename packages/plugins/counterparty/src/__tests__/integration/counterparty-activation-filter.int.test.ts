@@ -102,11 +102,26 @@ async function seed(): Promise<void> {
     const repo = dataSource.getRepository(TestCounterparty);
     const base = { phone: '+10000000', officialEmail: 'a@example.test' };
     const [, , , , activated] = await repo.save([
-        { ...base, erpId: 'ready-a', inn: '770000001', legalName: 'L1', shortName: 'Ready A', branchId: 'branch-a' },
-        { ...base, erpId: 'ready-none', inn: '770000002', legalName: 'L2', shortName: 'Ready None', branchId: null },
         {
             ...base,
-            erpId: 'missing-phone', inn: '770000003',
+            erpId: 'ready-a',
+            inn: '770000001',
+            legalName: 'L1',
+            shortName: 'Ready A',
+            branchId: 'branch-a',
+        },
+        {
+            ...base,
+            erpId: 'ready-none',
+            inn: '770000002',
+            legalName: 'L2',
+            shortName: 'Ready None',
+            branchId: null,
+        },
+        {
+            ...base,
+            erpId: 'missing-phone',
+            inn: '770000003',
             legalName: 'L3',
             shortName: 'Missing Phone',
             phone: '',
@@ -114,14 +129,22 @@ async function seed(): Promise<void> {
         },
         {
             ...base,
-            erpId: 'inactive', inn: '770000004',
+            erpId: 'inactive',
+            inn: '770000004',
             legalName: 'L4',
             shortName: 'Inactive',
             isActive: false,
             officialEmail: null,
             branchId: 'branch-a',
         },
-        { ...base, erpId: 'activated', inn: '770000005', legalName: 'L5', shortName: 'Activated', branchId: null },
+        {
+            ...base,
+            erpId: 'activated',
+            inn: '770000005',
+            legalName: 'L5',
+            shortName: 'Activated',
+            branchId: null,
+        },
     ]);
     const customers = dataSource.getRepository(TestCustomer);
     await customers.save([

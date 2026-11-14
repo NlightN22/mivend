@@ -97,7 +97,14 @@ describe('SettlementEntryService.allocate', () => {
                     limit: vi.fn(),
                     getRawMany: vi.fn(async () => []),
                 };
-                for (const k of ['select', 'addSelect', 'where', 'andWhere', 'groupBy', 'limit'] as const) {
+                for (const k of [
+                    'select',
+                    'addSelect',
+                    'where',
+                    'andWhere',
+                    'groupBy',
+                    'limit',
+                ] as const) {
                     qb[k].mockReturnValue(qb);
                 }
                 return qb;

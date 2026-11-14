@@ -230,4 +230,3 @@ query ActiveDiscountCounts($counterpartyIds: [ID!]!) {
         count
     }
 }
-

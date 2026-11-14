@@ -73,7 +73,9 @@ async function createNotification(input: NewNotification): Promise<NotificationI
     const result = await shopApi(CreateClientNotificationDocument, {
         input: { ...input, kind: input.kind as unknown as GeneratedNotificationKind },
     });
-    return result.createClientNotification ? toNotificationItem(result.createClientNotification) : null;
+    return result.createClientNotification
+        ? toNotificationItem(result.createClientNotification)
+        : null;
 }
 
 export async function markNotificationRead(id: string): Promise<NotificationItem> {

@@ -63,7 +63,11 @@ const OPEN_ORDERS_SQL = `
     WHERE o."customFieldsCounterpartyid" = $1 AND o.state <> ALL($2::text[])`;
 
 // Rows of one currency may arrive under both its numeric and alphabetic code.
-function sumByCurrency<T>(rows: T[], code: (r: T) => string, value: (r: T) => number): Map<string, number> {
+function sumByCurrency<T>(
+    rows: T[],
+    code: (r: T) => string,
+    value: (r: T) => number,
+): Map<string, number> {
     const out = new Map<string, number>();
     for (const r of rows) {
         const key = toAlphaCurrency(code(r));
@@ -74,7 +78,9 @@ function sumByCurrency<T>(rows: T[], code: (r: T) => string, value: (r: T) => nu
 
 // Dominant currency = the one with the largest absolute balance, else the largest 12-month turnover.
 function pickCurrency(balances: CurrencyAmount[], turnover: TurnoverRow[]): string {
-    const byBalance = [...balances].sort((a, b) => Math.abs(b.amountMinor) - Math.abs(a.amountMinor))[0];
+    const byBalance = [...balances].sort(
+        (a, b) => Math.abs(b.amountMinor) - Math.abs(a.amountMinor),
+    )[0];
     if (byBalance) return byBalance.currency;
     const byTurnover = [...turnover].sort((a, b) => Math.abs(b.last12) - Math.abs(a.last12))[0];
     return byTurnover ? toAlphaCurrency(byTurnover.currency) : DEFAULT_CURRENCY;
@@ -100,7 +106,11 @@ export class CounterpartyMetricsService implements CounterpartyMetricsProvider {
             this.turnover(ctx, counterpartyId, w),
             this.query(ctx, OPEN_ORDERS_SQL, [counterpartyId, NON_OPEN_STATES]),
         ]);
-        const totals = sumByCurrency(balanceRows, r => String(r.currency), r => Number(r.total));
+        const totals = sumByCurrency(
+            balanceRows,
+            r => String(r.currency),
+            r => Number(r.total),
+        );
         const balances = [...totals].map(([currency, amountMinor]) => ({ currency, amountMinor }));
         const currency = pickCurrency(balances, turnoverRows);
         const own = turnoverRows.filter(r => toAlphaCurrency(r.currency) === currency);

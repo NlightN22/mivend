@@ -1,11 +1,7 @@
 import { ref, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { toFilterColumns } from '@mivend/ui-kit/src/components/MvAdvancedDataTable/advancedDataTableTypes';
-import {
-    fetchEntityVersionsForRefs,
-    type EntityRef,
-    type EntityVersionRow,
-} from '../api/history';
+import { fetchEntityVersionsForRefs, type EntityRef, type EntityVersionRow } from '../api/history';
 import {
     HISTORY_DEFAULT_SORT,
     NO_HISTORY_OPTIONS,
@@ -23,7 +19,10 @@ export interface EntityHistoryList extends CardTabListState {
 }
 
 // All filtering, paging and search run on the server, on top of the scope-checked refs.
-export function useEntityHistoryList(getRefs: () => EntityRef[], urlPrefix: string): EntityHistoryList {
+export function useEntityHistoryList(
+    getRefs: () => EntityRef[],
+    urlPrefix: string,
+): EntityHistoryList {
     const items = ref<EntityVersionRow[]>([]);
     const totalItems = ref(0);
     const failed = ref(false);

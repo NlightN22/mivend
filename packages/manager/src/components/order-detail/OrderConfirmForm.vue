@@ -18,7 +18,9 @@ const emit = defineEmits<{ 'update:days': [value: string]; submit: [] }>();
                 @update:model-value="emit('update:days', $event)"
             />
         </label>
-        <MvButton :loading="submitting" @click="emit('submit')">{{ t('orderDetail.actions.confirm') }}</MvButton>
+        <MvButton :loading="submitting" @click="emit('submit')">{{
+            t('orderDetail.actions.confirm')
+        }}</MvButton>
     </div>
 </template>
 

@@ -24,7 +24,11 @@ export function orderTotalRows(
     const discount = totalDiscountMinor(order.lines, serverFor);
     const paid = order.customFields.erpPaidAmount;
     const rows: DocTotalRow[] = [
-        { key: 'positions', label: tr('orderLines.totals.positions'), value: String(order.lines.length) },
+        {
+            key: 'positions',
+            label: tr('orderLines.totals.positions'),
+            value: String(order.lines.length),
+        },
         {
             key: 'weight',
             label: tr('orderLines.totals.weightTotal'),
@@ -37,14 +41,36 @@ export function orderTotalRows(
             value: formatVolumeM3(packaging.totalVolumeM3),
             note: withoutData(gaps.volume),
         },
-        { key: 'subtotal', label: tr('orderLines.totals.subtotal'), value: money(order.subTotalWithTax) },
+        {
+            key: 'subtotal',
+            label: tr('orderLines.totals.subtotal'),
+            value: money(order.subTotalWithTax),
+        },
         { key: 'discount', label: tr('orderLines.totals.discountTotal'), value: money(discount) },
     ];
     if (retroTotal !== null)
-        rows.push({ key: 'retro', label: tr('orderLines.totals.retroTotal'), value: money(retroTotal) });
-    rows.push({ key: 'delivery', label: tr('orderLines.totals.delivery'), value: money(order.shippingWithTax) });
+        rows.push({
+            key: 'retro',
+            label: tr('orderLines.totals.retroTotal'),
+            value: money(retroTotal),
+        });
+    rows.push({
+        key: 'delivery',
+        label: tr('orderLines.totals.delivery'),
+        value: money(order.shippingWithTax),
+    });
     if (paid != null)
-        rows.push({ key: 'paid', label: tr('orderLines.totals.paid'), value: money(paid), note: tr('orderLines.totals.atLeast') });
-    rows.push({ key: 'total', label: tr('orderLines.totals.total'), value: money(order.totalWithTax), emphasis: true });
+        rows.push({
+            key: 'paid',
+            label: tr('orderLines.totals.paid'),
+            value: money(paid),
+            note: tr('orderLines.totals.atLeast'),
+        });
+    rows.push({
+        key: 'total',
+        label: tr('orderLines.totals.total'),
+        value: money(order.totalWithTax),
+        emphasis: true,
+    });
     return rows;
 }

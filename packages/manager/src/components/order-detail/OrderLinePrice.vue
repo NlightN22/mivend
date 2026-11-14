@@ -10,7 +10,10 @@ defineProps<{ price: string; adjustment: AdjustmentInfo | null }>();
 <template>
     <div class="line-price">
         <span>{{ price }}</span>
-        <span v-if="adjustment && adjustment.label !== t('orderLines.adjustment.pending')" @click.stop>
+        <span
+            v-if="adjustment && adjustment.label !== t('orderLines.adjustment.pending')"
+            @click.stop
+        >
             <MvPopover>
                 <template #trigger>
                     <MvFlagChip tone="info" :label="adjustment.label" />

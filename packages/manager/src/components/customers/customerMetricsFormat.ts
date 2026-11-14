@@ -16,10 +16,7 @@ export function balanceCaption(balanceMinor: number): string {
     return t('customers.metrics.settled');
 }
 
-export function contractLabel(row: {
-    contractName: string | null;
-    contractErpId: string;
-}): string {
+export function contractLabel(row: { contractName: string | null; contractErpId: string }): string {
     return row.contractName ?? (row.contractErpId || t('customers.metrics.noContract'));
 }
 

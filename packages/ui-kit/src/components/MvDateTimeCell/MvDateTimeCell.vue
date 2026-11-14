@@ -11,11 +11,13 @@ const props = defineProps<{ value: string }>();
 
 const locale = useUiLocale();
 const date = computed(() => new Date(props.value));
-const dateLabel = computed(() => date.value.toLocaleDateString(locale.value, {
+const dateLabel = computed(() =>
+    date.value.toLocaleDateString(locale.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
-    }));
+    }),
+);
 const timeLabel = computed(() =>
     date.value.toLocaleTimeString(locale.value, {
         hour: '2-digit',

@@ -123,11 +123,7 @@ async function submit(): Promise<void> {
             :error="shown('name')"
             required
         >
-            <MvInput
-                v-model="form.name"
-                :error="!!shown('name')"
-                @focusout="touched.name = true"
-            />
+            <MvInput v-model="form.name" :error="!!shown('name')" @focusout="touched.name = true" />
         </MvFormField>
         <MvFormField
             :label="t('customers.tradingPoints.form.address')"
@@ -170,9 +166,9 @@ async function submit(): Promise<void> {
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <div class="tp-edit-form__actions">
-            <MvButton :loading="submitting" :disabled="!form.location" @click="submit"
-                >{{ t('customers.tradingPoints.form.saveChanges') }}</MvButton
-            >
+            <MvButton :loading="submitting" :disabled="!form.location" @click="submit">{{
+                t('customers.tradingPoints.form.saveChanges')
+            }}</MvButton>
             <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
                 {{ t('common.cancel') }}
             </button>

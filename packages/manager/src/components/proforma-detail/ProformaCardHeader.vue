@@ -44,7 +44,8 @@ function onMenu(key: string): void {
         <div class="pf-header__breadcrumb">
             <RouterLink to="/proforma-invoices">{{
                 t('proformaInvoices.header.breadcrumb')
-            }}</RouterLink> /
+            }}</RouterLink>
+            /
             {{ formatDocumentNumber(card.number) }}
         </div>
         <div class="pf-header__row">

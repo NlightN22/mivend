@@ -114,10 +114,7 @@ onMounted(async () => {
         </div>
 
         <MvKpiCarousel v-if="summary" class="customers-page__kpis">
-            <MvKpiCard
-                :label="t('customers.page.kpi.activeClients')"
-                :value="activeClientsCount"
-            />
+            <MvKpiCard :label="t('customers.page.kpi.activeClients')" :value="activeClientsCount" />
             <MvKpiCard
                 v-if="canReadCredit"
                 :label="t('customers.page.kpi.creditUsed')"

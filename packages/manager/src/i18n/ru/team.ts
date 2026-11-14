@@ -2,7 +2,12 @@ import type en from '../en/team';
 
 const team: typeof en = {
     page: { breadcrumb: 'Рабочее пространство', title: 'Команда' },
-    views: { all: 'Все', active: 'Активные', unassigned: 'Не распределены', inactive: 'Неактивные' },
+    views: {
+        all: 'Все',
+        active: 'Активные',
+        unassigned: 'Не распределены',
+        inactive: 'Неактивные',
+    },
     status: { active: 'Активен', inactive: 'Неактивен', unassigned: 'Не распределён' },
     columns: {
         name: 'Имя',

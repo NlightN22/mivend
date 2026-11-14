@@ -47,7 +47,10 @@ const canOfferAll = computed(
 const label = computed(() =>
     matching.value
         ? t('bulkOperations.activation.selectedAll', { total: matching.value.total })
-        : t('bulkOperations.activation.selectedOf', { count: props.selection.ids.size, total: total.value }),
+        : t('bulkOperations.activation.selectedOf', {
+              count: props.selection.ids.size,
+              total: total.value,
+          }),
 );
 
 watch(criteria, value => {

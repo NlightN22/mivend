@@ -16,6 +16,8 @@ export class SettlementDocumentTypeMovesTurnover1791586000000 implements Migrati
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "settlement_document_type" DROP COLUMN "movesTurnover"`);
+        await queryRunner.query(
+            `ALTER TABLE "settlement_document_type" DROP COLUMN "movesTurnover"`,
+        );
     }
 }

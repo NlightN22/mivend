@@ -25,7 +25,10 @@ export const BLANK_ACTIVATION_FILTERS: ActivationFilters = {
     conditions: [],
 };
 
-export const ACTIVATION_VIEWS = [{ key: 'all' }, ...READINESS_VALUES.map(value => ({ key: value }))];
+export const ACTIVATION_VIEWS = [
+    { key: 'all' },
+    ...READINESS_VALUES.map(value => ({ key: value })),
+];
 
 export const ACTIVATION_FILTER_COLUMNS = toFilterColumns(buildActivationColumns([]));
 

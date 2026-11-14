@@ -154,7 +154,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<Row>): void {
         data-key="uuid"
         :row-height-px="56"
         :header-height-px="65"
-        :search="{ filterKey: 'number', placeholder: t('bulkOperations.history.searchPlaceholder') }"
+        :search="{
+            filterKey: 'number',
+            placeholder: t('bulkOperations.history.searchPlaceholder'),
+        }"
         :conditions="history.filters.value.conditions"
         :default-filters="{ number: '' }"
         :empty-message="t('bulkOperations.history.empty')"

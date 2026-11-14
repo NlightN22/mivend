@@ -4,7 +4,12 @@ import { useI18n } from 'vue-i18n';
 import { MvKpiCard, MvKpiCarousel, MvPanel, MvSkeleton } from '@mivend/ui-kit';
 import { fetchCounterpartyMetrics, type CounterpartyMetrics } from '../../api/counterpartyMetrics';
 import { useCurrency } from '../../composables/useCurrency';
-import { balanceCaption, contractLabel, dynamicsText, formatComputedAt } from './customerMetricsFormat';
+import {
+    balanceCaption,
+    contractLabel,
+    dynamicsText,
+    formatComputedAt,
+} from './customerMetricsFormat';
 
 const props = defineProps<{
     counterpartyId: string;
@@ -77,7 +82,9 @@ const otherBalances = (m: CounterpartyMetrics): string =>
                 v-if="metrics"
                 :label="t('customers.metrics.averageCheck')"
                 :value="
-                    metrics.averageCheckMinor === null ? '—' : formatMinor(metrics.averageCheckMinor)
+                    metrics.averageCheckMinor === null
+                        ? '—'
+                        : formatMinor(metrics.averageCheckMinor)
                 "
                 :caption="t('customers.metrics.perSalesDocument')"
             />
@@ -96,20 +103,28 @@ const otherBalances = (m: CounterpartyMetrics): string =>
                 :value="formatWhole(availableCredit)"
             />
         </MvKpiCarousel>
-        <p v-if="!metrics" class="customer-metrics__note" role="status">{{ t('customers.metrics.unavailable') }}</p>
+        <p v-if="!metrics" class="customer-metrics__note" role="status">
+            {{ t('customers.metrics.unavailable') }}
+        </p>
         <p v-else-if="otherBalances(metrics)" class="customer-metrics__note">
             {{ t('customers.metrics.otherBalances', { balances: otherBalances(metrics) }) }}
         </p>
         <MvPanel v-if="metrics && metrics.contractBalances.length" class="customer-metrics__panel">
             <details>
-                <summary>{{
-                    t('customers.metrics.byContract', { count: metrics.contractBalances.length })
-                }}</summary>
+                <summary>
+                    {{
+                        t('customers.metrics.byContract', {
+                            count: metrics.contractBalances.length,
+                        })
+                    }}
+                </summary>
                 <ul class="customer-metrics__list">
                     <li v-for="(row, i) in metrics.contractBalances" :key="i">
                         <span class="customer-metrics__name">
                             {{ contractLabel(row) }}
-                            <small v-if="!row.contractName"> {{ t('customers.metrics.contractNotImported') }}</small>
+                            <small v-if="!row.contractName">
+                                {{ t('customers.metrics.contractNotImported') }}</small
+                            >
                         </span>
                         <span>{{ formatMinor(row.closingBalanceMinor) }}</span>
                     </li>

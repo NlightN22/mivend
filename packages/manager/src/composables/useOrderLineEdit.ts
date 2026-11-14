@@ -24,7 +24,8 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
             if (seq === loadSeq) availability.value = new Map(rows.map(r => [r.orderLineId, r]));
         } catch (e) {
             if (seq === loadSeq)
-                error.value = e instanceof Error ? e.message : tr('orderLines.lineEdit.stockFailed');
+                error.value =
+                    e instanceof Error ? e.message : tr('orderLines.lineEdit.stockFailed');
         }
     }
 

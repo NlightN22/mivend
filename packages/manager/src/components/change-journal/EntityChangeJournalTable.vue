@@ -25,11 +25,7 @@ import {
     CHANGE_JOURNAL_LABELS as L,
 } from './changeJournalLabels';
 import JournalEntryDetailModal from './JournalEntryDetailModal.vue';
-import {
-    JOURNAL_DEFAULT_SORT,
-    NO_JOURNAL_OPTIONS,
-    buildJournalColumns,
-} from './journalTabFilter';
+import { JOURNAL_DEFAULT_SORT, NO_JOURNAL_OPTIONS, buildJournalColumns } from './journalTabFilter';
 
 // The change journal of one entity (the customer card tab). Requires ReadChangeJournal on the server,
 // which also refuses an entity outside the viewer's scope; the filters only narrow that entity's entries.

@@ -42,7 +42,8 @@ const customerName = computed(() => {
 <template>
     <header class="order-header">
         <div class="order-header__breadcrumb">
-            <RouterLink to="/orders">{{ t('orderDetail.common.orders') }}</RouterLink> / {{ formatDocumentNumber(order.code) }}
+            <RouterLink to="/orders">{{ t('orderDetail.common.orders') }}</RouterLink> /
+            {{ formatDocumentNumber(order.code) }}
         </div>
         <div class="order-header__row">
             <h1 class="order-header__title">

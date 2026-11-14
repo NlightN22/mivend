@@ -93,7 +93,8 @@ describe('ChangeJournalService reads (real Postgres)', () => {
         await insertJournalEntry(ds, entry({ actorType: 'system', administratorId: null }));
         await insertJournalEntry(ds, entry({ entityId: '2', actorType: 'acting' }));
         await insertJournalEntry(ds, entry({ entityType: 'Order', actorType: 'acting' }));
-        const only = (filter: object) => service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
+        const only = (filter: object) =>
+            service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
         expect((await only({ actorType: 'acting' })).totalItems).toBe(1);
         expect((await only({ administratorId: '4' })).totalItems).toBe(1);
         expect((await only({ occurredBefore: new Date(NOW.getTime() - 1000) })).totalItems).toBe(0);
@@ -103,14 +104,20 @@ describe('ChangeJournalService reads (real Postgres)', () => {
 
     it('searches the changed fields and values with wildcards taken literally, and filters by action', async () => {
         await insertJournalEntry(ds, entry({ changes: { phone: { before: '1', after: '50%' } } }));
-        await insertJournalEntry(ds, entry({ action: 'insert', changes: { name: { after: 'x' } } }));
+        await insertJournalEntry(
+            ds,
+            entry({ action: 'insert', changes: { name: { after: 'x' } } }),
+        );
         await insertJournalEntry(ds, entry({ entityId: '2', changes: { phone: { after: '9' } } }));
-        const only = (filter: object) => service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
+        const only = (filter: object) =>
+            service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
         expect((await only({ search: 'PHONE' })).totalItems).toBe(1);
         expect((await only({ search: '50%' })).totalItems).toBe(1);
         expect((await only({ search: '%' })).totalItems).toBe(1);
         expect((await only({ search: '_' })).totalItems).toBe(0);
-        expect((await only({ search: "'; DROP TABLE change_journal_entry;--" })).totalItems).toBe(0);
+        expect((await only({ search: "'; DROP TABLE change_journal_entry;--" })).totalItems).toBe(
+            0,
+        );
         expect((await only({ action: 'insert' })).totalItems).toBe(1);
     });
 

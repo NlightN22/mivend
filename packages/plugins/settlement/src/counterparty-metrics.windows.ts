@@ -47,7 +47,10 @@ export const localMidnight = (date: LocalDate, timeZone: string): Date => {
 export function computeWindows(now: Date, timeZone: string = processTimeZone()): MetricsWindows {
     const p = partsOf(now.getTime(), timeZone);
     const at = (monthShift: number, dayShift: number): Date =>
-        localMidnight({ year: p.year, month: p.month + monthShift, day: p.day + dayShift }, timeZone);
+        localMidnight(
+            { year: p.year, month: p.month + monthShift, day: p.day + dayShift },
+            timeZone,
+        );
     return {
         timeZone,
         computedAt: now,
