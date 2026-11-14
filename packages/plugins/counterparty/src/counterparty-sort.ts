@@ -32,7 +32,7 @@ export function applyCounterpartySort(
         if (field === 'lastOrderAt') {
             ensureLastOrderJoin(qb);
             qb.addSelect(LAST_ORDER_AT_SQL, LAST_ORDER_ALIAS).orderBy(
-                `"${LAST_ORDER_ALIAS}"`,
+                LAST_ORDER_ALIAS,
                 order,
                 'NULLS LAST',
             );
