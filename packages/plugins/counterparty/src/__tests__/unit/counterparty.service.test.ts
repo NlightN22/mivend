@@ -588,6 +588,7 @@ describe('CounterpartyService', () => {
         function mockPageQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
             qb.orderBy = vi.fn(() => qb);
+            qb.addOrderBy = vi.fn(() => qb);
             qb.where = vi.fn(() => qb);
             qb.andWhere = vi.fn(() => qb);
             qb.take = vi.fn(() => qb);
