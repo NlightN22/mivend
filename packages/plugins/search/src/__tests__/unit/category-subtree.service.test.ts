@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CategorySubtreeService } from '../../category-subtree.service';
 
 function build(rows: unknown[]) {
-    const query = vi.fn<(sql: string, params?: unknown[]) => Promise<unknown[]>>(async () => rows);
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => rows);
     const connection = { getRepository: () => ({ query }) };
     return { query, service: new CategorySubtreeService(connection as never) };
 }

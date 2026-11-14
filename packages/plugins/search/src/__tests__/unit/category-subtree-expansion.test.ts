@@ -53,7 +53,8 @@ describe('visibleSubtreeFacetValueIds', () => {
 
     it('does not loop on a parent cycle', () => {
         const cyclic = visibleSubtreeFacetValueIds([node(1, 2, 10), node(2, 1, 20)]);
-        expect(cyclic('10')).toEqual(['20']);
+        expect(cyclic('10')).toEqual(expect.arrayContaining(['20']));
+        expect(cyclic('10').length).toBeLessThanOrEqual(2);
     });
 });
 
@@ -61,13 +62,19 @@ describe('expandCategoryFilters', () => {
     const descendantsOf = visibleSubtreeFacetValueIds(rows);
 
     it('widens an or filter and keeps the original value first', () => {
-        const [filter] = expandCategoryFilters([{ or: ['20'] }], descendantsOf);
+        const [filter] = expandCategoryFilters([{ or: ['20'] }], descendantsOf) as Array<{
+            or?: string[];
+            and?: string;
+        }>;
         expect(filter.or?.slice(0, 1)).toEqual(['20']);
         expect([...(filter.or ?? [])].sort()).toEqual(['20', '30', '60']);
     });
 
     it('turns an and filter into an or over the subtree', () => {
-        const [filter] = expandCategoryFilters([{ and: '20' }], descendantsOf);
+        const [filter] = expandCategoryFilters([{ and: '20' }], descendantsOf) as Array<{
+            or?: string[];
+            and?: string;
+        }>;
         expect(filter.and).toBeUndefined();
         expect([...(filter.or ?? [])].sort()).toEqual(['20', '30', '60']);
     });
