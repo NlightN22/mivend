@@ -80,7 +80,11 @@ export class SettlementShopService {
     }
 
     async overdue(ctx: RequestContext, counterpartyId: string): Promise<CounterpartyOverdue> {
-        return summariseOverdue(await this.balanceCards(ctx, counterpartyId), new Date());
+        return summariseOverdue(
+            await this.balanceCards(ctx, counterpartyId),
+            new Date(),
+            ctx.channel.defaultCurrencyCode,
+        );
     }
 
     async documents(

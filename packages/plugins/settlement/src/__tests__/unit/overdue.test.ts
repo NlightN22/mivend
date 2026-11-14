@@ -22,14 +22,23 @@ describe('summariseOverdue', () => {
                     card(0, null),
                 ],
                 NOW,
+                'EUR',
             ),
         ).toEqual({ amount: 700, currency: 'RUB', oldestDays: 11 });
     });
 
     it('has no days when nothing is overdue', () => {
-        expect(summariseOverdue([card(0, null)], NOW)).toEqual({
+        expect(summariseOverdue([card(0, null)], NOW, 'EUR')).toEqual({
             amount: 0,
             currency: 'RUB',
+            oldestDays: null,
+        });
+    });
+
+    it('names the channel currency when the counterparty has no cards at all', () => {
+        expect(summariseOverdue([], NOW, 'EUR')).toEqual({
+            amount: 0,
+            currency: 'EUR',
             oldestDays: null,
         });
     });

@@ -27,12 +27,13 @@ const DAY_MS = 86_400_000;
 export function summariseOverdue(
     cards: Pick<SettlementBalanceCard, 'overdue' | 'currency' | 'oldestOverdueDue'>[],
     now: Date,
+    fallbackCurrency: string,
 ): CounterpartyOverdue {
     const overdue = cards.filter(c => c.overdue > 0);
     const dues = overdue.flatMap(c => (c.oldestOverdueDue ? [c.oldestOverdueDue.getTime()] : []));
     return {
         amount: overdue.reduce((sum, c) => sum + c.overdue, 0),
-        currency: overdue[0]?.currency ?? cards[0]?.currency ?? 'RUB',
+        currency: overdue[0]?.currency ?? cards[0]?.currency ?? fallbackCurrency,
         oldestDays: dues.length
             ? Math.max(0, Math.floor((now.getTime() - Math.min(...dues)) / DAY_MS))
             : null,
