@@ -10,7 +10,11 @@ import {
 } from 'shared';
 
 import { INN_DIGITS_SQL } from './counterparty-inn-guard';
-import { LAST_ORDER_AT_SQL } from './counterparty-last-order.sql';
+import {
+    LAST_ORDER_AT_SQL,
+    ensureLastOrderJoin,
+    filterUsesLastOrder,
+} from './counterparty-last-order.sql';
 import { READINESS_CASE_SQL } from './counterparty-readiness-filter';
 import type { Counterparty } from './entities/counterparty.entity';
 
@@ -85,6 +89,7 @@ export function applyCounterpartyFilterParameter(
     qb: SelectQueryBuilder<Counterparty>,
     filter: CounterpartyFilterParameter | undefined,
 ): SelectQueryBuilder<Counterparty> {
+    if (filterUsesLastOrder(filter)) ensureLastOrderJoin(qb);
     applyListFilter(CONFIG, qb, filter);
     return qb;
 }

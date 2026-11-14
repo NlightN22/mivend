@@ -1,6 +1,6 @@
 import type { SelectQueryBuilder } from 'typeorm';
 
-import { LAST_ORDER_AT_SQL } from './counterparty-last-order.sql';
+import { LAST_ORDER_AT_SQL, ensureLastOrderJoin } from './counterparty-last-order.sql';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartySortParameter } from './types';
 
@@ -30,6 +30,7 @@ export function applyCounterpartySort(
     >) {
         if (!order) continue;
         if (field === 'lastOrderAt') {
+            ensureLastOrderJoin(qb);
             qb.addSelect(LAST_ORDER_AT_SQL, LAST_ORDER_ALIAS).orderBy(
                 `"${LAST_ORDER_ALIAS}"`,
                 order,
