@@ -1157,6 +1157,8 @@ export type Counterparty = Node & {
     /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
     innStatus: Scalars['String']['output'];
     isActive: Scalars['Boolean']['output'];
+    /** Latest placed order of this counterparty, whoever may see the order; null when never ordered */
+    lastOrderAt: Maybe<Scalars['DateTime']['output']>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
@@ -1217,6 +1219,8 @@ export type CounterpartyFilterParameter = {
     /** ok | missing | duplicate, the same value as Counterparty.innStatus */
     innStatus?: InputMaybe<StringOperators>;
     isActive?: InputMaybe<BooleanOperators>;
+    /** Latest placed order of the counterparty, whoever may see the order; isNull means never ordered */
+    lastOrderAt?: InputMaybe<DateOperators>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<StringOperators>;
     legalName?: InputMaybe<StringOperators>;
@@ -1348,6 +1352,8 @@ export type CounterpartySortParameter = {
     inn?: InputMaybe<SortOrder>;
     /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
     innStatus?: InputMaybe<SortOrder>;
+    /** Never-ordered counterparties come last in either direction */
+    lastOrderAt?: InputMaybe<SortOrder>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<SortOrder>;
     legalName?: InputMaybe<SortOrder>;
@@ -2555,6 +2561,12 @@ export type DiscountLimitScopeOption = {
     ref: Scalars['String']['output'];
 };
 
+/** take defaults to 50 and is capped at 200. */
+export type DiscountListOptions = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type DiscountRegistryEntry = {
     approvalRequestId: Maybe<Scalars['ID']['output']>;
     counterpartyIds: Maybe<Array<Scalars['String']['output']>>;
@@ -2650,6 +2662,11 @@ export type DiscountRuleInput = {
     priceTypeCode: Scalars['String']['input'];
     validFrom: Scalars['DateTime']['input'];
     validTo: Scalars['DateTime']['input'];
+};
+
+export type DiscountRuleList = {
+    items: Array<DiscountRule>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type DiscountSetupCounterparty = {
@@ -8478,7 +8495,7 @@ export type Query = {
     discountLimitScopeOptions: Array<DiscountLimitScopeOption>;
     discountLimits: Array<DiscountLimit>;
     discountRegistryPage: DiscountRegistryEntryList;
-    discountRules: Array<DiscountRule>;
+    discountRules: DiscountRuleList;
     discountSetupCounts: DiscountSetupCounts;
     discountSetups: DiscountSetupList;
     documentTypes: Array<Scalars['String']['output']>;
@@ -8897,6 +8914,7 @@ export type QueryDiscountRegistryPageArgs = {
 };
 
 export type QueryDiscountRulesArgs = {
+    options?: InputMaybe<DiscountListOptions>;
     priceTypeCode?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -12299,6 +12317,7 @@ export type CustomersPageQuery = {
         totalItems: number;
         items: Array<{
             portalReadiness: string;
+            lastOrderAt: any | null;
             id: string;
             shortName: string;
             legalName: string;
@@ -12618,14 +12637,6 @@ export type ActiveDiscountCountsQueryVariables = Exact<{
 
 export type ActiveDiscountCountsQuery = {
     activeDiscountCounts: Array<{ counterpartyId: string; count: number }>;
-};
-
-export type LastOrderDatesQueryVariables = Exact<{
-    counterpartyIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-}>;
-
-export type LastOrderDatesQuery = {
-    lastOrderDates: Array<{ counterpartyId: string; lastOrderAt: any }>;
 };
 
 export type DashboardOrdersQueryVariables = Exact<{
@@ -16321,6 +16332,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
     items {
       ...CustomerListItemFields
       portalReadiness
+      lastOrderAt
     }
     totalItems
   }
@@ -16670,14 +16682,6 @@ export const ActiveDiscountCountsDocument = new TypedDocumentString(`
     ActiveDiscountCountsQuery,
     ActiveDiscountCountsQueryVariables
 >;
-export const LastOrderDatesDocument = new TypedDocumentString(`
-    query LastOrderDates($counterpartyIds: [ID!]!) {
-  lastOrderDates(counterpartyIds: $counterpartyIds) {
-    counterpartyId
-    lastOrderAt
-  }
-}
-    `) as unknown as TypedDocumentString<LastOrderDatesQuery, LastOrderDatesQueryVariables>;
 export const DashboardOrdersDocument = new TypedDocumentString(`
     query DashboardOrders($excludedStates: [String!]!, $since24h: DateTime!, $overdueBefore: DateTime!) {
   activeOrders: visibleOrders(
