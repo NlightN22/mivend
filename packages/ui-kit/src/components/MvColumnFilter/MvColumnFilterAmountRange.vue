@@ -7,6 +7,7 @@
 // directly as the already-open filter popover's content, like MvColumnFilterDate/Enum/Status.
 import { computed, ref, watch } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
+import { currencySymbol as symbolFor, useUiFormatLocale } from '../../utils/uiFormat';
 import type {
     AmountRangeFilterConfig,
     AmountRangeFilterValue,
@@ -26,14 +27,10 @@ const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
     { value: 'less', label: 'Less than' },
 ];
 
-const currencySymbol = computed(() => {
-    if (!props.config.currencyCode) return '';
-    const parts = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: props.config.currencyCode,
-    }).formatToParts(0);
-    return parts.find(p => p.type === 'currency')?.value ?? props.config.currencyCode;
-});
+const formatLocale = useUiFormatLocale('en-US');
+const currencySymbol = computed(() =>
+    props.config.currencyCode ? symbolFor(props.config.currencyCode, formatLocale.value) : '',
+);
 
 const DEFAULT_PRESETS: AmountRangePreset[] = [
     { label: 'Up to 500', min: undefined, max: 500 },

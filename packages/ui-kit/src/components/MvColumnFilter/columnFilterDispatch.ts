@@ -1,3 +1,4 @@
+import { currencySymbol } from '../../utils/uiFormat';
 import type {
     AmountRangeFilterValue,
     ColumnFilterConfig,
@@ -64,7 +65,11 @@ export function hasValue(value: unknown): boolean {
 }
 
 // Symbol is a pure ISO-4217 lookup, not business data, so it needs no config beyond currencyCode.
-export function describeValue(config: ColumnFilterConfig, value: unknown): string {
+export function describeValue(
+    config: ColumnFilterConfig,
+    value: unknown,
+    locale = 'en-US',
+): string {
     if (!hasValue(value)) return '';
     switch (config.type) {
         case 'status':
@@ -91,11 +96,7 @@ export function describeValue(config: ColumnFilterConfig, value: unknown): strin
         }
         case 'amount-range': {
             const v = value as AmountRangeFilterValue;
-            const parts = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: config.currencyCode,
-            }).formatToParts(0);
-            const s = parts.find(p => p.type === 'currency')?.value ?? config.currencyCode;
+            const s = currencySymbol(config.currencyCode, locale);
             if (v.mode === 'equal') return `= ${s}${v.min}`;
             if (v.mode === 'more') return `≥ ${s}${v.min}`;
             if (v.mode === 'less') return `≤ ${s}${v.max}`;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { AMOUNT_FORMATTER } from './amount-format';
+import { useUiFormatLocale } from '../../utils/uiFormat';
 
 export type AmountSize = 'sm' | 'md' | 'lg';
 
@@ -17,9 +18,11 @@ withDefaults(defineProps<Props>(), {
     decimals: 0,
 });
 
+const formatLocale = useUiFormatLocale('ru-RU');
+
 function formatAmount(value: number, currency: string, decimals: number): string {
     try {
-        return new Intl.NumberFormat('ru-RU', {
+        return new Intl.NumberFormat(formatLocale.value, {
             style: 'currency',
             currency,
             minimumFractionDigits: decimals,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
+import { useUiFormatLocale } from '../../utils/uiFormat';
 
 export interface DiscountTier {
     percent: number;
@@ -22,18 +23,24 @@ const props = withDefaults(defineProps<Props>(), {
     tiers: () => [],
     size: 'md',
     title: 'Volume discount',
-    weightLabel: (kg: number) => `≥ ${kg.toLocaleString()} kg`,
-    amountLabel: (minorUnits: number) => `≥ ${(minorUnits / 100).toLocaleString()} ₽`,
+    weightLabel: undefined,
+    amountLabel: undefined,
 });
+
+const formatLocale = useUiFormatLocale(undefined);
 
 const maxPercent = computed(() => Math.max(0, ...props.tiers.map(t => t.percent)));
 
 function formatThreshold(tier: DiscountTier): string {
     if (tier.minWeightKg !== null) {
-        return props.weightLabel(tier.minWeightKg);
+        return props.weightLabel
+            ? props.weightLabel(tier.minWeightKg)
+            : `≥ ${tier.minWeightKg.toLocaleString(formatLocale.value)} kg`;
     }
     if (tier.minAmount !== null) {
-        return props.amountLabel(tier.minAmount);
+        return props.amountLabel
+            ? props.amountLabel(tier.minAmount)
+            : `≥ ${(tier.minAmount / 100).toLocaleString(formatLocale.value)} ₽`;
     }
     return '';
 }
