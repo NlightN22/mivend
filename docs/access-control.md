@@ -176,6 +176,7 @@ counterparty sees its balance, turnover, credit limit and overdue figures: `Read
 every default role, and the counterparty scope is the only restriction. The rows are limited to the counterparties the caller sees (`CounterpartyService.visibleErpIdsSql`),
 applied before any client filter, search or counterparty argument. The grant lives in `default-roles.ts`
 (re-provisioned on every start, never by hand in the Admin UI).
+The last order date follows the same rule (#344): `Counterparty.lastOrderAt` and its list filter/sort are the latest placed order over all orders of the counterparty, not limited to the orders the caller may see, and need no permission beyond seeing the counterparty.
 
 `settlementDocumentTypes` returns the document type list (code, label, category) with no counts and no counterparty
 scope: it is ERP reference metadata (the registry plus codes seen on documents), carries no per-customer data, and
