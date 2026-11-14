@@ -272,19 +272,19 @@ describe('category tree writers against real Postgres', () => {
         expect(await privateOf('b')).toBe(false);
     });
 
-    it('recomputes a wide, multi-level tree where one root hides every category', async () => {
+    it('recomputes a prod-sized tree (8000 categories) where one root hides every category', async () => {
         await dataSource.query('truncate category restart identity');
         await dataSource.query("insert into category (code, override) values ('root', 'hidden')");
         await dataSource.query(
             `insert into category ("parentId", code)
              select case when g <= 100 then 1 else 2 + (g - 101) / 10 end, 'c' || g
-             from generate_series(1, 999) g`,
+             from generate_series(1, 7999) g`,
         );
         const writes = await recomputeCategoryTree({} as never, deps as never);
-        expect(writes).toBeGreaterThanOrEqual(1000);
+        expect(writes).toBeGreaterThanOrEqual(8000);
         const [{ visible }] = await dataSource.query(
             'select count(*)::int as visible from category where not "isPrivate"',
         );
         expect(visible).toBe(0);
-    });
+    }, 120_000);
 });
