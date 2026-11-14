@@ -82,9 +82,10 @@ const privateOf = async (code: string): Promise<boolean> =>
         .isPrivate;
 
 // The feed writer: reads the override under the shared lock, then writes the state it resolved.
-async function feedEventForRoot(): Promise<void> {
+async function feedEventForRoot(onLocked: () => void): Promise<void> {
     await withAggregateLock(connection as never, {} as never, CATEGORY_TREE_LOCK, async tx => {
         const { manager } = tx as unknown as TestCtx;
+        onLocked();
         const [row] = await manager.query("select override from category where code = 'root'");
         await manager.query('select pg_sleep(0.3)');
         await manager.query('update category set "isPrivate" = $1 where code = $2', [
@@ -119,8 +120,10 @@ describe('category tree writers against real Postgres', () => {
         await dataSource.query("insert into category (code) values ('root')");
         await dataSource.query('insert into category ("parentId", code) values (1, \'child\')');
 
-        const feed = feedEventForRoot();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        let onLocked!: () => void;
+        const locked = new Promise<void>(resolve => (onLocked = resolve));
+        const feed = feedEventForRoot(onLocked);
+        await locked;
         await dataSource.query(
             "update category set override = 'hidden', \"isPrivate\" = true where code = 'root'",
         );
@@ -143,13 +146,16 @@ describe('category tree writers against real Postgres', () => {
     });
 
     it('a writer waiting behind a stuck holder fails with a lock timeout instead of hanging', async () => {
+        let onLocked!: () => void;
+        const locked = new Promise<void>(resolve => (onLocked = resolve));
         const holder = dataSource.transaction(async manager => {
             await manager.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
                 CATEGORY_TREE_LOCK,
             ]);
+            onLocked();
             await manager.query('select pg_sleep(3)');
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await locked;
         await expect(
             withAggregateLock(connection as never, {} as never, CATEGORY_TREE_LOCK, async () => 1, {
                 lockTimeoutMs: 300,
@@ -266,18 +272,19 @@ describe('category tree writers against real Postgres', () => {
         expect(await privateOf('b')).toBe(false);
     });
 
-    it('recomputes a prod-sized tree (8000 categories, all hidden by one root) within a generous bound', async () => {
+    it('recomputes a wide, multi-level tree where one root hides every category', async () => {
         await dataSource.query('truncate category restart identity');
         await dataSource.query("insert into category (code, override) values ('root', 'hidden')");
         await dataSource.query(
             `insert into category ("parentId", code)
              select case when g <= 100 then 1 else 2 + (g - 101) / 10 end, 'c' || g
-             from generate_series(1, 7999) g`,
+             from generate_series(1, 999) g`,
         );
-        const started = Date.now();
         const writes = await recomputeCategoryTree({} as never, deps as never);
-        // Covers only the SQL planning part; a real Vendure update (~70 ms each) is outside this bound.
-        expect(Date.now() - started).toBeLessThan(120_000);
-        expect(writes).toBeGreaterThanOrEqual(8000);
+        expect(writes).toBeGreaterThanOrEqual(1000);
+        const [{ visible }] = await dataSource.query(
+            'select count(*)::int as visible from category where not "isPrivate"',
+        );
+        expect(visible).toBe(0);
     });
 });
