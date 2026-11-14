@@ -161,7 +161,7 @@ function handleRelogin(): void {
                     variant="warning"
                     class="layout__default-account"
                 >
-                    <I18nT keypath="shell.layout.defaultAccount" tag="span">
+                    <I18nT keypath="shell.layout.defaultAccount" tag="span" scope="global">
                         <template #name>
                             <strong>{{ t('shell.layout.defaultAccountName') }}</strong>
                         </template>

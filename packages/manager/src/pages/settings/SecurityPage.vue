@@ -140,7 +140,7 @@ async function handleSignOutEverywhere(): Promise<void> {
                 {{ t('settingsSystem.security.breachedCurrent') }}
             </MvNotice>
             <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
-                <i18n-t keypath="settingsSystem.security.defaultAccount" tag="span">
+                <i18n-t keypath="settingsSystem.security.defaultAccount" tag="span" scope="global">
                     <template #account><strong>superadmin</strong></template>
                 </i18n-t>
             </MvNotice>
