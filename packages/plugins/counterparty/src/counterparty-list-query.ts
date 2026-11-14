@@ -10,6 +10,7 @@ import {
 } from 'shared';
 
 import { INN_DIGITS_SQL } from './counterparty-inn-guard';
+import { LAST_ORDER_AT_SQL } from './counterparty-last-order.sql';
 import { READINESS_CASE_SQL } from './counterparty-readiness-filter';
 import type { Counterparty } from './entities/counterparty.entity';
 
@@ -61,6 +62,11 @@ const FIELDS: Record<string, FieldSpec> = {
     },
     creditLimit: { kind: 'number', sql: 'c."creditLimit"', operators: NUMBER_OPERATORS },
     creditBalance: { kind: 'number', sql: 'c."creditBalance"', operators: NUMBER_OPERATORS },
+    lastOrderAt: {
+        kind: 'date',
+        sql: LAST_ORDER_AT_SQL,
+        operators: ['before', 'after', 'between'],
+    },
     isActive: { kind: 'boolean', sql: 'c."isActive"', operators: ['eq'] },
 };
 

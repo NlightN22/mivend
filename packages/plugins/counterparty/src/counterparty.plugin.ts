@@ -2,6 +2,7 @@ import { ErpIdLookupService } from './erp-id-lookup.service';
 import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
 import { CounterpartySearchProvider } from './counterparty-search.provider';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
+import { CounterpartyLastOrderResolver } from './counterparty-last-order.resolver';
 import {
     LanguageCode,
     PluginCommonModule,
@@ -125,6 +126,7 @@ const adminResolvers = [
     CounterpartyResolver,
     CounterpartyCreditResolver,
     CounterpartyChosenContactResolver,
+    CounterpartyLastOrderResolver,
     CounterpartyCustomerLinkResolver,
     TradingPointAdminResolver,
     TradingPointChangeAdminResolver,

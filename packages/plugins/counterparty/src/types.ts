@@ -13,6 +13,7 @@ export interface CounterpartySortParameter {
     officialEmail?: 'ASC' | 'DESC' | null;
     creditLimit?: 'ASC' | 'DESC' | null;
     creditBalance?: 'ASC' | 'DESC' | null;
+    lastOrderAt?: 'ASC' | 'DESC' | null;
 }
 
 export interface CounterpartyUpsertPayload {

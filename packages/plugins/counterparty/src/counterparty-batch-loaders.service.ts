@@ -4,6 +4,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CtxLoader, ctxQuery, findBounded, getManyBounded } from 'shared';
 import { In, Not } from 'typeorm';
 
+import { loadLastOrderDates } from './counterparty-last-order.sql';
 import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
 import { ContactPointService, type ChosenContact } from './contact-point.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
@@ -29,6 +30,11 @@ export class CounterpartyBatchLoaders {
         return keys.map(key => found.get(key) ?? 'missing-data');
     });
 
+    private lastOrder = new CtxLoader<Date | null>(async (ctx, keys) => {
+        const found = await loadLastOrderDates(this.connection, ctx, keys.filter(isRowId));
+        return keys.map(key => found.get(key) ?? null);
+    });
+
     private chosen = new CtxLoader<ChosenContact>(async (ctx, keys) => {
         const found = await this.contactPoints.chosenContacts(ctx, keys.filter(isRowId));
         return keys.map(key => found.get(key) ?? { email: null, phone: null });
@@ -43,6 +49,10 @@ export class CounterpartyBatchLoaders {
     chosenContact(ctx: RequestContext, counterpartyId: string | number): Promise<ChosenContact> {
         if (!isRowId(String(counterpartyId))) return Promise.resolve({ email: null, phone: null });
         return this.chosen.load(ctx, counterpartyId);
+    }
+
+    lastOrderAt(ctx: RequestContext, counterpartyId: string | number): Promise<Date | null> {
+        return this.lastOrder.load(ctx, counterpartyId);
     }
 
     portalReadiness(

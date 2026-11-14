@@ -18,6 +18,8 @@ export const adminApiSchema = gql`
         "Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver"
         creditBalance: Int
         paymentDelayDays: Int!
+        "Latest placed order of this counterparty, whoever may see the order; null when never ordered"
+        lastOrderAt: DateTime
         "Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver"
         priceType: String
         isActive: Boolean!
@@ -128,6 +130,8 @@ export const adminApiSchema = gql`
         creditLimit: NumberOperators
         "Needs ReadCounterpartyCredit"
         creditBalance: NumberOperators
+        "Latest placed order of the counterparty, whoever may see the order; isNull means never ordered"
+        lastOrderAt: DateOperators
         isActive: BooleanOperators
         _and: [CounterpartyFilterParameter!]
     }
@@ -160,6 +164,8 @@ export const adminApiSchema = gql`
         creditLimit: SortOrder
         "Needs ReadCounterpartyCredit"
         creditBalance: SortOrder
+        "Never-ordered counterparties come last in either direction"
+        lastOrderAt: SortOrder
     }
 
     type CounterpartySummary {
