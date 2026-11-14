@@ -67,9 +67,8 @@ export function parseDiscountSetup(
     };
 }
 
-// Fail closed: any attribute mivend does not evaluate, set to a non-default value, stores the document inactive.
-// Quality, purpose and currency are deliberately ignored: they never restrict a discount here.
-// Values are opaque ERP ids and enums: only empty/absent versus set is compared, never a name.
+// Fail closed: an unevaluated attribute set to a non-default value marks the document inactive.
+// Quality, purpose, currency never limit discounts. Ids are opaque: only set vs empty is compared.
 function notApplicableReason(payload: Record<string, unknown>, percent: number): string | null {
     if (!Number.isFinite(percent) || percent === 0) return 'no-header-percent';
     if (optionalNumber(payload.priceNumber) !== null) return 'fixed-price';

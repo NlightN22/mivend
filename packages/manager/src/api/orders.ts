@@ -53,9 +53,8 @@ const ORDER_STATES = [
     'Cancelled',
 ] as const;
 
-// Vendure's own OrderProcess states, not ERP business data; a const list is intentional here.
-// Documented carve-out for internal technical states in backend-plugin-rules.
-// 'Draft' (capitalized) is the admin draft-order state, distinct from a customer's AddingItems cart.
+// Vendure's own OrderProcess states, not ERP business data: const list is intentional.
+// 'Draft' (admin draft order) is distinct from a customer's AddingItems cart state.
 export const ORDER_STATE_OPTIONS = lazyOptions('orders.state', ['', ...ORDER_STATES] as const);
 
 // Must use real Vendure OrderSortParameter keys: DataTable column fields don't map 1:1

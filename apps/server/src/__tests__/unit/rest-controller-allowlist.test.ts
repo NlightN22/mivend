@@ -4,9 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../../../../..');
 
-// Every REST controller must carry a key guard and be flag-gated; a new one must be listed here
-// with its reason, so it cannot ship unguarded by accident (docs/environments.md, REST policy).
-// `session`: a portal download authorized per row by the caller's own Vendure session (#263), not a key.
+// Every REST controller needs a key guard and flag gate; new ones must be listed here with a reason.
+// Portal downloads marked session are authorized per row by the caller's Vendure session, not a key.
 const ALLOW_LIST: Record<string, { reason: string; session?: true }> = {
     'packages/plugins/documents/src/document-pdf.controller.ts': {
         reason: 'Vendure session + DocumentPdfAccessService scope check; 404 for guest/hidden/missing',

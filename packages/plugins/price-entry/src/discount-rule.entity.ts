@@ -2,9 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Exactly one trigger shape per row: facet/priceType threshold, or per-product promo, never both.
-// Counterparty/contract rules are DiscountSetup documents, not rows here.
-// Gift-type `percent` is an int column, so it only approximates a free gift (GIFT_TYPE_PERCENT).
+// One trigger shape per row: facet/priceType threshold or per-product promo, never both.
+// Gift percent is an int column, so it only approximates a free gift (GIFT_TYPE_PERCENT).
 export type DiscountRuleOperationKind =
     | 'percent-discount'
     | 'gift-one-from-list'

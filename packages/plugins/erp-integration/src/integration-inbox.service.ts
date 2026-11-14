@@ -183,9 +183,8 @@ export class IntegrationInboxService {
             WHERE status = 'dependency_missing' AND eligible_at <= now() ${streamFilter}
             ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
 
-        // Parked rows (prio 1) only fill what fresh pending and stale rows leave of the batch.
-        // FIFO by the time a row became eligible, not by enqueue time — a backed-off retry queues
-        // behind rows that arrived before it came due, so retries can't starve them (#146).
+        // Parked rows fill only the batch slots left after fresh and stale rows.
+        // FIFO by eligibility time, not enqueue time, so retries can't starve earlier rows.
         const rows = await ctxQuery<Array<{ id: string }>>(
             this.connection,
             ctx,

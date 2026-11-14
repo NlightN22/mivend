@@ -634,8 +634,7 @@ export const config: VendureConfig = {
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         CounterpartyDashboardPlugin,
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
-        // Defense in depth: backstops AccessControlPlugin's bootstrap-time self-provisioning.
-        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
+        // Backstop for AccessControlPlugin's bootstrap-time self-provisioning.
         ConsistencyReportsDashboardPlugin,
         RoleProvisioningDashboardPlugin,
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.

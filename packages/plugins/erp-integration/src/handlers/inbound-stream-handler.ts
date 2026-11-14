@@ -12,9 +12,8 @@ export interface InboundStreamHandler {
     ): Promise<InboundOutcome>;
 }
 
-// A deliberate no-op must say why (issue #200): the reason is stored on the inbox row and counted
-// on the integration-health page.
-// afterCommit runs once the inbox transaction committed (job enqueues that must see the rows).
+// A deliberate no-op must state its reason: it is stored on the inbox row and health metrics.
+// afterCommit runs only after the inbox transaction commits, so enqueued jobs see the rows.
 export type InboundAfterCommit = (ctx: RequestContext) => Promise<void>;
 // contactFailure: a derived contact step failed and was rolled back alone; the row is recorded with that reason.
 export type InboundOutcome = (
@@ -45,9 +44,8 @@ export type BatchInboundResult =
     | InboundOutcome
     | { kind: 'invalid'; error: NonRetryableInboundError };
 
-// Opt-in: results are positional, items arrive sorted by (entityId, version) and run in one
-// transaction under the entity locks. A throw rolls the whole batch back and the processor
-// falls back to apply() per row.
+// Results are positional; items arrive sorted by (entityId, version) within the entity locks.
+// A throw rolls back the whole batch and the processor falls back to apply() per row.
 export interface BatchInboundStreamHandler extends InboundStreamHandler {
     applyBatch(ctx: RequestContext, items: BatchInboundItem[]): Promise<BatchInboundResult[]>;
 }

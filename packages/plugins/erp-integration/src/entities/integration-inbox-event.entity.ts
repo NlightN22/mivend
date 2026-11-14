@@ -9,9 +9,8 @@ import {
 
 import type { InboundStream } from '../types';
 
-// replay_requested: a failed row whose entity was replayed, waiting for the new event to be
-// processed; resolved: that event was processed; dependency_missing: parked until the
-// referenced entity arrives, retried on the longest backoff (docs/integration-health.md).
+// dependency_missing rows stay parked until the referenced entity arrives and use the longest retry backoff.
+// See docs/integration-health.md for the full status lifecycle.
 export type IntegrationInboxEventStatus =
     | 'pending'
     | 'processing'

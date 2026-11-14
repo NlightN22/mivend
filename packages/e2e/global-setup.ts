@@ -221,9 +221,8 @@ export default async function globalSetup(): Promise<void> {
         reassignerToken,
     );
 
-    // DiscountGrant is materialized only on approval and has no erp-import record type, so seed
-    // through requestDiscountGrant -> decideDiscountGrantRequest. Second grant must not leak onto e2e.
-    // Approval types the specs request: a fresh database has no WorkflowDefinition until one is seeded.
+    // Seed via requestDiscountGrant -> decideDiscountGrantRequest: DiscountGrant has no erp-import type.
+    // A fresh DB has no WorkflowDefinition until seeded; second grant must not leak onto e2e.
     if (adminToken) {
         const definitions = [
             {

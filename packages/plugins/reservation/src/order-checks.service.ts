@@ -62,9 +62,8 @@ export class OrderChecksService {
         });
     }
 
-    // An auto trigger that hits `hold` leaves the order in the manual confirmation queue; staff
-    // confirming it manually is the release.
-    // Fail-open by owner decision (docs/checks-and-policies.md): a broken check never stops an order.
+    // Auto-trigger hold parks the order in the manual queue; manual confirmation is the release.
+    // Fail-open by design: a broken check never blocks an order (see docs/checks-and-policies.md).
     async isHeld(
         ctx: RequestContext,
         orderId: string,

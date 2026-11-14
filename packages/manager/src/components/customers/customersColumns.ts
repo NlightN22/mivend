@@ -35,9 +35,8 @@ export interface CustomersColumnOptions {
     branches?: FilterOption[];
 }
 
-// Group, INN status and portal access start hidden (CUSTOMERS_DEFAULT_HIDDEN). Filtering is the toolbar
-// Filter builder; the search box covers the name and INN. Discounts live in another plugin and are
-// not filterable.
+// Group, INN status and portal access default to hidden via CUSTOMERS_DEFAULT_HIDDEN.
+// Discounts live in another plugin and cannot be filtered here.
 export function buildCustomersColumns(
     options: CustomersColumnOptions = {},
 ): AdvancedDataTableColumn[] {

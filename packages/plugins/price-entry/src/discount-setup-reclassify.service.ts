@@ -25,9 +25,8 @@ interface LegacyRow {
     productFilter: unknown[] | null;
 }
 
-// One-time, idempotent: rows stored before filters were evaluated carry the legacy reason. Their
-// recipients were not stored while inactive, so an evaluable one waits for the ERP to re-send it:
-// its version is reset so any re-delivery applies.
+// Legacy-reason rows: recipients were never stored while inactive; ERP must re-send.
+// Version reset so any re-delivery applies. Idempotent, so safe to re-run.
 @Injectable()
 export class DiscountSetupReclassifyService implements OnApplicationBootstrap {
     constructor(

@@ -27,7 +27,11 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             { label: t('shell.nav.customers'), path: '/customers' },
             { label: t('shell.nav.documents'), children: documents },
             ...settlements,
-            { label: t('shell.nav.approvals'), path: '/approvals', badgeCount: approvalsBadgeCount.value },
+            {
+                label: t('shell.nav.approvals'),
+                path: '/approvals',
+                badgeCount: approvalsBadgeCount.value,
+            },
             { label: t('shell.nav.team'), path: '/team' },
         ];
         if (canOpenBulkOperations(authStore.hasPermission)) {
@@ -36,21 +40,23 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         items.push({ label: t('shell.nav.analytics'), path: '/analytics' });
         if (authStore.hasPermission('ReadChangeJournal'))
             items.push({ label: CHANGE_JOURNAL_LABELS.pageTitle, path: '/change-journal' });
-        // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
-        // itself checks — not a role-code allowlist, so granting/revoking this via the native
-        // Vendure admin UI (any role) is enough, no manager-portal code change needed.
+        // Permission-gated (ManageAccessControl), not a role allowlist: granting it in Vendure admin
+        // needs no manager-portal code change.
         const settingsPath = systemSettingsPath(authStore.hasPermission);
         if (settingsPath) items.push({ label: t('shell.nav.systemSettings'), path: settingsPath });
         return items;
     });
 
-    // The 5 items that fit the mobile bottom bar — everything else lives in the "More" sheet.
-    // Computed (not a plain array) so approvalsBadgeCount's async onMounted update actually reaches
-    // the rendered badge — a plain array literal would freeze badgeCount at its value when this
-    // component's <script setup> first ran, before the fetch below ever resolves.
+    // Must be computed, not a plain array: the async onMounted badge update would never reach
+    // the rendered badge (a literal freezes badgeCount at first script setup).
     const mobileNavItems = computed<AppMobileNavItem[]>(() => [
         { key: 'dashboard', label: t('shell.nav.dashboard'), path: '/', icon: 'home' },
-        { key: 'customers', label: t('shell.nav.customers'), path: '/customers', icon: 'customers' },
+        {
+            key: 'customers',
+            label: t('shell.nav.customers'),
+            path: '/customers',
+            icon: 'customers',
+        },
         { key: 'orders', label: t('shell.nav.orders'), path: '/orders', icon: 'orders' },
         {
             key: 'approvals',
@@ -74,7 +80,11 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             });
         items.push({ key: 'discounts', label: t('shell.nav.discounts'), path: '/discounts' });
         if (authStore.hasPermission('ReadSettlementDocument'))
-            items.push({ key: 'settlements', label: t('shell.nav.settlements'), path: '/settlements' });
+            items.push({
+                key: 'settlements',
+                label: t('shell.nav.settlements'),
+                path: '/settlements',
+            });
         items.push(
             { key: 'team', label: t('shell.nav.team'), path: '/team' },
             { key: 'analytics', label: t('shell.nav.analytics'), path: '/analytics' },
@@ -87,7 +97,11 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             });
         const settingsPath = systemSettingsPath(authStore.hasPermission);
         if (settingsPath)
-            items.push({ key: 'settings', label: t('shell.nav.systemSettings'), path: settingsPath });
+            items.push({
+                key: 'settings',
+                label: t('shell.nav.systemSettings'),
+                path: settingsPath,
+            });
         return items;
     });
 

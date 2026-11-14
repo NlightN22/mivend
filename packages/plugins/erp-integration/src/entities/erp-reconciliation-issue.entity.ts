@@ -10,10 +10,8 @@ export type ErpReconciliationIssueType =
 export type ErpReconciliationIssueStatus = 'open' | 'resolved';
 export type ErpReconciliationTrigger = 'scheduled' | 'manual';
 
-// Never auto-resolved: upstream-higher needs a human replay via operator-only resync (no point API).
-// failed-inbox-rows (aggregateType `inbox-failed:<stream>`, ourCount = failed rows) clears when none remain.
-// missing-coordinates (aggregateType `trading-point-no-coordinates`, ourCount = active points) clears when none remain.
-// local-higher is flagged for review and never auto-deleted (may be stale or orphaned).
+// upstream-higher: never auto-resolved; needs human replay via operator-only resync (no point API).
+// local-higher is never auto-deleted: it may be stale or orphaned; only flagged for review.
 @Entity()
 export class ErpReconciliationIssue extends UuidEntity {
     constructor(input?: DeepPartial<ErpReconciliationIssue>) {

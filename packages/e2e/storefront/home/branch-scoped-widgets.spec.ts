@@ -8,10 +8,8 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { cancelTestOrder } from '../../helpers/manager-order';
 import { openStorefrontAs } from '../../visibility/session';
 
-// Test plan (#298): widgets offer only products in stock at a warehouse of the viewer's branch.
-// Seed: product A is stocked at branch A's warehouse only, product B at branch B's only; both are
-// new and on sale; customer-a/customer-b belong to branches A/B. Popular needs sales, so each
-// customer orders its own branch's product. One case per widget and viewer, API ids plus home UI.
+// Seed: product A is stocked only at branch A's warehouse, product B only at branch B's.
+// Products are new and on sale; Popular needs sales, so each customer buys its branch's product.
 
 type Side = 'a' | 'b';
 const SIDES: { side: Side; customer: CustomerKey; other: Side }[] = [

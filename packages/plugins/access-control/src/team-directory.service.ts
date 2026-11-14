@@ -64,9 +64,8 @@ export class TeamDirectoryService {
         private positionService: PositionService,
     ) {}
 
-    // Inactive (soft-deleted) rows only for ManageAdministratorLifecycle holders, like Settings > Users.
-    // Names outside the caller's department are null unless teamVisibility is 'all'; search never
-    // matches a name the caller cannot see.
+    // Soft-deleted rows are returned only to ManageAdministratorLifecycle holders.
+    // Names outside the caller's department are null unless teamVisibility is 'all'; search must skip hidden names so it cannot leak them.
     async findPage(
         ctx: RequestContext,
         options: TeamDirectoryListOptions = {},

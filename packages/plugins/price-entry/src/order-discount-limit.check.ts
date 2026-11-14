@@ -12,9 +12,8 @@ interface OrderDiscountSubject {
     orderId: string;
 }
 
-// Judges manual discounts only; no row means a 0% ceiling (docs/access-control.md). Measured against whoever runs the stage;
-// a run without an administrator has no limit to judge by.
-// Facts carry the line's discount percent, never the limit.
+// Manual discounts only; no row means a 0% ceiling (docs/access-control.md).
+// Judged against the stage runner (no admin = no limit). Facts carry the percent, never the limit.
 @Injectable()
 export class OrderDiscountLimitCheck implements OnModuleInit {
     constructor(

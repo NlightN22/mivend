@@ -24,9 +24,8 @@ interface PriceTypeBase {
     branchIds: Set<string> | 'all';
 }
 
-// The single deny-by-default decision for price types (docs/access-control.md, layer 4):
-// customer types = branch allow-list (+ branch default) or ReadAllCustomerPriceTypes;
-// confidential types = ReadConfidentialPriceTypes only, never a branch rule or a context.
+// Deny by default. Customer types: branch allow-list/default or ReadAllCustomerPriceTypes.
+// Confidential types: only ReadConfidentialPriceTypes; branch rules and contexts never grant them.
 @Injectable()
 export class PriceTypeAccessService {
     private baseCache = new WeakMap<RequestContext, Promise<PriceTypeBase>>();

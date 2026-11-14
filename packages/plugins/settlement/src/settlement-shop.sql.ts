@@ -1,6 +1,5 @@
-// Every balance of the counterparty counts toward the total, whether or not its contract is known;
-// only balances of customer contracts are aged. Positive opening balance = oldest debt, already overdue.
-// Missing term means no due date, never an implicit zero.
+// Totals include all counterparty balances, known contract or not; only customer ones are aged.
+// Positive opening balance = oldest debt, already overdue. Missing term = no due date, not zero.
 export const AGING_CTE = `
 bal AS (
     SELECT b."organizationErpId" AS org, b."contractId" AS ctr, b."openingDate" AS od,

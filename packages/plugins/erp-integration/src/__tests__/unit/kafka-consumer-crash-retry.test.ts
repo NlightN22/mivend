@@ -219,9 +219,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         expect(createdConsumers[2].connect).toHaveBeenCalledTimes(1);
     });
 
-    // Read from the DB row, not isConnected(): the in-memory flag is invisible to the
-    // separate HTTP process that serves KafkaStatusController.
-    // The status write waits for the admin ctx, so let its promise chain settle under fake timers.
+    // Read the DB row: in-memory isConnected() is invisible to the KafkaStatusController process.
+    // Status write waits on the admin ctx; let the promise chain settle under fake timers.
     const flushMicrotasks = async (): Promise<void> => {
         for (let i = 0; i < 10; i++) await Promise.resolve();
     };

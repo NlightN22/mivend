@@ -14,11 +14,8 @@ interface LineAllocation {
     net: number;
 }
 
-// Keeps Vendure's own allocation (stock_movement, StockLevel.stockAllocated) in step with a staff edit of a
-// placed order: the edit writes lines directly, so Vendure's order-modification hooks never run (#233).
-// Whether a line is allocated is read from its own movement rows, never guessed from the order state.
-// Verified against @vendure/core 3.7.3 StockMovementService: ALLOCATION and RELEASE rows store a positive
-// quantity (stockAllocated +q / -q), SALE stores -q and takes q out of stockAllocated AND stockOnHand.
+// Staff edits write lines directly, bypassing Vendure's order-modification hooks; sync allocation.
+// Read allocation per line from its movement rows. ALLOCATION/RELEASE store +qty, SALE stores -qty.
 @Injectable()
 export class OrderLineStockSyncService {
     constructor(

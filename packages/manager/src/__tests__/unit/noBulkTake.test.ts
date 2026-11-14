@@ -21,9 +21,8 @@ function graphqlFiles(dir: string): string[] {
     });
 }
 
-// Covers .graphql files and gql strings in non-test .ts; a variable `take: $take` is not checked.
-// A fixed large `take` whose result is filtered, searched or summed in the browser is a bug:
-// use server-side search, take: 0 counts, by-id lookups or an aggregate (issue #312).
+// Checks .graphql and gql strings in non-test .ts only; `take: $take` variables are not checked.
+// Large fixed `take` results filtered in the browser are a bug; use server-side search or counts.
 describe('no bulk take in manager/storefront GraphQL documents', () => {
     it('flags take >= 100 unless that line or the one after it carries a "# bounded:" reason', () => {
         const offenders = ROOTS.flatMap(root =>

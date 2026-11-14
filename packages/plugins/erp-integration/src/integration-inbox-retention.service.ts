@@ -40,9 +40,8 @@ export class IntegrationInboxRetentionService {
         private readonly requestContextService: RequestContextService,
     ) {}
 
-    // Older duplicates keep their row but get payload={}: the row is the enqueue dedup key.
-    // Deleting it would let a Kafka redelivery pass dedup as new and reapply stale data.
-    // One call handles one bounded index slice; the DB cancels it past the statement timeout.
+    // Older duplicates keep their row and only get payload={}: the row is the enqueue dedup key.
+    // Deleting the row would let a Kafka redelivery pass dedup as new and reapply stale data.
     async purgeSupersededProcessedRows(
         statementTimeoutMs: number = INBOX_RETENTION_STATEMENT_TIMEOUT_MS,
     ): Promise<RetentionSliceResult> {

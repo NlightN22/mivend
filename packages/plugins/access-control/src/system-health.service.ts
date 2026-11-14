@@ -21,9 +21,8 @@ export interface SystemHealthCheckItem {
 const DEFAULT_TAX_ZONE_DETAIL =
     'Zone, Tax Category and Tax Rate can all exist while this is still unset: set it under Settings > Channels.';
 
-// Zone, TaxCategory and TaxRate can exist while Channel.defaultTaxZone is null, silently breaking
-// tax calculation, so each item is checked independently. Runs under the caller's single permission
-// gate instead of requiring Vendure's ReadSettings on business roles.
+// Zone/TaxCategory/TaxRate may exist while Channel.defaultTaxZone is null, silently breaking tax;
+// so check each separately. Single caller gate avoids requiring ReadSettings on business roles.
 @Injectable()
 export class SystemHealthService {
     constructor(private connection: TransactionalConnection) {}

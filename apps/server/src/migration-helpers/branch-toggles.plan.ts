@@ -13,9 +13,8 @@ export interface PolicyRowPlan {
     enabled: boolean;
 }
 
-// Global rows carry the global-default branch's flags (both false without one); a branch gets an
-// override per check only where its flag differs. `credit.limit` at `checkout`: hold = the over-limit
-// order waits for a manager (flag off, the old default), warn = it goes on after the customer acknowledges.
+// Global rows carry the default branch's flags; a branch overrides a check only if its flag differs.
+// credit.limit at checkout: hold = over-limit order waits for manager; warn = proceeds after customer acknowledges.
 export function planPolicyRows(
     globalDefault: BranchFlags | null,
     branches: BranchFlags[],
