@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { MvBlockError } from '@mivend/ui-kit';
 import { i18n } from '../../i18n';
+import { tr } from '../../utils/lazyLabels';
 import { formatDate } from '../../i18n/format';
 import type { ActivityItem } from '../../api/dashboard';
 
@@ -22,10 +23,10 @@ const blockFailedTitle = (): string => i18n.global.t('common.blockLoadFailed');
 function timeAgo(at: string): string {
     const diffMs = Date.now() - new Date(at).getTime();
     const minutes = Math.round(diffMs / 60000);
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 1) return tr('dashboardParts.activity.justNow');
+    if (minutes < 60) return tr('dashboardParts.activity.minutesAgo', { count: minutes }, minutes);
     const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return tr('dashboardParts.activity.hoursAgo', { count: hours }, hours);
     return formatDate(at);
 }
 </script>
@@ -33,7 +34,9 @@ function timeAgo(at: string): string {
 <template>
     <MvBlockError v-if="failureReason" :title="blockFailedTitle()" :message="failureReason" />
     <ul v-else class="activity-feed">
-        <li v-if="!items.length" class="activity-feed__empty">No recent activity</li>
+        <li v-if="!items.length" class="activity-feed__empty">
+            {{ tr('dashboardParts.activity.empty') }}
+        </li>
         <li v-for="item in items" :key="item.id" class="activity-feed__item">
             <span class="activity-feed__dot" />
             <div class="activity-feed__body">

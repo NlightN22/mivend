@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { FailedIntegrationInboxEvent } from '../../api/integration-health';
 
 defineProps<{ events: FailedIntegrationInboxEvent[] }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <ul class="integration-inbox-errors">
         <li v-if="!events.length" class="integration-inbox-errors__empty">
-            No failed inbox events
+            {{ t('dashboardParts.inbox.empty') }}
         </li>
         <li
             v-for="event in events.slice(0, 5)"
@@ -20,10 +22,12 @@ defineProps<{ events: FailedIntegrationInboxEvent[] }>();
                     >{{ event.stream }} · {{ event.entityId }}</span
                 >
                 <span class="integration-inbox-errors__error">{{
-                    event.lastError ?? 'No error message recorded'
+                    event.lastError ?? t('dashboardParts.inbox.noError')
                 }}</span>
             </div>
-            <MvStatusBadge variant="danger">{{ event.attempts }} attempts</MvStatusBadge>
+            <MvStatusBadge variant="danger">{{
+                t('dashboardParts.inbox.attempts', { count: event.attempts }, event.attempts)
+            }}</MvStatusBadge>
         </li>
     </ul>
 </template>

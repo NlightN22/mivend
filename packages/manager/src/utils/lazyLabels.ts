@@ -1,5 +1,9 @@
 import { i18n } from '../i18n';
 
+export function te(key: string): boolean {
+    return i18n.global.te(key);
+}
+
 export function tr(key: string, named?: Record<string, unknown>, plural?: number): string {
     if (plural !== undefined) return i18n.global.t(key, named ?? {}, plural);
     return named ? i18n.global.t(key, named) : i18n.global.t(key);

@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 
 defineProps<{ notifications: NotificationItem[] }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <ul class="payment-reconciliation">
         <li v-if="!notifications.length" class="payment-reconciliation__empty">
-            No open payment issues
+            {{ t('dashboardParts.paymentEmpty') }}
         </li>
         <li
             v-for="notification in notifications.slice(0, 5)"

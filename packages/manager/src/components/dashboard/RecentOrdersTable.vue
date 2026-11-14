@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate, formatMoney } from '../../i18n/format';
 import { computed, h } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
@@ -10,13 +11,19 @@ import { ORDER_STATE_LABEL, ORDER_STATE_BADGE_VARIANT } from '../../api/orders';
 
 const props = defineProps<{ orders: RecentOrder[] }>();
 const router = useRouter();
+const { t } = useI18n();
 
-const columns: Column<TableRow>[] = [
-    { key: 'code', title: 'Order', dataKey: 'codeDisplay', width: 170 },
-    { key: 'customer', title: 'Customer', dataKey: 'customer', width: 160 },
+const columns = computed<Column<TableRow>[]>(() => [
+    { key: 'code', title: t('dashboardParts.orders.order'), dataKey: 'codeDisplay', width: 170 },
+    {
+        key: 'customer',
+        title: t('dashboardParts.orders.customer'),
+        dataKey: 'customer',
+        width: 160,
+    },
     {
         key: 'state',
-        title: 'Status',
+        title: t('dashboardParts.orders.status'),
         dataKey: 'state',
         width: 170,
         cellRenderer: ({ rowData }) => {
@@ -28,9 +35,15 @@ const columns: Column<TableRow>[] = [
             );
         },
     },
-    { key: 'total', title: 'Total', dataKey: 'total', width: 120, align: 'right' },
-    { key: 'date', title: 'Date', dataKey: 'date', width: 120 },
-];
+    {
+        key: 'total',
+        title: t('dashboardParts.orders.total'),
+        dataKey: 'total',
+        width: 120,
+        align: 'right',
+    },
+    { key: 'date', title: t('dashboardParts.orders.date'), dataKey: 'date', width: 120 },
+]);
 
 const rows = computed<TableRow[]>(() =>
     props.orders.map(order => ({
@@ -54,7 +67,7 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
         :columns="columns"
         :data="rows"
         :height="Math.max(rows.length, 1) * 52 + 40"
-        empty-text="No orders yet"
+        :empty-text="t('dashboardParts.orders.empty')"
         @row-click="handleRowClick"
     />
 </template>

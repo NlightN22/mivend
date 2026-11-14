@@ -1,3 +1,4 @@
+import { tr } from '../utils/lazyLabels';
 import type { DashboardData, DashboardSection } from './dashboard';
 
 export interface KpiCardConfig {
@@ -16,24 +17,31 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     {
         key: 'active-orders',
         section: 'orders',
-        label: 'Active orders',
+        get label() {
+            return tr('dashboardParts.kpi.activeOrders');
+        },
         to: '/orders',
         value: data => data.activeOrdersCount,
-        caption: data => `${data.activeOrdersPlacedLast24h} placed in the last 24h`,
+        caption: data =>
+            tr('dashboardParts.kpi.placedLast24h', { count: data.activeOrdersPlacedLast24h }),
     },
     {
         key: 'awaiting-shipment',
         section: 'orders',
-        label: 'Awaiting shipment / overdue',
+        get label() {
+            return tr('dashboardParts.kpi.awaitingShipment');
+        },
         to: '/orders',
         accent: true,
         value: data => data.awaitingShipmentCount,
-        caption: data => `${data.overdueCount} overdue (>3 days)`,
+        caption: data => tr('dashboardParts.kpi.overdue', { count: data.overdueCount }),
     },
     {
         key: 'pending-approvals',
         section: 'approvals',
-        label: 'My pending approval requests',
+        get label() {
+            return tr('dashboardParts.kpi.pendingApprovals');
+        },
         to: '/approvals',
         accent: true,
         value: data => data.pendingApprovalsCount,
@@ -41,7 +49,9 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     {
         key: 'my-clients',
         section: 'clients',
-        label: 'My clients',
+        get label() {
+            return tr('dashboardParts.kpi.myClients');
+        },
         to: '/customers',
         value: data => data.myClientsCount,
     },
@@ -53,24 +63,31 @@ const OPERATOR_CARDS: KpiCardConfig[] = [
     {
         key: 'department-orders',
         section: 'orders',
-        label: 'Department orders',
+        get label() {
+            return tr('dashboardParts.kpi.departmentOrders');
+        },
         to: '/orders',
         value: data => data.activeOrdersCount,
-        caption: data => `${data.activeOrdersPlacedLast24h} placed in the last 24h`,
+        caption: data =>
+            tr('dashboardParts.kpi.placedLast24h', { count: data.activeOrdersPlacedLast24h }),
     },
     {
         key: 'awaiting-shipment',
         section: 'orders',
-        label: 'Awaiting shipment / overdue',
+        get label() {
+            return tr('dashboardParts.kpi.awaitingShipment');
+        },
         to: '/orders',
         accent: true,
         value: data => data.awaitingShipmentCount,
-        caption: data => `${data.overdueCount} overdue (>3 days)`,
+        caption: data => tr('dashboardParts.kpi.overdue', { count: data.overdueCount }),
     },
     {
         key: 'department-clients',
         section: 'clients',
-        label: 'Department clients',
+        get label() {
+            return tr('dashboardParts.kpi.departmentClients');
+        },
         to: '/customers',
         value: data => data.myClientsCount,
     },
@@ -80,7 +97,9 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     {
         key: 'awaiting-my-decision',
         section: 'approvals',
-        label: 'Awaiting my decision',
+        get label() {
+            return tr('dashboardParts.kpi.awaitingMyDecision');
+        },
         to: '/approvals',
         accent: true,
         value: data => data.awaitingMyDecisionCount,
@@ -88,31 +107,40 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     {
         key: 'department-orders',
         section: 'orders',
-        label: 'Department orders',
+        get label() {
+            return tr('dashboardParts.kpi.departmentOrders');
+        },
         to: '/orders',
         value: data => data.activeOrdersCount,
-        caption: data => `${data.activeOrdersPlacedLast24h} placed in the last 24h`,
+        caption: data =>
+            tr('dashboardParts.kpi.placedLast24h', { count: data.activeOrdersPlacedLast24h }),
     },
     {
         key: 'awaiting-shipment',
         section: 'orders',
-        label: 'Awaiting shipment / overdue',
+        get label() {
+            return tr('dashboardParts.kpi.awaitingShipment');
+        },
         to: '/orders',
         accent: true,
         value: data => data.awaitingShipmentCount,
-        caption: data => `${data.overdueCount} overdue (>3 days)`,
+        caption: data => tr('dashboardParts.kpi.overdue', { count: data.overdueCount }),
     },
     {
         key: 'department-clients',
         section: 'clients',
-        label: 'Department clients',
+        get label() {
+            return tr('dashboardParts.kpi.departmentClients');
+        },
         to: '/customers',
         value: data => data.myClientsCount,
     },
     {
         key: 'unassigned-clients',
         section: 'clients',
-        label: 'Unassigned clients',
+        get label() {
+            return tr('dashboardParts.kpi.unassignedClients');
+        },
         to: '/customers?managerId=__unassigned__',
         accent: true,
         value: data => data.unassignedClientsCount,

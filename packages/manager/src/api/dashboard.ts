@@ -1,4 +1,5 @@
 import { adminApi } from './client';
+import { te, tr } from '../utils/lazyLabels';
 import {
     DashboardApprovalsDocument,
     DashboardClientsDocument,
@@ -17,12 +18,6 @@ export interface ActivityItem {
     at: string;
 }
 
-const REQUEST_TYPE_LABEL: Record<string, string> = {
-    priceAdjustmentApproval: 'Price adjustment request',
-    discountGrantApproval: 'Discount request',
-    creditTermApproval: 'Payment term request',
-};
-
 // No unified activity/event log exists yet, so this is a best-effort merge of recent orders
 // and approval requests, not a real feed.
 export function buildActivityFeed(
@@ -34,22 +29,32 @@ export function buildActivityFeed(
         .filter(order => order.orderPlacedAt)
         .map(order => ({
             id: `order-${order.code}`,
-            text: `Order ${order.code} placed by ${order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'a customer'}`,
+            text: tr('dashboardParts.activity.orderPlaced', {
+                code: order.code,
+                customer: order.customer
+                    ? `${order.customer.firstName} ${order.customer.lastName}`
+                    : tr('dashboardParts.activity.aCustomer'),
+            }),
             at: order.orderPlacedAt as string,
         }));
 
     const approvalItems: ActivityItem[] = approvals.map(approval => {
-        const label = REQUEST_TYPE_LABEL[approval.requestType] ?? approval.requestType;
+        const typeKey = `dashboardParts.approvalStatus.requestType.${approval.requestType}`;
+        const label = te(typeKey) ? tr(typeKey) : approval.requestType;
+        const named = { label, id: approval.id };
         if (approval.status !== 'pending' && approval.decidedAt) {
-            return {
-                id: `approval-${approval.id}`,
-                text: `${label} #${approval.id} was ${approval.status}`,
-                at: approval.decidedAt,
-            };
+            const decided =
+                approval.status === 'approved' || approval.status === 'rejected'
+                    ? tr(`dashboardParts.activity.${approval.status}`, named)
+                    : tr('dashboardParts.activity.decidedOther', {
+                          ...named,
+                          status: approval.status,
+                      });
+            return { id: `approval-${approval.id}`, text: decided, at: approval.decidedAt };
         }
         return {
             id: `approval-${approval.id}`,
-            text: `${label} #${approval.id} submitted`,
+            text: tr('dashboardParts.activity.submitted', named),
             at: approval.createdAt,
         };
     });

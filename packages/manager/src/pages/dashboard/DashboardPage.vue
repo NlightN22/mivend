@@ -10,6 +10,7 @@ import {
     type FilterChip,
 } from '@mivend/ui-kit';
 import { useI18n } from 'vue-i18n';
+import { formatDate } from '../../i18n/format';
 import { useAuthStore } from '../../stores/auth';
 import { buildActivityFeed, type DashboardSection } from '../../api/dashboard';
 import { getDashboardKpiCards } from '../../api/dashboard-config';
@@ -23,7 +24,7 @@ import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationI
 import ReservationReconciliationPanel from '../../components/dashboard/ReservationReconciliationPanel.vue';
 import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const authStore = useAuthStore();
 const {
     data,
@@ -41,12 +42,18 @@ const {
 } = useDashboard();
 
 const failedSectionKeys = computed(() => Object.keys(failedSections.value) as DashboardSection[]);
-const FILTER_CHIPS: FilterChip[] = [
-    { key: 'all', label: 'All' },
-    { key: 'in-progress', label: 'In progress' },
-    { key: 'awaiting-shipment', label: 'Awaiting shipment' },
-    { key: 'today', label: "Today's" },
-];
+const filterChips = computed<FilterChip[]>(() => [
+    { key: 'all', label: t('dashboardParts.chips.all') },
+    { key: 'in-progress', label: t('dashboardParts.chips.inProgress') },
+    { key: 'awaiting-shipment', label: t('dashboardParts.chips.awaitingShipment') },
+    { key: 'today', label: t('dashboardParts.chips.today') },
+]);
+
+const sectionError = (section: DashboardSection): string =>
+    t('dashboardParts.page.sectionFailed', {
+        section: t(`dashboardParts.section.${section}`),
+        reason: failedSections.value[section] ?? '',
+    });
 const activeFilter = ref('all');
 
 const filteredOrders = computed(() => {
@@ -84,7 +91,12 @@ const pendingBreakdown = computed(() => {
         counts.set(approval.requestType, (counts.get(approval.requestType) ?? 0) + 1);
     }
     if (!counts.size) return '';
-    return [...counts.entries()].map(([type, count]) => `${count} ${type}`).join(', ');
+    return [...counts.entries()]
+        .map(([type, count]) => {
+            const key = `dashboardParts.approvalStatus.requestType.${type}`;
+            return `${count} ${te(key) ? t(key) : type}`;
+        })
+        .join(', ');
 });
 
 onMounted(load);
@@ -94,17 +106,12 @@ onMounted(load);
     <div class="dashboard">
         <div class="dashboard__header">
             <div>
-                <div class="dashboard__breadcrumb">Dashboard</div>
-                <h1 class="dashboard__title">Welcome back, {{ authStore.fullName }}</h1>
+                <div class="dashboard__breadcrumb">{{ t('dashboardParts.page.breadcrumb') }}</div>
+                <h1 class="dashboard__title">
+                    {{ t('dashboardParts.page.welcome', { name: authStore.fullName }) }}
+                </h1>
                 <p class="dashboard__subtitle">
-                    {{
-                        new Date().toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                        })
-                    }}
-                    · Your operational summary for today.
+                    {{ t('dashboardParts.page.subtitle', { date: formatDate(new Date()) }) }}
                 </p>
             </div>
             <div class="dashboard__context">
@@ -122,7 +129,7 @@ onMounted(load);
                 v-for="section in failedSectionKeys"
                 :key="section"
                 :title="t('common.blockLoadFailed')"
-                :message="`${section}: ${failedSections[section]}`"
+                :message="sectionError(section)"
                 :retry-label="t('common.retry')"
                 :retrying="loading"
                 @retry="load"
@@ -154,13 +161,13 @@ onMounted(load);
 
         <div v-if="data" class="dashboard__grid">
             <div class="dashboard__left-stack">
-                <MvPanel title="Recent orders">
+                <MvPanel :title="t('dashboardParts.page.recentOrders')">
                     <template #header-actions>
-                        <RouterLink to="/orders">View all</RouterLink>
+                        <RouterLink to="/orders">{{ t('dashboardParts.page.viewAll') }}</RouterLink>
                     </template>
                     <template #subheader>
                         <MvFilterChips
-                            :chips="FILTER_CHIPS"
+                            :chips="filterChips"
                             :active="activeFilter"
                             @select="activeFilter = $event"
                         />
@@ -173,9 +180,11 @@ onMounted(load);
                     <RecentOrdersTable v-else :orders="filteredOrders" />
                 </MvPanel>
 
-                <MvPanel title="My approval requests status">
+                <MvPanel :title="t('dashboardParts.page.approvalRequests')">
                     <template #header-actions>
-                        <RouterLink to="/approvals">Open submitted</RouterLink>
+                        <RouterLink to="/approvals">{{
+                            t('dashboardParts.page.openSubmitted')
+                        }}</RouterLink>
                     </template>
                     <MvBlockError
                         v-if="failedSections.approvals"
@@ -187,7 +196,7 @@ onMounted(load);
 
                 <MvPanel
                     v-if="authStore.hasPermission('ManageAccessControl')"
-                    title="Integration inbox errors"
+                    :title="t('dashboardParts.page.inboxErrors')"
                 >
                     <MvBlockError
                         v-if="inboxError"
@@ -199,7 +208,7 @@ onMounted(load);
 
                 <MvPanel
                     v-if="authStore.hasPermission('ReadOrder')"
-                    title="Reservation reconciliation"
+                    :title="t('dashboardParts.page.reservationReconciliation')"
                 >
                     <MvBlockError
                         v-if="notificationsError"
@@ -211,7 +220,7 @@ onMounted(load);
 
                 <MvPanel
                     v-if="authStore.hasPermission('ReadPayment')"
-                    title="Payment reconciliation"
+                    :title="t('dashboardParts.page.paymentReconciliation')"
                 >
                     <MvBlockError
                         v-if="notificationsError"
@@ -223,11 +232,11 @@ onMounted(load);
             </div>
 
             <aside class="dashboard__right-stack">
-                <MvPanel title="Quick actions">
+                <MvPanel :title="t('dashboardParts.page.quickActions')">
                     <QuickActionsPanel />
                 </MvPanel>
 
-                <MvPanel title="Activity feed">
+                <MvPanel :title="t('dashboardParts.page.activityFeed')">
                     <ActivityFeed :items="activityItems" :failed="failedSections" />
                 </MvPanel>
             </aside>

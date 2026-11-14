@@ -1,21 +1,25 @@
 <script setup lang="ts">
-const actions = [
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+const actions = computed(() => [
     {
-        label: 'Find customer',
-        description: 'Open customer card, orders and documents.',
+        label: t('dashboardParts.quick.findCustomer'),
+        description: t('dashboardParts.quick.findCustomerHint'),
         to: '/customers',
     },
     {
-        label: 'New discount',
-        description: 'Submit a discount grant approval request.',
+        label: t('dashboardParts.quick.newDiscount'),
+        description: t('dashboardParts.quick.newDiscountHint'),
         to: '/discounts?source=requests',
     },
     {
-        label: 'New client',
-        description: 'Register a new customer/counterparty.',
+        label: t('dashboardParts.quick.newClient'),
+        description: t('dashboardParts.quick.newClientHint'),
         to: '/customers/new',
     },
-];
+]);
 </script>
 
 <template>

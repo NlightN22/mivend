@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 
 defineProps<{ notifications: NotificationItem[] }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <ul class="reservation-reconciliation">
         <li v-if="!notifications.length" class="reservation-reconciliation__empty">
-            No open reservation issues
+            {{ t('dashboardParts.reservationEmpty') }}
         </li>
         <li
             v-for="notification in notifications.slice(0, 5)"
