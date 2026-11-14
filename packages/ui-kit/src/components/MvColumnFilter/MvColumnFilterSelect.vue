@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ArrowDown } from '@element-plus/icons-vue';
 import type { SelectFilterConfig } from './columnFilterTypes';
 import { SEARCHABLE_OPTION_COUNT, filterOptionsByQuery } from './filterOptionsByQuery';
+const uiLabel = useUiLabels();
 
 const props = defineProps<{ config: SelectFilterConfig; modelValue: string }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
@@ -42,7 +44,7 @@ function select(value: string): void {
                 v-if="modelValue"
                 type="button"
                 class="mv-column-filter-select__clear"
-                aria-label="Clear"
+                :aria-label="uiLabel('clear', 'Clear')"
                 @click.stop="emit('update:modelValue', '')"
             >
                 ×
@@ -55,7 +57,7 @@ function select(value: string): void {
                 v-model="query"
                 type="text"
                 class="mv-column-filter-select__search"
-                placeholder="Search…"
+                :placeholder="uiLabel('searchPlaceholder', 'Search…')"
             />
             <button
                 v-for="option in visibleOptions"

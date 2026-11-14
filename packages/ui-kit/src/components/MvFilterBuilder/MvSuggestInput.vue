@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, toRef } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
 import { type SuggestFetcher, useSuggestions } from './useSuggestions';
+const uiLabel = useUiLabels();
 
 // A text input that offers up to 10 server suggestions; free text always stays allowed.
 const props = defineProps<{
@@ -44,9 +46,11 @@ function onInput(text: string): void {
             :id="listId"
             class="mv-suggest__list"
             role="listbox"
-            aria-label="Starting with"
+            :aria-label="uiLabel('startingWith', 'Starting with')"
         >
-            <li class="mv-suggest__hint" role="presentation">Starting with</li>
+            <li class="mv-suggest__hint" role="presentation">
+                {{ uiLabel('startingWith', 'Starting with') }}
+            </li>
             <li
                 v-for="(item, index) in items"
                 :id="`${listId}-${index}`"

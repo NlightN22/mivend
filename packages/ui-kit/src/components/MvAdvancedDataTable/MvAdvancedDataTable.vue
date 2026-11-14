@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, ref, useSlots } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
@@ -23,6 +24,7 @@ import { useColumnFilters } from './useColumnFilters';
 import { useRowSelection } from './useRowSelection';
 import { useTablePaging } from './useTablePaging';
 import { useTableScrollHost } from './useTableScrollHost';
+const uiLabel = useUiLabels();
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill): column
 // toggle/resize, typed column filters, filter chips, server pagination, single-column sort,
@@ -146,7 +148,9 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
         :aria-busy="loading"
         :style="{ '--mv-skeleton-row-height': `${rowHeightPx}px` }"
     >
-        <span v-if="loading" class="mv-advanced-data-table__sr-only" role="status">Loading</span>
+        <span v-if="loading" class="mv-advanced-data-table__sr-only" role="status">{{
+            uiLabel('loading', 'Loading')
+        }}</span>
         <AdvancedDataTableToolbar
             v-model:conditions="conditions"
             :search="search"
@@ -188,7 +192,7 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
                 size="sm"
                 variant="ghost"
                 @click="selection.resetSelection"
-                >Clear selection</MvButton
+                >{{ uiLabel('clearSelection', 'Clear selection') }}</MvButton
             >
         </div>
 

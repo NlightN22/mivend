@@ -69,20 +69,26 @@ export function describeValue(
     config: ColumnFilterConfig,
     value: unknown,
     locale = 'en-US',
+    uiLabel: (key: string, fallback: string) => string = (_key, fallback) => fallback,
 ): string {
     if (!hasValue(value)) return '';
     switch (config.type) {
         case 'status':
         case 'enum': {
             const values = Array.isArray(value) ? value : [value as string];
-            if (values.length > 1) return `${values.length} selected`;
+            if (values.length > 1)
+                return uiLabel('nSelected', '{count} selected').replace('{count}', () =>
+                    String(values.length),
+                );
             return config.options.find(o => o.value === values[0])?.label ?? String(values[0]);
         }
         case 'select':
             return config.options.find(o => o.value === value)?.label ?? String(value);
         case 'boolean': {
             const labels = config.labels;
-            return value === 'yes' ? (labels?.yes ?? 'Yes') : (labels?.no ?? 'No');
+            return value === 'yes'
+                ? (labels?.yes ?? uiLabel('yes', 'Yes'))
+                : (labels?.no ?? uiLabel('no', 'No'));
         }
         case 'text':
             return `"${value as string}"`;

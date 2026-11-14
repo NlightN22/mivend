@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import type { NotificationKind } from '../../composables/notificationTypes';
+const uiLabel = useUiLabels();
 
 withDefaults(
     defineProps<{
@@ -27,7 +29,7 @@ defineEmits<{ dismiss: [] }>();
         <button
             class="mv-notification-popup__close"
             type="button"
-            aria-label="Dismiss"
+            :aria-label="uiLabel('dismiss', 'Dismiss')"
             @click="$emit('dismiss')"
         >
             ×

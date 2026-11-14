@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useUiLabels } from '../../utils/uiLabels';
 
 // Past this, the message escalates and a manual relogin (full navigation to /login) appears.
 const ESCALATE_AFTER_MS = 2 * 60 * 1000;
@@ -16,12 +17,9 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     loggedOut: false,
-    reconnectingLabel: 'Reconnecting to the server…',
-    unavailableLabel: 'Server unavailable for a while — try again later.',
-    loggedOutLabel: 'Your session has ended — log in again when you’re ready.',
-    reloginLabel: 'Log in again',
 });
 const emit = defineEmits<{ relogin: [] }>();
+const label = useUiLabels();
 
 const now = ref(Date.now());
 let tickTimer: ReturnType<typeof setInterval> | null = null;
@@ -41,10 +39,21 @@ const timedOut = computed(
 const escalated = computed(() => props.loggedOut || timedOut.value);
 
 const message = computed(() => {
-    if (props.loggedOut) return props.loggedOutLabel;
-    if (timedOut.value) return props.unavailableLabel;
-    return props.reconnectingLabel;
+    if (props.loggedOut)
+        return (
+            props.loggedOutLabel ??
+            label('connectionLoggedOut', 'Your session has ended — log in again when you’re ready.')
+        );
+    if (timedOut.value)
+        return (
+            props.unavailableLabel ??
+            label('connectionUnavailable', 'Server unavailable for a while — try again later.')
+        );
+    return (
+        props.reconnectingLabel ?? label('connectionReconnecting', 'Reconnecting to the server…')
+    );
 });
+const relogin = computed(() => props.reloginLabel ?? label('connectionRelogin', 'Log in again'));
 </script>
 
 <template>
@@ -67,7 +76,7 @@ const message = computed(() => {
                     class="mv-connection-bar__relogin"
                     @click="emit('relogin')"
                 >
-                    {{ reloginLabel }}
+                    {{ relogin }}
                 </button>
             </div>
         </div>

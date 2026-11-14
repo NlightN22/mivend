@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { onMounted, ref } from 'vue';
 import { IconSearch, IconX } from '@tabler/icons-vue';
+const uiLabel = useUiLabels();
 
 defineProps<{ placeholder: string }>();
 const query = defineModel<string>('query', { default: '' });
@@ -31,8 +33,8 @@ function submit(): void {
         <button
             type="button"
             class="phone-search__close"
-            aria-label="Close search"
-            title="Close search"
+            :aria-label="uiLabel('closeSearch', 'Close search')"
+            :title="uiLabel('closeSearch', 'Close search')"
             @click="emit('close')"
         >
             <IconX :size="20" aria-hidden="true" />

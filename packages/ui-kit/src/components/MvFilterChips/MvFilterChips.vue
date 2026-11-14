@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { ref } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import { useChipsOverflow } from './useChipsOverflow';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import { formatCompactCount, formatExactCount } from '../../utils/compactCount';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
+const uiLabel = useUiLabels();
 
 // Quick-filter chips: two rows at most, the rest behind More; see docs/ui-standards.md.
 export interface FilterChip {
@@ -60,7 +62,7 @@ const emit = defineEmits<{ select: [key: string] }>();
                 v-if="chip.countLoading"
                 class="mv-filter-chip__count-skeleton"
                 role="status"
-                aria-label="Loading"
+                :aria-label="uiLabel('loading', 'Loading')"
                 data-testid="chip-count-skeleton"
                 ><MvSkeleton width="28px" height="17px" radius="999px" aria-hidden="true"
             /></span>

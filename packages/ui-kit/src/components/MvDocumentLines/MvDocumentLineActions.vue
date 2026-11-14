@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { IconCheck, IconPencil, IconTrash, IconX } from '@tabler/icons-vue';
+const uiLabel = useUiLabels();
 
 defineProps<{
     editing: boolean;
@@ -16,8 +18,8 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
         <button
             type="button"
             class="doc-actions__btn doc-actions__btn--ok"
-            aria-label="Apply changes"
-            title="Apply changes"
+            :aria-label="uiLabel('applyChanges', 'Apply changes')"
+            :title="uiLabel('applyChanges', 'Apply changes')"
             :disabled="saving || busy"
             @click="$emit('commit')"
         >
@@ -26,8 +28,8 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
         <button
             type="button"
             class="doc-actions__btn doc-actions__btn--cancel"
-            aria-label="Discard changes"
-            title="Discard changes"
+            :aria-label="uiLabel('discardChanges', 'Discard changes')"
+            :title="uiLabel('discardChanges', 'Discard changes')"
             :disabled="saving"
             @click="$emit('cancel')"
         >
@@ -38,8 +40,8 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
         v-else-if="canEdit"
         type="button"
         class="doc-actions__btn"
-        aria-label="Edit line"
-        title="Edit line"
+        :aria-label="uiLabel('editLine', 'Edit line')"
+        :title="uiLabel('editLine', 'Edit line')"
         :disabled="busy"
         @click="$emit('start')"
     >
@@ -49,8 +51,8 @@ defineEmits<{ start: []; commit: []; cancel: []; remove: [] }>();
         v-if="!editing && canRemove"
         type="button"
         class="doc-actions__btn"
-        aria-label="Delete position"
-        title="Delete position"
+        :aria-label="uiLabel('deletePosition', 'Delete position')"
+        :title="uiLabel('deletePosition', 'Delete position')"
         :disabled="busy"
         @click="$emit('remove')"
     >

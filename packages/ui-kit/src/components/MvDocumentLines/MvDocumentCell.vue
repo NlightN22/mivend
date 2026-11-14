@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { ref } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvFlagChip from '../MvFlagChip/MvFlagChip.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
 import MvFlagNotes from './MvFlagNotes.vue';
 import type { DocFlag } from './documentLinesModel';
+const uiLabel = useUiLabels();
 
 defineProps<{ flag?: DocFlag }>();
 const emit = defineEmits<{ action: [key: string] }>();
@@ -19,7 +21,11 @@ function run(key: string): void {
 <template>
     <MvPopover v-if="flag" v-model:open="open" :width="300">
         <template #trigger>
-            <MvFlagChip :tone="flag.tone" label="Show what is wrong here" :tip-disabled="open">
+            <MvFlagChip
+                :tone="flag.tone"
+                :label="uiLabel('showWhatIsWrong', 'Show what is wrong here')"
+                :tip-disabled="open"
+            >
                 <slot />
                 <template #tip><MvFlagNotes :notes="flag.notes" /></template>
             </MvFlagChip>

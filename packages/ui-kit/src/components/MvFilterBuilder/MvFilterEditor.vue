@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed, ref } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvDateField from '../MvDateField/MvDateField.vue';
@@ -19,6 +20,7 @@ import {
     operatorValueKind,
     operatorsFor,
 } from './filterOperators';
+const uiLabel = useUiLabels();
 
 // "Filter by <column>": operator select, a value input of the column's kind, and Apply.
 const props = defineProps<{ column: FilterColumn; initial?: FilterCondition }>();
@@ -76,7 +78,7 @@ function apply(): void {
                 v-if="!initial"
                 type="button"
                 class="mv-filter-editor__back"
-                aria-label="Back to columns"
+                :aria-label="uiLabel('backToColumns', 'Back to columns')"
                 @click="emit('back')"
             >
                 ‹
@@ -106,7 +108,7 @@ function apply(): void {
                 v-else-if="column.suggest && SUGGEST_OPERATORS.includes(operator)"
                 :model-value="value as string"
                 :suggest="column.suggest"
-                placeholder="Value"
+                :placeholder="uiLabel('value', 'Value')"
                 testid="filter-value"
                 @update:model-value="value = $event"
             />
@@ -116,14 +118,14 @@ function apply(): void {
                 :type="inputType"
                 :inputmode="column.type === 'number' ? 'numeric' : 'text'"
                 size="sm"
-                placeholder="Value"
+                :placeholder="uiLabel('value', 'Value')"
                 data-testid="filter-value"
                 @update:model-value="value = $event"
             />
         </template>
         <template v-else-if="kind === 'range'">
             <label class="mv-filter-editor__part">
-                <span>From</span>
+                <span>{{ uiLabel('from', 'From') }}</span>
                 <MvDateField
                     v-if="column.type === 'date'"
                     :model-value="(value as string[])[0] ?? ''"
@@ -139,7 +141,7 @@ function apply(): void {
                 />
             </label>
             <label class="mv-filter-editor__part">
-                <span>To</span>
+                <span>{{ uiLabel('to', 'To') }}</span>
                 <MvDateField
                     v-if="column.type === 'date'"
                     :model-value="(value as string[])[1] ?? ''"

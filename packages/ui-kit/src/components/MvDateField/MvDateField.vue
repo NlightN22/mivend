@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Calendar } from '@element-plus/icons-vue';
 import MvDatePicker from '../MvDatePicker/MvDatePicker.vue';
 import { useAnchoredPanel } from '../../composables/useAnchoredPanel';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import { isoToDisplay, maskDate, parseMaskedDate } from './dateFieldText';
+const uiLabel = useUiLabels();
 
 // One compact date input: a masked DD.MM.YYYY field with a small calendar popover, native picker on phones.
 const props = withDefaults(defineProps<{ modelValue: string; placeholder?: string }>(), {
@@ -87,7 +89,7 @@ onBeforeUnmount(() => {
             <button
                 type="button"
                 class="mv-date-field__toggle"
-                aria-label="Open calendar"
+                :aria-label="uiLabel('openCalendar', 'Open calendar')"
                 :aria-expanded="open"
                 @click="open = !open"
             >
@@ -107,7 +109,9 @@ onBeforeUnmount(() => {
                 </div>
             </Teleport>
         </template>
-        <p v-if="invalid" class="mv-date-field__error">Not a real date</p>
+        <p v-if="invalid" class="mv-date-field__error">
+            {{ uiLabel('notRealDate', 'Not a real date') }}
+        </p>
     </div>
 </template>
 

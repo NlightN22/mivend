@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { onBeforeUnmount, onMounted } from 'vue';
+const uiLabel = useUiLabels();
 
 export interface AppMobileSheetItem {
     key: string;
@@ -35,11 +37,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     >
         <div class="mv-mobile-sheet__handle" />
         <div class="mv-mobile-sheet__head">
-            <h2 class="mv-mobile-sheet__title">Workspace</h2>
+            <h2 class="mv-mobile-sheet__title">{{ uiLabel('workspace', 'Workspace') }}</h2>
             <button
                 type="button"
                 class="mv-mobile-sheet__close"
-                aria-label="Close menu"
+                :aria-label="uiLabel('closeMenu', 'Close menu')"
                 @click="emit('close')"
             >
                 ×

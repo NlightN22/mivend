@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 // The one filter type that keeps Apply/Clear (see columnFilterTypes.ts) — the condition is
 // composite (mode + one or two numbers), so instant-apply-per-keystroke would fire a half-entered
 // query (e.g. applying "From" the moment it's typed, before "To" is even touched) and — for a
@@ -13,6 +14,7 @@ import type {
     AmountRangeFilterValue,
     AmountRangePreset,
 } from './columnFilterTypes';
+const uiLabel = useUiLabels();
 
 const props = defineProps<{
     config: AmountRangeFilterConfig;
@@ -20,12 +22,12 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: AmountRangeFilterValue]; close: [] }>();
 
-const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
-    { value: 'range', label: 'Range' },
-    { value: 'equal', label: 'Equal' },
-    { value: 'more', label: 'More than' },
-    { value: 'less', label: 'Less than' },
-];
+const modes = computed<{ value: AmountRangeFilterValue['mode']; label: string }[]>(() => [
+    { value: 'range', label: uiLabel('amountRange', 'Range') },
+    { value: 'equal', label: uiLabel('amountEqual', 'Equal') },
+    { value: 'more', label: uiLabel('amountMore', 'More than') },
+    { value: 'less', label: uiLabel('amountLess', 'Less than') },
+]);
 
 const formatLocale = useUiFormatLocale('en-US');
 const currencySymbol = computed(() =>
@@ -128,11 +130,13 @@ function onClear(): void {
 
 <template>
     <div class="mv-amount-range-filter">
-        <div class="mv-amount-range-filter__title">Total amount</div>
+        <div class="mv-amount-range-filter__title">
+            {{ uiLabel('totalAmount', 'Total amount') }}
+        </div>
 
         <div class="mv-amount-range-filter__modes">
             <button
-                v-for="m in MODES"
+                v-for="m in modes"
                 :key="m.value"
                 type="button"
                 class="mv-amount-range-filter__mode-btn"
@@ -145,14 +149,14 @@ function onClear(): void {
 
         <div v-if="mode === 'range'" class="mv-amount-range-filter__row">
             <div class="mv-amount-range-filter__field">
-                <label>From</label>
+                <label>{{ uiLabel('from', 'From') }}</label>
                 <div class="mv-amount-range-filter__input">
                     <span>{{ currencySymbol }}</span>
                     <input v-model.number="minLocal" type="number" placeholder="0" />
                 </div>
             </div>
             <div class="mv-amount-range-filter__field">
-                <label>To</label>
+                <label>{{ uiLabel('to', 'To') }}</label>
                 <div class="mv-amount-range-filter__input">
                     <span>{{ currencySymbol }}</span>
                     <input v-model.number="maxLocal" type="number" placeholder="0" />
@@ -160,7 +164,7 @@ function onClear(): void {
             </div>
         </div>
         <div v-else class="mv-amount-range-filter__field">
-            <label>Value</label>
+            <label>{{ uiLabel('value', 'Value') }}</label>
             <div class="mv-amount-range-filter__input">
                 <span>{{ currencySymbol }}</span>
                 <input v-model.number="singleLocal" type="number" placeholder="0" />
@@ -184,8 +188,12 @@ function onClear(): void {
         </p>
 
         <div class="mv-amount-range-filter__footer">
-            <MvButton size="sm" variant="ghost" @click="onClear">Clear</MvButton>
-            <MvButton size="sm" variant="primary" @click="onApply">Apply</MvButton>
+            <MvButton size="sm" variant="ghost" @click="onClear">{{
+                uiLabel('clear', 'Clear')
+            }}</MvButton>
+            <MvButton size="sm" variant="primary" @click="onApply">{{
+                uiLabel('apply', 'Apply')
+            }}</MvButton>
         </div>
     </div>
 </template>

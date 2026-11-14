@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useUiLabels } from '../../utils/uiLabels';
 import MvPagination from '../MvPagination/MvPagination.vue';
 import MvStatusBadge from '../MvStatusBadge/MvStatusBadge.vue';
 import {
@@ -11,6 +12,8 @@ import {
     type BatchResultMode,
     type BatchResultRow,
 } from './batchResultModel';
+
+const uiLabel = useUiLabels();
 
 // Per-record outcome of a batch, with counters; the same table serves the review and the result.
 const props = withDefaults(
@@ -33,8 +36,8 @@ const props = withDefaults(
         pageSize: 25,
         totalRows: undefined,
         activeOutcome: '',
-        recordLabel: 'Record',
-        emptyMessage: 'No records',
+        recordLabel: undefined,
+        emptyMessage: undefined,
         loading: false,
         reasonLabel: undefined,
     },
@@ -47,16 +50,21 @@ const emit = defineEmits<{
 const stats = computed(() => {
     const result = props.mode === 'result';
     return [
-        { key: '', label: 'All', count: props.counters.total, variant: 'neutral' as const },
+        {
+            key: '',
+            label: uiLabel('all', 'All'),
+            count: props.counters.total,
+            variant: 'neutral' as const,
+        },
         {
             key: result ? 'applied' : 'apply',
-            label: result ? 'Applied' : 'Will apply',
+            label: result ? uiLabel('applied', 'Applied') : uiLabel('willApply', 'Will apply'),
             count: props.counters.applied,
             variant: 'success' as const,
         },
         {
             key: result ? 'skipped' : 'skip',
-            label: 'Skipped',
+            label: uiLabel('skipped', 'Skipped'),
             count: props.counters.skipped,
             variant: 'warning' as const,
         },
@@ -64,7 +72,7 @@ const stats = computed(() => {
             ? [
                   {
                       key: 'failed',
-                      label: 'Failed',
+                      label: uiLabel('failed', 'Failed'),
                       count: props.counters.failed,
                       variant: 'danger' as const,
                   },
@@ -74,7 +82,7 @@ const stats = computed(() => {
             ? [
                   {
                       key: 'pending',
-                      label: 'Pending',
+                      label: uiLabel('pending', 'Pending'),
                       count: pendingCount(props.counters),
                       variant: 'neutral' as const,
                   },
@@ -87,7 +95,11 @@ const total = computed(() => props.totalRows ?? props.rows.length);
 
 <template>
     <div class="mv-batch-result" :aria-busy="loading">
-        <div class="mv-batch-result__stats" role="group" aria-label="Counters">
+        <div
+            class="mv-batch-result__stats"
+            role="group"
+            :aria-label="uiLabel('counters', 'Counters')"
+        >
             <button
                 v-for="stat in stats"
                 :key="stat.key"
@@ -101,30 +113,32 @@ const total = computed(() => props.totalRows ?? props.rows.length);
             </button>
         </div>
 
-        <p v-if="!rows.length" class="mv-batch-result__empty">{{ loading ? '' : emptyMessage }}</p>
+        <p v-if="!rows.length" class="mv-batch-result__empty">
+            {{ loading ? '' : (emptyMessage ?? uiLabel('noRecords', 'No records')) }}
+        </p>
         <table v-else class="mv-batch-result__table">
             <thead>
                 <tr>
-                    <th>{{ recordLabel }}</th>
-                    <th>Result</th>
-                    <th>Reason</th>
+                    <th>{{ recordLabel ?? uiLabel('record', 'Record') }}</th>
+                    <th>{{ uiLabel('result', 'Result') }}</th>
+                    <th>{{ uiLabel('reason', 'Reason') }}</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="row in rows" :key="row.targetId">
-                    <td data-label="Record">
+                    <td :data-label="uiLabel('record', 'Record')">
                         <span class="mv-batch-result__name">{{ row.label ?? row.targetId }}</span>
                         <span v-if="row.label" class="mv-batch-result__id"
                             >#{{ row.targetId }}</span
                         >
                     </td>
-                    <td data-label="Result">
+                    <td :data-label="uiLabel('result', 'Result')">
                         <MvStatusBadge :variant="rowStatus(row, mode).variant">{{
                             rowStatus(row, mode).text
                         }}</MvStatusBadge>
                     </td>
                     <td
-                        data-label="Reason"
+                        :data-label="uiLabel('reason', 'Reason')"
                         class="mv-batch-result__reason"
                         :title="technicalDetail(row, reasonLabel) || undefined"
                     >

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
+const uiLabel = useUiLabels();
 // Horizontal filter row: caller puts one MvFilterField per field in the default slot; the Reset
 // button is built in. See docs/ai/manager-portal-pages/00-shared-conventions.md, "FilterBar".
 const emit = defineEmits<{ reset: [] }>();
@@ -7,7 +9,9 @@ const emit = defineEmits<{ reset: [] }>();
 <template>
     <div class="mv-filter-bar">
         <slot />
-        <button class="mv-filter-bar__reset" type="button" @click="emit('reset')">Reset</button>
+        <button class="mv-filter-bar__reset" type="button" @click="emit('reset')">
+            {{ uiLabel('reset', 'Reset') }}
+        </button>
     </div>
 </template>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
+import { useUiLabels } from '../../utils/uiLabels';
 import { canJumpTo, nextKey, previousKey, stepStates, type WizardStep } from './wizardModel';
 
 // Steps header, content slot and Back/Next; the page decides when Next is allowed and why not.
@@ -17,14 +18,15 @@ const props = withDefaults(
     }>(),
     {
         nextDisabledReason: '',
-        nextLabel: 'Next',
-        backLabel: 'Back',
         busy: false,
         hideBack: false,
         hideNext: false,
     },
 );
 const emit = defineEmits<{ 'update:modelValue': [key: string]; next: [key: string] }>();
+const label = useUiLabels();
+const back = computed(() => props.backLabel ?? label('back', 'Back'));
+const nextText = computed(() => props.nextLabel ?? label('next', 'Next'));
 
 const states = computed(() => stepStates(props.steps, props.modelValue));
 const previous = computed(() => previousKey(props.steps, props.modelValue));
@@ -77,7 +79,7 @@ function goNext(): void {
                 :disabled="busy"
                 @click="emit('update:modelValue', previous)"
             >
-                {{ backLabel }}
+                {{ back }}
             </MvButton>
             <span v-if="nextDisabledReason && !hideNext" class="mv-wizard__reason" role="status">
                 {{ nextDisabledReason }}
@@ -89,7 +91,7 @@ function goNext(): void {
                 :loading="busy"
                 @click="goNext"
             >
-                {{ nextLabel }}
+                {{ nextText }}
             </MvButton>
         </footer>
     </section>

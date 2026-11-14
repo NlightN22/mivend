@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { IconBell } from '@tabler/icons-vue';
+import { useUiLabels } from '../../utils/uiLabels';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
 
-withDefaults(defineProps<{ unreadCount: number; ariaLabel?: string }>(), {
-    ariaLabel: 'Notifications',
-});
+const props = defineProps<{ unreadCount: number; ariaLabel?: string }>();
+const label = useUiLabels();
+const text = computed(() => props.ariaLabel ?? label('notificationsTitle', 'Notifications'));
 
 defineEmits<{ click: [] }>();
 </script>
@@ -14,7 +16,7 @@ defineEmits<{ click: [] }>();
         type="button"
         class="mv-notification-bell"
         data-notification-bell
-        :aria-label="ariaLabel"
+        :aria-label="text"
         @click="$emit('click')"
     >
         <IconBell :size="20" stroke-width="1.75" />

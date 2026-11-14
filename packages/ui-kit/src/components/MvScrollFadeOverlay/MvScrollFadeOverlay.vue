@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
+const uiLabel = useUiLabels();
 
 defineProps<{
     canScrollLeft: boolean;
@@ -30,7 +32,7 @@ const emit = defineEmits<{
         v-if="canScrollLeft"
         :size="32"
         class="mv-scroll-fade-overlay__arrow mv-scroll-fade-overlay__arrow--left"
-        aria-label="Scroll left"
+        :aria-label="uiLabel('scrollLeft', 'Scroll left')"
         @click="emit('scroll-left')"
     >
         ‹
@@ -39,7 +41,7 @@ const emit = defineEmits<{
         v-if="canScrollRight"
         :size="32"
         class="mv-scroll-fade-overlay__arrow mv-scroll-fade-overlay__arrow--right"
-        aria-label="Scroll right"
+        :aria-label="uiLabel('scrollRight', 'Scroll right')"
         @click="emit('scroll-right')"
     >
         ›

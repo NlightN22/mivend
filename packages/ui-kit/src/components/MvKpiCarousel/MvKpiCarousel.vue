@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
+const uiLabel = useUiLabels();
 
 const track = ref<HTMLElement | null>(null);
 const canScrollLeft = ref(false);
@@ -40,7 +42,7 @@ onBeforeUnmount(() => {
             v-if="canScrollLeft"
             :size="36"
             class="mv-kpi-carousel__arrow"
-            aria-label="Scroll KPIs left"
+            :aria-label="uiLabel('scrollKpisLeft', 'Scroll KPIs left')"
             @click="scrollBy(-1)"
         >
             ‹
@@ -58,7 +60,7 @@ onBeforeUnmount(() => {
             v-if="canScrollRight"
             :size="36"
             class="mv-kpi-carousel__arrow"
-            aria-label="Scroll KPIs right"
+            :aria-label="uiLabel('scrollKpisRight', 'Scroll KPIs right')"
             @click="scrollBy(1)"
         >
             ›

@@ -8,6 +8,7 @@ import {
     describeValue,
 } from '../MvColumnFilter/columnFilterDispatch';
 import { useUiFormatLocale } from '../../utils/uiFormat';
+import { useUiLabels } from '../../utils/uiLabels';
 import type { FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
 import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { DataTableState } from '../../composables/useDataTableState';
@@ -22,6 +23,7 @@ export function useColumnFilters(opts: {
 }) {
     const { tableState } = opts;
     const formatLocale = useUiFormatLocale('en-US');
+    const uiLabel = useUiLabels();
 
     // PrimeVue draws a column's funnel/overlay only when its field has an entry here; the values
     // themselves live in `tableState.filters`.
@@ -73,7 +75,7 @@ export function useColumnFilters(opts: {
             if (!hasValue(value)) continue;
             chips.push({
                 key: col.field,
-                label: `${col.header}: ${describeValue(col.filterConfig, value, formatLocale.value)}`,
+                label: `${col.header}: ${describeValue(col.filterConfig, value, formatLocale.value, uiLabel)}`,
             });
         }
         return chips;

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { IconCheck, IconX } from '@tabler/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvInput from '../MvInput/MvInput.vue';
+import { useUiLabels } from '../../utils/uiLabels';
 import type { NoticeVariant } from '../MvNotice/MvNotice.vue';
 import type { NotificationItem, NotificationKind } from '../../composables/notificationTypes';
 
@@ -45,7 +46,25 @@ const props = withDefaults(
     { loading: false, labels: () => ({}) },
 );
 
-const text = computed<NotificationPanelLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
+const label = useUiLabels();
+const text = computed<NotificationPanelLabels>(() => ({
+    title: label('notificationsTitle', DEFAULT_LABELS.title),
+    close: label('close', DEFAULT_LABELS.close),
+    loading: label('loadingEllipsis', DEFAULT_LABELS.loading),
+    empty: label('notificationsEmpty', DEFAULT_LABELS.empty),
+    markRead: label('notificationsMarkRead', DEFAULT_LABELS.markRead),
+    resolve: label('notificationsResolve', DEFAULT_LABELS.resolve),
+    resolutionPlaceholder: label(
+        'notificationsResolutionNote',
+        DEFAULT_LABELS.resolutionPlaceholder,
+    ),
+    showAll: label('notificationsShowAll', DEFAULT_LABELS.showAll),
+    justNow: label('notificationsJustNow', DEFAULT_LABELS.justNow),
+    minutesAgo: m => label('notificationsMinutesAgo', '{n}m ago').replace('{n}', () => String(m)),
+    hoursAgo: h => label('notificationsHoursAgo', '{n}h ago').replace('{n}', () => String(h)),
+    daysAgo: d => label('notificationsDaysAgo', '{n}d ago').replace('{n}', () => String(d)),
+    ...props.labels,
+}));
 
 const emit = defineEmits<{
     markRead: [id: string];

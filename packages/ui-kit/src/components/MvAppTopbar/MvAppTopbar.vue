@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 // Backoffice topbar shell (logo + global search placeholder + user pill with its menu) — shared
 // across every manager portal page. On phone: logo mark, search button, actions and a round avatar; search takes over the row.
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -8,6 +9,7 @@ import MvAppTopbarPhoneSearch from './MvAppTopbarPhoneSearch.vue';
 import MvAppTopbarSearchBox from './MvAppTopbarSearchBox.vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
+const uiLabel = useUiLabels();
 
 withDefaults(
     defineProps<{
@@ -96,8 +98,8 @@ defineExpose({ closeSearch });
                 ref="searchButton"
                 type="button"
                 class="mv-app-topbar__search-button"
-                aria-label="Search"
-                title="Search"
+                :aria-label="uiLabel('search', 'Search')"
+                :title="uiLabel('search', 'Search')"
                 @click="searching = true"
             >
                 <IconSearch :size="20" aria-hidden="true" />

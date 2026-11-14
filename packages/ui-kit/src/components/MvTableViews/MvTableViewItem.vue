@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { ref } from 'vue';
+const uiLabel = useUiLabels();
 
 export interface TableViewItem {
     id: string;
@@ -60,7 +62,7 @@ function commitRename(): void {
                 v-if="view.isDefault"
                 class="mv-table-views__badge"
                 data-testid="table-views-default"
-                >Team default</span
+                >{{ uiLabel('teamDefault', 'Team default') }}</span
             >
         </button>
         <div class="mv-table-views__acts">
@@ -79,7 +81,7 @@ function commitRename(): void {
                 v-if="manageable"
                 type="button"
                 class="mv-table-views__act"
-                title="Rename"
+                :title="uiLabel('rename', 'Rename')"
                 :disabled="busy"
                 @click="startRename"
             >
@@ -98,7 +100,7 @@ function commitRename(): void {
                 v-if="manageable"
                 type="button"
                 class="mv-table-views__act mv-table-views__act--danger"
-                title="Delete"
+                :title="uiLabel('delete', 'Delete')"
                 :disabled="busy"
                 @click="emit('delete', view.id)"
             >

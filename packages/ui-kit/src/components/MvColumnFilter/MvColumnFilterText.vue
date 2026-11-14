@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { Search } from '@element-plus/icons-vue';
 import { useDebouncedTextModel } from '../../composables/useDebouncedTextModel';
 import type { TextFilterConfig } from './columnFilterTypes';
+const uiLabel = useUiLabels();
 
 const props = defineProps<{ config: TextFilterConfig; modelValue: string }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
@@ -26,7 +28,7 @@ const { text, input, clear } = useDebouncedTextModel(
             v-if="text"
             type="button"
             class="mv-column-filter-text__clear"
-            aria-label="Clear"
+            :aria-label="uiLabel('clear', 'Clear')"
             @click="clear"
         >
             ×

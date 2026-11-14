@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 import { computed } from 'vue';
 import { HomeFilled, User, List, CircleCheck, MoreFilled } from '@element-plus/icons-vue';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
+const uiLabel = useUiLabels();
 
 export interface AppMobileNavItem {
     key: string;
@@ -38,7 +40,10 @@ const isMoreActive = computed(
 </script>
 
 <template>
-    <nav class="mv-app-mobile-nav mv-glass-liquid" aria-label="Primary mobile navigation">
+    <nav
+        class="mv-app-mobile-nav mv-glass-liquid"
+        :aria-label="uiLabel('primaryMobileNav', 'Primary mobile navigation')"
+    >
         <RouterLink
             v-for="item in items.filter(i => i.key !== 'more')"
             :key="item.key"
@@ -69,7 +74,7 @@ const isMoreActive = computed(
             <span class="mv-app-mobile-nav__icon-wrap">
                 <el-icon class="mv-app-mobile-nav__icon"><MoreFilled /></el-icon>
             </span>
-            <span class="mv-app-mobile-nav__label">More</span>
+            <span class="mv-app-mobile-nav__label">{{ uiLabel('more', 'More') }}</span>
         </button>
     </nav>
 </template>

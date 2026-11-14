@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { IconArrowDown, IconArrowUp } from '@tabler/icons-vue';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
+import { useUiLabels } from '../../utils/uiLabels';
 
 const props = withDefaults(
     defineProps<{ down?: boolean; upLabel?: string; downLabel?: string }>(),
-    { down: true, upLabel: 'Scroll to top', downLabel: 'Scroll to bottom' },
+    { down: true, upLabel: undefined, downLabel: undefined },
 );
 
 const SHOW_UP_THRESHOLD_PX = 400;
+const label = useUiLabels();
+const upText = computed(() => props.upLabel ?? label('scrollToTop', 'Scroll to top'));
+const downText = computed(() => props.downLabel ?? label('scrollToBottom', 'Scroll to bottom'));
 const NEAR_BOTTOM_SLACK_PX = 24;
 
 const showUp = ref(false);
@@ -64,8 +68,8 @@ onBeforeUnmount(() => {
         <div class="mv-scroll-nav__slot" :class="{ 'mv-scroll-nav__slot--hidden': !showUp }">
             <MvRoundIconButton
                 variant="primary"
-                :aria-label="props.upLabel"
-                :title="props.upLabel"
+                :aria-label="upText"
+                :title="upText"
                 :tabindex="showUp ? 0 : -1"
                 @click="scrollToTop"
             >
@@ -79,8 +83,8 @@ onBeforeUnmount(() => {
         >
             <MvRoundIconButton
                 variant="primary"
-                :aria-label="props.downLabel"
-                :title="props.downLabel"
+                :aria-label="downText"
+                :title="downText"
                 :tabindex="showDown ? 0 : -1"
                 @click="scrollToBottom"
             >

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLabels } from '../../utils/uiLabels';
 // Presets apply instantly the moment they're picked from the dropdown; only "Custom range"
 // reveals From/To fields needing an explicit Apply/Clear (a manually-typed pair of dates is a
 // composite condition, same reasoning as amount-range).
@@ -8,6 +9,7 @@ import { useUiLocale } from '../../utils/uiLocale';
 import MvDatePicker from '../MvDatePicker/MvDatePicker.vue';
 import { DATE_RANGE_PRESETS, resolveDateRangePreset } from './dateRangePresets';
 import type { DateRangeFilterConfig, DateRangeFilterValue } from './columnFilterTypes';
+const uiLabel = useUiLabels();
 
 const props = defineProps<{ config: DateRangeFilterConfig; modelValue: DateRangeFilterValue }>();
 const locale = useUiLocale();
@@ -200,7 +202,7 @@ function onClear(): void {
         <template v-if="isCustom">
             <div class="mv-column-filter-date-range__custom">
                 <div class="mv-column-filter-date-range__field">
-                    <label>From</label>
+                    <label>{{ uiLabel('from', 'From') }}</label>
                     <input
                         type="text"
                         inputmode="numeric"
@@ -223,7 +225,7 @@ function onClear(): void {
                 </div>
                 <span class="mv-column-filter-date-range__arrow">→</span>
                 <div class="mv-column-filter-date-range__field">
-                    <label>To</label>
+                    <label>{{ uiLabel('to', 'To') }}</label>
                     <input
                         type="text"
                         inputmode="numeric"
@@ -267,8 +269,12 @@ function onClear(): void {
             />
 
             <div class="mv-column-filter-date-range__footer">
-                <MvButton size="sm" variant="ghost" @click="onClear">Clear</MvButton>
-                <MvButton size="sm" variant="primary" @click="onApplyCustom">Apply</MvButton>
+                <MvButton size="sm" variant="ghost" @click="onClear">{{
+                    uiLabel('clear', 'Clear')
+                }}</MvButton>
+                <MvButton size="sm" variant="primary" @click="onApplyCustom">{{
+                    uiLabel('apply', 'Apply')
+                }}</MvButton>
             </div>
             <div v-if="currentRangeLabel" class="mv-column-filter-date-range__caption">
                 {{ currentRangeLabel }}

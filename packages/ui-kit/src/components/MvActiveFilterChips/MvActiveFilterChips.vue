@@ -17,12 +17,19 @@ const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
 
 <template>
     <div v-if="chips.length" class="mv-active-filter-chips">
-        <span class="mv-active-filter-chips__label">{{ label('activeFilters', 'Active filters:') }}</span>
+        <span class="mv-active-filter-chips__label">{{
+            label('activeFilters', 'Active filters:')
+        }}</span>
         <span v-for="chip in chips" :key="chip.key" class="mv-active-filter-chips__chip">
             {{ chip.label }}
             <button
                 type="button"
-                :aria-label="`Remove ${chip.label} filter`"
+                :aria-label="
+                    label('removeFilter', 'Remove {label} filter').replace(
+                        '{label}',
+                        () => chip.label,
+                    )
+                "
                 @click="emit('remove', chip.key)"
             >
                 ×

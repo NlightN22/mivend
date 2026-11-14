@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="R extends DocRow">
+import { useUiLabels } from '../../utils/uiLabels';
 import MvCheckbox from '../MvCheckbox/MvCheckbox.vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import type { useLineSelection } from '../../composables/useLineSelection';
@@ -7,6 +8,7 @@ import MvDocumentAddButton from './MvDocumentAddButton.vue';
 import MvDocumentLinesToolbar from './MvDocumentLinesToolbar.vue';
 import MvDocumentSelectionBar from './MvDocumentSelectionBar.vue';
 import { columnCount, visibleColumns, type DocColumn, type DocRow } from './documentLinesModel';
+const uiLabel = useUiLabels();
 
 const props = defineProps<{
     title: string;
@@ -61,7 +63,7 @@ const actionable = () => !!(props.canEdit || props.canRemove);
                                 :indeterminate="
                                     selection!.count.value > 0 && !selection!.allSelected.value
                                 "
-                                aria-label="Select all positions"
+                                :aria-label="uiLabel('selectAllPositions', 'Select all positions')"
                                 @update:model-value="selection!.setAll"
                             />
                         </th>
