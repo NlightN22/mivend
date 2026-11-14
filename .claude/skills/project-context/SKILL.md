@@ -17,6 +17,15 @@ Always update:
 
 Create the directory if it does not exist.
 
+## Where the update goes
+
+**Straight onto `main`, never a separate branch or worktree for the context.** The context file is
+shared state, not a feature: a branch for it goes stale, is forgotten and splits the truth between
+sessions. Update it where it lives, commit it as a docs-only commit (fast-forward push of
+`main`), and delete nothing but your own scratch. If `main` moved, rebase the single docs commit
+and regenerate the conflicting lines from the file as it now stands; never hand-merge another
+session's section away. Archives go to the local `docs/ai/.backup/` as before.
+
 ## What to preserve
 
 The context file must include:
