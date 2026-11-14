@@ -54,6 +54,7 @@ export function expandCategoryFilters<F extends FacetValueFilter>(
         ...new Set([...ids, ...ids.flatMap(id => descendantsOf(String(id)))]),
     ];
     return filters.map(filter => {
+        // A filter holding both `and` and a non-empty `or` widens only its `or`: the storefront never sends that shape.
         const hasAnd = filter.and !== undefined && filter.and !== null;
         const own =
             hasAnd && !filter.or?.length ? [filter.and as string | number] : (filter.or ?? []);

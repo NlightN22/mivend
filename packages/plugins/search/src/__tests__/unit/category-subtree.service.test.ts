@@ -29,7 +29,7 @@ describe('CategorySubtreeService', () => {
             facetValueFilters: [{ or: ['10'] }, { and: '10' }, { or: ['77'] }],
         });
         expect(query).toHaveBeenCalledTimes(1);
-        expect(query.mock.calls[0][0]).toContain('LIMIT 5001');
+        expect(query.mock.calls[0][0]).toContain('LIMIT 50001');
         expect(result.facetValueFilters).toEqual([
             { or: ['10', '20'] },
             { and: undefined, or: ['10', '20'] },

@@ -9,7 +9,8 @@ import {
     type CategoryNodeRow,
 } from './category-subtree-expansion';
 
-const CATEGORY_TREE_CEILING = 5000;
+// Rows, up to two translations per category: far above the 321 categories in production and the 8000-category first import.
+const CATEGORY_TREE_CEILING = 50000;
 
 // One bounded read of the category tree per request that carries facet filters.
 export const CATEGORY_TREE_SQL = `SELECT col.id AS "collectionId", col."parentId" AS "parentId",
