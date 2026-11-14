@@ -12,13 +12,19 @@ import { OrderDiscountPromotionBootstrapService } from '../../order-discount-pro
 
 function setup(existing: unknown[], isWorker = false) {
     const ctx = {} as RequestContext;
+    const qb = {
+        where: vi.fn(() => qb),
+        andWhere: vi.fn(() => qb),
+        take: vi.fn(() => qb),
+        getMany: vi.fn(async () => existing),
+    };
     const connection = {
         withTransaction: vi.fn(async (c: RequestContext, work: (tx: RequestContext) => unknown) =>
             work(c),
         ),
         getRepository: vi.fn(() => ({
             query: vi.fn(async () => undefined),
-            find: vi.fn(async () => existing),
+            createQueryBuilder: vi.fn(() => qb),
         })),
     };
     const promotionService = {
@@ -31,7 +37,7 @@ function setup(existing: unknown[], isWorker = false) {
         { create: vi.fn(async () => ctx) } as unknown as RequestContextService,
         { isWorker } as ProcessContext,
     );
-    return { service, promotionService };
+    return { service, promotionService, qb };
 }
 
 const promotion = (enabled: boolean, deletedAt: Date | null = null) => ({
@@ -69,6 +75,14 @@ describe('OrderDiscountPromotionBootstrapService', () => {
         const { service, promotionService } = setup([promotion(true, new Date())]);
         await service.onApplicationBootstrap();
         expect(promotionService.createPromotion).toHaveBeenCalledTimes(1);
+    });
+
+    it('looks the promotion up by its action code in SQL, not by reading the whole table', async () => {
+        const { service, qb } = setup([promotion(true)]);
+        await service.onApplicationBootstrap();
+        expect(qb.andWhere).toHaveBeenCalledWith('promotion.actions LIKE :needle', {
+            needle: `%${ORDER_DISCOUNT_ACTION_CODE}%`,
+        });
     });
 
     it('does nothing in a worker process', async () => {
