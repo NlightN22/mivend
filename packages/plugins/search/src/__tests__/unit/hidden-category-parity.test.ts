@@ -27,6 +27,7 @@ const internal: Backend = {
         const resolver = new InternalShopSearchResolver(
             { get: () => ({ search }) } as never,
             { hiddenFacetValueIds: async () => [HIDDEN_FACET_VALUE] } as never,
+            { expand: async (_ctx: unknown, input: unknown) => input } as never,
         );
         const { input } = await resolver.search(ctx, { term: 'oil' });
         const query = mapSearchQuery(
@@ -134,6 +135,7 @@ describe('a visible override under a hidden ancestor stays hidden on both backen
         const resolver = new InternalShopSearchResolver(
             { get: () => ({ search }) } as never,
             { hiddenFacetValueIds: async () => hiddenIds.map(id => `fv-${id}`) } as never,
+            { expand: async (_ctx: unknown, input: unknown) => input } as never,
         );
         const { input } = await resolver.search(ctx, { term: 'oil' });
         const query = JSON.stringify(

@@ -11,7 +11,11 @@ describe('InternalShopSearchResolver', () => {
         return {
             search,
             get,
-            resolver: new InternalShopSearchResolver({ get } as never, hidden as never),
+            resolver: new InternalShopSearchResolver(
+                { get } as never,
+                hidden as never,
+                { expand: async (_ctx: unknown, input: unknown) => input } as never,
+            ),
         };
     }
 

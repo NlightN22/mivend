@@ -5,15 +5,17 @@ import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 import { HiddenCategoryProductsService } from '@mivend/plugin-access-control';
 
+import { CategorySubtreeService } from './category-subtree.service';
 import { assertSearchDepth } from './search-end-user-id';
 
-// Replaces the Elasticsearch plugin's shop `search`: the input carries the hidden category facet
-// values, so hits, counts, code groups and facets all drop hidden-category products identically.
+// Replaces the Elasticsearch plugin's shop `search`: the input carries the hidden category values
+// and subtree-wide category filters, so hits, counts, code groups and facets agree.
 @Resolver()
 export class InternalShopSearchResolver {
     constructor(
         private moduleRef: ModuleRef,
         private hidden: HiddenCategoryProductsService,
+        private subtree: CategorySubtreeService,
     ) {}
 
     @Query()
@@ -24,7 +26,7 @@ export class InternalShopSearchResolver {
     ): Promise<Record<string, unknown>> {
         assertSearchDepth(input.skip);
         const scoped = {
-            ...input,
+            ...(await this.subtree.expand(ctx, input)),
             hiddenFacetValueIds: await this.hidden.hiddenFacetValueIds(ctx),
         };
         const elasticsearch = this.moduleRef.get(ElasticsearchService, { strict: false });
