@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -26,6 +26,8 @@ import type { PaymentRow } from './paymentsRows';
 
 const { t } = useI18n();
 const COLUMNS = buildPaymentsColumns();
+// Display columns are rebuilt on a language switch; COLUMNS only feeds the persisted state.
+const displayColumns = computed(() => buildPaymentsColumns());
 
 const props = defineProps<{
     rows: PaymentRow[];
@@ -145,7 +147,7 @@ function applyView(state: TableViewState): void {
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="COLUMNS"
+        :columns="displayColumns"
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"

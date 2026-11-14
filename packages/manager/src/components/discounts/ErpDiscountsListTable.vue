@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import {
@@ -47,6 +47,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const COLUMNS = buildErpDiscountsColumns();
+// Display columns are rebuilt on a language switch; COLUMNS only feeds the persisted state.
+const displayColumns = computed(() => buildErpDiscountsColumns());
 
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; search: string }>(
     `erp-discounts-list-v1:${props.nested ? 'nested:' : ''}${props.administratorId}`,
@@ -133,7 +135,7 @@ const dateLabel = (value: string): string => formatDate(value);
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="COLUMNS"
+        :columns="displayColumns"
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"

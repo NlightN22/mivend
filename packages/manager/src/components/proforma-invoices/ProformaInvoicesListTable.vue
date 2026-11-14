@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -9,6 +9,7 @@ import {
     MvErrorState,
     useDataTableState,
     formatDocumentNumber,
+    type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
 } from '@mivend/ui-kit';
 import {
@@ -41,7 +42,11 @@ const props = defineProps<{
 }>();
 
 // Nested under a customer, the customer column and filter are redundant.
-const COLUMNS = buildProformaInvoicesColumns().filter(c => !props.nested || c.field !== 'customer');
+const visibleColumns = (): AdvancedDataTableColumn[] =>
+    buildProformaInvoicesColumns().filter(c => !props.nested || c.field !== 'customer');
+const COLUMNS = visibleColumns();
+// Display columns are rebuilt on a language switch; COLUMNS only feeds the persisted state.
+const displayColumns = computed(visibleColumns);
 
 const emit = defineEmits<{
     'update:filters': [filters: ProformaInvoicesListFilters];
@@ -151,7 +156,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="COLUMNS"
+        :columns="displayColumns"
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"

@@ -46,9 +46,9 @@ const props = defineProps<{
 
 // Nested under a customer, the customer column is redundant; the scope column marks shared discounts.
 const { t } = useI18n();
-const COLUMNS = buildDiscountsColumns().filter(
-    c => c.field !== (props.nested ? 'customer' : 'scope'),
-);
+const visibleColumns = (): AdvancedDataTableColumn[] =>
+    buildDiscountsColumns().filter(c => c.field !== (props.nested ? 'customer' : 'scope'));
+const COLUMNS = visibleColumns();
 
 const emit = defineEmits<{
     'update:filters': [filters: DiscountsListFilters];
@@ -82,7 +82,7 @@ onMounted(async () => {
     }
 });
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
-    COLUMNS.map(c => {
+    visibleColumns().map(c => {
         if (c.field === 'priceType') return { ...c, filterOptions: priceTypeOptions.value };
         if (c.field !== 'productGroup' || !groupOptions.value.length) return c;
         return {
