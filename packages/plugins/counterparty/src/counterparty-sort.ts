@@ -18,7 +18,7 @@ const SORTABLE_COLUMNS: Record<Exclude<keyof CounterpartySortParameter, 'lastOrd
 
 // Only the first non-null sort key applies: one active sort, matching MvAdvancedDataTable
 // A selected alias, not a raw expression: take/skip paging resolves order keys through the selection.
-const LAST_ORDER_ALIAS = 'lastOrderAtSort';
+const LAST_ORDER_ALIAS = 'last_order_sort';
 
 export function applyCounterpartySort(
     qb: SelectQueryBuilder<Counterparty>,

@@ -57,6 +57,6 @@ describe('counterparty lastOrderAt list mapping', () => {
         const { qb, addSelect, orderBy } = fakeQb();
         applyCounterpartySort(qb, { lastOrderAt: order });
         expect(addSelect).toHaveBeenCalledOnce();
-        expect(orderBy).toHaveBeenCalledWith('lastOrderAtSort', order, 'NULLS LAST');
+        expect(orderBy).toHaveBeenCalledWith('last_order_sort', order, 'NULLS LAST');
     });
 });
