@@ -66,19 +66,23 @@ export { reloadOnStaleChunk } from './utils/staleChunkReload';
 export { default as MvPhoneInput } from './components/MvPhoneInput/MvPhoneInput.vue';
 export { default as MvAddressInput } from './components/MvAddressInput/MvAddressInput.vue';
 export { default as MvNameInput } from './components/MvNameInput/MvNameInput.vue';
-export { formatPersonName, isValidPersonName } from './utils/contactFormat';
-export { isValidPhone } from './utils/phoneFormat';
+export { formatPersonName } from './utils/contactFormat';
 export { default as MvEmailInput } from './components/MvEmailInput/MvEmailInput.vue';
 export { default as MvWorkingHoursInput } from './components/MvWorkingHoursInput/MvWorkingHoursInput.vue';
 export {
     contactRowErrors,
+    datePeriodError,
     formatEmail,
     isValidAddress,
     isValidEmail,
+    isValidIsoDate,
+    isValidPersonName,
+    isValidPhone,
     isValidWorkingHours,
     tradingPointFieldErrors,
 } from './utils/fieldValidation';
 export type {
+    DatePeriodError,
     ContactRowValues,
     TradingPointFieldKey,
     TradingPointFieldValues,
@@ -224,6 +228,7 @@ export { default as MvScrollFadeOverlay } from './components/MvScrollFadeOverlay
 export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
 export type { DatePickerLabels } from './components/MvDatePicker/MvDatePicker.vue';
 export { default as MvDateField } from './components/MvDateField/MvDateField.vue';
+export { default as MvDateRangeField } from './components/MvDateRangeField/MvDateRangeField.vue';
 
 // Every filterable column must declare its filter type explicitly; the table looks up the
 // component in COLUMN_FILTER_REGISTRY instead of building its own popover/input/select.

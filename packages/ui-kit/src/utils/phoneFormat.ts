@@ -70,7 +70,3 @@ export function applyPhoneInput(
 export function parsePhone(raw: string): ReturnType<typeof parsePhoneNumberFromString> {
     return parsePhoneNumberFromString(raw, DEFAULT_COUNTRY);
 }
-
-export function isValidPhone(raw: string): boolean {
-    return parsePhone(raw)?.isValid() ?? false;
-}

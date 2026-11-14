@@ -21,8 +21,3 @@ export function formatPersonName(raw: string): string {
 export function applyNameInput(raw: string, caret: number): { value: string; caret: number } {
     return { value: formatPersonName(raw), caret: formatPersonName(raw.slice(0, caret)).length };
 }
-
-export function isValidPersonName(raw: string): boolean {
-    const words = raw.trim().split(/\s+/).filter(Boolean);
-    return words.length >= 2 && words.every(w => /\p{L}{2,}|^\p{L}\.$/u.test(w));
-}

@@ -11,6 +11,8 @@ export default {
         percent: 'Discount %',
         validFrom: 'Valid from',
         validTo: 'Valid to',
+        periodInvalid:
+            'The period is not valid: check the dates and that the end is not before the start',
         status: 'Status',
         justification: 'Justification',
         products: 'Products',

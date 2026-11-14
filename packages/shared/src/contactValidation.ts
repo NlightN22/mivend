@@ -1,30 +1,10 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
+import { isValidAddress, isValidPersonName, normalizePhone } from './field-validation';
 
 export interface ContactInput {
     name: string;
     address: string;
     contactName?: string | null;
     contactPhone?: string | null;
-}
-
-export function normalizePhone(raw: string): string | null {
-    const parsed = parsePhoneNumberFromString(raw, 'RU');
-    return parsed?.isValid() ? parsed.formatInternational() : null;
-}
-
-export function normalizePhoneE164(raw: string): string | null {
-    const parsed = parsePhoneNumberFromString(raw, 'RU');
-    return parsed?.isValid() ? parsed.number : null;
-}
-
-export function isValidPersonName(raw: string): boolean {
-    const words = raw.trim().split(/\s+/).filter(Boolean);
-    return words.length >= 2 && words.every(w => /\p{L}{2,}|^\p{L}\.$/u.test(w));
-}
-
-export function isValidAddress(raw: string): boolean {
-    const v = raw.trim();
-    return v.length >= 10 && /\d/.test(v) && /\p{L}/u.test(v);
 }
 
 export type ContactField = 'address' | 'contactName' | 'contactPhone';

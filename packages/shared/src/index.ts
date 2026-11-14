@@ -131,4 +131,5 @@ export type { ProductAttributes, RefResolution } from './selection-filter-eval';
 export { loadFilterTerms, replaceFilterTerms } from './filter-terms';
 export type { FilterTermTable } from './filter-terms';
 export * from './contactValidation';
+export * from './field-validation';
 export { ErpMirrorEntity } from './erp-mirror-entity';

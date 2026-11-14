@@ -13,6 +13,7 @@ const discounts: typeof en = {
         percent: 'Скидка',
         validFrom: 'Начало',
         validTo: 'Конец',
+        periodInvalid: 'Период указан неверно: проверьте даты, конец не может быть раньше начала',
         status: 'Статус',
         justification: 'Обоснование',
         products: 'Товары',

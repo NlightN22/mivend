@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyNameInput, formatPersonName, isValidPersonName } from '../../utils/contactFormat';
+import { applyNameInput, formatPersonName } from '../../utils/contactFormat';
+import { isValidPersonName } from '../../utils/fieldValidation';
 
 describe('formatPersonName', () => {
     it.each([

@@ -126,7 +126,14 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
             });
 
             await service.updateDetails(mockCtx, 'tp-1', {
-                contacts: [{ name: 'Petr', phone: '456', email: null, isPrimary: true }],
+                contacts: [
+                    {
+                        name: 'Petr Petrov',
+                        phone: '+7 913 123 45 67',
+                        email: null,
+                        isPrimary: true,
+                    },
+                ],
             });
 
             expect(mockCpRepo.delete).toHaveBeenCalledWith({ tradingPoint: { id: 'tp-1' } });
@@ -139,7 +146,14 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                     changedFields: {
                         contacts: {
                             from: [{ name: 'Ivan', phone: '123', email: null, isPrimary: true }],
-                            to: [{ name: 'Petr', phone: '456', email: null, isPrimary: true }],
+                            to: [
+                                {
+                                    name: 'Petr Petrov',
+                                    phone: '+7 913 123 45 67',
+                                    email: null,
+                                    isPrimary: true,
+                                },
+                            ],
                         },
                     },
                 }),
@@ -203,12 +217,12 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 contacts: [],
             });
 
-            await service.updateDetails(mockCtx, 'tp-1', { address: 'New Address' });
+            await service.updateDetails(mockCtx, 'tp-1', { address: 'New Address 5' });
 
             expect(mockVersioningService.recordChange).toHaveBeenCalledWith(
                 mockCtx,
                 expect.objectContaining({
-                    changedFields: { address: { from: 'Old Address', to: 'New Address' } },
+                    changedFields: { address: { from: 'Old Address', to: 'New Address 5' } },
                 }),
             );
         });
@@ -235,6 +249,43 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                     action: 'reactivate',
                 }),
             );
+        });
+    });
+
+    describe('updateDetails field validation', () => {
+        const point = {
+            id: 'tp-1',
+            name: 'Point A',
+            address: 'Old Address',
+            workingHours: null,
+            deliveryComment: null,
+            counterpartyId: 'cp-1',
+            latitude: 10,
+            longitude: 20,
+            contacts: [],
+        };
+
+        it.each([
+            ['an address without a house number', { address: 'Some long street' }],
+            ['a one-word contact name', { contacts: [{ name: 'Ivan' }] }],
+            [
+                'an incomplete contact phone',
+                { contacts: [{ name: 'Ivan Petrov', phone: '+7 913' }] },
+            ],
+            ['a malformed contact e-mail', { contacts: [{ name: 'Ivan Petrov', email: 'a@b' }] }],
+            ['over-long working hours', { workingHours: '9'.repeat(201) }],
+        ])('rejects %s and saves nothing', async (_label, patch) => {
+            mockTpRepo.findOne.mockResolvedValue({ ...point });
+            await expect(service.updateDetails(mockCtx, 'tp-1', patch)).rejects.toThrow(
+                UserInputError,
+            );
+            expect(mockTpRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('leaves an untouched ERP address with no house number alone', async () => {
+            mockTpRepo.findOne.mockResolvedValue({ ...point, address: 'Legacy' });
+            await service.updateDetails(mockCtx, 'tp-1', { address: 'Legacy', name: 'Point B' });
+            expect(mockTpRepo.save).toHaveBeenCalled();
         });
     });
 });

@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvSelect, MvMultiSelect, MvInput, MvButton, MvNotice } from '@mivend/ui-kit';
+import {
+    MvSelect,
+    MvMultiSelect,
+    MvInput,
+    MvButton,
+    MvNotice,
+    MvDateRangeField,
+    datePeriodError,
+} from '@mivend/ui-kit';
 import {
     fetchPriceTypeCodes,
     fetchFacets,
@@ -95,6 +103,10 @@ async function submit(): Promise<void> {
         error.value = t('discounts.form.fillRequired');
         return;
     }
+    if (datePeriodError(form.validFrom, form.validTo)) {
+        error.value = t('discounts.form.periodInvalid');
+        return;
+    }
     if (
         isRenewal.value &&
         props.renewFrom?.justification &&
@@ -181,24 +193,13 @@ async function submit(): Promise<void> {
                     @update:model-value="form.percent = $event"
                 />
             </label>
-            <label>
-                {{ t('discounts.form.validFrom') }}
-                <MvInput
-                    size="sm"
-                    type="date"
-                    :model-value="form.validFrom"
-                    @update:model-value="form.validFrom = $event"
-                />
-            </label>
-            <label>
-                {{ t('discounts.form.validTo') }}
-                <MvInput
-                    size="sm"
-                    type="date"
-                    :model-value="form.validTo"
-                    @update:model-value="form.validTo = $event"
-                />
-            </label>
+            <MvDateRangeField
+                v-model:from="form.validFrom"
+                v-model:to="form.validTo"
+                class="discount-grant-form__period"
+                :from-label="t('discounts.form.validFrom')"
+                :to-label="t('discounts.form.validTo')"
+            />
         </div>
 
         <label class="discount-grant-form__customers">
@@ -266,6 +267,10 @@ async function submit(): Promise<void> {
     display: flex;
     gap: 14px;
     font-size: 13px;
+}
+
+.discount-grant-form__period {
+    grid-column: span 2;
 }
 
 .discount-grant-form__grid {

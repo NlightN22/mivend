@@ -15,6 +15,7 @@ import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
 
 import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
+import { tradingPointPatchError } from './trading-point-patch-validation';
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
@@ -134,6 +135,8 @@ export class TradingPointService {
         const record = await repo.findOne({ where: { id: String(id) }, relations: ['contacts'] });
         if (!record) throw new UserInputError(`TradingPoint not found: id=${id}`);
         await this.assertStaffCanEdit(ctx, record);
+        const invalid = tradingPointPatchError(patch, record);
+        if (invalid) throw new UserInputError(invalid);
 
         const changedFields: Record<string, ChangedFieldDiff> = {};
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);

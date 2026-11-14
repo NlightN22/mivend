@@ -1,26 +1,27 @@
-import { isValidPersonName } from './contactFormat';
-import { isValidPhone } from './phoneFormat';
+import {
+    isValidAddress,
+    isValidEmail,
+    isValidPersonName,
+    isValidPhone,
+    isValidWorkingHours,
+} from 'shared/src/field-validation';
 
-export const ADDRESS_MIN_LENGTH = 10;
-export const WORKING_HOURS_MAX_LENGTH = 200;
-export const EMAIL_MAX_LENGTH = 254;
-
-export function isValidAddress(raw: string): boolean {
-    const address = raw.trim();
-    return address.length >= ADDRESS_MIN_LENGTH && /\d/.test(address);
-}
-
-export function isValidEmail(raw: string): boolean {
-    return raw.length <= EMAIL_MAX_LENGTH && /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(raw);
-}
+export {
+    ADDRESS_MIN_LENGTH,
+    EMAIL_MAX_LENGTH,
+    WORKING_HOURS_MAX_LENGTH,
+    datePeriodError,
+    isValidAddress,
+    isValidEmail,
+    isValidIsoDate,
+    isValidPersonName,
+    isValidPhone,
+    isValidWorkingHours,
+} from 'shared/src/field-validation';
+export type { DatePeriodError } from 'shared/src/field-validation';
 
 export function formatEmail(raw: string): string {
     return raw.replace(/\s+/g, '');
-}
-
-// Free text in any language, so only the length is checked.
-export function isValidWorkingHours(raw: string): boolean {
-    return raw.trim().length <= WORKING_HOURS_MAX_LENGTH;
 }
 
 export type TradingPointFieldKey =

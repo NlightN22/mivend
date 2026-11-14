@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyPhoneInput, isValidPhone } from '../../utils/phoneFormat';
+import { applyPhoneInput } from '../../utils/phoneFormat';
+import { isValidPhone } from '../../utils/fieldValidation';
 
 interface Field {
     value: string;
