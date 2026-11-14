@@ -175,18 +175,23 @@ describe('ActingLimitService (real Postgres)', () => {
                  FROM generate_series(1, $1::int) g`,
                 [n],
             );
-        await seed(1000);
-        expect(await limits(10, 1).enforceCustomerCap(testRequestContext, '5')).toBe(1000);
-        await dataSource.query(`DELETE FROM session WHERE token LIKE 'bulk-%'`);
-        cacheDelete.mockClear();
-        await seed(1002);
-        await expect(
-            limits(10, 1).enforceCustomerCap(testRequestContext, '5'),
-        ).rejects.toMatchObject({
-            extensions: { code: 'QUERY_TOO_LARGE' },
-        });
-        expect(cacheDelete).toHaveBeenCalledTimes(0);
-    });
+        const dropBulk = () => dataSource.query(`DELETE FROM session WHERE token LIKE 'bulk-%'`);
+        try {
+            await seed(1000);
+            expect(await limits(10, 1).enforceCustomerCap(testRequestContext, '5')).toBe(1000);
+            await dropBulk();
+            cacheDelete.mockClear();
+            await seed(1002);
+            await expect(
+                limits(10, 1).enforceCustomerCap(testRequestContext, '5'),
+            ).rejects.toMatchObject({
+                extensions: { code: 'QUERY_TOO_LARGE' },
+            });
+            expect(cacheDelete).toHaveBeenCalledTimes(0);
+        } finally {
+            await dropBulk();
+        }
+    }, 120_000);
 
     it('does not let a dead acting session (manager signed out) occupy a slot or evict a live one', async () => {
         await insertSession('live', true, 5);
