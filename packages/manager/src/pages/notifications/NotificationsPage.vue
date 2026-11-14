@@ -123,7 +123,8 @@ async function onMarkRead(id: string): Promise<void> {
         if (index !== -1) notifications.value[index] = updated;
         await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : t('notifications.errors.markReadFailed');
+        actionError.value =
+            e instanceof Error ? e.message : t('notifications.errors.markReadFailed');
     } finally {
         actingId.value = null;
     }
@@ -138,7 +139,8 @@ async function onResolve(id: string, resolution: string): Promise<void> {
         if (index !== -1) notifications.value[index] = updated;
         await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
-        actionError.value = e instanceof Error ? e.message : t('notifications.errors.resolveFailed');
+        actionError.value =
+            e instanceof Error ? e.message : t('notifications.errors.resolveFailed');
     } finally {
         actingId.value = null;
     }
@@ -156,6 +158,9 @@ onMounted(() => {
         <h1 class="notifications-page__title">{{ t('notifications.page.title') }}</h1>
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
+        <MvNotice v-if="notificationsStore.error" variant="error">
+            {{ t('common.blockLoadFailed') }}: {{ notificationsStore.error }}
+        </MvNotice>
 
         <NotificationsDataTable
             :notifications="notifications"

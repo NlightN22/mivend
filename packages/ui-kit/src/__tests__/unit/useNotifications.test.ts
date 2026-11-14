@@ -215,3 +215,39 @@ describe('useNotifications', () => {
         expect(unreadCount.value).toBe(0);
     });
 });
+
+describe('useNotifications load failures', () => {
+    const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+    it('stores the reason of a failed first load and never leaves an unhandled rejection', async () => {
+        const unhandled = vi.fn();
+        process.on('unhandledRejection', unhandled);
+        const transport = makeTransport([]);
+        (transport.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
+            new Error('request too large'),
+        );
+        const store = useNotifications(transport);
+        await settle();
+        process.off('unhandledRejection', unhandled);
+        expect(store.error.value).toBe('request too large');
+        expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it('still rejects an explicit refresh, and clears the reason after a success', async () => {
+        const transport = makeTransport([makeItem()]);
+        const fetch = transport.fetch as ReturnType<typeof vi.fn>;
+        const store = useNotifications(transport);
+        await settle();
+        expect(store.error.value).toBeNull();
+        fetch.mockRejectedValueOnce(new Error('down'));
+        await expect(store.refresh()).rejects.toThrow('down');
+        expect(store.error.value).toBe('down');
+        fetch.mockImplementation(async (opts?: NotificationFetchOptions) =>
+            opts?.status === 'unread'
+                ? { items: [], totalItems: 1 }
+                : { items: [makeItem()], totalItems: 1 },
+        );
+        await store.refresh();
+        expect(store.error.value).toBeNull();
+    });
+});

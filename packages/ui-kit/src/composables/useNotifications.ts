@@ -15,6 +15,8 @@ export interface UseNotifications {
     // The fetched page is capped, so counting it locally silently undercounts.
     unreadCount: ComputedRef<number>;
     loading: Ref<boolean>;
+    // Reason of the last failed load, null after a success; background loads never throw.
+    error: Ref<string | null>;
     markRead: (id: string) => Promise<void>;
     resolve: (id: string, resolution: string) => Promise<void>;
     refresh: () => Promise<void>;
@@ -24,6 +26,11 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
     const notifications = ref<NotificationItem[]>([]);
     const unreadTotal = ref(0);
     const loading = ref(false);
+    const error = ref<string | null>(null);
+
+    function reportFailure(cause: unknown): void {
+        error.value = cause instanceof Error ? cause.message : String(cause);
+    }
 
     const unreadCount = computed(() => unreadTotal.value);
 
@@ -39,6 +46,7 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
     async function refreshUnreadTotal(): Promise<void> {
         const page = await transport.fetch({ status: 'unread', take: 0 });
         unreadTotal.value = page.totalItems;
+        error.value = null;
     }
 
     async function refresh(): Promise<void> {
@@ -49,6 +57,10 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
                 refreshUnreadTotal(),
             ]);
             notifications.value = page.items;
+            error.value = null;
+        } catch (cause) {
+            reportFailure(cause);
+            throw cause;
         } finally {
             loading.value = false;
         }
@@ -81,7 +93,7 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
                 defaultTtlMs(item.kind),
             );
         }
-        void refreshUnreadTotal();
+        refreshUnreadTotal().catch(reportFailure);
     });
     setNotificationPersister(record);
 
@@ -94,7 +106,7 @@ export function useNotifications(transport: NotificationTransport): UseNotificat
         onBeforeUnmount(unsubscribe);
     }
 
-    void refresh();
+    refresh().catch(() => undefined);
 
-    return { notifications, unreadCount, loading, markRead, resolve, refresh };
+    return { notifications, unreadCount, loading, error, markRead, resolve, refresh };
 }
