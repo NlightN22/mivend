@@ -115,7 +115,7 @@ export class SessionManagementService {
         for await (const slice of slices) {
             const own = slice.filter(isOwn);
             // delete by id: remove() would clear the ids the next slice's cursor reads.
-            if (own.length > 0) await repo.delete(own.map(session => Number(session.id)));
+            if (own.length > 0) await repo.delete(own.map(session => session.id) as number[]);
             for (const session of own) {
                 await this.configService.authOptions.sessionCacheStrategy.delete(session.token);
             }

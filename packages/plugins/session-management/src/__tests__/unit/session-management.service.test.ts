@@ -247,7 +247,7 @@ describe('SessionManagementService', () => {
         const removed = repo.delete.mock.calls.flatMap(call => (call as unknown[])[0] as unknown[]);
         expect(removed).toHaveLength(2500);
         expect(deleteFromCache).toHaveBeenCalledTimes(2500);
-        expect(reads.map(r => r.afterId)).toEqual([0, 1000, 2000]);
+        expect(reads.map(r => Number(r.afterId))).toEqual([0, 1000, 2000]);
         expect(reads.every(r => r.take === 1000)).toBe(true);
     });
 
