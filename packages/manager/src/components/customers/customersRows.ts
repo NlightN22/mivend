@@ -30,7 +30,6 @@ function readinessLabel(value: string): string {
 export interface CustomerRowSources {
     credit: Map<string, CustomerCredit>;
     discountCounts: Map<string, number>;
-    lastOrderDates: Map<string, string>;
     managerName: (assignedManagerId: string | null, managerErpId: string | null) => string;
     branchName: (branchId: string | null) => string;
     formatMoney: (value: number) => string;
@@ -40,7 +39,6 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
     return items.map(c => {
         const primaryContact = c.contacts.find(p => p.isPrimary) ?? c.contacts[0];
         const credit = src.credit.get(c.id);
-        const lastOrder = src.lastOrderDates.get(c.id);
         return {
             id: c.id,
             shortName: c.shortName,
@@ -58,7 +56,7 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
                     ? (credit.creditBalance / credit.creditLimit) * 100
                     : null,
             discounts: src.discountCounts.get(c.id) ?? 0,
-            lastOrder: lastOrder ? formatDate(lastOrder) : '—',
+            lastOrder: c.lastOrderAt ? formatDate(c.lastOrderAt) : '—',
             isActive: c.isActive,
         };
     });

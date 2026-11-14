@@ -9,7 +9,6 @@ import {
     fetchActiveDiscountCountsByCustomer,
     fetchCreditByCounterpartyId,
     fetchCustomersPage,
-    fetchLastOrderDatesByCounterpartyId,
     type CustomerCredit,
     type CustomerListItem,
 } from './customers';
@@ -45,6 +44,7 @@ export const CUSTOMERS_SORT_FIELDS: CustomersSortField[] = [
     'officialEmail',
     'creditLimit',
     'creditBalance',
+    'lastOrderAt',
 ];
 
 export const BLANK_CUSTOMERS_FILTERS: CustomersListFilters = {
@@ -82,7 +82,6 @@ export interface CustomersPageResult {
     totalItems: number;
     credit: Map<string, CustomerCredit>;
     discountCounts: Map<string, number>;
-    lastOrderDates: Map<string, string>;
 }
 
 export async function fetchCustomersList(
@@ -104,12 +103,8 @@ export async function fetchCustomersList(
         fetchCustomersPage(options),
         fetchCreditByCounterpartyId(options),
     ]);
-    const ids = result.items.map(c => c.id);
-    const [discountCounts, lastOrderDates] = await Promise.all([
-        fetchActiveDiscountCountsByCustomer(ids),
-        fetchLastOrderDatesByCounterpartyId(ids),
-    ]);
-    return { ...result, credit, discountCounts, lastOrderDates };
+    const discountCounts = await fetchActiveDiscountCountsByCustomer(result.items.map(c => c.id));
+    return { ...result, credit, discountCounts };
 }
 
 export type CustomersViewCounts = Record<CustomersView, number>;

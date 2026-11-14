@@ -35,6 +35,7 @@ query CustomersPage($options: CounterpartyListOptions) {
         items {
             ...CustomerListItemFields
             portalReadiness
+            lastOrderAt
         }
         totalItems
     }
@@ -230,9 +231,3 @@ query ActiveDiscountCounts($counterpartyIds: [ID!]!) {
     }
 }
 
-query LastOrderDates($counterpartyIds: [ID!]!) {
-    lastOrderDates(counterpartyIds: $counterpartyIds) {
-        counterpartyId
-        lastOrderAt
-    }
-}

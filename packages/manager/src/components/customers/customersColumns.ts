@@ -36,8 +36,8 @@ export interface CustomersColumnOptions {
 }
 
 // Group, INN status and portal access start hidden (CUSTOMERS_DEFAULT_HIDDEN). Filtering is the toolbar
-// Filter builder; the search box covers the name and INN. Discounts and last order live in other plugins
-// and are not filterable.
+// Filter builder; the search box covers the name and INN. Discounts live in another plugin and are
+// not filterable.
 export function buildCustomersColumns(
     options: CustomersColumnOptions = {},
 ): AdvancedDataTableColumn[] {
@@ -179,10 +179,12 @@ export function buildCustomersColumns(
         {
             field: 'lastOrder',
             header: col('lastOrder'),
+            sortField: 'lastOrderAt',
             width: 110,
             minWidth: 100,
             priority: 4,
             filterConfig: NOT_FILTERED,
+            filterType: 'date',
         },
         {
             field: 'isActive',

@@ -120,7 +120,6 @@ describe('toCustomerRows', () => {
         const [row] = toCustomerRows([item], {
             credit: new Map(),
             discountCounts: new Map(),
-            lastOrderDates: new Map(),
             managerName: id => `manager-${id}`,
             branchName: id => `name-${id}`,
             formatMoney: v => String(v),
@@ -157,7 +156,6 @@ describe('customers list: manager source and credit, readiness filters', () => {
         const [row] = toCustomerRows([item], {
             credit: new Map(),
             discountCounts: new Map(),
-            lastOrderDates: new Map(),
             managerName: (_id, erpId) => `name-of-${erpId}`,
             branchName: () => '',
             formatMoney: v => String(v),

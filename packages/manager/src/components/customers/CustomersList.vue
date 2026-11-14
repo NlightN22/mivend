@@ -42,7 +42,6 @@ const rows = computed(() =>
     toCustomerRows(list.result.value?.items ?? [], {
         credit: list.result.value?.credit ?? new Map(),
         discountCounts: list.result.value?.discountCounts ?? new Map(),
-        lastOrderDates: list.result.value?.lastOrderDates ?? new Map(),
         managerName,
         branchName,
         formatMoney: formatWhole,

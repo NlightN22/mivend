@@ -15,7 +15,6 @@ import {
     CustomersPageDocument,
     CustomersSummaryDocument,
     HighUsageCustomersDocument,
-    LastOrderDatesDocument,
     PendingTradingPointChangesDocument,
     ReassignCounterpartyManagerDocument,
     RejectTradingPointChangeDocument,
@@ -32,14 +31,15 @@ import {
 export type ContactPersonInfo =
     CustomerListItemFieldsFragment['tradingPoints'][number]['contacts'][number];
 export type TradingPointInfo = CustomerListItemFieldsFragment['tradingPoints'][number];
-// portalReadiness comes only with the list query; the single-customer fetch leaves it out.
+// portalReadiness and lastOrderAt come only with the list query; the single-customer fetch leaves them out.
 export type CustomerListItem = CustomerListItemFieldsFragment & {
     contacts: ContactPersonInfo[];
     portalReadiness?: string;
+    lastOrderAt?: string | null;
 };
 
 function toCustomerListItem(
-    c: CustomerListItemFieldsFragment & { portalReadiness?: string },
+    c: CustomerListItemFieldsFragment & { portalReadiness?: string; lastOrderAt?: string | null },
 ): CustomerListItem {
     return { ...c, contacts: c.tradingPoints.flatMap(tp => tp.contacts) };
 }
@@ -353,12 +353,4 @@ export async function fetchActiveDiscountCountsByCustomer(
     if (ids.length === 0) return new Map();
     const result = await adminApi(ActiveDiscountCountsDocument, { counterpartyIds: ids });
     return new Map(result.activeDiscountCounts.map(row => [row.counterpartyId, row.count]));
-}
-
-export async function fetchLastOrderDatesByCounterpartyId(
-    counterpartyIds: string[],
-): Promise<Map<string, string>> {
-    if (counterpartyIds.length === 0) return new Map();
-    const result = await adminApi(LastOrderDatesDocument, { counterpartyIds });
-    return new Map(result.lastOrderDates.map(r => [r.counterpartyId, r.lastOrderAt]));
 }

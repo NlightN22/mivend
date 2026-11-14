@@ -30,6 +30,7 @@ export interface CounterpartySortParameter {
     officialEmail?: 'ASC' | 'DESC';
     creditLimit?: 'ASC' | 'DESC';
     creditBalance?: 'ASC' | 'DESC';
+    lastOrderAt?: 'ASC' | 'DESC';
 }
 
 export interface ActivationCandidatesOptions {
