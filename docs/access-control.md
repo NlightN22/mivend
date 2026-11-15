@@ -183,6 +183,16 @@ scope: it is ERP reference metadata (the registry plus codes seen on documents),
 exists so the manager portal can colour types consistently without the scoped count aggregate. It sits behind the
 same permission as the list, so a role that cannot read documents cannot read it either.
 
+### ERP customer claims, sales corrections and order corrections (#333)
+
+`visibleCustomerClaims`, `visibleSalesCorrections`, `visibleOrderCorrections` and `relatedErpDocumentCounts` need `ReadOrder`
+(no new permission; every default role has it). The rows are limited to the counterparties the caller sees
+(`CounterpartyService.visibleErpIdsSql`, the same scope as the settlement documents), applied before any client filter,
+search or preset. Tombstoned rows (`isDeleted`) are never shown, and a document whose counterparty does not resolve is
+invisible below scope 'all'. Decision: the scope is the counterparty scope, not the order scope, so the order code and id
+of an order outside the caller's order scope are shown on a visible counterparty's document by design.
+`relatedErpDocumentCounts` counts with exactly the same scope. Pinned by `access/document/erp-document-visibility.test.ts`.
+
 ### Team table views (#320)
 
 `ManageSharedTableViews` (department-head, general-director, portal-admin) creates, edits, deletes team-wide

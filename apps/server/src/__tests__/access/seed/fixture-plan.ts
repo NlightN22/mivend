@@ -218,6 +218,14 @@ export const SETTLEMENT_NUMBERS: Record<CustomerKey, Record<SettlementCategory, 
     'customer-b': { sale: '9521', payment: '9522' },
 };
 
+// ERP customer claims (#333): one live per customer, plus a tombstone and a claim of an unknown counterparty.
+export const ERP_CLAIM_NUMBERS: Record<CustomerKey, string> = {
+    'customer-a': '9611',
+    'customer-b': '9621',
+};
+export const ERP_CLAIM_DELETED = '9631';
+export const ERP_CLAIM_UNKNOWN_COUNTERPARTY = '9641';
+
 // Portal clients whose main contract does not resolve to an active price type (#263 group 19), one per reason.
 export type GapReason =
     | 'no-main-contract'

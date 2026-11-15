@@ -3,6 +3,7 @@ import { seedApprovals } from './approval-seed';
 import { seedCategories } from './category-seed';
 import { seedDiscountSetups } from './discount-setup-seed';
 import { seedDocuments } from './document-seed';
+import { seedErpDocuments } from './erp-document-seed';
 import { seedGapClients } from './gap-seed';
 import { seedHistory } from './history-seed';
 import { seedNotifications } from './notification-seed';
@@ -36,6 +37,7 @@ export async function runAccessSeed(
     await seedPriceTypes(target, superadmin);
     await seedCategories(target, superadmin);
     await seedSettlements(target);
+    await seedErpDocuments(database);
     await seedDocuments(target, superadmin, ids.counterparties);
     await seedNotifications(database, ordering.orders);
     const approvals = await seedApprovals(baseUrl, superadmin, ordering);
