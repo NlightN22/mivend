@@ -1,3 +1,4 @@
+import { TradingPointCustomerService } from '../../trading-point-customer.service';
 import { Not } from 'typeorm';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -52,9 +53,14 @@ const mockCtx = {} as unknown as RequestContext;
 
 describe('TradingPointService — customer methods', () => {
     let service: TradingPointService;
+    let customers: TradingPointCustomerService;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        customers = new TradingPointCustomerService(
+            mockConnection as unknown as TransactionalConnection,
+            { bump: async () => 1 } as never,
+        );
         service = new TradingPointService(
             mockConnection as unknown as TransactionalConnection,
             mockCustomerService,
@@ -131,7 +137,7 @@ describe('TradingPointService — customer methods', () => {
         const valid = { name: 'Point A', address: 'Main street 12, office 3' };
 
         it('customerAdd refuses a point without a location', async () => {
-            await expect(service.customerAdd(mockCtx, 'cp1', valid)).rejects.toThrow(
+            await expect(customers.customerAdd(mockCtx, 'cp1', valid)).rejects.toThrow(
                 UserInputError,
             );
             expect(mockTpRepo.save).not.toHaveBeenCalled();
@@ -142,16 +148,20 @@ describe('TradingPointService — customer methods', () => {
             ['NaN', { latitude: NaN, longitude: 20 }],
             ['(0, 0)', { latitude: 0, longitude: 0 }],
         ])('customerAdd refuses %s', async (_n, loc) => {
-            await expect(service.customerAdd(mockCtx, 'cp1', { ...valid, ...loc })).rejects.toThrow(
-                UserInputError,
-            );
+            await expect(
+                customers.customerAdd(mockCtx, 'cp1', { ...valid, ...loc }),
+            ).rejects.toThrow(UserInputError);
             expect(mockTpRepo.save).not.toHaveBeenCalled();
         });
 
         it('customerAdd stores the supplied location', async () => {
             mockTpRepo.create.mockReturnValue({ contacts: [] });
             mockTpRepo.save.mockResolvedValue({ id: 'tp1' });
-            await service.customerAdd(mockCtx, 'cp1', { ...valid, latitude: 1.5, longitude: 2.5 });
+            await customers.customerAdd(mockCtx, 'cp1', {
+                ...valid,
+                latitude: 1.5,
+                longitude: 2.5,
+            });
             expect(mockTpRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({ latitude: 1.5, longitude: 2.5 }),
             );
@@ -168,7 +178,7 @@ describe('TradingPointService — customer methods', () => {
             };
             mockTpRepo.findOne.mockResolvedValue(record);
             mockTpRepo.save.mockImplementation(async (r: unknown) => r);
-            await service.customerEdit(mockCtx, 'tp1', 'cp1', valid);
+            await customers.customerEdit(mockCtx, 'tp1', 'cp1', valid);
             expect(record).toMatchObject({ latitude: 5, longitude: 6 });
         });
 
@@ -182,7 +192,7 @@ describe('TradingPointService — customer methods', () => {
                 contacts: [],
             });
             await expect(
-                service.customerEdit(mockCtx, 'tp1', 'cp1', {
+                customers.customerEdit(mockCtx, 'tp1', 'cp1', {
                     ...valid,
                     latitude: null,
                     longitude: null,
@@ -201,10 +211,10 @@ describe('TradingPointService — customer methods', () => {
             };
             mockTpRepo.findOne.mockResolvedValue(record);
             mockTpRepo.save.mockImplementation(async (r: unknown) => r);
-            await expect(service.customerEdit(mockCtx, 'tp1', 'cp1', valid)).rejects.toThrow(
+            await expect(customers.customerEdit(mockCtx, 'tp1', 'cp1', valid)).rejects.toThrow(
                 UserInputError,
             );
-            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+            await customers.customerEdit(mockCtx, 'tp1', 'cp1', {
                 ...valid,
                 latitude: 3,
                 longitude: 4,
@@ -236,7 +246,7 @@ describe('TradingPointService — customer methods', () => {
             const record = erpPoint();
             mockTpRepo.findOne.mockResolvedValue(record);
 
-            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+            await customers.customerEdit(mockCtx, 'tp1', 'cp1', {
                 ...base,
                 name: 'Renamed',
                 latitude: 7,
@@ -257,7 +267,7 @@ describe('TradingPointService — customer methods', () => {
             const record = erpPoint();
             mockTpRepo.findOne.mockResolvedValue(record);
 
-            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+            await customers.customerEdit(mockCtx, 'tp1', 'cp1', {
                 ...base,
                 deliveryComment: 'Gate 3',
             });
@@ -273,7 +283,7 @@ describe('TradingPointService — customer methods', () => {
                 longitude: null,
             });
 
-            await expect(service.customerEdit(mockCtx, 'tp1', 'cp1', base)).rejects.toThrow(
+            await expect(customers.customerEdit(mockCtx, 'tp1', 'cp1', base)).rejects.toThrow(
                 UserInputError,
             );
             expect(mockChangeRepo.save).not.toHaveBeenCalled();
@@ -294,7 +304,7 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.create.mockReturnValue(tp);
             mockTpRepo.save.mockResolvedValue(tp);
 
-            const result = await service.customerAdd(mockCtx, 'cp1', {
+            const result = await customers.customerAdd(mockCtx, 'cp1', {
                 latitude: 10,
                 longitude: 20,
                 name: 'Point A',
@@ -313,7 +323,7 @@ describe('TradingPointService — customer methods', () => {
 
         it('rejects an incomplete phone and stores the normalized one', async () => {
             await expect(
-                service.customerAdd(mockCtx, 'cp1', {
+                customers.customerAdd(mockCtx, 'cp1', {
                     latitude: 10,
                     longitude: 20,
                     name: 'P',
@@ -331,7 +341,7 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.create.mockReturnValue(tp);
             mockTpRepo.save.mockResolvedValue(tp);
 
-            await service.customerAdd(mockCtx, 'cp1', {
+            await customers.customerAdd(mockCtx, 'cp1', {
                 latitude: 10,
                 longitude: 20,
                 name: 'P',
@@ -351,7 +361,7 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.create.mockReturnValue(tp);
             mockTpRepo.save.mockResolvedValue(tp);
 
-            await service.customerAdd(mockCtx, 'cp1', {
+            await customers.customerAdd(mockCtx, 'cp1', {
                 latitude: 10,
                 longitude: 20,
                 name: 'P',
@@ -370,7 +380,7 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.findOne.mockResolvedValue({ id: 'tp1', counterpartyId: 'cp1' });
             mockTpRepo.update.mockResolvedValue({});
 
-            const result = await service.customerDelete(mockCtx, 'tp1', 'cp1');
+            const result = await customers.customerDelete(mockCtx, 'tp1', 'cp1');
 
             expect(mockTpRepo.update).toHaveBeenCalledWith(
                 { id: 'tp1' },
@@ -382,7 +392,7 @@ describe('TradingPointService — customer methods', () => {
         it('throws UserInputError when record not found', async () => {
             mockTpRepo.findOne.mockResolvedValue(null);
 
-            await expect(service.customerDelete(mockCtx, 'tp99', 'cp1')).rejects.toThrow(
+            await expect(customers.customerDelete(mockCtx, 'tp99', 'cp1')).rejects.toThrow(
                 UserInputError,
             );
         });
@@ -394,7 +404,7 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.findOne.mockResolvedValueOnce(tp).mockResolvedValueOnce(tp);
             mockTpRepo.update.mockResolvedValue({});
 
-            await service.customerRestore(mockCtx, 'tp1', 'cp1');
+            await customers.customerRestore(mockCtx, 'tp1', 'cp1');
 
             expect(mockTpRepo.update).toHaveBeenCalledWith(
                 { id: 'tp1' },
@@ -405,7 +415,7 @@ describe('TradingPointService — customer methods', () => {
         it('throws UserInputError when record not found', async () => {
             mockTpRepo.findOne.mockResolvedValue(null);
 
-            await expect(service.customerRestore(mockCtx, 'tp99', 'cp1')).rejects.toThrow(
+            await expect(customers.customerRestore(mockCtx, 'tp99', 'cp1')).rejects.toThrow(
                 UserInputError,
             );
         });

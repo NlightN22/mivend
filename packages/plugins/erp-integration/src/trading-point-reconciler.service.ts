@@ -26,6 +26,7 @@ export class TradingPointReconciler {
               WHERE tp.version > 0
                 AND NOT EXISTS (SELECT 1 FROM integration_outbox x
                                  WHERE x.event_type = 'trading-point.changed'
+                                   AND x.status IN ('pending', 'published', 'failed')
                                    AND x.payload ->> 'uuid' = tp.uuid::text
                                    AND (x.payload ->> 'version')::bigint >= tp.version)
               ORDER BY tp.id ASC LIMIT ${SWEEP_LIMIT}`,

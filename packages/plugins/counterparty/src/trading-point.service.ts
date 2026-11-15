@@ -7,7 +7,6 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { randomUUID } from 'crypto';
 import { Not } from 'typeorm';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { ActingContextService } from '@mivend/plugin-session-management';
@@ -18,9 +17,7 @@ import { Counterparty } from './entities/counterparty.entity';
 import { tradingPointPatchError } from './trading-point-patch-validation';
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
-import { TradingPointChange } from './entities/trading-point-change.entity';
 import { TradingPointVersionService } from './trading-point-version.service';
-import { savePendingChange, type ProposedPointFields } from './trading-point-change';
 import { writeErpMirror } from './trading-point-erp-mirror';
 import { markMirrorDeleted, type ErpPointExtra } from './trading-point-erp-extra';
 import { loggerCtx } from './types';
@@ -29,13 +26,7 @@ import {
     isUsableLocation,
     resolveTradingPointLocation,
 } from './trading-point-location';
-import {
-    ctxQuery,
-    findBounded,
-    normalizePhone,
-    validateTradingPointContact,
-    type ContactField,
-} from 'shared';
+import { ctxQuery, findBounded } from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -253,7 +244,12 @@ export class TradingPointService {
         return saved;
     }
 
-    async upsert(ctx: RequestContext, payload: TradingPointUpsertPayload): Promise<TradingPoint> {
+    // `announce` marks a manager-side call whose change goes to the ERP; the hub-branch consumer and seed leave it off.
+    async upsert(
+        ctx: RequestContext,
+        payload: TradingPointUpsertPayload,
+        options: { announce?: boolean } = {},
+    ): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
 
         const counterpartyRow = await ctxQuery<Array<{ id: string; branchId: string | null }>>(
@@ -278,7 +274,10 @@ export class TradingPointService {
             ...payload,
             counterpartyId,
         });
+        let changed = !record;
         if (record) {
+            changed =
+                record.isActive !== payload.isActive || record.counterpartyId !== counterpartyId;
             // mivend's record is the source of truth; the ERP only moves activity and ownership.
             record.isActive = payload.isActive;
             record.counterpartyId = counterpartyId;
@@ -309,6 +308,7 @@ export class TradingPointService {
         }
 
         const saved = await repo.save(record);
+        if (options.announce && changed) saved.version = await this.versions.bump(ctx, saved.id);
         Logger.verbose(`Upserted trading point erpId=${payload.erpId}`, loggerCtx);
         return saved;
     }
@@ -505,7 +505,9 @@ export class TradingPointService {
         const point = await this.findById(ctx, tradingPointId);
         if (!point) throw new UserInputError(`TradingPoint not found: id=${tradingPointId}`);
         await this.assertStaffCanEdit(ctx, point);
+        if (point.deliveryComment === comment) return point;
         await repo.update({ id: String(tradingPointId) }, { deliveryComment: comment });
+        await this.versions.bump(ctx, tradingPointId);
         return (await this.findById(ctx, tradingPointId)) ?? point;
     }
 
@@ -550,208 +552,4 @@ export class TradingPointService {
         );
         return rows?.[0]?.cid ?? null;
     }
-
-    async customerAdd(
-        ctx: RequestContext,
-        counterpartyId: string,
-        input: CustomerTradingPointInput,
-    ): Promise<TradingPoint> {
-        input = normalizeCustomerInput(input);
-        const location = resolveTradingPointLocation(input);
-        const repo = this.connection.getRepository(ctx, TradingPoint);
-        const cpRepo = this.connection.getRepository(ctx, ContactPerson);
-        const counterparty = await this.connection
-            .getRepository(ctx, Counterparty)
-            .findOne({ where: { id: counterpartyId } });
-        const contact = input.contactName
-            ? cpRepo.create({
-                  name: input.contactName,
-                  phone: input.contactPhone ?? null,
-                  email: null,
-                  isPrimary: true,
-              })
-            : null;
-        const record = repo.create({
-            erpId: `cust_${randomUUID()}`,
-            counterpartyId,
-            servicingBranchId: counterparty?.branchId ?? null,
-            name: input.name,
-            address: input.address,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            workingHours: input.workingHours ?? null,
-            deliveryComment: input.deliveryComment ?? null,
-            isActive: true,
-            customerStatus: 'active',
-            customerOwned: true,
-            contacts: contact ? [contact] : [],
-        });
-        const saved = await repo.save(record);
-        saved.version = await this.versions.bump(ctx, saved.id);
-        Logger.verbose(`Customer added trading point ${saved.id}`, loggerCtx);
-        return saved;
-    }
-
-    async customerEdit(
-        ctx: RequestContext,
-        id: ID,
-        counterpartyId: string,
-        input: CustomerTradingPointInput,
-    ): Promise<TradingPoint> {
-        input = normalizeCustomerInput(input);
-        const repo = this.connection.getRepository(ctx, TradingPoint);
-        const cpRepo = this.connection.getRepository(ctx, ContactPerson);
-        await ctxQuery(
-            this.connection,
-            ctx,
-            `SELECT id FROM trading_point WHERE id = $1 FOR UPDATE`,
-            [String(id)],
-        );
-        const record = await repo.findOne({
-            where: { id: String(id), counterpartyId },
-            relations: ['contacts'],
-        });
-        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
-        const primary = record.contacts?.find(c => c.isPrimary) ?? record.contacts?.[0];
-        input = normalizeCustomerInput(input, {
-            address: record.address,
-            contactName: primary?.name ?? null,
-            contactPhone: primary?.phone ?? null,
-        });
-        const location = resolveTradingPointLocation(input, record);
-        if (!record.customerOwned) {
-            return this.proposeCustomerEdit(ctx, record, primary, input, location);
-        }
-        record.name = input.name;
-        record.address = input.address;
-        record.latitude = location.latitude;
-        record.longitude = location.longitude;
-        record.workingHours = input.workingHours ?? null;
-        record.deliveryComment = input.deliveryComment ?? null;
-        if (input.contactName !== undefined) {
-            await cpRepo.delete({ tradingPoint: { id: record.id } });
-            record.contacts = input.contactName
-                ? [
-                      cpRepo.create({
-                          name: input.contactName,
-                          phone: input.contactPhone ?? null,
-                          email: null,
-                          isPrimary: true,
-                      }),
-                  ]
-                : [];
-        }
-        const saved = await repo.save(record);
-        saved.version = await this.versions.bump(ctx, saved.id);
-        Logger.verbose(`Customer edited trading point ${id}`, loggerCtx);
-        return saved;
-    }
-
-    // An ERP-confirmed point is not edited by the customer directly: the edit waits for a manager.
-    // The delivery comment is the customer's own note and applies at once.
-    private async proposeCustomerEdit(
-        ctx: RequestContext,
-        record: TradingPoint,
-        primary: ContactPerson | undefined,
-        input: CustomerTradingPointInput,
-        location: { latitude: number; longitude: number },
-    ): Promise<TradingPoint> {
-        const proposed: ProposedPointFields = {
-            name: input.name,
-            address: input.address,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            workingHours: input.workingHours ?? null,
-            contactName: input.contactName,
-            contactPhone: input.contactPhone,
-        };
-        const contactChanged =
-            input.contactName !== undefined &&
-            ((input.contactName ?? null) !== (primary?.name ?? null) ||
-                (input.contactPhone ?? null) !== (primary?.phone ?? null));
-        const changed =
-            proposed.name !== record.name ||
-            proposed.address !== record.address ||
-            proposed.latitude !== record.latitude ||
-            proposed.longitude !== record.longitude ||
-            proposed.workingHours !== record.workingHours ||
-            contactChanged;
-        const repo = this.connection.getRepository(ctx, TradingPoint);
-        const commentChanged = record.deliveryComment !== (input.deliveryComment ?? null);
-        record.deliveryComment = input.deliveryComment ?? null;
-        const saved = await repo.save(record);
-        if (commentChanged) saved.version = await this.versions.bump(ctx, saved.id);
-        if (changed) {
-            await savePendingChange(
-                this.connection.getRepository(ctx, TradingPointChange),
-                { id: String(record.id), counterpartyId: record.counterpartyId },
-                proposed,
-                ctx.activeUserId ? String(ctx.activeUserId) : null,
-            );
-        }
-        Logger.verbose(`Customer proposed an edit of trading point ${record.id}`, loggerCtx);
-        return saved;
-    }
-
-    async customerDelete(ctx: RequestContext, id: ID, counterpartyId: string): Promise<boolean> {
-        const repo = this.connection.getRepository(ctx, TradingPoint);
-        const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
-        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
-        if (record.customerStatus === 'hidden') return true;
-        await repo.update({ id: String(id) }, { customerStatus: 'hidden' });
-        await this.versions.bump(ctx, id);
-        Logger.verbose(`Customer soft-deleted trading point ${id}`, loggerCtx);
-        return true;
-    }
-
-    async customerRestore(
-        ctx: RequestContext,
-        id: ID,
-        counterpartyId: string,
-    ): Promise<TradingPoint> {
-        const repo = this.connection.getRepository(ctx, TradingPoint);
-        const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
-        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
-        const changed = record.customerStatus !== 'active' || !record.isActive;
-        await repo.update({ id: String(id) }, { customerStatus: 'active', isActive: true });
-        if (changed) await this.versions.bump(ctx, id);
-        const updated = await this.findById(ctx, id);
-        if (!updated) throw new UserInputError(`TradingPoint not found: id=${id}`);
-        return updated;
-    }
-}
-
-export interface CustomerTradingPointInput {
-    name: string;
-    address: string;
-    workingHours?: string | null;
-    deliveryComment?: string | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-}
-
-function normalizeCustomerInput(
-    input: CustomerTradingPointInput,
-    current?: { address: string; contactName: string | null; contactPhone: string | null },
-): CustomerTradingPointInput {
-    const unchanged: ContactField[] = [];
-    if (input.address.trim() === current?.address) unchanged.push('address');
-    if ((input.contactName?.trim() || null) === current?.contactName) unchanged.push('contactName');
-    if ((input.contactPhone?.trim() || null) === current?.contactPhone)
-        unchanged.push('contactPhone');
-    const error = validateTradingPointContact(input, unchanged);
-    if (error) throw new UserInputError(error);
-    return {
-        ...input,
-        name: input.name.trim(),
-        address: input.address.trim(),
-        contactName: input.contactName?.trim() || null,
-        contactPhone: unchanged.includes('contactPhone')
-            ? (current?.contactPhone ?? null)
-            : input.contactPhone
-              ? normalizePhone(input.contactPhone)
-              : null,
-    };
 }

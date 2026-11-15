@@ -5,6 +5,7 @@ import { OrderReservedEvent } from '@mivend/plugin-reservation';
 import { subscribeAndLog } from 'shared';
 
 import { OrderSubmittedBuilder } from './order-submitted.builder';
+import { lockKeyOf } from './outbound-event-types';
 import { OutboundGateway } from './outbound-gateway';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
@@ -42,7 +43,7 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         await this.gateway.enqueue(ctx, {
             eventType: 'order.confirmed',
             subject: { orderId: String(orderId), orderCode },
-            lockKey: `reserve-order:${String(orderId)}`,
+            lockKey: lockKeyOf('order.confirmed', { orderId }),
             build: txCtx => this.builder.build(txCtx, orderId, orderCode),
         });
     }

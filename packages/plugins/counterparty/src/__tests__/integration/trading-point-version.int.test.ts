@@ -1,3 +1,4 @@
+import { TradingPointCustomerService } from '../../trading-point-customer.service';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     Column,
@@ -82,6 +83,7 @@ const published: TradingPointVersionedEvent[] = [];
 const assertWritable = vi.fn(async () => undefined);
 let dataSource: DataSource;
 let service: TradingPointService;
+let customers: TradingPointCustomerService;
 let pointId: number;
 let counterpartyId: string;
 
@@ -113,6 +115,7 @@ beforeAll(async () => {
     const versions = new TradingPointVersionService(connection(), {
         publish: (event: TradingPointVersionedEvent) => published.push(event),
     } as never);
+    customers = new TradingPointCustomerService(connection(), versions);
     service = new TradingPointService(
         connection(),
         {} as never,
@@ -202,7 +205,7 @@ describe('trading point version bump (real Postgres)', () => {
 
     it('a customer-added point starts at version 1', async () => {
         const added = await inTx(ctx =>
-            service.customerAdd(ctx, counterpartyId, {
+            customers.customerAdd(ctx, counterpartyId, {
                 name: 'Added',
                 address: 'Test Street 99',
                 latitude: 11,
@@ -215,9 +218,9 @@ describe('trading point version bump (real Postgres)', () => {
     });
 
     it('hide and restore each move the version once', async () => {
-        await inTx(ctx => service.customerDelete(ctx, pointId, counterpartyId));
-        await inTx(ctx => service.customerDelete(ctx, pointId, counterpartyId));
-        await inTx(ctx => service.customerRestore(ctx, pointId, counterpartyId));
+        await inTx(ctx => customers.customerDelete(ctx, pointId, counterpartyId));
+        await inTx(ctx => customers.customerDelete(ctx, pointId, counterpartyId));
+        await inTx(ctx => customers.customerRestore(ctx, pointId, counterpartyId));
 
         expect((await row()).version).toBe(2);
         expect(published.map(e => e.version)).toEqual([1, 2]);

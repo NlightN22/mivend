@@ -1,3 +1,4 @@
+import { TradingPointCustomerService } from '../../trading-point-customer.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { TradingPointService } from '../../trading-point.service';
@@ -41,9 +42,14 @@ const point = {
 
 describe('TradingPointService version bumps', () => {
     let service: TradingPointService;
+    let customers: TradingPointCustomerService;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        customers = new TradingPointCustomerService(
+            connection as unknown as TransactionalConnection,
+            { bump } as never,
+        );
         service = new TradingPointService(
             connection as unknown as TransactionalConnection,
             {} as never,
@@ -74,23 +80,23 @@ describe('TradingPointService version bumps', () => {
     });
 
     it('bumps when the customer hides a visible point, not when it is already hidden', async () => {
-        await service.customerDelete(ctx, 'tp-1', 'cp-1');
+        await customers.customerDelete(ctx, 'tp-1', 'cp-1');
         expect(bump).toHaveBeenCalledTimes(1);
         tpRepo.findOne.mockResolvedValue({ ...point, customerStatus: 'hidden' });
-        await service.customerDelete(ctx, 'tp-1', 'cp-1');
+        await customers.customerDelete(ctx, 'tp-1', 'cp-1');
         expect(bump).toHaveBeenCalledTimes(1);
     });
 
     it('bumps on restore of a hidden point, not of an active one', async () => {
-        await service.customerRestore(ctx, 'tp-1', 'cp-1');
+        await customers.customerRestore(ctx, 'tp-1', 'cp-1');
         expect(bump).not.toHaveBeenCalled();
         tpRepo.findOne.mockResolvedValue({ ...point, customerStatus: 'hidden' });
-        await service.customerRestore(ctx, 'tp-1', 'cp-1');
+        await customers.customerRestore(ctx, 'tp-1', 'cp-1');
         expect(bump).toHaveBeenCalledTimes(1);
     });
 
     it('a customer-added point gets its first version', async () => {
-        const saved = await service.customerAdd(ctx, 'cp-1', {
+        const saved = await customers.customerAdd(ctx, 'cp-1', {
             name: 'New',
             address: 'Some Street 1',
             latitude: 1,
@@ -98,6 +104,32 @@ describe('TradingPointService version bumps', () => {
         });
         expect(bump).toHaveBeenCalledTimes(1);
         expect(saved.version).toBe(7);
+    });
+
+    it('the staff delivery comment bumps only when the value really changes', async () => {
+        await service.updateDeliveryComment(ctx, 'tp-1', null);
+        expect(bump).not.toHaveBeenCalled();
+        await service.updateDeliveryComment(ctx, 'tp-1', 'Gate 2');
+        expect(bump).toHaveBeenCalledTimes(1);
+    });
+
+    it('the admin upsert bumps a new point or a real change when announced, never the consumer path', async () => {
+        tpRepo.query.mockResolvedValue([{ id: 'cp-1', branchId: null }]);
+        tpRepo.findOne.mockResolvedValue(null);
+        const payload = {
+            erpId: 'e9',
+            counterpartyErpId: 'cp-erp',
+            name: 'N',
+            address: 'A',
+            isActive: true,
+        };
+        await service.upsert(ctx, payload);
+        expect(bump).not.toHaveBeenCalled();
+        await service.upsert(ctx, payload, { announce: true });
+        expect(bump).toHaveBeenCalledTimes(1);
+        tpRepo.findOne.mockResolvedValue({ ...point, counterpartyId: 'cp-1', isActive: true });
+        await service.upsert(ctx, payload, { announce: true });
+        expect(bump).toHaveBeenCalledTimes(1);
     });
 
     it('inbound stream writes never bump', async () => {

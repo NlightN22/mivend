@@ -1,3 +1,4 @@
+import { TradingPointCustomerService } from '../../trading-point-customer.service';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     Column,
@@ -66,6 +67,7 @@ const mirrors = new Map<unknown, unknown>([
 const recordChange = vi.fn();
 let dataSource: DataSource;
 let service: TradingPointService;
+let customers: TradingPointCustomerService;
 let changeService: TradingPointChangeService;
 let pointId: number;
 
@@ -92,13 +94,17 @@ beforeAll(async () => {
     const slowScope = {
         assertCounterpartyWritable: () => new Promise(resolve => setTimeout(resolve, 150)),
     };
+    const versions = new TradingPointVersionService(connection(), {
+        publish: () => undefined,
+    } as never);
+    customers = new TradingPointCustomerService(connection(), versions);
     service = new TradingPointService(
         connection(),
         {} as never,
         slowScope as never,
         { recordChange } as never,
         {} as never,
-        new TradingPointVersionService(connection(), { publish: () => undefined } as never),
+        versions,
     );
     changeService = new TradingPointChangeService(connection(), service, {
         findOneVisible: async () => ({}),
@@ -155,7 +161,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                 const row = await em
                     .getRepository(TestTradingPoint)
                     .findOneByOrFail({ id: pointId });
-                return service.customerEdit(
+                return customers.customerEdit(
                     { em } as unknown as RequestContext,
                     pointId,
                     row.counterpartyId,
@@ -219,7 +225,7 @@ describe('TradingPointService.updateDetails (real Postgres, concurrent writers)'
                 const row = await em
                     .getRepository(TestTradingPoint)
                     .findOneByOrFail({ id: pointId });
-                return service.customerEdit(
+                return customers.customerEdit(
                     { em } as unknown as RequestContext,
                     pointId,
                     row.counterpartyId,

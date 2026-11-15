@@ -21,7 +21,7 @@ export const operations = `
         tradingPointsDifferingFromErp(
             options: OpenErpReconciliationIssueListOptions
         ): TradingPointList!
-        "Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328)."
+        "Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328). A customer-added point does not leave this list on its own, because the ERP assigns its own id; the list is informational, not an alarm."
         tradingPointsNotConfirmedByErp(
             options: OpenErpReconciliationIssueListOptions
         ): TradingPointList!

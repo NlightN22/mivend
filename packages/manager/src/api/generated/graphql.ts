@@ -8681,7 +8681,7 @@ export type Query = {
     tradingPoint: Maybe<TradingPoint>;
     /** Trading points whose mivend record differs from the last state the ERP sent (people edited them; issue #328). */
     tradingPointsDifferingFromErp: TradingPointList;
-    /** Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328). */
+    /** Trading points the ERP never sent: customer-created and not yet confirmed by the ERP (issue #328). A customer-added point does not leave this list on its own, because the ERP assigns its own id; the list is informational, not an alarm. */
     tradingPointsNotConfirmedByErp: TradingPointList;
     /** Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315). */
     tradingPointsWithoutLocation: TradingPointList;

@@ -4,8 +4,14 @@ import { TradingPointCommandSchema } from '@nlightn22/event-contracts';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
 
+import { readFileSync } from 'fs';
+import { version as installedContracts } from '@nlightn22/event-contracts/package.json';
+import { compareContractVersions } from '../../contract-version-drift';
 import { TradingPointCommandBuilder } from '../../trading-point-command.builder';
-import { encodeTradingPointCommand } from '../../trading-point-command.codec';
+import {
+    encodeTradingPointCommand,
+    TRADING_POINT_COMMANDS_TOPIC,
+} from '../../trading-point-command.codec';
 import { toTradingPointCommandPayload } from '../../trading-point-command.payload';
 
 const ctx = {} as RequestContext;
@@ -121,5 +127,19 @@ describe('TradingPointCommandBuilder', () => {
         const result = await builder.build(ctx, basePoint.uuid);
         expect(result.kind).toBe('noop');
         expect(gateway.skipOlderWaiting).not.toHaveBeenCalled();
+    });
+});
+
+describe('trading point contract pin', () => {
+    it('publishes to the contract topic', () => {
+        expect(TRADING_POINT_COMMANDS_TOPIC).toBe('mivend.trading-point.commands.v1');
+    });
+
+    it('requires a contracts package that ships the command (^0.88.0)', () => {
+        const pkg = JSON.parse(readFileSync(`${__dirname}/../../../package.json`, 'utf8')) as {
+            dependencies: Record<string, string>;
+        };
+        expect(pkg.dependencies['@nlightn22/event-contracts']).toMatch(/^\^0\.(8[8-9]|9\d)\./);
+        expect(compareContractVersions(installedContracts, '0.88.0').status).not.toBe('BEHIND');
     });
 });

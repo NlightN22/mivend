@@ -36,6 +36,7 @@ describe('upsertTradingPoint location', () => {
         expect(upsert).toHaveBeenCalledWith(
             {},
             expect.objectContaining({ latitude: 1, longitude: 2 }),
+            { announce: true },
         );
     });
 });

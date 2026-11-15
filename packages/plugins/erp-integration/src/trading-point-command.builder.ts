@@ -7,8 +7,6 @@ import { outboundNoop, outboundSend, outboundSkip, OutboundGateway } from './out
 import type { OutboundBuildResult } from './outbound-gateway';
 import { toTradingPointCommandPayload } from './trading-point-command.payload';
 
-export const tradingPointLockKey = (uuid: string): string => `trading-point:${uuid}`;
-
 // Builds the whole current record of one trading point (never a delta), so quick edits collapse into the
 // latest state. Runs under the point's lock, which is what makes the version guards below race-free.
 @Injectable()
@@ -47,20 +45,5 @@ export class TradingPointCommandBuilder {
                 ),
             },
         ]);
-    }
-
-    // Recovery re-check after it took the point's lock: the rebuilt event may already be covered.
-    async supersededOrDuplicate(
-        ctx: RequestContext,
-        result: OutboundBuildResult,
-    ): Promise<boolean> {
-        if (result.kind !== 'send') return false;
-        const payload = result.events[0].payload;
-        return this.gateway.hasEntryAtOrAbove(
-            ctx,
-            'trading-point.changed',
-            String(payload.uuid),
-            Number(payload.version),
-        );
     }
 }

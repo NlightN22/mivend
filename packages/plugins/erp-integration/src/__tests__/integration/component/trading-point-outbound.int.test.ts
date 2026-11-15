@@ -233,6 +233,19 @@ describe('trading point outbound (integration, real Postgres)', () => {
         expect(await outbox()).toHaveLength(1);
     });
 
+    it('a skipped row does not count as coverage, the reconciler still re-drives the version', async () => {
+        await seedPoint(2);
+        await dataSource.getRepository(IntegrationOutboxEntry).insert({
+            eventId: '00000000-0000-4000-8000-000000000001',
+            eventType: 'trading-point.changed',
+            payload: { uuid, version: 2 },
+            status: 'skipped',
+        });
+
+        expect(await reconciler.sweep()).toBe(1);
+        expect((await outbox()).map(r => r.status)).toEqual(['skipped', 'pending']);
+    });
+
     it('a point never changed by mivend (version 0) is not sent', async () => {
         await seedPoint(0);
 

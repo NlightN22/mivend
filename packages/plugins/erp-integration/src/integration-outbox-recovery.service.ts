@@ -6,11 +6,11 @@ import { In } from 'typeorm';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { OrderSubmittedBuilder } from './order-submitted.builder';
-import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
+import { lockKeyOf, OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
 import { buildCancelRequested } from './order-cancel-requested.builder';
-import { TradingPointCommandBuilder, tradingPointLockKey } from './trading-point-command.builder';
+import { TradingPointCommandBuilder } from './trading-point-command.builder';
 
 // Another recovery got there first; callers that race on purpose (the sweep) treat it as a no-op.
 export class NotSkippedError extends Error {}
@@ -91,7 +91,7 @@ export class IntegrationOutboxRecoveryService {
             const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
             const versionKey = (OUTBOUND_EVENT_TYPES[eventType] as { versionKey?: string })
                 .versionKey;
-            const isAlreadySent = async (): Promise<boolean> =>
+            const isAlreadySent = async (version?: unknown): Promise<boolean> =>
                 (
                     await ctxQuery<unknown[]>(
                         this.connection,
@@ -106,7 +106,7 @@ export class IntegrationOutboxRecoveryService {
                             subjectKey,
                             String(row.payload[subjectKey]),
                             versionKey ?? null,
-                            versionKey ? String(row.payload[versionKey] ?? 0) : null,
+                            versionKey ? String(version ?? row.payload[versionKey] ?? 0) : null,
                         ],
                     )
                 ).length > 0;
@@ -134,25 +134,13 @@ export class IntegrationOutboxRecoveryService {
                 return 'already-sent' as const;
             }
             if (result.kind === 'send' && result.events.length > 0) {
-                // Lock order: outbox row, then the order lock. The live enqueue holds it across
+                // Lock order: outbox row, then the aggregate lock. The live enqueue holds it across
                 // check + insert, so one of the two sees the other's row.
-                if (eventType === 'order.confirmed') {
-                    await withAggregateLock(
-                        this.connection,
-                        txCtx,
-                        `reserve-order:${String(row.payload.orderId)}`,
-                        async () => undefined,
-                    );
-                    if (await isAlreadySent()) return markAlreadySent();
-                }
-                if (eventType === 'trading-point.changed') {
-                    await withAggregateLock(
-                        this.connection,
-                        txCtx,
-                        tradingPointLockKey(String(row.payload.uuid)),
-                        async () => undefined,
-                    );
-                    if (await this.tradingPoint.supersededOrDuplicate(txCtx, result)) {
+                const lockKey = lockKeyOf(eventType, row.payload);
+                if (lockKey) {
+                    await withAggregateLock(this.connection, txCtx, lockKey, async () => undefined);
+                    const built = result.events[0].payload;
+                    if (await isAlreadySent(versionKey ? built[versionKey] : undefined)) {
                         return markAlreadySent();
                     }
                 }

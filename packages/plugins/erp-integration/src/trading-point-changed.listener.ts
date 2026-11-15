@@ -5,7 +5,8 @@ import { TradingPointVersionedEvent } from '@mivend/plugin-counterparty';
 import { subscribeAndLog } from 'shared';
 
 import { OutboundGateway } from './outbound-gateway';
-import { TradingPointCommandBuilder, tradingPointLockKey } from './trading-point-command.builder';
+import { lockKeyOf } from './outbound-event-types';
+import { TradingPointCommandBuilder } from './trading-point-command.builder';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
@@ -40,7 +41,7 @@ export class TradingPointChangedListener implements OnApplicationBootstrap {
         await this.gateway.enqueue(ctx, {
             eventType: 'trading-point.changed',
             subject: { uuid, version },
-            lockKey: tradingPointLockKey(uuid),
+            lockKey: lockKeyOf('trading-point.changed', { uuid }),
             build: txCtx => this.builder.build(txCtx, uuid),
         });
     }

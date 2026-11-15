@@ -424,14 +424,14 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   never a delta, so quick edits collapse to the latest state; the sent `version` is the current one). Topic
   `mivend.trading-point.commands.v1`, key = point `uuid`, plain protobuf `TradingPointCommand` (no Confluent framing:
   the contract package ships no registry schema for it). Idempotency is `uuid` + `version`: a version already
-  pending or published, or an older one than what is, is recorded as skipped; enqueuing a newer version first skips
+  pending or published, or an older one than what is, is dropped without a row; enqueuing a newer version first skips
   the point's older rows that are still waiting. Delivery, retries and poison handling are the existing outbox
-  processor's. Acknowledgement gap: the ERP's `PointOfSaleChanged` carries no mivend `uuid`/`version`, so the only
-  signal is the ERP sending a point with that `erpId`; a point leaves `tradingPointsNotConfirmedByErp` then and the
-  confirmed version is not stored. Storing it needs a field in the ERP's point stream (contract change, ERP side).
+  processor's. The ERP reports its side through the normal exchange; a point leaves `tradingPointsNotConfirmedByErp`
+  by the existing stream logic.
 - **Trading point drift (#328)**: `tradingPointsDifferingFromErp` lists points whose record differs from the mirror
   (expected after people edit), `tradingPointsNotConfirmedByErp` lists customer-created points the ERP never sent
-  (both ManageErpIntegration).
+  (both ManageErpIntegration). A customer-added (`cust_…`) point does not leave that list on its own, because the ERP
+  assigns its own id, so the list is informational and not an alarm.
 - **Location rule (#315)**: `customerAddTradingPoint`, `customerEditTradingPoint`, `upsertTradingPoint` and
   `updateTradingPointDetails` require latitude -90..90 and longitude -180..180, finite, not (0, 0). An edit cannot
   clear them, and any edit of a point stored without coordinates must supply them

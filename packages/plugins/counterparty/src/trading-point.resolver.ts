@@ -7,11 +7,11 @@ import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-cont
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointChangeService } from './trading-point-change.service';
 import { changeView } from './trading-point-change';
+import { TradingPointService, TradingPointDetailsPatch } from './trading-point.service';
 import {
-    TradingPointService,
+    TradingPointCustomerService,
     CustomerTradingPointInput,
-    TradingPointDetailsPatch,
-} from './trading-point.service';
+} from './trading-point-customer.service';
 import { CounterpartyService } from './counterparty.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
@@ -136,7 +136,10 @@ export class CustomerTradingPointsQueryResolver {
 
 @Resolver('Mutation')
 export class CustomerTradingPointsMutationResolver {
-    constructor(private tradingPointService: TradingPointService) {}
+    constructor(
+        private tradingPointService: TradingPointService,
+        private customerPoints: TradingPointCustomerService,
+    ) {}
 
     @Transaction()
     @Mutation()
@@ -146,7 +149,7 @@ export class CustomerTradingPointsMutationResolver {
     ): Promise<TradingPoint | null> {
         const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
         if (!counterpartyId) return null;
-        return this.tradingPointService.customerAdd(ctx, counterpartyId, args);
+        return this.customerPoints.customerAdd(ctx, counterpartyId, args);
     }
 
     @Transaction()
@@ -158,7 +161,7 @@ export class CustomerTradingPointsMutationResolver {
         const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
         if (!counterpartyId) return null;
         const { id, ...input } = args;
-        return this.tradingPointService.customerEdit(ctx, id, counterpartyId, input);
+        return this.customerPoints.customerEdit(ctx, id, counterpartyId, input);
     }
 
     @Transaction()
@@ -169,7 +172,7 @@ export class CustomerTradingPointsMutationResolver {
     ): Promise<boolean> {
         const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
         if (!counterpartyId) return false;
-        return this.tradingPointService.customerDelete(ctx, args.id, counterpartyId);
+        return this.customerPoints.customerDelete(ctx, args.id, counterpartyId);
     }
 
     @Transaction()
@@ -180,7 +183,7 @@ export class CustomerTradingPointsMutationResolver {
     ): Promise<TradingPoint | null> {
         const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
         if (!counterpartyId) return null;
-        return this.tradingPointService.customerRestore(ctx, args.id, counterpartyId);
+        return this.customerPoints.customerRestore(ctx, args.id, counterpartyId);
     }
 }
 
@@ -227,7 +230,7 @@ export class TradingPointAdminResolver {
         },
     ): Promise<TradingPoint> {
         const location = resolveTradingPointLocation(args);
-        return this.tradingPointService.upsert(ctx, { ...args, ...location });
+        return this.tradingPointService.upsert(ctx, { ...args, ...location }, { announce: true });
     }
 
     // Gated by the same permission pair as the counterparties query, not Permission.UpdateCustomer;
