@@ -1,0 +1,10 @@
+{
+    "checkedRules": ["locks/no-raw-advisory-lock"],
+    "exceptions": [
+        {
+            "rule": "locks/no-raw-advisory-lock",
+            "file": "apps/server/src/bootstrap-lock.ts",
+            "reason": "Session-level lock on a dedicated connection held for the whole process bootstrap; a transaction-scoped helper cannot express it."
+        }
+    ]
+}
