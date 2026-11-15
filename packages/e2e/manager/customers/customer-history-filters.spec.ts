@@ -30,7 +30,7 @@ test.describe('customer History tab — Filter builder @on:manager-portal-admin 
         await expect(page).toHaveURL(/history\.filters=/);
 
         await page.reload();
-        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByTestId('filter-trigger')).toBeVisible({ timeout: 15000 });
         await expect(page.getByTestId('filter-chip')).toHaveCount(1);
 
         await page
