@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { ERP_DOCUMENT_KINDS, ERP_DOCUMENT_PATHS } from '../api/erpDocumentKinds';
+import {
+    ERP_DOCUMENT_KINDS,
+    ERP_DOCUMENT_PATHS,
+    POWER_OF_ATTORNEY_PATH,
+} from '../api/erpDocumentKinds';
 import { BULK_PERMISSIONS } from '../components/bulk-operations/operationPermissions';
 
 export const router = createRouter({
@@ -75,6 +79,12 @@ export const router = createRouter({
                     props: { kind },
                     meta: { requiresAuth: true },
                 })),
+                {
+                    path: POWER_OF_ATTORNEY_PATH.slice(1),
+                    name: 'powers-of-attorney',
+                    component: () => import('../pages/erp-documents/PowersOfAttorneyPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 {
                     path: 'settlements',
                     name: 'settlements',

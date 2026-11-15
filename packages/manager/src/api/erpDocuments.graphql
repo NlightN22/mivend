@@ -47,5 +47,6 @@ query RelatedErpDocumentCounts($orderId: ID, $counterpartyId: ID) {
         customerClaims
         salesCorrections
         orderCorrections
+        powersOfAttorney
     }
 }

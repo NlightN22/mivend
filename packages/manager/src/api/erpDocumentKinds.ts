@@ -11,3 +11,5 @@ export const ERP_DOCUMENT_PATHS: Record<ErpDocumentKind, string> = {
     salesCorrection: '/documents/sales-corrections',
     orderCorrection: '/documents/order-corrections',
 };
+
+export const POWER_OF_ATTORNEY_PATH = '/documents/powers-of-attorney';

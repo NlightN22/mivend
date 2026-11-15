@@ -1,7 +1,11 @@
 import { computed, type Ref } from 'vue';
 import { i18n } from '../i18n';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
-import { ERP_DOCUMENT_KINDS, ERP_DOCUMENT_PATHS } from '../api/erpDocumentKinds';
+import {
+    ERP_DOCUMENT_KINDS,
+    ERP_DOCUMENT_PATHS,
+    POWER_OF_ATTORNEY_PATH,
+} from '../api/erpDocumentKinds';
 import { useAuthStore } from '../stores/auth';
 import { CHANGE_JOURNAL_LABELS } from '../components/change-journal/changeJournalLabels';
 import { canOpenBulkOperations } from '../components/bulk-operations/operationUi';
@@ -26,6 +30,11 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                     label: t(`erpDocuments.${kind}.title`),
                     path: ERP_DOCUMENT_PATHS[kind],
                 });
+        if (authStore.hasPermission('ReadCounterparty'))
+            documents.push({
+                label: t('erpDocuments.powerOfAttorney.title'),
+                path: POWER_OF_ATTORNEY_PATH,
+            });
         // Settlements are gated like their visibleSettlementDocuments query.
         const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
             ? [{ label: t('shell.nav.settlements'), path: '/settlements' }]
@@ -94,6 +103,12 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                     label: t(`erpDocuments.${kind}.title`),
                     path: ERP_DOCUMENT_PATHS[kind],
                 });
+        if (authStore.hasPermission('ReadCounterparty'))
+            items.push({
+                key: 'powerOfAttorney',
+                label: t('erpDocuments.powerOfAttorney.title'),
+                path: POWER_OF_ATTORNEY_PATH,
+            });
         if (authStore.hasPermission('ReadSettlementDocument'))
             items.push({
                 key: 'settlements',

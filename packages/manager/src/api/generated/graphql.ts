@@ -2852,6 +2852,8 @@ export type EntityVersionListOptions = {
 export type ErpDocumentCounts = {
     customerClaims: Scalars['Int']['output'];
     orderCorrections: Scalars['Int']['output'];
+    /** Zero when asked by order only: a power of attorney belongs to a contract. */
+    powersOfAttorney: Scalars['Int']['output'];
     salesCorrections: Scalars['Int']['output'];
 };
 
@@ -7547,6 +7549,8 @@ export type Permission =
     | 'ReadCustomerGroup'
     /** Grants permission to read DashboardGlobalViews */
     | 'ReadDashboardGlobalViews'
+    /** See powers of attorney whose contract the ERP deleted (marked as such); without it those rows are hidden from the list (#333) */
+    | 'ReadDeletedContractPowerOfAttorney'
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     | 'ReadEntityHistory'
     /** Grants permission to read Facet */
@@ -7653,6 +7657,63 @@ export type PermissionDefinition = {
 };
 
 export type PortalUserStatus = 'active' | 'inactive';
+
+export type PowerOfAttorneyFilter = {
+    _and?: InputMaybe<Array<PowerOfAttorneyFilter>>;
+    contract?: InputMaybe<StringOperators>;
+    contractDeleted?: InputMaybe<BooleanOperators>;
+    contractId?: InputMaybe<IdOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    customer?: InputMaybe<StringOperators>;
+    hasScan?: InputMaybe<BooleanOperators>;
+    holder?: InputMaybe<StringOperators>;
+    number?: InputMaybe<StringOperators>;
+    status?: InputMaybe<StringOperators>;
+    validFrom?: InputMaybe<DateOperators>;
+    validUntil?: InputMaybe<DateOperators>;
+};
+
+/** Paging, search, filter and sort of the powers of attorney; field names are a fixed whitelist. */
+export type PowerOfAttorneyListInput = {
+    filter?: InputMaybe<PowerOfAttorneyFilter>;
+    /** Substring match against the number, the holder and the counterparty name and INN. */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<PowerOfAttorneySort>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** One power of attorney row from the ERP contract; the scan is only indicated, the file is not delivered. */
+export type PowerOfAttorneyListItem = {
+    /** True when the ERP deleted the contract; such rows are returned only to holders of ReadDeletedContractPowerOfAttorney. */
+    contractDeleted: Scalars['Boolean']['output'];
+    contractId: Maybe<Scalars['ID']['output']>;
+    contractName: Maybe<Scalars['String']['output']>;
+    counterpartyId: Maybe<Scalars['ID']['output']>;
+    counterpartyName: Maybe<Scalars['String']['output']>;
+    hasScan: Scalars['Boolean']['output'];
+    holderName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    scanId: Maybe<Scalars['String']['output']>;
+    /** active or expired, computed from the validity end date. */
+    status: Scalars['String']['output'];
+    validFrom: Maybe<Scalars['DateTime']['output']>;
+    validUntil: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type PowerOfAttorneyPage = {
+    items: Array<PowerOfAttorneyListItem>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type PowerOfAttorneySort = {
+    customer?: InputMaybe<SortOrder>;
+    holder?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    validFrom?: InputMaybe<SortOrder>;
+    validUntil?: InputMaybe<SortOrder>;
+};
 
 export type PreviewCollectionVariantsInput = {
     filters: Array<ConfigurableOperationInput>;
@@ -8771,6 +8832,7 @@ export type Query = {
     visibleOrdersAmount: Scalars['Money']['output'];
     /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
     visiblePayments: PaymentAttemptList;
+    visiblePowersOfAttorney: PowerOfAttorneyPage;
     /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
     visibleProformaInvoices: ProformaInvoiceList;
     visibleSalesCorrections: ErpDocumentPage;
@@ -9495,6 +9557,10 @@ export type QueryVisibleOrdersAmountArgs = {
 export type QueryVisiblePaymentsArgs = {
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     options?: InputMaybe<PaymentListOptions>;
+};
+
+export type QueryVisiblePowersOfAttorneyArgs = {
+    list?: InputMaybe<PowerOfAttorneyListInput>;
 };
 
 export type QueryVisibleProformaInvoicesArgs = {
@@ -13129,7 +13195,12 @@ export type RelatedErpDocumentCountsQueryVariables = Exact<{
 }>;
 
 export type RelatedErpDocumentCountsQuery = {
-    counts: { customerClaims: number; salesCorrections: number; orderCorrections: number };
+    counts: {
+        customerClaims: number;
+        salesCorrections: number;
+        orderCorrections: number;
+        powersOfAttorney: number;
+    };
 };
 
 export type GeoConfigQueryVariables = Exact<{ [key: string]: never }>;
@@ -14065,6 +14136,47 @@ export type PaymentsPageQuery = {
             counterpartyShortName: string | null;
             proformaInvoiceNumber: string | null;
             orderCode: string | null;
+        }>;
+    };
+};
+
+export type PowerOfAttorneyRowFieldsFragment = {
+    id: string;
+    number: string;
+    holderName: string;
+    validFrom: any | null;
+    validUntil: any | null;
+    status: string;
+    scanId: string | null;
+    hasScan: boolean;
+    contractId: string | null;
+    contractName: string | null;
+    counterpartyId: string | null;
+    counterpartyName: string | null;
+    contractDeleted: boolean;
+};
+
+export type PowersOfAttorneyPageQueryVariables = Exact<{
+    list?: InputMaybe<PowerOfAttorneyListInput>;
+}>;
+
+export type PowersOfAttorneyPageQuery = {
+    page: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            holderName: string;
+            validFrom: any | null;
+            validUntil: any | null;
+            status: string;
+            scanId: string | null;
+            hasScan: boolean;
+            contractId: string | null;
+            contractName: string | null;
+            counterpartyId: string | null;
+            counterpartyName: string | null;
+            contractDeleted: boolean;
         }>;
     };
 };
@@ -15567,6 +15679,26 @@ export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'PaymentListItemFields' },
 ) as unknown as TypedDocumentString<PaymentListItemFieldsFragment, unknown>;
+export const PowerOfAttorneyRowFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment PowerOfAttorneyRowFields on PowerOfAttorneyListItem {
+  id
+  number
+  holderName
+  validFrom
+  validUntil
+  status
+  scanId
+  hasScan
+  contractId
+  contractName
+  counterpartyId
+  counterpartyName
+  contractDeleted
+}
+    `,
+    { fragmentName: 'PowerOfAttorneyRowFields' },
+) as unknown as TypedDocumentString<PowerOfAttorneyRowFieldsFragment, unknown>;
 export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment ProformaInvoiceListItemFields on ProformaInvoice {
@@ -17306,6 +17438,7 @@ export const RelatedErpDocumentCountsDocument = new TypedDocumentString(`
     customerClaims
     salesCorrections
     orderCorrections
+    powersOfAttorney
   }
 }
     `) as unknown as TypedDocumentString<
@@ -18297,6 +18430,33 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   proformaInvoiceNumber
   orderCode
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
+export const PowersOfAttorneyPageDocument = new TypedDocumentString(`
+    query PowersOfAttorneyPage($list: PowerOfAttorneyListInput) {
+  page: visiblePowersOfAttorney(list: $list) {
+    totalItems
+    items {
+      ...PowerOfAttorneyRowFields
+    }
+  }
+}
+    fragment PowerOfAttorneyRowFields on PowerOfAttorneyListItem {
+  id
+  number
+  holderName
+  validFrom
+  validUntil
+  status
+  scanId
+  hasScan
+  contractId
+  contractName
+  counterpartyId
+  counterpartyName
+  contractDeleted
+}`) as unknown as TypedDocumentString<
+    PowersOfAttorneyPageQuery,
+    PowersOfAttorneyPageQueryVariables
+>;
 export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
     mutation RequestPriceAdjustment($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
   requestPriceAdjustment(

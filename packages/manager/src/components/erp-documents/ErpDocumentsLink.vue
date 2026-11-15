@@ -3,7 +3,11 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { fetchRelatedErpDocumentCounts } from '../../api/erpDocumentsList';
-import { ERP_DOCUMENT_KINDS, ERP_DOCUMENT_PATHS } from '../../api/erpDocumentKinds';
+import {
+    ERP_DOCUMENT_KINDS,
+    ERP_DOCUMENT_PATHS,
+    POWER_OF_ATTORNEY_PATH,
+} from '../../api/erpDocumentKinds';
 
 // Opens the first document list that has rows, preset to the order or the customer; hidden when there are none.
 const props = defineProps<{ orderId?: string | null; counterpartyId?: string | null }>();
@@ -12,16 +16,26 @@ const { t } = useI18n();
 const authStore = useAuthStore();
 const counts = ref<Awaited<ReturnType<typeof fetchRelatedErpDocumentCounts>> | null>(null);
 
+// Powers of attorney belong to a customer's contract, so only the customer card counts them.
+const withPowers = computed(
+    () => !!props.counterpartyId && authStore.hasPermission('ReadCounterparty'),
+);
+const lists = computed(() => [
+    ...ERP_DOCUMENT_KINDS.map(k => ({ key: k, path: ERP_DOCUMENT_PATHS[k] })),
+    ...(withPowers.value
+        ? [{ key: 'powerOfAttorney' as const, path: POWER_OF_ATTORNEY_PATH }]
+        : []),
+]);
 const total = computed(() =>
-    counts.value ? ERP_DOCUMENT_KINDS.reduce((sum, k) => sum + (counts.value?.[k] ?? 0), 0) : 0,
+    counts.value ? lists.value.reduce((sum, l) => sum + (counts.value?.[l.key] ?? 0), 0) : 0,
 );
 const target = computed(() => {
-    const kind = ERP_DOCUMENT_KINDS.find(k => (counts.value?.[k] ?? 0) > 0);
-    if (!kind) return null;
+    const list = lists.value.find(l => (counts.value?.[l.key] ?? 0) > 0);
+    if (!list) return null;
     const query = props.orderId
         ? { orderId: props.orderId }
         : { counterpartyId: props.counterpartyId ?? '' };
-    return { path: ERP_DOCUMENT_PATHS[kind], query };
+    return { path: list.path, query };
 });
 
 async function load(): Promise<void> {

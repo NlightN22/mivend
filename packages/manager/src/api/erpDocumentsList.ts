@@ -90,7 +90,7 @@ export async function fetchErpDocuments(
 export async function fetchRelatedErpDocumentCounts(
     orderId: string | null,
     counterpartyId: string | null,
-): Promise<Record<ErpDocumentKind, number>> {
+): Promise<Record<ErpDocumentKind | 'powerOfAttorney', number>> {
     const { counts } = await adminApi(RelatedErpDocumentCountsDocument, {
         orderId: orderId ?? undefined,
         counterpartyId: counterpartyId ?? undefined,
@@ -99,5 +99,6 @@ export async function fetchRelatedErpDocumentCounts(
         customerClaim: counts.customerClaims,
         salesCorrection: counts.salesCorrections,
         orderCorrection: counts.orderCorrections,
+        powerOfAttorney: counts.powersOfAttorney,
     };
 }

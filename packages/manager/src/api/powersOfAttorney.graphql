@@ -1,0 +1,24 @@
+fragment PowerOfAttorneyRowFields on PowerOfAttorneyListItem {
+    id
+    number
+    holderName
+    validFrom
+    validUntil
+    status
+    scanId
+    hasScan
+    contractId
+    contractName
+    counterpartyId
+    counterpartyName
+    contractDeleted
+}
+
+query PowersOfAttorneyPage($list: PowerOfAttorneyListInput) {
+    page: visiblePowersOfAttorney(list: $list) {
+        totalItems
+        items {
+            ...PowerOfAttorneyRowFields
+        }
+    }
+}

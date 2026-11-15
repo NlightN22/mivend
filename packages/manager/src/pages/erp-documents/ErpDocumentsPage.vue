@@ -3,9 +3,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import ErpDocumentsList from '../../components/erp-documents/ErpDocumentsList.vue';
+import { useAuthStore } from '../../stores/auth';
 import {
     ERP_DOCUMENT_KINDS,
     ERP_DOCUMENT_PATHS,
+    POWER_OF_ATTORNEY_PATH,
     type ErpDocumentKind,
 } from '../../api/erpDocumentKinds';
 
@@ -13,11 +15,12 @@ const props = defineProps<{ kind: ErpDocumentKind }>();
 
 const { t } = useI18n();
 const route = useRoute();
+const authStore = useAuthStore();
 
 // The other lists open with the same order/customer preset, so a card link can reach any of them.
-const siblings = computed(() =>
-    ERP_DOCUMENT_KINDS.filter(k => k !== props.kind).map(k => ({
-        kind: k,
+const siblings = computed(() => [
+    ...ERP_DOCUMENT_KINDS.filter(k => k !== props.kind).map(k => ({
+        kind: k as string,
         to: {
             path: ERP_DOCUMENT_PATHS[k],
             query: {
@@ -28,7 +31,20 @@ const siblings = computed(() =>
             },
         },
     })),
-);
+    ...(authStore.hasPermission('ReadCounterparty')
+        ? [
+              {
+                  kind: 'powerOfAttorney',
+                  to: {
+                      path: POWER_OF_ATTORNEY_PATH,
+                      query: route.query.counterpartyId
+                          ? { counterpartyId: route.query.counterpartyId }
+                          : {},
+                  },
+              },
+          ]
+        : []),
+]);
 </script>
 
 <template>
