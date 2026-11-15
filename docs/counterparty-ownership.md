@@ -30,3 +30,6 @@ is listed there, and a unit test pins the portal-owned set.
   `counterpartiesWithUnlinkedManagers`.
 - `notification_phone` is in the contract but mivend stores no such column, so it is never sent.
 - Not covered by a bump yet: manual contact channels (no editing exists before #332); add the bump with that editor.
+- Snapshot consistency: the record, team, ERP links and contacts are four separate reads under the outbound lock, not
+  the `counterparty:<erpId>` lock the portal writers use. A write between the reads can send newer team data labelled
+  with the older version; the newer version's event follows and is not deduplicated, so the ERP converges.

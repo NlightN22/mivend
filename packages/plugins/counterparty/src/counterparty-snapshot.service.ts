@@ -21,7 +21,7 @@ export interface CounterpartySnapshot extends ManagerList {
     contactInfos: SnapshotContactInfo[];
 }
 
-// Reads the portal-owned record as one consistent snapshot for the outbound command and the drift report.
+// Four separate reads under the outbound lock, not the portal writers' lock; a mid-read write converges via its own version event.
 @Injectable()
 export class CounterpartySnapshotService {
     constructor(private readonly connection: TransactionalConnection) {}

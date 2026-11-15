@@ -988,6 +988,17 @@ page. `replayFailedIntegrationInbox` (1 to 100 row ids), `requeueFailedIntegrati
 `rebuildSkippedIntegrationOutbox` need `RecoverIntegrationEvents`; the dashboard shows their buttons
 only to holders of it.
 
+### Counterparty ERP drift reports (#368)
+
+`counterpartiesDifferingFromErp`, `counterpartiesNotConfirmedByErp` and `counterpartiesWithUnlinkedManagers` need
+`ManageErpIntegration` and nothing else. They are deliberately unscoped system reports: `CounterpartyErpDriftService`
+applies no visibility scope, the resolver permission is the only gate, so a holder sees every counterparty regardless
+of branch or ownership. No default role holds `ManageErpIntegration` (checked in `default-roles.ts`); the superadmin and
+roles an administrator grants it explicitly do. The returned `Counterparty` keeps its field-level gating:
+`creditLimit` and `creditBalance` are `@ResolveField`s on the type and throw without `ReadCounterpartyCredit`, so a
+holder without it gets that field as null plus an error (verified in `counterparty.resolver.ts`, the fields are
+nullable). Tests: `apps/server/src/__tests__/access/erp-integration/counterparty-drift.test.ts`.
+
 ## Products of hidden categories (customers vs staff)
 
 Customers (Shop API, guests included) never see a product whose category Collection is private;
