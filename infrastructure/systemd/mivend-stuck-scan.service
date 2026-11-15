@@ -1,9 +1,10 @@
 [Unit]
-Description=Detect busy-but-not-serving processes (detection only)
+Description=Detect busy-but-not-serving processes and respawn a stuck tracked dev child
 
 [Service]
 ExecStart=/usr/bin/python3 /opt/mivend/infrastructure/scripts/stuck-scan.py
 Environment=STUCK_STATUS_FILE=/run/mivend-stuck-processes.json
+Environment=STUCK_KILL=1
 Restart=always
 Nice=10
 

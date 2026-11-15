@@ -6,9 +6,10 @@ fail() { echo "FAIL: $1"; exit 1; }
 alive() { kill -0 "$1" 2>/dev/null; }
 
 work=$(mktemp -d)
-trap 'for f in "$work"/*.pgid "$work"/*.grp "$work"/*.stale "$work"/*.foreign; do [ -f "$f" ] && kill -9 -- "-$(cat "$f")" 2>/dev/null; done; rm -rf "$work" "${sibling_dir:-}"' EXIT
+trap 'for f in "$work"/*.pgid "$work"/*.grp "$work"/*.stale "$work"/*.foreign; do [ -f "$f" ] && { kill -9 -- "-$(cat "$f")" 2>/dev/null || true; }; done; rm -rf "$work" "${sibling_dir:-}"' EXIT
 
-export STUCK_STATUS_FILE="$work/status.json" STUCK_INTERVAL_SECS=1 STUCK_CPU_PCT=15 STUCK_BUSY_SECS=2 STUCK_LOG_QUIET_SECS=2
+export STUCK_STATUS_FILE="$work/status.json" STUCK_INTERVAL_SECS=1 STUCK_CPU_PCT=15 STUCK_BUSY_SECS=2
+export STUCK_ROOT="$(cd "$here/../.." && pwd)"
 export STUCK_COMM='^python3$' STUCK_PGID_GLOB="$work/*.pgid"
 
 port_live=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
@@ -53,8 +54,21 @@ alive "$stuck" && fail "tracked stuck process was not killed"
 alive "$serving" || fail "serving sibling was killed"
 alive "$sibling" || fail "idle sibling was killed"
 alive "$other" || fail "untracked stuck process was killed"
-alive "$growing" || fail "hot non-listening process with a growing log was killed"
+alive "$growing" && fail "tracked stuck process with a growing log was not killed"
 alive "$stale" || fail "process of a group running outside the repo was killed"
 alive "$foreign" || fail "process named by a foreign-owned group file was killed"
+
+# A child with a piped stdout (make dev) is killed and its entry file touched to respawn it.
+touch -d '1 hour ago' "$work/main.ts" "$work/worker.ts"
+printf '#!/usr/bin/env bash\necho $$ > "$1"\nshift\nfor c in "$@"; do (exec python3 "$WORK/spin.py" $c) | cat &\ndone\nwait\n' > "$work/pipe-group.sh"
+setsid bash "$work/pipe-group.sh" "$work/piped.pgid" "$work/main.ts" "$work/worker.ts" &
+sleep 1
+pgrep -f "spin.py $work/main.ts" >/dev/null || fail "piped server entry did not start"
+server_entry=$(pgrep -f "spin.py $work/main.ts" | head -1); worker_entry=$(pgrep -f "spin.py $work/worker.ts" | head -1)
+STUCK_COMM='^python3$' STUCK_PGID_GLOB="$work/piped.pgid" STUCK_KILL=1 python3 "$here/stuck-scan.py" 8 2>/dev/null
+alive "$server_entry" && fail "piped stuck server entry was not killed"
+alive "$worker_entry" && fail "piped stuck worker entry was not killed"
+[ "$(stat -c %Y "$work/main.ts")" -gt "$(date -d '30 minutes ago' +%s)" ] || fail "entry file was not touched to respawn"
+kill -9 -- "-$(cat "$work/piped.pgid")" 2>/dev/null || true
 
 echo "stuck-scan: ok"

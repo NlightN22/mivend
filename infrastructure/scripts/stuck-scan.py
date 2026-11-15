@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host-level scan for busy-but-not-serving processes; detection only unless STUCK_KILL=1 (docs/environments.md).
+"""Host-level scan for busy-but-not-serving processes; kills tracked suspects only with STUCK_KILL=1 (docs/environments.md).
 Writes the suspects as JSON to STUCK_STATUS_FILE atomically."""
 import glob
 import json
@@ -15,8 +15,7 @@ CPU_PCT = int(os.environ.get("STUCK_CPU_PCT", "60"))
 BUSY_SECS = int(os.environ.get("STUCK_BUSY_SECS", "600"))
 COMM = re.compile(os.environ.get("STUCK_COMM", r"^(node|esbuild|vite|chrome.*|python3?)$"))
 KILL = os.environ.get("STUCK_KILL") == "1"
-LOG_QUIET_SECS = int(os.environ.get("STUCK_LOG_QUIET_SECS", "300"))
-REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+ROOT = os.path.realpath(os.environ.get("STUCK_ROOT", "/opt"))
 PGID_GLOB = os.environ.get("STUCK_PGID_GLOB", "/tmp/mivend-dev*.pgid")
 CLK_TCK = os.sysconf("SC_CLK_TCK")
 SELF = os.getpid()
@@ -61,7 +60,7 @@ def log_tail(path, lines=20):
 
 
 def is_tracked(pid, pgid):
-    """The group is recorded by dev-run-tracked.sh, the file is trusted, and a member still runs in this repo."""
+    """The group is recorded by dev-run-tracked.sh, the file is trusted, and a member still runs under ROOT."""
     try:
         suspect_uid = os.stat(f"/proc/{pid}").st_uid
     except OSError:
@@ -76,18 +75,27 @@ def is_tracked(pid, pgid):
             if member.isdigit() and read_proc(member) and read_proc(member)[2] == pgid:
                 try:
                     cwd = os.path.realpath(f"/proc/{member}/cwd")
-                    if os.path.commonpath([cwd, REPO_ROOT]) == REPO_ROOT:
+                    if os.path.commonpath([cwd, ROOT]) == ROOT:
                         return True
                 except (OSError, ValueError):
                     pass
     return False
 
 
-def log_quiet(path):
+def entry_file(cmd, cwd):
+    """The script a ts-node-dev child runs (its last .ts argument), as an absolute path."""
+    scripts = [t for t in cmd.split() if t.endswith(".ts")]
+    return os.path.join(cwd, scripts[-1]) if scripts else None
+
+
+def restart(entry):
+    """ts-node-dev --respawn waits for a file change after its child dies; touching the entry file respawns just that child."""
     try:
-        return path is not None and time.time() - os.stat(path).st_mtime >= LOG_QUIET_SECS
-    except OSError:
-        return False
+        if entry is not None:
+            os.utime(entry)
+            print(f"[stuck-scan] touched {entry} to respawn the child", file=sys.stderr, flush=True)
+    except OSError as err:
+        print(f"[stuck-scan] could not touch {entry}: {err}", file=sys.stderr, flush=True)
 
 
 def write_status(suspects):
@@ -132,12 +140,14 @@ def scan(state):
         log = log_file(pid)
         suspects.append({"pid": pid, "command": cmd[:300], "cwd": cwd, "cpu_percent": round(cpu),
                          "busy_seconds": busy, "listening": False, "last_log_lines": log_tail(log) if log else []})
-        if KILL and log_quiet(log) and is_tracked(pid, pgid):
+        entry = entry_file(cmd, cwd)
+        if KILL and is_tracked(pid, pgid):
             try:
                 os.kill(pid, 9)
             except ProcessLookupError:
                 continue
             print(f"[stuck-scan] killed tracked pid {pid} (group {pgid}): {round(cpu)}% CPU for {busy}s, not listening: {cmd[:200]}", file=sys.stderr, flush=True)
+            restart(entry)
     for pid in set(state) - seen:
         del state[pid]
     return suspects
