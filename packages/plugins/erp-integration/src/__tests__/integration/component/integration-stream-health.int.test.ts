@@ -205,12 +205,11 @@ describe('integrationOutboxHealth', () => {
         expect(rows.map(row => row.eventType).sort()).toEqual([
             'order.cancel-requested',
             'order.confirmed',
+            'trading-point.changed',
         ]);
-        expect(rows).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({ pending: 0, failed: 0, skipped: 0 }),
-            ]),
-        );
+        for (const row of rows) {
+            expect(row).toMatchObject({ pending: 0, failed: 0, skipped: 0 });
+        }
     });
 
     it('counts skipped rows separately and reports the last skip reason, not as a publish error', async () => {
