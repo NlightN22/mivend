@@ -19,6 +19,7 @@ describe('TradingPointService.resolveServicingBranchId', () => {
             {} as never,
             {} as never,
             { getGlobalDefaultBranchId } as never,
+            { bump: async () => 1 } as never,
         );
     });
 

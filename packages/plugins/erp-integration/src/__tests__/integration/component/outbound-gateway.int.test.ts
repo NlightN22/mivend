@@ -15,6 +15,7 @@ import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-ent
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
 import { OutboundGateway, outboundSend, outboundSkip } from '../../../outbound-gateway';
+import type { OutboundEnqueueOutcome } from '../../../outbound-gateway';
 
 // Silent-drop pattern (docs/testing-patterns.md): every enqueue ends as pending rows or one
 // skipped row with a reason, atomically, and a skipped row is never published.
@@ -196,7 +197,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     // Widens the check-then-insert window to something reliably reproducible (verified: removing
     // the lock below makes this fail every run) — proves the lock, not scheduling luck, closes it.
-    function guardedSubmit(orderId: string): Promise<'queued' | 'skipped'> {
+    function guardedSubmit(orderId: string): Promise<OutboundEnqueueOutcome> {
         return gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject: { orderId },

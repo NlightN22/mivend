@@ -4,7 +4,7 @@ import type { RequestContext } from '@vendure/core';
 import { ctxQueryBounded, withAggregateLock } from 'shared';
 
 import { IntegrationOutboxService } from './integration-outbox.service';
-import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
+import { OUTBOUND_EVENT_TYPES, versionedSpec } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import { loggerCtx } from './types';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
@@ -16,15 +16,18 @@ export interface OutboundEventDraft {
 
 // A builder must return one of these: "nothing to send" is not expressible, so a producer can
 // never drop an event without a recorded reason.
+// 'noop' = another outbox row already carries this change (idempotent repeat): logged, no row, no alert.
 export type OutboundBuildResult =
     | { kind: 'send'; events: OutboundEventDraft[] }
-    | { kind: 'skip'; reason: string };
+    | { kind: 'skip'; reason: string }
+    | { kind: 'noop'; reason: string };
 
 export const outboundSend = (events: OutboundEventDraft[]): OutboundBuildResult => ({
     kind: 'send',
     events,
 });
 export const outboundSkip = (reason: string): OutboundBuildResult => ({ kind: 'skip', reason });
+export const outboundNoop = (reason: string): OutboundBuildResult => ({ kind: 'noop', reason });
 
 export interface OutboundEnqueueInput {
     eventType: OutboundEventType;
@@ -36,7 +39,7 @@ export interface OutboundEnqueueInput {
     build: (ctx: RequestContext) => Promise<OutboundBuildResult>;
 }
 
-export type OutboundEnqueueOutcome = 'queued' | 'skipped';
+export type OutboundEnqueueOutcome = 'queued' | 'skipped' | 'noop';
 
 // The only place outbound events are recorded: every enqueue ends as pending rows, or as one
 // skipped row carrying the reason. Producers never call IntegrationOutboxService directly.
@@ -71,6 +74,10 @@ export class OutboundGateway {
                         });
                     }
                     return 'queued';
+                }
+                if (result.kind === 'noop') {
+                    Logger.verbose(`${input.eventType} not queued: ${result.reason}`, loggerCtx);
+                    return 'noop';
                 }
                 const reason =
                     result.kind === 'skip' ? result.reason : 'builder returned no events';
@@ -107,6 +114,58 @@ export class OutboundGateway {
             .andWhere('outbox.status IN (:...statuses)', { statuses: ['pending', 'published'] })
             .getCount();
         return count > 0;
+    }
+
+    // Versioned subjects: is a live entry for the subject already at this version or newer?
+    async hasEntryAtOrAbove(
+        ctx: RequestContext,
+        eventType: OutboundEventType,
+        subjectValue: string,
+        version: number,
+    ): Promise<boolean> {
+        const { subjectKey, versionKey } = versionedSpec(eventType);
+        const count = await this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
+            .createQueryBuilder('outbox')
+            .where('outbox.event_type = :eventType', { eventType })
+            .andWhere('outbox.payload ->> :subjectKey = :subjectValue', {
+                subjectKey,
+                subjectValue,
+            })
+            .andWhere('(outbox.payload ->> :versionKey)::bigint >= :version', {
+                versionKey,
+                version,
+            })
+            .andWhere('outbox.status IN (:...statuses)', { statuses: ['pending', 'published'] })
+            .getCount();
+        return count > 0;
+    }
+
+    // A newer version replaces older ones that never reached the broker; conditional on the row
+    // still waiting, so a row being published is never skipped.
+    async skipOlderWaiting(
+        ctx: RequestContext,
+        eventType: OutboundEventType,
+        subjectValue: string,
+        version: number,
+    ): Promise<number> {
+        const { subjectKey, versionKey } = versionedSpec(eventType);
+        const result = await this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
+            .createQueryBuilder()
+            .update(IntegrationOutboxEntry)
+            .set({
+                status: 'skipped',
+                lastError: `superseded by version ${version}`,
+                lastErrorAt: () => 'now()',
+            })
+            .where(
+                `event_type = :eventType AND payload ->> :subjectKey = :subjectValue
+                 AND (payload ->> :versionKey)::bigint < :version AND status IN ('pending', 'failed')`,
+                { eventType, subjectKey, subjectValue, versionKey, version },
+            )
+            .execute();
+        return result.affected ?? 0;
     }
 
     // Statuses of the order's confirmed events that still count: published ones were sent, pending

@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
-import { EventBus, RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
 import { CounterpartyService } from './counterparty.service';
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
-import { TradingPointChangeAcceptedEvent } from './trading-point-change.events';
 import { parsePayload } from './trading-point-change';
 import { TradingPointService } from './trading-point.service';
 
@@ -19,7 +18,6 @@ export class TradingPointChangeService {
         private connection: TransactionalConnection,
         private tradingPoints: TradingPointService,
         private counterparties: CounterpartyService,
-        private eventBus: EventBus,
     ) {}
 
     findPending(ctx: RequestContext, tradingPointId: ID): Promise<TradingPointChange | null> {
@@ -72,9 +70,6 @@ export class TradingPointChangeService {
         change.status = 'accepted';
         change.version = Number(rows[0].v);
         await this.markDecided(ctx, change);
-        this.eventBus.publish(
-            new TradingPointChangeAcceptedEvent(ctx, point.uuid, change.uuid, change.version),
-        );
         return change;
     }
 

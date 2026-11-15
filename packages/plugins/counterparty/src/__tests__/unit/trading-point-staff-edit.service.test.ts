@@ -57,6 +57,7 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
             mockAccessScopeService,
             mockVersioningService,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 

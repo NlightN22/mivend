@@ -3,7 +3,6 @@ import { RequestContext, TransactionalConnection, UserInputError } from '@vendur
 
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { TradingPointChange } from '../../entities/trading-point-change.entity';
-import { TradingPointChangeAcceptedEvent } from '../../trading-point-change.events';
 import { TradingPointChangeService } from '../../trading-point-change.service';
 
 const payload = {
@@ -33,7 +32,6 @@ const connection = {
 const updateDetails = vi.fn();
 const findOneVisible = vi.fn();
 const visibleErpIdsSql = vi.fn();
-const publish = vi.fn();
 const ctx = { activeUserId: 'u9' } as unknown as RequestContext;
 
 describe('TradingPointChangeService', () => {
@@ -58,11 +56,10 @@ describe('TradingPointChangeService', () => {
             connection as unknown as TransactionalConnection,
             { updateDetails } as never,
             { findOneVisible, visibleErpIdsSql } as never,
-            { publish } as never,
         );
     });
 
-    it('accept applies the proposal through the staff edit path and publishes it once with point uuid and version', async () => {
+    it('accept applies the proposal through the staff edit path, which owns the version bump', async () => {
         const result = await service.accept(ctx, '5');
 
         expect(updateDetails).toHaveBeenCalledWith(
@@ -76,14 +73,6 @@ describe('TradingPointChangeService', () => {
             }),
         );
         expect(result).toMatchObject({ status: 'accepted', version: 3, decidedByUserId: 'u9' });
-        expect(publish).toHaveBeenCalledTimes(1);
-        const event = publish.mock.calls[0][0] as TradingPointChangeAcceptedEvent;
-        expect(event).toBeInstanceOf(TradingPointChangeAcceptedEvent);
-        expect([event.tradingPointUuid, event.changeUuid, event.version]).toEqual([
-            'point-uuid',
-            'change-uuid',
-            3,
-        ]);
     });
 
     it('accept leaves the contacts alone when the proposal carried none', async () => {
@@ -94,12 +83,11 @@ describe('TradingPointChangeService', () => {
         expect(updateDetails.mock.calls[0][2].contacts).toBeUndefined();
     });
 
-    it('reject keeps the record untouched and publishes nothing', async () => {
+    it('reject keeps the record untouched', async () => {
         const result = await service.reject(ctx, '5', 'wrong address');
 
         expect(result).toMatchObject({ status: 'rejected', comment: 'wrong address' });
         expect(updateDetails).not.toHaveBeenCalled();
-        expect(publish).not.toHaveBeenCalled();
     });
 
     it.each(['accepted', 'rejected'] as const)(
@@ -110,7 +98,6 @@ describe('TradingPointChangeService', () => {
             await expect(service.accept(ctx, '5')).rejects.toThrow(UserInputError);
             await expect(service.reject(ctx, '5')).rejects.toThrow(UserInputError);
             expect(updateDetails).not.toHaveBeenCalled();
-            expect(publish).not.toHaveBeenCalled();
         },
     );
 

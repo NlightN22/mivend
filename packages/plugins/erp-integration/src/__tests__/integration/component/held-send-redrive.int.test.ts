@@ -63,6 +63,7 @@ beforeAll(async () => {
         createTestConnection(dataSource),
         new IntegrationOutboxService(createTestConnection(dataSource)),
         { build } as never,
+        {} as never,
     );
     const eventBus = {
         ofType: (cls: { name: string }) => ({

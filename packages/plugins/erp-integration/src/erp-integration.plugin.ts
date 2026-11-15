@@ -67,6 +67,10 @@ import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
+import { TradingPointReconciler } from './trading-point-reconciler.service';
+import { createTradingPointReconcilerTask } from './trading-point-reconciler.scheduled-task';
+import { TradingPointChangedListener } from './trading-point-changed.listener';
+import { TradingPointCommandBuilder } from './trading-point-command.builder';
 import { OrderSubmittedReconciler } from './order-submitted-reconciler.service';
 import { createOrderSubmittedReconcilerTask } from './order-submitted-reconciler.scheduled-task';
 import { CategoryOverrideRecomputeListener } from './category-override-recompute.listener';
@@ -174,6 +178,9 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
+        TradingPointChangedListener,
+        TradingPointReconciler,
+        TradingPointCommandBuilder,
         OrderSubmittedReconciler,
         OrderCancellationAdapter,
         OrderLinesEditAdapter,
@@ -256,6 +263,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createHeldSendRedriveTask(ErpIntegrationPlugin.options),
                 createOrderSubmittedReconcilerTask(ErpIntegrationPlugin.options),
+                createTradingPointReconcilerTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),

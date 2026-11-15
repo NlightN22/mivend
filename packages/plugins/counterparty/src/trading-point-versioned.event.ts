@@ -1,11 +1,10 @@
 import { RequestContext, VendureEvent } from '@vendure/core';
 
-// Idempotency for the ERP side is the point uuid plus version; the ERP publisher subscribes to this.
-export class TradingPointChangeAcceptedEvent extends VendureEvent {
+// One per committed change of a trading point record; the version is the per-point counter after the change.
+export class TradingPointVersionedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
         public readonly tradingPointUuid: string,
-        public readonly changeUuid: string,
         public readonly version: number,
     ) {
         super();

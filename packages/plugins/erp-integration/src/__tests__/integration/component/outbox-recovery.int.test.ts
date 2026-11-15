@@ -52,6 +52,7 @@ beforeAll(async () => {
         {
             build,
         } as never,
+        {} as never,
     );
 });
 

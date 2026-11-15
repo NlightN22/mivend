@@ -61,6 +61,7 @@ describe('TradingPointService — customer methods', () => {
             mockAccessScopeService,
             mockVersioningService,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 

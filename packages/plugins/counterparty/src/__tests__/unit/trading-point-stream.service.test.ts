@@ -64,6 +64,7 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             mockAccessScopeService,
             mockVersioningService,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 

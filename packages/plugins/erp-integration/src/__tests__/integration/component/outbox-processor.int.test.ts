@@ -182,6 +182,7 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
             createTestConnection(dataSource),
             {} as never,
             {} as never,
+            {} as never,
         );
         const status = async (): Promise<unknown> =>
             (

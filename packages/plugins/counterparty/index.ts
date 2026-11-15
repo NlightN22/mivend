@@ -43,3 +43,4 @@ export { ContactPointService } from './src/contact-point.service';
 export { ErpContactPersonService } from './src/erp-contact-person.service';
 export type { ContactPointInput } from './src/contact-point-normalize';
 export type { ContactPointType } from './src/entities/contact-point.entity';
+export { TradingPointVersionedEvent } from './src/trading-point-versioned.event';

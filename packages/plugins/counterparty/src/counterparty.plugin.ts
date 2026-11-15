@@ -74,6 +74,7 @@ import { CounterpartySuggestService } from './counterparty-suggest.service';
 import { TradingPointService } from './trading-point.service';
 import { TradingPointChangeAdminResolver } from './trading-point-change.resolver';
 import { TradingPointChangeService } from './trading-point-change.service';
+import { TradingPointVersionService } from './trading-point-version.service';
 import { TradingPointLocationReportService } from './trading-point-location-report.service';
 import { CreditTermExtensionCheck } from './credit-term-extension.check';
 import { CreditTermService } from './credit-term.service';
@@ -201,6 +202,7 @@ const adminResolvers = [
         CounterpartyConsumer,
         TradingPointService,
         TradingPointChangeService,
+        TradingPointVersionService,
         TradingPointLocationReportService,
         AddressSuggestService,
         CounterpartySuggestService,
@@ -228,6 +230,7 @@ const adminResolvers = [
         ErpIdLookupService,
         TradingPointService,
         TradingPointChangeService,
+        TradingPointVersionService,
         TradingPointLocationReportService,
         ContractService,
         PowerOfAttorneyErpService,

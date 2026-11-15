@@ -10,6 +10,7 @@ import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
 import { buildCancelRequested } from './order-cancel-requested.builder';
+import { TradingPointCommandBuilder, tradingPointLockKey } from './trading-point-command.builder';
 
 // Another recovery got there first; callers that race on purpose (the sweep) treat it as a no-op.
 export class NotSkippedError extends Error {}
@@ -31,12 +32,15 @@ export class IntegrationOutboxRecoveryService {
             this.orderSubmitted.build(ctx, String(subject.orderId), String(subject.orderCode)),
         'order.cancel-requested': async (_ctx, subject) =>
             buildCancelRequested(String(subject.orderUuid)),
+        'trading-point.changed': (ctx, subject) =>
+            this.tradingPoint.build(ctx, String(subject.uuid)),
     } satisfies Record<OutboundEventType, OutboundRebuilder>;
 
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly outbox: IntegrationOutboxService,
         private readonly orderSubmitted: OrderSubmittedBuilder,
+        private readonly tradingPoint: TradingPointCommandBuilder,
     ) {}
 
     // Conditional UPDATE: only rows still `failed` move, so a double click or a concurrent
@@ -85,6 +89,8 @@ export class IntegrationOutboxRecoveryService {
 
             const eventType = row.eventType as OutboundEventType;
             const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
+            const versionKey = (OUTBOUND_EVENT_TYPES[eventType] as { versionKey?: string })
+                .versionKey;
             const isAlreadySent = async (): Promise<boolean> =>
                 (
                     await ctxQuery<unknown[]>(
@@ -93,8 +99,15 @@ export class IntegrationOutboxRecoveryService {
                         `SELECT 1 FROM integration_outbox
                  WHERE event_type = $1 AND status IN ('pending', 'published')
                    AND payload ->> $2 = $3
+                   AND ($4::text IS NULL OR (payload ->> $4)::bigint >= $5::bigint)
                  LIMIT 1`,
-                        [row.eventType, subjectKey, String(row.payload[subjectKey])],
+                        [
+                            row.eventType,
+                            subjectKey,
+                            String(row.payload[subjectKey]),
+                            versionKey ?? null,
+                            versionKey ? String(row.payload[versionKey] ?? 0) : null,
+                        ],
                     )
                 ).length > 0;
             const markAlreadySent = async (): Promise<'already-sent'> => {
@@ -114,6 +127,12 @@ export class IntegrationOutboxRecoveryService {
                 onBuildFailure(failure);
                 throw failure;
             }
+            if (result.kind === 'noop') {
+                row.status = 'resolved';
+                row.lastError = result.reason;
+                await repo.save(row);
+                return 'already-sent' as const;
+            }
             if (result.kind === 'send' && result.events.length > 0) {
                 // Lock order: outbox row, then the order lock. The live enqueue holds it across
                 // check + insert, so one of the two sees the other's row.
@@ -125,6 +144,17 @@ export class IntegrationOutboxRecoveryService {
                         async () => undefined,
                     );
                     if (await isAlreadySent()) return markAlreadySent();
+                }
+                if (eventType === 'trading-point.changed') {
+                    await withAggregateLock(
+                        this.connection,
+                        txCtx,
+                        tradingPointLockKey(String(row.payload.uuid)),
+                        async () => undefined,
+                    );
+                    if (await this.tradingPoint.supersededOrDuplicate(txCtx, result)) {
+                        return markAlreadySent();
+                    }
                 }
                 for (const event of result.events) {
                     await this.outbox.writeToOutbox(txCtx, {

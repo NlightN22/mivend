@@ -25,6 +25,7 @@ import { TestTradingPointChange } from './trading-point-test-entities';
 import { savePendingChange } from '../../trading-point-change';
 import { TradingPointChangeService } from '../../trading-point-change.service';
 import { TradingPointService } from '../../trading-point.service';
+import { TradingPointVersionService } from '../../trading-point-version.service';
 
 @Entity('counterparty')
 class TestCounterparty {
@@ -37,6 +38,7 @@ class TestTradingPoint {
     @Column({ type: 'varchar' }) counterpartyId!: string;
     @Column({ type: 'varchar', nullable: true }) uuid!: string | null;
     @Column({ type: 'boolean', default: true }) customerOwned!: boolean;
+    @Column({ type: 'int', default: 0 }) version!: number;
     @Column({ type: 'varchar' }) name!: string;
     @Column({ type: 'varchar' }) address!: string;
     @Column({ type: 'float', nullable: true }) latitude!: number | null;
@@ -96,13 +98,11 @@ beforeAll(async () => {
         slowScope as never,
         { recordChange } as never,
         {} as never,
+        new TradingPointVersionService(connection(), { publish: () => undefined } as never),
     );
-    changeService = new TradingPointChangeService(
-        connection(),
-        service,
-        { findOneVisible: async () => ({}) } as never,
-        { publish: vi.fn() } as never,
-    );
+    changeService = new TradingPointChangeService(connection(), service, {
+        findOneVisible: async () => ({}),
+    } as never);
 });
 
 afterAll(async () => {

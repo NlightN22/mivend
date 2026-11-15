@@ -20,6 +20,7 @@ describe('TradingPointService.getPreferredForCustomer', () => {
             {} as never,
             {} as never,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 
@@ -54,6 +55,7 @@ describe('TradingPointService.setPreferred', () => {
             {} as never,
             {} as never,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 
@@ -88,6 +90,7 @@ describe('TradingPointService in an acting session', () => {
             {} as never,
             {} as never,
             {} as never,
+            { bump: async () => 1 } as never,
             { get, setTradingPoint } as never,
         );
     });

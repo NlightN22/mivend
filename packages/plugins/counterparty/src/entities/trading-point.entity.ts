@@ -43,6 +43,10 @@ export class TradingPoint extends UuidEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
+    // Per-point change counter sent to the ERP; moved only by TradingPointVersionService.
+    @Column({ type: 'int', default: 0 })
+    version!: number;
+
     // 'active' | 'hidden' — customer-controlled soft delete
     @Column({ type: 'varchar', default: 'active' })
     customerStatus!: string;

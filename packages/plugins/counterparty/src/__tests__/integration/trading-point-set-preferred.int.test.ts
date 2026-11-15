@@ -49,6 +49,7 @@ beforeAll(async () => {
         {} as never,
         {} as never,
         {} as never,
+        { bump: async () => 1 } as never,
     );
 });
 

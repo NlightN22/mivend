@@ -19,6 +19,7 @@ import { tradingPointPatchError } from './trading-point-patch-validation';
 import { TradingPoint } from './entities/trading-point.entity';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
 import { TradingPointChange } from './entities/trading-point-change.entity';
+import { TradingPointVersionService } from './trading-point-version.service';
 import { savePendingChange, type ProposedPointFields } from './trading-point-change';
 import { writeErpMirror } from './trading-point-erp-mirror';
 import { markMirrorDeleted, type ErpPointExtra } from './trading-point-erp-extra';
@@ -101,6 +102,7 @@ export class TradingPointService {
         private accessScopeService: AccessScopeService,
         private versioningService: VersioningService,
         private branchSettingsService: BranchSettingsService,
+        private versions: TradingPointVersionService,
         private actingContext?: ActingContextService,
     ) {}
 
@@ -212,6 +214,9 @@ export class TradingPointService {
 
         const saved = await repo.save(record);
         if (Object.keys(changedFields).length > 0) {
+            if (Object.keys(changedFields).some(field => field !== 'servicingBranchId')) {
+                saved.version = await this.versions.bump(ctx, saved.id);
+            }
             await this.versioningService.recordChange(ctx, {
                 entityName: 'TradingPoint',
                 entityId: saved.id,
@@ -231,9 +236,13 @@ export class TradingPointService {
         if (!record) throw new UserInputError(`TradingPoint not found: id=${id}`);
         await this.assertStaffCanEdit(ctx, record);
 
+        const changed =
+            record.isActive !== isActive ||
+            record.customerStatus !== (isActive ? 'active' : 'hidden');
         record.isActive = isActive;
         record.customerStatus = isActive ? 'active' : 'hidden';
         const saved = await repo.save(record);
+        if (changed) saved.version = await this.versions.bump(ctx, saved.id);
 
         await this.versioningService.recordChange(ctx, {
             entityName: 'TradingPoint',
@@ -578,6 +587,7 @@ export class TradingPointService {
             contacts: contact ? [contact] : [],
         });
         const saved = await repo.save(record);
+        saved.version = await this.versions.bump(ctx, saved.id);
         Logger.verbose(`Customer added trading point ${saved.id}`, loggerCtx);
         return saved;
     }
@@ -632,6 +642,7 @@ export class TradingPointService {
                 : [];
         }
         const saved = await repo.save(record);
+        saved.version = await this.versions.bump(ctx, saved.id);
         Logger.verbose(`Customer edited trading point ${id}`, loggerCtx);
         return saved;
     }
@@ -666,8 +677,10 @@ export class TradingPointService {
             proposed.workingHours !== record.workingHours ||
             contactChanged;
         const repo = this.connection.getRepository(ctx, TradingPoint);
+        const commentChanged = record.deliveryComment !== (input.deliveryComment ?? null);
         record.deliveryComment = input.deliveryComment ?? null;
         const saved = await repo.save(record);
+        if (commentChanged) saved.version = await this.versions.bump(ctx, saved.id);
         if (changed) {
             await savePendingChange(
                 this.connection.getRepository(ctx, TradingPointChange),
@@ -684,7 +697,9 @@ export class TradingPointService {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
         if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        if (record.customerStatus === 'hidden') return true;
         await repo.update({ id: String(id) }, { customerStatus: 'hidden' });
+        await this.versions.bump(ctx, id);
         Logger.verbose(`Customer soft-deleted trading point ${id}`, loggerCtx);
         return true;
     }
@@ -697,7 +712,9 @@ export class TradingPointService {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
         if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        const changed = record.customerStatus !== 'active' || !record.isActive;
         await repo.update({ id: String(id) }, { customerStatus: 'active', isActive: true });
+        if (changed) await this.versions.bump(ctx, id);
         const updated = await this.findById(ctx, id);
         if (!updated) throw new UserInputError(`TradingPoint not found: id=${id}`);
         return updated;

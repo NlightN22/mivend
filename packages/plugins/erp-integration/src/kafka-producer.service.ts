@@ -7,6 +7,10 @@ import { SchemaRegistryClient } from './schema-registry.client';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { encodeConfluentMessage } from './wire-format';
+import {
+    encodeTradingPointCommand,
+    TRADING_POINT_COMMANDS_TOPIC,
+} from './trading-point-command.codec';
 import type { OutboundEventSchema } from './schemas/registry';
 import { OUTBOUND_EVENT_SCHEMAS } from './schemas/registry';
 
@@ -23,6 +27,7 @@ export class KafkaProducerService implements OnModuleDestroy {
     // Never swallow errors here: the caller (IntegrationOutboxWorker) applies retry/dead-letter policy,
     // so a swallowed error would be a silent message drop.
     async publish(eventType: string, payload: Record<string, unknown>): Promise<void> {
+        if (eventType === 'trading-point.changed') return this.publishTradingPoint(payload);
         const schemaEntry = this.resolveSchema(eventType);
         // The registry client appends "-value", giving the topic's union subject.
         const schemaId = await this.schemaRegistry.resolveSchemaId(
@@ -43,6 +48,16 @@ export class KafkaProducerService implements OnModuleDestroy {
                     headers: { type: String(payload.type) },
                 },
             ],
+        });
+    }
+
+    private async publishTradingPoint(payload: Record<string, unknown>): Promise<void> {
+        const value = Buffer.from(encodeTradingPointCommand(payload));
+        const producer = await this.getProducer();
+        await producer.send({
+            topic: TRADING_POINT_COMMANDS_TOPIC,
+            acks: -1,
+            messages: [{ key: String(payload.uuid), value }],
         });
     }
 

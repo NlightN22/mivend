@@ -34,6 +34,7 @@ describe('TradingPointService.findOwnById (Shop API)', () => {
             {} as never,
             {} as never,
             {} as never,
+            { bump: async () => 1 } as never,
         );
     });
 
@@ -144,6 +145,7 @@ describe('TradingPointService.updateDeliveryComment scope', () => {
         { assertCounterpartyWritable } as never,
         {} as never,
         {} as never,
+        { bump: async () => 1 } as never,
     );
 
     beforeEach(() => vi.clearAllMocks());

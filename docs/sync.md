@@ -414,9 +414,21 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   edit path with its row lock and version history). `rejectTradingPointChange` leaves the record as it was. The
   delivery comment is the customer's own note and applies at once; points a customer created (`cust_…`) and staff
   edits apply directly. Checkout and the storefront keep reading the current record while a change is pending.
-  Acceptance publishes `TradingPointChangeAcceptedEvent` with the point `uuid`, the change `uuid` and a per-point
-  `version`; the ERP side dedupes on point `uuid` + `version`. The outbound ERP message is not wired yet: it needs a
-  contract in the contracts package and the ERP side.
+  Every committed change of a point (staff edit, accepted customer edit, customer-added point, hide/restore, active
+  toggle, the customer's own delivery comment) bumps the point's `version` in the same transaction
+  (`TradingPointVersionService`) and publishes one `TradingPointVersionedEvent` (point `uuid`, `version`) after commit.
+  Inbound stream writes and the preferred-point choice never bump it. `erp-integration` turns the event into one
+  outbound `trading-point.changed` message, see "Trading point return path (#367)".
+- **Trading point return path (#367)**: on the central instance the event enqueues one outbox row of type
+  `trading-point.changed` per point version, built at send time from the current record (full snapshot with contacts,
+  never a delta, so quick edits collapse to the latest state; the sent `version` is the current one). Topic
+  `mivend.trading-point.commands.v1`, key = point `uuid`, plain protobuf `TradingPointCommand` (no Confluent framing:
+  the contract package ships no registry schema for it). Idempotency is `uuid` + `version`: a version already
+  pending or published, or an older one than what is, is recorded as skipped; enqueuing a newer version first skips
+  the point's older rows that are still waiting. Delivery, retries and poison handling are the existing outbox
+  processor's. Acknowledgement gap: the ERP's `PointOfSaleChanged` carries no mivend `uuid`/`version`, so the only
+  signal is the ERP sending a point with that `erpId`; a point leaves `tradingPointsNotConfirmedByErp` then and the
+  confirmed version is not stored. Storing it needs a field in the ERP's point stream (contract change, ERP side).
 - **Trading point drift (#328)**: `tradingPointsDifferingFromErp` lists points whose record differs from the mirror
   (expected after people edit), `tradingPointsNotConfirmedByErp` lists customer-created points the ERP never sent
   (both ManageErpIntegration).

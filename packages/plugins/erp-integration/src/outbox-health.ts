@@ -1,4 +1,4 @@
-import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
+import { OUTBOUND_EVENT_TYPES, PROTOBUF_OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import { OUTBOUND_EVENT_SCHEMAS } from './schemas/registry';
 
 export interface OutboxHealthByEventType {
@@ -18,9 +18,11 @@ export interface OutboxHealthByEventType {
 }
 
 const schemaSourceOf = (eventType: string): 'contract' | 'local' | null =>
-    (OUTBOUND_EVENT_SCHEMAS as Record<string, { source: 'contract' | 'local' } | undefined>)[
-        eventType
-    ]?.source ?? null;
+    (PROTOBUF_OUTBOUND_EVENT_TYPES as readonly string[]).includes(eventType)
+        ? 'contract'
+        : ((OUTBOUND_EVENT_SCHEMAS as Record<string, { source: 'contract' | 'local' } | undefined>)[
+              eventType
+          ]?.source ?? null);
 
 const emptyRow = (eventType: string): OutboxHealthByEventType => ({
     eventType,

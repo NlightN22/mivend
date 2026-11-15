@@ -92,6 +92,7 @@ beforeAll(async () => {
         {} as never,
         {} as never,
         {} as never,
+        { bump: async () => 1 } as never,
     );
     loaders = new CounterpartyBatchLoaders(connection(), {} as never, {} as never);
 });

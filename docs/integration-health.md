@@ -80,6 +80,13 @@ the owner alone; breaking changes need the consumer's agreement and a version bu
   mivend's side does not prove the receiver processed the event.
 - The Schema column is the only schema-drift indicator planned for this page.
 
+`trading-point.changed` (#367) is the second outbound record family: the whole current trading point, sent as
+plain protobuf `TradingPointCommand` to `mivend.trading-point.commands.v1` (key = point `uuid`), so the Schema column
+shows `Contract` and no registry subject exists for it. Idempotency is `uuid` + `version` (a repeat or older
+version is dropped without a row, an older waiting row is skipped as "superseded by version N"); recovery treats a
+skipped row as already sent only when a pending or published row of that point has the same or a higher version.
+The scheduled task `erp-integration-trading-point-reconciler` re-drives a point version that has no outbox row.
+
 ### Order check counters (#237)
 
 Query `orderCheckHealth` (permission `ManageErpIntegration`): one row per ERP-requirement check code and reason

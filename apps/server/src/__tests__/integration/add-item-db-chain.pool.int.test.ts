@@ -65,6 +65,7 @@ beforeAll(async () => {
         {} as never,
         {} as never,
         {} as never,
+        { bump: async () => 1 } as never,
     );
     numbering = new NumberingService(connection, { instanceNumberCode: '100' });
 });
