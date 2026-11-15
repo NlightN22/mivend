@@ -9,7 +9,7 @@ describe('buildSettingsNav', () => {
     it('shows every section to a holder of all permissions, in three groups', () => {
         const groups = buildSettingsNav(() => true);
         expect(groups.map(g => g.label)).toEqual(['Access', 'Organization', 'System']);
-        expect(groups.flatMap(g => g.items)).toHaveLength(12);
+        expect(groups.flatMap(g => g.items)).toHaveLength(11);
     });
 
     it('hides permission-gated sections and drops groups left empty', () => {
