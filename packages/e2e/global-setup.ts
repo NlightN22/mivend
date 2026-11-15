@@ -12,6 +12,8 @@ import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
+import { readVisOrders } from './fixtures/visibility/ids';
+import { seedErpDocuments } from './fixtures/erp-documents/seed';
 import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages';
 import { prepareMarkupCustomer } from './fixtures/seed-markup';
 import { seedDiscountGrants } from './fixtures/discount-grants';
@@ -279,7 +281,8 @@ export default async function globalSetup(): Promise<void> {
         otherCounterpartyId,
     });
     await seedPendingGrantRequests(managerToken, otherCounterpartyId);
-    await seedVisibility(adminToken);
+    const visIds = await seedVisibility(adminToken);
+    seedErpDocuments(await readVisOrders(adminToken, visIds));
     await reindexSearch(adminToken);
 
     const browser = await chromium.launch();

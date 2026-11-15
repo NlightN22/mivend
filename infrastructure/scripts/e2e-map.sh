@@ -14,10 +14,10 @@ while IFS= read -r f; do
     packages/e2e/manager/*/*) d="${f#packages/e2e/manager/}"; add "$(grep -oE "^\| \`manager-[a-z-]+\`.*manager/${d%%/*}( |\`)" docs/e2e-testing.md | head -1 | grep -oE '`[^`]+`' | head -1 | tr -d '`')" ;;
     packages/e2e/*|docs/*|*.md|.claude/*|.github/*) ;;
     packages/storefront/src/*) add smoke storefront-layout storefront-home storefront-catalog storefront-cart storefront-orders storefront-account ;;
-    packages/manager/src/*) add manager-layout manager-orders manager-customers manager-settlements manager-settings manager-dashboard ;;
+    packages/manager/src/*) add manager-layout manager-orders manager-customers manager-settlements manager-settings manager-dashboard manager-erp-documents ;;
     packages/ui-kit/*) add smoke storefront-layout manager-layout ;;
     packages/plugins/access-control/*|packages/plugins/counterparty/*|packages/plugins/search/*) add visibility-storefront visibility-manager manager-customers ;;
-    packages/plugins/reservation/*|packages/plugins/checkout*/*|packages/plugins/erp-order/*) add storefront-orders storefront-cart manager-orders ;;
+    packages/plugins/reservation/*|packages/plugins/checkout*/*|packages/plugins/erp-order/*) add storefront-orders storefront-cart manager-orders manager-erp-documents ;;
     packages/plugins/settlement/*|packages/plugins/documents/*|packages/plugins/acquiring/*) add storefront-account storefront-documents storefront-proforma manager-settlements manager-proforma-payments ;;
     packages/plugins/price-entry/*|packages/plugins/discount*/*|packages/plugins/pricing*/*) add cart-totals storefront-catalog storefront-cart ;;
     packages/plugins/*|packages/shared/*|apps/server/*) add smoke visibility-storefront visibility-manager ;;
