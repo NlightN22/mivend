@@ -21,7 +21,7 @@ export function unlistedWarnings(results, list, root = ROOT) {
     return found;
 }
 
-// Usage: pnpm exec eslint . -f json -o lint.json; node eslint-rules/check-lint-exceptions.mjs lint.json
+// Usage: pnpm exec eslint . --no-inline-config -f json -o lint.json; node eslint-rules/check-lint-exceptions.mjs lint.json
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const results = JSON.parse(readFileSync(process.argv[2], 'utf8'));
     const list = JSON.parse(readFileSync(LIST_URL, 'utf8'));

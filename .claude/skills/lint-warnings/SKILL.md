@@ -15,7 +15,9 @@ The accepted warnings live in one file: `eslint-rules/lint-exceptions.json` (`ch
 
 ## Check
 
-    pnpm exec eslint . -f json -o lint.json
+    pnpm exec eslint . --no-inline-config -f json -o lint.json
     node eslint-rules/check-lint-exceptions.mjs lint.json
+
+`--no-inline-config` is required: an `eslint-disable` comment would otherwise hide the warning from the check.
 
 Exit code 0 and the line `lint exceptions: 0 unlisted warning(s) ...` mean every checked-rule warning is on the list. Any other result fails the check. Delete `lint.json` afterwards (do not commit it).
