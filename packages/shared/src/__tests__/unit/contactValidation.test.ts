@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { normalizePhone, validateTradingPointContact } from '../../contactValidation';
+import { validateTradingPointContact } from '../../contactValidation';
+import { normalizePhone } from '../../field-validation';
 
 const valid = { name: 'Point', address: 'Street 1, building 5' };
 

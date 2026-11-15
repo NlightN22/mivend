@@ -32,10 +32,10 @@ describe('field predicates', () => {
         expect(formatEmail(' a @b.co ')).toBe('a@b.co');
     });
 
-    it('accepts hours in any language, rejects only over-long text', () => {
-        expect(isValidWorkingHours('9-18')).toBe(true);
+    it('accepts a real hours range or text with letters, rejects the rest', () => {
+        expect(isValidWorkingHours('09:00\u201318:00')).toBe(true);
         expect(isValidWorkingHours('Круглосуточно')).toBe(true);
-        expect(isValidWorkingHours('Пн-Пт, без выходных')).toBe(true);
+        expect(isValidWorkingHours('9-18')).toBe(false);
         expect(isValidWorkingHours('9'.repeat(201))).toBe(false);
     });
 });

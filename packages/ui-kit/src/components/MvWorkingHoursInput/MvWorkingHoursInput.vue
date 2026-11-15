@@ -3,6 +3,7 @@ import { useId } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
 import type { InputSize } from '../MvInput/MvInput.vue';
 import { WORKING_HOURS_MAX_LENGTH } from '../../utils/fieldValidation';
+import { applyWorkingHoursInput } from '../../utils/workingHoursFormat';
 
 withDefaults(
     defineProps<{
@@ -26,12 +27,13 @@ const listId = `mv-hours-${useId()}`;
             :model-value="modelValue"
             :list="listId"
             autocomplete="off"
+            inputmode="numeric"
             :maxlength="WORKING_HOURS_MAX_LENGTH"
-            :placeholder="placeholder"
+            :placeholder="placeholder ?? '09:00\u201318:00'"
             :disabled="disabled"
             :error="error"
             :size="size"
-            @update:model-value="emit('update:modelValue', $event)"
+            @update:model-value="emit('update:modelValue', applyWorkingHoursInput($event))"
         />
         <datalist :id="listId">
             <option v-for="preset in presets" :key="preset" :value="preset" />

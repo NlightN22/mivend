@@ -50,3 +50,12 @@ describe('dates and periods', () => {
         expect(datePeriodError('2026-02-02', '2026-02-01')).toBe('endBeforeStart');
     });
 });
+
+describe('working hours', () => {
+    it.each(['09:00–18:00', '00:00–23:59', 'Mon-Fri 9-18'])('accepts %s', v =>
+        expect(isValidWorkingHours(v)).toBe(true),
+    );
+    it.each(['09:00', '09:00–18:6', '25:00–18:00', '09:60–18:00'])('rejects %s', v =>
+        expect(isValidWorkingHours(v)).toBe(false),
+    );
+});

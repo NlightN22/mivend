@@ -3,11 +3,22 @@ import { computed } from 'vue';
 import { useUiLabels } from '../../utils/uiLabels';
 import { datePeriodError } from '../../utils/fieldValidation';
 import MvDateField from '../MvDateField/MvDateField.vue';
+import { DATE_RANGE_PRESETS, resolveDateRangePreset } from '../MvColumnFilter/dateRangePresets';
 
 const uiLabel = useUiLabels();
 const from = defineModel<string>('from', { required: true });
 const to = defineModel<string>('to', { required: true });
-defineProps<{ fromLabel?: string; toLabel?: string }>();
+const props = defineProps<{ fromLabel?: string; toLabel?: string; presets?: string[] }>();
+
+const presetOptions = computed(() =>
+    DATE_RANGE_PRESETS.filter(preset => props.presets?.includes(preset.key)),
+);
+
+function applyPreset(key: string): void {
+    const range = resolveDateRangePreset(key);
+    from.value = range.from;
+    to.value = range.to;
+}
 
 const error = computed(() =>
     datePeriodError(from.value, to.value) === 'endBeforeStart'
@@ -26,6 +37,17 @@ const error = computed(() =>
             <span>{{ toLabel ?? uiLabel('periodTo', 'To') }}</span>
             <MvDateField v-model="to" />
         </label>
+        <div v-if="presetOptions.length" class="mv-date-range__presets">
+            <button
+                v-for="preset in presetOptions"
+                :key="preset.key"
+                type="button"
+                class="mv-date-range__preset"
+                @click="applyPreset(preset.key)"
+            >
+                {{ preset.label }}
+            </button>
+        </div>
         <p v-if="error" class="mv-date-range__error">{{ error }}</p>
     </div>
 </template>
@@ -43,6 +65,24 @@ const error = computed(() =>
     gap: 4px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
+}
+
+.mv-date-range__presets {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mv-date-range__preset {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 999px;
+    background: var(--el-fill-color-light);
+    font-size: 12px;
+    color: var(--el-text-color-primary);
+    cursor: pointer;
 }
 
 .mv-date-range__error {
