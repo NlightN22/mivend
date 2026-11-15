@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 20+
+- [Node.js](https://nodejs.org/) 22
 - [pnpm](https://pnpm.io/) 10+ (`corepack enable`)
 - [Docker](https://docs.docker.com/get-docker/) with Compose v2
 - GNU Make
