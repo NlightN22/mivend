@@ -23,15 +23,18 @@ import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-ent
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
 import { OutboundGateway } from '../../../outbound-gateway';
-import { TradingPointChangedListener } from '../../../trading-point-changed.listener';
+import { CounterpartyCommandBuilder } from '../../../counterparty-command.builder';
 import { TradingPointCommandBuilder } from '../../../trading-point-command.builder';
-import { TradingPointReconciler } from '../../../trading-point-reconciler.service';
+import { VersionedEntityBuilders } from '../../../versioned-entity-builders';
+import { VersionedEntityListener } from '../../../versioned-entity.listener';
+import { VersionedEntityReconciler } from '../../../versioned-entity.reconciler';
 import { testRequestContextService } from '../../test-request-context-service';
 
 @Entity('counterparty')
 class TestCounterparty {
     @PrimaryGeneratedColumn('increment') id!: number;
     @Column({ type: 'varchar' }) erpId!: string;
+    @Column({ type: 'int', default: 0 }) version!: number;
 }
 
 @Entity('trading_point')
@@ -71,8 +74,8 @@ const mirrors = new Map<unknown, unknown>([
     [Counterparty, TestCounterparty],
 ]);
 let dataSource: DataSource;
-let listener: TradingPointChangedListener;
-let reconciler: TradingPointReconciler;
+let listener: VersionedEntityListener;
+let reconciler: VersionedEntityReconciler;
 let processor: IntegrationOutboxProcessorService;
 let uuid: string;
 const publish = vi.fn();
@@ -100,13 +103,16 @@ beforeAll(async () => {
             base.getRepository(c, (mirrors.get(entity) ?? entity) as never),
     } as unknown as TransactionalConnection;
     const gateway = new OutboundGateway(connection, new IntegrationOutboxService(connection));
-    listener = new TradingPointChangedListener(
+    listener = new VersionedEntityListener(
         {} as never,
         gateway,
-        new TradingPointCommandBuilder(connection, gateway),
+        new VersionedEntityBuilders(
+            new TradingPointCommandBuilder(connection, gateway),
+            new CounterpartyCommandBuilder({ load: async () => null } as never, gateway),
+        ),
         { instanceType: 'central' } as never,
     );
-    reconciler = new TradingPointReconciler(connection, listener, testRequestContextService);
+    reconciler = new VersionedEntityReconciler(connection, listener, testRequestContextService);
     processor = new IntegrationOutboxProcessorService(
         connection,
         { publish } as never,
@@ -142,7 +148,7 @@ async function seedPoint(version: number): Promise<void> {
 }
 
 const enqueue = (version: number): Promise<void> =>
-    listener.enqueueVersion(testRequestContext, uuid, version);
+    listener.enqueueVersion(testRequestContext, 'trading-point.changed', uuid, version);
 
 describe('trading point outbound (integration, real Postgres)', () => {
     it('one change gives exactly one pending row carrying the full record', async () => {
@@ -155,10 +161,12 @@ describe('trading point outbound (integration, real Postgres)', () => {
         expect(rows[0].payload).toMatchObject({
             uuid,
             version: '1',
-            name: 'Point v1',
-            counterpartyId: 'erp-cp-1',
-            address: 'Test Street 1',
-            contactPhone: '+70000000001',
+            tradingPointSnapshot: {
+                name: 'Point v1',
+                counterpartyId: 'erp-cp-1',
+                address: 'Test Street 1',
+                contactPhone: '+70000000001',
+            },
         });
     });
 

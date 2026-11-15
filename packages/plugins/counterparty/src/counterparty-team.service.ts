@@ -10,6 +10,7 @@ import {
     CounterpartyTeamMember,
     CounterpartyTeamMemberRole,
 } from './entities/counterparty-team-member.entity';
+import { CounterpartyVersionService } from './counterparty-version.service';
 import { loggerCtx } from './types';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class CounterpartyTeamService {
     constructor(
         private connection: TransactionalConnection,
         private accessScopeService: AccessScopeService,
+        private versions: CounterpartyVersionService,
     ) {}
 
     async getTeamMembers(
@@ -51,13 +53,9 @@ export class CounterpartyTeamService {
             role,
             phone: phone ?? null,
         });
+        let saved: CounterpartyTeamMember;
         try {
-            const saved = await repo.save(member);
-            Logger.verbose(
-                `Added team member administrator=${administratorId} to counterparty=${counterpartyId} (role=${role})`,
-                loggerCtx,
-            );
-            return saved;
+            saved = await repo.save(member);
         } catch (e) {
             if (e instanceof QueryFailedError) {
                 throw new UserInputError(
@@ -66,6 +64,12 @@ export class CounterpartyTeamService {
             }
             throw e;
         }
+        await this.versions.bump(ctx, counterparty.id);
+        Logger.verbose(
+            `Added team member administrator=${administratorId} to counterparty=${counterpartyId} (role=${role})`,
+            loggerCtx,
+        );
+        return saved;
     }
 
     async removeTeamMember(
@@ -81,11 +85,34 @@ export class CounterpartyTeamService {
             counterpartyId: String(counterpartyId),
             administratorId: String(administratorId),
         });
+        if (!result.affected) return false;
+        await this.versions.bump(ctx, counterparty.id);
         Logger.verbose(
             `Removed team member administrator=${administratorId} from counterparty=${counterpartyId}`,
             loggerCtx,
         );
-        return (result.affected ?? 0) > 0;
+        return true;
+    }
+
+    // Inbound only: the ERP's manager list becomes the team on first arrival. Never bumps, so it is not sent back.
+    async seedFromErp(
+        ctx: RequestContext,
+        counterpartyId: ID,
+        administratorIds: readonly string[],
+    ): Promise<void> {
+        const repo = this.connection.getRepository(ctx, CounterpartyTeamMember);
+        for (const administratorId of administratorIds) {
+            await repo
+                .createQueryBuilder()
+                .insert()
+                .values({
+                    counterpartyId: String(counterpartyId),
+                    administratorId,
+                    role: 'observer',
+                })
+                .orIgnore()
+                .execute();
+        }
     }
 
     private async findCounterpartyOrFail(

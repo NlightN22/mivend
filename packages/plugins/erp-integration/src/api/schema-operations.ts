@@ -25,6 +25,18 @@ export const operations = `
         tradingPointsNotConfirmedByErp(
             options: OpenErpReconciliationIssueListOptions
         ): TradingPointList!
+        "Counterparties whose portal-owned fields differ from the last state the ERP sent (people edited them; issue #368)."
+        counterpartiesDifferingFromErp(
+            options: OpenErpReconciliationIssueListOptions
+        ): CounterpartyList!
+        "Counterparties edited here whose latest version the ERP has not echoed back yet (issue #368)."
+        counterpartiesNotConfirmedByErp(
+            options: OpenErpReconciliationIssueListOptions
+        ): CounterpartyList!
+        "Counterparties with an owner or team member whose Administrator has no ERP user link; that manager is left out of what is sent to the ERP (issue #368)."
+        counterpartiesWithUnlinkedManagers(
+            options: OpenErpReconciliationIssueListOptions
+        ): CounterpartyList!
         "Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll."
         kafkaConsumerLag: [KafkaTopicLag!]!
         "Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog."

@@ -53,6 +53,8 @@ function counterparty(overrides: Record<string, unknown> = {}): Record<string, u
     };
 }
 
+const mockVersions = { bump: vi.fn(), bumpMany: vi.fn() };
+
 describe('CounterpartyManagerAssignmentService.reassignManager', () => {
     let service: CounterpartyManagerAssignmentService;
 
@@ -66,6 +68,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
             mockTeamAdministratorService as unknown as TeamAdministratorService,
             mockVersioningService as unknown as VersioningService,
             { assignCounterparties: vi.fn() } as never,
+            mockVersions as never,
         );
     });
 

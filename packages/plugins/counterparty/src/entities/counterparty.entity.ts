@@ -115,4 +115,8 @@ export class Counterparty extends VendureEntity {
 
     @Column({ type: 'varchar', nullable: true })
     legalFormId!: string | null;
+
+    // Counts committed changes of the portal-owned fields; moved only by CounterpartyVersionService.
+    @Column({ type: 'int', default: 0 })
+    version!: number;
 }

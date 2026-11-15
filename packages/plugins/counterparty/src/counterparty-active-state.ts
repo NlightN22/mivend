@@ -1,5 +1,6 @@
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyErpDetails, definedErpDetails } from './counterparty-erp-details';
+import { withoutPortalOwned } from './counterparty-ownership';
 
 export interface ActiveStateFields extends CounterpartyErpDetails {
     name: string | null;
@@ -16,8 +17,8 @@ export interface ActiveStateFields extends CounterpartyErpDetails {
     officialEmail?: string | null;
 }
 
-// Only the columns the stream owns: a full-entity save would write a stale branchId over a concurrent reconcile.
-export function activeStatePatch(fields: ActiveStateFields): Partial<Counterparty> {
+// Everything the event carries, for a record seen for the first time.
+export function activeStateSeedPatch(fields: ActiveStateFields): Partial<Counterparty> {
     const patch: Partial<Counterparty> = { isActive: fields.isActive };
     if (fields.name) {
         patch.legalName = fields.name;
@@ -33,6 +34,11 @@ export function activeStatePatch(fields: ActiveStateFields): Partial<Counterpart
     if (fields.phone !== undefined) patch.phone = fields.phone;
     if (fields.officialEmail !== undefined) patch.officialEmail = fields.officialEmail;
     return { ...patch, ...definedErpDetails(fields) };
+}
+
+// An existing record takes only what the ERP still owns; a full-entity save would also write a stale branchId over a concurrent reconcile.
+export function activeStatePatch(fields: ActiveStateFields): Partial<Counterparty> {
+    return withoutPortalOwned(activeStateSeedPatch(fields));
 }
 
 export function newCounterpartyFromActiveState(

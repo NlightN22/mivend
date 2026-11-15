@@ -1,3 +1,4 @@
+import { CounterpartyVersionService } from '../../counterparty-version.service';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
@@ -114,6 +115,7 @@ beforeAll(async () => {
         mockTeamAdministratorService as never,
         mockVersioningService as never,
         { assignCounterparties: vi.fn() } as never,
+        new CounterpartyVersionService(connectionShim, { publish: vi.fn() } as never),
     );
 });
 

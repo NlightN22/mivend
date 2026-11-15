@@ -10,7 +10,7 @@ import { lockKeyOf, OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
 import { buildCancelRequested } from './order-cancel-requested.builder';
-import { TradingPointCommandBuilder } from './trading-point-command.builder';
+import { VersionedEntityBuilders } from './versioned-entity-builders';
 
 // Another recovery got there first; callers that race on purpose (the sweep) treat it as a no-op.
 export class NotSkippedError extends Error {}
@@ -33,14 +33,16 @@ export class IntegrationOutboxRecoveryService {
         'order.cancel-requested': async (_ctx, subject) =>
             buildCancelRequested(String(subject.orderUuid)),
         'trading-point.changed': (ctx, subject) =>
-            this.tradingPoint.build(ctx, String(subject.uuid)),
+            this.versioned.get('trading-point.changed').build(ctx, String(subject.uuid)),
+        'counterparty.changed': (ctx, subject) =>
+            this.versioned.get('counterparty.changed').build(ctx, String(subject.erpId)),
     } satisfies Record<OutboundEventType, OutboundRebuilder>;
 
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly outbox: IntegrationOutboxService,
         private readonly orderSubmitted: OrderSubmittedBuilder,
-        private readonly tradingPoint: TradingPointCommandBuilder,
+        private readonly versioned: VersionedEntityBuilders,
     ) {}
 
     // Conditional UPDATE: only rows still `failed` move, so a double click or a concurrent

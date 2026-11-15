@@ -1,22 +1,22 @@
 import { ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
-import { TradingPointReconciler } from './trading-point-reconciler.service';
+import { VersionedEntityReconciler } from './versioned-entity.reconciler';
 import type { ErpIntegrationPluginOptions } from './types';
 
 const EVERY_MS = 10 * 60 * 1000;
 
-export function createTradingPointReconcilerTask(
+export function createVersionedEntityReconcilerTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
     return new ScheduledTask({
-        id: 'erp-integration-trading-point-reconciler',
+        id: 'erp-integration-versioned-entity-reconciler',
         description:
-            'Sends trading point versions that never got an outbound record (central hub only).',
+            'Sends record versions (trading points, counterparties) that never got an outbound record (central hub only).',
         schedule: cronEveryMs(EVERY_MS),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
-            return { redriven: await injector.get(TradingPointReconciler).sweep() };
+            return { redriven: await injector.get(VersionedEntityReconciler).sweep() };
         },
     });
 }

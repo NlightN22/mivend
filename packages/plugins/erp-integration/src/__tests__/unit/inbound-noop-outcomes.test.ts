@@ -98,6 +98,8 @@ describe.each([
                 } as never,
                 { guarded: passthroughGuard } as never,
                 {} as never,
+                { write: vi.fn() } as never,
+                {} as never,
             ),
         { isDeleted: true },
     ],

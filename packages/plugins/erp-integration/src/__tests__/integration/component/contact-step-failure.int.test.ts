@@ -47,10 +47,18 @@ afterAll(async () => {
 
 const handler = new CounterpartyStreamHandler(
     {
-        upsertActiveState: vi.fn(async (_c: unknown, erpId: string) => {
-            upserted.push(erpId);
-            return true;
-        }),
+        upsertActiveState: vi.fn(
+            async (
+                c: unknown,
+                erpId: string,
+                _fields: unknown,
+                onFirst?: (c: unknown, cp: unknown) => Promise<void>,
+            ) => {
+                upserted.push(erpId);
+                await onFirst?.(c, { id: 1 });
+                return true;
+            },
+        ),
     } as never,
     {} as never,
     {
@@ -72,6 +80,8 @@ const handler = new CounterpartyStreamHandler(
         }),
     } as never,
     { linkWaitingContacts: vi.fn() } as never,
+    { write: vi.fn() } as never,
+    { seedFromErp: vi.fn() } as never,
 );
 
 async function deliver(version: string): Promise<void> {

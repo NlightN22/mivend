@@ -17,6 +17,7 @@ import { VersioningService } from '@mivend/plugin-versioning';
 
 import { CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartyVersionService } from './counterparty-version.service';
 import { Counterparty } from './entities/counterparty.entity';
 import { loggerCtx } from './types';
 
@@ -33,6 +34,7 @@ export class CounterpartyManagerAssignmentService {
         private teamAdministratorService: TeamAdministratorService,
         private versioningService: VersioningService,
         private branchAssignment: BranchAssignmentService,
+        private versions: CounterpartyVersionService,
     ) {}
 
     async reassignManager(
@@ -51,6 +53,9 @@ export class CounterpartyManagerAssignmentService {
         const previousManagerId = counterparty.assignedManagerId;
         counterparty.assignedManagerId = String(administratorId);
         await repo.update(counterparty.id, { assignedManagerId: counterparty.assignedManagerId });
+        if (previousManagerId !== counterparty.assignedManagerId) {
+            await this.versions.bump(ctx, counterparty.id);
+        }
         const saved = counterparty;
         await this.recordReassignment(ctx, saved.id, previousManagerId, saved.assignedManagerId);
         await this.branchAssignment.assignCounterparties(ctx, { ids: [String(saved.id)] });
@@ -87,6 +92,10 @@ export class CounterpartyManagerAssignmentService {
             ctx,
             counterparties.map(c => c.id),
             to,
+        );
+        await this.versions.bumpMany(
+            ctx,
+            changed.map(({ id }) => id),
         );
         for (const { id, previous } of changed) {
             await this.recordReassignment(ctx, id, previous, to);

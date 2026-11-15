@@ -27,12 +27,18 @@ const mockAccessScopeService = {
 
 const mockCtx = {} as RequestContext;
 
+const mockVersions = { bump: vi.fn() };
+
 describe('CounterpartyTeamService', () => {
     let service: CounterpartyTeamService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new CounterpartyTeamService(mockConnection as never, mockAccessScopeService);
+        service = new CounterpartyTeamService(
+            mockConnection as never,
+            mockAccessScopeService,
+            mockVersions as never,
+        );
         mockCounterpartyRepo.findOne.mockResolvedValue({
             id: 'cp-1',
             assignedManagerId: 'admin-owner',
@@ -52,6 +58,7 @@ describe('CounterpartyTeamService', () => {
         const result = await service.addTeamMember(mockCtx, 'cp-1', 'admin-2', 'backup');
 
         expect(result.role).toBe('backup');
+        expect(mockVersions.bump).toHaveBeenCalledTimes(1);
         expect(mockAccessScopeService.assertCounterpartyWritable).toHaveBeenCalled();
         expect(mockTeamRepo.save).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -137,6 +144,7 @@ describe('CounterpartyTeamService', () => {
         const result = await service.removeTeamMember(mockCtx, 'cp-1', 'admin-2');
 
         expect(result).toBe(true);
+        expect(mockVersions.bump).toHaveBeenCalledTimes(1);
         expect(mockAccessScopeService.assertCounterpartyWritable).toHaveBeenCalled();
         expect(mockTeamRepo.delete).toHaveBeenCalledWith({
             counterpartyId: 'cp-1',
@@ -150,6 +158,7 @@ describe('CounterpartyTeamService', () => {
         const result = await service.removeTeamMember(mockCtx, 'cp-1', 'admin-nonexistent');
 
         expect(result).toBe(false);
+        expect(mockVersions.bump).not.toHaveBeenCalled();
     });
 
     it('getTeamMembers lists members for a counterparty', async () => {

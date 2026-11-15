@@ -134,6 +134,7 @@ export const JOURNALED_ENTITIES: readonly string[] = [
     'Counterparty',
     'TradingPoint',
     'TradingPointErp',
+    'CounterpartyErp',
     'CounterpartyContactErp',
     'CounterpartyGroupErp',
     'PointOfSaleTypeErp',

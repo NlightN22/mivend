@@ -37,6 +37,12 @@ import { PowerOfAttorneyListResolver } from './power-of-attorney-list/power-of-a
 import { powerOfAttorneyListSchema } from './power-of-attorney-list/power-of-attorney-list.schema';
 import { PowerOfAttorneyListService } from './power-of-attorney-list/power-of-attorney-list.service';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
+import { CounterpartyErp } from './entities/counterparty-erp.entity';
+import { CounterpartyErpDriftService } from './counterparty-erp-drift.service';
+import { CounterpartyErpMirrorService } from './counterparty-erp-mirror.service';
+import { CounterpartySnapshotService } from './counterparty-snapshot.service';
+import { CounterpartyStreamStateService } from './counterparty-stream-state.service';
+import { CounterpartyVersionService } from './counterparty-version.service';
 import { CounterpartyContactErp } from './entities/counterparty-contact-erp.entity';
 import { CounterpartyGroupErp } from './entities/counterparty-group-erp.entity';
 import { PointOfSaleTypeErp } from './entities/point-of-sale-type-erp.entity';
@@ -162,6 +168,7 @@ const adminResolvers = [
         Counterparty,
         TradingPoint,
         TradingPointErp,
+        CounterpartyErp,
         CounterpartyContactErp,
         CounterpartyGroupErp,
         PointOfSaleTypeErp,
@@ -201,6 +208,11 @@ const adminResolvers = [
         ...visibilityBundle.providers,
         CounterpartyPortalAccessExecutor,
         CounterpartyService,
+        CounterpartyErpDriftService,
+        CounterpartyErpMirrorService,
+        CounterpartySnapshotService,
+        CounterpartyStreamStateService,
+        CounterpartyVersionService,
         CounterpartyBatchLoaders,
         ErpIdLookupService,
         ContactPointService,
@@ -233,6 +245,11 @@ const adminResolvers = [
     ],
     exports: [
         CounterpartyService,
+        CounterpartyErpDriftService,
+        CounterpartyErpMirrorService,
+        CounterpartySnapshotService,
+        CounterpartyStreamStateService,
+        CounterpartyVersionService,
         ContactPointService,
         ErpContactPersonService,
         ErpIdLookupService,

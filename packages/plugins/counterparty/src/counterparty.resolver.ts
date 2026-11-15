@@ -18,7 +18,9 @@ import { CounterpartyService } from './counterparty.service';
 import { CounterpartySuggestService } from './counterparty-suggest.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
+import { CounterpartyVersionService } from './counterparty-version.service';
 import { CounterpartySortParameter } from './types';
+import type { CounterpartyUpsertPayload } from './types';
 import type { CounterpartyFilterParameter } from './counterparty-list-query';
 
 @Resolver('Customer')
@@ -140,6 +142,7 @@ export class CounterpartyResolver {
         private counterpartyService: CounterpartyService,
         private managerAssignmentService: CounterpartyManagerAssignmentService,
         private priceTypeAccess: PriceTypeAccessService,
+        private versions: CounterpartyVersionService,
         private suggestions: CounterpartySuggestService,
     ) {}
 
@@ -237,23 +240,12 @@ export class CounterpartyResolver {
     @Allow(Permission.UpdateCustomer)
     async upsertCounterparty(
         @Ctx() ctx: RequestContext,
-        @Args()
-        args: {
-            erpId: string;
-            legalName: string;
-            shortName: string;
-            inn?: string;
-            creditLimit: number;
-            creditBalance: number;
-            paymentDelayDays: number;
-            priceType: string;
-            isActive: boolean;
-            departmentId?: string;
-            erpGroupLabel?: string;
-        },
+        @Args() args: CounterpartyUpsertPayload,
     ): Promise<Counterparty> {
         await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceType);
-        return this.counterpartyService.upsert(ctx, args);
+        const saved = await this.counterpartyService.upsert(ctx, args);
+        await this.versions.bump(ctx, saved.id);
+        return saved;
     }
 
     @Transaction()

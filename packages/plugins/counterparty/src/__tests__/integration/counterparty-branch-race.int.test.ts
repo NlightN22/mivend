@@ -19,7 +19,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { CounterpartyService } from '../../counterparty.service';
+import { CounterpartyStreamStateService } from '../../counterparty-stream-state.service';
 import { Counterparty } from '../../entities/counterparty.entity';
 
 @Entity('counterparty')
@@ -87,7 +87,7 @@ class TestErpUser {
 const { schema, extra } = testSchemaOptions('counterparty_branch_race');
 const ctx = testRequestContext;
 let dataSource: DataSource;
-let service: CounterpartyService;
+let streamState: CounterpartyStreamStateService;
 let assignment: BranchAssignmentService;
 let mappings: DepartmentBranchMappingService;
 const retries: BranchAssignmentRetryEvent[] = [];
@@ -133,15 +133,7 @@ beforeAll(async () => {
         },
     } as never);
     mappings = new DepartmentBranchMappingService(conn, assignment);
-    service = new CounterpartyService(
-        conn,
-        {} as never,
-        {} as never,
-        {} as never,
-        {
-            publish: () => undefined,
-        } as never,
-    );
+    streamState = new CounterpartyStreamStateService(conn, { publish: () => undefined } as never);
 });
 
 afterEach(async () => {
@@ -179,9 +171,9 @@ describe('applyActiveState vs reconcile (real Postgres)', () => {
             const target = round % 2 === 0 ? second : first;
             await Promise.all([
                 assignment.assignCounterpartyIfInputsChanged(ctx, 'cp-1', () =>
-                    service.upsertActiveState(ctx, 'cp-1', {
+                    streamState.upsertActiveState(ctx, 'cp-1', {
                         name: `Name ${round}`,
-                        isActive: true,
+                        isActive: round % 2 === 0,
                         departmentId: 'dept-1',
                     }),
                 ),
@@ -196,7 +188,8 @@ describe('applyActiveState vs reconcile (real Postgres)', () => {
                 .getRepository(TestCounterparty)
                 .findOneByOrFail({ erpId: 'cp-1' });
             expect(row.branchId).toBe(String(target));
-            expect(row.legalName).toBe(`Name ${round}`);
+            expect(row.isActive).toBe(round % 2 === 0);
+            expect(row.legalName).toBe('N');
         }
     });
 });

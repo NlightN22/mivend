@@ -2,34 +2,35 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import {
     ContactPointService,
-    CounterpartyService,
+    CounterpartyErpMirrorService,
+    CounterpartyStreamStateService,
+    CounterpartyTeamService,
     ErpContactPersonService,
 } from '@mivend/plugin-counterparty';
+import type { ActiveStateFields } from '@mivend/plugin-counterparty';
 import { BranchAssignmentService, UserEnrichmentService } from '@mivend/plugin-access-control';
 
 import { parseContactInfos } from './contact-infos';
+import { resolveManagers } from './counterparty-manager-resolution';
 import { optionalErpDetails } from './counterparty-erp-details';
+import { mirrorFields } from './counterparty-mirror-fields';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
-interface ManagerResolution {
-    assignedManagerId: string | null | undefined;
-    managerErpId: string | null | undefined;
-    unresolvedReason?: string;
-}
-
 const loggerCtx = 'IntegrationCounterpartyHandler';
 
-// ERP is master for business data: assignedManagerId is written directly, bypassing
-// reassignCounterpartyManager's scope check on purpose; manual overrides sit on top.
+// The first event of a counterparty seeds mivend's record (and its team); afterwards only the ERP-owned
+// fields move (counterparty-ownership.ts). Every event lands in the counterparty_erp mirror.
 @Injectable()
 export class CounterpartyStreamHandler implements InboundStreamHandler {
     constructor(
-        private readonly counterpartyService: CounterpartyService,
+        private readonly streamState: CounterpartyStreamStateService,
         private readonly userEnrichmentService: UserEnrichmentService,
         private readonly branchAssignment: BranchAssignmentService,
         private readonly contactPoints: ContactPointService,
         private readonly persons: ErpContactPersonService,
+        private readonly mirror: CounterpartyErpMirrorService,
+        private readonly team: CounterpartyTeamService,
     ) {}
 
     async apply(
@@ -44,55 +45,73 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         // in JSON encoding despite the field being declared optional bool in the .proto.
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
-        const { assignedManagerId, managerErpId, unresolvedReason } =
-            await this.resolveAssignedManagerId(entityId, ctx, payload);
+        const { assignedManagerId, managerErpId, teamAdministratorIds, unresolvedReason } =
+            await resolveManagers(this.userEnrichmentService, entityId, ctx, payload);
+        const contactInfos = parseContactInfos(payload.contactInfos);
+        const fields: ActiveStateFields = {
+            name,
+            isActive,
+            // inn/group/department: absent keeps the stored value. Contact fields below are
+            // full state on a named event: absent or empty clears (#259).
+            inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
+            erpGroupLabel:
+                'erpGroupLabel' in payload
+                    ? ((payload.erpGroupLabel as string | null) ?? null)
+                    : undefined,
+            departmentId:
+                'departmentId' in payload
+                    ? ((payload.departmentId as string | null) ?? null)
+                    : undefined,
+            assignedManagerId,
+            managerErpId,
+            legalAddress: contact(name, payload.legalAddress),
+            factualAddress: contact(name, payload.factualAddress),
+            phone: contact(name, payload.phone),
+            officialEmail: contact(name, payload.officialEmail),
+            ...optionalErpDetails(payload),
+            // notificationPhone: deliberately unread — no column until a consumer exists.
+        };
+        if (name) {
+            await this.mirror.write(
+                ctx,
+                entityId,
+                mirrorFields(fields, payload.managerIds, contactInfos),
+            );
+        }
 
+        const contactStep: { failure: string | null } = { failure: null };
         const stored = await this.branchAssignment.assignCounterpartyIfInputsChanged(
             ctx,
             entityId,
             () =>
-                this.counterpartyService.upsertActiveState(ctx, entityId, {
-                    name,
-                    isActive,
-                    // inn/group/department: absent keeps the stored value. Contact fields below are
-                    // full state on a named event: absent or empty clears (#259).
-                    inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
-                    erpGroupLabel:
-                        'erpGroupLabel' in payload
-                            ? ((payload.erpGroupLabel as string | null) ?? null)
-                            : undefined,
-                    departmentId:
-                        'departmentId' in payload
-                            ? ((payload.departmentId as string | null) ?? null)
-                            : undefined,
-                    assignedManagerId,
-                    managerErpId,
-                    legalAddress: contact(name, payload.legalAddress),
-                    factualAddress: contact(name, payload.factualAddress),
-                    phone: contact(name, payload.phone),
-                    officialEmail: contact(name, payload.officialEmail),
-
-                    ...optionalErpDetails(payload),
-                    // notificationPhone: deliberately unread — see this file's own top-of-file field
-                    // accounting comment.
-                }),
+                this.streamState.upsertActiveState(
+                    ctx,
+                    entityId,
+                    fields,
+                    async (txCtx, created) => {
+                        await this.team.seedFromErp(txCtx, created.id, teamAdministratorIds);
+                        contactStep.failure = await this.contactPoints.guarded(
+                            txCtx,
+                            `counterparty ${entityId}`,
+                            async () => {
+                                if (contactInfos) {
+                                    await this.contactPoints.replaceErpPointsByErpId(
+                                        txCtx,
+                                        'counterparty',
+                                        entityId,
+                                        contactInfos,
+                                    );
+                                }
+                            },
+                        );
+                    },
+                ),
         );
-        const contactInfos = parseContactInfos(payload.contactInfos);
-        const failure = await this.contactPoints.guarded(
-            ctx,
-            `counterparty ${entityId}`,
-            async () => {
-                if (name && contactInfos) {
-                    await this.contactPoints.replaceErpPointsByErpId(
-                        ctx,
-                        'counterparty',
-                        entityId,
-                        contactInfos,
-                    );
-                }
-                if (name) await this.persons.linkWaitingContacts(ctx, entityId);
-            },
-        );
+        const failure = name
+            ? ((await this.contactPoints.guarded(ctx, `counterparty ${entityId}`, () =>
+                  this.persons.linkWaitingContacts(ctx, entityId),
+              )) ?? contactStep.failure)
+            : contactStep.failure;
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +
@@ -107,43 +126,6 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         return unresolvedReason
             ? inboundNoop(failure ? `${unresolvedReason}; ${failure}` : unresolvedReason)
             : inboundApplied(undefined, failure);
-    }
-
-    // Omitted manager keys must never clear an existing manager. A known but unlinked erpId
-    // is not a race: don't retry, save with assignedManagerId null; the listener backfills it.
-    private async resolveAssignedManagerId(
-        entityId: string,
-        ctx: RequestContext,
-        payload: Record<string, unknown>,
-    ): Promise<ManagerResolution> {
-        const managerIds = Array.isArray(payload.managerIds)
-            ? (payload.managerIds as unknown[])
-            : [];
-        const managerErpId = payload.managerId
-            ? String(payload.managerId)
-            : managerIds.length > 0
-              ? String(managerIds[0])
-              : undefined;
-        if (managerErpId === undefined) {
-            return { assignedManagerId: undefined, managerErpId: undefined };
-        }
-
-        const resolution = await this.userEnrichmentService.findManagerLink(ctx, managerErpId);
-        if (!resolution.found) {
-            // The manager is a soft reference: never hold the counterparty (or its waiting contracts)
-            // for it; the id may never arrive, and assignedManagerId is backfilled on link.
-            const reason = `counterparty ${entityId} saved without a manager: manager reference ${managerErpId} is not a known ERP user (it may be a user group, which is never published); assigned only if a user with this id links to an Administrator`;
-            Logger.verbose(reason, loggerCtx);
-            return { assignedManagerId: null, managerErpId, unresolvedReason: reason };
-        }
-        if (resolution.administratorId === null) {
-            Logger.verbose(
-                `counterparty ${entityId}: manager erpId=${managerErpId} is known but not yet linked to an Administrator — saving with no manager, not retrying`,
-                loggerCtx,
-            );
-            return { assignedManagerId: null, managerErpId };
-        }
-        return { assignedManagerId: String(resolution.administratorId), managerErpId };
     }
 }
 

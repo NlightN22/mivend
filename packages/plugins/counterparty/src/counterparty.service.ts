@@ -18,11 +18,6 @@ import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
 import { Counterparty } from './entities/counterparty.entity';
-import {
-    ActiveStateFields,
-    activeStatePatch,
-    newCounterpartyFromActiveState,
-} from './counterparty-active-state';
 import { selectHighUsage, summarizeCounterparties } from './counterparty-credit-queries';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { applyCounterpartySort } from './counterparty-sort';
@@ -64,38 +59,6 @@ export class CounterpartyService {
                 return saved;
             },
         );
-    }
-
-    // Never reuse upsert() here: the stream omits creditLimit/paymentDelayDays/priceType/branchId
-    // Tombstone (name null) only updates isActive, never creates a row. undefined = keep, null = clear.
-    async upsertActiveState(
-        ctx: RequestContext,
-        erpId: string,
-        fields: ActiveStateFields,
-    ): Promise<boolean> {
-        return withAggregateLock(this.connection, ctx, `counterparty:${erpId}`, txCtx =>
-            this.applyActiveState(txCtx, erpId, fields),
-        );
-    }
-
-    private async applyActiveState(
-        ctx: RequestContext,
-        erpId: string,
-        fields: ActiveStateFields,
-    ): Promise<boolean> {
-        const repo = this.connection.getRepository(ctx, Counterparty);
-        const entity = await repo.findOne({ where: { erpId } });
-        if (entity) {
-            await repo.update(entity.id, activeStatePatch(fields));
-            return true;
-        }
-        if (!fields.name) return false;
-        const created = await repo.save(
-            repo.create(newCounterpartyFromActiveState(erpId, fields.name, fields)),
-        );
-        this.publishCreated(ctx, created);
-        Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
-        return true;
     }
 
     private publishCreated(ctx: RequestContext, counterparty: Counterparty): void {

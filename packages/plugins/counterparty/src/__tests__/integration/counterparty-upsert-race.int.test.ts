@@ -11,6 +11,7 @@ import {
 } from 'shared';
 
 import { CounterpartyService } from '../../counterparty.service';
+import { CounterpartyStreamStateService } from '../../counterparty-stream-state.service';
 import { Counterparty } from '../../entities/counterparty.entity';
 
 // VendureEntity's primary column needs a bootstrapped EntityIdStrategy; a bare DataSource has none.
@@ -50,6 +51,7 @@ function mapCounterparty(base: TransactionalConnection): TransactionalConnection
 const { schema, extra } = testSchemaOptions('counterparty_upsert_race');
 let dataSource: DataSource;
 let service: CounterpartyService;
+let streamState: CounterpartyStreamStateService;
 const published: string[] = [];
 const ctx = testRequestContext;
 
@@ -82,6 +84,12 @@ beforeAll(async () => {
         {} as never,
         { publish: (e: { erpId: string }) => published.push(e.erpId) } as never,
     );
+    streamState = new CounterpartyStreamStateService(
+        mapCounterparty(createTestConnection(dataSource)),
+        {
+            publish: (e: { erpId: string }) => published.push(e.erpId),
+        } as never,
+    );
 });
 
 afterEach(async () => {
@@ -104,8 +112,8 @@ describe('CounterpartyService upsert concurrency (integration, real Postgres)', 
 
     it('parallel upsertActiveState calls for a new erpId insert one row', async () => {
         const results = await Promise.all([
-            service.upsertActiveState(ctx, 'cp-erp-2', { name: 'A', isActive: true }),
-            service.upsertActiveState(ctx, 'cp-erp-2', { name: 'B', isActive: true }),
+            streamState.upsertActiveState(ctx, 'cp-erp-2', { name: 'A', isActive: true }),
+            streamState.upsertActiveState(ctx, 'cp-erp-2', { name: 'B', isActive: true }),
         ]);
 
         expect(results).toEqual([true, true]);

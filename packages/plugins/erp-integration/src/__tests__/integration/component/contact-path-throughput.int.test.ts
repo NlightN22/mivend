@@ -222,7 +222,19 @@ describe('contact path throughput (real Postgres, migrated schema)', () => {
     it('applies counterparty events with contact lists fast enough for a burst, and replay is idempotent', async () => {
         const connection = mapped(createTestConnection(dataSource));
         const handler = new CounterpartyStreamHandler(
-            { upsertActiveState: vi.fn().mockResolvedValue(true) } as never,
+            {
+                upsertActiveState: vi.fn(
+                    async (
+                        c: unknown,
+                        _e: string,
+                        _f: unknown,
+                        onFirst?: (c: unknown, cp: unknown) => Promise<void>,
+                    ) => {
+                        await onFirst?.(c, { id: 1 });
+                        return true;
+                    },
+                ),
+            } as never,
             {} as never,
             {
                 assignCounterpartyIfInputsChanged: async (
@@ -233,6 +245,8 @@ describe('contact path throughput (real Postgres, migrated schema)', () => {
             } as never,
             new ContactPointService(connection),
             new ErpContactPersonService(connection),
+            { write: vi.fn() } as never,
+            { seedFromErp: vi.fn() } as never,
         );
         const inbox = new IntegrationInboxService(createTestConnection(dataSource));
         const processor = makeInboxProcessor(

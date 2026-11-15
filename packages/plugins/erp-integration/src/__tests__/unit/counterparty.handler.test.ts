@@ -6,7 +6,17 @@ import type { ManagerLinkResolution } from '@mivend/plugin-access-control';
 import { CounterpartyStreamHandler } from '../../handlers/counterparty.handler';
 
 function makeHandler(
-    upsertActiveState = vi.fn().mockResolvedValue(undefined),
+    upsertActiveState = vi.fn(
+        async (
+            c: unknown,
+            _erpId: string,
+            fields: { name: string | null },
+            onFirst?: (c: unknown, cp: unknown) => Promise<void>,
+        ) => {
+            if (fields.name) await onFirst?.(c, { id: 1 });
+            return true;
+        },
+    ),
     findManagerLink = vi.fn().mockResolvedValue({ found: false } satisfies ManagerLinkResolution),
 ): {
     handler: CounterpartyStreamHandler;
@@ -14,6 +24,8 @@ function makeHandler(
     userEnrichmentService: { findManagerLink: ReturnType<typeof vi.fn> };
     contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
     persons: { linkWaitingContacts: ReturnType<typeof vi.fn> };
+    mirror: { write: ReturnType<typeof vi.fn> };
+    team: { seedFromErp: ReturnType<typeof vi.fn> };
 } {
     const counterpartyService = { upsertActiveState };
     const userEnrichmentService = { findManagerLink };
@@ -21,6 +33,8 @@ function makeHandler(
         guarded: passthroughGuard,
         replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
     };
+    const mirror = { write: vi.fn().mockResolvedValue(undefined) };
+    const team = { seedFromErp: vi.fn().mockResolvedValue(undefined) };
     const persons = { linkWaitingContacts: vi.fn().mockResolvedValue(undefined) };
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,
@@ -32,8 +46,18 @@ function makeHandler(
         } as never,
         contactPoints as never,
         persons as never,
+        mirror as never,
+        team as never,
     );
-    return { handler, counterpartyService, userEnrichmentService, contactPoints, persons };
+    return {
+        handler,
+        counterpartyService,
+        userEnrichmentService,
+        contactPoints,
+        persons,
+        mirror,
+        team,
+    };
 }
 
 describe('CounterpartyStreamHandler', () => {
@@ -111,6 +135,56 @@ describe('CounterpartyStreamHandler', () => {
         });
     });
 
+    describe('ownership (issue #368)', () => {
+        it('writes every named event to the mirror, with exactly what it carried', async () => {
+            const { handler, mirror } = makeHandler();
+            await handler.apply(ctx, 'cp-1', {
+                name: 'Acme',
+                inn: '7700000001',
+                managerIds: ['user-1', 'user-2'],
+                contactInfos: [{ type: 'Телефон', presentation: '+70000000001' }],
+            });
+            expect(mirror.write).toHaveBeenCalledWith(
+                ctx,
+                'cp-1',
+                expect.objectContaining({
+                    name: 'Acme',
+                    inn: '7700000001',
+                    managerIds: '["user-1","user-2"]',
+                }),
+            );
+        });
+
+        it('does not write a nameless tombstone to the mirror', async () => {
+            const { handler, mirror } = makeHandler();
+            await handler.apply(ctx, 'cp-1', { isDeleted: true });
+            expect(mirror.write).not.toHaveBeenCalled();
+        });
+
+        it('replaces contact channels and seeds the team only when the record is seen for the first time', async () => {
+            const existing = vi.fn(async () => true);
+            const { handler, contactPoints, team } = makeHandler(existing);
+            await handler.apply(ctx, 'cp-1', { name: 'Acme', contactInfos: [] });
+            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+            expect(team.seedFromErp).not.toHaveBeenCalled();
+        });
+
+        it('seeds the team from the other linked managers on first arrival', async () => {
+            const findManagerLink = vi.fn(async (_c: unknown, erpId: string) => ({
+                found: true,
+                administratorId:
+                    erpId === 'user-1' ? 'admin-1' : erpId === 'user-2' ? 'admin-2' : null,
+            }));
+            const { handler, team } = makeHandler(undefined, findManagerLink as never);
+            await handler.apply(ctx, 'cp-1', {
+                name: 'Acme',
+                managerId: 'user-1',
+                managerIds: ['user-1', 'user-2', 'user-3'],
+            });
+            expect(team.seedFromErp).toHaveBeenCalledWith(ctx, 1, ['admin-2']);
+        });
+    });
+
     // Deletion tombstones carry no name, same as organization/department.
     // Forward it so a known counterparty can be deactivated; upsertActiveState refuses null-name inserts.
     it('passes name:null through when the payload has no name (deletion tombstone)', async () => {
@@ -118,19 +192,24 @@ describe('CounterpartyStreamHandler', () => {
 
         await handler.apply(ctx, 'cp-1', { isDeleted: true });
 
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(ctx, 'cp-1', {
-            name: null,
-            isActive: false,
-            inn: undefined,
-            erpGroupLabel: undefined,
-            departmentId: undefined,
-            assignedManagerId: undefined,
-            managerErpId: undefined,
-            legalAddress: undefined,
-            factualAddress: undefined,
-            phone: undefined,
-            officialEmail: undefined,
-        });
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            {
+                name: null,
+                isActive: false,
+                inn: undefined,
+                erpGroupLabel: undefined,
+                departmentId: undefined,
+                assignedManagerId: undefined,
+                managerErpId: undefined,
+                legalAddress: undefined,
+                factualAddress: undefined,
+                phone: undefined,
+                officialEmail: undefined,
+            },
+            expect.any(Function),
+        );
     });
 
     it('upserts name + isActive, never fabricating REST-only fields', async () => {
@@ -138,19 +217,24 @@ describe('CounterpartyStreamHandler', () => {
 
         await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: false });
 
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: false,
-            inn: undefined,
-            erpGroupLabel: undefined,
-            departmentId: undefined,
-            assignedManagerId: undefined,
-            managerErpId: undefined,
-            legalAddress: null,
-            factualAddress: null,
-            phone: null,
-            officialEmail: null,
-        });
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            {
+                name: 'Acme Corp',
+                isActive: false,
+                inn: undefined,
+                erpGroupLabel: undefined,
+                departmentId: undefined,
+                assignedManagerId: undefined,
+                managerErpId: undefined,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            },
+            expect.any(Function),
+        );
     });
 
     // proto3 JSON encoding omits a scalar field equal to its zero-value — isActive:false is never
@@ -164,6 +248,7 @@ describe('CounterpartyStreamHandler', () => {
             ctx,
             'cp-1',
             expect.objectContaining({ name: 'Acme Corp', isActive: false }),
+            expect.any(Function),
         );
     });
 
@@ -180,6 +265,7 @@ describe('CounterpartyStreamHandler', () => {
             ctx,
             'cp-1',
             expect.objectContaining({ name: 'Acme Corp', isActive: false }),
+            expect.any(Function),
         );
     });
 
@@ -192,6 +278,7 @@ describe('CounterpartyStreamHandler', () => {
             ctx,
             'cp-1',
             expect.objectContaining({ name: 'Acme Corp', isActive: true }),
+            expect.any(Function),
         );
     });
 
@@ -205,6 +292,7 @@ describe('CounterpartyStreamHandler', () => {
             ctx,
             'cp-unknown',
             expect.objectContaining({ name: 'Not yet synced', isActive: false }),
+            expect.any(Function),
         );
     });
 
@@ -221,19 +309,24 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: 'dept-1',
         });
 
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: true,
-            inn: '7701234567',
-            erpGroupLabel: 'Wholesale',
-            departmentId: 'dept-1',
-            assignedManagerId: undefined,
-            managerErpId: undefined,
-            legalAddress: null,
-            factualAddress: null,
-            phone: null,
-            officialEmail: null,
-        });
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            {
+                name: 'Acme Corp',
+                isActive: true,
+                inn: '7701234567',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+                assignedManagerId: undefined,
+                managerErpId: undefined,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            },
+            expect.any(Function),
+        );
     });
 
     // These are real optional-scalar fields — absence must read as "leave unchanged"
@@ -261,19 +354,24 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: null,
         });
 
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: true,
-            inn: null,
-            erpGroupLabel: null,
-            departmentId: null,
-            assignedManagerId: undefined,
-            managerErpId: undefined,
-            legalAddress: null,
-            factualAddress: null,
-            phone: null,
-            officialEmail: null,
-        });
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            {
+                name: 'Acme Corp',
+                isActive: true,
+                inn: null,
+                erpGroupLabel: null,
+                departmentId: null,
+                assignedManagerId: undefined,
+                managerErpId: undefined,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            },
+            expect.any(Function),
+        );
     });
 
     // factualAddress, phone and officialEmail are optional scalars added in 0.39.0; legalAddress is field 15.
@@ -299,6 +397,7 @@ describe('CounterpartyStreamHandler', () => {
                 phone: '+70000000000',
                 officialEmail: 'contact@acme.example',
             }),
+            expect.any(Function),
         );
     });
 
@@ -340,6 +439,7 @@ describe('CounterpartyStreamHandler', () => {
                 phone: null,
                 officialEmail: null,
             }),
+            expect.any(Function),
         );
     });
 
@@ -383,6 +483,7 @@ describe('CounterpartyStreamHandler', () => {
                     assignedManagerId: 'admin-1',
                     managerErpId: 'user-erp-1',
                 }),
+                expect.any(Function),
             );
         });
 
@@ -411,6 +512,7 @@ describe('CounterpartyStreamHandler', () => {
                     assignedManagerId: 'admin-2',
                     managerErpId: 'user-erp-2',
                 }),
+                expect.any(Function),
             );
         });
 
@@ -446,6 +548,7 @@ describe('CounterpartyStreamHandler', () => {
                     assignedManagerId: null,
                     managerErpId: 'user-erp-unknown',
                 }),
+                expect.any(Function),
             );
             expect(outcome).toEqual({
                 kind: 'noop',
@@ -477,6 +580,7 @@ describe('CounterpartyStreamHandler', () => {
                     assignedManagerId: null,
                     managerErpId: 'user-erp-unlinked',
                 }),
+                expect.any(Function),
             );
         });
     });
@@ -516,6 +620,7 @@ describe('CounterpartyStreamHandler: ERP reference details', () => {
                 regionId: 'region-1',
                 legalFormId: 'form-1',
             }),
+            expect.any(Function),
         );
     });
 
@@ -539,6 +644,7 @@ describe('CounterpartyStreamHandler: ERP reference details', () => {
             ctx,
             'cp-1',
             expect.objectContaining({ kpp: null }),
+            expect.any(Function),
         );
     });
 });

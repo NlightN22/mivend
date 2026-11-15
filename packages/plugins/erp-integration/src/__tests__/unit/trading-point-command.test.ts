@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fromBinary } from '@bufbuild/protobuf';
 import { TradingPointCommandSchema } from '@nlightn22/event-contracts';
+import type { TradingPointSnapshot } from '@nlightn22/event-contracts';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
 
@@ -37,13 +38,17 @@ const basePoint = {
 describe('trading point command payload', () => {
     it('maps the full record and round-trips through the protobuf contract', () => {
         const payload = toTradingPointCommandPayload(basePoint, 'erp-cp-1', 'ev-1', new Date(0));
-        const decoded = fromBinary(TradingPointCommandSchema, encodeTradingPointCommand(payload));
+        const envelope = fromBinary(TradingPointCommandSchema, encodeTradingPointCommand(payload));
 
-        expect(decoded).toMatchObject({
+        expect(envelope).toMatchObject({
             eventId: 'ev-1',
             uuid: basePoint.uuid,
             version: 3n,
             erpId: 'erp-point-1',
+        });
+        expect(envelope.command.case).toBe('tradingPointSnapshot');
+        const decoded = envelope.command.value as TradingPointSnapshot;
+        expect(decoded).toMatchObject({
             name: 'Point A',
             counterpartyId: 'erp-cp-1',
             address: 'Test Street 1',
@@ -63,18 +68,21 @@ describe('trading point command payload', () => {
 
     it('leaves erp_id unset for a customer-added point and flags a hidden one', () => {
         const point = { ...basePoint, erpId: 'cust_abc', customerStatus: 'hidden' } as TradingPoint;
-        const decoded = fromBinary(
+        const envelope = fromBinary(
             TradingPointCommandSchema,
             encodeTradingPointCommand(
                 toTradingPointCommandPayload(point, 'erp-cp-1', 'e', new Date()),
             ),
         );
-        expect(decoded.erpId).toBeUndefined();
-        expect(decoded.isHidden).toBe(true);
+        expect(envelope.erpId).toBeUndefined();
+        expect((envelope.command.value as TradingPointSnapshot).isHidden).toBe(true);
     });
 
     it('refuses a payload with a field outside the contract', () => {
         expect(() => encodeTradingPointCommand({ uuid: 'u', unknownField: 1 })).toThrow();
+        expect(() =>
+            encodeTradingPointCommand({ uuid: 'u', tradingPointSnapshot: { unknownField: 1 } }),
+        ).toThrow();
     });
 });
 
@@ -135,11 +143,11 @@ describe('trading point contract pin', () => {
         expect(TRADING_POINT_COMMANDS_TOPIC).toBe('mivend.trading-point.commands.v1');
     });
 
-    it('requires a contracts package that ships the command (^0.88.0)', () => {
+    it('requires a contracts package that ships the command (^0.90.0)', () => {
         const pkg = JSON.parse(readFileSync(`${__dirname}/../../../package.json`, 'utf8')) as {
             dependencies: Record<string, string>;
         };
-        expect(pkg.dependencies['@nlightn22/event-contracts']).toMatch(/^\^0\.(8[8-9]|9\d)\./);
-        expect(compareContractVersions(installedContracts, '0.88.0').status).not.toBe('BEHIND');
+        expect(pkg.dependencies['@nlightn22/event-contracts']).toMatch(/^\^0\.(9\d)\./);
+        expect(compareContractVersions(installedContracts, '0.90.0').status).not.toBe('BEHIND');
     });
 });

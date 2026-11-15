@@ -67,9 +67,11 @@ import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
-import { TradingPointReconciler } from './trading-point-reconciler.service';
-import { createTradingPointReconcilerTask } from './trading-point-reconciler.scheduled-task';
-import { TradingPointChangedListener } from './trading-point-changed.listener';
+import { VersionedEntityReconciler } from './versioned-entity.reconciler';
+import { createVersionedEntityReconcilerTask } from './versioned-entity-reconciler.scheduled-task';
+import { VersionedEntityListener } from './versioned-entity.listener';
+import { VersionedEntityBuilders } from './versioned-entity-builders';
+import { CounterpartyCommandBuilder } from './counterparty-command.builder';
 import { TradingPointCommandBuilder } from './trading-point-command.builder';
 import { OrderSubmittedReconciler } from './order-submitted-reconciler.service';
 import { createOrderSubmittedReconcilerTask } from './order-submitted-reconciler.scheduled-task';
@@ -178,8 +180,10 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
-        TradingPointChangedListener,
-        TradingPointReconciler,
+        VersionedEntityListener,
+        VersionedEntityReconciler,
+        VersionedEntityBuilders,
+        CounterpartyCommandBuilder,
         TradingPointCommandBuilder,
         OrderSubmittedReconciler,
         OrderCancellationAdapter,
@@ -263,7 +267,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createHeldSendRedriveTask(ErpIntegrationPlugin.options),
                 createOrderSubmittedReconcilerTask(ErpIntegrationPlugin.options),
-                createTradingPointReconcilerTask(ErpIntegrationPlugin.options),
+                createVersionedEntityReconcilerTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),

@@ -1,7 +1,12 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
-import { TradingPoint, TradingPointLocationReportService } from '@mivend/plugin-counterparty';
+import {
+    Counterparty,
+    CounterpartyErpDriftService,
+    TradingPoint,
+    TradingPointLocationReportService,
+} from '@mivend/plugin-counterparty';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import {
@@ -15,6 +20,7 @@ export class ReconciliationResolver {
     constructor(
         private reconciliationService: ReconciliationService,
         private locationReport: TradingPointLocationReportService,
+        private counterpartyDrift: CounterpartyErpDriftService,
     ) {}
 
     @Query()
@@ -42,6 +48,33 @@ export class ReconciliationResolver {
         @Args() args: { options?: OpenErpReconciliationIssueListOptions },
     ): Promise<PaginatedList<TradingPoint>> {
         return this.locationReport.listNotConfirmedByErp(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async counterpartiesDifferingFromErp(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<Counterparty>> {
+        return this.counterpartyDrift.listDifferingFromErp(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async counterpartiesNotConfirmedByErp(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<Counterparty>> {
+        return this.counterpartyDrift.listNotConfirmedByErp(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async counterpartiesWithUnlinkedManagers(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<Counterparty>> {
+        return this.counterpartyDrift.listWithUnlinkedManagers(ctx, args.options);
     }
 
     @Query()

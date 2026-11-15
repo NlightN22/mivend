@@ -1,6 +1,5 @@
-// One entry per outbound event type; a new type breaks every Record<OutboundEventType, ...> until
-// filled in. `subjectKey` is the payload key recovery uses to detect an already-sent event;
-// `lockKey` is the aggregate lock live enqueue and recovery share; `versionKey` marks a versioned record whose older versions must never follow a newer one.
+// One entry per outbound type; a new type breaks every Record<OutboundEventType, ...> until filled in.
+// `subjectKey`: payload key recovery matches on; `lockKey`: shared live/recovery lock; `versionKey`: older never follows newer.
 export const OUTBOUND_EVENT_TYPES = {
     'order.confirmed': {
         subjectKey: 'orderId',
@@ -12,12 +11,21 @@ export const OUTBOUND_EVENT_TYPES = {
         versionKey: 'version',
         lockKey: (subject: Record<string, unknown>) => `trading-point:${String(subject.uuid)}`,
     },
+    'counterparty.changed': {
+        subjectKey: 'erpId',
+        versionKey: 'version',
+        lockKey: (subject: Record<string, unknown>) =>
+            `counterparty-outbound:${String(subject.erpId)}`,
+    },
 } as const;
 
 export type OutboundEventType = keyof typeof OUTBOUND_EVENT_TYPES;
 
 // Carried as protobuf on its own topic, not as a registry-framed JSON command.
-export const PROTOBUF_OUTBOUND_EVENT_TYPES = ['trading-point.changed'] as const;
+export const PROTOBUF_OUTBOUND_EVENT_TYPES = [
+    'trading-point.changed',
+    'counterparty.changed',
+] as const;
 export type JsonOutboundEventType = Exclude<
     OutboundEventType,
     (typeof PROTOBUF_OUTBOUND_EVENT_TYPES)[number]
