@@ -9,7 +9,6 @@ defineProps<{
     active:
         | 'roles'
         | 'users'
-        | 'security'
         | 'branches'
         | 'department-branch'
         | 'visibility-grants'
@@ -77,9 +76,6 @@ const canManageVisibility =
             :class="{ active: active === 'check-policies' }"
             >{{ t('settingsSystem.nav.checkPolicies') }}</RouterLink
         >
-        <RouterLink to="/settings/security" :class="{ active: active === 'security' }">{{
-            t('settingsSystem.nav.security')
-        }}</RouterLink>
         <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }">{{
             t('settingsSystem.nav.systemHealth')
         }}</RouterLink>

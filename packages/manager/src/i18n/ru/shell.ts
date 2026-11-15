@@ -22,7 +22,7 @@ const shell: typeof en = {
     },
     userMenu: {
         account: 'Учётная запись',
-        passwordAndSecurity: 'Пароль и безопасность',
+        profile: 'Профиль',
         theme: 'Тема',
         themeLight: 'Светлая',
         themeDark: 'Тёмная',
@@ -67,7 +67,6 @@ const shell: typeof en = {
         text: 'Этот раздел портала менеджера ещё не готов — он в планах.',
         newCustomer: 'Новый клиент',
         analytics: 'Аналитика',
-        profile: 'Профиль',
     },
     notFound: {
         text: 'Такой страницы не существует.',

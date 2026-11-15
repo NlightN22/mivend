@@ -196,12 +196,6 @@ export const router = createRouter({
                             meta: { requiresAuth: true },
                         },
                         {
-                            path: 'security',
-                            name: 'settings-security',
-                            component: () => import('../pages/settings/SecurityPage.vue'),
-                            meta: { requiresAuth: true },
-                        },
-                        {
                             path: 'system-health',
                             name: 'settings-system-health',
                             component: () => import('../pages/settings/SystemHealthPage.vue'),
@@ -268,10 +262,15 @@ export const router = createRouter({
                         requiresAnyPermission: BULK_PERMISSIONS,
                     },
                 },
+                {
+                    path: 'profile',
+                    name: 'profile',
+                    component: () => import('../pages/profile/ProfilePage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', titleKey: 'shell.comingSoon.newCustomer' },
                     { path: 'analytics', titleKey: 'shell.comingSoon.analytics' },
-                    { path: 'profile', titleKey: 'shell.comingSoon.profile' },
                 ].map(({ path, titleKey }) => ({
                     path,
                     component: () => import('../pages/error/ComingSoonPage.vue'),

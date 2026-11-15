@@ -131,7 +131,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
 | `manager-settlements` | dev | settlements list: type chips, filter, sort, menu entry, phone card | `--project=manager-portal-admin manager/settlements` |
-| `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
+| `manager-settings` | dev | roles, users, profile and security | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings manager/profile` |
 | `manager-team` | dev | Team directory: search, department filter, status chips, deactivated administrators (#311) | `--project=manager-operator manager/team` |
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
 | `visibility-storefront` | dev | own-data, price-type, category visibility incl. hidden-category URL empty catalog (storefront) | `--project=visibility-storefront` |
@@ -236,7 +236,7 @@ Decision per spec (R = all four roles; O = operator, M = manager, D = department
 | `catalog/category-tree`: visibility page | P | needs `UpdateCatalog` |
 | `settings/settings-roles`, `settings-users`: positive | P | `ManageAccessControl` / `ManageAdministratorLifecycle` |
 | `settings/settings-roles`, `settings-users`: negative | O, M, D | the other roles must be refused |
-| `settings/settings-security` | O | admin-api session mechanics, role-independent |
+| `profile/profile-security`, `profile-page` | O | admin-api session mechanics and personal preferences, role-independent |
 | `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display: the pages render the same component for every role, and their scope visibility is covered by `make test-access` (proforma, payment, discount-grant, dashboard matrices) and `visibility/` (entity lists, servicing team) |
 | `settlements` | P | needs `ReadSettlementDocument`; scope is covered by `make test-access` (settlement-admin-visibility) |
 | `layout/pagination-scroll` | P | UI mechanics |

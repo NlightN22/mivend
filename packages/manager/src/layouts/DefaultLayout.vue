@@ -166,9 +166,7 @@ function handleRelogin(): void {
                             <strong>{{ t('shell.layout.defaultAccountName') }}</strong>
                         </template>
                     </I18nT>
-                    <RouterLink to="/settings/security">{{
-                        t('shell.layout.changePassword')
-                    }}</RouterLink>
+                    <RouterLink to="/profile">{{ t('shell.layout.changePassword') }}</RouterLink>
                 </MvNotice>
                 <RouterView />
             </main>

@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { IconLogout, IconSettings } from '@tabler/icons-vue';
+import { IconLogout } from '@tabler/icons-vue';
 import { MvAvatar } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import UserMenuLanguage from './UserMenuLanguage.vue';
 import UserMenuTheme from './UserMenuTheme.vue';
-import { USER_MENU_ITEMS, systemSettingsPath } from './userMenuItems';
+import { USER_MENU_ITEMS } from './userMenuItems';
 
 defineEmits<{ logout: [] }>();
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const settingsPath = computed(() => systemSettingsPath(authStore.hasPermission));
 const email = computed(() => authStore.administrator?.emailAddress ?? null);
 const menu = ref<HTMLElement | null>(null);
 
@@ -64,10 +63,6 @@ function onKeydown(event: KeyboardEvent): void {
         </RouterLink>
         <UserMenuTheme />
         <UserMenuLanguage />
-        <RouterLink v-if="settingsPath" :to="settingsPath" class="user-menu__item" role="menuitem">
-            <IconSettings :size="18" aria-hidden="true" />
-            {{ t('shell.nav.systemSettings') }}
-        </RouterLink>
         <button
             type="button"
             class="user-menu__item user-menu__item--logout"

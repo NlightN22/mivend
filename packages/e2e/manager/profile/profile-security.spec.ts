@@ -129,7 +129,7 @@ test.describe('Session management API (admin-api)', () => {
     });
 });
 
-test.describe('Settings > Security page — UI', () => {
+test.describe('Profile > Security section — UI', () => {
     // Fresh, isolated context (not the shared .auth/manager-operator.json storageState) so
     // ending this session can't invalidate the auth file every other manager spec relies on.
     test('lists a second session and "End session" removes it from the list (positive) @on:manager-operator', async ({
@@ -153,14 +153,14 @@ test.describe('Settings > Security page — UI', () => {
             await page.getByRole('button', { name: 'Sign in', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
-            await page.goto('/settings/security');
-            await expect(page.locator('.security-page__row')).toHaveCount(2, { timeout: 15000 });
+            await page.goto('/profile');
+            await expect(page.locator('.profile-security__row')).toHaveCount(2, { timeout: 15000 });
 
             const otherRow = page
-                .locator('.security-page__row')
-                .filter({ hasNot: page.locator('.security-page__current') });
+                .locator('.profile-security__row')
+                .filter({ hasNot: page.locator('.profile-security__current') });
             await otherRow.getByRole('button', { name: 'End session' }).click();
-            await expect(page.locator('.security-page__row')).toHaveCount(1, { timeout: 15000 });
+            await expect(page.locator('.profile-security__row')).toHaveCount(1, { timeout: 15000 });
 
             expect(await isSessionAlive(cookieB)).toBe(false);
         } finally {
@@ -172,16 +172,15 @@ test.describe('Settings > Security page — UI', () => {
 
     // Must run before 'Sign out everywhere': that test ends every operator session, including
     // the one in shared .auth/manager-operator.json that other manager specs depend on.
-    test('/settings/security is reachable directly and shows the Security side-nav entry as active (positive)', async ({
+    test('/profile is reachable directly and shows the Security section (positive)', async ({
         page,
     }) => {
-        await page.goto('/settings/security');
-        await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible({
+        await page.goto('/profile');
+        await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible({
             timeout: 15000,
         });
-        await expect(page.locator('.settings-side-nav a.router-link-active')).toHaveText(
-            'Security',
-        );
+        await expect(page.getByRole('heading', { name: 'Security', exact: true })).toBeVisible();
+        await expect(page.locator('.settings-side-nav')).toHaveCount(0);
     });
 
     test('"Sign out everywhere" logs the current session out too (positive) @on:manager-operator', async ({
@@ -196,7 +195,7 @@ test.describe('Settings > Security page — UI', () => {
             await page.getByRole('button', { name: 'Sign in', exact: true }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
-            await page.goto('/settings/security');
+            await page.goto('/profile');
             await page.getByRole('button', { name: 'Sign out everywhere' }).click();
             await page.waitForURL(url => url.pathname.includes('/login'));
             expect(page.url()).toContain('/login');

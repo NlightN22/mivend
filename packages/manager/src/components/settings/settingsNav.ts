@@ -31,7 +31,6 @@ const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
                 to: '/settings/visibility-grants',
                 visible: has => has('ManageVisibilityGrants') || has('ManageAccessControl'),
             },
-            { label: 'security', to: '/settings/security' },
         ],
     },
     {

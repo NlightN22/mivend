@@ -51,9 +51,7 @@ watch(step, async value => {
     if (value !== 'done') return;
     captcha.clear();
     await router.push(
-        authStore.passwordChangeRequired
-            ? '/settings/security'
-            : ((route.query.redirect as string) ?? '/'),
+        authStore.passwordChangeRequired ? '/profile' : ((route.query.redirect as string) ?? '/'),
     );
 });
 

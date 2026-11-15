@@ -14,7 +14,7 @@ type Story = StoryObj<typeof ComingSoonPage>;
 export const Default: Story = {
     loaders: [
         async () => {
-            await router.push('/profile');
+            await router.push('/analytics');
         },
     ],
     render: () => ({

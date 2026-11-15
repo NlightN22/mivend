@@ -1,4 +1,4 @@
-import { IconMoon, IconSun, IconSunMoon, IconShieldLock } from '@tabler/icons-vue';
+import { IconMoon, IconSun, IconSunMoon, IconUser } from '@tabler/icons-vue';
 import type { Component } from 'vue';
 import type { ThemePreference } from '@mivend/ui-kit';
 
@@ -8,12 +8,12 @@ export interface UserMenuItem {
     icon: Component;
 }
 
-// Only personal pages that exist; the security page hosts the password change and two-factor setup.
+// Personal pages only; system-level pages stay behind the sidebar's System settings entry.
 export const USER_MENU_ITEMS: UserMenuItem[] = [
     {
-        labelKey: 'shell.userMenu.passwordAndSecurity',
-        to: '/settings/security',
-        icon: IconShieldLock,
+        labelKey: 'shell.userMenu.profile',
+        to: '/profile',
+        icon: IconUser,
     },
 ];
 

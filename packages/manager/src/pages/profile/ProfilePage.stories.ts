@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
-import SecurityPage from './SecurityPage.vue';
+import ProfilePage from './ProfilePage.vue';
 
-const meta: Meta<typeof SecurityPage> = {
-    title: 'Pages/Settings/SecurityPage',
-    component: SecurityPage,
+const meta: Meta<typeof ProfilePage> = {
+    title: 'Pages/Profile/ProfilePage',
+    component: ProfilePage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof SecurityPage>;
+type Story = StoryObj<typeof ProfilePage>;
 
 export const Default: Story = {
     loaders: [
@@ -27,11 +27,11 @@ export const Default: Story = {
                     },
                 ],
             }));
-            await router.push('/settings/security');
+            await router.push('/profile');
         },
     ],
     render: () => ({
-        components: { SecurityPage },
-        template: '<SecurityPage />',
+        components: { ProfilePage },
+        template: '<ProfilePage />',
     }),
 };

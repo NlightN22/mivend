@@ -22,7 +22,7 @@ const loading = ref(true);
 const error = ref('');
 const endingId = ref<string | null>(null);
 
-// Plain self-service form: the default-account banner and the breached-password redirect (#278) both link here.
+// The default-account banner and the breached-password redirect (#278) both land on this form.
 const newPassword = ref('');
 const confirmPassword = ref('');
 const passwordSubmitting = ref(false);
@@ -33,11 +33,11 @@ async function handleChangePassword(): Promise<void> {
     passwordError.value = '';
     passwordSuccess.value = false;
     if (newPassword.value.length < 8) {
-        passwordError.value = t('settingsSystem.security.passwordTooShort');
+        passwordError.value = t('profile.security.passwordTooShort');
         return;
     }
     if (newPassword.value !== confirmPassword.value) {
-        passwordError.value = t('settingsSystem.security.passwordMismatch');
+        passwordError.value = t('profile.security.passwordMismatch');
         return;
     }
     passwordSubmitting.value = true;
@@ -50,8 +50,8 @@ async function handleChangePassword(): Promise<void> {
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         passwordError.value = message.includes('PASSWORD_BREACHED')
-            ? t('settingsSystem.security.passwordBreached')
-            : t('settingsSystem.security.passwordFailed');
+            ? t('profile.security.passwordBreached')
+            : t('profile.security.passwordFailed');
     } finally {
         passwordSubmitting.value = false;
     }
@@ -63,7 +63,7 @@ async function load(): Promise<void> {
     try {
         sessions.value = await fetchMySessions();
     } catch {
-        error.value = t('settingsSystem.security.loadFailed');
+        error.value = t('profile.security.loadFailed');
     } finally {
         loading.value = false;
     }
@@ -89,37 +89,34 @@ async function handleSignOutEverywhere(): Promise<void> {
 </script>
 
 <template>
-    <div class="security-page">
-        <div class="security-page__breadcrumb">{{ t('settingsSystem.security.breadcrumb') }}</div>
-        <h1 class="security-page__title">{{ t('settingsSystem.security.title') }}</h1>
-
+    <div class="profile-security">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <SecurityTwoFactor />
 
         <SecurityNewDeviceEmail />
 
-        <MvPanel v-if="!loading" :title="t('settingsSystem.security.sessions')">
-            <ul v-if="sessions.length" class="security-page__items">
-                <li v-for="s in sessions" :key="s.id" class="security-page__row">
-                    <div class="security-page__identity">
+        <MvPanel v-if="!loading" :title="t('profile.security.sessions')">
+            <ul v-if="sessions.length" class="profile-security__items">
+                <li v-for="s in sessions" :key="s.id" class="profile-security__row">
+                    <div class="profile-security__identity">
                         <strong>{{ s.deviceLabel }}</strong>
-                        <span class="security-page__meta">
+                        <span class="profile-security__meta">
                             {{
                                 s.current
-                                    ? t('settingsSystem.security.currentSession')
-                                    : t('settingsSystem.security.signedIn')
+                                    ? t('profile.security.currentSession')
+                                    : t('profile.security.signedIn')
                             }}
                             ·
                             {{
-                                t('settingsSystem.security.since', {
+                                t('profile.security.since', {
                                     date: formatDateTime(s.createdAt),
                                 })
                             }}
                         </span>
                     </div>
-                    <span v-if="s.current" class="security-page__current">{{
-                        t('settingsSystem.security.current')
+                    <span v-if="s.current" class="profile-security__current">{{
+                        t('profile.security.current')
                     }}</span>
                     <MvButton
                         v-else
@@ -128,56 +125,56 @@ async function handleSignOutEverywhere(): Promise<void> {
                         :disabled="endingId === s.id"
                         @click="handleEndSession(s.id)"
                     >
-                        {{ t('settingsSystem.security.endSession') }}
+                        {{ t('profile.security.endSession') }}
                     </MvButton>
                 </li>
             </ul>
-            <p v-else class="security-page__empty">{{ t('settingsSystem.security.noSessions') }}</p>
+            <p v-else class="profile-security__empty">{{ t('profile.security.noSessions') }}</p>
         </MvPanel>
 
-        <MvPanel :title="t('settingsSystem.security.changePassword')">
+        <MvPanel :title="t('profile.security.changePassword')">
             <MvNotice v-if="authStore.passwordChangeRequired" variant="warning">
-                {{ t('settingsSystem.security.breachedCurrent') }}
+                {{ t('profile.security.breachedCurrent') }}
             </MvNotice>
             <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
-                <i18n-t keypath="settingsSystem.security.defaultAccount" tag="span" scope="global">
+                <i18n-t keypath="profile.security.defaultAccount" tag="span" scope="global">
                     <template #account><strong>superadmin</strong></template>
                 </i18n-t>
             </MvNotice>
-            <form class="security-page__password-form" @submit.prevent="handleChangePassword">
-                <MvFormField :label="t('settingsSystem.security.newPassword')" required>
+            <form class="profile-security__password-form" @submit.prevent="handleChangePassword">
+                <MvFormField :label="t('profile.security.newPassword')" required>
                     <MvPasswordInput
                         v-model="newPassword"
-                        :placeholder="t('settingsSystem.security.passwordPlaceholder')"
-                        :show-label="t('settingsSystem.security.show')"
-                        :hide-label="t('settingsSystem.security.hide')"
+                        :placeholder="t('profile.security.passwordPlaceholder')"
+                        :show-label="t('profile.security.show')"
+                        :hide-label="t('profile.security.hide')"
                     />
                 </MvFormField>
-                <MvFormField :label="t('settingsSystem.security.confirmPassword')" required>
+                <MvFormField :label="t('profile.security.confirmPassword')" required>
                     <MvPasswordInput
                         v-model="confirmPassword"
-                        :placeholder="t('settingsSystem.security.confirmPassword')"
-                        :show-label="t('settingsSystem.security.show')"
-                        :hide-label="t('settingsSystem.security.hide')"
+                        :placeholder="t('profile.security.confirmPassword')"
+                        :show-label="t('profile.security.show')"
+                        :hide-label="t('profile.security.hide')"
                     />
                 </MvFormField>
                 <MvNotice v-if="passwordError" variant="error">{{ passwordError }}</MvNotice>
                 <MvNotice v-if="passwordSuccess" variant="success">{{
-                    t('settingsSystem.security.passwordChanged')
+                    t('profile.security.passwordChanged')
                 }}</MvNotice>
-                <div class="security-page__password-actions">
+                <div class="profile-security__password-actions">
                     <MvButton native-type="submit" :loading="passwordSubmitting">{{
-                        t('settingsSystem.security.changePassword')
+                        t('profile.security.changePassword')
                     }}</MvButton>
                 </div>
             </form>
         </MvPanel>
 
-        <MvPanel v-if="!loading" :title="t('settingsSystem.security.signOut')">
-            <div class="security-page__danger">
-                <p>{{ t('settingsSystem.security.signOutHint') }}</p>
+        <MvPanel v-if="!loading" :title="t('profile.security.signOut')">
+            <div class="profile-security__danger">
+                <p>{{ t('profile.security.signOutHint') }}</p>
                 <MvButton variant="danger" @click="handleSignOutEverywhere">{{
-                    t('settingsSystem.security.signOutEverywhere')
+                    t('profile.security.signOutEverywhere')
                 }}</MvButton>
             </div>
         </MvPanel>
@@ -185,17 +182,7 @@ async function handleSignOutEverywhere(): Promise<void> {
 </template>
 
 <style scoped>
-.security-page__breadcrumb {
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-    margin-bottom: 4px;
-}
-
-.security-page__title {
-    margin: 0 0 4px;
-}
-
-.security-page__items {
+.profile-security__items {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -204,49 +191,49 @@ async function handleSignOutEverywhere(): Promise<void> {
     gap: 12px;
 }
 
-.security-page__row {
+.profile-security__row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
 }
 
-.security-page__identity {
+.profile-security__identity {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.security-page__meta {
+.profile-security__meta {
     font-size: 12px;
     color: var(--el-text-color-secondary);
 }
 
-.security-page__current {
+.profile-security__current {
     font-size: 12px;
     font-weight: 700;
     color: var(--el-color-primary-dark-2);
 }
 
-.security-page__empty {
+.profile-security__empty {
     color: var(--el-text-color-secondary);
 }
 
-.security-page__danger {
+.profile-security__danger {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
 }
 
-.security-page__password-form {
+.profile-security__password-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
     max-width: 360px;
 }
 
-.security-page__password-actions {
+.profile-security__password-actions {
     display: flex;
     justify-content: flex-end;
 }

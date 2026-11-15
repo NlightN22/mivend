@@ -181,8 +181,8 @@ inherit the parent's visibility. The PDF route `/document-pdf/:uuid` answers `in
 | Team | users and managers | exists |
 | Bulk operations | catalog and one wizard, batch history; see `docs/bulk-operations.md` (#337) | built on the framework: catalog, wizard, History tab (#337) |
 | Analytics | placeholder | not implemented yet (#363) |
-| System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | exists, renamed System settings; the security page (password, two-factor) is also linked from the user menu |
-| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built: identity block, "Password and security", compact menu with an icon-only theme control in one row with its label (Light / Dark / Auto, kept per browser), "System settings" when permitted, Log out last in the danger role; same component in the desktop dropdown and the phone bottom sheet; language switch built (ru / en, kept per browser); profile page: #361 |
+| System settings | system-level settings only: roles, branches, policies, price types and so on; nothing personal | built: renamed System settings; holds no personal pages (password and two-factor moved to the profile page, #361) |
+| User menu | opens from the user block in the header: user settings (profile, password, two-factor, language, theme switch light/dark) and Log out; not a page of the sidebar | built: identity block, "Profile", compact menu with an icon-only theme control in one row with its label (Light / Dark / Auto, kept per browser), Log out last in the danger role; same component in the desktop dropdown and the phone bottom sheet; language switch built (ru / en, kept per browser); the menu holds only personal items, system settings are reached from the sidebar only |
 | Mobile header | <=800px: logo mark, round search button (the field takes over the header row; the panel below shows recent queries and quick links, or grouped results from 2 characters; cross or Escape closes), notification bell with unread badge, round avatar button opening the user menu card | built on the global search; quick links are the user's accessible lists (saved views are per list and cannot be listed across lists) |
 | Global search | one box in the header (desktop dropdown, Ctrl K) and the search overlay (phone): customers, orders, proforma invoices, settlement documents, discounts, grouped by kind, 5 hits each | built (`globalSearch`, #345): a hit opens the customer, order or proforma invoice card; settlement documents and discounts have no card and open their list filtered by the number |
 
@@ -197,7 +197,7 @@ or tab is decided when the settlement document card is built. Until then the Set
 **System settings are not user settings.** The sidebar entry "Settings" becomes "System settings" and holds only
 system-level things (roles, branches, policies and so on). Everything personal (profile, password, two-factor,
 language, the light/dark theme switch) moves to the user menu that opens when the user block in the header is clicked,
-next to "Log out". The dark theme and the menu exist; moving the personal pages out of system settings into a profile page is #361.
+next to "Log out". The dark theme, the menu and the profile page (`/profile`: account, language and theme, password, two-factor, sessions, sign-in notifications) exist.
 
 ## Approvals
 
@@ -329,7 +329,6 @@ always the real total, never filtered by contracts or document visibility.
 
 Tracked as separate issues, outside #320:
 
-- Profile page with all personal settings, moved out of system settings: #361.
 - Manager card (plan/fact, dynamics, statistics): #362.
 - Analytics: #363.
 - Tasks and "My tasks" (most likely a separate service): #364.

@@ -15,7 +15,7 @@ onMounted(async () => {
         enabled.value = await fetchNewDeviceEmail();
         loaded.value = true;
     } catch {
-        error.value = t('settingsSystem.security.newDevice.loadFailed');
+        error.value = t('profile.security.newDevice.loadFailed');
     }
 });
 
@@ -25,7 +25,7 @@ async function toggle(value: boolean): Promise<void> {
     try {
         enabled.value = await setNewDeviceEmail(value);
     } catch {
-        error.value = t('settingsSystem.security.newDevice.saveFailed');
+        error.value = t('profile.security.newDevice.saveFailed');
     } finally {
         saving.value = false;
     }
@@ -33,12 +33,12 @@ async function toggle(value: boolean): Promise<void> {
 </script>
 
 <template>
-    <MvPanel :title="t('settingsSystem.security.newDevice.title')">
+    <MvPanel :title="t('profile.security.newDevice.title')">
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
         <MvSwitch
             :model-value="enabled"
             :disabled="!loaded || saving"
-            :label="t('settingsSystem.security.newDevice.label')"
+            :label="t('profile.security.newDevice.label')"
             @update:model-value="toggle"
         />
     </MvPanel>

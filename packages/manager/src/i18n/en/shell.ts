@@ -20,7 +20,7 @@ export default {
     },
     userMenu: {
         account: 'Account',
-        passwordAndSecurity: 'Password and security',
+        profile: 'Profile',
         theme: 'Theme',
         themeLight: 'Light',
         themeDark: 'Dark',
@@ -66,7 +66,6 @@ export default {
         text: "This section of the manager portal is not built yet — it's on the roadmap.",
         newCustomer: 'New client',
         analytics: 'Analytics',
-        profile: 'Profile',
     },
     notFound: {
         text: 'This page does not exist.',
