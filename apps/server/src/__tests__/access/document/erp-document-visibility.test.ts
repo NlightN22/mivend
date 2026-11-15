@@ -33,13 +33,17 @@ describe('staff ERP customer claims', () => {
         );
     });
 
-    describe.each(STAFF.map(s => s.key))('staff %s', (key: ActorKey) => {
+    describe.each(STAFF.map(s => [s.key, s.scope] as const))('staff %s', (key: ActorKey, scope) => {
         it('sees the claims of the visible customers only, and the related count agrees', async () => {
             const token = await staffToken(key);
             const visible = new Set(VISIBLE_COUNTERPARTIES[key]);
-            const expected = CUSTOMERS.filter(c => visible.has(c.counterparty))
-                .map(c => ERP_CLAIM_NUMBERS[c.key])
-                .sort();
+            // Only scope 'all' sees a claim whose counterparty is unresolved.
+            const expected = [
+                ...CUSTOMERS.filter(c => visible.has(c.counterparty)).map(
+                    c => ERP_CLAIM_NUMBERS[c.key],
+                ),
+                ...(scope === 'all' ? [ERP_CLAIM_UNKNOWN_COUNTERPARTY] : []),
+            ].sort();
             const list = await admin<Page>(token, LIST, { l: { take: 200 } });
             expect(list.errors).toEqual([]);
             expect(numbersOf(list.data!).sort()).toEqual(expected);
