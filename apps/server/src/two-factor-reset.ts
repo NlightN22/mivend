@@ -1,3 +1,5 @@
+import { withClientAggregateLock } from 'shared';
+
 export interface SqlClient {
     query(sql: string, params?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>;
 }
@@ -15,21 +17,13 @@ export async function resetTwoFactor(
     identifier: string,
     reason: string,
 ): Promise<ResetOutcome | null> {
-    await client.query('BEGIN');
-    try {
-        const users = await client.query(
-            `SELECT id FROM "user" WHERE identifier = $1 AND "deletedAt" IS NULL LIMIT 1`,
-            [identifier],
-        );
-        const userId = users.rows[0] ? String(users.rows[0].id) : null;
-        if (!userId) {
-            await client.query('ROLLBACK');
-            return null;
-        }
-        // eslint-disable-next-line locks/no-raw-advisory-lock -- standalone CLI, same key as TwoFactorLockService
-        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
-            `two-factor:${userId}`,
-        ]);
+    const users = await client.query(
+        `SELECT id FROM "user" WHERE identifier = $1 AND "deletedAt" IS NULL LIMIT 1`,
+        [identifier],
+    );
+    const userId = users.rows[0] ? String(users.rows[0].id) : null;
+    if (!userId) return null;
+    return withClientAggregateLock(client, `two-factor:${userId}`, async () => {
         const factors = await client.query(
             `DELETE FROM two_factor_factor WHERE "userId" = $1 RETURNING id`,
             [userId],
@@ -44,14 +38,10 @@ export async function resetTwoFactor(
              VALUES ('TwoFactor', $1, 'deactivate', $2)`,
             [userId, `two-factor reset by operator: ${reason}`],
         );
-        await client.query('COMMIT');
         return {
             userId,
             factorsRemoved: factors.rows.length,
             sessionsRemoved: sessions.rows.length,
         };
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    }
+    });
 }

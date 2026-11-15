@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
-import { tryLockAggregate, withAggregateLock } from '../../aggregate-lock';
+import { tryLockAggregate, withAggregateLock, withClientAggregateLock } from '../../aggregate-lock';
 
 const ctx = { id: 'outer' } as unknown as RequestContext;
 const txCtx = { id: 'tx' } as unknown as RequestContext;
@@ -99,5 +99,32 @@ describe('tryLockAggregate', () => {
             'ns:1',
         ]);
         expect(connection.getRepository.mock.calls[0][0]).toBe(txCtx);
+    });
+});
+
+describe('withClientAggregateLock', () => {
+    const makeClient = (): { sql: string[]; client: { query: (sql: string) => Promise<void> } } => {
+        const sql: string[] = [];
+        return { sql, client: { query: async (q: string) => void sql.push(q.split(' ')[0]) } };
+    };
+
+    it('locks inside the transaction before the work and commits', async () => {
+        const { sql, client } = makeClient();
+        const result = await withClientAggregateLock(client, 'ns:1', async () => {
+            sql.push('work');
+            return 7;
+        });
+        expect(result).toBe(7);
+        expect(sql).toEqual(['BEGIN', 'select', 'work', 'COMMIT']);
+    });
+
+    it('rolls back and rethrows when the work fails', async () => {
+        const { sql, client } = makeClient();
+        await expect(
+            withClientAggregateLock(client, 'ns:1', async () => {
+                throw new Error('boom');
+            }),
+        ).rejects.toThrow('boom');
+        expect(sql).toEqual(['BEGIN', 'select', 'ROLLBACK']);
     });
 });

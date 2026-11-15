@@ -57,6 +57,29 @@ export async function withAggregateLock<T>(
     });
 }
 
+export interface LockClient {
+    query(sql: string, params?: unknown[]): Promise<unknown>;
+}
+
+// For code outside Vendure on a bare pg client (pre-bootstrap data steps, operator CLIs): same lock key as
+// withAggregateLock, so both sides exclude each other. Commits on success, rolls back on error.
+export async function withClientAggregateLock<T>(
+    client: LockClient,
+    key: string,
+    work: () => Promise<T>,
+): Promise<T> {
+    await client.query('BEGIN');
+    try {
+        await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [key]);
+        const result = await work();
+        await client.query('COMMIT');
+        return result;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    }
+}
+
 // Never waits: false means another transaction holds the key. Call inside a transaction; the lock is held until it ends.
 export async function tryLockAggregate(
     connection: Pick<TransactionalConnection, 'getRepository'>,
