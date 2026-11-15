@@ -98,8 +98,9 @@ beforeEach(async () => {
         ]);
 });
 
-const numbers = async (list: Parameters<PowerOfAttorneyListService['findVisible']>[1]) =>
-    (await service.findVisible(ctx, list)).items.map(i => i.number).sort();
+const numbers = async (
+    list: Parameters<PowerOfAttorneyListService['findVisible']>[1],
+): Promise<string[]> => (await service.findVisible(ctx, list)).items.map(i => i.number).sort();
 
 describe('power of attorney list (real Postgres)', () => {
     it('resolves contract and counterparty names, status and the scan indicator', async () => {

@@ -193,6 +193,16 @@ invisible below scope 'all'. Decision: the scope is the counterparty scope, not 
 of an order outside the caller's order scope are shown on a visible counterparty's document by design.
 `relatedErpDocumentCounts` counts with exactly the same scope. Pinned by `access/document/erp-document-visibility.test.ts`.
 
+### ERP powers of attorney (#333)
+
+`visiblePowersOfAttorney` needs `ReadCounterparty`; the `powersOfAttorney` count of `relatedErpDocumentCounts` (asked by
+counterparty) is returned under the same scope. Rows are limited to contracts whose local counterparty the caller sees
+(`CounterpartyService.visibleIdsSql` on `contract.counterpartyId`, joined by the contract ERP id), so a row whose contract is
+not synced locally is invisible below scope 'all'. Rows of a contract the ERP deleted (`isDeleted`) are hidden unless the
+caller holds `ReadDeletedContractPowerOfAttorney`, granted in `default-roles.ts` to department-head, general-director,
+security-officer and portal-admin, never to operator or manager; such rows are returned marked `contractDeleted`. Pinned by
+`access/document/power-of-attorney-visibility.test.ts`.
+
 ### Team table views (#320)
 
 `ManageSharedTableViews` (department-head, general-director, portal-admin) creates, edits, deletes team-wide
