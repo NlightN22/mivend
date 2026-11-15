@@ -91,7 +91,7 @@ beforeEach(async () => {
         .getRepository(ContractPowerOfAttorneyErp)
         .save([
             row('1', 'ct-a', { scanId: 'scan-1' }),
-            row('2', 'ct-a', { validUntil: day(-1) }),
+            row('2', 'ct-a', { validUntil: day(-2) }),
             row('3', 'ct-b'),
             row('4', 'ct-gone', { isDeleted: true }),
             row('5', 'ct-unknown'),
@@ -159,5 +159,28 @@ describe('power of attorney list (real Postgres)', () => {
     it('counts a counterparty rows with the same scope', async () => {
         expect(await service.countForCounterparty(ctx, '1')).toBe(2);
         expect(await service.countForCounterparty(ctx, '2')).toBe(1);
+    });
+
+    it('treats the end date as inclusive: a power ending earlier today is active, one ended a day ago is expired', async () => {
+        const startOfToday = new Date();
+        startOfToday.setUTCHours(0, 0, 0, 0);
+        const repo = dataSource.getRepository(ContractPowerOfAttorneyErp);
+        await repo.save([
+            { number: 'today', contractId: 'ct-a', holderName: 'H', validUntil: startOfToday },
+            {
+                number: 'yesterday',
+                contractId: 'ct-a',
+                holderName: 'H',
+                validUntil: new Date(startOfToday.getTime() - 86_400_000),
+            },
+        ]);
+        const page = await service.findVisible(ctx, {
+            filter: { number: { contains: 'day' } },
+        });
+        const status = Object.fromEntries(page.items.map(i => [i.number, i.status]));
+        expect(status).toEqual({ today: 'active', yesterday: 'expired' });
+        expect(
+            await numbers({ filter: { status: { eq: 'active' }, number: { eq: 'today' } } }),
+        ).toEqual(['today']);
     });
 });

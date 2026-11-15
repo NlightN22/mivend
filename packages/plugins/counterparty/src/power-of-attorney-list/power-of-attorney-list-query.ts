@@ -18,7 +18,8 @@ export interface PowerOfAttorneyListInput {
 
 const TEXT = ['contains', 'notContains', 'eq', 'notEq'] as const;
 
-export const STATUS_SQL = `CASE WHEN "t"."validUntil" IS NOT NULL AND "t"."validUntil" < now() THEN 'expired' ELSE 'active' END`;
+// The ERP sends the end date as midnight UTC of that day, and the power is valid through the whole day.
+export const STATUS_SQL = `CASE WHEN "t"."validUntil" IS NOT NULL AND "t"."validUntil" + interval '1 day' <= now() THEN 'expired' ELSE 'active' END`;
 
 const FIELDS: Record<string, FieldSpec> = {
     number: { kind: 'string', sql: '"t"."number"', operators: TEXT },
