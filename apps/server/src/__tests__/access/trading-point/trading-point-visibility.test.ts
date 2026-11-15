@@ -113,12 +113,14 @@ describe('moves between branches', () => {
             const set = await admin(await staffToken('head-a'), DETAILS, {
                 id: point,
                 input: {
-                    contacts: [{ name: 'access-contact', phone: '+70000000000', isPrimary: true }],
+                    contacts: [
+                        { name: 'Access Contact', phone: '+7 913 123 45 67', isPrimary: true },
+                    ],
                 },
             });
             expect(set.errors, 'head-a edits a point of its branch').toEqual([]);
             expect((await readAs('head-a', point))!.contacts.map(c => c.name)).toEqual([
-                'access-contact',
+                'Access Contact',
             ]);
             expect(
                 await readAs('head-b', point),
