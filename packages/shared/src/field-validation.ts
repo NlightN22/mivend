@@ -1,11 +1,11 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
-import { z } from 'zod';
 
 export const ADDRESS_MIN_LENGTH = 10;
 export const WORKING_HOURS_MAX_LENGTH = 200;
 export const EMAIL_MAX_LENGTH = 254;
 
-const emailSchema = z.string().max(EMAIL_MAX_LENGTH).email();
+// Shape only, Unicode allowed: no spaces, one @, dotted domain with no empty label.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/u;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export function normalizePhone(raw: string): string | null {
@@ -33,16 +33,16 @@ export function isValidAddress(raw: string): boolean {
 }
 
 export function isValidEmail(raw: string): boolean {
-    return emailSchema.safeParse(raw).success;
+    return raw.length <= EMAIL_MAX_LENGTH && EMAIL_SHAPE.test(raw);
 }
 
 const HOURS_RANGE = /^(\d{2}):(\d{2})\u2013(\d{2}):(\d{2})$/u;
 
-// Text with letters is a legacy or preset value and is only length-checked; digits must form a real HH:MM–HH:MM range.
+// Text with letters or a slash (24/7) is a legacy or preset value and is only length-checked; digits must form a real HH:MM–HH:MM range.
 export function isValidWorkingHours(raw: string): boolean {
     const value = raw.trim();
     if (value.length > WORKING_HOURS_MAX_LENGTH) return false;
-    if (/\p{L}/u.test(value)) return true;
+    if (/[\p{L}/]/u.test(value)) return true;
     const match = HOURS_RANGE.exec(value);
     if (!match) return false;
     const [a, b, c, d] = match.slice(1).map(Number);

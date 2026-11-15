@@ -12,7 +12,8 @@ describe('applyWorkingHoursInput', () => {
         ['09:00-18:00', '09:00–18:00'],
     ])('masks %s as %s', (raw, masked) => expect(applyWorkingHoursInput(raw)).toBe(masked));
 
-    it('keeps text with letters as typed', () => {
+    it('keeps text with letters or a slash as typed', () => {
+        expect(applyWorkingHoursInput('24/7')).toBe('24/7');
         expect(applyWorkingHoursInput('Пн-Пт 9-18')).toBe('Пн-Пт 9-18');
     });
 });

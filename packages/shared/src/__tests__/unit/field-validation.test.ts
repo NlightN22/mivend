@@ -33,6 +33,20 @@ describe('field predicates', () => {
     });
 });
 
+describe('e-mail', () => {
+    it.each([
+        'ivan+tag@sub.example.com',
+        'a@b.co',
+        'a@x.y.zz',
+        'ivan@почта.рф',
+        'иван@example.com',
+    ])('accepts %s', v => expect(isValidEmail(v)).toBe(true));
+    it.each(['a@b', 'a@b.', 'a@.b.co', 'a@b..co', '@b.co', 'a b@c.de', 'a@@b.co'])(
+        'rejects %s',
+        v => expect(isValidEmail(v)).toBe(false),
+    );
+});
+
 describe('dates and periods', () => {
     it.each(['2026-02-28', '2028-02-29'])('accepts %s', d => expect(isValidIsoDate(d)).toBe(true));
     it.each(['2026-02-30', '2026-13-01', '26-01-01', '', '2026-1-1'])('rejects %s', d =>
