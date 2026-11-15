@@ -14,7 +14,7 @@ export {
     PICKUP_SHIPPING_METHOD_CODE,
     hasFreightShippingLine,
 } from './deliveryMethods';
-export { lockAggregates, withAggregateLock } from './aggregate-lock';
+export { lockAggregates, tryLockAggregate, withAggregateLock } from './aggregate-lock';
 export { withOrderCancelLocks } from './order-cancel-locks';
 export { withSavepoint } from './savepoint';
 export { ctxQuery } from './ctx-query';

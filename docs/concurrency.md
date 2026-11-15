@@ -140,6 +140,8 @@ await withAggregateLock(connection, ctx, `product-photo:${externalId}`, async tx
 - Always use the `txCtx` passed to `work` for every repository call inside; a repository built
   from the outer `ctx` reads outside the lock.
 - Errors from `work` propagate and roll the transaction back.
+- `tryLockAggregate(connection, txCtx, key)` is the non-waiting variant: call it inside a transaction, `false` means another transaction holds the key. Use it only where skipping the work is correct (sweeps, sign-in attempts).
+- A session-level lock on a dedicated connection (`apps/server/src/bootstrap-lock.ts`) is the one accepted exception, listed in `eslint-rules/lint-exceptions.json`.
 - Raw `pg_advisory_xact_lock` strings outside the helper are flagged by the
   `mivend/no-raw-advisory-lock` lint rule.
 

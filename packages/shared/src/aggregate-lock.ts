@@ -57,6 +57,18 @@ export async function withAggregateLock<T>(
     });
 }
 
+// Never waits: false means another transaction holds the key. Call inside a transaction; the lock is held until it ends.
+export async function tryLockAggregate(
+    connection: Pick<TransactionalConnection, 'getRepository'>,
+    txCtx: RequestContext,
+    key: string,
+): Promise<boolean> {
+    const [row] = await connection
+        .getRepository(txCtx, LOCK_ENTITY)
+        .query('select pg_try_advisory_xact_lock(hashtextextended($1, 0)) as locked', [key]);
+    return row.locked;
+}
+
 // Takes every key's lock in one statement in a fixed hash order, so two batches over overlapping
 // keys cannot deadlock. Call inside a transaction, before reading the guarded rows.
 export async function lockAggregates(

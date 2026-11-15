@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContextService, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, tryLockAggregate } from 'shared';
 
 import {
     INBOX_DEDUP_HORIZON_DAYS,
@@ -61,13 +61,7 @@ export class IntegrationInboxExpiryService {
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         try {
             return await this.connection.withTransaction(ctx, async txCtx => {
-                const [lock] = await ctxQuery<Array<{ locked: boolean }>>(
-                    this.connection,
-                    txCtx,
-                    'select pg_try_advisory_xact_lock(hashtextextended($1, 0)) as locked',
-                    [EXPIRY_LOCK_KEY],
-                );
-                if (!lock.locked)
+                if (!(await tryLockAggregate(this.connection, txCtx, EXPIRY_LOCK_KEY)))
                     return { deleted: 0, finished: true, outcome: 'skipped' as const };
                 await ctxQuery<unknown>(
                     this.connection,

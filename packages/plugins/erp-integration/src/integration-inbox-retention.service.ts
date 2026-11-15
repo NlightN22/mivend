@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContextService, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, tryLockAggregate } from 'shared';
 
 import {
     RETENTION_MIN_SLICE_SIZE,
@@ -62,13 +62,8 @@ export class IntegrationInboxRetentionService {
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         return this.connection.withTransaction(ctx, async txCtx => {
             // A try-lock skips the call when another sweep is running, so sweeps never overlap.
-            const [lock] = await ctxQuery<Array<{ locked: boolean }>>(
-                this.connection,
-                txCtx,
-                'select pg_try_advisory_xact_lock(hashtextextended($1, 0)) as locked',
-                [RETENTION_LOCK_KEY],
-            );
-            if (!lock.locked) return { tombstoned: 0, finished: true, outcome: 'skipped' };
+            if (!(await tryLockAggregate(this.connection, txCtx, RETENTION_LOCK_KEY)))
+                return { tombstoned: 0, finished: true, outcome: 'skipped' };
 
             await ctxQuery<unknown>(
                 this.connection,

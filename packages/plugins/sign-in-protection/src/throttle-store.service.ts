@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQuery, tryLockAggregate } from 'shared';
 
 import type { CounterState } from './throttle-policy';
 
@@ -15,12 +15,7 @@ export class ThrottleStoreService {
 
     // Never waits: false means another attempt on the key is in flight. Held until the transaction ends.
     async tryLock(ctx: RequestContext, key: string): Promise<boolean> {
-        const rows = await this.query<Array<{ ok: boolean }>>(
-            ctx,
-            `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS ok`,
-            [key],
-        );
-        return rows[0].ok;
+        return tryLockAggregate(this.connection, ctx, key);
     }
 
     // One atomic statement: concurrent failures are serialised by the row lock and all counted.

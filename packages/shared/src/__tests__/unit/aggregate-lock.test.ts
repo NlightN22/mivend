@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
-import { withAggregateLock } from '../../aggregate-lock';
+import { tryLockAggregate, withAggregateLock } from '../../aggregate-lock';
 
 const ctx = { id: 'outer' } as unknown as RequestContext;
 const txCtx = { id: 'tx' } as unknown as RequestContext;
@@ -87,5 +87,17 @@ describe('withAggregateLock', () => {
             });
         });
         expect(order).toEqual(['begin', 'lock', 'begin', 'lock', 'inner-work']);
+    });
+});
+
+describe('tryLockAggregate', () => {
+    it.each([true, false])('returns the database answer (%s) without waiting', async locked => {
+        const query = vi.fn(async (_sql: string, _params: string[]) => [{ locked }]);
+        const connection = { getRepository: vi.fn((_ctx: RequestContext) => ({ query })) };
+        await expect(tryLockAggregate(connection as never, txCtx, 'ns:1')).resolves.toBe(locked);
+        expect(query).toHaveBeenCalledWith(expect.stringContaining('pg_try_advisory_xact_lock'), [
+            'ns:1',
+        ]);
+        expect(connection.getRepository.mock.calls[0][0]).toBe(txCtx);
     });
 });
