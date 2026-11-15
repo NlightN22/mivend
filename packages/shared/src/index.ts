@@ -138,3 +138,4 @@ export type { FilterTermTable } from './filter-terms';
 export * from './contactValidation';
 export * from './field-validation';
 export { ErpMirrorEntity } from './erp-mirror-entity';
+export { toAlphaCurrency } from './currency-code';

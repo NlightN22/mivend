@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Brackets, type SelectQueryBuilder } from 'typeorm';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { clampSkip, clampTake, getRawManyBounded } from 'shared';
+import { toAlphaCurrency, clampSkip, clampTake, getRawManyBounded } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocumentType } from './entities/settlement-document-type.entity';
 import { SettlementDocument } from './entities/settlement-document.entity';
-import { toAlphaCurrency } from './currency-code';
 import {
     CATEGORY_LIST_SQL,
     PROFORMA_NUMBER_SQL,

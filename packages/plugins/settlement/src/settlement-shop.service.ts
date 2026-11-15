@@ -1,3 +1,4 @@
+import { toAlphaCurrency } from 'shared';
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
@@ -20,7 +21,6 @@ import {
     customerVisibleSql,
     normalizeCategory,
 } from './settlement-visibility';
-import { toAlphaCurrency } from './currency-code';
 
 const MAX_PAGE = 100;
 

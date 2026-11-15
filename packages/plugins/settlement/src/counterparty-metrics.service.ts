@@ -1,8 +1,8 @@
+import { toAlphaCurrency } from 'shared';
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { SettlementDocument } from './entities/settlement-document.entity';
-import { toAlphaCurrency } from './currency-code';
 import { averageCheck, computeWindows, type MetricsWindows } from './counterparty-metrics.windows';
 import type {
     ContractBalanceRow,

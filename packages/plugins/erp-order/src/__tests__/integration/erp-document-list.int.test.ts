@@ -98,6 +98,7 @@ beforeEach(async () => {
         number: n,
         counterpartyId: cp,
         totalAmountMinor: 1000,
+        currency: '643',
         date: new Date(Date.UTC(2026, 0, Number(n))),
         ...extra,
     });
@@ -138,6 +139,7 @@ describe('ERP document list (real Postgres)', () => {
             lineCount: 2,
             productNames: ['Widget'],
             amount: 1000,
+            currency: 'RUB',
         });
     });
 

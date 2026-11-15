@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { Brackets, type SelectQueryBuilder } from 'typeorm';
-import { clampSkip, clampTake, likeTerm, normalizeDocumentNumber, type ListFilter } from 'shared';
+import {
+    toAlphaCurrency,
+    clampSkip,
+    clampTake,
+    likeTerm,
+    normalizeDocumentNumber,
+    type ListFilter,
+} from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import {
@@ -125,7 +132,7 @@ export class ErpDocumentListService {
     }
 }
 
-function toItem(
+export function toItem(
     r: Raw,
     summary: { lineCount: number; productNames: string[] } | undefined,
 ): ErpDocumentListItem {
@@ -139,7 +146,7 @@ function toItem(
         orderCode: text(r.orderCode),
         organizationName: text(r.organizationName),
         contractName: text(r.contractName),
-        currency: text(r.currency),
+        currency: r.currency == null ? null : toAlphaCurrency(String(r.currency)),
         amount: Number(r.amountMinor),
         comment: text(r.comment),
         lineCount: summary?.lineCount ?? 0,
