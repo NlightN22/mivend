@@ -1,6 +1,6 @@
 # Build with: docker build -f apps/server/Dockerfile --secret id=npmrc,src=$HOME/.npmrc .
 # Same glibc base for build and run so native modules (sharp, bcrypt) match; Chromium is apt-installed in the runner.
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=1
@@ -16,7 +16,7 @@ RUN pnpm build:plugins && pnpm --filter "server" build
 
 # Debian-based (not Alpine) specifically so Puppeteer can drive a real,
 # apt-installed Chromium — musl/Alpine support for Chromium is unreliable.
-FROM node:20-slim AS runner
+FROM node:22-slim AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium fonts-liberation libnss3 libatk-bridge2.0-0 libatk1.0-0 libgbm1 libasound2 \

@@ -10,7 +10,7 @@
 # build with:
 #   DOCKER_BUILDKIT=1 docker build -f packages/dashboard/Dockerfile \
 #     --secret id=npmrc,src=$HOME/.npmrc -t mivend-dashboard:local .
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 COPY . .

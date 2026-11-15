@@ -8,7 +8,7 @@
 # @nlightn22/event-contracts registry package) would require a GitHub Packages auth token this
 # build has no reason to need, just to build a static frontend. Confirmed directly: a `COPY . .`
 # attempt failed on that private package's 401.
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 

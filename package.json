@@ -3,6 +3,9 @@
     "version": "1.1.1",
     "private": true,
     "license": "GPL-3.0-or-later",
+    "engines": {
+        "node": ">=22 <23"
+    },
     "scripts": {
         "dev:central": "dotenv -e apps/server/.env.central -- pnpm --filter server dev",
         "dev:worker": "dotenv -e apps/server/.env.central -- pnpm --filter server dev:worker",

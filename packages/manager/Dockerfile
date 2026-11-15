@@ -2,7 +2,7 @@
 # packages/storefront/Dockerfile for the full rationale (issue #78/#115), including why this uses
 # a selective COPY instead of `COPY . .` (avoids needing a private-registry auth token this build
 # has no reason to need).
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 

@@ -28,6 +28,10 @@ Central vs branch: same images and file. Central additionally sets the `INTEGRAT
 (the ERP exchange runs only there, `INTEGRATION_KAFKA_ENABLED=true`); a branch leaves them unset
 and talks only to central through RabbitMQ sync. Run one compose project per instance.
 
+## Node version (#334)
+
+One Node major everywhere: `.nvmrc` and the root `engines` field are the source; CI reads `.nvmrc`, the Dockerfiles and the dev compose file name the same major in `FROM`/`image`. Raising it means changing all of them in one commit.
+
 ## Configuration
 
 Time zone: every app container gets `TZ` from `.env` (compose default `UTC`; the release owner sets it, and the host zone, to the business zone). Stored timestamps are zone-independent: the server reads and writes `timestamp` columns as UTC whatever `TZ` is. Only wall-clock scheduling follows `TZ`: the daily session reset and native cron tasks such as `contract-proforma-cleanup`.
