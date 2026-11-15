@@ -203,6 +203,11 @@ function rowKey(row: TRow): unknown {
     letter-spacing: 0.04em;
 }
 
+.mv-advanced-mobile-card__value :deep(.mv-cell-link) {
+    color: inherit;
+    text-decoration: none;
+}
+
 .mv-advanced-mobile-card__value {
     margin-top: 3px;
     font-size: 13px;
