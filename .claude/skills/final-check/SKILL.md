@@ -14,6 +14,8 @@ Run these commands from the repository root:
     make lint
     make test
 
+`make lint` prints warnings without failing. The accepted ones are listed in `eslint-rules/lint-exceptions.json`; the `lint-warnings` skill says how to check against it and forbids adding to it without the owner's agreement.
+
 After changing any plugin code, also verify TypeScript compilation:
 
     pnpm --filter './packages/plugins/**' build
