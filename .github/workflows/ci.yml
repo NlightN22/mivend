@@ -46,6 +46,9 @@ jobs:
             - name: Type check (manager)
               run: pnpm --filter @mivend/manager exec vue-tsc --noEmit
 
+            - name: Type check (manager tests)
+              run: pnpm --filter @mivend/manager exec vue-tsc --noEmit -p tsconfig.test.json
+
             - name: Type check (dashboard)
               run: pnpm --filter @mivend/dashboard exec tsc --noEmit
 

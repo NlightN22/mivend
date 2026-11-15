@@ -14,6 +14,8 @@ const op = (i: number, area = 'customers'): BulkOperationInfo => ({
     description: `Does thing ${i}`,
     area,
     undoable: false,
+    supportsMatching: false,
+    maxRecords: 100,
 });
 const many = (n: number): BulkOperationInfo[] =>
     Array.from({ length: n }, (_, i) => op(i, i % 2 ? 'prices' : 'customers'));
