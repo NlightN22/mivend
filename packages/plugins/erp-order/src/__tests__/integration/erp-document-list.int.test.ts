@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import type { CounterpartyService } from '@mivend/plugin-counterparty';
+import type { CounterpartyService, PowerOfAttorneyListService } from '@mivend/plugin-counterparty';
 import {
     createTestSchema,
     dropTestSchema,
@@ -65,6 +65,7 @@ beforeAll(async () => {
         connection,
         counterparties,
         new ErpDocumentLineSummaryService(connection),
+        { countForCounterparty: async () => 0 } as unknown as PowerOfAttorneyListService,
     );
 });
 
@@ -166,12 +167,18 @@ describe('ERP document list (real Postgres)', () => {
 
     it('counts related documents of all three types by order or counterparty', async () => {
         const byOrder = await service.relatedCounts(ctx, '1', null);
-        expect(byOrder).toEqual({ customerClaims: 1, salesCorrections: 0, orderCorrections: 1 });
+        expect(byOrder).toEqual({
+            customerClaims: 1,
+            salesCorrections: 0,
+            orderCorrections: 1,
+            powersOfAttorney: 0,
+        });
         const byCounterparty = await service.relatedCounts(ctx, null, '2');
         expect(byCounterparty).toEqual({
             customerClaims: 1,
             salesCorrections: 0,
             orderCorrections: 0,
+            powersOfAttorney: 0,
         });
     });
 });

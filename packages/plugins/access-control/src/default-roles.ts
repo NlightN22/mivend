@@ -85,6 +85,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadEntityHistory',
             'ReadChangeJournal',
             'ManageSharedTableViews',
+            'ReadDeletedContractPowerOfAttorney',
         ],
         accessScopeConfig: {
             counterparty: 'department',
@@ -133,6 +134,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCounterpartyPortalAccess',
             'ManageVisibilityGrants',
             'UpdateCatalog',
+            'ReadDeletedContractPowerOfAttorney',
         ],
         accessScopeConfig: {
             counterparty: 'all',
@@ -159,6 +161,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ApproveSecurityLimit',
             'ReadEntityHistory',
             'ReadChangeJournal',
+            'ReadDeletedContractPowerOfAttorney',
         ],
         accessScopeConfig: {
             counterparty: 'all',
@@ -210,6 +213,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ApproveSecurityLimit',
             'ReadSettings',
             'UpdateCatalog',
+            'ReadDeletedContractPowerOfAttorney',
         ],
         accessScopeConfig: {
             counterparty: 'all',

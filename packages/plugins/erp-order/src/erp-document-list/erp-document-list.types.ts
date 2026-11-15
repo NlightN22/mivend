@@ -24,4 +24,5 @@ export interface ErpDocumentCounts {
     customerClaims: number;
     salesCorrections: number;
     orderCorrections: number;
+    powersOfAttorney: number;
 }

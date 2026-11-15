@@ -9,7 +9,7 @@ import {
     normalizeDocumentNumber,
     type ListFilter,
 } from 'shared';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { CounterpartyService, PowerOfAttorneyListService } from '@mivend/plugin-counterparty';
 
 import {
     applyErpDocumentFilter,
@@ -36,6 +36,7 @@ export class ErpDocumentListService {
         private readonly connection: TransactionalConnection,
         private readonly counterparties: CounterpartyService,
         private readonly lines: ErpDocumentLineSummaryService,
+        private readonly powersOfAttorney: PowerOfAttorneyListService,
     ) {}
 
     async findVisible(
@@ -86,12 +87,16 @@ export class ErpDocumentListService {
         }
         const count = async (kind: ErpDocumentKind): Promise<number> =>
             (await this.baseQuery(ctx, kind, null, filter)).getCount();
-        const [customerClaims, salesCorrections, orderCorrections] = await Promise.all([
-            count('customerClaim'),
-            count('salesCorrection'),
-            count('orderCorrection'),
-        ]);
-        return { customerClaims, salesCorrections, orderCorrections };
+        const [customerClaims, salesCorrections, orderCorrections, powersOfAttorney] =
+            await Promise.all([
+                count('customerClaim'),
+                count('salesCorrection'),
+                count('orderCorrection'),
+                counterpartyId
+                    ? this.powersOfAttorney.countForCounterparty(ctx, counterpartyId)
+                    : 0,
+            ]);
+        return { customerClaims, salesCorrections, orderCorrections, powersOfAttorney };
     }
 
     private async baseQuery(

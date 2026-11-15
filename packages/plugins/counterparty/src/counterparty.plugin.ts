@@ -33,6 +33,9 @@ import { ErpContactPersonService } from './erp-contact-person.service';
 import { TradingPoint } from './entities/trading-point.entity';
 import { ContractPowerOfAttorneyErp } from './entities/contract-power-of-attorney-erp.entity';
 import { PowerOfAttorneyErpService } from './power-of-attorney-erp.service';
+import { PowerOfAttorneyListResolver } from './power-of-attorney-list/power-of-attorney-list.resolver';
+import { powerOfAttorneyListSchema } from './power-of-attorney-list/power-of-attorney-list.schema';
+import { PowerOfAttorneyListService } from './power-of-attorney-list/power-of-attorney-list.service';
 import { TradingPointErp } from './entities/trading-point-erp.entity';
 import { CounterpartyContactErp } from './entities/counterparty-contact-erp.entity';
 import { CounterpartyGroupErp } from './entities/counterparty-group-erp.entity';
@@ -139,6 +142,7 @@ const adminResolvers = [
     CounterpartyPortalAccessFieldResolver,
     CounterpartyPortalAccessMutationResolver,
     ScopedCustomerResolver,
+    PowerOfAttorneyListResolver,
     ...visibilityBundle.resolvers,
 ];
 
@@ -187,6 +191,7 @@ const adminResolvers = [
         schema: gql`
             ${adminApiSchema}
             ${visibilitySchema}
+            ${powerOfAttorneyListSchema}
             ${geoSchema}
         `,
         resolvers: adminResolvers,
@@ -222,6 +227,7 @@ const adminResolvers = [
         CounterpartyPortalAccessService,
         ContractService,
         PowerOfAttorneyErpService,
+        PowerOfAttorneyListService,
         CreditLimitCheckService,
         CreditLimitRecomputeService,
     ],
@@ -237,6 +243,7 @@ const adminResolvers = [
         TradingPointLocationReportService,
         ContractService,
         PowerOfAttorneyErpService,
+        PowerOfAttorneyListService,
         CreditLimitCheckService,
         CreditLimitRecomputeService,
     ],

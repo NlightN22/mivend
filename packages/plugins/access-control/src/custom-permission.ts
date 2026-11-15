@@ -149,4 +149,9 @@ export const CustomPermission = {
         description:
             "Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager",
     }),
+    ReadDeletedContractPowerOfAttorney: new PermissionDefinition({
+        name: 'ReadDeletedContractPowerOfAttorney',
+        description:
+            'See powers of attorney whose contract the ERP deleted (marked as such); without it those rows are hidden from the list (#333)',
+    }),
 } as const;

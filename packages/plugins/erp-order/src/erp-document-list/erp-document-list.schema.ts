@@ -29,6 +29,8 @@ export const erpDocumentListSchema = gql`
         customerClaims: Int!
         salesCorrections: Int!
         orderCorrections: Int!
+        "Zero when asked by order only: a power of attorney belongs to a contract."
+        powersOfAttorney: Int!
     }
 
     "Paging, search, filter and sort of an ERP document list; field names are a fixed whitelist."

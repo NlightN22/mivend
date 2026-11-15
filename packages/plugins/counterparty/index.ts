@@ -6,6 +6,7 @@ export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { ErpIdLookupService } from './src/erp-id-lookup.service';
 export { ContractService } from './src/contract.service';
 export { PowerOfAttorneyErpService } from './src/power-of-attorney-erp.service';
+export { PowerOfAttorneyListService } from './src/power-of-attorney-list/power-of-attorney-list.service';
 export type {
     PowerOfAttorneyErpItem,
     PowerOfAttorneyErpReplace,

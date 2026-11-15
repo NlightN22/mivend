@@ -88,3 +88,17 @@ describe('default roles: shared table views', () => {
         ]);
     });
 });
+
+describe('default roles: deleted-contract powers of attorney (#333)', () => {
+    it('roles above manager see them; operator and manager never do', () => {
+        const holders = DEFAULT_ROLES.filter(r =>
+            r.permissions.includes('ReadDeletedContractPowerOfAttorney'),
+        );
+        expect(holders.map(r => r.code).sort()).toEqual([
+            'department-head',
+            'general-director',
+            'portal-admin',
+            'security-officer',
+        ]);
+    });
+});

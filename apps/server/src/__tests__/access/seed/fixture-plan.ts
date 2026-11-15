@@ -226,6 +226,16 @@ export const ERP_CLAIM_NUMBERS: Record<CustomerKey, string> = {
 export const ERP_CLAIM_DELETED = '9631';
 export const ERP_CLAIM_UNKNOWN_COUNTERPARTY = '9641';
 
+// ERP powers of attorney (#333): one live per customer contract, a row of a deleted contract and one of an unknown contract.
+export const ERP_POA_NUMBERS: Record<CustomerKey, string> = {
+    'customer-a': '9711',
+    'customer-b': '9721',
+};
+export const ERP_POA_DELETED_CONTRACT = '9731';
+export const ERP_POA_UNKNOWN_CONTRACT = '9741';
+// Roles above manager: the actors holding ReadDeletedContractPowerOfAttorney.
+export const POA_DELETED_READERS: ActorKey[] = ['head-a', 'head-b', 'head-default', 'director'];
+
 // Portal clients whose main contract does not resolve to an active price type (#263 group 19), one per reason.
 export type GapReason =
     | 'no-main-contract'
