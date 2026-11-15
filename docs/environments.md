@@ -488,7 +488,7 @@ and reports those that stay above `STUCK_CPU_PCT` CPU for `STUCK_BUSY_SECS` whil
 status file atomically and never touches a process unless `STUCK_KILL=1` (set in the systemd unit): enabled means it kills, unset means it never does. It kills only a suspect inside a
 process group recorded by `dev-run-tracked.sh` (`/tmp/mivend-dev*.pgid`; the file must be owned by root or the suspect's user and
 a member of the group must still run with its cwd under `STUCK_ROOT`, default `/opt`, so every worktree's contour is covered).
-`STUCK_BUSY_SECS` is the only knob for how long a hot, non-listening child is tolerated: workers and import children never listen
+The pgid files, not `STUCK_ROOT`, are the real boundary: nothing outside a `dev-run-tracked.sh` group is ever touched. A child killed `STUCK_MAX_KILLS` times (default 3) within an hour is not killed again, so a legitimately long job is not respawned forever: the scanner logs it once and marks it `"giving_up": true` in the status file. `STUCK_BUSY_SECS` is the only knob for how long a hot, non-listening child is tolerated: workers and import children never listen
 and can run hot, so keep it generous.
 
 After a kill the scanner touches the child's entry file: `ts-node-dev --respawn` only waits for a file change after its child
@@ -507,6 +507,7 @@ fix the path in `ExecStart`, `systemctl enable --now mivend-stuck-scan`; without
 | `STUCK_BUSY_SECS` | `600` | How long it must stay busy and not listening; a cold server compile plus boot is about 40 s, a legitimately CPU-bound suite process can run longer, hence the generous default |
 | `STUCK_COMM` | `^(node\|esbuild\|vite\|chrome.*\|python3?)$` | Process-name regex to inspect |
 | `STUCK_KILL` | unset | `1` enables the kill and respawn of suspects in dev-run-tracked groups; set in the systemd unit, remove it to disable |
+| `STUCK_MAX_KILLS` | `3` | Kills of one entry within an hour before the scanner gives up on it |
 | `STUCK_ROOT` | `/opt` | A tracked group is killed only when one of its members runs under this directory |
 | `STUCK_PGID_GLOB` | `/tmp/mivend-dev*.pgid` | Tracked group files `STUCK_KILL` is limited to |
 

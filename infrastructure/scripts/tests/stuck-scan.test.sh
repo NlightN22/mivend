@@ -71,4 +71,14 @@ alive "$worker_entry" && fail "piped stuck worker entry was not killed"
 [ "$(stat -c %Y "$work/main.ts")" -gt "$(date -d '30 minutes ago' +%s)" ] || fail "entry file was not touched to respawn"
 kill -9 -- "-$(cat "$work/piped.pgid")" 2>/dev/null || true
 
+# A child that keeps being stuck is killed STUCK_MAX_KILLS times, then left alone and reported as giving_up.
+printf '#!/usr/bin/env bash\necho $$ > "$1"\nshift\nwhile true; do python3 "$WORK/spin.py" "$@"; done\n' > "$work/loop.sh"
+setsid bash "$work/loop.sh" "$work/loop.pgid" "$work/loop.ts" &
+sleep 1
+STUCK_PGID_GLOB="$work/loop.pgid" STUCK_MAX_KILLS=2 STUCK_KILL=1 python3 "$here/stuck-scan.py" 30 2>"$work/loop.err"
+[ "$(grep -c 'killed tracked' "$work/loop.err")" -eq 2 ] || fail "looping child was not killed exactly STUCK_MAX_KILLS times"
+grep -q "giving up" "$work/loop.err" || fail "giving up was not logged"
+jq -e '[.stuck[] | select(.giving_up)] | length == 1' "$work/status.json" >/dev/null || fail "giving_up not in the status file"
+kill -9 -- "-$(cat "$work/loop.pgid")" 2>/dev/null || true
+
 echo "stuck-scan: ok"

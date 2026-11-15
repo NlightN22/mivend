@@ -15,10 +15,14 @@ CPU_PCT = int(os.environ.get("STUCK_CPU_PCT", "60"))
 BUSY_SECS = int(os.environ.get("STUCK_BUSY_SECS", "600"))
 COMM = re.compile(os.environ.get("STUCK_COMM", r"^(node|esbuild|vite|chrome.*|python3?)$"))
 KILL = os.environ.get("STUCK_KILL") == "1"
+MAX_KILLS = int(os.environ.get("STUCK_MAX_KILLS", "3"))
+KILL_WINDOW = 3600
 ROOT = os.path.realpath(os.environ.get("STUCK_ROOT", "/opt"))
 PGID_GLOB = os.environ.get("STUCK_PGID_GLOB", "/tmp/mivend-dev*.pgid")
 CLK_TCK = os.sysconf("SC_CLK_TCK")
 SELF = os.getpid()
+KILLS = {}  # entry (or command) -> kill times within KILL_WINDOW
+GAVE_UP = set()
 
 
 def read_proc(pid):
@@ -82,18 +86,37 @@ def is_tracked(pid, pgid):
     return False
 
 
-def entry_file(cmd, cwd):
+def entry_file(pid, cwd):
     """The script a ts-node-dev child runs (its last .ts argument), as an absolute path."""
-    scripts = [t for t in cmd.split() if t.endswith(".ts")]
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            args = f.read().decode(errors="replace").split("\0")
+    except OSError:
+        return None
+    scripts = [t for t in args if t.endswith(".ts")]
     return os.path.join(cwd, scripts[-1]) if scripts else None
+
+
+def giving_up(key, now):
+    """A child killed MAX_KILLS times within KILL_WINDOW is legitimately busy or broken: stop the kill-respawn loop."""
+    recent = [t for t in KILLS.get(key, []) if now - t < KILL_WINDOW]
+    KILLS[key] = recent
+    if len(recent) < MAX_KILLS:
+        return False
+    if key not in GAVE_UP:
+        GAVE_UP.add(key)
+        print(f"[stuck-scan] giving up on {key}: killed {len(recent)} times within {KILL_WINDOW}s, not killing it again", file=sys.stderr, flush=True)
+    return True
 
 
 def restart(entry):
     """ts-node-dev --respawn waits for a file change after its child dies; touching the entry file respawns just that child."""
+    if entry is None:
+        print("[stuck-scan] no entry file found, child not respawned", file=sys.stderr, flush=True)
+        return
     try:
-        if entry is not None:
-            os.utime(entry)
-            print(f"[stuck-scan] touched {entry} to respawn the child", file=sys.stderr, flush=True)
+        os.utime(entry)
+        print(f"[stuck-scan] touched {entry} to respawn the child", file=sys.stderr, flush=True)
     except OSError as err:
         print(f"[stuck-scan] could not touch {entry}: {err}", file=sys.stderr, flush=True)
 
@@ -140,12 +163,17 @@ def scan(state):
         log = log_file(pid)
         suspects.append({"pid": pid, "command": cmd[:300], "cwd": cwd, "cpu_percent": round(cpu),
                          "busy_seconds": busy, "listening": False, "last_log_lines": log_tail(log) if log else []})
-        entry = entry_file(cmd, cwd)
+        entry = entry_file(pid, cwd)
+        key = entry or cmd[:200]
         if KILL and is_tracked(pid, pgid):
+            if giving_up(key, now):
+                suspects[-1]["giving_up"] = True
+                continue
             try:
                 os.kill(pid, 9)
             except ProcessLookupError:
                 continue
+            KILLS.setdefault(key, []).append(now)
             print(f"[stuck-scan] killed tracked pid {pid} (group {pgid}): {round(cpu)}% CPU for {busy}s, not listening: {cmd[:200]}", file=sys.stderr, flush=True)
             restart(entry)
     for pid in set(state) - seen:
