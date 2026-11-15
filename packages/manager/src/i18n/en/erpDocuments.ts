@@ -20,8 +20,8 @@ export default {
         columns: {
             number: 'Number',
             holder: 'Holder',
-            validFrom: 'Valid from',
-            validUntil: 'Valid until',
+            validFrom: 'From',
+            validUntil: 'Until',
             status: 'Status',
             customer: 'Customer',
             contract: 'Contract',

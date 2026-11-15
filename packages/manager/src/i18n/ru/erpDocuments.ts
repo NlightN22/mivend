@@ -22,8 +22,8 @@ const erpDocuments: typeof en = {
         columns: {
             number: 'Номер',
             holder: 'Доверенное лицо',
-            validFrom: 'Действует с',
-            validUntil: 'Действует до',
+            validFrom: 'С',
+            validUntil: 'До',
             status: 'Статус',
             customer: 'Клиент',
             contract: 'Договор',
