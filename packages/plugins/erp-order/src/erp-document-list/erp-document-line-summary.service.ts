@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { MAX_TAKE, ctxQueryBounded } from 'shared';
 
 const NAMES_PER_DOCUMENT = 3;
 const PRODUCT_IDS_PER_DOCUMENT = 5;
@@ -28,16 +28,18 @@ export class ErpDocumentLineSummaryService {
                     `SELECT "documentId", "lineNumber", "productId" FROM "${table}" WHERE "documentId" = ANY($1::int[])`,
             )
             .join(' UNION ALL ');
-        // unbounded-ok: one row per document of the requested page, at most MAX_TAKE
-        const rows = await ctxQuery<
-            Array<{ documentId: number; lineCount: number; productIds: string[] }>
-        >(
+        const rows = await ctxQueryBounded<{
+            documentId: number;
+            lineCount: number;
+            productIds: string[];
+        }>(
             this.connection,
             ctx,
             `SELECT "documentId", COUNT(*)::int AS "lineCount",
                     (array_agg("productId" ORDER BY "lineNumber") FILTER (WHERE "productId" IS NOT NULL))[1:${PRODUCT_IDS_PER_DOCUMENT}] AS "productIds"
              FROM (${union}) l GROUP BY "documentId"`,
             [documentIds],
+            MAX_TAKE,
         );
         const names = await this.productNames(
             ctx,
@@ -63,13 +65,14 @@ export class ErpDocumentLineSummaryService {
     ): Promise<Map<string, string>> {
         const ids = [...new Set(productIds.filter((id): id is string => Boolean(id)))];
         if (ids.length === 0) return new Map();
-        const rows = await ctxQuery<Array<{ externalId: string; name: string }>>(
+        const rows = await ctxQueryBounded<{ externalId: string; name: string }>(
             this.connection,
             ctx,
             `SELECT p."customFieldsExternalid" AS "externalId", pt."name"
              FROM product p JOIN product_translation pt ON pt."baseId" = p.id AND pt."languageCode" = $2
              WHERE p."customFieldsExternalid" = ANY($1::text[])`,
             [ids, ctx.languageCode],
+            MAX_TAKE * PRODUCT_IDS_PER_DOCUMENT * 2,
         );
         return new Map(rows.map(r => [r.externalId, r.name]));
     }
