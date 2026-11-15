@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { VisOrder } from '../visibility/ids';
 import { clientErpId } from '../visibility/plan';
+import { powerOfAttorneySql } from './power-of-attorney';
 import {
     ERP_DOCS,
     ERP_DOC_DATE,
@@ -95,5 +96,9 @@ export function seedErpDocuments(orders: Record<OrderOwner, VisOrder>): void {
     const inserts = ERP_DOC_KINDS.flatMap(kind =>
         ERP_DOCS[kind].map(doc => documentSql(kind, doc)),
     );
-    runSql(['BEGIN;', cleanupSql(), ...orderLinks, ...inserts, 'COMMIT;'].join('\n'));
+    runSql(
+        ['BEGIN;', cleanupSql(), ...orderLinks, ...inserts, powerOfAttorneySql(), 'COMMIT;'].join(
+            '\n',
+        ),
+    );
 }

@@ -10,6 +10,11 @@ import {
     type ErpDocKind,
     type ErpDocPlan,
 } from '../../fixtures/erp-documents/plan';
+import {
+    POA_PATH,
+    POA_TITLE,
+    POWERS_OF_ATTORNEY,
+} from '../../fixtures/erp-documents/power-of-attorney';
 import { clientName, type CustomerKey } from '../../fixtures/visibility/plan';
 import { formatDocumentNumber } from '../../helpers/e2e-order';
 import { openManagerAs, visData, type Session } from '../session';
@@ -149,7 +154,7 @@ test.describe('related documents links', () => {
         const counterpartyId = ids.clients['a-own'];
         await s.page.goto(`/customers/${counterpartyId}`);
         const link = s.page.getByTestId('erp-documents-link');
-        await expect(link).toHaveText('Related documents (4)', WAIT);
+        await expect(link).toHaveText('Related documents (7)', WAIT);
         await link.click();
         await expect(s.page).toHaveURL(
             new RegExp(`${ERP_DOC_PATHS.customerClaim}\\?counterpartyId=${counterpartyId}`),
@@ -160,12 +165,15 @@ test.describe('related documents links', () => {
     });
 });
 
-test('the Documents menu offers the three lists @read-only', async () => {
+test('the Documents menu offers the four lists @read-only', async () => {
     await s.page.goto(ERP_DOC_PATHS.customerClaim);
     for (const kind of ERP_DOC_KINDS)
         await expect(
             s.page.locator('.mv-app-sidebar').getByRole('link', { name: ERP_DOC_TITLES[kind] }),
         ).toBeVisible(WAIT);
+    await expect(
+        s.page.locator('.mv-app-sidebar').getByRole('link', { name: POA_TITLE }),
+    ).toBeVisible(WAIT);
 });
 
 test('on a phone each document is a card with a styled customer link @read-only', async () => {
@@ -185,4 +193,34 @@ test('on a phone each document is a card with a styled customer link @read-only'
     } finally {
         await s.page.setViewportSize({ width: 1280, height: 720 });
     }
+});
+
+test.describe('Powers of attorney list', () => {
+    test('shows status, scan indicator and the deleted-contract marker to a leadership role @read-only', async () => {
+        await s.page.goto(POA_PATH);
+        await expect(s.page.getByRole('heading', { name: POA_TITLE, exact: true })).toBeVisible(
+            WAIT,
+        );
+        await expect(s.page.getByRole('columnheader').first()).toContainText('Number');
+        for (const p of POWERS_OF_ATTORNEY)
+            await expect(rowOf(s.page, p.number), p.number).toHaveCount(1, WAIT);
+        await expect(rowOf(s.page, 'E2E-POA-0001')).toContainText('Active');
+        await expect(rowOf(s.page, 'E2E-POA-0001')).toContainText('Scan present');
+        await expect(rowOf(s.page, 'E2E-POA-0002')).toContainText('Expired');
+        await expect(rowOf(s.page, 'E2E-POA-0002')).toContainText('No scan');
+        await expect(rowOf(s.page, 'E2E-POA-0003')).toContainText('Contract deleted');
+        await expect(rowOf(s.page, 'E2E-POA-0001')).not.toContainText('Contract deleted');
+    });
+
+    test('the holder search finds one row and the customer preset narrows the list @read-only', async () => {
+        await s.page.goto(POA_PATH);
+        await expect(rowOf(s.page, 'E2E-POA-0001')).toBeVisible(WAIT);
+        await s.page.getByPlaceholder('Number, holder or customer…').fill('Holder B');
+        await expect(s.page.locator(ROWS)).toHaveCount(1, WAIT);
+        await expect(s.page.locator(ROWS)).toContainText('E2E-POA-0004');
+        await s.page.goto(`${POA_PATH}?counterpartyId=${ids.clients['b-own']}`);
+        await expect(s.page.getByText('Filtered to one customer.')).toBeVisible(WAIT);
+        await expect(rowOf(s.page, 'E2E-POA-0004')).toHaveCount(1, WAIT);
+        await expect(s.page.getByText('E2E-POA-0001')).toHaveCount(0);
+    });
 });
