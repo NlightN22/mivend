@@ -10,10 +10,10 @@ const unitFiles = ['packages', 'apps', 'eslint-rules'].flatMap(root =>
 export default defineConfig({
     plugins: [vue()],
     resolve: {
-        alias: {
-            vue: resolve(__dirname, 'packages/ui-kit/node_modules/vue'),
-            shared: resolve(__dirname, 'packages/shared/src/index.ts'),
-        },
+        alias: [
+            { find: 'vue', replacement: resolve(__dirname, 'packages/ui-kit/node_modules/vue') },
+            { find: /^shared$/, replacement: resolve(__dirname, 'packages/shared/src/index.ts') },
+        ],
     },
     test: {
         globals: true,
