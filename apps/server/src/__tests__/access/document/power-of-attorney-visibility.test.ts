@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { inject, describe, expect, it } from 'vitest';
 
 import { DENIED, admin, customerToken, seed, staffToken } from '../harness/actors';
+import { gqlOk, login } from '../harness/graphql';
 import {
     CUSTOMERS,
     ERP_POA_DELETED_CONTRACT,
@@ -77,5 +78,58 @@ describe('staff ERP powers of attorney', () => {
     it('refuses a caller without the counterparty right', async () => {
         const res = await admin(await customerToken('customer-a'), LIST, { l: {} });
         expect(JSON.stringify(res.errors)).toMatch(DENIED);
+    });
+});
+
+describe('a role with the order right but not the counterparty right', () => {
+    it('gets 0 from the powers-of-attorney count and is denied the list', async () => {
+        const base = inject('accessBaseUrl');
+        const root = await staffToken('superadmin');
+        const email = 'poa-orders-only@access.test';
+        const password = 'access-test-password';
+        const call = <T>(query: string, variables?: Record<string, unknown>): Promise<T> =>
+            gqlOk<T>(base, 'admin-api', query, variables, root);
+        const role = await call<{ createRole: { id: string } }>(
+            `mutation($i: CreateRoleInput!) { createRole(input: $i) { id } }`,
+            {
+                i: {
+                    code: 'poa-orders-only',
+                    description: 'ReadOrder only',
+                    permissions: ['ReadOrder'],
+                },
+            },
+        );
+        const created = await call<{ createAdministrator: { id: string } }>(
+            `mutation($i: CreateAdministratorInput!) { createAdministrator(input: $i) { id } }`,
+            {
+                i: {
+                    firstName: 'Poa',
+                    lastName: 'Orders',
+                    emailAddress: email,
+                    password,
+                    roleIds: [role.createRole.id],
+                },
+            },
+        );
+        try {
+            const token = await login(base, 'admin-api', email, password);
+            const counterpartyId = seed().counterparties[CUSTOMERS[0].counterparty];
+            const counts = await admin<{ relatedErpDocumentCounts: { powersOfAttorney: number } }>(
+                token,
+                COUNTS,
+                { cp: counterpartyId },
+            );
+            expect(counts.errors).toEqual([]);
+            expect(counts.data!.relatedErpDocumentCounts.powersOfAttorney).toBe(0);
+            const list = await admin(token, LIST, { l: {} });
+            expect(JSON.stringify(list.errors)).toMatch(DENIED);
+        } finally {
+            await call(`mutation($id: ID!) { deleteAdministrator(id: $id) { result } }`, {
+                id: created.createAdministrator.id,
+            });
+            await call(`mutation($id: ID!) { deleteRole(id: $id) { result } }`, {
+                id: role.createRole.id,
+            });
+        }
     });
 });

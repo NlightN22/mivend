@@ -9,6 +9,7 @@ import {
     normalizeDocumentNumber,
     type ListFilter,
 } from 'shared';
+import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService, PowerOfAttorneyListService } from '@mivend/plugin-counterparty';
 
 import {
@@ -92,7 +93,8 @@ export class ErpDocumentListService {
                 count('customerClaim'),
                 count('salesCorrection'),
                 count('orderCorrection'),
-                counterpartyId
+                counterpartyId &&
+                ctx.userHasPermissions([CustomPermission.ReadCounterparty.Permission])
                     ? this.powersOfAttorney.countForCounterparty(ctx, counterpartyId)
                     : 0,
             ]);

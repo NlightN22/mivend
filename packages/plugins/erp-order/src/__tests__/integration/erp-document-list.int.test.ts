@@ -16,7 +16,7 @@ import { ErpDocumentLineSummaryService } from '../../erp-document-list/erp-docum
 import { ErpDocumentListService } from '../../erp-document-list/erp-document-list.service';
 
 const { schema, extra } = testSchemaOptions('erp_document_list');
-const ctx = { languageCode: 'en' } as RequestContext;
+const ctx = { languageCode: 'en', userHasPermissions: () => true } as unknown as RequestContext;
 let dataSource: DataSource;
 let service: ErpDocumentListService;
 let visibleErpIds: string[] | null = null;
