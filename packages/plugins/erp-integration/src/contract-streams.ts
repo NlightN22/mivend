@@ -2,9 +2,12 @@ import * as contracts from '@nlightn22/event-contracts';
 import { version } from '@nlightn22/event-contracts/package.json';
 
 // ErpOrderEventSchema is the envelope of erp.order.events.v1, split into the order-* streams.
-// TradingPointCommandSchema is mivend's own outbound command, not an inbound stream.
+// The trading point and counterparty commands are mivend's own outbound messages, not inbound streams.
 const NOT_EVENT_SCHEMAS = new Set([
     'TradingPointCommandSchema',
+    'TradingPointSnapshotSchema',
+    'CounterpartyCommandSchema',
+    'CounterpartySnapshotSchema',
     'ErpOrderEventSchema',
     'OrderChangedLineSchema',
     'OrderChangedLinkedDocumentSchema',

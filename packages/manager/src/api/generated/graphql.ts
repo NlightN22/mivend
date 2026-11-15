@@ -8591,6 +8591,12 @@ export type Query = {
     /** Per-source health, last provider summary and local open counts (issue #303); empty when no source is configured. */
     consistencySources: Array<ConsistencySource>;
     counterparties: CounterpartyList;
+    /** Counterparties whose portal-owned fields differ from the last state the ERP sent (people edited them; issue #368). */
+    counterpartiesDifferingFromErp: CounterpartyList;
+    /** Counterparties edited here whose latest version the ERP has not echoed back yet (issue #368). */
+    counterpartiesNotConfirmedByErp: CounterpartyList;
+    /** Counterparties with an owner or team member whose Administrator has no ERP user link; that manager is left out of what is sent to the ERP (issue #368). */
+    counterpartiesWithUnlinkedManagers: CounterpartyList;
     counterparty: Maybe<Counterparty>;
     /** Typeahead for the list filter: shortName | inn values among the counterparties the caller may list */
     counterpartyFilterSuggestions: Array<Scalars['String']['output']>;
@@ -8961,6 +8967,18 @@ export type QueryConsistencyReportsArgs = {
 };
 
 export type QueryCounterpartiesArgs = {
+    options?: InputMaybe<CounterpartyListOptions>;
+};
+
+export type QueryCounterpartiesDifferingFromErpArgs = {
+    options?: InputMaybe<CounterpartyListOptions>;
+};
+
+export type QueryCounterpartiesNotConfirmedByErpArgs = {
+    options?: InputMaybe<CounterpartyListOptions>;
+};
+
+export type QueryCounterpartiesWithUnlinkedManagersArgs = {
     options?: InputMaybe<CounterpartyListOptions>;
 };
 

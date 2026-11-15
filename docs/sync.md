@@ -422,12 +422,20 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 - **Trading point return path (#367)**: on the central instance the event enqueues one outbox row of type
   `trading-point.changed` per point version, built at send time from the current record (full snapshot with contacts,
   never a delta, so quick edits collapse to the latest state; the sent `version` is the current one). Topic
-  `mivend.trading-point.commands.v1`, key = point `uuid`, plain protobuf `TradingPointCommand` (no Confluent framing:
+  `mivend.trading-point.commands.v1`, key = point `uuid`, plain protobuf `TradingPointCommand` (envelope with `oneof command { trading_point_snapshot }`, contracts 0.90.0; no Confluent framing:
   the contract package ships no registry schema for it). Idempotency is `uuid` + `version`: a version already
   pending or published, or an older one than what is, is dropped without a row; enqueuing a newer version first skips
   the point's older rows that are still waiting. Delivery, retries and poison handling are the existing outbox
   processor's. The ERP reports its side through the normal exchange; a point leaves `tradingPointsNotConfirmedByErp`
   by the existing stream logic.
+- **Counterparty ownership and return path (#368)**: same mechanism for the counterparty, one registry of versioned
+  entities in `erp-integration` (trading point and counterparty share the listener, reconciler and recovery). The
+  counterparty stream keeps a mirror (`counterparty_erp`), seeds `counterparty` on the first arrival and afterwards
+  moves only ERP-owned fields and fills an empty owner; field authority is one table in code, see
+  `counterparty-ownership.md`. Each committed change of a portal-owned field bumps `counterparty.version` and sends
+  `counterparty.changed` (`mivend.counterparty.commands.v1`, key = ERP id, idempotency ERP id + version) with the
+  whole record and the manager list. Drift: `counterpartiesDifferingFromErp`, `counterpartiesNotConfirmedByErp`,
+  `counterpartiesWithUnlinkedManagers`.
 - **Trading point drift (#328)**: `tradingPointsDifferingFromErp` lists points whose record differs from the mirror
   (expected after people edit), `tradingPointsNotConfirmedByErp` lists customer-created points the ERP never sent
   (both ManageErpIntegration). A customer-added (`cust_…`) point does not leave that list on its own, because the ERP

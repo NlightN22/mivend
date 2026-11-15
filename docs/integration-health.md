@@ -85,7 +85,11 @@ plain protobuf `TradingPointCommand` to `mivend.trading-point.commands.v1` (key 
 shows `Contract` and no registry subject exists for it. Idempotency is `uuid` + `version` (a repeat or older
 version is dropped without a row, an older waiting row is skipped as "superseded by version N"); recovery treats a
 skipped row as already sent only when a pending or published row of that point has the same or a higher version.
-The scheduled task `erp-integration-trading-point-reconciler` re-drives a point version that has no outbox row.
+The scheduled task `erp-integration-versioned-entity-reconciler` re-drives a trading point or counterparty version that has no outbox row.
+
+`counterparty.changed` (#368) is the third: the whole portal-owned counterparty record with the manager list, plain protobuf
+`CounterpartyCommand` to `mivend.counterparty.commands.v1` (key = ERP id), idempotent by ERP id + version, same recovery
+rules as the trading point. It appears in `integrationOutboxHealth` next to the other types.
 
 ### Order check counters (#237)
 
