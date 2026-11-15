@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { MvEmailInput, MvFormField, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
+import { MvButton, MvEmailInput, MvFormField, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
 import type { useContactRows } from '../../composables/useContactRows';
 
 defineProps<{ contacts: ReturnType<typeof useContactRows> }>();
@@ -11,9 +11,9 @@ const { t } = useI18n();
     <div class="tp-contacts">
         <div class="tp-contacts__head">
             <span>{{ t('customers.tradingPoints.contacts.title') }}</span>
-            <button type="button" class="tp-contacts__add" @click="contacts.add()">
+            <MvButton variant="ghost" size="sm" @click="contacts.add()">
                 {{ t('customers.tradingPoints.contacts.add') }}
-            </button>
+            </MvButton>
         </div>
         <div v-for="(row, index) in contacts.rows" :key="index" class="tp-contacts__row">
             <MvFormField
@@ -58,9 +58,14 @@ const { t } = useI18n();
                     @blur="row.touched.email = true"
                 />
             </MvFormField>
-            <button type="button" class="tp-contacts__remove" @click="contacts.remove(index)">
+            <MvButton
+                class="tp-contacts__remove"
+                variant="danger"
+                size="sm"
+                @click="contacts.remove(index)"
+            >
                 {{ t('customers.tradingPoints.contacts.remove') }}
-            </button>
+            </MvButton>
         </div>
         <p v-if="!contacts.rows.length" class="tp-contacts__empty">
             {{ t('customers.tradingPoints.contacts.empty') }}
@@ -83,15 +88,6 @@ const { t } = useI18n();
     font-weight: 700;
 }
 
-.tp-contacts__add {
-    background: none;
-    border: none;
-    color: var(--el-color-primary-dark-2);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
 .tp-contacts__row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -109,13 +105,6 @@ const { t } = useI18n();
 
 .tp-contacts__remove {
     justify-self: start;
-    background: none;
-    border: none;
-    color: var(--el-color-danger);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 0;
 }
 
 .tp-contacts__empty {

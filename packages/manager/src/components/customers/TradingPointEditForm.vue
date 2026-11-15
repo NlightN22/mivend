@@ -169,9 +169,7 @@ async function submit(): Promise<void> {
             <MvButton :loading="submitting" :disabled="!form.location" @click="submit">{{
                 t('customers.tradingPoints.form.saveChanges')
             }}</MvButton>
-            <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
-                {{ t('common.cancel') }}
-            </button>
+            <MvButton variant="ghost" @click="emit('cancel')">{{ t('common.cancel') }}</MvButton>
         </div>
     </div>
 </template>
@@ -199,13 +197,5 @@ async function submit(): Promise<void> {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.tp-edit-form__cancel {
-    background: none;
-    border: none;
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-    cursor: pointer;
 }
 </style>
