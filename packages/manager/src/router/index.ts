@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { ERP_DOCUMENT_KINDS, ERP_DOCUMENT_PATHS } from '../api/erpDocumentKinds';
 import { BULK_PERMISSIONS } from '../components/bulk-operations/operationPermissions';
 
 export const router = createRouter({
@@ -67,6 +68,13 @@ export const router = createRouter({
                     component: () => import('../pages/payments/PaymentsPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                ...ERP_DOCUMENT_KINDS.map(kind => ({
+                    path: ERP_DOCUMENT_PATHS[kind].slice(1),
+                    name: `erp-documents-${kind}`,
+                    component: () => import('../pages/erp-documents/ErpDocumentsPage.vue'),
+                    props: { kind },
+                    meta: { requiresAuth: true },
+                })),
                 {
                     path: 'settlements',
                     name: 'settlements',

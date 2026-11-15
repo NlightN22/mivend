@@ -104,6 +104,7 @@ export default {
         delivery: 'Delivery',
         priceType: 'Price type',
         erpRegistration: 'ERP registration',
+        relatedDocuments: 'ERP documents',
     },
     history: {
         title: 'History',

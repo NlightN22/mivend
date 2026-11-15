@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue';
 import { i18n } from '../i18n';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
+import { ERP_DOCUMENT_KINDS, ERP_DOCUMENT_PATHS } from '../api/erpDocumentKinds';
 import { useAuthStore } from '../stores/auth';
 import { CHANGE_JOURNAL_LABELS } from '../components/change-journal/changeJournalLabels';
 import { canOpenBulkOperations } from '../components/bulk-operations/operationUi';
@@ -18,6 +19,13 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
         if (authStore.hasPermission('ReadProformaInvoice'))
             documents.push({ label: t('shell.nav.proformaInvoices'), path: '/proforma-invoices' });
         documents.push({ label: t('shell.nav.discounts'), path: '/discounts' });
+        // The ERP document lists are gated like their visible* queries (the order right).
+        if (authStore.hasPermission('ReadOrder'))
+            for (const kind of ERP_DOCUMENT_KINDS)
+                documents.push({
+                    label: t(`erpDocuments.${kind}.title`),
+                    path: ERP_DOCUMENT_PATHS[kind],
+                });
         // Settlements are gated like their visibleSettlementDocuments query.
         const settlements: AppSidebarItem[] = authStore.hasPermission('ReadSettlementDocument')
             ? [{ label: t('shell.nav.settlements'), path: '/settlements' }]
@@ -79,6 +87,13 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
                 path: '/proforma-invoices',
             });
         items.push({ key: 'discounts', label: t('shell.nav.discounts'), path: '/discounts' });
+        if (authStore.hasPermission('ReadOrder'))
+            for (const kind of ERP_DOCUMENT_KINDS)
+                items.push({
+                    key: kind,
+                    label: t(`erpDocuments.${kind}.title`),
+                    path: ERP_DOCUMENT_PATHS[kind],
+                });
         if (authStore.hasPermission('ReadSettlementDocument'))
             items.push({
                 key: 'settlements',

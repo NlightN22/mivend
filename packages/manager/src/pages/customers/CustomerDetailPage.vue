@@ -25,6 +25,7 @@ import CustomerMetricsKpis from '../../components/customers/CustomerMetricsKpis.
 import CustomerInfoRow from '../../components/customers/CustomerInfoRow.vue';
 import CustomerTabBar from '../../components/customers/CustomerTabBar.vue';
 import CustomerTabContent from '../../components/customers/CustomerTabContent.vue';
+import ErpDocumentsLink from '../../components/erp-documents/ErpDocumentsLink.vue';
 import ActAsCustomerButton from '../../components/acting/ActAsCustomerButton.vue';
 
 const { t } = useI18n();
@@ -130,6 +131,7 @@ watch(() => route.params.id, load);
             {{ t('customers.detail.inn', { inn: customer.inn }) }}
         </p>
         <ActAsCustomerButton :counterparty-id="customer.id" />
+        <ErpDocumentsLink :counterparty-id="customer.id" class="customer-detail__documents-link" />
         <MvStatusBadge
             v-if="customer.innStatus === 'missing'"
             variant="warning"
@@ -183,6 +185,10 @@ watch(() => route.params.id, load);
 </template>
 
 <style scoped>
+.customer-detail__documents-link {
+    align-self: flex-start;
+}
+
 .customer-detail {
     display: flex;
     flex-direction: column;

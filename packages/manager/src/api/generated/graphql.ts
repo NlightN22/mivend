@@ -2849,6 +2849,69 @@ export type EntityVersionListOptions = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type ErpDocumentCounts = {
+    customerClaims: Scalars['Int']['output'];
+    orderCorrections: Scalars['Int']['output'];
+    salesCorrections: Scalars['Int']['output'];
+};
+
+export type ErpDocumentFilter = {
+    _and?: InputMaybe<Array<ErpDocumentFilter>>;
+    amount?: InputMaybe<NumberOperators>;
+    comment?: InputMaybe<StringOperators>;
+    /** Not available on order corrections. */
+    contract?: InputMaybe<StringOperators>;
+    counterpartyId?: InputMaybe<IdOperators>;
+    customer?: InputMaybe<StringOperators>;
+    customerInn?: InputMaybe<StringOperators>;
+    date?: InputMaybe<DateOperators>;
+    number?: InputMaybe<StringOperators>;
+    orderCode?: InputMaybe<StringOperators>;
+    orderId?: InputMaybe<IdOperators>;
+    organization?: InputMaybe<StringOperators>;
+};
+
+/** Paging, search, filter and sort of an ERP document list; field names are a fixed whitelist. */
+export type ErpDocumentListInput = {
+    filter?: InputMaybe<ErpDocumentFilter>;
+    /** Substring match against the document number, the order code, the customer name and INN. */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<ErpDocumentSort>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** One ERP document row; names are resolved from the local catalogue, null when the soft link does not resolve. */
+export type ErpDocumentListItem = {
+    amount: Scalars['Money']['output'];
+    comment: Maybe<Scalars['String']['output']>;
+    contractName: Maybe<Scalars['String']['output']>;
+    counterpartyId: Maybe<Scalars['ID']['output']>;
+    counterpartyName: Maybe<Scalars['String']['output']>;
+    currency: Maybe<Scalars['String']['output']>;
+    date: Maybe<Scalars['DateTime']['output']>;
+    id: Scalars['ID']['output'];
+    lineCount: Scalars['Int']['output'];
+    number: Scalars['String']['output'];
+    orderCode: Maybe<Scalars['String']['output']>;
+    orderId: Maybe<Scalars['ID']['output']>;
+    organizationName: Maybe<Scalars['String']['output']>;
+    /** First products of the document by line order, at most three. */
+    productNames: Array<Scalars['String']['output']>;
+};
+
+export type ErpDocumentPage = {
+    items: Array<ErpDocumentListItem>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ErpDocumentSort = {
+    amount?: InputMaybe<SortOrder>;
+    customer?: InputMaybe<SortOrder>;
+    date?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+};
+
 export type ErpPosition = {
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -8638,6 +8701,8 @@ export type Query = {
     recentProductTaxCodeFlags: ProductTaxCodeFlagList;
     /** Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204. */
     rejectedOrderCount: Scalars['Int']['output'];
+    /** Visible documents of all three types tied to an order and/or a counterparty (local ids). */
+    relatedErpDocumentCounts: ErpDocumentCounts;
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     retroBonusRules: Array<RetroBonusRule>;
     reverseGeocode: Maybe<Scalars['String']['output']>;
@@ -8699,6 +8764,8 @@ export type Query = {
     /** Administrators the caller may pick in a grant: everyone for ManageAccessControl, else their team and granted managers. */
     visibilityGrantCandidates: Array<VisibilityCandidate>;
     visibilityGrants: VisibilityGrantPage;
+    visibleCustomerClaims: ErpDocumentPage;
+    visibleOrderCorrections: ErpDocumentPage;
     visibleOrders: OrderList;
     /** Sum of totalWithTax over the caller's visible orders matching options.filter */
     visibleOrdersAmount: Scalars['Money']['output'];
@@ -8706,6 +8773,7 @@ export type Query = {
     visiblePayments: PaymentAttemptList;
     /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
     visibleProformaInvoices: ProformaInvoiceList;
+    visibleSalesCorrections: ErpDocumentPage;
     /** Manager-portal settlement documents of the customers the caller may see; needs ReadSettlementDocument. */
     visibleSettlementDocuments: SettlementListPage;
     /** Document counts per type for the same search and filter (the type itself is ignored), for the type chips. */
@@ -9240,6 +9308,11 @@ export type QueryRecentProductTaxCodeFlagsArgs = {
     options?: InputMaybe<ProductTaxCodeFlagListOptions>;
 };
 
+export type QueryRelatedErpDocumentCountsArgs = {
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    orderId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type QueryReservationExtensionLimitArgs = {
     roleCode: Scalars['String']['input'];
 };
@@ -9399,6 +9472,14 @@ export type QueryVisibilityGrantsArgs = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QueryVisibleCustomerClaimsArgs = {
+    list?: InputMaybe<ErpDocumentListInput>;
+};
+
+export type QueryVisibleOrderCorrectionsArgs = {
+    list?: InputMaybe<ErpDocumentListInput>;
+};
+
 export type QueryVisibleOrdersArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
     list?: InputMaybe<OrderListInput>;
@@ -9419,6 +9500,10 @@ export type QueryVisiblePaymentsArgs = {
 export type QueryVisibleProformaInvoicesArgs = {
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     options?: InputMaybe<ProformaInvoiceListOptions>;
+};
+
+export type QueryVisibleSalesCorrectionsArgs = {
+    list?: InputMaybe<ErpDocumentListInput>;
 };
 
 export type QueryVisibleSettlementDocumentsArgs = {
@@ -12943,6 +13028,110 @@ export type DiscountCounterpartySearchQuery = {
     counterparties: { items: Array<{ id: string; legalName: string }> };
 };
 
+export type ErpDocumentRowFieldsFragment = {
+    id: string;
+    number: string;
+    date: any | null;
+    counterpartyId: string | null;
+    counterpartyName: string | null;
+    orderId: string | null;
+    orderCode: string | null;
+    organizationName: string | null;
+    contractName: string | null;
+    currency: string | null;
+    amount: any;
+    comment: string | null;
+    lineCount: number;
+    productNames: Array<string>;
+};
+
+export type CustomerClaimsPageQueryVariables = Exact<{
+    list?: InputMaybe<ErpDocumentListInput>;
+}>;
+
+export type CustomerClaimsPageQuery = {
+    page: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            date: any | null;
+            counterpartyId: string | null;
+            counterpartyName: string | null;
+            orderId: string | null;
+            orderCode: string | null;
+            organizationName: string | null;
+            contractName: string | null;
+            currency: string | null;
+            amount: any;
+            comment: string | null;
+            lineCount: number;
+            productNames: Array<string>;
+        }>;
+    };
+};
+
+export type SalesCorrectionsPageQueryVariables = Exact<{
+    list?: InputMaybe<ErpDocumentListInput>;
+}>;
+
+export type SalesCorrectionsPageQuery = {
+    page: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            date: any | null;
+            counterpartyId: string | null;
+            counterpartyName: string | null;
+            orderId: string | null;
+            orderCode: string | null;
+            organizationName: string | null;
+            contractName: string | null;
+            currency: string | null;
+            amount: any;
+            comment: string | null;
+            lineCount: number;
+            productNames: Array<string>;
+        }>;
+    };
+};
+
+export type OrderCorrectionsPageQueryVariables = Exact<{
+    list?: InputMaybe<ErpDocumentListInput>;
+}>;
+
+export type OrderCorrectionsPageQuery = {
+    page: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            date: any | null;
+            counterpartyId: string | null;
+            counterpartyName: string | null;
+            orderId: string | null;
+            orderCode: string | null;
+            organizationName: string | null;
+            contractName: string | null;
+            currency: string | null;
+            amount: any;
+            comment: string | null;
+            lineCount: number;
+            productNames: Array<string>;
+        }>;
+    };
+};
+
+export type RelatedErpDocumentCountsQueryVariables = Exact<{
+    orderId?: InputMaybe<Scalars['ID']['input']>;
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type RelatedErpDocumentCountsQuery = {
+    counts: { customerClaims: number; salesCorrections: number; orderCorrections: number };
+};
+
 export type GeoConfigQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GeoConfigQuery = {
@@ -15217,6 +15406,27 @@ export const DiscountRegistryItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'DiscountRegistryItemFields' },
 ) as unknown as TypedDocumentString<DiscountRegistryItemFieldsFragment, unknown>;
+export const ErpDocumentRowFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment ErpDocumentRowFields on ErpDocumentListItem {
+  id
+  number
+  date
+  counterpartyId
+  counterpartyName
+  orderId
+  orderCode
+  organizationName
+  contractName
+  currency
+  amount
+  comment
+  lineCount
+  productNames
+}
+    `,
+    { fragmentName: 'ErpDocumentRowFields' },
+) as unknown as TypedDocumentString<ErpDocumentRowFieldsFragment, unknown>;
 export const EntityVersionRowFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment EntityVersionRowFields on EntityVersion {
@@ -17005,6 +17215,102 @@ export const DiscountCounterpartySearchDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     DiscountCounterpartySearchQuery,
     DiscountCounterpartySearchQueryVariables
+>;
+export const CustomerClaimsPageDocument = new TypedDocumentString(`
+    query CustomerClaimsPage($list: ErpDocumentListInput) {
+  page: visibleCustomerClaims(list: $list) {
+    totalItems
+    items {
+      ...ErpDocumentRowFields
+    }
+  }
+}
+    fragment ErpDocumentRowFields on ErpDocumentListItem {
+  id
+  number
+  date
+  counterpartyId
+  counterpartyName
+  orderId
+  orderCode
+  organizationName
+  contractName
+  currency
+  amount
+  comment
+  lineCount
+  productNames
+}`) as unknown as TypedDocumentString<CustomerClaimsPageQuery, CustomerClaimsPageQueryVariables>;
+export const SalesCorrectionsPageDocument = new TypedDocumentString(`
+    query SalesCorrectionsPage($list: ErpDocumentListInput) {
+  page: visibleSalesCorrections(list: $list) {
+    totalItems
+    items {
+      ...ErpDocumentRowFields
+    }
+  }
+}
+    fragment ErpDocumentRowFields on ErpDocumentListItem {
+  id
+  number
+  date
+  counterpartyId
+  counterpartyName
+  orderId
+  orderCode
+  organizationName
+  contractName
+  currency
+  amount
+  comment
+  lineCount
+  productNames
+}`) as unknown as TypedDocumentString<
+    SalesCorrectionsPageQuery,
+    SalesCorrectionsPageQueryVariables
+>;
+export const OrderCorrectionsPageDocument = new TypedDocumentString(`
+    query OrderCorrectionsPage($list: ErpDocumentListInput) {
+  page: visibleOrderCorrections(list: $list) {
+    totalItems
+    items {
+      ...ErpDocumentRowFields
+    }
+  }
+}
+    fragment ErpDocumentRowFields on ErpDocumentListItem {
+  id
+  number
+  date
+  counterpartyId
+  counterpartyName
+  orderId
+  orderCode
+  organizationName
+  contractName
+  currency
+  amount
+  comment
+  lineCount
+  productNames
+}`) as unknown as TypedDocumentString<
+    OrderCorrectionsPageQuery,
+    OrderCorrectionsPageQueryVariables
+>;
+export const RelatedErpDocumentCountsDocument = new TypedDocumentString(`
+    query RelatedErpDocumentCounts($orderId: ID, $counterpartyId: ID) {
+  counts: relatedErpDocumentCounts(
+    orderId: $orderId
+    counterpartyId: $counterpartyId
+  ) {
+    customerClaims
+    salesCorrections
+    orderCorrections
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RelatedErpDocumentCountsQuery,
+    RelatedErpDocumentCountsQueryVariables
 >;
 export const GeoConfigDocument = new TypedDocumentString(`
     query GeoConfig {

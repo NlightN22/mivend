@@ -1,0 +1,51 @@
+fragment ErpDocumentRowFields on ErpDocumentListItem {
+    id
+    number
+    date
+    counterpartyId
+    counterpartyName
+    orderId
+    orderCode
+    organizationName
+    contractName
+    currency
+    amount
+    comment
+    lineCount
+    productNames
+}
+
+query CustomerClaimsPage($list: ErpDocumentListInput) {
+    page: visibleCustomerClaims(list: $list) {
+        totalItems
+        items {
+            ...ErpDocumentRowFields
+        }
+    }
+}
+
+query SalesCorrectionsPage($list: ErpDocumentListInput) {
+    page: visibleSalesCorrections(list: $list) {
+        totalItems
+        items {
+            ...ErpDocumentRowFields
+        }
+    }
+}
+
+query OrderCorrectionsPage($list: ErpDocumentListInput) {
+    page: visibleOrderCorrections(list: $list) {
+        totalItems
+        items {
+            ...ErpDocumentRowFields
+        }
+    }
+}
+
+query RelatedErpDocumentCounts($orderId: ID, $counterpartyId: ID) {
+    counts: relatedErpDocumentCounts(orderId: $orderId, counterpartyId: $counterpartyId) {
+        customerClaims
+        salesCorrections
+        orderCorrections
+    }
+}

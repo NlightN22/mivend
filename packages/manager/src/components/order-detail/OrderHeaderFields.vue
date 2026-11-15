@@ -5,6 +5,7 @@ import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import OrderContractPanel from './OrderContractPanel.vue';
 import OrderDeliveryPanel from './OrderDeliveryPanel.vue';
 import OrderErpRegistration from './OrderErpRegistration.vue';
+import ErpDocumentsLink from '../erp-documents/ErpDocumentsLink.vue';
 
 const { t } = useI18n();
 defineProps<{
@@ -61,6 +62,10 @@ defineEmits<{ changed: [] }>();
                     :raw-erp-status="order.customFields.erpStatus ?? null"
                 />
             </dd>
+        </div>
+        <div class="order-fields__cell">
+            <dt>{{ t('orderDetail.fields.relatedDocuments') }}</dt>
+            <dd><ErpDocumentsLink :order-id="order.id" /></dd>
         </div>
     </dl>
 </template>

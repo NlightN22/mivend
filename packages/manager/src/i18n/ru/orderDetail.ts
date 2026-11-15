@@ -106,6 +106,7 @@ const orderDetail: typeof en = {
         delivery: 'Доставка',
         priceType: 'Тип цены',
         erpRegistration: 'Регистрация в ERP',
+        relatedDocuments: 'Документы ERP',
     },
     history: {
         title: 'История',
