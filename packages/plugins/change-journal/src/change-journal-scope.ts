@@ -5,6 +5,7 @@ const HISTORY = 'already an append-only history or log of other changes';
 
 export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     ChangeJournalEntry: 'the journal itself',
+    RoleDefaultGrant: 'config table written only by migrate and the CLI, never by a user action',
     Session: AUTH,
     AnonymousSession: AUTH,
     AuthenticatedSession: AUTH,
