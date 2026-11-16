@@ -11,6 +11,7 @@ import { resolveRequestActor, sqlActorLookups } from '../../change-journal-actor
 import { runInChangeScope } from '../../change-journal-context';
 import { ChangeJournalSubscriber } from '../../change-journal.subscriber';
 import { CHANGE_JOURNAL_DDL } from './change-journal-ddl';
+import { ChangeActor } from '../../change-journal.types';
 
 @Entity('actor_probe')
 class ActorProbe {
@@ -20,8 +21,17 @@ class ActorProbe {
 
 const { schema, extra } = testSchemaOptions('change_journal_actor');
 let ds: DataSource;
+interface ScopeResult {
+    source: string;
+    journaled: boolean;
+    requestId: string;
+    sessionId: () => null;
+    resolveActor: (runner: {
+        query(sql: string, p?: unknown[]): Promise<unknown>;
+    }) => Promise<ChangeActor>;
+}
 
-function scope(apiType: string, activeUserId: number, token?: string) {
+function scope(apiType: string, activeUserId: number, token?: string): ScopeResult {
     const ctx = { apiType, activeUserId };
     return {
         source: `${apiType}-api:test`,

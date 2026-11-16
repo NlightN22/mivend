@@ -3,15 +3,20 @@ import type { RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import type { EntityVersionScopeRegistry } from '@mivend/plugin-versioning';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ChangeJournalResolver } from '../../api/change-journal.resolver';
 import type { ChangeJournalService } from '../../change-journal.service';
 
 const ctx = {} as RequestContext;
 const PAGE = { items: [{ id: '1' }], totalItems: 1 };
+interface BuildResult {
+    journal: { findForEntity: Mock; findFiltered: Mock };
+    registry: { filterRefs: Mock<(_: RequestContext, refs: unknown[]) => Promise<unknown[]>> };
+    resolver: ChangeJournalResolver;
+}
 
-function build(visible: boolean, scope: 'own' | 'department' | 'all') {
+function build(visible: boolean, scope: 'own' | 'department' | 'all'): BuildResult {
     const journal = {
         findForEntity: vi.fn().mockResolvedValue(PAGE),
         findFiltered: vi.fn().mockResolvedValue(PAGE),

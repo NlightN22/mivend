@@ -11,7 +11,7 @@ import {
 
 import type { ChangeJournalRecord } from '../../change-journal.types';
 import { sweepChangeJournal } from '../../change-journal-cleanup.scheduled-task';
-import { ChangeJournalService } from '../../change-journal.service';
+import { ChangeJournalPage, ChangeJournalService } from '../../change-journal.service';
 import { insertJournalEntry } from '../../change-journal-write';
 import { CHANGE_JOURNAL_DDL } from './change-journal-ddl';
 
@@ -93,7 +93,7 @@ describe('ChangeJournalService reads (real Postgres)', () => {
         await insertJournalEntry(ds, entry({ actorType: 'system', administratorId: null }));
         await insertJournalEntry(ds, entry({ entityId: '2', actorType: 'acting' }));
         await insertJournalEntry(ds, entry({ entityType: 'Order', actorType: 'acting' }));
-        const only = (filter: object) =>
+        const only = (filter: object): Promise<ChangeJournalPage> =>
             service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
         expect((await only({ actorType: 'acting' })).totalItems).toBe(1);
         expect((await only({ administratorId: '4' })).totalItems).toBe(1);
@@ -109,7 +109,7 @@ describe('ChangeJournalService reads (real Postgres)', () => {
             entry({ action: 'insert', changes: { name: { after: 'x' } } }),
         );
         await insertJournalEntry(ds, entry({ entityId: '2', changes: { phone: { after: '9' } } }));
-        const only = (filter: object) =>
+        const only = (filter: object): Promise<ChangeJournalPage> =>
             service.findForEntity(ctx, 'TradingPoint', '1', {}, filter);
         expect((await only({ search: 'PHONE' })).totalItems).toBe(1);
         expect((await only({ search: '50%' })).totalItems).toBe(1);
