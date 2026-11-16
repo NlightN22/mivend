@@ -40,7 +40,7 @@
         "@storybook/addon-viewport": "^8.6.18",
         "@storybook/vue3": "^8.6.18",
         "@storybook/vue3-vite": "^8.6.18",
-        "@types/node": "^20.19.43",
+        "@types/node": "^22.0.0",
         "@vitejs/plugin-vue": "^5.2.0",
         "@vue/test-utils": "^2.4.0",
         "msw": "^2.15.0",
