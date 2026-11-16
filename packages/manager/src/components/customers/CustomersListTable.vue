@@ -23,7 +23,7 @@ import type { TableViewState } from '../../composables/tableViewState';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import { sortFromState, sortToState } from '../bulk-operations/counterpartySort';
 import { buildCustomersColumns, CUSTOMERS_DEFAULT_HIDDEN } from './customersColumns';
-import { innStatusBadge, usageVariant, type CustomerRow } from './customersRows';
+import { innStatusBadge, portalStateBadge, usageVariant, type CustomerRow } from './customersRows';
 
 const props = defineProps<{
     rows: CustomerRow[];
@@ -234,6 +234,15 @@ function applyView(state: TableViewState): void {
             <MvStatusBadge :variant="innStatusBadge((data as CustomerRow).innStatus).variant">{{
                 innStatusBadge((data as CustomerRow).innStatus).label
             }}</MvStatusBadge>
+        </template>
+
+        <template #cell-portalState="{ data }">
+            <MvStatusBadge
+                v-if="portalStateBadge((data as CustomerRow).portalState)"
+                :variant="portalStateBadge((data as CustomerRow).portalState)!.variant"
+                >{{ portalStateBadge((data as CustomerRow).portalState)!.label }}</MvStatusBadge
+            >
+            <span v-else class="mv-cell-meta">—</span>
         </template>
 
         <template #cell-contact="{ data }">

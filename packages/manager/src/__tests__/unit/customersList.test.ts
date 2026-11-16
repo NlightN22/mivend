@@ -143,14 +143,14 @@ describe('toCustomerRows', () => {
     });
 });
 
-describe('customers list: manager source and credit, readiness filters', () => {
+describe('customers list: manager source and credit, portal state filters', () => {
     it('passes the ERP manager id to the column so it matches the filter field', () => {
         const item = {
             id: 'c1',
             shortName: 'customer-123',
             assignedManagerId: 'm1',
             managerErpId: 'erp-m1',
-            portalReadiness: 'ready',
+            portalState: 'invited',
             contacts: [],
         } as unknown as CustomerListItem;
         const [row] = toCustomerRows([item], {
@@ -161,15 +161,15 @@ describe('customers list: manager source and credit, readiness filters', () => {
             formatMoney: v => String(v),
         });
         expect(row.manager).toBe('name-of-erp-m1');
-        expect(row.readiness).toBe('Ready to activate');
+        expect(row.portalState).toBe('invited');
     });
 
-    it('builds server filters for credit and portal readiness', () => {
+    it('builds server filters for credit and portal state', () => {
         expect(
             conditionsToCustomersFilter([
                 { columnKey: 'creditLimit', operator: 'gte', value: '100' },
-                { columnKey: 'readiness', operator: 'eq', value: 'activated' },
+                { columnKey: 'portalState', operator: 'eq', value: 'active' },
             ]),
-        ).toEqual({ creditLimit: { gte: 100 }, readiness: { eq: 'activated' } });
+        ).toEqual({ creditLimit: { gte: 100 }, portalState: { eq: 'active' } });
     });
 });

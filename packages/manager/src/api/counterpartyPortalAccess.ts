@@ -31,6 +31,7 @@ export interface CounterpartySortParameter {
     creditLimit?: 'ASC' | 'DESC';
     creditBalance?: 'ASC' | 'DESC';
     lastOrderAt?: 'ASC' | 'DESC';
+    portalState?: 'ASC' | 'DESC';
 }
 
 export interface ActivationCandidatesOptions {

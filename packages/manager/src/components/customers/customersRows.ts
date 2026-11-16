@@ -1,6 +1,7 @@
 import { i18n } from '../../i18n';
 import { formatDate } from '../../i18n/format';
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
+import { PORTAL_STATES, type PortalState } from './customersColumns';
 import type { CustomerCredit, CustomerListItem } from '../../api/customers';
 
 export type CustomerRow = {
@@ -11,7 +12,7 @@ export type CustomerRow = {
     branch: string;
     group: string;
     innStatus: string;
-    readiness: string;
+    portalState: string;
     contact: string;
     creditLimit: string;
     creditBalance: string;
@@ -20,12 +21,6 @@ export type CustomerRow = {
     lastOrder: string;
     isActive: boolean;
 };
-
-const READINESS_KEYS = ['ready', 'missing-data', 'inn-duplicate', 'erp-inactive', 'activated'];
-
-function readinessLabel(value: string): string {
-    return READINESS_KEYS.includes(value) ? i18n.global.t(`customers.list.readiness.${value}`) : '';
-}
 
 export interface CustomerRowSources {
     credit: Map<string, CustomerCredit>;
@@ -47,7 +42,7 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
             branch: src.branchName(c.branchId),
             group: c.erpGroupLabel ?? '',
             innStatus: c.innStatus,
-            readiness: readinessLabel(c.portalReadiness ?? ''),
+            portalState: c.portalState ?? '',
             contact: primaryContact?.name ?? '—',
             creditLimit: credit ? src.formatMoney(credit.creditLimit) : '—',
             creditBalance: credit ? src.formatMoney(credit.creditBalance) : '—',
@@ -74,6 +69,23 @@ const INN_STATUS_VARIANT = {
     missing: 'warning',
     duplicate: 'danger',
 } as const;
+
+const PORTAL_STATE_VARIANT: Record<PortalState, StatusBadgeVariant> = {
+    none: 'neutral',
+    invited: 'info',
+    verified: 'warning',
+    active: 'success',
+};
+
+export function portalStateBadge(
+    state: string,
+): { variant: StatusBadgeVariant; label: string } | null {
+    if (!(PORTAL_STATES as readonly string[]).includes(state)) return null;
+    return {
+        variant: PORTAL_STATE_VARIANT[state as PortalState],
+        label: i18n.global.t(`customers.list.portalState.${state}`),
+    };
+}
 
 export function innStatusBadge(status: string): { variant: StatusBadgeVariant; label: string } {
     const key = status in INN_STATUS_VARIANT ? (status as keyof typeof INN_STATUS_VARIANT) : 'ok';

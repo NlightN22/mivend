@@ -22,11 +22,13 @@ export function innStatusOptions(): FilterOption[] {
     ];
 }
 
-export function readinessOptions(): FilterOption[] {
-    const t = i18n.global.t;
-    return ['ready', 'missing-data', 'inn-duplicate', 'erp-inactive', 'activated'].map(value => ({
+export const PORTAL_STATES = ['none', 'invited', 'verified', 'active'] as const;
+export type PortalState = (typeof PORTAL_STATES)[number];
+
+export function portalStateOptions(): FilterOption[] {
+    return PORTAL_STATES.map(value => ({
         value,
-        label: t(`customers.list.readiness.${value}`),
+        label: i18n.global.t(`customers.list.portalState.${value}`),
     }));
 }
 
@@ -35,7 +37,7 @@ export interface CustomersColumnOptions {
     branches?: FilterOption[];
 }
 
-// Group, INN status and portal access default to hidden via CUSTOMERS_DEFAULT_HIDDEN.
+// Group and INN status default to hidden via CUSTOMERS_DEFAULT_HIDDEN.
 // Discounts live in another plugin and cannot be filtered here.
 export function buildCustomersColumns(
     options: CustomersColumnOptions = {},
@@ -122,15 +124,17 @@ export function buildCustomersColumns(
             mobile: { hidden: true },
         },
         {
-            field: 'readiness',
-            header: col('readiness'),
-            width: 150,
+            field: 'portalState',
+            header: col('portalState'),
+            sortField: 'portalState',
+            width: 160,
             minWidth: 120,
-            priority: 1,
+            priority: 7,
             filterConfig: NOT_FILTERED,
             filterType: 'select',
+            filterField: 'portalState',
             filterOperators: ['eq', 'notEq'],
-            filterOptions: readinessOptions(),
+            filterOptions: portalStateOptions(),
             mobile: { hidden: true },
         },
         {
@@ -199,4 +203,4 @@ export function buildCustomersColumns(
     ];
 }
 
-export const CUSTOMERS_DEFAULT_HIDDEN = ['group', 'innStatus', 'readiness'];
+export const CUSTOMERS_DEFAULT_HIDDEN = ['group', 'innStatus'];

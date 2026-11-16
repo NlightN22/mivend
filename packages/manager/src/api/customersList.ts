@@ -15,11 +15,13 @@ import {
 import { CUSTOMERS_FILTER_COLUMNS, conditionsToCustomersFilter } from './customersFilter';
 import { mergeFilters } from './orders-filter';
 
-export type CustomersView = 'all' | 'active' | 'inactive';
+export type CustomersView = 'all' | 'none' | 'invited' | 'verified' | 'active';
 export const CUSTOMERS_VIEWS: { key: CustomersView; label: string }[] = [
     { key: 'all', label: 'All' },
+    { key: 'none', label: 'No access' },
+    { key: 'invited', label: 'Invited' },
+    { key: 'verified', label: 'Verified' },
     { key: 'active', label: 'Active' },
-    { key: 'inactive', label: 'Inactive' },
 ];
 
 export interface CustomersListFilters {
@@ -45,6 +47,7 @@ export const CUSTOMERS_SORT_FIELDS: CustomersSortField[] = [
     'creditLimit',
     'creditBalance',
     'lastOrderAt',
+    'portalState',
 ];
 
 export const BLANK_CUSTOMERS_FILTERS: CustomersListFilters = {
@@ -65,6 +68,16 @@ export function restoreCustomersFilters(raw: unknown): CustomersListFilters {
         view: isCustomersView(r.view) ? r.view : 'all',
         conditions: sanitizeConditions(r.conditions, CUSTOMERS_FILTER_COLUMNS),
     };
+}
+
+export function viewFilter(
+    view: CustomersView,
+    filter: CounterpartyFilterParameter | undefined,
+): CounterpartyFilterParameter | undefined {
+    if (view === 'all') return filter;
+    return mergeFilters(filter ?? {}, {
+        portalState: { eq: view },
+    }) as CounterpartyFilterParameter;
 }
 
 // A fixed filter (the customer card's nested list) narrows beside the builder, never replaces it.
@@ -95,8 +108,7 @@ export async function fetchCustomersList(
         take: pageSize,
         skip: (page - 1) * pageSize,
         search: filters.search.trim() || undefined,
-        status: filters.view === 'all' ? undefined : filters.view,
-        filter: customersListFilter(filters, fixed),
+        filter: viewFilter(filters.view, customersListFilter(filters, fixed)),
         sort: { [sort.field]: sort.dir },
     };
     const [result, credit] = await Promise.all([
@@ -117,16 +129,26 @@ export async function fetchCustomersViewCounts(
     const base = {
         take: 0,
         search: filters.search.trim() || undefined,
-        filter: customersListFilter(filters, fixed),
     };
+    const filter = customersListFilter(filters, fixed);
+    const options = (
+        view: CustomersView,
+    ): { take: number; search?: string; filter?: CounterpartyFilterParameter } => ({
+        ...base,
+        filter: viewFilter(view, filter),
+    });
     const result = await adminApi(CustomersViewCountsDocument, {
-        all: base,
-        active: { ...base, status: 'active' },
-        inactive: { ...base, status: 'inactive' },
+        all: options('all'),
+        none: options('none'),
+        invited: options('invited'),
+        verified: options('verified'),
+        active: options('active'),
     });
     return {
         all: result.all.totalItems,
+        none: result.none.totalItems,
+        invited: result.invited.totalItems,
+        verified: result.verified.totalItems,
         active: result.active.totalItems,
-        inactive: result.inactive.totalItems,
     };
 }

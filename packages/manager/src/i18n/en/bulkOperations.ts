@@ -56,6 +56,7 @@ export default {
         no_portal_access: 'No portal access to revoke',
         inactive: 'Inactive in the ERP',
         no_contact: 'Phone or e-mail is missing',
+        no_login: 'No portal login to reset',
         no_inn: 'INN is missing in the ERP',
         inn_duplicate: 'INN is used by another counterparty with portal access',
         actor_not_allowed: 'Your access changed before this record was reached',
@@ -93,6 +94,9 @@ export default {
             records: 'Records',
             result: 'Result',
         },
+    },
+    passwordReset: {
+        notice: 'Sends each selected counterparty a new password link. Records without a portal login are skipped and listed on the next step.',
     },
     activation: {
         optionsLegend: 'What to do with the selected counterparties',

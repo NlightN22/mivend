@@ -31,15 +31,18 @@ import {
 export type ContactPersonInfo =
     CustomerListItemFieldsFragment['tradingPoints'][number]['contacts'][number];
 export type TradingPointInfo = CustomerListItemFieldsFragment['tradingPoints'][number];
-// portalReadiness and lastOrderAt come only with the list query; the single-customer fetch leaves them out.
+// portalState and lastOrderAt come only with the list query; the single-customer fetch leaves them out.
 export type CustomerListItem = CustomerListItemFieldsFragment & {
     contacts: ContactPersonInfo[];
-    portalReadiness?: string;
+    portalState?: string | null;
     lastOrderAt?: string | null;
 };
 
 function toCustomerListItem(
-    c: CustomerListItemFieldsFragment & { portalReadiness?: string; lastOrderAt?: string | null },
+    c: CustomerListItemFieldsFragment & {
+        portalState?: string | null;
+        lastOrderAt?: string | null;
+    },
 ): CustomerListItem {
     return { ...c, contacts: c.tradingPoints.flatMap(tp => tp.contacts) };
 }

@@ -1,6 +1,7 @@
 import type { Component } from 'vue';
 import ActivationParametersStep from './ActivationParametersStep.vue';
 import ActivationSelectStep from './ActivationSelectStep.vue';
+import PasswordResetParametersStep from './PasswordResetParametersStep.vue';
 import { BULK_PERMISSIONS } from './operationPermissions';
 
 // What the manager portal needs to run an operation the server catalog lists: its wizard steps.
@@ -17,6 +18,12 @@ export const OPERATION_UI: Record<string, OperationUi> = {
         selectStep: ActivationSelectStep,
         parametersStep: ActivationParametersStep,
         defaultParameters: { action: 'activate' },
+        recordNoun: 'counterparties',
+    },
+    'counterparty-password-reset': {
+        selectStep: ActivationSelectStep,
+        parametersStep: PasswordResetParametersStep,
+        defaultParameters: {},
         recordNoun: 'counterparties',
     },
 };

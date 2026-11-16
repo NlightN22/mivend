@@ -117,7 +117,7 @@ interface CustomersPageVariables {
         skip?: number;
         take?: number;
         search?: string;
-        status?: 'active' | 'inactive';
+        filter?: { portalState?: { eq?: string } };
         managerId?: string;
         branchId?: string;
         groupLabel?: string;
@@ -137,7 +137,6 @@ function mockCustomersData(): void {
                     includesCi(c.inn, o.search!),
             );
         }
-        if (o?.status) filtered = filtered.filter(c => (o.status === 'active') === c.isActive);
         if (o?.branchId) filtered = filtered.filter(c => c.branchId === o.branchId);
         if (o?.groupLabel) filtered = filtered.filter(c => c.erpGroupLabel === o.groupLabel);
         if (o?.unassignedOnly) {
@@ -149,8 +148,10 @@ function mockCustomersData(): void {
     });
     registerMock('CustomersViewCounts', () => ({
         all: { totalItems: CUSTOMERS.length },
-        active: { totalItems: CUSTOMERS.filter(c => c.isActive).length },
-        inactive: { totalItems: CUSTOMERS.filter(c => !c.isActive).length },
+        none: { totalItems: CUSTOMERS.length },
+        invited: { totalItems: 0 },
+        verified: { totalItems: 0 },
+        active: { totalItems: 0 },
     }));
     registerMock('CustomersSummary', () => ({
         counterpartySummary: {
@@ -205,8 +206,10 @@ export const Empty: Story = {
             }));
             registerMock('CustomersViewCounts', () => ({
                 all: { totalItems: 0 },
+                none: { totalItems: 0 },
+                invited: { totalItems: 0 },
+                verified: { totalItems: 0 },
                 active: { totalItems: 0 },
-                inactive: { totalItems: 0 },
             }));
             registerMock('Branches', () => ({ branches: [] }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
