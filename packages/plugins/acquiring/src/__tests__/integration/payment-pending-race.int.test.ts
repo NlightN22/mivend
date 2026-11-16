@@ -217,8 +217,13 @@ describe('payProformaInvoice repeat delivery with the same reference (#247)', ()
             status: 'issued',
         });
     }
+    type StoredResult = Promise<{
+        attempts: TestPaymentAttempt[];
+        entries: TestSettlementEntry[];
+        invoice: TestProformaInvoice;
+    }>;
 
-    async function stored(invoiceId: number) {
+    async function stored(invoiceId: number): StoredResult {
         const attempts = await dataSource.getRepository(TestPaymentAttempt).find();
         const entries = await dataSource.getRepository(TestSettlementEntry).find();
         const invoice = await dataSource

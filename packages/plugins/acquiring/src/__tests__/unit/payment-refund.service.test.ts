@@ -1,12 +1,11 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { PaymentRefundService } from '../../payment-refund.service';
 
 const mockCtx = {} as unknown as RequestContext;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-function createMockRepo() {
+function createMockRepo(): Record<string, Mock> {
     return {
         find: vi.fn(),
         create: vi.fn(input => input),

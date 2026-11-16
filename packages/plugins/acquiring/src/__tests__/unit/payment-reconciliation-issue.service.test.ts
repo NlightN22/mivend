@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { PaymentReconciliationIssueService } from '../../payment-reconciliation-issue.service';
@@ -6,16 +6,21 @@ import { PaymentReconciliationIssueService } from '../../payment-reconciliation-
 // The PaymentReconciliationIssue row stays the system of record; this Notification is additive.
 // report() emits both, so the existing issue row is never replaced.
 describe('PaymentReconciliationIssueService.report — Notification wiring', () => {
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createMockRepo() {
+    interface CreateMockRepoResult {
+        create: Mock<[fields: unknown], unknown>;
+        save: Mock<[row: unknown], Promise<unknown>>;
+        findOne: Mock<[], Promise<{ id: number; orderId: number }>>;
+    }
+
+    function createMockRepo(): CreateMockRepoResult {
         return {
             create: vi.fn((fields: unknown) => fields),
             save: vi.fn(async (row: unknown) => row),
             findOne: vi.fn(async () => ({ id: 1, orderId: 7 })),
         };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockNotificationService() {
+
+    function createMockNotificationService(): { create: Mock<[], Promise<object>> } {
         return { create: vi.fn(async () => ({})) };
     }
 

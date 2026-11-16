@@ -18,7 +18,7 @@ let service: VariantOrganizationHealthService;
 const addVariant = (
     organizationId: number | null,
     opts: { enabled?: boolean; deleted?: boolean },
-) =>
+): Promise<unknown> =>
     dataSource.query(
         `INSERT INTO product_variant (enabled, "deletedAt", "customFieldsOrganizationid")
          VALUES ($1, $2, $3)`,

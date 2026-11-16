@@ -1,5 +1,5 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
@@ -48,8 +48,17 @@ describe('SettlementEntryService.allocate', () => {
     let scanQb: ReturnType<typeof createChainableQb>;
     let preferredQb: ReturnType<typeof createChainableQb>;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createChainableQb(result: unknown) {
+    interface CreateChainableQbResult {
+        where: Mock;
+        andWhere: Mock;
+        orderBy: Mock;
+        take: Mock;
+        setLock: Mock;
+        getMany: Mock<[], Promise<unknown>>;
+        getOne: Mock<[], Promise<unknown>>;
+    }
+
+    function createChainableQb(result: unknown): CreateChainableQbResult {
         const qb = {
             where: vi.fn(),
             andWhere: vi.fn(),
@@ -67,11 +76,25 @@ describe('SettlementEntryService.allocate', () => {
         return qb;
     }
 
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    interface CreateMockProformaInvoiceRepoResult {
+        createQueryBuilder: Mock<
+            [],
+            {
+                where: Mock;
+                andWhere: Mock;
+                orderBy: Mock;
+                take: Mock;
+                setLock: Mock;
+                getMany: Mock<[], Promise<unknown>>;
+                getOne: Mock<[], Promise<unknown>>;
+            }
+        >;
+    }
+
     function createMockProformaInvoiceRepo(
         openProformaInvoices: ProformaInvoice[],
         findOneResult: ProformaInvoice | null = null,
-    ) {
+    ): CreateMockProformaInvoiceRepoResult {
         scanQb = createChainableQb(openProformaInvoices);
         preferredQb = createChainableQb(findOneResult);
         let call = 0;
@@ -84,8 +107,25 @@ describe('SettlementEntryService.allocate', () => {
             }),
         };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockSettlementRepo() {
+
+    interface CreateMockSettlementRepoResult {
+        createQueryBuilder: Mock<
+            [],
+            {
+                select: Mock;
+                addSelect: Mock;
+                where: Mock;
+                andWhere: Mock;
+                groupBy: Mock;
+                limit: Mock;
+                getRawMany: Mock<[], Promise<never[]>>;
+            }
+        >;
+        create: Mock;
+        save: Mock<[entity: unknown], Promise<{ id: number }>>;
+    }
+
+    function createMockSettlementRepo(): CreateMockSettlementRepoResult {
         return {
             createQueryBuilder: vi.fn(() => {
                 const qb = {

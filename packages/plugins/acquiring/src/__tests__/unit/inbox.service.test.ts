@@ -1,5 +1,5 @@
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { IncomingPaymentEvent } from '../../entities/incoming-payment-event.entity';
 import { InboxService } from '../../inbox.service';
@@ -34,8 +34,7 @@ describe('InboxService', () => {
         execute: vi.fn(async () => ({ affected: 1 })),
     });
 
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createMockRepo() {
+    function createMockRepo(): Record<string, Mock> {
         return {
             findOne: vi.fn(),
             findOneOrFail: vi.fn(),

@@ -1,14 +1,18 @@
 import { RequestContext } from '@vendure/core';
 import { BranchKassaPaymentEvent, ErpPaymentReportedEvent } from '@mivend/plugin-sync';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { InboxService } from '../../inbox.service';
 import { PaymentEventListener } from '../../payment-event.listener';
 
 const mockCtx = {} as unknown as RequestContext;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- test double, shape is obvious from usage
-function createMockEventBus() {
+interface CreateMockEventBusResult {
+    ofType: Mock<[type: unknown], { subscribe: (fn: (event: unknown) => void) => void }>;
+    emit(type: unknown, event: unknown): void;
+}
+
+function createMockEventBus(): CreateMockEventBusResult {
     const subscribersByType = new Map<unknown, Array<(event: unknown) => void>>();
     return {
         ofType: vi.fn((type: unknown) => ({
@@ -25,8 +29,7 @@ function createMockEventBus() {
 }
 
 describe('PaymentEventListener', () => {
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createMockInboxService() {
+    function createMockInboxService(): { enqueue: Mock<unknown[], Promise<{ id: number }>> } {
         return {
             enqueue: vi.fn(async (..._args: unknown[]) => ({ id: 99 })),
         };

@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, EntityManager, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    EntityManager,
+    PrimaryGeneratedColumn,
+    Repository,
+} from 'typeorm';
 import { EntityNotFoundError, UserInputError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 import {
@@ -78,7 +85,7 @@ function service(): PaymentReceivedService {
     );
 }
 
-const repo = () => dataSource.getRepository(TestPayment);
+const repo = (): Repository<TestPayment> => dataSource.getRepository(TestPayment);
 const stateOf = async (id: number): Promise<string> => (await repo().findOneByOrFail({ id })).state;
 
 beforeAll(async () => {

@@ -17,14 +17,20 @@ const injector = {
     },
 } as unknown as Injector;
 
-const order = (customerId: number | null = 1) =>
+const order = (customerId: number | null = 1): Order =>
     ({
         id: 7,
         customerId,
         customFields: { selectedContractId: 'picked' },
     }) as unknown as Order;
-const args = (o: Order) => ({ ctx: {} as RequestContext, order: o });
-const end = (toState: OrderState, o = order()) =>
+const args = (o: Order): { ctx: RequestContext; order: Order } => ({
+    ctx: {} as RequestContext,
+    order: o,
+});
+const end = (
+    toState: OrderState,
+    o = order(),
+): ReturnType<NonNullable<typeof contractOrderGuard.onTransitionEnd>> =>
     contractOrderGuard.onTransitionEnd?.('AddingItems', toState, args(o));
 
 beforeEach(() => {

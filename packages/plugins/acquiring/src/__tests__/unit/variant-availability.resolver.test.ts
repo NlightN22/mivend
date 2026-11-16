@@ -3,7 +3,7 @@ import type { ProductVariant } from '@vendure/core';
 
 import { ProductVariantAvailabilityResolver } from '../../variant-availability.resolver';
 
-const variant = (customFields: ProductVariant['customFields']) =>
+const variant = (customFields: ProductVariant['customFields']): ProductVariant =>
     ({ customFields }) as ProductVariant;
 
 describe('ProductVariantAvailabilityResolver', () => {

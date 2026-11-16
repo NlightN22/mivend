@@ -43,8 +43,22 @@ const { schema, extra } = testSchemaOptions('proformaInvoice_versions');
 
 const withManager = (ctx: RequestContext, manager: EntityManager): RequestContext =>
     ({ ...ctx, __manager: manager }) as unknown as RequestContext;
+interface OrderLineResult {
+    id: number;
+    quantity: number;
+    unitPriceWithTax: number;
+    linePriceWithTax: number;
+    discounts: never[];
+    customFields: { organizationId: number };
+    productVariant: { id: number; sku: string; name: string };
+}
 
-function orderLine(id: number, organizationId: number, price: number, quantity = 1) {
+function orderLine(
+    id: number,
+    organizationId: number,
+    price: number,
+    quantity = 1,
+): OrderLineResult {
     return {
         id,
         quantity,
@@ -126,7 +140,8 @@ afterAll(async () => {
 });
 
 const ctx = {} as RequestContext;
-const rows = () => dataSource.getRepository(TestProformaInvoice).find({ order: { id: 'ASC' } });
+const rows = (): Promise<TestProformaInvoice[]> =>
+    dataSource.getRepository(TestProformaInvoice).find({ order: { id: 'ASC' } });
 
 describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
     it('is idempotent: unchanged content returns the same snapshots', async () => {
@@ -326,7 +341,7 @@ describe('document id, dates and kind (real Postgres)', () => {
         await issuing.issueForOrder(ctx, 7);
 
         const org1 = (await rows()).filter(r => r.organizationId === 1);
-        const days = (r: TestProformaInvoice) =>
+        const days = (r: TestProformaInvoice): number =>
             Math.round((r.dueDate.getTime() - r.issuedAt.getTime()) / 86_400_000);
         expect(org1.map(r => [r.kind, days(r)])).toEqual([
             ['order-placed', 5],

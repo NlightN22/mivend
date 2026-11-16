@@ -19,7 +19,7 @@ let dataSource: DataSource;
 const run = (sql: string, params: unknown[] = []): Promise<Array<Record<string, unknown>>> =>
     dataSource.query(sql, params);
 
-async function addLine(orderId: number, sku: string, organizationId: number | null) {
+async function addLine(orderId: number, sku: string, organizationId: number | null): Promise<void> {
     const [variant] = await run(
         `INSERT INTO product_variant (sku, "customFieldsOrganizationid") VALUES ($1, $2) RETURNING id`,
         [sku, organizationId],
@@ -67,13 +67,15 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const stamp = (orderId: number) =>
+const stamp = (
+    orderId: number,
+): ReturnType<NonNullable<typeof organizationOrderGuard.onTransitionEnd>> =>
     organizationOrderGuard.onTransitionEnd?.('AddingItems', 'ArrangingPayment', {
         ctx: {} as RequestContext,
         order: { id: orderId } as unknown as Order,
     });
 
-const lineOrganizations = async (orderId: number) =>
+const lineOrganizations = async (orderId: number): Promise<unknown[]> =>
     (
         await run(
             `SELECT "customFieldsOrganizationid" AS org FROM order_line WHERE "orderId" = $1 ORDER BY id`,

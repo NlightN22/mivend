@@ -168,7 +168,21 @@ beforeEach(async () => {
     callerCounterparty = '1';
     await dataSource.getRepository(TestOrganization).save({ erpId: 'org-a' });
     await dataSource.getRepository(TestCounterparty).save({ branchId: 'branch-a' });
-    const contract = (erpId: string, counterpartyId: string, isActive: boolean) => ({
+    interface ContractResult {
+        erpId: string;
+        counterpartyId: string;
+        organizationId: string;
+        name: string;
+        currency: string;
+        isActive: boolean;
+        isCustomerContract: boolean;
+    }
+
+    const contract = (
+        erpId: string,
+        counterpartyId: string,
+        isActive: boolean,
+    ): ContractResult => ({
         erpId,
         counterpartyId,
         organizationId: 'org-a',
@@ -192,8 +206,10 @@ const issue = (
     mode: 'debt-repayment' | 'advance',
     key: string,
     amount = 6_000_000,
-) => service.issue(ctx, { contractId, mode, amount, idempotencyKey: key });
-const rows = () => dataSource.getRepository(TestProformaInvoice).find({ order: { id: 'ASC' } });
+): Promise<ProformaInvoice> =>
+    service.issue(ctx, { contractId, mode, amount, idempotencyKey: key });
+const rows = (): Promise<TestProformaInvoice[]> =>
+    dataSource.getRepository(TestProformaInvoice).find({ order: { id: 'ASC' } });
 
 describe('ContractProformaInvoiceService (real Postgres)', () => {
     it('issues debt and advance proformas for an own contract with sequence numbers', async () => {
@@ -256,7 +272,7 @@ describe('ContractProformaInvoiceService (real Postgres)', () => {
             currencyCode: 'RUB',
             status: 'issued',
         });
-        const capture = (proformaInvoiceId: number, id: number) =>
+        const capture = (proformaInvoiceId: number, id: number): Promise<SettlementEntry[]> =>
             dataSource.transaction(manager =>
                 settlement.allocate(
                     { __manager: manager } as unknown as RequestContext,

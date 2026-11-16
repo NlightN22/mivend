@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { Brackets } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PaymentVisibilityService } from '../../payment-visibility.service';
@@ -6,8 +6,24 @@ import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibil
 
 // Left un-annotated on purpose: an explicit Mock type breaks TS's inference of each mock's signature
 // getRawAndEntities is loosely typed: tests reassign it with rows of different shapes.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
-function mockQueryBuilder() {
+
+interface MockQueryBuilderResult {
+    innerJoin: Mock;
+    leftJoin: Mock;
+    andWhere: Mock;
+    addSelect: Mock;
+    orderBy: Mock;
+    addOrderBy: Mock;
+    offset: Mock;
+    limit: Mock;
+    getCount: Mock<[], Promise<number>>;
+    getRawAndEntities: Mock<
+        [],
+        Promise<{ entities: Record<string, unknown>[]; raw: Record<string, unknown>[] }>
+    >;
+}
+
+function mockQueryBuilder(): MockQueryBuilderResult {
     const qb = {
         innerJoin: vi.fn(),
         leftJoin: vi.fn(),

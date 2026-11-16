@@ -85,7 +85,7 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const addInvoice = async (status = 'issued') =>
+const addInvoice = async (status = 'issued'): Promise<number> =>
     (await dataSource.getRepository(TestProformaInvoice).save({ orderId: 7, status })).id;
 
 describe('ProformaInvoiceWithdrawService (real Postgres)', () => {

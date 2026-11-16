@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ProformaInvoiceAdminResolver } from '../../proforma-invoice.resolver';
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock generics
-function build(orderState: string) {
+interface BuildResult {
+    resolver: ProformaInvoiceAdminResolver;
+    withdraw: Mock<[], Promise<{ id: number; status: string }>>;
+    close: Mock<[], Promise<undefined>>;
+}
+
+function build(orderState: string): BuildResult {
     const qb = {
         alias: 'order',
         andWhere: vi.fn().mockReturnThis(),

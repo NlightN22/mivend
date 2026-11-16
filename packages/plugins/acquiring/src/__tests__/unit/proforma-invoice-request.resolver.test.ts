@@ -1,5 +1,5 @@
 import { EntityNotFoundError, ForbiddenError, type RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import {
     ProformaInvoiceRequestAdminResolver,
@@ -7,8 +7,15 @@ import {
 } from '../../proforma-invoice-request.resolver';
 
 const ctx = { activeUserId: 'u1' } as unknown as RequestContext;
+interface ShopResult {
+    resolver: ProformaInvoiceRequestShopResolver;
+    issuing: { requestForOrder: Mock<[], Promise<never[]>> };
+}
 
-function shop(order: unknown, counterparties: Record<string, { id: string } | undefined>) {
+function shop(
+    order: unknown,
+    counterparties: Record<string, { id: string } | undefined>,
+): ShopResult {
     const issuing = { requestForOrder: vi.fn(async () => []) };
     const resolver = new ProformaInvoiceRequestShopResolver(
         { getRepository: () => ({ findOne: async () => order }) } as never,
@@ -53,7 +60,12 @@ describe('requestProformaInvoices (shop)', () => {
 });
 
 describe('requestProformaInvoicesForOrder (admin)', () => {
-    function admin(visible: unknown) {
+    interface AdminResult {
+        resolver: ProformaInvoiceRequestAdminResolver;
+        issuing: { requestForOrder: Mock<[], Promise<never[]>> };
+    }
+
+    function admin(visible: unknown): AdminResult {
         const issuing = { requestForOrder: vi.fn(async () => []) };
         const qb = { alias: 'o', andWhere: () => qb, getOne: async () => visible };
         const resolver = new ProformaInvoiceRequestAdminResolver(

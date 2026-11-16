@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type {
     ChannelService,
     PaymentMethodService,
@@ -9,7 +9,7 @@ import type {
 import { OfflineTermsBootstrapService } from '../../offline-terms-bootstrap.service';
 import { OFFLINE_TERMS_METHOD_CODE } from '../../offline-terms-handler';
 
-function createMockRepo() {
+function createMockRepo(): { findOne: Mock } {
     return {
         findOne: vi.fn(),
     };

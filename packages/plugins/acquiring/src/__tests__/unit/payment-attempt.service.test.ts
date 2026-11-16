@@ -1,5 +1,5 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { ProformaInvoiceService } from '../../proforma-invoice.service';
@@ -30,8 +30,7 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
     let mockPaymentAttemptRepo: ReturnType<typeof createMockPaymentAttemptRepo>;
     let mockConnection: TransactionalConnection;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createMockProformaInvoiceService() {
+    function createMockProformaInvoiceService(): Record<string, Mock> {
         const findOne = vi.fn();
         // The locked re-read returns whatever the outside read returned last, unless a test overrides it.
         const findOneForUpdate = vi.fn(async () => {
@@ -40,16 +39,16 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         });
         return { findOne, findOneForUpdate, updateStatus: vi.fn() };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockSettlementEntryService() {
+
+    function createMockSettlementEntryService(): { allocate: Mock<[], Promise<never[]>> } {
         return { allocate: vi.fn(async () => []) };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockReconciliationIssueService() {
+
+    function createMockReconciliationIssueService(): { report: Mock<[], Promise<{ id: number }>> } {
         return { report: vi.fn(async () => ({ id: 1 })) };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockPaymentAttemptRepo() {
+
+    function createMockPaymentAttemptRepo(): Record<string, Mock> {
         return {
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),

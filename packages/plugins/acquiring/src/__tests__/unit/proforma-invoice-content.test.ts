@@ -105,7 +105,15 @@ describe('contentHash', () => {
 });
 
 describe('decideVersion', () => {
-    const head = (status: 'issued' | 'paid' | 'pending') => ({
+    interface HeadResult {
+        status: 'issued' | 'paid' | 'pending';
+        organizationId: number;
+        currencyCode: string;
+        amount: number;
+        lines: ProformaInvoiceLineSnapshot[];
+    }
+
+    const head = (status: 'issued' | 'paid' | 'pending'): HeadResult => ({
         status,
         organizationId: 1,
         currencyCode: 'RUB',

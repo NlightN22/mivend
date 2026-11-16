@@ -1,13 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { Brackets } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScope, AccessScopeService } from '@mivend/plugin-access-control';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
 // Don't annotate: an explicit type defeats TS's inference of each mock's real call signature
 // and causes spurious 'Mock<...> not assignable to Mock<any[], unknown>' errors.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
-function mockQueryBuilder() {
+
+interface MockQueryBuilderResult {
+    leftJoin: Mock;
+    andWhere: Mock;
+    orderBy: Mock;
+    addOrderBy: Mock;
+    clone: Mock;
+    select: Mock;
+    addSelect: Mock;
+    offset: Mock;
+    limit: Mock;
+    getRawOne: Mock<[], Promise<{ total: string }>>;
+    getRawAndEntities: Mock<[], Promise<{ entities: never[]; raw: never[] }>>;
+}
+
+function mockQueryBuilder(): MockQueryBuilderResult {
     const qb = {
         leftJoin: vi.fn(),
         andWhere: vi.fn(),
@@ -37,8 +51,25 @@ const mockCtx = {} as unknown as RequestContext;
 
 // Don't annotate as ReturnType<typeof vi.fn>: it widens to Mock<any[], unknown> and fails to
 // accept the concrete callback's Mock. Derive the type from the factory's ReturnType instead.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
-function mockAccessScopeService() {
+
+interface MockAccessScopeServiceResult {
+    resolveProformaInvoiceScope: Mock;
+    managerClause: (
+        scope: AccessScope,
+        counterpartyAlias: string,
+        param?: string | undefined,
+    ) => { sql: string; params: Record<string, string[]> } | null;
+    applyOwnCounterpartyFilter: Mock<
+        [
+            builder: { andWhere: (sql: string, params: Record<string, unknown>) => void },
+            alias: string,
+            scope: { administratorId?: string },
+        ],
+        void
+    >;
+}
+
+function mockAccessScopeService(): MockAccessScopeServiceResult {
     return {
         resolveProformaInvoiceScope: vi.fn(),
         managerClause: (...args: Parameters<AccessScopeService['managerClause']>) =>

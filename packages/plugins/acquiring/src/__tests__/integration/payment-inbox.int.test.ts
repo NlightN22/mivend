@@ -1,9 +1,10 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import {
     Column,
     DataSource,
     Entity,
     Index,
+    ObjectLiteral,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
@@ -130,8 +131,8 @@ let proformaInvoiceService: ProformaInvoiceService;
 let settlementEntryService: SettlementEntryService;
 let paymentAttemptService: PaymentAttemptService;
 let inboxService: InboxService;
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-function createMockReconciliationIssueService() {
+
+function createMockReconciliationIssueService(): { report: Mock<[], Promise<{ id: number }>> } {
     return { report: vi.fn(async () => ({ id: 1 })) };
 }
 let reconciliationIssueService: ReturnType<typeof createMockReconciliationIssueService>;
@@ -681,7 +682,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
                 currencyCode: 'RUB',
             }),
         );
-        const findRow = () =>
+        const findRow = (): Promise<TestIncomingPaymentEvent> =>
             dataSource
                 .getRepository(TestIncomingPaymentEvent)
                 .findOneOrFail({ where: { providerEventId: 'erp-evt-unknown-uuid-1' } });
@@ -967,7 +968,18 @@ describe('Payment document amount and unreferenced facts (integration, real Post
             erpEventId: 'x',
             ...over,
         } as never);
-    const open = (over: Record<string, unknown>) =>
+    type OpenResult = Promise<
+        {
+            orderId: number;
+            organizationId: number;
+            counterpartyId: number;
+            amount: number;
+            currencyCode: string;
+            status: string;
+        } & ObjectLiteral
+    >;
+
+    const open = (over: Record<string, unknown>): OpenResult =>
         invoices().save({
             orderId: 1,
             organizationId: 1,

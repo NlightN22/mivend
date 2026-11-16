@@ -10,7 +10,9 @@ const injector = {
         token === TransactionalConnection ? { getRepository: () => ({ query }) } : undefined,
 } as unknown as Injector;
 const args = { ctx: {} as RequestContext, order: { id: 1 } as unknown as Order };
-const end = (toState: OrderState) =>
+const end = (
+    toState: OrderState,
+): ReturnType<NonNullable<typeof organizationOrderGuard.onTransitionEnd>> =>
     organizationOrderGuard.onTransitionEnd?.('AddingItems', toState, args);
 
 beforeEach(() => {

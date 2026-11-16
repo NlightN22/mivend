@@ -41,7 +41,10 @@ describe('ProformaInvoiceFieldResolver.lines', () => {
     });
 });
 
-function serviceWith(query: ReturnType<typeof vi.fn>, find: ReturnType<typeof vi.fn>) {
+function serviceWith(
+    query: ReturnType<typeof vi.fn>,
+    find: ReturnType<typeof vi.fn>,
+): ProformaInvoiceDetailService {
     return new ProformaInvoiceDetailService({
         getRepository: (_ctx: unknown, entity: unknown) =>
             entity === 'Channel' ? { query } : { find },

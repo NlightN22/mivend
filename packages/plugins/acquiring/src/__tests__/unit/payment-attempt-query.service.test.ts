@@ -1,6 +1,6 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttemptQueryService } from '../../payment-attempt-query.service';
@@ -21,8 +21,18 @@ function makeProformaInvoice(overrides: Partial<ProformaInvoice> = {}): Proforma
 }
 
 describe('PaymentAttemptQueryService', () => {
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockQb() {
+    interface CreateMockQbResult {
+        innerJoin: Mock;
+        where: Mock;
+        andWhere: Mock;
+        orderBy: Mock;
+        addOrderBy: Mock;
+        take: Mock;
+        skip: Mock;
+        getManyAndCount: Mock;
+    }
+
+    function createMockQb(): CreateMockQbResult {
         const qb = {
             innerJoin: vi.fn(),
             where: vi.fn(),
@@ -160,8 +170,17 @@ describe('PaymentAttemptQueryService', () => {
     });
 
     describe('sumCapturedAmountsByOrderIds', () => {
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        function createMockAggregateQb() {
+        interface CreateMockAggregateQbResult {
+            select: Mock;
+            addSelect: Mock;
+            where: Mock;
+            andWhere: Mock;
+            groupBy: Mock;
+            limit: Mock;
+            getRawMany: Mock;
+        }
+
+        function createMockAggregateQb(): CreateMockAggregateQbResult {
             const qb = {
                 select: vi.fn(),
                 addSelect: vi.fn(),
