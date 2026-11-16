@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { evaluateMultiplicity } from '../../multiplicity.check';
+interface LineResult {
+    lineId: string;
+    productVariantId: string;
+    sku: string;
+    quantity: number;
+    requiredMultiple: number;
+}
 
-const line = (over: Partial<Parameters<typeof evaluateMultiplicity>[0][number]> = {}) => ({
+const line = (
+    over: Partial<Parameters<typeof evaluateMultiplicity>[0][number]> = {},
+): LineResult => ({
     lineId: 'l1',
     productVariantId: 'v1',
     sku: 'SKU-1',

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { PackagingPolicyService } from '../../packaging-policy.service';
@@ -71,7 +71,12 @@ describe('PackagingPolicyService', () => {
     });
 
     it('isMultiplicityEnforced reads the branch cart policy: on only when enabled and blocking', async () => {
-        const policyFor = (policy: { enabled: boolean; consequence: string }) => {
+        interface PolicyForResult {
+            service: PackagingPolicyService;
+            resolve: Mock<() => Promise<{ enabled: boolean; consequence: string }>>;
+        }
+
+        const policyFor = (policy: { enabled: boolean; consequence: string }): PolicyForResult => {
             const resolve = vi.fn(async () => policy);
             const service = new PackagingPolicyService(
                 { resolveEffective: vi.fn(async () => null) } as never,
@@ -104,9 +109,15 @@ describe('PackagingPolicyService.requiredMultiples', () => {
         id: string,
         multiplicity: number | null,
         unitRatioToBase: number | null = null,
-    ) => ({ id, customFields: { multiplicity, unitRatioToBase } }) as never;
+    ): never => ({ id, customFields: { multiplicity, unitRatioToBase } }) as never;
+    interface BuildResult {
+        service: PackagingPolicyService;
+        resolveEffective: Mock<() => Promise<{ packagesOnly: boolean }>>;
+        getPreferredForCustomer: Mock<() => Promise<{ servicingBranchId: string }>>;
+        resolve: Mock<() => Promise<{ enabled: boolean; consequence: string }>>;
+    }
 
-    function build(packagesOnly: boolean, enforced: boolean) {
+    function build(packagesOnly: boolean, enforced: boolean): BuildResult {
         const resolveEffective = vi.fn(async () => ({ packagesOnly }));
         const getPreferredForCustomer = vi.fn(async () => ({ servicingBranchId: 'branch-a' }));
         const resolve = vi.fn(async () => ({ enabled: enforced, consequence: 'block' }));
