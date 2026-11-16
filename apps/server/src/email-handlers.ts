@@ -1,3 +1,4 @@
+import { EmailPluginOptions } from '@vendure/email-plugin';
 import {
     createEmailAddressChangeHandler,
     createEmailVerificationHandler,
@@ -12,7 +13,7 @@ export function createEmailHandlers(
     urls: PasswordResetUrls,
     recoveryUrls: PasswordResetUrls,
     fallback: EmailLanguage,
-) {
+): EmailPluginOptions['handlers'] {
     return [
         createEmailVerificationHandler(fallback),
         createPasswordResetHandler(urls, fallback),

@@ -1,5 +1,5 @@
 import { RequestContext, TransactionalConnection, Type, User, VendureEvent } from '@vendure/core';
-import { EmailEventListener } from '@vendure/email-plugin';
+import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 import {
     TwoFactorChangedEvent,
     TwoFactorEnabledEvent,
@@ -22,7 +22,7 @@ function notice<E extends VendureEvent & UserEvent>(
     event: Type<E>,
     subjects: Subjects,
     fallback: EmailLanguage,
-) {
+): EmailEventHandler<string, E> {
     return new EmailEventListener(type)
         .on(event)
         .setRecipient(e => e.user.identifier)
@@ -31,7 +31,16 @@ function notice<E extends VendureEvent & UserEvent>(
         .setTemplateVars(e => ({ emailLanguage: resolveEmailLanguage(e.ctx, fallback) }));
 }
 
-export function createTwoFactorEmailHandlers(urls: PasswordResetUrls, fallback: EmailLanguage) {
+export function createTwoFactorEmailHandlers(
+    urls: PasswordResetUrls,
+    fallback: EmailLanguage,
+): (
+    | EmailEventHandler<string, TwoFactorEnabledEvent>
+    | EmailEventHandler<
+          'two-factor-recovery',
+          EventWithAsyncData<TwoFactorRecoveryRequestedEvent, { twoFactorRecoveryUrl: string }>
+      >
+)[] {
     const recovery = new EmailEventListener('two-factor-recovery')
         .on(TwoFactorRecoveryRequestedEvent)
         .loadData(async ({ event, injector }) => {

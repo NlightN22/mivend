@@ -1,5 +1,5 @@
 import { AccountRegistrationEvent, IdentifierChangeRequestEvent } from '@vendure/core';
-import { EmailEventListener } from '@vendure/email-plugin';
+import { EmailEventHandler, EmailEventListener } from '@vendure/email-plugin';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
 
 export const EMAIL_SUBJECTS = {
@@ -34,7 +34,9 @@ export const EMAIL_SUBJECTS = {
     },
 } satisfies Record<string, Record<EmailLanguage, string>>;
 
-export function createEmailVerificationHandler(fallback: EmailLanguage) {
+export function createEmailVerificationHandler(
+    fallback: EmailLanguage,
+): EmailEventHandler<'email-verification', AccountRegistrationEvent> {
     return new EmailEventListener('email-verification')
         .on(AccountRegistrationEvent)
         .filter(event => !!event.user.getNativeAuthenticationMethod().identifier)
@@ -49,7 +51,9 @@ export function createEmailVerificationHandler(fallback: EmailLanguage) {
         }));
 }
 
-export function createEmailAddressChangeHandler(fallback: EmailLanguage) {
+export function createEmailAddressChangeHandler(
+    fallback: EmailLanguage,
+): EmailEventHandler<'email-address-change', IdentifierChangeRequestEvent> {
     return new EmailEventListener('email-address-change')
         .on(IdentifierChangeRequestEvent)
         .setRecipient(event => event.user.getNativeAuthenticationMethod().pendingIdentifier ?? '')
