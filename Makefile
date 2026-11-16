@@ -69,7 +69,7 @@ restart:
 
 dev:
 	@bash infrastructure/scripts/dev-kill.sh
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --no-recreate --wait
 	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central'" | grep -q 1 \
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central"
 	bash infrastructure/scripts/dev-run-tracked.sh /tmp/mivend-dev.pgid pnpm dev:all
@@ -105,7 +105,7 @@ endif
 # database itself — there is no Redis in this stack anymore at all.
 dev-branch:
 	@bash infrastructure/scripts/dev-kill-branch.sh
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait postgres-branch rabbitmq elasticsearch
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --no-recreate --wait postgres-branch rabbitmq elasticsearch
 	@docker exec docker-postgres-branch-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_branch'" | grep -q 1 \
 		|| docker exec docker-postgres-branch-1 psql -U postgres -c "CREATE DATABASE mivend_branch"
 	pnpm build:plugins
@@ -125,7 +125,7 @@ dev-branch:
 dev-staging-integration:
 	@test -f apps/server/.env.central.staging-integration || (echo "Missing apps/server/.env.central.staging-integration — copy .env.central.staging-integration.example and fill in real credentials" && exit 1)
 	@bash infrastructure/scripts/dev-kill-staging-integration.sh
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --no-recreate --wait
 	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central_staging_integration'" | grep -q 1 \
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central_staging_integration"
 	pnpm build:plugins
