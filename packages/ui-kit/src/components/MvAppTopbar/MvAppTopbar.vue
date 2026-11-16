@@ -9,7 +9,10 @@ import MvAppTopbarPhoneSearch from './MvAppTopbarPhoneSearch.vue';
 import MvAppTopbarSearchBox from './MvAppTopbarSearchBox.vue';
 import MvLogo from '../MvLogo/MvLogo.vue';
 import MvPopover from '../MvPopover/MvPopover.vue';
+import { readSiteIconUrl, readSiteName } from '../../utils/siteName';
 const uiLabel = useUiLabels();
+const siteName = readSiteName();
+const siteIconUrl = readSiteIconUrl();
 
 withDefaults(
     defineProps<{
@@ -64,7 +67,7 @@ defineExpose({ closeSearch });
 <template>
     <header :class="['mv-app-topbar', { 'mv-app-topbar--searching': searching }]">
         <RouterLink class="mv-app-topbar__brand" :to="brandTo">
-            <MvLogo size="sm" />
+            <MvLogo :name="siteName" :icon-url="siteIconUrl" size="sm" />
         </RouterLink>
 
         <MvAppTopbarSearchBox
