@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RoleDefaultGrant1791588000000 implements MigrationInterface {
-    name = 'RoleDefaultGrant1791588000000';
+export class RoleDefaultGrant1791589000000 implements MigrationInterface {
+    name = 'RoleDefaultGrant1791589000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
