@@ -199,14 +199,6 @@ async function ensureTaxSetup() {
     console.log('  Created default tax zone and 22% tax rate.');
 }
 
-// Enough managers that the manager filter list crosses the type-to-search threshold (#377).
-const SEED_MANAGERS = Array.from({ length: 6 }, (_, i) => ({
-    n: i + 1,
-    email: `seed.manager${i + 1}@mivend.dev`,
-    firstName: 'Seed',
-    lastName: `Manager${i + 1}`,
-}));
-
 // Demo administrators for the org-structure import below. The manager-portal roles are
 // self-provisioned by RoleProvisioningService at server boot (issue #134) — no manual seed step
 // needed — but this still looks the role up by code and skips with a warning rather than failing
@@ -282,7 +274,6 @@ async function ensureOrgStructureAdmins() {
             lastName: 'Security',
             roleCode: 'security-officer',
         },
-        ...SEED_MANAGERS.map(m => ({ ...m, roleCode: 'manager' })),
     ];
 
     let created = 0;
@@ -450,6 +441,19 @@ async function ensureBranchSettingsSeeded() {
 }
 
 const PSQL = `docker exec -i docker-postgres-central-1 psql -U postgres -d ${process.env.SEED_DB_NAME ?? 'mivend_central'} -v ON_ERROR_STOP=1`;
+
+// Unlinked ERP users: the manager filter lists them next to linked administrators, and six of
+// them put it past the type-to-search threshold (#377). The Administrator erpId is read-only.
+function seedDemoErpUsers() {
+    const rows = Array.from(
+        { length: 6 },
+        (_, i) =>
+            `('seed-erp-user-${i + 1}', 'Seed Manager${i + 1}', 'seed.manager${i + 1}@mivend.dev', now(), now())`,
+    );
+    const sql = `INSERT INTO erp_user ("erpId", "fullName", email, "firstSeenAt", "lastSeenAt")
+        VALUES ${rows.join(',')} ON CONFLICT ("erpId") DO NOTHING;`;
+    execSync(PSQL, { input: sql, stdio: ['pipe', 'inherit', 'inherit'] });
+}
 
 // Must exist before the price batch, or the purchase entries are rejected (#235).
 function seedPurchasePriceType() {
@@ -653,6 +657,7 @@ async function main() {
         price: Math.round(p.price * 0.9 * 100) / 100,
     }));
     seedPurchasePriceType();
+    seedDemoErpUsers();
     const priceTypeResult = await postBatch(
         `seed-price-types-${run}`,
         ['WHOLESALE', 'RETAIL', 'SPECIAL'].map(code => ({
@@ -1572,13 +1577,6 @@ async function main() {
             roleCode: 'general-director',
             positionErpId: 'pos-director',
         },
-        ...SEED_MANAGERS.map(m => ({
-            erpId: `emp-10${m.n}`,
-            email: m.email,
-            departmentErpId: 'dept-sales',
-            roleCode: 'manager',
-            positionErpId: 'pos-manager',
-        })),
     ];
     console.log(`Sending ${employees.length} employees...`);
     const employeeResult = await postBatch(
