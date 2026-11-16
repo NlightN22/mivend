@@ -1,9 +1,10 @@
 import { RequestContext } from '@vendure/core';
 import { FileBasedTemplateLoader } from '@vendure/email-plugin';
+import { SITE_LANGUAGES, siteLanguageSnapshot } from '@mivend/plugin-site-language';
 
 type Env = Record<string, string | undefined>;
 
-export const EMAIL_LANGUAGES = ['en', 'ru'] as const;
+export const EMAIL_LANGUAGES = SITE_LANGUAGES;
 export type EmailLanguage = (typeof EMAIL_LANGUAGES)[number];
 
 const FALLBACK_LANGUAGE: EmailLanguage = 'en';
@@ -24,11 +25,14 @@ export function defaultEmailLanguage(env: Env): EmailLanguage {
 }
 
 // Vendure fills ctx.languageCode with the channel default when the request names none, so read the query.
-// The Dashboard always sends languageCode=en, so admin-api requests use the deployment default.
+// The Dashboard always sends languageCode=en, so admin-api requests skip it. Order: request, Global Settings, env.
 export function resolveEmailLanguage(ctx: RequestContext, fallback: EmailLanguage): EmailLanguage {
-    if (ctx.apiType === 'admin') return fallback;
-    const requested = ctx.req?.query?.languageCode;
-    return supported(typeof requested === 'string' ? requested : undefined) ?? fallback;
+    const requested = ctx.apiType === 'admin' ? undefined : ctx.req?.query?.languageCode;
+    return (
+        supported(typeof requested === 'string' ? requested : undefined) ??
+        siteLanguageSnapshot.value ??
+        fallback
+    );
 }
 
 export class LanguageTemplateLoader extends FileBasedTemplateLoader {

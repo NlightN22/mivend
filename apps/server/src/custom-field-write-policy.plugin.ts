@@ -21,6 +21,7 @@ export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly str
         'autoReserveOnPlacement',
         'stockTierLowMax',
         'stockTierMediumMax',
+        'defaultLanguage',
     ],
 };
 

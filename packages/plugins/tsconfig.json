@@ -37,6 +37,7 @@
         { "path": "./staff-search" },
         { "path": "./checks" },
         { "path": "./numbering" },
-        { "path": "./change-journal" }
+        { "path": "./change-journal" },
+        { "path": "./site-language" }
     ]
 }

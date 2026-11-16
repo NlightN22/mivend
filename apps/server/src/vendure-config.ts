@@ -41,6 +41,7 @@ import {
 } from '@mivend/plugin-erp-integration';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
+import { SiteLanguagePlugin } from '@mivend/plugin-site-language';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
@@ -682,6 +683,7 @@ export const config: VendureConfig = {
         ...searchPlugins,
         ErpOrderPlugin,
         PopularProductsPlugin,
+        SiteLanguagePlugin,
         SyncPlugin.init({
             instanceType,
             instanceId: process.env.INSTANCE_ID ?? 'central',
