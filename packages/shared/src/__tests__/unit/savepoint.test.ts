@@ -1,11 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { withSavepoint } from '../../savepoint';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    connection: { getRepository: () => { query: Mock<(sql: string) => Promise<undefined>> } };
+    statements: string[];
+}
 
-function setup() {
+function setup(): SetupResult {
     const statements: string[] = [];
     const connection = {
         getRepository: () => ({ query: vi.fn(async (sql: string) => void statements.push(sql)) }),

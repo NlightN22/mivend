@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { classifySelectionFilter } from '../../selection-filter';
+import { classifySelectionFilter, FilterTerm } from '../../selection-filter';
 import { evaluateCounterpartyTerms, evaluateProductTerms } from '../../selection-filter-eval';
 import type { ProductAttributes, RefResolution } from '../../selection-filter-eval';
 
-const cond = (field: string, comparison: string, ...refs: string[]) => ({
+const cond = (
+    field: string,
+    comparison: string,
+    ...refs: string[]
+): { field: string; comparison: string; values: { refId: string }[] } => ({
     field,
     comparison,
     values: refs.map(refId => ({ refId })),
@@ -49,8 +53,10 @@ describe('classifySelectionFilter', () => {
     });
 
     it('stores unknown shapes with an explicit reason', () => {
-        const reason = (f: unknown[], side: 'product' | 'counterparty' = 'product') =>
-            classifySelectionFilter(f, side).reason;
+        const reason = (
+            f: unknown[],
+            side: 'product' | 'counterparty' = 'product',
+        ): string | null => classifySelectionFilter(f, side).reason;
         expect(reason([cond('Поставщик', 'Равно', 'x')])).toBe('unknown-filter-field');
         expect(reason([cond(ITEM, 'Больше', 'x')])).toBe('unknown-comparison');
         expect(reason([cond('Контрагент', 'ВСпискеПоИерархии', 'x')], 'counterparty')).toBe(
@@ -153,7 +159,7 @@ describe('evaluateProductTerms', () => {
 
 describe('evaluateCounterpartyTerms', () => {
     it('matches equals, in-list and negations by id', () => {
-        const terms = (c: string, ...refs: string[]) =>
+        const terms = (c: string, ...refs: string[]): FilterTerm[] =>
             classifySelectionFilter([cond('Контрагент', c, ...refs)], 'counterparty').terms;
         expect(evaluateCounterpartyTerms(terms('Равно', 'c1'), 'c1')).toBe(true);
         expect(evaluateCounterpartyTerms(terms('ВСписке', 'c2', 'c1'), 'c1')).toBe(true);

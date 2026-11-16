@@ -14,7 +14,19 @@ const fvByCode = new Map([
     ['mid', 'fv-m'],
     ['leaf', 'fv-l'],
 ]);
-const node = (id: string, parentId: string | null, slug: string, ids: string[] = []) => ({
+interface NodeResult {
+    id: string;
+    parentId: string | null;
+    slug: string;
+    filterFacetValueIds: string[];
+}
+
+const node = (
+    id: string,
+    parentId: string | null,
+    slug: string,
+    ids: string[] = [],
+): NodeResult => ({
     id,
     parentId,
     slug,
@@ -76,6 +88,14 @@ describe('collectFacetValueIds / filter helpers', () => {
         ).toEqual([]);
     });
 });
+interface VisResult {
+    id: string;
+    parentId: string | null;
+    slug: string;
+    feedHidden: boolean;
+    visibilityOverride: string | null;
+    isPrivate: boolean;
+}
 
 const vis = (
     id: string,
@@ -83,7 +103,7 @@ const vis = (
     feedHidden: boolean,
     isPrivate: boolean,
     visibilityOverride: string | null = null,
-) => ({ id, parentId, slug: `cat-${id}`, feedHidden, visibilityOverride, isPrivate });
+): VisResult => ({ id, parentId, slug: `cat-${id}`, feedHidden, visibilityOverride, isPrivate });
 
 describe('planCategoryVisibilityUpdates', () => {
     it('hides every descendant of a hidden category', () => {

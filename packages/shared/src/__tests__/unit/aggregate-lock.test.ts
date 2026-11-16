@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -6,8 +6,23 @@ import { tryLockAggregate, withAggregateLock, withClientAggregateLock } from '..
 
 const ctx = { id: 'outer' } as unknown as RequestContext;
 const txCtx = { id: 'tx' } as unknown as RequestContext;
+interface MakeConnectionResult {
+    connection: {
+        withTransaction: Mock<
+            (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) => Promise<unknown>
+        >;
+        getRepository: Mock<
+            (
+                _ctx: RequestContext,
+                _entity: string,
+            ) => { query: Mock<(_sql: string, _params: string[]) => Promise<void>> }
+        >;
+    };
+    query: Mock<(_sql: string, _params: string[]) => Promise<void>>;
+    order: string[];
+}
 
-function makeConnection(order: string[] = []) {
+function makeConnection(order: string[] = []): MakeConnectionResult {
     const query = vi.fn(async (_sql: string, _params: string[]) => {
         order.push('lock');
     });

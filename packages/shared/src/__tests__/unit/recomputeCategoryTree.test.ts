@@ -2,13 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { recomputeCategoryTree } from '../../recomputeCategoryTree';
+interface CollectionResult {
+    id: number;
+    parentId: number | null;
+    isPrivate: boolean;
+    filters: never[];
+    customFields: object;
+    translations: { languageCode: string; name: string; slug: string; description: string }[];
+}
 
 const collection = (
     id: number,
     parentId: number | null,
     slug: string,
     extra: Record<string, unknown> = {},
-) => ({
+): CollectionResult => ({
     id,
     parentId,
     isPrivate: false,

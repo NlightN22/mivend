@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { SelectQueryBuilder } from 'typeorm';
 import { getPageAndCount } from '../../paginate-query';
 
-function fakeQb() {
+function fakeQb(): { getCount: Mock; getManyAndCount: Mock; take: Mock; skip: Mock } {
     const qb = {
         getCount: vi.fn().mockResolvedValue(7),
         getManyAndCount: vi.fn().mockResolvedValue([[{ id: 1 }], 7]),

@@ -22,8 +22,12 @@ const CONFIG: ListQueryConfig = {
     tiebreakerSql: '"c"."id"',
     limits: { maxTextLength: 10 },
 };
+interface FakeQbResult {
+    qb: SelectQueryBuilder<object>;
+    calls: { where: [string, unknown?][]; order: string[]; limit: number[]; select: string[] };
+}
 
-function fakeQb() {
+function fakeQb(): FakeQbResult {
     const calls: {
         where: [string, unknown?][];
         order: string[];

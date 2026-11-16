@@ -102,7 +102,11 @@ describe('hidden category SQL', () => {
 });
 
 describe('excludeCategoryIdsFor', () => {
-    const row = (id: number, parentId: number | null, erp: string) => ({
+    const row = (
+        id: number,
+        parentId: number | null,
+        erp: string,
+    ): { id: number; parentId: number | null; slug: string } => ({
         id,
         parentId,
         slug: `cat-${erp}`,

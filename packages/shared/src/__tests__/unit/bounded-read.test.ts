@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import {
@@ -54,10 +54,15 @@ describe('query builder and find variants', () => {
 });
 
 describe('ctxQueryBounded', () => {
-    const run = (n: number) => {
+    interface RunResult {
+        query: Mock<() => Promise<{ id: number }[]>>;
+        call: () => Promise<Record<string, unknown>[]>;
+    }
+
+    const run = (n: number): RunResult => {
         const query = vi.fn(async () => rows(n));
         const connection = { getRepository: () => ({ query }) };
-        const call = () =>
+        const call = (): Promise<Record<string, unknown>[]> =>
             ctxQueryBounded(connection as never, {} as RequestContext, 'SELECT id FROM t;', [1], 3);
         return { query, call };
     };
@@ -75,7 +80,7 @@ describe('ctxQueryBounded', () => {
     it('refuses SQL a bare LIMIT suffix cannot bound, and a bad ceiling', async () => {
         const query = vi.fn(async () => rows(1));
         const connection = { getRepository: () => ({ query }) };
-        const call = (sql: string, ceiling = 3) =>
+        const call = (sql: string, ceiling = 3): Promise<Record<string, unknown>[]> =>
             ctxQueryBounded(connection as never, {} as RequestContext, sql, [], ceiling);
         await expect(call('SELECT id FROM t -- note')).rejects.toThrow(/trailing comment/);
         await expect(call('SELECT id FROM t LIMIT 5')).rejects.toThrow(/trailing comment/);
