@@ -5,7 +5,8 @@ import { ApprovalEligibilityRegistry } from '../../approval-eligibility.registry
 import type { ApprovalRequest } from '../../entities/approval-request.entity';
 
 const ctx = {} as RequestContext;
-const request = (requestType: string) => ({ id: 1, requestType, payload: '{}' }) as ApprovalRequest;
+const request = (requestType: string): ApprovalRequest =>
+    ({ id: 1, requestType, payload: '{}' }) as ApprovalRequest;
 
 describe('ApprovalEligibilityRegistry', () => {
     it('lets a request type without a rule through', async () => {

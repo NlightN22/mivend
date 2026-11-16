@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
@@ -7,19 +7,27 @@ import { ApprovalStepService } from '../../approval-step.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 const ctx = {} as RequestContext;
+interface RepoReturningResult {
+    find: Mock<() => Promise<{ stepsJson: string }[]>>;
+    connection: TransactionalConnection;
+}
 
-function repoReturning(n: number) {
+function repoReturning(n: number): RepoReturningResult {
     const find = vi.fn(async () => Array.from({ length: n }, () => ({ stepsJson: '[]' })));
     const connection = { getRepository: () => ({ find }) } as unknown as TransactionalConnection;
     return { find, connection };
 }
 
-function queryService(rowCount: number) {
-    const qb = {
-        select: () => qb,
-        where: () => qb,
-        andWhere: () => qb,
-        orderBy: () => qb,
+function queryService(rowCount: number): {
+    service: ApprovalRequestQueryService;
+    qb: Record<string, Mock>;
+    scope: { apply: Mock };
+} {
+    const qb: Record<string, Mock> = {
+        select: vi.fn(() => qb),
+        where: vi.fn(() => qb),
+        andWhere: vi.fn(() => qb),
+        orderBy: vi.fn(() => qb),
         take: vi.fn(() => qb),
         limit: vi.fn(() => qb),
         getMany: vi.fn(async () => Array.from({ length: rowCount }, () => ({}))),
