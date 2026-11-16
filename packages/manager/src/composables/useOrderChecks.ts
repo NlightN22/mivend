@@ -1,9 +1,21 @@
 import { tr } from '../utils/lazyLabels';
-import { computed, ref, type Ref } from 'vue';
+import { computed, ComputedRef, ref, type Ref } from 'vue';
 import { fetchOrderChecks, recomputeOrderChecks } from '../api/orderChecks';
 import { findingsByLine, type OrderCheckFinding } from '../utils/orderCheckMessages';
 
-export function useOrderChecks(orderId: Ref<string>) {
+export interface UseOrderChecks {
+    findings: Ref<OrderCheckFinding[]>;
+    loading: Ref<boolean>;
+    recomputing: Ref<boolean>;
+    error: Ref<string>;
+    byLine: ComputedRef<Map<string, OrderCheckFinding[]>>;
+    hasStale: ComputedRef<boolean>;
+    computedAt: ComputedRef<string>;
+    load: () => Promise<void>;
+    recompute: () => Promise<void>;
+}
+
+export function useOrderChecks(orderId: Ref<string>): UseOrderChecks {
     const findings = ref<OrderCheckFinding[]>([]);
     const loading = ref(false);
     const recomputing = ref(false);

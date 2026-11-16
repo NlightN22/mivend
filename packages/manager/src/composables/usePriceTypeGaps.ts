@@ -1,9 +1,20 @@
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import { tr } from '../utils/lazyLabels';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { fetchPriceTypeGaps, type PriceTypeGapRow } from '../api/priceTypeGaps';
 
-export function usePriceTypeGaps() {
+export interface UsePriceTypeGaps {
+    error: Ref<string>;
+    items: Ref<PriceTypeGapRow[]>;
+    total: Ref<number>;
+    page: Ref<number>;
+    pageSize: Ref<number>;
+    search: Ref<string>;
+    loading: Ref<boolean>;
+    load: () => Promise<void>;
+}
+
+export function usePriceTypeGaps(): UsePriceTypeGaps {
     const error = ref('');
     const items = ref<PriceTypeGapRow[]>([]);
     const total = ref(0);

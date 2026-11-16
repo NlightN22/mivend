@@ -1,4 +1,4 @@
-import { computed, type Ref } from 'vue';
+import { computed, ComputedRef, type Ref } from 'vue';
 import { i18n } from '../i18n';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
 import {
@@ -12,7 +12,13 @@ import { canOpenBulkOperations } from '../components/bulk-operations/operationUi
 import { systemSettingsPath } from '../components/layout/userMenuItems';
 
 // Navigation entries of the default layout, gated by the same permissions as the pages they open.
-export function useNavItems(approvalsBadgeCount: Ref<number>) {
+export interface UseNavItems {
+    menuItems: ComputedRef<AppSidebarItem[]>;
+    mobileNavItems: ComputedRef<AppMobileNavItem[]>;
+    moreSheetItems: ComputedRef<AppMobileSheetItem[]>;
+}
+
+export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
     const t = (key: string): string => i18n.global.t(key);
     const authStore = useAuthStore();
 

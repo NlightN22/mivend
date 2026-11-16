@@ -1,7 +1,7 @@
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, Ref, ref } from 'vue';
 import type { OrderDetailLine } from '../api/orderDetail';
-import { capHint, percentFromPrice, priceFromPercent } from '../utils/lineValueModel';
-import { useLineRowEdit } from './useLineRowEdit';
+import { CapHint, capHint, percentFromPrice, priceFromPercent } from '../utils/lineValueModel';
+import { UseLineRowEdit, useLineRowEdit } from './useLineRowEdit';
 
 export interface OrderLineEditingDeps {
     orderId: () => string;
@@ -13,7 +13,22 @@ export interface OrderLineEditingDeps {
 }
 
 // One row is edited at a time; the kit's editingId says which, this holds the draft of that row.
-export function useOrderLineEditing(deps: OrderLineEditingDeps) {
+export interface UseOrderLineEditing {
+    editingId: Ref<string | null>;
+    savingId: ComputedRef<string | null>;
+    errors: ComputedRef<Record<string, string>>;
+    edit: UseLineRowEdit;
+    lastId: Ref<string | null>;
+    discountText: Ref<string>;
+    hint: ComputedRef<CapHint>;
+    setPrice: (value: string) => void;
+    setPercent: (value: string) => void;
+    start: (id: string) => void;
+    commit: () => Promise<void>;
+    cancel: () => void;
+}
+
+export function useOrderLineEditing(deps: OrderLineEditingDeps): UseOrderLineEditing {
     const editingId = ref<string | null>(null);
     const lastId = ref<string | null>(null);
     const edit = useLineRowEdit({

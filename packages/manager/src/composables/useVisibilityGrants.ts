@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { tr } from '../utils/lazyLabels';
 import {
@@ -10,8 +10,25 @@ import {
     type GrantInput,
     type VisibilityGrantRow,
 } from '../api/visibilityGrants';
+import { VisibilityGrantFieldsFragment } from '../api/generated/graphql';
 
-export function useVisibilityGrants() {
+export interface UseVisibilityGrants {
+    rows: Ref<VisibilityGrantFieldsFragment[]>;
+    totalItems: Ref<number>;
+    page: Ref<number>;
+    pageSize: Ref<number>;
+    status: Ref<string>;
+    search: Ref<string>;
+    error: Ref<string>;
+    loading: Ref<boolean>;
+    administrators: Ref<AdministratorOption[]>;
+    load: () => Promise<void>;
+    loadAdministrators: () => Promise<void>;
+    grant: (input: GrantInput) => Promise<boolean>;
+    revoke: (id: string, reason: string) => Promise<void>;
+}
+
+export function useVisibilityGrants(): UseVisibilityGrants {
     const rows = ref<VisibilityGrantRow[]>([]);
     const totalItems = ref(0);
     const page = ref(1);

@@ -7,8 +7,26 @@ import {
     type OrderLineAvailability,
     type SplitOutcome,
 } from '../api/orderLineEdit';
+import { OrderLineAvailabilityFieldsFragment } from '../api/generated/graphql';
 
-export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
+export interface UseOrderLineEdit {
+    availability: Ref<Map<string, OrderLineAvailabilityFieldsFragment>>;
+    lineDiscounts: Ref<Map<string, LineDiscountLimit>>;
+    loadCeilings: () => Promise<void>;
+    busy: Ref<boolean>;
+    error: Ref<string>;
+    lastSplit: Ref<
+        { orderLineId: string; requested: number; kept: number; shortfall: number }[],
+        | { orderLineId: string; requested: number; kept: number; shortfall: number }[]
+        | { orderLineId: string; requested: number; kept: number; shortfall: number }[]
+    >;
+    alreadyWithinStock: Ref<boolean>;
+    load: () => Promise<void>;
+    apply: (action: () => Promise<void>) => Promise<boolean>;
+    cutToStock: () => Promise<boolean>;
+}
+
+export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void): UseOrderLineEdit {
     const availability = ref<Map<string, OrderLineAvailability>>(new Map());
     const lineDiscounts = ref<Map<string, LineDiscountLimit>>(new Map());
     const busy = ref(false);

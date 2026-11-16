@@ -1,9 +1,16 @@
 import { tr } from '../utils/lazyLabels';
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, Ref, ref } from 'vue';
 import { startActingSession } from '../api/actingSession';
 import { useAuthStore } from '../stores/auth';
 
-export function useActAsCustomer(counterpartyId: () => string) {
+export interface UseActAsCustomer {
+    allowed: ComputedRef<boolean>;
+    starting: Ref<boolean>;
+    error: Ref<string>;
+    start: () => Promise<void>;
+}
+
+export function useActAsCustomer(counterpartyId: () => string): UseActAsCustomer {
     const auth = useAuthStore();
     const allowed = computed(() => auth.hasPermission('CreateOrder'));
     const starting = ref(false);

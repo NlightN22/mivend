@@ -1,5 +1,5 @@
 import { tr } from '../utils/lazyLabels';
-import { computed, ref, watch } from 'vue';
+import { computed, ComputedRef, Ref, ref, watch } from 'vue';
 import {
     addOrderLineBySku,
     fetchOrderLineQuote,
@@ -16,10 +16,32 @@ const MIN_QUERY = 2;
 const REQUOTE_DELAY_MS = 300;
 
 // Inline add row: pick a product (its quote prefills price and discount), then add in one user action.
+export interface UseOrderLineAdd {
+    open: Ref<boolean>;
+    query: Ref<string>;
+    matches: Ref<SkuMatch[]>;
+    picked: Ref<SkuMatch | null>;
+    quote: Ref<OrderLineQuote | null>;
+    step: ComputedRef<number>;
+    multipleError: ComputedRef<string>;
+    quantity: Ref<number>;
+    price: Ref<string>;
+    discount: Ref<string>;
+    error: Ref<string>;
+    notice: Ref<string>;
+    begin: () => void;
+    cancel: () => void;
+    search: (value: string) => Promise<void>;
+    pick: (match: SkuMatch) => Promise<void>;
+    setPrice: (value: string) => void;
+    setDiscount: (value: string) => void;
+    submit: () => Promise<boolean>;
+}
+
 export function useOrderLineAdd(
     orderId: () => string,
     run: (action: () => Promise<void>) => Promise<boolean>,
-) {
+): UseOrderLineAdd {
     const open = ref(false);
     const query = ref('');
     const matches = ref<SkuMatch[]>([]);

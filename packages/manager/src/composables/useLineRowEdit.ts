@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, Ref, ref } from 'vue';
 import { changeOrderLineQuantity, removeOrderLine } from '../api/orderLineEdit';
 import { requestPriceAdjustment } from '../api/priceAdjustment';
 import {
@@ -20,7 +20,18 @@ export interface LineRowEditDeps {
     apply: (action: () => Promise<void>) => Promise<boolean>;
 }
 
-export function useLineRowEdit(deps: LineRowEditDeps) {
+export interface UseLineRowEdit {
+    state: Ref<LineEditState>;
+    editing: ComputedRef<boolean>;
+    draft: Ref<LineDraft>;
+    error: Ref<string>;
+    sentForApproval: Ref<boolean>;
+    start: () => void;
+    cancel: () => void;
+    commit: () => Promise<void>;
+}
+
+export function useLineRowEdit(deps: LineRowEditDeps): UseLineRowEdit {
     const state = ref<LineEditState>('idle');
     const draft = ref<LineDraft>(initialDraft(deps.original()));
     const error = ref('');

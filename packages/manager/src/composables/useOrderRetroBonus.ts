@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, ComputedRef, ref, watch, type Ref } from 'vue';
 import { fetchOrderRetroBonus } from '../api/orderRetroBonus';
 
 export interface LineBonus {
@@ -7,7 +7,16 @@ export interface LineBonus {
 }
 
 // Display only: what the customer's retro-bonus rules promise per line; never part of a price.
-export function useOrderRetroBonus(orderId: Ref<string>, reloadKey: () => unknown) {
+export interface UseOrderRetroBonus {
+    shown: Ref<boolean>;
+    byLine: Ref<Map<string, LineBonus>>;
+    total: ComputedRef<number>;
+}
+
+export function useOrderRetroBonus(
+    orderId: Ref<string>,
+    reloadKey: () => unknown,
+): UseOrderRetroBonus {
     const shown = ref(false);
     const byLine = ref<Map<string, LineBonus>>(new Map());
     let seq = 0;

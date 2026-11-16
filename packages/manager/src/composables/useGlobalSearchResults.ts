@@ -1,11 +1,21 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, ComputedRef, ref, watch, type Ref } from 'vue';
 import { useDebouncedCallback, useLatestRequest } from '@mivend/ui-kit';
 import { fetchGlobalSearch, type SearchGroup } from '../api/globalSearch';
 
 export const GLOBAL_SEARCH_MIN_CHARS = 2;
 const DEBOUNCE_MS = 250;
 
-export function useGlobalSearchResults(query: Ref<string>) {
+export interface UseGlobalSearchResults {
+    groups: Ref<SearchGroup[]>;
+    failed: Ref<boolean>;
+    loading: Ref<boolean>;
+    pending: ComputedRef<boolean>;
+    active: ComputedRef<boolean>;
+    tooShort: ComputedRef<boolean>;
+    empty: ComputedRef<boolean>;
+}
+
+export function useGlobalSearchResults(query: Ref<string>): UseGlobalSearchResults {
     const groups = ref<SearchGroup[]>([]);
     const failed = ref(false);
     const settledTerm = ref('');

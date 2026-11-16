@@ -1,8 +1,13 @@
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, Ref, ref } from 'vue';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { useBlockLoad } from './useBlockLoad';
-import { fetchDashboardData, type DashboardData, type DashboardLoadResult } from '../api/dashboard';
+import {
+    DashboardSection,
+    fetchDashboardData,
+    type DashboardData,
+    type DashboardLoadResult,
+} from '../api/dashboard';
 import { fetchExpiringDiscountGrants } from '../api/discounts';
 import {
     fetchFailedIntegrationInboxEvents,
@@ -26,7 +31,22 @@ function optional<T>(label: string, load: () => Promise<T>, fallback: T): Promis
     });
 }
 
-export function useDashboard() {
+export interface UseDashboard {
+    data: Ref<DashboardData | null>;
+    failedSections: Ref<Partial<Record<DashboardSection, string>>>;
+    departmentName: Ref<string | null>;
+    expiringDiscounts: ComputedRef<ExpiringDiscount[]>;
+    failedInboxEvents: ComputedRef<FailedIntegrationInboxEvent[]>;
+    reservationIssues: ComputedRef<NotificationItem[]>;
+    paymentIssues: ComputedRef<NotificationItem[]>;
+    grantsError: Ref<string | null>;
+    inboxError: Ref<string | null>;
+    notificationsError: Ref<string | null>;
+    loading: Ref<boolean>;
+    load: () => Promise<void>;
+}
+
+export function useDashboard(): UseDashboard {
     const authStore = useAuthStore();
     const data = ref<DashboardData | null>(null);
     const failedSections = ref<DashboardLoadResult['failed']>({});

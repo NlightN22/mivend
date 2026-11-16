@@ -1,19 +1,30 @@
-import { computed, ref, type Ref } from 'vue';
+import { computed, ComputedRef, ref, type Ref } from 'vue';
 import { useIsMobileViewport } from '@mivend/ui-kit';
 import { canConfirmOrder } from '../utils/canConfirmOrder';
-import { headerActions } from '../utils/orderHeaderActions';
+import { HeaderActions, headerActions } from '../utils/orderHeaderActions';
 import type { OrderDetail } from '../api/orderDetail';
-import { useCancelOrderAsStaff } from './useCancelOrderAsStaff';
+import { UseCancelOrderAsStaff, useCancelOrderAsStaff } from './useCancelOrderAsStaff';
 import type { useReservationActions } from './useReservationActions';
 
 // The header's confirm and cancel flows live here so a flagged table cell can open them too.
+export interface UseOrderHeaderCommands {
+    mobile: Ref<boolean>;
+    confirmOpen: Ref<boolean>;
+    extendOpen: Ref<boolean>;
+    cancelOpen: Ref<boolean>;
+    cancelFlow: UseCancelOrderAsStaff;
+    actions: ComputedRef<HeaderActions>;
+    canConfirm: ComputedRef<boolean>;
+    canCancel: ComputedRef<boolean>;
+}
+
 export function useOrderHeaderCommands(deps: {
     order: Ref<OrderDetail | null>;
     reservation: ReturnType<typeof useReservationActions>;
     canSeeChecks: () => boolean;
     canCut: () => boolean;
     onCancelled: () => void;
-}) {
+}): UseOrderHeaderCommands {
     const mobile = useIsMobileViewport(800);
     const confirmOpen = ref(false);
     const extendOpen = ref(false);

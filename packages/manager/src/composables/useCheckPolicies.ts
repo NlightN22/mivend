@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import { tr } from '../utils/lazyLabels';
 import {
     fetchCheckDefinitions,
@@ -8,7 +8,19 @@ import {
 } from '../api/checkPolicies';
 import { buildPolicyRows, type PolicyRow } from '../utils/checkPolicyRows';
 
-export function useCheckPolicies() {
+export interface UseCheckPolicies {
+    rows: Ref<PolicyRow[]>;
+    branchId: Ref<string | null>;
+    loading: Ref<boolean>;
+    savingKey: Ref<string | null>;
+    error: Ref<string>;
+    load: () => Promise<void>;
+    selectBranch: (id: string | null) => Promise<void>;
+    save: (row: PolicyRow) => Promise<void>;
+    reset: (row: PolicyRow) => Promise<void>;
+}
+
+export function useCheckPolicies(): UseCheckPolicies {
     const rows = ref<PolicyRow[]>([]);
     const branchId = ref<string | null>(null);
     const loading = ref(true);

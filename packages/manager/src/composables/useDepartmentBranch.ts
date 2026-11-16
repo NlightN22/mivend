@@ -1,5 +1,5 @@
 import { tr } from '../utils/lazyLabels';
-import { computed, ref } from 'vue';
+import { computed, ComputedRef, Ref, ref } from 'vue';
 import { fetchBranchOptions, type BranchOption } from '../api/branchSettings';
 import {
     clearDepartmentBranch,
@@ -7,9 +7,25 @@ import {
     setDepartmentBranch,
     type DepartmentBranchNode,
 } from '../api/departmentBranch';
-import { flattenDepartmentTree, isUnmappedWithPeople } from '../utils/departmentTree';
+import {
+    DepartmentTreeRow,
+    flattenDepartmentTree,
+    isUnmappedWithPeople,
+} from '../utils/departmentTree';
 
-export function useDepartmentBranch() {
+export interface UseDepartmentBranch {
+    rows: ComputedRef<DepartmentTreeRow[]>;
+    branches: Ref<BranchOption[]>;
+    branchName: ComputedRef<Map<string, string>>;
+    loading: Ref<boolean>;
+    savingId: Ref<string | null>;
+    error: Ref<string>;
+    unmappedWithPeopleCount: ComputedRef<number>;
+    load: () => Promise<void>;
+    assign: (departmentErpId: string, branchId: string) => Promise<void>;
+}
+
+export function useDepartmentBranch(): UseDepartmentBranch {
     const nodes = ref<DepartmentBranchNode[]>([]);
     const branches = ref<BranchOption[]>([]);
     const loading = ref(true);

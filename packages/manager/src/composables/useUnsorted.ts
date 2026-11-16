@@ -1,5 +1,5 @@
 import { tr } from '../utils/lazyLabels';
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
 import {
     fetchUnsortedAdministrators,
@@ -8,7 +8,24 @@ import {
     type UnsortedCounterpartyRow,
 } from '../api/visibilityGrants';
 
-export function useUnsorted() {
+export interface UseUnsorted {
+    error: Ref<string>;
+    counterparties: Ref<UnsortedCounterpartyRow[]>;
+    counterpartyTotal: Ref<number>;
+    counterpartyPage: Ref<number>;
+    counterpartyPageSize: Ref<number>;
+    counterpartySearch: Ref<string>;
+    counterpartiesLoading: Ref<boolean>;
+    administrators: Ref<UnsortedAdministratorRow[]>;
+    administratorTotal: Ref<number>;
+    administratorPage: Ref<number>;
+    administratorPageSize: Ref<number>;
+    administratorsLoading: Ref<boolean>;
+    loadCounterparties: () => Promise<void>;
+    loadAdministrators: () => Promise<void>;
+}
+
+export function useUnsorted(): UseUnsorted {
     const error = ref('');
     const counterparties = ref<UnsortedCounterpartyRow[]>([]);
     const counterpartyTotal = ref(0);
