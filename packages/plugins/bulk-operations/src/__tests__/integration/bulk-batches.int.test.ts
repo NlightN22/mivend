@@ -140,7 +140,7 @@ describe('item read ceiling', () => {
             fakeExecutor(connectionFor(dataSource)),
         );
         const draft = await stack.batches.preview(actor, FAKE_TYPE, {}, ['1']);
-        const fill = (from: number, to: number) =>
+        const fill = (from: number, to: number): Promise<unknown> =>
             dataSource.query(
                 `INSERT INTO bulk_batch_item ("batchId", "targetId", "previewOutcome")
                  SELECT $1, 'x' || g, 'ok' FROM generate_series($2::int, $3::int) g`,
