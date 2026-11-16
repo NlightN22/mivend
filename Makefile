@@ -223,11 +223,10 @@ storybook:
 # separate from a real `storybook build`) has a real recurring bug where after certain file edits
 # it gets stuck serving a stale "Could not parse import/exports with acorn" error for a file that
 # is actually syntactically valid (confirmed repeatedly with a standalone @babel/parser check) — a
-# plain restart alone does not clear it, only wiping this cache does. `fuser -k` (by port, not by
-# matched command string) is used to kill, since `pkill -f` was observed leaving the actual node
-# process alive (reparented under PPID 1) still holding the port.
+# plain restart alone does not clear it, only wiping this cache does. The kill goes by port and by
+# command, limited to this checkout (storybook-kill.sh): `pkill -f` alone left the node process alive.
 storybook-up:
-	-fuser -k -9 6006/tcp 6016/tcp 6018/tcp 2>/dev/null; pkill -9 -f "storybook dev" 2>/dev/null; sleep 1
+	@bash infrastructure/scripts/storybook-kill.sh; sleep 1
 	rm -rf packages/ui-kit/node_modules/.cache/storybook packages/ui-kit/node_modules/.cache/sb-vite-plugin-externals
 	rm -rf packages/manager/node_modules/.cache/storybook packages/manager/node_modules/.cache/sb-vite-plugin-externals
 	rm -rf packages/storefront/node_modules/.cache/storybook packages/storefront/node_modules/.cache/sb-vite-plugin-externals
@@ -237,8 +236,7 @@ storybook-up:
 	@echo "Storybook starting in background: ui-kit :6006, manager :6016, storefront :6018 (logs in /tmp/storybook-*.log)"
 
 storybook-down:
-	-fuser -k -9 6006/tcp 6016/tcp 6018/tcp 2>/dev/null
-	-pkill -9 -f "storybook dev" 2>/dev/null
+	@bash infrastructure/scripts/storybook-kill.sh
 
 storefront:
 	pnpm --filter @mivend/storefront dev
