@@ -1173,6 +1173,8 @@ export type Counterparty = Node & {
     phone: Maybe<Scalars['String']['output']>;
     /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
     portalReadiness: Scalars['String']['output'];
+    /** none | invited | verified | active, the state of the portal account (#375); null when the counterparty is hidden from the viewer */
+    portalState: Maybe<Scalars['String']['output']>;
     /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
     portalUsers: Array<Customer>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
@@ -1232,6 +1234,8 @@ export type CounterpartyFilterParameter = {
     phone?: InputMaybe<StringOperators>;
     /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
     portalReadiness?: InputMaybe<StringOperators>;
+    /** none | invited | verified | active, the same value as Counterparty.portalState */
+    portalState?: InputMaybe<StringOperators>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<StringOperators>;
     /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same value as Counterparty.portalReadiness */
@@ -1365,6 +1369,8 @@ export type CounterpartySortParameter = {
     phone?: InputMaybe<SortOrder>;
     /** ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies */
     portalReadiness?: InputMaybe<SortOrder>;
+    /** Orders none, invited, verified, active */
+    portalState?: InputMaybe<SortOrder>;
     /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<SortOrder>;
     shortName?: InputMaybe<SortOrder>;
@@ -12485,7 +12491,7 @@ export type CustomersPageQuery = {
     counterparties: {
         totalItems: number;
         items: Array<{
-            portalReadiness: string;
+            portalState: string | null;
             lastOrderAt: any | null;
             id: string;
             shortName: string;
@@ -12529,14 +12535,18 @@ export type CustomerFilterSuggestionsQuery = { counterpartyFilterSuggestions: Ar
 
 export type CustomersViewCountsQueryVariables = Exact<{
     all?: InputMaybe<CounterpartyListOptions>;
+    none?: InputMaybe<CounterpartyListOptions>;
+    invited?: InputMaybe<CounterpartyListOptions>;
+    verified?: InputMaybe<CounterpartyListOptions>;
     active?: InputMaybe<CounterpartyListOptions>;
-    inactive?: InputMaybe<CounterpartyListOptions>;
 }>;
 
 export type CustomersViewCountsQuery = {
     all: { totalItems: number };
+    none: { totalItems: number };
+    invited: { totalItems: number };
+    verified: { totalItems: number };
     active: { totalItems: number };
-    inactive: { totalItems: number };
 };
 
 export type UnassignedCounterpartyCountQueryVariables = Exact<{ [key: string]: never }>;
@@ -16691,7 +16701,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
   counterparties(options: $options) {
     items {
       ...CustomerListItemFields
-      portalReadiness
+      portalState
       lastOrderAt
     }
     totalItems
@@ -16737,14 +16747,20 @@ export const CustomerFilterSuggestionsDocument = new TypedDocumentString(`
     CustomerFilterSuggestionsQueryVariables
 >;
 export const CustomersViewCountsDocument = new TypedDocumentString(`
-    query CustomersViewCounts($all: CounterpartyListOptions, $active: CounterpartyListOptions, $inactive: CounterpartyListOptions) {
+    query CustomersViewCounts($all: CounterpartyListOptions, $none: CounterpartyListOptions, $invited: CounterpartyListOptions, $verified: CounterpartyListOptions, $active: CounterpartyListOptions) {
   all: counterparties(options: $all) {
     totalItems
   }
-  active: counterparties(options: $active) {
+  none: counterparties(options: $none) {
     totalItems
   }
-  inactive: counterparties(options: $inactive) {
+  invited: counterparties(options: $invited) {
+    totalItems
+  }
+  verified: counterparties(options: $verified) {
+    totalItems
+  }
+  active: counterparties(options: $active) {
     totalItems
   }
 }

@@ -80,6 +80,6 @@ describe('CounterpartyPasswordResetExecutor (#375)', () => {
         expect(executor().validate({})).toEqual({});
         expect(() => executor().validate({ action: 'x' })).toThrow(UserInputError);
         expect(executor().permission).toBe('ManageCounterpartyPortalAccess');
-        expect(executor().undoPlan).toBeUndefined();
+        expect('undoPlan' in executor()).toBe(false);
     });
 });
