@@ -199,11 +199,6 @@ async function ensureTaxSetup() {
     console.log('  Created default tax zone and 22% tax rate.');
 }
 
-// Demo administrators for the org-structure import below. The manager-portal roles are
-// self-provisioned by RoleProvisioningService at server boot (issue #134) — no manual seed step
-// needed — but this still looks the role up by code and skips with a warning rather than failing
-// the whole seed run, in case a role name here ever drifts from
-// packages/plugins/access-control/src/default-roles.ts.
 // Enough managers that the manager filter list crosses the type-to-search threshold (#377).
 const SEED_MANAGERS = Array.from({ length: 6 }, (_, i) => ({
     n: i + 1,
@@ -212,6 +207,11 @@ const SEED_MANAGERS = Array.from({ length: 6 }, (_, i) => ({
     lastName: `Manager${i + 1}`,
 }));
 
+// Demo administrators for the org-structure import below. The manager-portal roles are
+// self-provisioned by RoleProvisioningService at server boot (issue #134) — no manual seed step
+// needed — but this still looks the role up by code and skips with a warning rather than failing
+// the whole seed run, in case a role name here ever drifts from
+// packages/plugins/access-control/src/default-roles.ts.
 async function ensureOrgStructureAdmins() {
     let session = await adminGraphqlWithSession(`
         mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
