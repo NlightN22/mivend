@@ -31,7 +31,12 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    service = new BranchService(createTestConnection(dataSource), {} as never, {} as never);
+    service = new BranchService(
+        createTestConnection(dataSource),
+        {} as never,
+        {} as never,
+        {} as never,
+    );
 });
 
 afterAll(async () => {

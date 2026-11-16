@@ -2,12 +2,15 @@ import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import {
     GlobalSettingsService,
+    ListQueryBuilder,
+    ListQueryOptions,
     Logger,
+    PaginatedList,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { findBounded, withAggregateLock } from 'shared';
+import { findBounded, getPageAndCount, withAggregateLock } from 'shared';
 
 import { BranchSettingsService } from './branch-settings.service';
 import { Branch } from './entities/branch.entity';
@@ -28,6 +31,7 @@ export class BranchService {
         private connection: TransactionalConnection,
         private globalSettingsService: GlobalSettingsService,
         private branchSettingsService: BranchSettingsService,
+        private listQueryBuilder: ListQueryBuilder,
     ) {}
 
     async upsert(ctx: RequestContext, record: BranchRecordInput): Promise<Branch> {
@@ -46,6 +50,17 @@ export class BranchService {
         return findBounded(this.connection.getRepository(ctx, Branch), {
             order: { name: 'ASC' },
         });
+    }
+
+    findList(
+        ctx: RequestContext,
+        options?: ListQueryOptions<Branch>,
+    ): Promise<PaginatedList<Branch>> {
+        const qb = this.listQueryBuilder.build(Branch, options ?? {}, {
+            ctx,
+            orderBy: { name: 'ASC' },
+        });
+        return getPageAndCount(qb, options?.take, options?.skip);
     }
 
     // Kafka-only contours never run erp-import's REST sync, leaving Branch empty and the picker blocked.

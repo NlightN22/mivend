@@ -27,11 +27,18 @@ export const adminApiSchema: DocumentNode = gql`
         parentErpId: String
     }
 
-    type Branch {
+    type Branch implements Node {
         id: ID!
+        createdAt: DateTime!
+        updatedAt: DateTime!
         erpId: String!
         name: String!
         isDefault: Boolean!
+    }
+
+    type BranchList implements PaginatedList {
+        items: [Branch!]!
+        totalItems: Int!
     }
 
     type Warehouse {
@@ -162,6 +169,7 @@ export const adminApiSchema: DocumentNode = gql`
         departments: [Department!]!
         positions: [ErpPosition!]!
         branches: [Branch!]!
+        branchList: BranchList!
         warehouses: [Warehouse!]!
         branchSettings(branchId: String!): BranchSettings
         teamMembers: [TeamMember!]!

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { GlobalSettingsService, RequestContext, TransactionalConnection } from '@vendure/core';
+import type {
+    GlobalSettingsService,
+    ListQueryBuilder,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 
 import { BranchService } from '../../branch.service';
 import type { BranchSettingsService } from '../../branch-settings.service';
@@ -26,17 +31,20 @@ describe('BranchService', () => {
     let service: BranchService;
     let updateSettings: ReturnType<typeof vi.fn>;
     let getGlobalDefaultBranchId: ReturnType<typeof vi.fn>;
+    let buildList: ReturnType<typeof vi.fn>;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
         repo = createMockRepo();
         const connection = { getRepository: () => repo };
         updateSettings = vi.fn();
+        buildList = vi.fn();
         getGlobalDefaultBranchId = vi.fn().mockResolvedValue(null);
         service = new BranchService(
             connection as unknown as TransactionalConnection,
             { updateSettings } as unknown as GlobalSettingsService,
             { getGlobalDefaultBranchId } as unknown as BranchSettingsService,
+            { build: buildList } as unknown as ListQueryBuilder,
         );
     });
 
@@ -57,6 +65,26 @@ describe('BranchService', () => {
         expect(repo.save).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'Renamed by admin' }),
         );
+    });
+
+    it('findList pages the branches ordered by name', async () => {
+        const qb = {
+            take: vi.fn().mockReturnThis(),
+            skip: vi.fn().mockReturnThis(),
+            getManyAndCount: vi.fn(async () => [[{ id: 1 }], 7]),
+        };
+        buildList.mockReturnValue(qb);
+
+        const page = await service.findList(ctx, { take: 10, skip: 20 });
+
+        expect(page).toEqual({ items: [{ id: 1 }], totalItems: 7 });
+        expect(buildList).toHaveBeenCalledWith(
+            expect.anything(),
+            { take: 10, skip: 20 },
+            { ctx, orderBy: { name: 'ASC' } },
+        );
+        expect(qb.take).toHaveBeenCalledWith(10);
+        expect(qb.skip).toHaveBeenCalledWith(20);
     });
 
     it('findAll returns rows ordered by name', async () => {

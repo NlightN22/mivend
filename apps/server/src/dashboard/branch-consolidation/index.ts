@@ -5,7 +5,7 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
-import { BranchesPage } from './branches-page';
+import { BranchesPage } from './branches-page.js';
 
 // Not in packages/plugins/*: pnpm workspace symlinks break dashboard discovery.
 // No Branch rows = every warehouse event silently skipped; only a Logger.warn, nothing queryable.
@@ -55,7 +55,7 @@ defineDashboardExtension({
     routes: [
         {
             path: '/branches',
-            component: BranchesPage,
+            component: route => BranchesPage({ route }),
             navMenuItem: {
                 // Branch gates warehouse-event processing, so it sits near the top of settings.
                 // Order 150 keeps it between Vendure's native Sellers (100) and Channels (200).

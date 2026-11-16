@@ -11,6 +11,22 @@ export const listBranchesDocument = graphql(`
     }
 `);
 
+export const branchListDocument = graphql(`
+    query BranchListForDashboard($options: BranchListOptions) {
+        branchList(options: $options) {
+            items {
+                id
+                createdAt
+                updatedAt
+                erpId
+                name
+                isDefault
+            }
+            totalItems
+        }
+    }
+`);
+
 export const createBranchDocument = graphql(`
     mutation CreateBranchFromDashboard($name: String!) {
         createBranch(name: $name) {

@@ -4,6 +4,7 @@ import {
     Administrator,
     Allow,
     Ctx,
+    ListQueryOptions,
     PaginatedList,
     RequestContext,
     Transaction,
@@ -75,6 +76,15 @@ export class AccessControlResolver {
     @Allow(Permission.Authenticated)
     async branches(@Ctx() ctx: RequestContext): Promise<Branch[]> {
         return this.branchService.findAll(ctx);
+    }
+
+    @Query()
+    @Allow(Permission.Authenticated)
+    branchList(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: ListQueryOptions<Branch> },
+    ): Promise<PaginatedList<Branch>> {
+        return this.branchService.findList(ctx, args.options);
     }
 
     // Blocks warehouse ingestion system-wide if misused, so SuperAdmin only.
