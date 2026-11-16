@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingActiveOrderStrategy } from '../../acting-active-order.strategy';
+interface SetupResult {
+    strategy: ActingActiveOrderStrategy;
+    inner: { name: string; determineActiveOrder: Mock; createActiveOrder: Mock };
+    carts: { find: Mock; create: Mock; findCustomerCart: Mock };
+    sessions: { unsetActiveOrder: Mock };
+}
 
-function setup(acting: unknown) {
+function setup(acting: unknown): SetupResult {
     const inner = {
         name: 'default',
         determineActiveOrder: vi.fn().mockResolvedValue({ id: 'customer-cart' }),

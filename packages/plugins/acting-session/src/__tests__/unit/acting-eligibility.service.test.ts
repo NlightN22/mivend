@@ -1,9 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingEligibilityService } from '../../acting-eligibility.service';
 
 const activeCounterparty = { id: 'cp-1', isActive: true };
 const point = { id: 'tp-1', counterpartyId: 'cp-1', isActive: true, customerStatus: 'active' };
+interface SetupResult {
+    service: ActingEligibilityService;
+    accessScope: { assertCounterpartyWritable: Mock<() => Promise<void>> };
+}
 
 function setup(overrides: {
     counterparty?: unknown;
@@ -11,7 +15,7 @@ function setup(overrides: {
     customer?: unknown;
     point?: unknown;
     scopeError?: Error;
-}) {
+}): SetupResult {
     const counterparty = 'counterparty' in overrides ? overrides.counterparty : activeCounterparty;
     const connection = { getRepository: () => ({ findOne: async () => counterparty }) };
     const customers = {

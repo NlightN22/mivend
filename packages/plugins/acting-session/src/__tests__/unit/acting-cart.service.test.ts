@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingCartService } from '../../acting-cart.service';
+interface SetupResult {
+    service: ActingCartService;
+    query: Mock;
+    update: Mock;
+    orderService: { create: Mock; findOne: Mock; deleteOrder: Mock };
+}
 
-function setup(queryResults: unknown[][]) {
+function setup(queryResults: unknown[][]): SetupResult {
     const query = vi.fn();
     for (const rows of queryResults) query.mockResolvedValueOnce(rows);
     const update = vi.fn();

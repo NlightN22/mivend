@@ -32,7 +32,11 @@ function tickets(): ActingTicketService {
     });
 }
 
-async function insertTicket(ticket: string, expiresInMs: number, usedAt: Date | null = null) {
+async function insertTicket(
+    ticket: string,
+    expiresInMs: number,
+    usedAt: Date | null = null,
+): Promise<void> {
     await dataSource.query(
         `INSERT INTO acting_ticket ("tokenHash", "administratorId", "parentSessionId", "counterpartyId",
             "customerId", "tradingPointId", "expiresAt", "usedAt")
@@ -218,7 +222,7 @@ describe('ActingCartService.findCustomerCart (real Postgres)', () => {
         customerId: number,
         ageMs: number,
         acting: string | null,
-    ) {
+    ): Promise<void> {
         await dataSource.query(
             `INSERT INTO "order" (id, "customerId", active, "createdAt", "customFieldsActingsessionid")
              VALUES ($1, $2, true, $3, $4)`,
@@ -227,7 +231,7 @@ describe('ActingCartService.findCustomerCart (real Postgres)', () => {
         await dataSource.query('INSERT INTO order_channels_channel VALUES ($1, 1)', [id]);
     }
 
-    function carts() {
+    function carts(): ActingCartService {
         const findOne = vi.fn(async (_ctx: unknown, id: string) => ({ id }));
         const service = new ActingCartService(
             createTestConnection(dataSource),

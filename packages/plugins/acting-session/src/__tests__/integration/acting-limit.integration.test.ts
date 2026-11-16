@@ -18,7 +18,11 @@ const { schema, extra } = testSchemaOptions('acting_limit');
 let dataSource: DataSource;
 const cacheDelete = vi.fn();
 
-async function insertTicket(ticket: string, expiresInMs: number, usedAt: Date | null = null) {
+async function insertTicket(
+    ticket: string,
+    expiresInMs: number,
+    usedAt: Date | null = null,
+): Promise<void> {
     await dataSource.query(
         `INSERT INTO acting_ticket ("tokenHash", "administratorId", "parentSessionId", "counterpartyId",
             "customerId", "tradingPointId", "expiresAt", "usedAt")
@@ -127,7 +131,7 @@ describe('ActingLimitService (real Postgres)', () => {
     it('keeps exactly the cap of newest items after 8 parallel starts of one manager', async () => {
         const connection = createTestConnection(dataSource);
         const service = limits(3);
-        const start = (n: number) =>
+        const start = (n: number): Promise<void> =>
             withAggregateLock(connection, testRequestContext, 'acting-manager:1', async ctx => {
                 await service.enforceManagerCap(ctx, '1');
                 await connection.getRepository(ctx, 'Channel').query(
@@ -150,7 +154,7 @@ describe('ActingLimitService (real Postgres)', () => {
     it('keeps exactly the cap of live acting sessions per customer after 8 parallel exchanges', async () => {
         const connection = createTestConnection(dataSource);
         const service = limits(10, 3);
-        const exchange = (n: number) =>
+        const exchange = (n: number): Promise<void> =>
             withAggregateLock(connection, testRequestContext, 'acting-customer:5', async ctx => {
                 await service.enforceCustomerCap(ctx, '5');
                 await connection.getRepository(ctx, 'Channel').query(
@@ -168,14 +172,15 @@ describe('ActingLimitService (real Postgres)', () => {
     });
 
     it('fails the start over the read ceiling and ends nothing, passing at the ceiling', async () => {
-        const seed = (n: number) =>
+        const seed = (n: number): Promise<unknown> =>
             dataSource.query(
                 `INSERT INTO session (id, token, type, invalidated, expires, "customFieldsActingadministratorid", "customFieldsActingparentsessionid", "userId")
                  SELECT 1000000 + g, 'bulk-' || g, 'AuthenticatedSession', false, now() + interval '1 day', '1', '10', 5
                  FROM generate_series(1, $1::int) g`,
                 [n],
             );
-        const dropBulk = () => dataSource.query(`DELETE FROM session WHERE token LIKE 'bulk-%'`);
+        const dropBulk = (): Promise<unknown> =>
+            dataSource.query(`DELETE FROM session WHERE token LIKE 'bulk-%'`);
         try {
             await seed(1000);
             expect(await limits(10, 1).enforceCustomerCap(testRequestContext, '5')).toBe(1000);

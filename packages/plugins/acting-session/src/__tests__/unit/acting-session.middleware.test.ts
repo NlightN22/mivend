@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { Request, Response } from 'express';
 
 import { ActingSessionMiddleware, bearerToken } from '../../acting-session.middleware';
@@ -7,7 +7,7 @@ function run(
     headers: Record<string, string>,
     endDeadSession = vi.fn().mockResolvedValue(0),
     onReq: (req: Request) => void = () => undefined,
-) {
+): { req: Request; done: Promise<unknown>; endDeadSession: Mock } {
     const middleware = new ActingSessionMiddleware(
         { endDeadSession } as never,
         { create: vi.fn().mockResolvedValue({}) } as never,

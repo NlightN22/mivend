@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingSessionService } from '../../acting-session.service';
 
@@ -15,6 +15,14 @@ const binding = {
     customerId: 'cu-1',
     tradingPointId: 'tp-1',
 };
+interface SetupResult {
+    service: ActingSessionService;
+    save: Mock<(entity: unknown) => Promise<unknown>>;
+    tickets: { issue: Mock; claim: Mock };
+    eligibility: { resolveForManager: Mock; resolveByIds: Mock };
+    carts: { deleteForSession: Mock };
+    limits: { enforceManagerCap: Mock; enforceCustomerCap: Mock };
+}
 
 function setup(
     over: {
@@ -24,7 +32,7 @@ function setup(
         url?: string;
         nameLookupFails?: boolean;
     } = {},
-) {
+): SetupResult {
     const save = vi.fn(async (entity: unknown) => entity);
     const connection = {
         withTransaction: async (ctx: unknown, work: (c: unknown) => unknown) => work(ctx),

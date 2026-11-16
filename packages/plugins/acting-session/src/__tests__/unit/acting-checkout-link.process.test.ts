@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingCheckoutLinkProcess } from '../../acting-checkout-link.process';
 
-function setup() {
+function setup(): { process: ActingCheckoutLinkProcess; update: Mock; set: Mock } {
     const update = vi.fn();
     const set = vi.fn();
     const repo = {
