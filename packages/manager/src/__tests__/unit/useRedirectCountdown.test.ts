@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { effectScope } from 'vue';
+import { EffectScope, effectScope, Ref } from 'vue';
 import { REDIRECT_SECONDS, useRedirectCountdown } from '../../composables/useRedirectCountdown';
+interface SetupResult {
+    api: { remaining: Ref<number>; start: () => void };
+    scope: EffectScope;
+}
 
-function setup(onDone: () => void) {
+function setup(onDone: () => void): SetupResult {
     const scope = effectScope();
     const api = scope.run(() => useRedirectCountdown(onDone))!;
     return { api, scope };

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildCategoryTreeRows, parentIdsWithChildren } from '../../utils/categoryVisibilityTree';
 
-function c(id: string, name: string, path: string[] = []) {
+function c(
+    id: string,
+    name: string,
+    path: string[] = [],
+): { id: string; name: string; breadcrumbs: { id: string }[] } {
     return { id, name, breadcrumbs: [{ id: 'root' }, ...path.map(p => ({ id: p })), { id }] };
 }
 
@@ -13,8 +17,9 @@ const items = [
     c('orphan', 'Orphan', ['missing']),
 ];
 
-const summary = (rows: ReturnType<typeof buildCategoryTreeRows<(typeof items)[number]>>) =>
-    rows.map(r => `${r.depth}:${r.item.id}${r.expanded ? '+' : ''}`);
+const summary = (
+    rows: ReturnType<typeof buildCategoryTreeRows<(typeof items)[number]>>,
+): string[] => rows.map(r => `${r.depth}:${r.item.id}${r.expanded ? '+' : ''}`);
 
 describe('buildCategoryTreeRows', () => {
     it('shows only roots when nothing is expanded, children after their parent when expanded', () => {

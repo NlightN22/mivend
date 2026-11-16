@@ -7,7 +7,7 @@ import { BLANK_ORDERS_FILTERS } from '../../api/orders-list';
 import { countsQueryVariables, fetchOrdersViewCounts } from '../../api/orders-counts';
 
 const NOW = new Date('2026-11-07T12:00:00Z');
-const total = (n: number) => ({ totalItems: n });
+const total = (n: number): { totalItems: number } => ({ totalItems: n });
 
 describe('fetchOrdersViewCounts', () => {
     beforeEach(() => {

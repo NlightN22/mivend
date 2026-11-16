@@ -67,7 +67,17 @@ describe('buildPolicyRows', () => {
     });
 
     it('shows a branch override over the global row, and marks a row without one as inherited', () => {
-        const policy = (branchId: string | null, consequence: string) => ({
+        interface PolicyResult {
+            id: string;
+            checkCode: string;
+            stage: string;
+            branchId: string | null;
+            consequence: string;
+            recipient: null;
+            enabled: boolean;
+        }
+
+        const policy = (branchId: string | null, consequence: string): PolicyResult => ({
             id: `${branchId}`,
             checkCode: 'erp.organization-stock',
             stage: 'pre-reserve',

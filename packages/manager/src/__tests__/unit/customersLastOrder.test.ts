@@ -4,8 +4,9 @@ import { toCustomerRows } from '../../components/customers/customersRows';
 import { conditionsToCustomersFilter } from '../../api/customersFilter';
 import { CUSTOMERS_SORT_FIELDS } from '../../api/customersList';
 import type { CustomerListItem } from '../../api/customers';
+import { AdvancedDataTableColumn } from '@mivend/ui-kit';
 
-const lastOrderColumn = () =>
+const lastOrderColumn = (): AdvancedDataTableColumn | undefined =>
     buildCustomersColumns({ managers: [] }).find(c => c.field === 'lastOrder');
 
 describe('customers list: last order column', () => {

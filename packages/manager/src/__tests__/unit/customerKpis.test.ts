@@ -3,7 +3,11 @@ import { customerKpis } from '../../utils/customerKpis';
 
 const NOW = new Date('2026-11-07T12:00:00Z').getTime();
 const day = 24 * 60 * 60 * 1000;
-const order = (state: string, daysAgo: number | null, total: number) => ({
+const order = (
+    state: string,
+    daysAgo: number | null,
+    total: number,
+): { state: string; orderPlacedAt: string | null; totalWithTax: number } => ({
     state,
     orderPlacedAt: daysAgo === null ? null : new Date(NOW - daysAgo * day).toISOString(),
     totalWithTax: total,

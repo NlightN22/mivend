@@ -12,7 +12,7 @@ import {
     toErpDiscountsUrlState,
 } from '../../composables/erpDiscountsListUrl';
 import { buildErpDiscountsColumns } from '../../components/discounts/erpDiscountsColumns';
-import { toErpDiscountRows } from '../../components/discounts/erpDiscountsRows';
+import { ErpDiscountRow, toErpDiscountRows } from '../../components/discounts/erpDiscountsRows';
 import { erpSortFromState, erpSortToState } from '../../components/discounts/erpDiscountsSort';
 
 function item(over: Partial<ErpDiscountItem> = {}): ErpDiscountItem {
@@ -33,7 +33,8 @@ function item(over: Partial<ErpDiscountItem> = {}): ErpDiscountItem {
         ...over,
     };
 }
-const row = (over: Partial<ErpDiscountItem> = {}) => toErpDiscountRows([item(over)])[0];
+const row = (over: Partial<ErpDiscountItem> = {}): ErpDiscountRow =>
+    toErpDiscountRows([item(over)])[0];
 
 describe('ERP discount rows', () => {
     it('links a single visible customer and keeps the raw document number', () => {

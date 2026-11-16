@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../../api/orderDetail';
 import { orderTotalRows } from '../../utils/orderTotalRows';
+interface CustomFieldsResult {
+    unitRatioToBase: number | null;
+    unitWeightKg: number | null;
+    unitVolumeM3: number | null;
+}
 
-const customFields = (weight: number | null) => ({
+const customFields = (weight: number | null): CustomFieldsResult => ({
     unitRatioToBase: weight === null ? null : 1,
     unitWeightKg: weight,
     unitVolumeM3: weight === null ? null : 0.01,

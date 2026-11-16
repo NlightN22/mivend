@@ -3,7 +3,12 @@ import type { OrderDetailLine } from '../../api/orderDetail';
 import type { OrderReservation } from '../../api/reservation';
 import type { FindingConsequence } from '../../utils/findingConsequence';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { findingTone, lineProblems, orderLevelProblem } from '../../utils/orderLineProblems';
+import {
+    findingTone,
+    LineProblems,
+    lineProblems,
+    orderLevelProblem,
+} from '../../utils/orderLineProblems';
 import { buildLineRows } from '../../utils/orderLineRows';
 
 const line = (over: Partial<OrderDetailLine> = {}): OrderDetailLine =>
@@ -45,7 +50,7 @@ function problemsOf(
         l?: OrderDetailLine;
     } = {},
     consequences = new Map<string, FindingConsequence>(),
-) {
+): LineProblems {
     const row = buildLineRows({
         lines: [opts.l ?? line()],
         findings,

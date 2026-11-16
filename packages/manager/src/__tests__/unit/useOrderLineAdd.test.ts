@@ -198,7 +198,10 @@ describe('useOrderLineAdd', () => {
         beforeEach(() => vi.useFakeTimers());
         afterEach(() => vi.useRealTimers());
 
-        async function changeQuantity(add: ReturnType<typeof useOrderLineAdd>, value: number) {
+        async function changeQuantity(
+            add: ReturnType<typeof useOrderLineAdd>,
+            value: number,
+        ): Promise<void> {
             add.quantity.value = value;
             await nextTick();
             await vi.advanceTimersByTimeAsync(300);

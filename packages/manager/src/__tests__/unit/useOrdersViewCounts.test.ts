@@ -25,7 +25,7 @@ vi.mock('../../stores/orderStatuses', () => ({
 import { BLANK_ORDERS_FILTERS } from '../../api/orders-list';
 import { useOrdersViewCounts } from '../../composables/useOrdersViewCounts';
 
-const flush = async () => {
+const flush = async (): Promise<void> => {
     for (let i = 0; i < 5; i++) await Promise.resolve();
     await nextTick();
 };

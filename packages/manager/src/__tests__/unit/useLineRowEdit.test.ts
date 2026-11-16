@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
     changeOrderLineQuantity: vi.fn(),
@@ -10,9 +10,13 @@ vi.mock('../../api/priceAdjustment', () => ({
     requestPriceAdjustment: api.requestPriceAdjustment,
 }));
 
-import { useLineRowEdit } from '../../composables/useLineRowEdit';
+import { UseLineRowEdit, useLineRowEdit } from '../../composables/useLineRowEdit';
+interface SetupResult {
+    edit: UseLineRowEdit;
+    apply: Mock<(action: () => Promise<void>) => Promise<boolean>>;
+}
 
-function setup(applyResult = true) {
+function setup(applyResult = true): SetupResult {
     const apply = vi.fn(async (action: () => Promise<void>) => {
         if (!applyResult) return false;
         await action();

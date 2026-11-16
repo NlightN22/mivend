@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderDetailLine } from '../../api/orderDetail';
 import type { OrderReservation } from '../../api/reservation';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { buildLineRows, discountPercent } from '../../utils/orderLineRows';
+import { buildLineRows, discountPercent, OrderLineRow } from '../../utils/orderLineRows';
 
 function line(over: Partial<OrderDetailLine> = {}): OrderDetailLine {
     return {
@@ -40,7 +40,7 @@ function rowOf(
     reservations: OrderReservation[] = [],
     l = line(),
     ceiling?: () => number | null,
-) {
+): OrderLineRow {
     return buildLineRows({
         lines: [l],
         findings,

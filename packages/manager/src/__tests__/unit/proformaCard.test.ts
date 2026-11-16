@@ -3,8 +3,19 @@ import type { ProformaCardPayment, ProformaCardVersion } from '../../api/proform
 import { paymentSummary } from '../../utils/proformaPayments';
 import { timelineEntries, versionChange } from '../../utils/proformaVersionDiff';
 import { changeSummary, signedMoney } from '../../utils/proformaVersionText';
+interface LineResult {
+    quantity: number;
+    linePriceWithTax: number;
+    discountAmount: number;
+    productVariant: { name: string; sku: string };
+}
 
-function line(sku: string, quantity: number, linePriceWithTax: number, discountAmount = 0) {
+function line(
+    sku: string,
+    quantity: number,
+    linePriceWithTax: number,
+    discountAmount = 0,
+): LineResult {
     return { quantity, linePriceWithTax, discountAmount, productVariant: { name: sku, sku } };
 }
 

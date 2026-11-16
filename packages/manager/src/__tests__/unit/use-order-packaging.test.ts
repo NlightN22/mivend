@@ -42,7 +42,22 @@ describe('useOrderPackaging', () => {
 });
 
 describe('packagingGaps', () => {
-    const line = (ratio: number | null, weight: number | null, volume: number | null) => ({
+    interface LineResult {
+        quantity: number;
+        productVariant: {
+            customFields: {
+                unitRatioToBase: number | null;
+                unitWeightKg: number | null;
+                unitVolumeM3: number | null;
+            };
+        };
+    }
+
+    const line = (
+        ratio: number | null,
+        weight: number | null,
+        volume: number | null,
+    ): LineResult => ({
         quantity: 1,
         productVariant: {
             customFields: { unitRatioToBase: ratio, unitWeightKg: weight, unitVolumeM3: volume },

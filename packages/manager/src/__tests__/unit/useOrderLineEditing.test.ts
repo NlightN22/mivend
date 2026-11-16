@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { OrderDetailLine } from '../../api/orderDetail';
-import { useOrderLineEditing } from '../../composables/useOrderLineEditing';
+import { UseOrderLineEditing, useOrderLineEditing } from '../../composables/useOrderLineEditing';
 
 vi.mock('../../api/orderLineEdit', () => ({
     changeOrderLineQuantity: vi.fn(),
@@ -15,7 +15,7 @@ const line = {
     discountedUnitPriceWithTax: 15300,
 } as OrderDetailLine;
 
-function build(max: number | null) {
+function build(max: number | null): UseOrderLineEditing {
     const editing = useOrderLineEditing({
         orderId: () => '5',
         lines: () => [line],
