@@ -13,8 +13,8 @@ import { DEFAULT_ROLES, DefaultRoleDefinition } from './default-roles';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { loggerCtx } from './types';
 
-// Direct DB writes: RoleService.create/update require an authenticated active user, absent at boot.
-// Server process only (!isWorker); on fresh contours missing roles silently fall back to 'own'.
+// Create-only: an existing role or scope row is never touched, so edits made in the admin UI survive.
+// Direct DB writes (RoleService needs an authenticated user, absent at boot); server process only.
 @Injectable()
 export class RoleProvisioningService implements OnApplicationBootstrap {
     constructor(
@@ -55,37 +55,26 @@ export class RoleProvisioningService implements OnApplicationBootstrap {
         definition: DefaultRoleDefinition,
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Role);
-        let role = await repo.findOne({ where: { code: definition.code } });
+        const role = await repo.findOne({ where: { code: definition.code } });
         const permissions = [Permission.Authenticated, ...definition.permissions] as Permission[];
 
         if (!role) {
             const defaultChannel = await this.channelService.getDefaultChannel(ctx);
-            role = repo.create({
-                code: definition.code,
-                description: definition.description,
-                permissions,
-                channels: [defaultChannel],
-            });
-            await repo.save(role);
+            await repo.save(
+                repo.create({
+                    code: definition.code,
+                    description: definition.description,
+                    permissions,
+                    channels: [defaultChannel],
+                }),
+            );
             Logger.info(`Provisioned role "${definition.code}"`, loggerCtx);
-        } else if (!permissionsMatch(role.permissions, permissions)) {
-            role.permissions = permissions;
-            role.description = definition.description;
-            await repo.save(role);
-            Logger.info(`Updated permissions for role "${definition.code}"`, loggerCtx);
         }
 
-        await this.roleScopeConfigService.setScopeFor(
+        await this.roleScopeConfigService.createScopeIfMissing(
             ctx,
             definition.code,
             definition.accessScopeConfig,
         );
     }
-}
-
-function permissionsMatch(a: Permission[], b: Permission[]): boolean {
-    if (a.length !== b.length) return false;
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
-    return sortedA.every((value, index) => value === sortedB[index]);
 }

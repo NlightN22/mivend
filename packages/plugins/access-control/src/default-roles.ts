@@ -7,6 +7,9 @@ export interface DefaultRoleDefinition {
     accessScopeConfig: AccessScopeConfig;
 }
 
+// Initial state of a new environment, not the enforced state: bootstrap only creates missing roles, never overwrites
+// edits made in the admin UI. New rights reach existing roles via grantMissingDefaultPermissions (docs/access-control.md).
+
 // Hardcoded on purpose: RBAC config, not business data, so AGENTS.md's enum rule does not apply.
 // Every role must set both "counterparty" and "order"; a missing key silently falls back to 'own'.
 export const DEFAULT_ROLES: DefaultRoleDefinition[] = [

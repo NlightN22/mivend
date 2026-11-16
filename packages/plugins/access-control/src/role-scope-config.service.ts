@@ -13,13 +13,6 @@ export interface AccessScopeConfig {
     [resource: string]: AccessScopeKind;
 }
 
-function configsMatch(a: AccessScopeConfig, b: AccessScopeConfig): boolean {
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    return keysA.every(key => a[key] === b[key]);
-}
-
 function parseAccessScopeConfig(row: RoleAccessScope): AccessScopeConfig | null {
     try {
         return JSON.parse(row.accessScopeConfig) as AccessScopeConfig;
@@ -76,21 +69,30 @@ export class RoleScopeConfigService {
         return row ? parseAccessScopeConfig(row) : null;
     }
 
-    // Detects rows deleted/corrupted after bootstrap, or roles added to DEFAULT_ROLES since last boot.
-    // Report-only: does not re-provision, the health-check alert surfaces the drift.
+    // Reports only absent rows (deleted, or a role added to DEFAULT_ROLES); an edited config is intentional.
     async getProvisioningStatus(
         ctx: RequestContext,
     ): Promise<Array<{ roleCode: string; missing: boolean }>> {
         const rows = await findBounded(this.connection.getRepository(ctx, RoleAccessScope));
-        const rowByCode = new Map(rows.map(row => [row.roleCode, row]));
-        return DEFAULT_ROLES.map(definition => {
-            const row = rowByCode.get(definition.code);
-            const config = row ? parseAccessScopeConfig(row) : null;
-            return {
-                roleCode: definition.code,
-                missing: !config || !configsMatch(config, definition.accessScopeConfig),
-            };
-        });
+        const presentCodes = new Set(rows.map(row => row.roleCode));
+        return DEFAULT_ROLES.map(definition => ({
+            roleCode: definition.code,
+            missing: !presentCodes.has(definition.code),
+        }));
+    }
+
+    async createScopeIfMissing(
+        ctx: RequestContext,
+        roleCode: string,
+        config: AccessScopeConfig,
+    ): Promise<void> {
+        await this.connection
+            .getRepository(ctx, RoleAccessScope)
+            .createQueryBuilder()
+            .insert()
+            .values({ roleCode, accessScopeConfig: JSON.stringify(config) })
+            .orIgnore()
+            .execute();
     }
 
     async setScopeFor(

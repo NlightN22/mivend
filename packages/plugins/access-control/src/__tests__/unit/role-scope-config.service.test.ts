@@ -120,29 +120,20 @@ describe('RoleScopeConfigService', () => {
             expect(status.every(item => item.missing)).toBe(true);
         });
 
-        it('reports a role as not missing when its stored config exactly matches DEFAULT_ROLES', async () => {
+        it('does not flag a role whose stored config was edited away from DEFAULT_ROLES', async () => {
             repo.find.mockResolvedValue([
-                scopeRow('manager', { counterparty: 'own', order: 'own', proformaInvoice: 'own' }),
+                scopeRow('manager', { counterparty: 'all', order: 'all', proformaInvoice: 'all' }),
             ]);
             const status = await service.getProvisioningStatus(ctx);
-            const manager = status.find(item => item.roleCode === 'manager');
-            expect(manager?.missing).toBe(false);
+            expect(status.find(item => item.roleCode === 'manager')?.missing).toBe(false);
         });
 
-        it('reports a role as missing when its stored config has drifted from DEFAULT_ROLES', async () => {
-            repo.find.mockResolvedValue([
-                scopeRow('manager', { counterparty: 'all', order: 'own', proformaInvoice: 'own' }),
+        it('flags only the roles whose row is absent', async () => {
+            repo.find.mockResolvedValue([scopeRow('manager', {})]);
+            const status = await service.getProvisioningStatus(ctx);
+            expect(status.filter(item => !item.missing).map(item => item.roleCode)).toEqual([
+                'manager',
             ]);
-            const status = await service.getProvisioningStatus(ctx);
-            const manager = status.find(item => item.roleCode === 'manager');
-            expect(manager?.missing).toBe(true);
-        });
-
-        it('reports a role as missing when its stored config JSON is invalid', async () => {
-            repo.find.mockResolvedValue([scopeRow('manager', '{not json')]);
-            const status = await service.getProvisioningStatus(ctx);
-            const manager = status.find(item => item.roleCode === 'manager');
-            expect(manager?.missing).toBe(true);
         });
     });
 });

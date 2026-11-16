@@ -18,7 +18,7 @@ describe('RoleProvisioningService', () => {
     let getRepositoryCallCount: number;
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
     let channelService: { getDefaultChannel: ReturnType<typeof vi.fn> };
-    let roleScopeConfigService: { setScopeFor: ReturnType<typeof vi.fn> };
+    let roleScopeConfigService: { createScopeIfMissing: ReturnType<typeof vi.fn> };
     let processContext: { isWorker: boolean };
     let service: RoleProvisioningService;
 
@@ -32,7 +32,7 @@ describe('RoleProvisioningService', () => {
             },
         };
         channelService = { getDefaultChannel: vi.fn().mockResolvedValue({ id: 1 }) };
-        roleScopeConfigService = { setScopeFor: vi.fn() };
+        roleScopeConfigService = { createScopeIfMissing: vi.fn() };
         processContext = { isWorker: false };
         service = new RoleProvisioningService(
             connection as unknown as TransactionalConnection,
@@ -54,9 +54,11 @@ describe('RoleProvisioningService', () => {
 
         expect(repo.create).toHaveBeenCalledTimes(DEFAULT_ROLES.length);
         expect(repo.save).toHaveBeenCalledTimes(DEFAULT_ROLES.length);
-        expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledTimes(DEFAULT_ROLES.length);
+        expect(roleScopeConfigService.createScopeIfMissing).toHaveBeenCalledTimes(
+            DEFAULT_ROLES.length,
+        );
         for (const definition of DEFAULT_ROLES) {
-            expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledWith(
+            expect(roleScopeConfigService.createScopeIfMissing).toHaveBeenCalledWith(
                 expect.anything(),
                 definition.code,
                 definition.accessScopeConfig,
@@ -84,40 +86,27 @@ describe('RoleProvisioningService', () => {
 
         expect(repo.create).not.toHaveBeenCalled();
         expect(repo.save).not.toHaveBeenCalled();
-        expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledTimes(DEFAULT_ROLES.length);
+        expect(roleScopeConfigService.createScopeIfMissing).toHaveBeenCalledTimes(
+            DEFAULT_ROLES.length,
+        );
     });
 
-    it('updates permissions on an existing role whose permissions have drifted from DEFAULT_ROLES', async () => {
-        const drifted = DEFAULT_ROLES[0];
+    it('leaves an existing role with edited permissions and description untouched', async () => {
         repo.findOne.mockImplementation(
-            async ({ where: { code } }: { where: { code: string } }) => {
-                if (code === drifted.code) {
-                    return {
-                        code: drifted.code,
-                        description: drifted.description,
-                        permissions: ['Authenticated'],
-                    };
-                }
-                return {
-                    code,
-                    description: 'x',
-                    permissions: [
-                        'Authenticated',
-                        ...(DEFAULT_ROLES.find(d => d.code === code)?.permissions ?? []),
-                    ],
-                };
-            },
+            async ({ where: { code } }: { where: { code: string } }) => ({
+                code,
+                description: 'edited in the admin UI',
+                permissions: ['Authenticated'],
+            }),
         );
 
         await service.onApplicationBootstrap();
 
         expect(repo.create).not.toHaveBeenCalled();
-        expect(repo.save).toHaveBeenCalledTimes(1);
-        const savedRole = repo.save.mock.calls[0][0] as { permissions: string[] };
-        expect(savedRole.permissions).toEqual(expect.arrayContaining(drifted.permissions));
+        expect(repo.save).not.toHaveBeenCalled();
     });
 
-    it('never touches an Administrator assignment — only creates/updates Role and RoleAccessScope rows', async () => {
+    it('never touches an Administrator assignment — only creates Role and RoleAccessScope rows', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.onApplicationBootstrap();
 
@@ -145,10 +134,12 @@ describe('RoleProvisioningService', () => {
         await service.onApplicationBootstrap();
 
         expect(repo.save).toHaveBeenCalledTimes(DEFAULT_ROLES.length - 1);
-        expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledTimes(DEFAULT_ROLES.length - 1);
+        expect(roleScopeConfigService.createScopeIfMissing).toHaveBeenCalledTimes(
+            DEFAULT_ROLES.length - 1,
+        );
         for (const definition of DEFAULT_ROLES) {
             if (definition.code === failingCode) continue;
-            expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledWith(
+            expect(roleScopeConfigService.createScopeIfMissing).toHaveBeenCalledWith(
                 expect.anything(),
                 definition.code,
                 definition.accessScopeConfig,
