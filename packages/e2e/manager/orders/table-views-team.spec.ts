@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
-const trigger = (page: Page) => page.getByTestId('table-views-trigger');
+const trigger = (page: Page): Locator => page.getByTestId('table-views-trigger');
 
 async function deleteTeamView(page: Page, name: string): Promise<void> {
     await page.goto('/orders');

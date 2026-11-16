@@ -136,7 +136,7 @@ test.describe('delivery point of a staff-created order @on:manager-operator', ()
     test('a chosen point is stored, a point the client cannot use is refused, and null clears it', async () => {
         const orderId = await draftWithLine(token, ids);
         created.push(orderId);
-        const set = (tradingPointId: string | null) =>
+        const set = (tradingPointId: string | null): Promise<{ data: unknown; token?: string }> =>
             adminGql(
                 `mutation($o: ID!, $t: ID) { setDraftOrderTradingPoint(orderId: $o, tradingPointId: $t) }`,
                 { o: orderId, t: tradingPointId },
@@ -222,7 +222,10 @@ test.describe('delivery point of a staff-created order @on:manager-operator', ()
         const orderId = await draftWithLine(token, ids);
         created.push(orderId);
         await place(token, orderId, 'pickup');
-        const setDelivery = (method: string, tradingPointId: string | null) =>
+        const setDelivery = (
+            method: string,
+            tradingPointId: string | null,
+        ): Promise<{ data: unknown; token?: string }> =>
             adminGql(
                 `mutation($o: ID!, $m: OrderDeliveryMethod!, $t: ID) { setOrderDelivery(orderId: $o, method: $m, tradingPointId: $t) }`,
                 { o: orderId, m: method, t: tradingPointId },

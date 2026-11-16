@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { adminGql, postBatch, waitForRun } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
 
@@ -200,7 +200,7 @@ async function activateAllMatching(page: Page, search: string, total: number): P
     await footer.getByRole('button', { name: 'Run batch' }).click();
 
     const counters = page.getByRole('group', { name: 'Counters' });
-    const counter = (count: number, label: string) =>
+    const counter = (count: number, label: string): Locator =>
         counters.getByRole('button', { name: new RegExp(`^${count}\\s*${label}$`) });
     await expect(counter(total, 'Applied')).toBeVisible({ timeout: 120000 });
     await expect(counter(total, 'All')).toBeVisible();

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
 import { MANAGER_ACCOUNTS } from '../../fixtures/accounts';
@@ -7,7 +7,7 @@ import { setupNumber } from '../../fixtures/visibility/setups';
 
 const ROWS = '.mv-advanced-data-table__grid tbody tr';
 const SEARCH = 'Number or customer…';
-const row = (page: Page, number: string) =>
+const row = (page: Page, number: string): Locator =>
     page.locator(ROWS).filter({ has: page.getByRole('cell', { name: number, exact: true }) });
 
 interface Counts {

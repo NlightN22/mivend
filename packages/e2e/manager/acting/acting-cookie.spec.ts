@@ -23,7 +23,7 @@ let variants: Record<string, string>;
 let cookie: string;
 const actingTokens: string[] = [];
 
-const clearRealCart = () =>
+const clearRealCart = (): Promise<unknown> =>
     shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, cookie);
 
 test.beforeAll(async () => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, Locator, test, type Page } from '@playwright/test';
 import { SUPERADMIN } from '../../fixtures/accounts';
 import { restoreCategoryPlan } from '../../fixtures/visibility/categories';
 import { shopSlugs, waitForShopProduct, waitForShopSlug } from '../../helpers/category-tree';
@@ -31,7 +31,7 @@ async function openSuperadmin(browser: import('@playwright/test').Browser): Prom
     return { context, page, bodies: [] };
 }
 
-const row = (page: Page, erpId: string) =>
+const row = (page: Page, erpId: string): Locator =>
     page.getByRole('row').filter({ has: page.getByText(`cat-${erpId}`, { exact: true }) });
 
 async function search(page: Page, erpId: string): Promise<void> {

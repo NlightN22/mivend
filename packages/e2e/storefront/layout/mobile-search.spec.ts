@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
 test.use({ viewport: { width: 390, height: 800 }, isMobile: true, hasTouch: true });
 
-const trigger = (page: Page) => page.locator('.mobile-search__trigger');
-const overlay = (page: Page) => page.locator('.mobile-search__overlay');
+const trigger = (page: Page): Locator => page.locator('.mobile-search__trigger');
+const overlay = (page: Page): Locator => page.locator('.mobile-search__overlay');
 
 async function openSearch(page: Page): Promise<void> {
     await page.goto('/');

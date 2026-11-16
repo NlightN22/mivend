@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
 
 finishOrdersPlacedInEachTest();
@@ -39,7 +39,7 @@ async function openCheckout(page: Page): Promise<void> {
     await expect(page.locator('.delivery-selector__point')).toBeVisible();
 }
 
-function changeBtn(page: Page) {
+function changeBtn(page: Page): Locator {
     return page.locator('.delivery-selector__change-btn');
 }
 

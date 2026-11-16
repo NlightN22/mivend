@@ -32,18 +32,22 @@ const actingTokens: string[] = [];
 const cookies: string[] = [];
 const orderIds: string[] = [];
 
-const login = async (email = E2E_CUSTOMER.email, password = E2E_CUSTOMER.password) => {
+const login = async (
+    email = E2E_CUSTOMER.email,
+    password = E2E_CUSTOMER.password,
+): Promise<string> => {
     const c = await shopLoginCookie(email, password);
     cookies.push(c);
     return c;
 };
-const cartOf = (cookie: string) => shopGql<Cart>(CART, undefined, cookie);
-const start = async (admin = operator, counterparty = counterpartyId) => {
+const cartOf = (cookie: string): Promise<Cart> => shopGql<Cart>(CART, undefined, cookie);
+const start = async (admin = operator, counterparty = counterpartyId): Promise<string> => {
     const t = await actingToken(admin, counterparty);
     actingTokens.push(t);
     return t;
 };
-const actingCartId = async (t: string) => (await acting<Cart>(t, CART)).activeOrder?.id;
+const actingCartId = async (t: string): Promise<string | undefined> =>
+    (await acting<Cart>(t, CART)).activeOrder?.id;
 
 test.beforeAll(async () => {
     operator = await adminTokenFor(
