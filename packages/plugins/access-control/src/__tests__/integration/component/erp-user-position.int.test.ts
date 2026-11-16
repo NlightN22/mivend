@@ -1,5 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, DeleteDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    DeleteDateColumn,
+    Entity,
+    PrimaryGeneratedColumn,
+    Repository,
+} from 'typeorm';
 import type {
     EventBus,
     ListQueryBuilder,
@@ -58,7 +65,7 @@ let dataSource: DataSource;
 let erpUserService: ErpUserService;
 let service: UserEnrichmentService;
 
-const erpUsers = () => dataSource.getRepository(TestErpUser);
+const erpUsers = (): Repository<TestErpUser> => dataSource.getRepository(TestErpUser);
 
 beforeAll(async () => {
     await createTestSchema(schema);

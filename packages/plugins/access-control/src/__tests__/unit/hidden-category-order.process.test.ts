@@ -26,7 +26,7 @@ function setup(hiddenProductIds: number[]): ReturnType<typeof vi.fn> {
     return query;
 }
 
-const run = (from: string, to: string, ctx: RequestContext) =>
+const run = (from: string, to: string, ctx: RequestContext): Promise<string | undefined> =>
     orderProcess.onTransitionStart(from as never, to as never, {
         ctx,
         order: { id: 1 } as Order,

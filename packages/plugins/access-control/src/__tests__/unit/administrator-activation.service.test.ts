@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type {
     AdministratorService,
     ListQueryBuilder,
@@ -142,7 +142,14 @@ describe('AdministratorActivationService', () => {
     });
 
     describe('findAllWithStatus', () => {
-        function mockQb() {
+        interface MockQbResult {
+            alias: string;
+            withDeleted: Mock;
+            andWhere: Mock;
+            getManyAndCount: Mock<[], Promise<(number | { id: string }[])[]>>;
+        }
+
+        function mockQb(): MockQbResult {
             const qb = {
                 alias: 'administrator',
                 withDeleted: vi.fn(),

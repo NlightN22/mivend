@@ -1,11 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type { ChannelService, ProcessContext, TransactionalConnection } from '@vendure/core';
 
 import { RoleProvisioningService } from '../../role-provisioning.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 import { DEFAULT_ROLES } from '../../default-roles';
+interface CreateMockRepoResult {
+    findOne: Mock;
+    create: Mock<[x: unknown], unknown>;
+    save: Mock<[x: unknown], Promise<unknown>>;
+}
 
-function createMockRepo() {
+function createMockRepo(): CreateMockRepoResult {
     return {
         findOne: vi.fn(),
         create: vi.fn((x: unknown) => x),

@@ -1,10 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { ChannelService, ProcessContext } from '@vendure/core';
 
 import { DefaultChannelCurrencyBootstrapService } from '../../default-channel-currency-bootstrap.service';
 
 describe('DefaultChannelCurrencyBootstrapService', () => {
-    function build(current: string, code: string | undefined, isWorker = false) {
+    function build(
+        current: string,
+        code: string | undefined,
+        isWorker = false,
+    ): { service: DefaultChannelCurrencyBootstrapService; update: Mock } {
         const update = vi.fn();
         const service = new DefaultChannelCurrencyBootstrapService(
             {

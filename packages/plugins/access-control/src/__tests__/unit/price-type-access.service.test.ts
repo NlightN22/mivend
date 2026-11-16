@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ForbiddenError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -9,12 +9,20 @@ const rows = [
     { id: '2', code: 'wholesale', externalId: 'e2', visibility: 'customer' },
     { id: '3', code: 'purchase', externalId: 'e3', visibility: 'confidential' },
 ];
+interface MakeResult {
+    ctx: RequestContext;
+    service: PriceTypeAccessService;
+    query: Mock<
+        [],
+        Promise<{ id: string; code: string; externalId: string; visibility: string }[]>
+    >;
+}
 
 function make(opts: {
     permissions?: string[];
     branchId?: string | null;
     settings?: { defaultPriceTypeId: string; visiblePriceTypeIds?: string[] | null } | null;
-}) {
+}): MakeResult {
     const ctx = {
         userHasPermissions: (p: string[]) => p.every(x => (opts.permissions ?? []).includes(x)),
     } as unknown as RequestContext;

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ForbiddenError } from '@vendure/core';
 import type { AdministratorService, RequestContext } from '@vendure/core';
 
@@ -9,7 +9,10 @@ import type { AccessScope } from '../../types';
 
 const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
-function build(maxScope: 'own' | 'department' | 'all', granted: string[]) {
+function build(
+    maxScope: 'own' | 'department' | 'all',
+    granted: string[],
+): { service: AccessScopeService; reader: { activeManagerIds: Mock } } {
     const reader = { activeManagerIds: vi.fn().mockResolvedValue(granted) };
     const service = new AccessScopeService(
         {
@@ -24,8 +27,13 @@ function build(maxScope: 'own' | 'department' | 'all', granted: string[]) {
     );
     return { service, reader };
 }
+interface RowResult {
+    assignedManagerId: string | null;
+    branchId: string | null;
+    departmentId: null;
+}
 
-const row = (assignedManagerId: string | null, branchId: string | null) => ({
+const row = (assignedManagerId: string | null, branchId: string | null): RowResult => ({
     assignedManagerId,
     branchId,
     departmentId: null,

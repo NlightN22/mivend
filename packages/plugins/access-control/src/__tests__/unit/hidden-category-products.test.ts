@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { Order, RequestContext } from '@vendure/core';
 import type { Injector } from '@vendure/core';
 
@@ -11,7 +11,7 @@ import {
 
 const shopCtx = { apiType: 'shop' } as unknown as RequestContext;
 const adminCtx = { apiType: 'admin' } as unknown as RequestContext;
-const hiddenIds = (...ids: number[]) => ({
+const hiddenIds = (...ids: number[]): { hiddenProductIds: Mock } => ({
     hiddenProductIds: vi.fn().mockResolvedValue(new Set(ids.map(String))),
 });
 
@@ -87,7 +87,7 @@ describe('HiddenCategoryOrderInterceptor', () => {
             hidden: ReturnType<typeof hiddenIds>,
             ctx: RequestContext,
             quantity: number,
-        ) =>
+        ): Promise<string | void> =>
             build(hidden).willAdjustOrderLine(ctx, {} as Order, {
                 orderLine: line as never,
                 quantity,
@@ -118,8 +118,16 @@ describe('HiddenCategoryOrderInterceptor', () => {
 });
 
 describe('ShopVisibleProductsResolver', () => {
-    const product = (id: number, enabled = true) => ({ id, enabled, facetValues: [] });
-    const build = (items: ReturnType<typeof product>[], hidden: number[]) => {
+    const product = (
+        id: number,
+        enabled = true,
+    ): { id: number; enabled: boolean; facetValues: never[] } => ({ id, enabled, facetValues: [] });
+    interface BuildResult {
+        productService: { findAll: Mock; findOne: Mock; findOneBySlug: Mock };
+        resolver: ShopVisibleProductsResolver;
+    }
+
+    const build = (items: ReturnType<typeof product>[], hidden: number[]): BuildResult => {
         const productService = {
             findAll: vi.fn().mockResolvedValue({ items, totalItems: items.length }),
             findOne: vi.fn().mockResolvedValue(items[0]),

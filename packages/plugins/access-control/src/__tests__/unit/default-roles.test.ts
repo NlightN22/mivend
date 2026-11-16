@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_ROLES } from '../../default-roles';
 
-const byCode = (code: string) => DEFAULT_ROLES.find(r => r.code === code)?.permissions ?? [];
+const byCode = (code: string): string[] =>
+    DEFAULT_ROLES.find(r => r.code === code)?.permissions ?? [];
 
 describe('default roles: finance figures', () => {
     it('every role that reads counterparties also reads their balance, turnover and credit', () => {

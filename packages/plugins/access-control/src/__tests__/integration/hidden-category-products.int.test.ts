@@ -122,7 +122,11 @@ async function applyVisibility(tree: Cat[]): Promise<void> {
     }
 }
 
-async function addProduct(name: string, category: string | null, on: 'product' | 'variant') {
+async function addProduct(
+    name: string,
+    category: string | null,
+    on: 'product' | 'variant',
+): Promise<void> {
     const product = await dataSource.getRepository(TProduct).save({});
     productIds.set(name, product.id);
     const variant = await dataSource.getRepository(TVariant).save({

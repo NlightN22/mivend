@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type { ListQueryBuilder, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ErpUserService } from '../../erp-user.service';
@@ -12,8 +12,13 @@ function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
         find: vi.fn(),
     } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
+interface MockQbResult {
+    alias: string;
+    andWhere: Mock;
+    getManyAndCount: Mock<[], Promise<(number | unknown[])[]>>;
+}
 
-function mockQb(rows: unknown[], total: number) {
+function mockQb(rows: unknown[], total: number): MockQbResult {
     const qb = {
         alias: 'erpuser',
         andWhere: vi.fn(),
