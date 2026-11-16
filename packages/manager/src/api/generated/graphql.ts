@@ -547,6 +547,7 @@ export type BooleanStructFieldConfig = StructField & {
 export type Branch = {
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
+    isDefault: Scalars['Boolean']['output'];
     name: Scalars['String']['output'];
 };
 
@@ -3372,6 +3373,7 @@ export type GlobalSettings = {
 export type GlobalSettingsCustomFields = {
     autoReserveOnPlacement: Maybe<Scalars['Boolean']['output']>;
     defaultBranchId: Maybe<Scalars['String']['output']>;
+    defaultLanguage: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
     settlementRetentionMonths: Maybe<Scalars['Int']['output']>;
@@ -4767,6 +4769,7 @@ export type Mutation = {
     removeShippingMethodsFromChannel: Array<ShippingMethod>;
     /** Removes StockLocations from the specified Channel */
     removeStockLocationsFromChannel: Array<StockLocation>;
+    renameBranch: Branch;
     /** Asks Integration Service to re-publish dead-lettered inbox entities (1 to 100 row ids); replayed rows become resolved. Needs RecoverIntegrationEvents. */
     replayFailedIntegrationInbox: Array<IntegrationInboxReplayResult>;
     /** Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181). */
@@ -4806,6 +4809,7 @@ export type Mutation = {
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
+    setDefaultBranch: Branch;
     setDepartmentBranch: Scalars['Boolean']['output'];
     setDiscountLimit: DiscountLimit;
     /** Sets the billing address for a draft Order */
@@ -5703,6 +5707,11 @@ export type MutationRemoveStockLocationsFromChannelArgs = {
     input: RemoveStockLocationsFromChannelInput;
 };
 
+export type MutationRenameBranchArgs = {
+    branchId: Scalars['ID']['input'];
+    name: Scalars['String']['input'];
+};
+
 export type MutationReplayFailedIntegrationInboxArgs = {
     ids: Array<Scalars['ID']['input']>;
 };
@@ -5824,6 +5833,10 @@ export type MutationSetCustomerForDraftOrderArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
     input?: InputMaybe<CreateCustomerInput>;
     orderId: Scalars['ID']['input'];
+};
+
+export type MutationSetDefaultBranchArgs = {
+    branchId: Scalars['ID']['input'];
 };
 
 export type MutationSetDepartmentBranchArgs = {
@@ -11175,7 +11188,7 @@ export type UpdateFacetValueInput = {
 
 export type UpdateGlobalSettingsCustomFieldsInput = {
     autoReserveOnPlacement?: InputMaybe<Scalars['Boolean']['input']>;
-    defaultBranchId?: InputMaybe<Scalars['String']['input']>;
+    defaultLanguage?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
     settlementRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
@@ -14724,6 +14737,10 @@ export type SignInCaptchaRequirementQuery = {
     };
 };
 
+export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SiteDefaultLanguageQuery = { siteDefaultLanguage: string | null };
+
 export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SystemHealthChecklistQuery = {
@@ -15163,10 +15180,6 @@ export type UnsortedAdministratorsQuery = {
         }>;
     };
 };
-
-export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
-
-export type SiteDefaultLanguageQuery = { siteDefaultLanguage: string | null };
 
 export class TypedDocumentString<TResult, TVariables>
     extends String
@@ -19012,6 +19025,14 @@ export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
     SignInCaptchaRequirementQuery,
     SignInCaptchaRequirementQueryVariables
 >;
+export const SiteDefaultLanguageDocument = new TypedDocumentString(`
+    query SiteDefaultLanguage {
+  siteDefaultLanguage
+}
+    `) as unknown as TypedDocumentString<
+    SiteDefaultLanguageQuery,
+    SiteDefaultLanguageQueryVariables
+>;
 export const SystemHealthChecklistDocument = new TypedDocumentString(`
     query SystemHealthChecklist {
   systemHealthChecklist {
@@ -19491,13 +19512,4 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UnsortedAdministratorsQuery,
     UnsortedAdministratorsQueryVariables
->;
-
-export const SiteDefaultLanguageDocument = new TypedDocumentString(`
-    query SiteDefaultLanguage {
-  siteDefaultLanguage
-}
-    `) as unknown as TypedDocumentString<
-    SiteDefaultLanguageQuery,
-    SiteDefaultLanguageQueryVariables
 >;

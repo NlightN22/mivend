@@ -3147,6 +3147,8 @@ export enum Permission {
     ReadCustomerGroup = 'ReadCustomerGroup',
     /** Grants permission to read DashboardGlobalViews */
     ReadDashboardGlobalViews = 'ReadDashboardGlobalViews',
+    /** See powers of attorney whose contract the ERP deleted (marked as such); without it those rows are hidden from the list (#333) */
+    ReadDeletedContractPowerOfAttorney = 'ReadDeletedContractPowerOfAttorney',
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     ReadEntityHistory = 'ReadEntityHistory',
     /** Grants permission to read Facet */
@@ -4842,6 +4844,10 @@ export type SignInCaptchaRequirementQuery = {
     };
 };
 
+export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SiteDefaultLanguageQuery = { siteDefaultLanguage?: string | null };
+
 export type TwoFactorStatusQueryVariables = Exact<{ [key: string]: never }>;
 
 export type TwoFactorStatusQuery = {
@@ -6183,10 +6189,6 @@ export type OrderStatusesQuery = {
     }>;
 };
 
-export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
-
-export type SiteDefaultLanguageQuery = { siteDefaultLanguage?: string | null };
-
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -6469,6 +6471,14 @@ export const SignInCaptchaRequirementDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SignInCaptchaRequirementQuery,
     SignInCaptchaRequirementQueryVariables
+>;
+export const SiteDefaultLanguageDocument = new TypedDocumentString(`
+    query SiteDefaultLanguage {
+  siteDefaultLanguage
+}
+    `) as unknown as TypedDocumentString<
+    SiteDefaultLanguageQuery,
+    SiteDefaultLanguageQueryVariables
 >;
 export const TwoFactorStatusDocument = new TypedDocumentString(`
     query TwoFactorStatus {
@@ -7911,12 +7921,3 @@ export const OrderStatusesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
-
-export const SiteDefaultLanguageDocument = new TypedDocumentString(`
-    query SiteDefaultLanguage {
-  siteDefaultLanguage
-}
-    `) as unknown as TypedDocumentString<
-    SiteDefaultLanguageQuery,
-    SiteDefaultLanguageQueryVariables
->;
