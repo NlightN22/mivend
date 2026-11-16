@@ -158,10 +158,15 @@ interface MailItem {
     subject: string;
 }
 
+// Mails carry a "[<domain>] " prefix naming the originating portal.
+function hasSubject(actual: string, subject: string): boolean {
+    return actual === subject || actual.endsWith(`] ${subject}`);
+}
+
 async function mailFiles(url: string, recipient: string, subject: string): Promise<string[]> {
     const list = (await (await fetch(`${url}/mailbox/list`)).json()) as MailItem[];
     return list
-        .filter(item => item.recipient === recipient && item.subject === subject)
+        .filter(item => item.recipient === recipient && hasSubject(item.subject, subject))
         .map(item => item.fileName);
 }
 
