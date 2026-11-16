@@ -416,7 +416,7 @@ interchangeable id spaces:
   `Administrator.customFields.branchId` and `Counterparty.branchId` are written only by
   `BranchAssignmentService` (see "Automatic branch assignment (#65)" below), never from a raw ERP id.
   An order's/proforma invoice's branch is resolved at read time (`TradingPointService.resolveServicingBranchId`):
-  the point's `servicingBranchId`, else the counterparty's `branchId`, else the global default branch (#198).
+  the point's `servicingBranchId`, else the counterparty's `branchId`; an order, proforma invoice or payment with neither is hidden from every `'department'` scope and visible only to scope `all` (#286).
 - **Unrelated naming collision, don't confuse the two**: `docs/architecture.md` also uses the
   word "Branch" for a completely different concept — a **deployed server instance**
   (`INSTANCE_TYPE=branch`, the "Central Hub / Branch Instance" topology). That has nothing to do
@@ -564,7 +564,7 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   what a branch-scoped caller sees.
 - **An order's branch is resolved at read time (#263)**, never from its placement-time
   `customFieldsBranchid` snapshot and with no `IS NULL` carve-out: the order's trading point
-  `servicingBranchId`, else its counterparty's `branchId`, else the global default branch. A
+  `servicingBranchId`, else its counterparty's `branchId`; with neither, the order is visible only to scope `all` (#286). A
   `'department'` scope sees orders whose resolved branch equals `scope.branchId`, plus own and
   granted managers' clients. External (ERP) orders have no snapshot, and a counterparty that moves
   branch takes its orders along. Proforma invoices (and payments and payment reconciliation issues,
@@ -572,7 +572,7 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   proforma without an order resolves via its counterparty. `OrderVisibilityService`, the reservation
   reconciliation issue list and `ProformaInvoiceVisibilityService` share `readTimeBranchClause`. `TradingPoint.servicingBranchId` defaults to the
   counterparty's `branchId` at creation and is overridable per point for chain accounts.
-  With no default branch set the chain ends in NULL and such orders are hidden from every branch scope.
+  The default branch is not part of this chain (#286); it stays a fallback for guests and branch-less customers (`docs/pricing.md`).
   The snapshot is still written and read by stock location, MOQ, reservation and sync code; only scope ignores it.
 - **The preferred trading point is self-healing, and reading it can write.**
   `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`

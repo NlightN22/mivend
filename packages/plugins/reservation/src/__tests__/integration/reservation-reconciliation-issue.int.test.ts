@@ -55,7 +55,6 @@ beforeAll(async () => {
         connectionShim,
         { create: async () => ({}) } as never,
         { resolveOrderScope: async () => ({ kind: 'all' }) } as never,
-        { getGlobalDefaultBranchId: async () => null } as never,
     );
 });
 

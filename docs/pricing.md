@@ -34,6 +34,16 @@ The default branch and its `BranchSettings` are bootstrapped by `plugin-access-c
 `GlobalSettings.defaultBranchId` if empty) and `DEFAULT_PRICE_TYPE_CODE` picks the default price
 type by code. Idempotent, never overrides admin-set values. If the price type has not synced yet
 there is no default until the next restart (the lookup is retried on every bootstrap).
+Once `defaultBranchId` is set, bootstrap creates and renames no branch: the administrator owns them
+from then on, so renaming a branch or changing `BOOTSTRAP_BRANCH_NAMES` afterwards adds nothing (#286).
+
+Default branch (#286): the fallback for guests and customers whose counterparty has no branch (price
+type, warehouse and stock come from its `BranchSettings`), for staff without branch settings, and for
+the branch of an order placed for a counterparty without one. It is not part of the read-time
+order/proforma visibility chain (see `docs/access-control.md`). SuperAdmin renames branches
+(`renameBranch`, the `erpId` never changes) and moves the default (`setDefaultBranch`) on the dashboard
+Branches page; it can be moved but never cleared, and `defaultBranchId` is not writable through
+`updateGlobalSettings`.
 Branch is mivend's own entity (see docs/access-control.md), never sent by the ERP over Kafka, so
 bootstrap-by-name is the source of truth for branches on Kafka-only contours.
 The default channel currency is set from `DEFAULT_CURRENCY_CODE` (default `RUB`) by the same plugin; Vendure creates it as USD and `ChannelService.update` re-currencies its variant prices.

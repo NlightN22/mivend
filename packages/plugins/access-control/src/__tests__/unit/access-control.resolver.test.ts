@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
-import { AccessControlResolver, AdministratorStatusResolver } from '../../access-control.resolver';
+import { Permission } from '@vendure/common/lib/generated-types';
+
+import {
+    AccessControlResolver,
+    AdministratorStatusResolver,
+    BranchFieldResolver,
+} from '../../access-control.resolver';
 import { AdministratorActivationService } from '../../administrator-activation.service';
 import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
 import { BranchService } from '../../branch.service';
@@ -154,5 +160,47 @@ describe('AdministratorStatusResolver.isActive', () => {
 
     it('is false when deletedAt is set', () => {
         expect(resolver.isActive({ deletedAt: new Date() } as never)).toBe(false);
+    });
+});
+
+describe('branch mutations (#286)', () => {
+    const PERMISSIONS_KEY = '__permissions__';
+
+    it.each(['createBranch', 'renameBranch', 'setDefaultBranch'] as const)(
+        '%s is for SuperAdmin only',
+        name => {
+            const permissions = Reflect.getMetadata(
+                PERMISSIONS_KEY,
+                AccessControlResolver.prototype[name],
+            );
+            expect(permissions).toEqual([Permission.SuperAdmin]);
+        },
+    );
+
+    it('delegates to BranchService and resolves isDefault per branch', async () => {
+        const ctx = {} as RequestContext;
+        const branchService = {
+            rename: vi.fn(async () => ({ id: 1 })),
+            setDefault: vi.fn(async () => ({ id: 2 })),
+            isDefault: vi.fn(async () => true),
+        };
+        const resolver = new AccessControlResolver(
+            {} as RoleScopeConfigService,
+            {} as DepartmentService,
+            branchService as unknown as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
+            {} as CreditTermLimitService,
+            {} as AdministratorProvisioningService,
+            {} as AdministratorActivationService,
+            {} as TeamAdministratorService,
+        );
+        await resolver.renameBranch(ctx, { branchId: '1', name: 'North' });
+        await resolver.setDefaultBranch(ctx, { branchId: '2' });
+        expect(branchService.rename).toHaveBeenCalledWith(ctx, '1', 'North');
+        expect(branchService.setDefault).toHaveBeenCalledWith(ctx, '2');
+        const field = new BranchFieldResolver(branchService as unknown as BranchService);
+        expect(await field.isDefault(ctx, { id: 2 } as never)).toBe(true);
+        expect(branchService.isDefault).toHaveBeenCalledWith(ctx, 2);
     });
 });

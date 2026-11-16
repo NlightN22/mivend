@@ -89,6 +89,27 @@ export class AccessControlResolver {
         return this.branchService.createManual(ctx, args.name);
     }
 
+    @Transaction()
+    @Mutation()
+    @Allow(Permission.SuperAdmin)
+    async renameBranch(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { branchId: string; name: string },
+    ): Promise<Branch> {
+        return this.branchService.rename(ctx, args.branchId, args.name);
+    }
+
+    // The fallback for guests and customers without a branch (#286); it can be moved, never cleared.
+    @Transaction()
+    @Mutation()
+    @Allow(Permission.SuperAdmin)
+    async setDefaultBranch(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { branchId: string },
+    ): Promise<Branch> {
+        return this.branchService.setDefault(ctx, args.branchId);
+    }
+
     // Curation source list for the Warehouse↔Branch admin surface (issue #66) — view-only for
     // any authenticated administrator, same as departments/branches above.
     @Query()
@@ -308,5 +329,15 @@ export class AdministratorStatusResolver {
     @ResolveField()
     isActive(@Parent() administrator: Administrator): boolean {
         return administrator.deletedAt == null;
+    }
+}
+
+@Resolver('Branch')
+export class BranchFieldResolver {
+    constructor(private branchService: BranchService) {}
+
+    @ResolveField()
+    async isDefault(@Ctx() ctx: RequestContext, @Parent() branch: Branch): Promise<boolean> {
+        return this.branchService.isDefault(ctx, branch.id);
     }
 }

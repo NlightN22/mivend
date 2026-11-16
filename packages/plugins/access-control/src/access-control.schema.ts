@@ -31,6 +31,7 @@ export const adminApiSchema: DocumentNode = gql`
         id: ID!
         erpId: String!
         name: String!
+        isDefault: Boolean!
     }
 
     type Warehouse {
@@ -205,6 +206,8 @@ export const adminApiSchema: DocumentNode = gql`
             proformaPaymentTermDays: Int
         ): BranchSettings!
         createBranch(name: String!): Branch!
+        renameBranch(branchId: ID!, name: String!): Branch!
+        setDefaultBranch(branchId: ID!): Branch!
         createAdministratorFromErpUser(erpId: String!): Administrator!
         resendAdministratorPasswordReset(administratorId: ID!): Boolean!
         setAdministratorActive(administratorId: ID!, isActive: Boolean!): Boolean!

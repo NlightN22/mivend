@@ -76,9 +76,7 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveProformaInvoiceScope = async () => scope;
-    service = new ProformaInvoiceVisibilityService(connection, accessScope, {
-        getGlobalDefaultBranchId: async () => 'branch-default',
-    } as never);
+    service = new ProformaInvoiceVisibilityService(connection, accessScope);
 });
 
 afterAll(async () => {

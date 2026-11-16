@@ -10,7 +10,7 @@ import {
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
 import { getManyBounded, getPageAndCount, likeTerm, normalizeDocumentNumber } from 'shared';
-import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
+import { AccessScopeService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { orderBranchClause } from './order-branch-clause';
 import { orderCounterpartyJoinSql } from './order-counterparty-join';
@@ -23,7 +23,6 @@ export class OrderVisibilityService {
     constructor(
         private listQueryBuilder: ListQueryBuilder,
         private accessScopeService: AccessScopeService,
-        private branchSettingsService: BranchSettingsService,
     ) {}
 
     // Split out so plugin-acquiring can add its payment-status filter before executing.
@@ -101,12 +100,7 @@ export class OrderVisibilityService {
                 break;
             case 'department': {
                 // Never the placement snapshot: external orders have none and counterparties move (#263).
-                const branch = orderBranchClause(
-                    qb.alias,
-                    'counterparty',
-                    scope.branchId ?? null,
-                    await this.branchSettingsService.getGlobalDefaultBranchId(ctx),
-                );
+                const branch = orderBranchClause(qb.alias, 'counterparty', scope.branchId ?? null);
                 const managers = this.accessScopeService.managerClause(scope, 'counterparty');
                 qb.andWhere(`(${branch.sql}${managers ? ` OR ${managers.sql}` : ''})`, {
                     ...branch.params,

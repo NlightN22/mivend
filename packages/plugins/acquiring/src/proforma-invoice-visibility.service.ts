@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { clampSkip, clampTake, documentNumberSearchTerm, normalizeDocumentNumber } from 'shared';
-import {
-    AccessScopeService,
-    AccessScope,
-    BranchSettingsService,
-} from '@mivend/plugin-access-control';
+import { AccessScopeService, AccessScope } from '@mivend/plugin-access-control';
 import { proformaBranchClause } from '@mivend/plugin-erp-order';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
@@ -16,14 +12,13 @@ import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 import { applyListFilter, applyListSort, likeTerm } from './proforma-invoice-list-query';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
-export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
+export type ProformaInvoiceScope = AccessScope;
 
 @Injectable()
 export class ProformaInvoiceVisibilityService {
     constructor(
         private connection: TransactionalConnection,
         private accessScopeService: AccessScopeService,
-        private branchSettingsService: BranchSettingsService,
     ) {}
 
     async findVisible(
@@ -140,12 +135,7 @@ export class ProformaInvoiceVisibilityService {
     // Shared by PaymentVisibilityService, which joins PaymentAttempt -> ProformaInvoice and needs the
     // exact same counterparty scope resolved/applied to the joined proforma invoice row, not duplicated.
     async resolveScope(ctx: RequestContext): Promise<ProformaInvoiceScope> {
-        const scope = await this.accessScopeService.resolveProformaInvoiceScope(ctx);
-        const defaultBranchId =
-            scope.kind === 'department'
-                ? await this.branchSettingsService.getGlobalDefaultBranchId(ctx)
-                : null;
-        return { ...scope, defaultBranchId };
+        return this.accessScopeService.resolveProformaInvoiceScope(ctx);
     }
 
     // Generic over the entity type so PaymentVisibilityService can reuse it on a PaymentAttempt query.
@@ -168,7 +158,6 @@ export class ProformaInvoiceVisibilityService {
                     tradingPointAlias,
                     counterpartyAlias,
                     scope.branchId ?? null,
-                    scope.defaultBranchId,
                 );
                 const managers = this.accessScopeService.managerClause(scope, counterpartyAlias);
                 qb.andWhere(`(${branch.sql}${managers ? ` OR ${managers.sql}` : ''})`, {

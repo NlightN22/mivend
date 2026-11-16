@@ -15,6 +15,7 @@ import { ACCESS_CONTROL_PLUGIN_OPTIONS, AccessControlPluginOptions, loggerCtx } 
 
 const BOOTSTRAP_ERP_ID_PREFIX = 'mivend-bootstrap:';
 
+// Once a default is set the administrator owns the branches (#286): bootstrap never creates or renames them.
 // Issue #161: contours fed only by real Kafka data are never seeded, so the guest price fallback
 // (#70) needs the default branch and its price type to exist without manual admin setup.
 @Injectable()
@@ -33,8 +34,10 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         if (this.processContext.isWorker || names.length === 0) return;
         try {
             const ctx = RequestContext.empty();
-            const branchIds = await this.ensureBranches(ctx, names);
-            const defaultBranchId = await this.ensureDefaultBranch(ctx, branchIds[0]);
+            const existing = await this.branchSettingsService.getGlobalDefaultBranchId(ctx);
+            const defaultBranchId =
+                existing ??
+                (await this.createDefaultBranch(ctx, await this.ensureBranches(ctx, names)));
             await this.ensureBranchSettings(ctx, defaultBranchId);
         } catch (err) {
             Logger.error(
@@ -57,14 +60,12 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         return ids;
     }
 
-    private async ensureDefaultBranch(ctx: RequestContext, firstBranchId: string): Promise<string> {
-        const existing = await this.branchSettingsService.getGlobalDefaultBranchId(ctx);
-        if (existing) return existing;
+    private async createDefaultBranch(ctx: RequestContext, branchIds: string[]): Promise<string> {
         await this.globalSettingsService.updateSettings(ctx, {
-            customFields: { defaultBranchId: firstBranchId },
+            customFields: { defaultBranchId: branchIds[0] },
         });
-        Logger.info(`Set default branch id=${firstBranchId}`, loggerCtx);
-        return firstBranchId;
+        Logger.info(`Set default branch id=${branchIds[0]}`, loggerCtx);
+        return branchIds[0];
     }
 
     private async ensureBranchSettings(ctx: RequestContext, branchId: string): Promise<void> {

@@ -106,7 +106,6 @@ beforeAll(async () => {
             applyOwnCounterpartyFilter: realScope.applyOwnCounterpartyFilter.bind(realScope),
             managerClause: realScope.managerClause.bind(realScope),
         } as unknown as AccessScopeService,
-        { getGlobalDefaultBranchId: async () => 'branch-default' } as never,
     );
     service = new OrdersAttentionService(visibility, {
         findPendingPriceAdjustmentOrderIds: async () => pendingIds,

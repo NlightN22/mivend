@@ -95,9 +95,7 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveProformaInvoiceScope = async () => scope;
-    const proformaVisibility = new ProformaInvoiceVisibilityService(connection, accessScope, {
-        getGlobalDefaultBranchId: async () => 'branch-default',
-    } as never);
+    const proformaVisibility = new ProformaInvoiceVisibilityService(connection, accessScope);
     service = new PaymentVisibilityService(connection, proformaVisibility);
 });
 

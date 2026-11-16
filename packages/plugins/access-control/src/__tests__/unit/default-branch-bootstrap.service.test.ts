@@ -83,6 +83,28 @@ describe('DefaultBranchBootstrapService', () => {
         expect(settingsRepo.save).not.toHaveBeenCalled();
     });
 
+    it('creates no branch once a default is set, so a renamed or newly listed name never adds one (#286)', async () => {
+        getGlobalDefaultBranchId.mockResolvedValue('42');
+        await build({
+            branchNames: ['Renamed in env', 'Branch B'],
+            defaultPriceTypeCode: 'RETAIL',
+        }).onApplicationBootstrap();
+        expect(branchRepo.findOne).not.toHaveBeenCalled();
+        expect(branchRepo.save).not.toHaveBeenCalled();
+        expect(updateSettings).not.toHaveBeenCalled();
+    });
+
+    it('still creates the default branch settings once the price type exists', async () => {
+        getGlobalDefaultBranchId.mockResolvedValue('42');
+        await build({
+            branchNames: ['Branch A'],
+            defaultPriceTypeCode: 'RETAIL',
+        }).onApplicationBootstrap();
+        expect(settingsRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ branchId: '42', defaultPriceTypeId: '3' }),
+        );
+    });
+
     it('reuses an already-bootstrapped branch on re-run (idempotent)', async () => {
         branchRepo.findOne.mockResolvedValue({ id: 7 });
         await build({ branchNames: ['Branch A', 'Branch B'] }).onApplicationBootstrap();

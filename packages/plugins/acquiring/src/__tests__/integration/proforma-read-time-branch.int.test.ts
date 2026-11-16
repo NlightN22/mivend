@@ -70,9 +70,7 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveProformaInvoiceScope = async () => scope;
-    service = new ProformaInvoiceVisibilityService(connection, accessScope, {
-        getGlobalDefaultBranchId: async () => 'branch-default',
-    } as never);
+    service = new ProformaInvoiceVisibilityService(connection, accessScope);
 });
 
 afterAll(async () => {
@@ -126,8 +124,10 @@ describe('proforma branch resolved at read time for department scope (#263, real
         expect(await visibleFor('branch-a')).toEqual(['PI-CONTRACT', 'PI-POINT-NONE']);
     });
 
-    it('falls back to the global default branch when neither is set', async () => {
-        expect(await visibleFor('branch-default')).toEqual(['PI-DEFAULT']);
+    it('hides a proforma whose branch cannot be determined from every department branch (#286)', async () => {
+        expect(await visibleFor('branch-default')).toEqual([]);
+        expect(await visibleFor('branch-a')).not.toContain('PI-DEFAULT');
+        expect(await visibleFor('branch-b')).not.toContain('PI-DEFAULT');
     });
 
     it('a proforma moves with its counterparty, ignoring the issue-time snapshot', async () => {

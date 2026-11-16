@@ -98,7 +98,6 @@ beforeAll(async () => {
             applyOwnCounterpartyFilter: realScope.applyOwnCounterpartyFilter.bind(realScope),
             managerClause: realScope.managerClause.bind(realScope),
         } as unknown as AccessScopeService,
-        { getGlobalDefaultBranchId: async () => 'branch-default' } as never,
     );
 });
 
@@ -170,8 +169,16 @@ describe('order branch resolved at read time for department scope (#263, real Po
         ]);
     });
 
-    it('falls back to the global default branch when neither is set', async () => {
-        expect(await visibleFor('branch-default')).toEqual(['NONE-DEFAULT']);
+    it('hides an order whose branch cannot be determined from every department branch (#286)', async () => {
+        expect(await visibleFor('branch-default')).toEqual([]);
+        expect(await visibleFor('branch-a')).not.toContain('NONE-DEFAULT');
+        expect(await visibleFor('branch-b')).not.toContain('NONE-DEFAULT');
+    });
+
+    it('scope all still lists an order whose branch cannot be determined (#286)', async () => {
+        scope = { kind: 'all' } as AccessScope;
+        const codes = (await service.findVisible(ctx)).items.map(o => o.code);
+        expect(codes).toContain('NONE-DEFAULT');
     });
 
     it('hides a null-snapshot order of a foreign-branch counterparty', async () => {

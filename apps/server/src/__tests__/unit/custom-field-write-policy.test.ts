@@ -103,4 +103,12 @@ describe('client-writable custom fields (#266)', () => {
             expect(defined, entity).toEqual(expect.arrayContaining([...names]));
         }
     });
+
+    it('keeps the default branch out of the client API: it moves only through setDefaultBranch (#286)', () => {
+        const field = customFields.GlobalSettings?.find(f => f.name === 'defaultBranchId');
+        expect(CLIENT_WRITABLE_CUSTOM_FIELDS.GlobalSettings).not.toContain('defaultBranchId');
+        expect(applyCustomFieldWritePolicy(customFields).GlobalSettings).toContainEqual(
+            expect.objectContaining({ name: field?.name, readonly: true }),
+        );
+    });
 });

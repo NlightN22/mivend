@@ -82,9 +82,7 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveOrderScope = async () => scope;
-    service = new ReservationReconciliationIssueService(connection, {} as never, accessScope, {
-        getGlobalDefaultBranchId: async () => 'branch-a',
-    } as never);
+    service = new ReservationReconciliationIssueService(connection, {} as never, accessScope);
 });
 
 afterAll(async () => {

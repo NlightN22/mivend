@@ -97,7 +97,6 @@ beforeAll(async () => {
     service = new OrderVisibilityService(
         listQueryBuilder as unknown as ListQueryBuilder,
         accessScope as unknown as AccessScopeService,
-        { getGlobalDefaultBranchId: async () => null } as never,
     );
 });
 

@@ -16,7 +16,6 @@ export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly str
     // Staff-edited system settings.
     GlobalSettings: [
         'organizationSplitEnabled',
-        'defaultBranchId',
         'settlementRetentionMonths',
         'deferredOrderMaxAgeDays',
         'autoReserveOnPlacement',

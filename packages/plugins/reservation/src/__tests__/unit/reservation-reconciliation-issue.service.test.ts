@@ -29,7 +29,6 @@ describe('ReservationReconciliationIssueService', () => {
             connection as unknown as TransactionalConnection,
             notificationService as never,
             { resolveOrderScope: vi.fn(async () => ({ kind: 'all' })) } as never,
-            { getGlobalDefaultBranchId: vi.fn(async () => null) } as never,
         );
     });
 
@@ -164,7 +163,6 @@ describe('ReservationReconciliationIssueService', () => {
                 connection as unknown as TransactionalConnection,
                 notificationService as never,
                 accessScopeService as never,
-                { getGlobalDefaultBranchId: vi.fn(async () => 'branch-default') } as never,
             );
         });
 
@@ -206,10 +204,7 @@ describe('ReservationReconciliationIssueService', () => {
             expect(sql).not.toContain('customFieldsBranchid');
             expect(sql).not.toContain('IS NULL');
             expect(sql).not.toContain('departmentId');
-            expect(params).toEqual({
-                branchId: 'branch-1',
-                orderDefaultBranchId: 'branch-default',
-            });
+            expect(params).toEqual({ branchId: 'branch-1' });
         });
     });
 });

@@ -53,7 +53,6 @@ describe('OrderVisibilityService', () => {
         service = new OrderVisibilityService(
             listQueryBuilder as unknown as ListQueryBuilder,
             accessScopeService as unknown as AccessScopeService,
-            { getGlobalDefaultBranchId: vi.fn(async () => 'branch-default') } as never,
         );
     });
 
@@ -87,7 +86,7 @@ describe('OrderVisibilityService', () => {
         expect(sql).not.toContain('customFieldsBranchid');
         expect(sql).not.toContain('IS NULL');
         expect(sql).not.toContain('departmentId');
-        expect(params).toEqual({ branchId: 'branch-1', orderDefaultBranchId: 'branch-default' });
+        expect(params).toEqual({ branchId: 'branch-1' });
     });
 
     it('applies no extra filter for "all" scope', async () => {

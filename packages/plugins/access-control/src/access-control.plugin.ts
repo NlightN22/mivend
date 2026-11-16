@@ -25,7 +25,11 @@ import { adminApiSchema } from './access-control.schema';
 import { SystemHealthResolver } from './system-health.resolver';
 import { SystemHealthService } from './system-health.service';
 
-import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
+import {
+    AccessControlResolver,
+    AdministratorStatusResolver,
+    BranchFieldResolver,
+} from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
 import { TeamAdministratorService } from './team-administrator.service';
 import { TeamDirectoryResolver } from './team-directory.resolver';
@@ -132,6 +136,7 @@ import { WarehouseService } from './warehouse.service';
             AccessControlResolver,
             TeamDirectoryResolver,
             AdministratorStatusResolver,
+            BranchFieldResolver,
             ErpUserResolver,
             PriceTypeAdminResolver,
             SystemHealthResolver,

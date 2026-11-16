@@ -85,9 +85,7 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveProformaInvoiceScope = async () => scope;
-    visibility = new ProformaInvoiceVisibilityService(connection, accessScope, {
-        getGlobalDefaultBranchId: async () => null,
-    } as never);
+    visibility = new ProformaInvoiceVisibilityService(connection, accessScope);
     issues = new PaymentReconciliationIssueService(connection, {} as never, visibility);
 });
 
@@ -130,7 +128,7 @@ async function scopedInvoiceBranches(): Promise<Array<string | null>> {
             'counterparty',
             'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
         );
-    visibility.applyScope(qb, { ...scope, defaultBranchId: null });
+    visibility.applyScope(qb, scope);
     return (await qb.orderBy('proformaInvoice.id').getMany()).map(i => i.branchId);
 }
 

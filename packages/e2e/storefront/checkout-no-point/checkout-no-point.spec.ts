@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
@@ -11,6 +12,26 @@ import {
 
 const NO_POINT_BUYER = 'nopoint@buyer.example';
 const NO_BRANCH_BUYER = 'nobranch@buyer.example';
+
+// The default branch is not writable through the API (#286): it moves only via setDefaultBranch and is never cleared.
+function setDefaultBranchId(id: string | null): void {
+    const value = id === null ? 'NULL' : `'${id.replace(/'/g, "''")}'`;
+    execFileSync(
+        'docker',
+        [
+            'exec',
+            'docker-postgres-central-1',
+            'psql',
+            '-U',
+            'postgres',
+            '-d',
+            process.env.E2E_DB_NAME ?? 'mivend_central',
+            '-c',
+            `UPDATE global_settings SET "customFieldsDefaultbranchid" = ${value}`,
+        ],
+        { encoding: 'utf8' },
+    );
+}
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.setTimeout(TEST_TIMEOUT_MS.standard);
@@ -72,16 +93,11 @@ test.describe.serial('checkout where no branch can be resolved (#347)', () => {
             globalSettings: { customFields: { defaultBranchId: string | null } };
         }>(`{ globalSettings { customFields { defaultBranchId } } }`);
         savedDefaultBranch = data.globalSettings.customFields.defaultBranchId;
-        await admin(
-            `mutation { updateGlobalSettings(input: { customFields: { defaultBranchId: null } }) { __typename } }`,
-        );
+        setDefaultBranchId(null);
         await cancelOpenOrders(NO_BRANCH_BUYER);
     });
     test.afterAll(async () => {
-        await admin(
-            `mutation($b: String) { updateGlobalSettings(input: { customFields: { defaultBranchId: $b } }) { __typename } }`,
-            { b: savedDefaultBranch },
-        );
+        setDefaultBranchId(savedDefaultBranch);
         await cancelOpenOrders(NO_BRANCH_BUYER);
     });
 

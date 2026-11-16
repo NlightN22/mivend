@@ -80,7 +80,6 @@ describe('ProformaInvoiceVisibilityService', () => {
         service = new ProformaInvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
             accessScopeService as unknown as AccessScopeService,
-            { getGlobalDefaultBranchId: vi.fn(async () => 'branch-default') } as never,
         );
     });
 
@@ -132,7 +131,7 @@ describe('ProformaInvoiceVisibilityService', () => {
         expect(sql).toContain('counterparty."branchId"');
         expect(sql).not.toContain('proformaInvoice.branchId');
         expect(sql).not.toContain('IS NULL');
-        expect(params).toEqual({ branchId: 'branch-1', orderDefaultBranchId: 'branch-default' });
+        expect(params).toEqual({ branchId: 'branch-1' });
     });
 
     it('applies no scope filter and no branch joins for "all" scope', async () => {
