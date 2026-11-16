@@ -1,9 +1,10 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { StockStreamHandler } from '../../handlers/stock.handler';
 import { isWarehouseTombstoned } from '../../handlers/warehouse-tombstone.query';
 import { MissingDependencyError } from '../../types';
+import { InboundOutcome } from '../../handlers/inbound-stream-handler';
 
 vi.mock('../../handlers/warehouse-tombstone.query', () => ({ isWarehouseTombstoned: vi.fn() }));
 
@@ -339,7 +340,13 @@ describe('StockStreamHandler', () => {
 
     describe('stockOnHand and erpAvailableQuantity are both preserved (issue #70 follow-up, #157)', () => {
         // Stateful fake of one StockLevel row: update() touches only the given columns, like SQL.
-        function setup(initial: { stockOnHand: number; erp?: number }) {
+        interface SetupResult {
+            row: { id: string; stockOnHand: number; erp: number | undefined };
+            run: (payload: Record<string, unknown>) => Promise<InboundOutcome>;
+            update: Mock;
+        }
+
+        function setup(initial: { stockOnHand: number; erp?: number }): SetupResult {
             const row = { id: 'level-1', stockOnHand: initial.stockOnHand, erp: initial.erp };
             const stockLevelService = {
                 getStockLevel: vi.fn().mockImplementation(async () => ({
@@ -360,7 +367,7 @@ describe('StockStreamHandler', () => {
                         v.customFields as { erpAvailableQuantity: number }
                     ).erpAvailableQuantity;
                 });
-            const run = (payload: Record<string, unknown>) =>
+            const run = (payload: Record<string, unknown>): Promise<InboundOutcome> =>
                 new StockStreamHandler(
                     createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], update) as never,
                     { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) } as never,

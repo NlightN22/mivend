@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { GrantedRetroBonusStreamHandler } from '../../handlers/granted-retro-bonus.handler';
@@ -18,8 +18,12 @@ function basePayload(overrides: Record<string, unknown> = {}): Record<string, un
         ...overrides,
     };
 }
+interface CreateHandlerResult {
+    handler: GrantedRetroBonusStreamHandler;
+    service: { upsert: Mock; remove: Mock };
+}
 
-function createHandler() {
+function createHandler(): CreateHandlerResult {
     const service = {
         upsert: vi.fn().mockResolvedValue(undefined),
         remove: vi.fn().mockResolvedValue(undefined),

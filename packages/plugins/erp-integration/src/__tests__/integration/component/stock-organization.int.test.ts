@@ -10,6 +10,7 @@ import {
 
 import { StockOrganizationStreamHandler } from '../../../handlers/stock-organization.handler';
 import { StockOrganizationReadService } from '../../../stock-organization-read.service';
+import { InboundOutcome } from '../../../handlers/inbound-stream-handler';
 
 // Real Postgres: the unique key and the per-entity advisory lock cannot be proven with a mock.
 @Entity('StockOrganization')
@@ -34,7 +35,7 @@ const ctx = {} as RequestContext;
 const withManager = (c: RequestContext, manager: EntityManager): RequestContext =>
     ({ ...c, __manager: manager }) as unknown as RequestContext;
 
-const apply = (entityId: string, fields: Record<string, unknown>) =>
+const apply = (entityId: string, fields: Record<string, unknown>): Promise<InboundOutcome> =>
     handler.apply(ctx, entityId, { productId: 'p-1', organizationId: 'o-1', ...fields });
 
 const rows = (): Promise<Array<Record<string, unknown>>> =>

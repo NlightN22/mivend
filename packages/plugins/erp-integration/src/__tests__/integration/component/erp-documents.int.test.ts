@@ -26,8 +26,28 @@ let dataSource: DataSource;
 let claims: CustomerClaimStreamHandler;
 let results: OrderChangeResultStreamHandler;
 let powers: PowerOfAttorneyErpService;
+type ClaimResult = {
+    version: string;
+    number: string;
+    orderId: string;
+    totalAmount: number;
+    goods: {
+        lineNumber: number;
+        productId: string;
+        quantity: number;
+        price: number;
+        amount: number;
+    }[];
+    services: {
+        lineNumber: number;
+        content: string;
+        quantity: number;
+        price: number;
+        amount: number;
+    }[];
+};
 
-const claim = (version: string, extra: Record<string, unknown> = {}) => ({
+const claim = (version: string, extra: Record<string, unknown> = {}): ClaimResult => ({
     version,
     number: '100',
     orderId: 'order-not-synced',
@@ -138,7 +158,16 @@ describe('ERP document tables', () => {
 });
 
 describe('contract powers of attorney', () => {
-    const item = (number: string) => ({
+    interface ItemResult {
+        externalId: null;
+        number: string;
+        holderName: string;
+        issueDate: null;
+        validUntil: null;
+        scanId: string;
+    }
+
+    const item = (number: string): ItemResult => ({
         externalId: null,
         number,
         holderName: 'Holder',
@@ -146,7 +175,7 @@ describe('contract powers of attorney', () => {
         validUntil: null,
         scanId: 'scan',
     });
-    const replace = (items: ReturnType<typeof item>[], isDeleted = false) =>
+    const replace = (items: ReturnType<typeof item>[], isDeleted = false): Promise<void> =>
         powers.replaceForContract(ctx, {
             contractId: 'contract-1',
             counterpartyId: 'cp-1',

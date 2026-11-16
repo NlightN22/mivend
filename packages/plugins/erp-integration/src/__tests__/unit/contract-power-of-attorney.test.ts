@@ -1,12 +1,16 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { powerOfAttorneyItems } from '../../handlers/contract-power-of-attorney';
 import { ContractStreamHandler } from '../../handlers/contract.handler';
 
 const ctx = {} as RequestContext;
+interface MakeHandlerResult {
+    handler: ContractStreamHandler;
+    powersOfAttorney: { replaceForContract: Mock; markContractDeleted: Mock };
+}
 
-function makeHandler() {
+function makeHandler(): MakeHandlerResult {
     const powersOfAttorney = { replaceForContract: vi.fn(), markContractDeleted: vi.fn() };
     const handler = new ContractStreamHandler(
         {

@@ -1,5 +1,5 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import type { ProductPhoto } from '../../entities/product-photo.entity';
 import { ProductPhotoStreamHandler } from '../../handlers/product-photo.handler';
@@ -15,8 +15,15 @@ const payload = {
     downloadUrl: 'https://files.example/p.jpg?sig=1',
     downloadUrlExpiresAt: '2026-10-13T00:00:00Z',
 };
+interface SetupResult {
+    repo: { findOne: Mock; save: Mock; update: Mock; create: Mock<(v: unknown) => unknown> };
+    enqueue: Mock;
+    handler: ProductPhotoStreamHandler;
+}
 
-function setup(opts: { existing?: Partial<ProductPhoto>; productExists?: boolean } = {}) {
+function setup(
+    opts: { existing?: Partial<ProductPhoto>; productExists?: boolean } = {},
+): SetupResult {
     const repo = {
         findOne: vi.fn().mockResolvedValue(opts.existing ?? null),
         save: vi.fn(),

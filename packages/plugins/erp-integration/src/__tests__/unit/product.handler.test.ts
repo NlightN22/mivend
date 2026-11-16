@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ProductStreamHandler } from '../../handlers/product.handler';
@@ -267,7 +267,21 @@ describe('ProductStreamHandler', () => {
     });
 
     describe('manufacturerPartNumber / fullName', () => {
-        const updateDeps = () => {
+        interface UpdateDepsResult {
+            connection: {
+                getRepository: ReturnType<typeof vi.fn>;
+                withTransaction: (c: unknown, work: (c: unknown) => unknown) => unknown;
+            };
+            productVariantService: {
+                getVariantsByProductId: Mock;
+                create: Mock;
+                update: Mock;
+                findOne: Mock;
+            };
+            productService: { create: Mock; update: Mock };
+        }
+
+        const updateDeps = (): UpdateDepsResult => {
             const connection = makeConnection('existing-product-id');
             const productVariantService = {
                 getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 'variant-1' }] }),

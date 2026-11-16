@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderLinesEditAdapter } from '../../order-lines-edit.adapter';
+interface BuildResult {
+    adapter: OrderLinesEditAdapter;
+    issueForOrder: Mock<() => Promise<{ created: { id: number }[]; current: never[] }>>;
+    publish: Mock;
+}
 
-function build(existing: number) {
+function build(existing: number): BuildResult {
     const issueForOrder = vi.fn(async () => ({ created: [{ id: 9 }], current: [] }));
     const publish = vi.fn();
     const adapter = new OrderLinesEditAdapter(

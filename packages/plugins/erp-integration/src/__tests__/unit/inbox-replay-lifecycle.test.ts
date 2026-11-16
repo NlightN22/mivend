@@ -8,8 +8,14 @@ import {
 } from '../../inbox-replay-lifecycle';
 
 const base = new Date('2026-01-01T00:00:00Z');
-const later = (ms: number) => new Date(base.getTime() + ms);
-const state = (over: Partial<Parameters<typeof expireDecision>[0]> = {}) => ({
+const later = (ms: number): Date => new Date(base.getTime() + ms);
+interface StateResult {
+    replayRequestedAt: Date;
+    hasPendingNewerEvent: boolean;
+    hasFailedNewerEvent: boolean;
+}
+
+const state = (over: Partial<Parameters<typeof expireDecision>[0]> = {}): StateResult => ({
     replayRequestedAt: base,
     hasPendingNewerEvent: false,
     hasFailedNewerEvent: false,

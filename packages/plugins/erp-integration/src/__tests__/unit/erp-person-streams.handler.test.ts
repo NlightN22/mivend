@@ -1,5 +1,5 @@
 import { passthroughGuard } from './contact-guard';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ContactPersonStreamHandler } from '../../handlers/contact-person.handler';
@@ -16,8 +16,23 @@ const phonePoint = {
     isPrimary: false,
     comment: null,
 };
+interface DepsResult {
+    persons: { upsert: Mock; deactivate: Mock };
+    points: {
+        guarded: (
+            _ctx: unknown,
+            _label: string,
+            work: () => Promise<void>,
+        ) => Promise<string | null>;
+        replaceErpPoints: Mock;
+    };
+    args: [never, never, never];
+}
 
-function deps(counterparty: { id: number } | null = { id: 3 }, deactivated: number | null = 5) {
+function deps(
+    counterparty: { id: number } | null = { id: 3 },
+    deactivated: number | null = 5,
+): DepsResult {
     const persons = {
         upsert: vi.fn().mockResolvedValue(7),
         deactivate: vi.fn().mockResolvedValue(deactivated),

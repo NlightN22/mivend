@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CategoryStreamHandler } from '../../handlers/category.handler';
@@ -17,8 +17,34 @@ interface Setup {
     descendants?: Array<{ slug: string }>;
     breadcrumbs?: Array<{ id: string }>;
 }
+interface BuildResult {
+    handler: CategoryStreamHandler;
+    collectionService: {
+        findOneBySlug: Mock<
+            (
+                _ctx: unknown,
+                slug: string,
+            ) => Promise<{
+                id: string;
+                name?: string;
+                isPrivate?: boolean;
+                customFields?: { visibilityOverride?: string | null };
+            }>
+        >;
+        create: Mock;
+        update: Mock;
+        move: Mock;
+        getDescendants: Mock;
+        getBreadcrumbs: Mock;
+    };
+}
 
-function build({ collections = {}, facetValues = [], descendants = [], breadcrumbs }: Setup) {
+function build({
+    collections = {},
+    facetValues = [],
+    descendants = [],
+    breadcrumbs,
+}: Setup): BuildResult {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue({ id: 'facet-1' }),
         create: vi.fn(),

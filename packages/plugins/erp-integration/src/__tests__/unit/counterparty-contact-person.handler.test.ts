@@ -1,12 +1,24 @@
 import { passthroughGuard } from './contact-guard';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CounterpartyContactStreamHandler } from '../../handlers/counterparty-contact.handler';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    handler: CounterpartyContactStreamHandler;
+    persons: { upsert: Mock; deactivate: Mock };
+    points: {
+        guarded: (
+            _ctx: unknown,
+            _label: string,
+            work: () => Promise<void>,
+        ) => Promise<string | null>;
+        replaceErpPoints: Mock;
+    };
+}
 
-function setup(counterparty: { id: number } | null) {
+function setup(counterparty: { id: number } | null): SetupResult {
     const repo = {
         findOne: vi.fn().mockResolvedValue(counterparty),
         create: vi.fn((v: unknown) => v),

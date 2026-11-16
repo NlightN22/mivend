@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ReconciliationService } from '../../reconciliation.service';
+interface MakeSummaryResult {
+    aggregateType: string;
+    count: number;
+    activeCount: number;
+    lastModifiedMax: null;
+}
 
-function makeSummary(aggregateType: string, activeCount: number) {
+function makeSummary(aggregateType: string, activeCount: number): MakeSummaryResult {
     return { aggregateType, count: activeCount, activeCount, lastModifiedMax: null };
 }
 
@@ -11,7 +17,7 @@ describe('ReconciliationService failed inbox rows', () => {
         failedByStream: Record<string, number>,
         open: object | undefined,
         missingCoordinates = 0,
-    ) {
+    ): { service: ReconciliationService; save: Mock; findOne: Mock } {
         const save = vi.fn().mockResolvedValue(undefined);
         const findOne = vi.fn().mockResolvedValue(open);
         const connection = { getRepository: () => ({ save, findOne }) };

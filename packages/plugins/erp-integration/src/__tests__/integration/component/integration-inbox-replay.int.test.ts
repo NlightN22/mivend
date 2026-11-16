@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, Mock, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
     createTestSchema,
@@ -84,7 +84,7 @@ function service(replay: ReturnType<typeof vi.fn>): IntegrationInboxReplayServic
     );
 }
 
-const accepted = (entityId: string) =>
+const accepted = (entityId: string): Mock =>
     vi.fn().mockResolvedValue([{ entityId, status: 'replayed_from_state' }]);
 
 describe('replay request', () => {

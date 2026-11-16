@@ -382,7 +382,7 @@ describe('createIntegrationInboxContactTask', () => {
             .fn()
             .mockResolvedValue({ processed: 1, failed: 0, claimed: 1 });
         const injector = { get: () => ({ processPendingBatch }) } as never;
-        const run = (type: 'central' | 'branch') =>
+        const run = (type: 'central' | 'branch'): Promise<unknown> =>
             createIntegrationInboxContactTask(makeOptions(type)).options.execute({
                 injector,
                 scheduledContext: {} as never,

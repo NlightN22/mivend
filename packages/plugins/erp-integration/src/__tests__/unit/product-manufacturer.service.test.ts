@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ProductManufacturerService } from '../../product-manufacturer.service';
+interface SetupResult {
+    service: ProductManufacturerService;
+    find: Mock;
+    ctx: RequestContext;
+}
 
-function setup(products: unknown[]) {
+function setup(products: unknown[]): SetupResult {
     const find = vi.fn().mockResolvedValue(products);
     const connection = { getRepository: () => ({ find }) };
     const service = new ProductManufacturerService(connection as never);

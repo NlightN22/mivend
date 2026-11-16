@@ -1,12 +1,12 @@
-import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import type { ID, RequestContext } from '@vendure/core';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 vi.mock('../../product-photo-download', async importOriginal => ({
     ...(await importOriginal<typeof import('../../product-photo-download')>()),
     downloadVerifiedPhoto: vi.fn(),
 }));
 
-import type { ProductPhoto } from '../../entities/product-photo.entity';
+import type { ProductPhoto, ProductPhotoStatus } from '../../entities/product-photo.entity';
 import { downloadVerifiedPhoto, PermanentPhotoError } from '../../product-photo-download';
 import { ProductPhotoSyncService } from '../../product-photo-sync.service';
 import { MissingDependencyError, MissingReferenceError } from '../../types';
@@ -31,8 +31,62 @@ function photo(over: Partial<ProductPhoto>): ProductPhoto {
         ...over,
     } as ProductPhoto;
 }
+interface SetupResult {
+    service: ProductPhotoSyncService;
+    repo: {
+        find: Mock<
+            () => Promise<
+                {
+                    externalId: string;
+                    productExternalId: string;
+                    contentHash: string | null;
+                    mimeType: string | null;
+                    position: number;
+                    downloadUrl: string | null;
+                    downloadUrlExpiresAt: Date | null;
+                    isDeleted: boolean;
+                    status: ProductPhotoStatus;
+                    assetId: string | null;
+                    syncQueuedAt: Date | null;
+                    replayAttempts: number;
+                    lastReplayAt: Date | null;
+                    lastError: string | null;
+                    id: ID;
+                    createdAt: Date;
+                    updatedAt: Date;
+                }[]
+            >
+        >;
+        findOne: Mock<
+            (q: { where: { contentHash: string } }) => Promise<{
+                externalId: string;
+                productExternalId: string;
+                contentHash: string | null;
+                mimeType: string | null;
+                position: number;
+                downloadUrl: string | null;
+                downloadUrlExpiresAt: Date | null;
+                isDeleted: boolean;
+                status: ProductPhotoStatus;
+                assetId: string | null;
+                syncQueuedAt: Date | null;
+                replayAttempts: number;
+                lastReplayAt: Date | null;
+                lastError: string | null;
+                id: ID;
+                createdAt: Date;
+                updatedAt: Date;
+            } | null>
+        >;
+        update: Mock<(id: string, patch: Partial<ProductPhoto>) => Promise<void>>;
+        remove: Mock;
+        query: Mock<(sql: string) => Promise<{ id: number }[]>>;
+    };
+    assetService: { createFromFileStream: Mock<() => Promise<{ id: number }>> };
+    productService: { update: Mock };
+}
 
-function setup(rows: ProductPhoto[], productExists = true) {
+function setup(rows: ProductPhoto[], productExists = true): SetupResult {
     const store = rows.map(r => ({ ...r }));
     const repo = {
         find: vi.fn(async () => store.map(r => ({ ...r }))),

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContextService } from '@vendure/core';
 
 import { ConsistencyClientError } from '../../../consistency/consistency-client-error';
@@ -12,13 +12,28 @@ import type { ConsistencySourceClient } from '../../../consistency/consistency-s
 import type { ConsistencyIssuePage } from '../../../consistency/consistency-types';
 import type { ErpIntegrationPluginOptions } from '../../../types';
 import { CONFIG, issue, wireSummary } from './consistency-fixtures';
+interface SetupResult {
+    poller: ConsistencyPollerService;
+    store: {
+        getState: Mock<() => Promise<StoredSourceState | null>>;
+        upsertIssues: Mock<() => Promise<undefined>>;
+        writeState: Mock<() => Promise<undefined>>;
+        markUnavailable: Mock<() => Promise<undefined>>;
+        resolveUnavailable: Mock<() => Promise<undefined>>;
+    };
+    client: ConsistencySourceClient;
+    rawClient: {
+        getSummary: () => Promise<ReturnType<typeof parseSummary>>;
+        getIssuesPage: Mock<(_request: unknown) => Promise<ConsistencyIssuePage>>;
+    };
+}
 
 function setup(opts: {
     state?: StoredSourceState | null;
     summary?: () => Promise<ReturnType<typeof parseSummary>>;
     pages?: Array<ConsistencyIssuePage | ConsistencyClientError>;
     sources?: ErpIntegrationPluginOptions['consistencySources'];
-}) {
+}): SetupResult {
     const store = {
         getState: vi.fn(async () => opts.state ?? null),
         upsertIssues: vi.fn(async () => undefined),

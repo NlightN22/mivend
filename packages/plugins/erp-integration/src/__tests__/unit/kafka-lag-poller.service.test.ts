@@ -1,5 +1,5 @@
 import { testRequestContextService } from '../test-request-context-service';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 vi.mock('@vendure/core', async importOriginal => {
     const actual = await importOriginal<typeof import('@vendure/core')>();
@@ -27,12 +27,24 @@ function makeOptions(
         ...overrides,
     };
 }
+interface MakeAdminResult {
+    connect: Mock;
+    disconnect: Mock;
+    fetchTopicOffsets: Mock<(topic: string) => Promise<{ partition: number; offset: string }[]>>;
+    fetchOffsets: Mock<
+        ({
+            topics,
+        }: {
+            topics: string[];
+        }) => Promise<{ topic: string; partitions: { partition: number; offset: string }[] }[]>
+    >;
+}
 
 function makeAdmin(behavior: {
     topicOffsetsByTopic: Record<string, Array<{ partition: number; offset: string }>>;
     groupOffsetsByTopic: Record<string, Array<{ partition: number; offset: string }>>;
     failTopics?: string[];
-}) {
+}): MakeAdminResult {
     return {
         connect: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn().mockResolvedValue(undefined),
@@ -47,7 +59,7 @@ function makeAdmin(behavior: {
     };
 }
 
-function makeDataSource() {
+function makeDataSource(): { rows: Record<string, unknown>[]; dataSource: never } {
     const rows: Array<Record<string, unknown>> = [];
     const upsert = vi.fn(async (data: Record<string, unknown>) => {
         rows.push(data);

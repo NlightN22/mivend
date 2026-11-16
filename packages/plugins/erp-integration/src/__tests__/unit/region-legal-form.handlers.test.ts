@@ -1,12 +1,15 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { LegalFormStreamHandler } from '../../handlers/legal-form.handler';
 import { RegionStreamHandler } from '../../handlers/region.handler';
 
 const ctx = {} as RequestContext;
 
-function setup<T>(Handler: new (c: never) => T, existing: Record<string, unknown> | null) {
+function setup<T>(
+    Handler: new (c: never) => T,
+    existing: Record<string, unknown> | null,
+): { handler: T; save: Mock } {
     const save = vi.fn();
     const repo = {
         findOne: vi.fn().mockResolvedValue(existing),

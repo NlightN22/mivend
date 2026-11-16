@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, PrimaryGeneratedColumn, SelectQueryBuilder } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     QueryTooLargeError,
@@ -60,7 +60,7 @@ describe('bounded helpers on real SQL shapes used by erp-integration', () => {
     beforeEach(() => seedProbe(0));
 
     it('getRawManyBounded: a grouped query passes at the ceiling and throws one over', async () => {
-        const grouped = () =>
+        const grouped = (): SelectQueryBuilder<BoundedProbe> =>
             dataSource
                 .getRepository(BoundedProbe)
                 .createQueryBuilder('p')
@@ -77,7 +77,7 @@ describe('bounded helpers on real SQL shapes used by erp-integration', () => {
         const connection = {
             getRepository: () => dataSource.getRepository(BoundedProbe),
         } as unknown as TransactionalConnection;
-        const read = () =>
+        const read = (): Promise<Record<string, unknown>[]> =>
             ctxQueryBounded(
                 connection,
                 mockCtx,
@@ -92,7 +92,7 @@ describe('bounded helpers on real SQL shapes used by erp-integration', () => {
     });
 
     it('getManyBounded: a skip-locked claim read passes at the ceiling and throws one over', async () => {
-        const claim = (ceiling: number) =>
+        const claim = (ceiling: number): Promise<BoundedProbe[]> =>
             dataSource.transaction(em =>
                 getManyBounded(
                     em

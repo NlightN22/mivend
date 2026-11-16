@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ManufacturerFacetService } from '../../manufacturer-facet.service';
@@ -15,6 +15,16 @@ vi.mock('@vendure/core', () => ({
 }));
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    service: ManufacturerFacetService;
+    facetValueService: { findByFacetId: Mock; create: Mock; update: Mock };
+    find: Mock<
+        (options: {
+            where: { id: { value: number } };
+            take: number;
+        }) => Promise<{ id?: number; externalId: string; name: string }[]>
+    >;
+}
 
 function setup(
     values: Array<{ id: number; code: string; name: string }>,
@@ -22,7 +32,7 @@ function setup(
     manufacturers: Array<{ id?: number; externalId: string; name: string }> = [
         { externalId: 'm-1', name: 'A' },
     ],
-) {
+): SetupResult {
     const facet = { id: 1 };
     const facetService = { findByCode: vi.fn().mockResolvedValue(facet), create: vi.fn() };
     const facetValueService = {

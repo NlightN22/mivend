@@ -1,9 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { StockOrganizationStreamHandler } from '../../handlers/stock-organization.handler';
+interface SetupResult {
+    repo: { upsert: Mock; delete: Mock; find: Mock };
+    connection: {
+        withTransaction: Mock<
+            (ctx: RequestContext, work: (c: RequestContext) => unknown) => unknown
+        >;
+        getRepository: Mock<() => { query: Mock; upsert: Mock; delete: Mock; find: Mock }>;
+    };
+    stale: { requestForProducts: Mock; drainSoon: Mock };
+    handler: StockOrganizationStreamHandler;
+}
 
-function setup(affected = 1) {
+function setup(affected = 1): SetupResult {
     const repo = {
         upsert: vi.fn(),
         delete: vi.fn().mockResolvedValue({ affected }),

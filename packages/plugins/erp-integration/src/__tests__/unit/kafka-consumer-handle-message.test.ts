@@ -16,7 +16,7 @@ function setup(
         {} as never,
         testRequestContextService,
     );
-    const handle = (value: Uint8Array | null) =>
+    const handle = (value: Uint8Array | null): Promise<void> =>
         (
             service as unknown as {
                 handleMessage(s: string, p: unknown): Promise<void>;

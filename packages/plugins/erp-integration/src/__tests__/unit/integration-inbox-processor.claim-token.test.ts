@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { IntegrationInboxProcessorService } from '../../integration-inbox-processor.service';
 import type { IntegrationInboxEvent } from '../../entities/integration-inbox-event.entity';
@@ -15,12 +15,16 @@ const row = (id: number, version = '1'): IntegrationInboxEvent =>
         payload: {},
         claimToken: TOKEN,
     }) as unknown as IntegrationInboxEvent;
+interface MakeProcessorResult {
+    service: IntegrationInboxProcessorService;
+    inbox: { claimBatch: Mock; markProcessed: Mock; markFailed: Mock; releaseClaims: Mock };
+}
 
 function makeProcessor(
     rows: IntegrationInboxEvent[],
     apply: () => Promise<unknown>,
     processedVersions: string[] = [],
-) {
+): MakeProcessorResult {
     const inbox = {
         claimBatch: vi.fn().mockResolvedValue(rows),
         markProcessed: vi.fn().mockResolvedValue(undefined),

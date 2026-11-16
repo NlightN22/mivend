@@ -1,5 +1,5 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import type { ProductPhoto } from '../../entities/product-photo.entity';
 import {
@@ -22,8 +22,24 @@ function photo(over: Partial<ProductPhoto>): ProductPhoto {
         ...over,
     } as ProductPhoto;
 }
+interface SetupResult {
+    service: ProductPhotoRecoveryService;
+    repo: {
+        find: Mock<
+            (q: { where: { status?: string } | { status?: string }[] }) => Promise<ProductPhoto[]>
+        >;
+        findOneOrFail: Mock<() => Promise<ProductPhoto>>;
+        update: Mock;
+    };
+    enqueue: Mock;
+    replay: Mock<(_type: string, ids: string[]) => Promise<{ entityId: string; status: string }[]>>;
+}
 
-function setup(rows: ProductPhoto[], kafkaEnabled = true, replayStatus = 'replayed_from_state') {
+function setup(
+    rows: ProductPhoto[],
+    kafkaEnabled = true,
+    replayStatus = 'replayed_from_state',
+): SetupResult {
     const repo = {
         find: vi.fn(async (q: { where: { status?: string } | { status?: string }[] }) => {
             const first = Array.isArray(q.where) ? q.where[0] : q.where;

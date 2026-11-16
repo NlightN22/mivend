@@ -3,6 +3,7 @@ import type { RequestContext } from '@vendure/core';
 
 import { OrderLineAvailabilityService } from '../../order-checks/order-line-availability.service';
 import type { OrderCheckData } from '../../order-checks/order-check-data';
+import { LineAvailability } from '@mivend/plugin-reservation';
 
 const ctx = {} as RequestContext;
 
@@ -14,7 +15,7 @@ function build(options: {
     ratio?: number;
     notControlled?: boolean;
     ignoredGlobally?: boolean;
-}) {
+}): Promise<LineAvailability[]> {
     const data: OrderCheckData = {
         storageOrganizations: new Map([['p1', ['org-own', 'org-other']]]),
         contractOrganizations: new Set(['org-own']),

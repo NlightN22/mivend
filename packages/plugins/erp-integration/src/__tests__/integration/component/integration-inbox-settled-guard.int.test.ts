@@ -16,7 +16,7 @@ let dataSource: DataSource;
 let inbox: IntegrationInboxService;
 const { schema, extra } = testSchemaOptions('erp_inbox_settled_guard');
 
-const enqueue = (n: number) =>
+const enqueue = (n: number): Promise<IntegrationInboxEvent> =>
     inbox.enqueue(testRequestContext, {
         stream: 'price',
         entityId: `pr-${n}`,
@@ -25,7 +25,7 @@ const enqueue = (n: number) =>
         payload: { sku: `SKU-${n}` },
     });
 
-const reload = (id: number) =>
+const reload = (id: number): Promise<IntegrationInboxEvent> =>
     dataSource.getRepository(IntegrationInboxEvent).findOneByOrFail({ id });
 
 beforeAll(async () => {

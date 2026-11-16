@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ReconciliationLocalCountsService } from '../../reconciliation-local-counts.service';
 
 describe('ReconciliationLocalCountsService', () => {
+    interface MakeServiceResult {
+        service: ReconciliationLocalCountsService;
+        querySpy: Mock;
+        stockQueryBuilder: { where: Mock; getCount: Mock };
+    }
+
     function makeService(overrides: {
         productTotalItems?: number;
         organizations?: Array<{ isActive: boolean }>;
@@ -10,7 +16,7 @@ describe('ReconciliationLocalCountsService', () => {
         priceTypes?: Array<{ isActive: boolean }>;
         sqlCount?: number;
         stockLevelCount?: number;
-    }) {
+    }): MakeServiceResult {
         const productService = {
             findAll: async () => ({ items: [], totalItems: overrides.productTotalItems ?? 0 }),
         };

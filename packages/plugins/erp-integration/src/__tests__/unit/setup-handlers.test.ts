@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { DiscountSetupStreamHandler } from '../../handlers/discount-setup.handler';
 import { RetroBonusSetupStreamHandler } from '../../handlers/retro-bonus-setup.handler';
+import { InboundOutcome } from '../../handlers/inbound-stream-handler';
 
 const ctx = {} as RequestContext;
 const base = {
@@ -15,7 +16,10 @@ const discount = { ...base, percent: 5, recipients: [{ counterpartyId: 'cp-1' }]
 const retro = { ...base, percent: 2, counterpartyMode: 'list' };
 
 describe('DiscountSetupStreamHandler', () => {
-    const run = async (result: string, payload: Record<string, unknown> = discount) => {
+    const run = async (
+        result: string,
+        payload: Record<string, unknown> = discount,
+    ): Promise<{ outcome: InboundOutcome; apply: Mock }> => {
         const apply = vi.fn().mockResolvedValue(result);
         const handler = new DiscountSetupStreamHandler({ apply } as never);
         return { outcome: await handler.apply(ctx, 'doc-1', payload), apply };
@@ -91,7 +95,7 @@ describe('DiscountSetupStreamHandler', () => {
 });
 
 describe('RetroBonusSetupStreamHandler', () => {
-    const run = async (result: string) => {
+    const run = async (result: string): Promise<{ outcome: InboundOutcome; apply: Mock }> => {
         const apply = vi.fn().mockResolvedValue(result);
         const handler = new RetroBonusSetupStreamHandler({ apply } as never);
         return { outcome: await handler.apply(ctx, 'doc-2', retro), apply };

@@ -209,7 +209,18 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
                 },
             }),
         );
-        const kafkaMessage = (type: string, value: Uint8Array) => ({
+        interface KafkaMessageResult {
+            topic: string;
+            partition: number;
+            message: {
+                key: Buffer<ArrayBuffer>;
+                value: Buffer<ArrayBuffer>;
+                offset: string;
+                headers: { type: Buffer<ArrayBuffer> };
+            };
+        }
+
+        const kafkaMessage = (type: string, value: Uint8Array): KafkaMessageResult => ({
             topic: 'erp.order.events.v1',
             partition: 0,
             message: {

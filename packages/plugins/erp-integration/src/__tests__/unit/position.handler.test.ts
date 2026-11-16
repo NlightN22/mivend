@@ -1,11 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { PositionStreamHandler } from '../../handlers/position.handler';
 
 describe('PositionStreamHandler', () => {
     const ctx = {} as RequestContext;
-    const build = (exists: boolean) => {
+    interface BuildResult {
+        service: { upsert: Mock; setActiveStateIfExists: Mock };
+        handler: PositionStreamHandler;
+    }
+
+    const build = (exists: boolean): BuildResult => {
         const service = {
             upsert: vi.fn(),
             setActiveStateIfExists: vi.fn().mockResolvedValue(exists),

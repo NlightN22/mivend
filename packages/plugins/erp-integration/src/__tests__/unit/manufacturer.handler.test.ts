@@ -1,12 +1,12 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ManufacturerStreamHandler } from '../../handlers/manufacturer.handler';
 import type { ManufacturerService } from '../../manufacturer.service';
 
 const ctx = {} as RequestContext;
 
-function setup() {
+function setup(): { upsert: Mock; handler: ManufacturerStreamHandler } {
     const upsert = vi.fn();
     const handler = new ManufacturerStreamHandler({ upsert } as unknown as ManufacturerService);
     return { upsert, handler };

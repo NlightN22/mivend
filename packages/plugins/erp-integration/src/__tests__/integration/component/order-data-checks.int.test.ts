@@ -5,6 +5,7 @@ import { OrderExportDataRegistrar } from '@mivend/plugin-reservation';
 
 import { createOrderChecksWorld, resetWorld } from './order-checks.harness';
 import type { OrderChecksWorld } from './order-checks.harness';
+import { Consequence } from '@mivend/plugin-checks';
 
 // Real Postgres and the real order subject, run through runChecks: proves the stage defaults of the
 // order data controls (#241): warn at checkout, hold at pre-reserve, so the automatic reserve waits.
@@ -58,7 +59,7 @@ describe('order data controls through runChecks on a real order', () => {
     });
 
     it('the freight control starts as warn at checkout and hold at pre-reserve', async () => {
-        const policy = (stage: string) =>
+        const policy = (stage: string): Promise<{ consequence: Consequence; enabled: boolean }> =>
             w.policies.resolve(w.ctx, 'delivery.freight-trading-point', stage, null);
         expect((await policy('checkout')).consequence).toBe('warn');
         expect((await policy('pre-reserve')).consequence).toBe('hold');

@@ -205,7 +205,7 @@ describe('reconciliation local counts against real Postgres', () => {
         await dataSource.query(
             `INSERT INTO counterparty ("erpId", "isActive") VALUES ('cp1', true)`,
         );
-        const point = (id: string, evt: string, p: Record<string, unknown>) =>
+        const point = (id: string, evt: string, p: Record<string, unknown>): Promise<unknown> =>
             dataSource.query(
                 `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status)
                  VALUES ('point-of-sale', $1, '1', $2, $3, 'processed')`,
@@ -259,7 +259,12 @@ describe('reconciliation local counts against real Postgres', () => {
     ] as const)(
         'adds active %s records skipped for a missing required field and not stored later',
         async (type, stream, table) => {
-            const event = (id: string, evt: string, outcome: string, p: Record<string, unknown>) =>
+            const event = (
+                id: string,
+                evt: string,
+                outcome: string,
+                p: Record<string, unknown>,
+            ): Promise<unknown> =>
                 dataSource.query(
                     `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, outcome)
                      VALUES ($1, $2, '1', $3, $4, 'processed', $5)`,

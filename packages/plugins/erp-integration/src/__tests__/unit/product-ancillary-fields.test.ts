@@ -67,7 +67,9 @@ describe('extractManufacturerCodes', () => {
 });
 
 describe('extractErpCreatedAt', () => {
-    const field = (value: unknown) => ({ sourceFields: { ДатаСоздания: value } });
+    const field = (value: unknown): { sourceFields: { ДатаСоздания: unknown } } => ({
+        sourceFields: { ДатаСоздания: value },
+    });
 
     it('reads the date value from the wire JSON of a real ProductChanged', () => {
         const message = create(ProductChangedSchema, {

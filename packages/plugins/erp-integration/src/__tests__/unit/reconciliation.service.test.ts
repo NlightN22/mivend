@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ReconciliationService } from '../../reconciliation.service';
 import type { ReconciliationSummary } from '../../reconciliation-summary.client';
@@ -10,10 +10,17 @@ function makeSummary(aggregateType: string, activeCount: number): Reconciliation
 
 // runComparison is shared by the scheduled task and the manual mutation, so tests call it directly
 describe('ReconciliationService.runComparison', () => {
+    interface MakeServiceResult {
+        service: ReconciliationService;
+        save: Mock;
+        findOne: Mock;
+        notificationService: { create: Mock; resolveBySource: Mock };
+    }
+
     function makeService(overrides?: {
         fetchSummaries?: (aggregateType?: string) => Promise<ReconciliationSummary[]>;
         getLocalActiveCount?: (ctx: unknown, aggregateType: string) => Promise<number>;
-    }) {
+    }): MakeServiceResult {
         const save = vi.fn().mockResolvedValue(undefined);
         const findOne = vi.fn().mockResolvedValue(undefined);
         const connection = {

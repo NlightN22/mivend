@@ -53,8 +53,15 @@ const connection = {
         query: (sql: string, params: unknown[]) => ctx.manager.query(sql, params),
     }),
 };
+interface RowResult {
+    group: 'attribute';
+    key: string;
+    rawValue: null;
+    normalizedValue: string;
+    structuredJson: null;
+}
 
-const row = (key: string, values: string[]) => ({
+const row = (key: string, values: string[]): RowResult => ({
     group: 'attribute' as const,
     key,
     rawValue: null,

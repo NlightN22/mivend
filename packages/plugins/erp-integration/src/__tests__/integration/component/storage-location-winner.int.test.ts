@@ -10,6 +10,7 @@ import {
 
 import { StorageLocationStreamHandler } from '../../../handlers/storage-location.handler';
 import { MissingDependencyError } from '../../../types';
+import { InboundOutcome } from '../../../handlers/inbound-stream-handler';
 
 // Real Postgres required: winner election is an ORDER BY under a per-product advisory lock
 // Tables are hand-rolled because VendureEntity needs bootstrap; a mock cannot prove the lock.
@@ -35,7 +36,12 @@ const ctx = {} as RequestContext;
 const withManager = (c: RequestContext, manager: EntityManager): RequestContext =>
     ({ ...c, __manager: manager }) as unknown as RequestContext;
 
-const apply = (entityId: string, org: string | null, priority: number, extraFields = {}) =>
+const apply = (
+    entityId: string,
+    org: string | null,
+    priority: number,
+    extraFields = {},
+): Promise<InboundOutcome> =>
     handler.apply(ctx, entityId, {
         productId: 'product-1',
         ...(org ? { organizationId: org } : {}),

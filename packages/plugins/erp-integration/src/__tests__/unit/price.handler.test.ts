@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { PriceStreamHandler } from '../../handlers/price.handler';
@@ -9,8 +9,13 @@ const priceType = { id: '1', code: 'WHOLESALE', name: 'Wholesale', isActive: tru
 describe('PriceStreamHandler', () => {
     const ctx = {} as RequestContext;
     const live = { productId: 'prod-1', priceTypeId: 'guid-1', value: '199.90', isActive: true };
+    interface BuildResult {
+        handler: PriceStreamHandler;
+        priceEntryService: { upsertByProduct: Mock; removeByProduct: Mock };
+        customerPricingService: { findPriceTypeByExternalId: Mock };
+    }
 
-    const build = (type: unknown = priceType) => {
+    const build = (type: unknown = priceType): BuildResult => {
         const priceEntryService = {
             upsertByProduct: vi.fn().mockResolvedValue(undefined),
             removeByProduct: vi.fn().mockResolvedValue(true),

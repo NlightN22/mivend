@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import type { CollectionEvent } from '@vendure/core';
 
 import { CategoryOverrideRecomputeListener } from '../../category-override-recompute.listener';
@@ -9,8 +9,12 @@ vi.mock('shared', async importOriginal => ({
     ...(await importOriginal<typeof import('shared')>()),
     recomputeCategoryTree: recompute,
 }));
+interface MakeResult {
+    listener: CategoryOverrideRecomputeListener;
+    eventBus: { ofType: Mock<() => { subscribe: Mock }> };
+}
 
-const make = (instanceType: 'central' | 'branch' = 'central') => {
+const make = (instanceType: 'central' | 'branch' = 'central'): MakeResult => {
     const subscribe = vi.fn();
     const eventBus = { ofType: vi.fn(() => ({ subscribe })) };
     const listener = new CategoryOverrideRecomputeListener(

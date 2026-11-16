@@ -1,5 +1,5 @@
 import type { RequestContext } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { CustomerClaimStreamHandler } from '../../handlers/customer-claim.handler';
 import { OrderChangeResultStreamHandler } from '../../handlers/order-change-result.handler';
@@ -9,7 +9,7 @@ import { SalesCorrectionStreamHandler } from '../../handlers/sales-correction.ha
 const ctx = {} as RequestContext;
 const header = { version: '2026-11-08T10:00:00Z', updatedAt: '2026-11-08T10:00:00Z' };
 
-function makeWriter(result = 'applied') {
+function makeWriter(result = 'applied'): { write: Mock } {
     return { write: vi.fn().mockResolvedValue(result) };
 }
 

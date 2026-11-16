@@ -1,14 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CategoryStreamHandler } from '../../handlers/category.handler';
+interface CreateServicesResult {
+    facetService: { findByCode: Mock; create: Mock };
+    facetValueService: { findByFacetId: Mock; create: Mock; update: Mock };
+    collectionService: {
+        findOneBySlug: Mock;
+        create: Mock;
+        update: Mock;
+        move: Mock;
+        getDescendants: Mock;
+        getBreadcrumbs: Mock;
+    };
+}
 
 function createServices(
     existingCollection:
         | { id: string; name?: string; customFields?: { visibilityOverride?: string | null } }
         | undefined,
     existingFacetValues: Array<{ id: string; code: string }> = [],
-) {
+): CreateServicesResult {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue({ id: 'facet-1' }),
         create: vi.fn(),

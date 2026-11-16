@@ -34,7 +34,7 @@ const { schema, extra } = testSchemaOptions('erp_held_send_redrive');
 const repo = (): Repository<IntegrationOutboxEntry> =>
     dataSource.getRepository(IntegrationOutboxEntry);
 
-const heldRow = (orderId: string, lastError = HELD_SKIP_REASON) =>
+const heldRow = (orderId: string, lastError = HELD_SKIP_REASON): Promise<IntegrationOutboxEntry> =>
     repo().save(
         repo().create({
             eventId: randomUUID(),
@@ -94,7 +94,7 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const policyChange = (stage: string, consequence: 'hold' | 'warn', enabled = true) =>
+const policyChange = (stage: string, consequence: 'hold' | 'warn', enabled = true): Promise<void> =>
     handlers.get('CheckPolicyChangedEvent')!(
         new CheckPolicyChangedEvent(ctx, 'erp.organization-stock', stage, { consequence, enabled }),
     );

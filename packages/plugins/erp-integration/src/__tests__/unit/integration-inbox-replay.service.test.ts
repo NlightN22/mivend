@@ -1,9 +1,14 @@
 import { testRequestContext } from 'shared';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { IntegrationInboxReplayService } from '../../integration-inbox-replay.service';
+interface BuildServiceResult {
+    service: IntegrationInboxReplayService;
+    replayClient: { replay: Mock };
+    state: { claimForReplay: Mock; releaseClaim: Mock };
+}
 
-function buildService(rows: Array<Record<string, unknown>>) {
+function buildService(rows: Array<Record<string, unknown>>): BuildServiceResult {
     const dataSource = {
         getRepository: () => ({
             find: vi.fn().mockResolvedValue(rows),

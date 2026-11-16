@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { DataSource } from 'typeorm';
 import {
@@ -12,7 +12,7 @@ import {
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
-import { inboundApplied } from '../../../handlers/inbound-stream-handler';
+import { inboundApplied, InboundOutcome } from '../../../handlers/inbound-stream-handler';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 
@@ -48,7 +48,7 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const writeThen = (fail: boolean) =>
+const writeThen = (fail: boolean): Mock<(ctx: RequestContext, entityId: string) => Promise<void>> =>
     vi.fn(async (ctx: RequestContext, entityId: string) => {
         await ctxQuery<unknown>(
             createTestConnection(dataSource),
@@ -101,7 +101,11 @@ describe('inbox handler transaction (component, real Postgres)', () => {
 });
 
 describe('inbox after-commit actions (component, real Postgres)', () => {
-    const writeWithAction = (fail: boolean, seen: number[]) =>
+    type WriteWithActionResult = Mock<
+        (ctx: RequestContext, entityId: string) => Promise<InboundOutcome>
+    >;
+
+    const writeWithAction = (fail: boolean, seen: number[]): WriteWithActionResult =>
         vi.fn(async (ctx: RequestContext, entityId: string) => {
             await writeThen(fail)(ctx, entityId);
             return inboundApplied([

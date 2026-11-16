@@ -54,7 +54,7 @@ describe('PriceTypeStreamHandler', () => {
 
 describe('PriceTypeStreamHandler purchase rule', () => {
     const ctx = {} as RequestContext;
-    const run = async (payload: Record<string, unknown>) => {
+    const run = async (payload: Record<string, unknown>): Promise<unknown> => {
         const svc = { upsertPriceTypeByExternalId: vi.fn().mockResolvedValue({}) };
         await new PriceTypeStreamHandler(svc as never).apply(ctx, 'g', { name: 'N', ...payload });
         return svc.upsertPriceTypeByExternalId.mock.calls[0][4];

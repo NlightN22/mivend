@@ -5,6 +5,7 @@ import type {
     ConsistencyIssue,
     ConsistencyIssuePage,
     ConsistencySourceConfig,
+    ConsistencySummary,
 } from '../../../consistency/consistency-types';
 
 export const CONFIG: ConsistencySourceConfig = {
@@ -81,7 +82,7 @@ export function issue(
     };
 }
 
-export function freshSummary() {
+export function freshSummary(): ConsistencySummary {
     const now = new Date().toISOString();
     return parseSummary(
         wireSummary({
@@ -97,7 +98,9 @@ export function freshSummary() {
     );
 }
 
-export function scriptedClient(steps: Array<ConsistencyIssuePage | ConsistencyClientError>) {
+export function scriptedClient(
+    steps: Array<ConsistencyIssuePage | ConsistencyClientError>,
+): ConsistencySourceClient {
     const queue = [...steps];
     return {
         getSummary: async () => freshSummary(),

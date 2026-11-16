@@ -1,9 +1,9 @@
 import { testRequestContextService } from '../test-request-context-service';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { KafkaConsumerService } from '../../kafka-consumer.service';
 
-function build(disconnect: () => Promise<void>) {
+function build(disconnect: () => Promise<void>): { service: KafkaConsumerService; upsert: Mock } {
     const upsert = vi.fn().mockResolvedValue(undefined);
     const dataSource = { getRepository: () => ({ upsert }) };
     const service = new KafkaConsumerService(

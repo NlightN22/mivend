@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { CancelOutcome } from '@mivend/plugin-reservation';
 
 import {
@@ -36,7 +36,13 @@ describe('describeRefusal', () => {
 });
 
 describe('PointConfirmationExpiryService.expireDue', () => {
-    const build = (cancel: ReturnType<typeof vi.fn>) => {
+    interface BuildResult {
+        service: PointConfirmationExpiryService;
+        notifications: { create: Mock };
+        query: Mock<(sql: string) => Promise<{ id: string; code: string }[]>>;
+    }
+
+    const build = (cancel: ReturnType<typeof vi.fn>): BuildResult => {
         const due = [
             { id: '1', code: 'A' },
             { id: '2', code: 'B' },

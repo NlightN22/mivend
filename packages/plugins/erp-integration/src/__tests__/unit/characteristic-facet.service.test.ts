@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 vi.mock('@vendure/core', () => ({
     FacetService: class {},
@@ -14,16 +14,32 @@ vi.mock('../../entities/product-characteristic.entity', () => ({
 }));
 
 import { CharacteristicFacetService } from '../../characteristic-facet.service';
+interface RowResult {
+    group: 'attribute';
+    key: string;
+    rawValue: null;
+    normalizedValue: string | null;
+    structuredJson: null;
+}
 
-const row = (key: string, normalized: string[] | null) => ({
+const row = (key: string, normalized: string[] | null): RowResult => ({
     group: 'attribute' as const,
     key,
     rawValue: null,
     normalizedValue: normalized ? JSON.stringify(normalized) : null,
     structuredJson: null,
 });
+interface MakeServiceResult {
+    service: CharacteristicFacetService;
+    facetService: { findByCode: Mock; create: Mock };
+    facetValueService: { findByFacetId: Mock; create: Mock };
+}
 
-function makeService(existingFacetValues: string[] = [], isServer = true, stored: unknown[] = []) {
+function makeService(
+    existingFacetValues: string[] = [],
+    isServer = true,
+    stored: unknown[] = [],
+): MakeServiceResult {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue(undefined),
         create: vi.fn().mockResolvedValue({ id: 'f1' }),
