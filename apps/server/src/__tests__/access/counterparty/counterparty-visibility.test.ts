@@ -9,9 +9,11 @@ import {
 } from '../seed/fixture-plan';
 import {
     ALL_KEYS,
+    PORTAL_STATES,
     SUMMARY,
     idOf,
     listed,
+    listedByPortalState,
     visibleById,
     visibleCounterpartyIds,
 } from './counterparty-queries';
@@ -73,5 +75,23 @@ describe.each(STAFF.map(s => s.key))('counterparty visibility for %s', (key: Act
             expect(found.ids.includes(idOf(cp)), `${cp} by search`).toBe(shown);
             if (!shown) expect(await visibleById(superadmin, cp), `${cp} exists`).toBe(true);
         }
+    });
+
+    it('the portal state filter and its counts never reach beyond the scope (#375)', async () => {
+        const ids = new Set(visibleCounterpartyIds(key));
+        const everyState = await listedByPortalState(token, PORTAL_STATES);
+        expect(everyState.total).toBe(ids.size);
+        expect(new Set(everyState.rows.map(r => r.id))).toEqual(ids);
+        expect(everyState.rows.every(r => PORTAL_STATES.some(s => s === r.portalState))).toBe(true);
+        let counted = 0;
+        for (const state of PORTAL_STATES) {
+            const part = await listedByPortalState(token, [state]);
+            expect(
+                part.rows.every(r => ids.has(r.id)),
+                `${state} stays in scope`,
+            ).toBe(true);
+            counted += part.total;
+        }
+        expect(counted).toBe(ids.size);
     });
 });

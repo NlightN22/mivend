@@ -11,6 +11,8 @@ import {
 } from '../seed/fixture-plan';
 
 export const LIST = `query($s: String) { counterparties(options: { take: 100, search: $s }) { totalItems items { id } } }`;
+export const PORTAL_STATES = ['none', 'invited', 'verified', 'active'] as const;
+export const LIST_BY_STATE = `query($states: [String!]) { counterparties(options: { take: 100, filter: { portalState: { in: $states } } }) { totalItems items { id portalState } } }`;
 export const ONE = `query($id: ID!) { counterparty(id: $id) { id } }`;
 export const SUMMARY = `query { counterpartySummary { totalCount } }`;
 export const STATE = `query($id: ID!) { counterparty(id: $id) { assignedManagerId branchId } }`;
@@ -54,4 +56,21 @@ export async function stateOf(
 export function visibleCounterpartyIds(key: ActorKey): string[] {
     const gaps = GAP_CLIENTS.filter(c => VISIBLE_GAP_BRANCHES[key].includes(c.branch));
     return [...VISIBLE_COUNTERPARTIES[key].map(idOf), ...gaps.map(c => seed().gapClients[c.erpId])];
+}
+
+export async function listedByPortalState(
+    token: string,
+    states: readonly string[],
+): Promise<{ total: number; rows: { id: string; portalState: string | null }[] }> {
+    const result = await admin<{
+        counterparties: {
+            totalItems: number;
+            items: { id: string; portalState: string | null }[];
+        };
+    }>(token, LIST_BY_STATE, { states });
+    expect(result.errors).toEqual([]);
+    return {
+        total: result.data!.counterparties.totalItems,
+        rows: result.data!.counterparties.items,
+    };
 }
