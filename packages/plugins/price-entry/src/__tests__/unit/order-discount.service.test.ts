@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { Order, RequestContext } from '@vendure/core';
 
 import { LookupMemo } from '../../lookup-memo';
@@ -35,8 +35,17 @@ function line(
 function orderOf(...lines: FakeLine[]): Order {
     return { lines, customerId: 'cust-1', customFields: {} } as unknown as Order;
 }
+interface SetupResult {
+    service: OrderDiscountService;
+    resolve: Mock<
+        (
+            _ctx: RequestContext,
+            variantId: string,
+        ) => Promise<{ customerPrice: number | null; compareAtPrice: null }>
+    >;
+}
 
-function setup(customerPriceByVariant: Record<string, number | null>) {
+function setup(customerPriceByVariant: Record<string, number | null>): SetupResult {
     const resolve = vi.fn(async (_ctx: RequestContext, variantId: string) => ({
         customerPrice: customerPriceByVariant[variantId] ?? null,
         compareAtPrice: null,

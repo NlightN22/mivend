@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { ForbiddenError, UserInputError } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
@@ -15,8 +15,21 @@ function mockCtx(permissions: string[]): RequestContext {
 
 // Left un-annotated on purpose: an explicit return type would defeat TS inference of the mock's
 // real call signature.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
-function mockQueryBuilder(getManyResult: unknown[] = [], count = 0) {
+
+interface MockQueryBuilderResult {
+    leftJoinAndSelect: Mock;
+    where: Mock;
+    andWhere: Mock;
+    orderBy: Mock;
+    addOrderBy: Mock;
+    skip: Mock;
+    take: Mock;
+    getCount: Mock<() => Promise<number>>;
+    getMany: Mock<() => Promise<unknown[]>>;
+    getManyAndCount: Mock<() => Promise<[unknown[], number]>>;
+}
+
+function mockQueryBuilder(getManyResult: unknown[] = [], count = 0): MockQueryBuilderResult {
     const qb = {
         leftJoinAndSelect: vi.fn(),
         where: vi.fn(),

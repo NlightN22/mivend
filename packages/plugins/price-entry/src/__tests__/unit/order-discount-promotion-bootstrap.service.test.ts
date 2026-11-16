@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import type {
     ProcessContext,
     PromotionService,
@@ -10,9 +10,16 @@ import type {
 import { ORDER_DISCOUNT_ACTION_CODE } from '../../order-discount.promotion';
 import { OrderDiscountPromotionBootstrapService } from '../../order-discount-promotion-bootstrap.service';
 
-function setup(existing: unknown[], isWorker = false) {
+function setup(
+    existing: unknown[],
+    isWorker = false,
+): {
+    service: OrderDiscountPromotionBootstrapService;
+    promotionService: { createPromotion: Mock; updatePromotion: Mock };
+    qb: Record<string, Mock>;
+} {
     const ctx = {} as RequestContext;
-    const qb = {
+    const qb: Record<string, Mock> = {
         where: vi.fn(() => qb),
         andWhere: vi.fn(() => qb),
         take: vi.fn(() => qb),
@@ -39,8 +46,14 @@ function setup(existing: unknown[], isWorker = false) {
     );
     return { service, promotionService, qb };
 }
+interface PromotionResult {
+    id: number;
+    enabled: boolean;
+    deletedAt: Date | null;
+    actions: { code: string }[];
+}
 
-const promotion = (enabled: boolean, deletedAt: Date | null = null) => ({
+const promotion = (enabled: boolean, deletedAt: Date | null = null): PromotionResult => ({
     id: 5,
     enabled,
     deletedAt,

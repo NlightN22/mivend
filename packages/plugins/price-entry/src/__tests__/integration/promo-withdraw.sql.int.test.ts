@@ -87,8 +87,19 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.query('TRUNCATE discount_rule, discount_grant, discount_registry_entry');
 });
+interface PromoResult {
+    erpId: string;
+    percent: number;
+    validFrom: Date;
+    validTo: Date;
+    triggerProductErpId: string;
+    triggerQuantity: number;
+    giftProductErpId: null;
+    giftQuantity: null;
+    operationKind: 'percent-discount';
+}
 
-const promo = (erpId: string) => ({
+const promo = (erpId: string): PromoResult => ({
     erpId,
     percent: 15,
     validFrom: new Date(Date.now() - day),
@@ -101,7 +112,8 @@ const promo = (erpId: string) => ({
 });
 
 const quantities = new Map([['prod-trigger', 5]]);
-const best = () => service.getBestPromoPercent(ctx, 'prod-trigger', new Date(), quantities);
+const best = (): Promise<number | null> =>
+    service.getBestPromoPercent(ctx, 'prod-trigger', new Date(), quantities);
 
 describe('withdrawn promo rule (real Postgres)', () => {
     it('stops applying after removal and applies again after reactivation', async () => {

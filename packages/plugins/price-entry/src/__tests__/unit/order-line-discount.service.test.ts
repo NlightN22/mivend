@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import { UserInputError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -18,8 +18,24 @@ function discount(over: Partial<LineDiscount>): LineDiscount {
         ...over,
     };
 }
+interface BuildResult {
+    service: OrderLineDiscountService;
+    lineEdit: {
+        edit: Mock<
+            (
+                c: unknown,
+                _o: unknown,
+                _k: unknown,
+                change: (c: unknown, o: unknown) => Promise<string | null>,
+            ) => Promise<void>
+        >;
+        lineOf: Mock<() => { id: number; customFields: object; productVariant: { sku: string } }>;
+        persist: Mock<() => Promise<undefined>>;
+    };
+    line: { id: number; customFields: object; productVariant: { sku: string } };
+}
 
-function build(states: LineDiscount[]) {
+function build(states: LineDiscount[]): BuildResult {
     const line = { id: 1, customFields: {}, productVariant: { sku: 'A' } };
     const lineEdit = {
         edit: vi.fn(

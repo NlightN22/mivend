@@ -1,5 +1,5 @@
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { LookupMemo } from '../../lookup-memo';
 import { preloadOrderLookups } from '../../order-preload';
@@ -7,8 +7,37 @@ import { PriceEntryService } from '../../price-entry.service';
 
 const resolveDefault = vi.fn(async () => 'RETAIL');
 const ctx = { languageCode: 'en' } as unknown as RequestContext;
+interface SetupResult {
+    connection: TransactionalConnection;
+    priceEntry: PriceEntryService;
+    order: Order;
+    variantFind: Mock<
+        () => Promise<
+            (
+                | {
+                      id: string;
+                      facetValues: never[];
+                      customFields: { weight: number };
+                      product: { customFields: { externalId: string }; facetValues: never[] };
+                  }
+                | {
+                      id: string;
+                      facetValues: never[];
+                      customFields: { weight?: undefined };
+                      product: { customFields: { externalId?: undefined }; facetValues: never[] };
+                  }
+            )[]
+        >
+    >;
+    qb: {
+        where: Mock;
+        andWhere: Mock;
+        take: Mock;
+        getMany: Mock<() => Promise<{ triggerProductErpId: string; giftProductErpId: null }[]>>;
+    };
+}
 
-function setup() {
+function setup(): SetupResult {
     const variants = [
         {
             id: 'v-a',

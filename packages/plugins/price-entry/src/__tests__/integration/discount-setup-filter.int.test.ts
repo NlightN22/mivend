@@ -81,8 +81,12 @@ beforeEach(async () => {
     queries = 0;
 });
 
-const ref = (refId: string) => ({ refId });
-const cond = (field: string, comparison: string, ...ids: string[]) => ({
+const ref = (refId: string): { refId: string } => ({ refId });
+const cond = (
+    field: string,
+    comparison: string,
+    ...ids: string[]
+): { field: string; comparison: string; values: { refId: string }[] } => ({
     field,
     comparison,
     values: ids.map(ref),

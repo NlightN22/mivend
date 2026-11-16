@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import { CheckRegistry } from '@mivend/plugin-checks';
+import { CheckRegistry, Finding } from '@mivend/plugin-checks';
 
 import { OrderDiscountLimitCheck } from '../../order-discount-limit.check';
 import { PriceAdjustmentLimitCheck } from '../../price-adjustment-limit.check';
@@ -9,7 +9,11 @@ import type { LineDiscountService } from '../../line-discount.service';
 
 const ctx = {} as RequestContext;
 
-function orderCheck(administratorId: string | null, ceiling: number, automaticOnly: string[] = []) {
+function orderCheck(
+    administratorId: string | null,
+    ceiling: number,
+    automaticOnly: string[] = [],
+): OrderDiscountLimitCheck {
     return new OrderDiscountLimitCheck(
         new CheckRegistry(),
         {
@@ -31,7 +35,7 @@ function orderCheck(administratorId: string | null, ceiling: number, automaticOn
     );
 }
 
-const orderRun = (check: OrderDiscountLimitCheck) =>
+const orderRun = (check: OrderDiscountLimitCheck): Promise<Finding[]> =>
     check.evaluate({ orderId: '9' }, { ctx, stage: 'on-edit', recipient: null });
 
 describe('OrderDiscountLimitCheck', () => {
@@ -77,7 +81,7 @@ function managerRun(
     params: { requestedPrice: number; referencePrice: number | null; direction: string },
     ceiling: number,
     administratorId: string | null = '7',
-) {
+): Promise<Finding[]> {
     const check = new PriceAdjustmentLimitCheck(
         new CheckRegistry(),
         {

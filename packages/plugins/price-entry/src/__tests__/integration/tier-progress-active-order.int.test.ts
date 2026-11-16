@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, Mock, vi } from 'vitest';
 import {
     Column,
     DataSource,
@@ -85,8 +85,12 @@ async function placeOrder(userId: string, lines: [number, number][]): Promise<vo
         .getRepository(TestOrderLine)
         .save(lines.map(([productVariantId, quantity]) => ({ productVariantId, quantity, order })));
 }
+interface SetupResult {
+    resolver: ProductVariantPriceResolver;
+    resolveTierProgress: Mock<() => Promise<null>>;
+}
 
-function setup() {
+function setup(): SetupResult {
     const resolveTierProgress = vi.fn(async () => null);
     // Mirrors Vendure: the active order is the caller's own, looked up by the session user.
     const activeOrderService = {

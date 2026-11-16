@@ -71,8 +71,19 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.getRepository(TestRule).clear();
 });
+interface PromoResult {
+    erpId: string;
+    percent: number;
+    validFrom: Date;
+    validTo: Date | null;
+    triggerProductErpId: string;
+    triggerQuantity: number;
+    giftProductErpId: null;
+    giftQuantity: null;
+    operationKind: 'percent-discount';
+}
 
-const promo = (erpId: string, validTo: Date | null) => ({
+const promo = (erpId: string, validTo: Date | null): PromoResult => ({
     erpId,
     percent: 15,
     validFrom: new Date(Date.now() - day),

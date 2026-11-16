@@ -9,7 +9,7 @@ import {
     testRequestContext,
     testSchemaOptions,
 } from 'shared';
-import { CheckRegistry, MANAGER_STAGES } from '@mivend/plugin-checks';
+import { CheckRegistry, Finding, MANAGER_STAGES } from '@mivend/plugin-checks';
 
 import { DiscountLimit } from '../../discount-limit.entity';
 import { DiscountLimitService } from '../../discount-limit.service';
@@ -85,7 +85,7 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-const ceiling = async (admin: string | null, product: string) =>
+const ceiling = async (admin: string | null, product: string): Promise<number | undefined> =>
     (await service.ceilingsForProducts(ctx, admin, [product])).get(product);
 
 describe('DiscountLimitService (integration, real Postgres)', () => {
@@ -159,7 +159,10 @@ describe('adjust-price limit check against stored limits (integration)', () => {
         }),
     } as unknown as TransactionalConnection;
 
-    function run(direction: PriceDirection, requestedPrice: number) {
+    function run(
+        direction: PriceDirection,
+        requestedPrice: number,
+    ): { registry: CheckRegistry; findings: Promise<Finding[]> } {
         const registry = new CheckRegistry();
         const check = new PriceAdjustmentLimitCheck(registry, connection, {
             actorAdministratorId: async () => '1',

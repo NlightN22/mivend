@@ -15,7 +15,7 @@ const d = (over: Partial<LineDiscount>): LineDiscount => ({
     ...over,
 });
 
-function service(automatic: number | null) {
+function service(automatic: number | null): LineDiscountService {
     const svc = new LineDiscountService(
         {} as never,
         { findOne: async () => ({ lines: [{ id: 1 }, { id: 2 }, { id: 3 }] }) } as never,
@@ -35,7 +35,7 @@ describe('LineDiscountService.limitApplies', () => {
     });
 
     it('judges a manual price only when it is deeper than the automatic price', async () => {
-        const manual = (lineId: string, effective: number) =>
+        const manual = (lineId: string, effective: number): LineDiscount =>
             d({ lineId, effective, percent: 100 - effective, manual: true });
         const applies = await service(90).limitApplies(ctx, 'o', [
             manual('1', 85),

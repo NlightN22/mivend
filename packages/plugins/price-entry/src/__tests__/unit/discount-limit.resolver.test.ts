@@ -29,7 +29,7 @@ describe('DiscountLimitResolver permissions', () => {
 
 describe('DiscountLimitResolver.orderLineDiscountLimits', () => {
     const ctx = {} as RequestContext;
-    const build = (visible: string[]) =>
+    const build = (visible: string[]): DiscountLimitResolver =>
         new DiscountLimitResolver(
             {
                 ceilingsForProducts: vi.fn(async () => new Map([['p1', 7]])),

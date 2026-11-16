@@ -152,7 +152,7 @@ async function percentFor(lines: CartLine[], priced: string): Promise<number | n
     );
 }
 
-const facetsOf = (maker: string | null) =>
+const facetsOf = (maker: string | null): ReturnType<typeof toFacetsAndWeight>['facetValues'] =>
     toFacetsAndWeight(languageCtx, variantOf(maker, 1)).facetValues;
 
 describe('manufacturer-scoped ladders (real Postgres)', () => {

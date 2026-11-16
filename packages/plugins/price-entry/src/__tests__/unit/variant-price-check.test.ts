@@ -1,11 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { VariantPriceCheck } from '../../variant-price-check';
 
 const ctx = {} as never;
 const order = { id: '5' } as never;
+interface BuildResult {
+    check: VariantPriceCheck;
+    resolve: Mock<() => Promise<{ customerPrice: number | null; compareAtPrice: null }>>;
+}
 
-function build(price: number | null) {
+function build(price: number | null): BuildResult {
     const resolve = vi.fn(async () => ({ customerPrice: price, compareAtPrice: null }));
     return { check: new VariantPriceCheck({ resolve } as never), resolve };
 }

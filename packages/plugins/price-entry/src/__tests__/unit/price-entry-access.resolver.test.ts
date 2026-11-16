@@ -1,12 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ForbiddenError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
 import { DiscountRuleAdminResolver, PriceEntryAdminResolver } from '../../price-entry.resolver';
 
 const ctx = {} as RequestContext;
+interface AccessResult {
+    allowedCodes: Mock<() => Promise<string[]>>;
+    assertCodeAllowed: Mock<(_c: unknown, code: string) => Promise<void>>;
+}
 
-function access(allowed: string[]) {
+function access(allowed: string[]): AccessResult {
     return {
         allowedCodes: vi.fn(async () => allowed),
         assertCodeAllowed: vi.fn(async (_c: unknown, code: string) => {

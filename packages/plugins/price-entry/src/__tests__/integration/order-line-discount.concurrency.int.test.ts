@@ -79,7 +79,7 @@ function buildService(): OrderLineDiscountService {
     );
 }
 
-const priceNow = async () =>
+const priceNow = async (): Promise<number> =>
     (await dataSource.getRepository(TestLine).findOneByOrFail({ id: 1 })).price;
 
 beforeAll(async () => {

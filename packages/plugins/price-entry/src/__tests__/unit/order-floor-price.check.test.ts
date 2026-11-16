@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
-import { CheckRegistry } from '@mivend/plugin-checks';
+import { CheckRegistry, Finding } from '@mivend/plugin-checks';
 
 import { OrderFloorPriceCheck } from '../../order-floor-price.check';
 import type { FloorPriceService } from '../../floor-price.service';
@@ -11,7 +11,7 @@ const lines = [
     { lineId: '2', productVariantId: 'v2', sku: 'B' },
 ];
 
-function run(floors: Array<[string, number]>, prices: Array<[number, number]>) {
+function run(floors: Array<[string, number]>, prices: Array<[number, number]>): Promise<Finding[]> {
     const connection = {
         getRepository: () => ({
             findByIds: vi.fn(async () =>

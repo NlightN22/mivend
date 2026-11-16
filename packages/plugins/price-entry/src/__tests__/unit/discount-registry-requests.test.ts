@@ -1,14 +1,23 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
 import { loadAllRequestsOfType } from '../../discount-registry-requests';
 
 const ctx = {} as RequestContext;
-const rows = (from: number, count: number) =>
+const rows = (from: number, count: number): { id: number }[] =>
     Array.from({ length: count }, (_, i) => ({ id: from + i }));
+interface ServiceResult {
+    findByRequestType: Mock<
+        (
+            _ctx: RequestContext,
+            _type: string,
+            options: { take?: number; skip?: number },
+        ) => Promise<{ items: { id: number }[]; totalItems: number }>
+    >;
+}
 
-function service(total: number) {
+function service(total: number): ServiceResult {
     return {
         findByRequestType: vi.fn(
             async (

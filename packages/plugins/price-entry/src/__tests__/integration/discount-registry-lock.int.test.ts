@@ -17,8 +17,26 @@ let service: DiscountRegistryService;
 const { schema, extra } = testSchemaOptions('price_entry_discount_registry');
 const ctx = testRequestContext;
 const pause = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+interface BackfillItemResult {
+    approvalRequestId: string | null;
+    discountRuleId: string | null;
+    status: 'materialized';
+    input: {
+        priceTypeCode: string;
+        facetCode: null;
+        facetValueCode: null;
+        percent: number;
+        validFrom: Date;
+        validTo: Date;
+        justification: null;
+        counterpartyIds: null;
+    };
+}
 
-const backfillItem = (approvalRequestId: string | null, discountRuleId: string | null) => ({
+const backfillItem = (
+    approvalRequestId: string | null,
+    discountRuleId: string | null,
+): BackfillItemResult => ({
     approvalRequestId,
     discountRuleId,
     status: 'materialized' as const,

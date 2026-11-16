@@ -95,7 +95,7 @@ const row = async (): Promise<{
 
 describe('DiscountSetupService.apply (real Postgres)', () => {
     it('stores a line percent per product, replaces it with a newer version and clears it', async () => {
-        const percents = () =>
+        const percents = (): Promise<{ percent: number | null }[]> =>
             dataSource.query(
                 `SELECT "productErpId", percent FROM discount_setup_product ORDER BY "productErpId"`,
             );

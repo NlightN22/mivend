@@ -29,9 +29,16 @@ const prices: Record<string, Record<string, number>> = {
     RETAIL: { v3: 700 },
 };
 
-function qb() {
+interface RuleQueryBuilder {
+    where(_sql: string, p: Record<string, unknown>): RuleQueryBuilder;
+    andWhere(_sql: string, p?: Record<string, unknown>): RuleQueryBuilder;
+    take(): RuleQueryBuilder;
+    getMany(): Promise<(typeof rules)[number][]>;
+}
+
+function qb(): RuleQueryBuilder {
     const params: Record<string, unknown> = {};
-    const builder = {
+    const builder: RuleQueryBuilder = {
         where: (_sql: string, p: Record<string, unknown>) => Object.assign(params, p) && builder,
         andWhere: (_sql: string, p?: Record<string, unknown>) =>
             Object.assign(params, p) && builder,

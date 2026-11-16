@@ -8,7 +8,7 @@ const rows = [
     { scopeKind: 'manufacturer', scopeRef: 'brand-a', maxDiscountPercent: 2 },
     { scopeKind: 'category', scopeRef: 'cat-a', maxDiscountPercent: 12 },
 ];
-const refs = (manufacturerRef: string | null, categories: string[]) =>
+const refs = (manufacturerRef: string | null, categories: string[]): Map<string, Set<string>> =>
     refsByScopeKind({
         productRef: 'p',
         manufacturerRef,

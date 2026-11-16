@@ -1,11 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ProductVariantPriceResolver } from '../../price-entry.resolver';
 
 const progress = { facetName: 'brand-a', metric: 'WEIGHT', current: 0 };
+interface SetupResult {
+    resolver: ProductVariantPriceResolver;
+    resolveTierProgress: Mock<
+        () => Promise<{ facetName: string; metric: string; current: number }>
+    >;
+    findOne: Mock<() => Promise<{ lines: unknown[] } | null>>;
+    active: { getActiveOrder: Mock<() => Promise<{ id: number } | undefined>> };
+}
 
-function setup(order: { lines: unknown[] } | undefined) {
+function setup(order: { lines: unknown[] } | undefined): SetupResult {
     const resolveTierProgress = vi.fn(async () => progress);
     const active = { getActiveOrder: vi.fn(async () => order && { id: 1 }) };
     const findOne = vi.fn(async () => order ?? null);

@@ -1,12 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { CatalogPricingService } from '../../catalog-pricing.service';
 import type { DiscountSetupRulesService } from '../../discount-setup-rules.service';
 import type { PriceEntryService } from '../../price-entry.service';
 import type { PriceResolutionService } from '../../price-resolution.service';
+interface BuildResult {
+    service: CatalogPricingService;
+    resolution: {
+        catalogPricingScope: Mock<
+            () => Promise<{ userCode: null; defaultCode: null; counterparty: null }>
+        >;
+        resolve: Mock<
+            (
+                ctx: { who: string },
+                id: string,
+            ) => Promise<{ customerPrice: number; compareAtPrice: null; who: string }>
+        >;
+        resolveTiers: Mock<() => Promise<never[]>>;
+    };
+    find: Mock<() => Promise<never[]>>;
+}
 
-function build(failFor: string[] = []) {
+function build(failFor: string[] = []): BuildResult {
     const find = vi.fn(async () => []);
     const connection = { getRepository: () => ({ find }) } as unknown as TransactionalConnection;
     const resolution = {

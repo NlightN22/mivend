@@ -5,7 +5,7 @@ import { FloorPriceService } from '../../floor-price.service';
 
 const ctx = {} as RequestContext;
 
-function make(type: unknown, purchase: Map<string, number>) {
+function make(type: unknown, purchase: Map<string, number>): FloorPriceService {
     const connection = { getRepository: () => ({ findOne: vi.fn(async () => type) }) };
     const entries = { getForVariants: vi.fn(async () => purchase) };
     return new FloorPriceService(connection as never, entries as never);

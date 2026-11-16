@@ -1,10 +1,15 @@
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { groupFacetOptionRows, loadDiscountFacetOptions } from '../../discount-facet-options';
 
 describe('loadDiscountFacetOptions', () => {
-    const connectionReturning = (rows: unknown[]) => {
+    interface ConnectionReturningResult {
+        query: Mock<() => Promise<unknown[]>>;
+        connection: TransactionalConnection;
+    }
+
+    const connectionReturning = (rows: unknown[]): ConnectionReturningResult => {
         const query = vi.fn(async () => rows);
         return {
             query,

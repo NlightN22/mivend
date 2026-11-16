@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { GrantedDiscountService } from '../../granted-discount.service';
@@ -16,8 +16,12 @@ const input = {
     discountAmount: 5,
     sourceVersion: '2',
 };
+interface SetupResult {
+    repo: { findOne: Mock; save: Mock; query: Mock };
+    service: GrantedDiscountService;
+}
 
-function setup(existing: Record<string, unknown> | null) {
+function setup(existing: Record<string, unknown> | null): SetupResult {
     const repo = { findOne: vi.fn().mockResolvedValue(existing), save: vi.fn(), query: vi.fn() };
     const connection = {
         getRepository: () => repo,

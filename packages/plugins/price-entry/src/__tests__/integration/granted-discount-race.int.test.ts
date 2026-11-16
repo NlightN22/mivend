@@ -45,8 +45,20 @@ let dataSource: DataSource;
 let service: GrantedDiscountService;
 const { schema, extra } = testSchemaOptions('price_entry_granted_discount');
 const ctx = testRequestContext;
+interface InputResult {
+    erpId: string;
+    sourceDocumentId: string;
+    counterpartyErpId: string;
+    productErpId: string;
+    orderEntityId: null;
+    discountDocumentId: null;
+    discountRuleRecipientId: string;
+    condition: null;
+    discountAmount: number;
+    sourceVersion: string;
+}
 
-const input = (sourceVersion: string) => ({
+const input = (sourceVersion: string): InputResult => ({
     erpId: 'gd-1',
     sourceDocumentId: 'ship-1',
     counterpartyErpId: 'cp-1',
