@@ -28,6 +28,7 @@ import {
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
+import { fetchSiteDefaultLanguage } from './api/siteLanguage';
 import { i18n, initLocale } from './i18n';
 import { activeTag } from './i18n/format';
 import { router } from './router';
@@ -86,4 +87,4 @@ app.use(PrimeVue, {
     },
 });
 
-initLocale().finally(() => app.mount('#app'));
+initLocale(fetchSiteDefaultLanguage).finally(() => app.mount('#app'));

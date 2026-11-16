@@ -33,6 +33,7 @@ import {
 
 import App from './App.vue';
 import { router } from './router';
+import { fetchSiteDefaultLanguage } from './api/siteLanguage';
 import { i18n, initLocale } from './i18n';
 import { formatAmount } from './i18n/format';
 import { initTheme } from '@mivend/ui-kit';
@@ -74,4 +75,4 @@ app.use(router);
 app.use(i18n);
 app.use(ElementPlus, { zIndex: layers.popover });
 
-void initLocale().finally(() => app.mount('#app'));
+void initLocale(fetchSiteDefaultLanguage).finally(() => app.mount('#app'));

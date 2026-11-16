@@ -3750,6 +3750,7 @@ export type Query = {
     settlementBalances: Array<SettlementBalanceCard>;
     settlementDocuments: SettlementDocumentPage;
     signInCaptchaRequirement: SignInCaptchaRequirement;
+    siteDefaultLanguage?: Maybe<Scalars['String']['output']>;
     suggestAddress: Array<Scalars['String']['output']>;
     tradingPoint?: Maybe<TradingPoint>;
     twoFactorRequired: Scalars['Boolean']['output'];
@@ -6182,6 +6183,10 @@ export type OrderStatusesQuery = {
     }>;
 };
 
+export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SiteDefaultLanguageQuery = { siteDefaultLanguage?: string | null };
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -7906,3 +7911,12 @@ export const OrderStatusesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
+
+export const SiteDefaultLanguageDocument = new TypedDocumentString(`
+    query SiteDefaultLanguage {
+  siteDefaultLanguage
+}
+    `) as unknown as TypedDocumentString<
+    SiteDefaultLanguageQuery,
+    SiteDefaultLanguageQueryVariables
+>;

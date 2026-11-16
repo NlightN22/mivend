@@ -18,6 +18,14 @@ describe('resolveLocale', () => {
         expect(resolveLocale(null, ['fr-FR', 'RU-ru', 'en'], SUPPORTED)).toBe('ru'));
     it('falls back to English when nothing matches', () =>
         expect(resolveLocale(null, ['fr', 'de'], SUPPORTED)).toBe(DEFAULT_LOCALE));
+    it('uses the settings default when neither saved nor browser language is supported', () =>
+        expect(resolveLocale(null, ['fr'], SUPPORTED, 'ru')).toBe('ru'));
+    it('prefers a supported browser language over the settings default', () =>
+        expect(resolveLocale(null, ['en-US'], SUPPORTED, 'ru')).toBe('en'));
+    it('prefers a saved choice over the settings default', () =>
+        expect(resolveLocale('en', ['fr'], SUPPORTED, 'ru')).toBe('en'));
+    it('ignores an unsupported settings default', () =>
+        expect(resolveLocale(null, ['fr'], SUPPORTED, 'de')).toBe(DEFAULT_LOCALE));
 });
 
 describe('locale metadata', () => {

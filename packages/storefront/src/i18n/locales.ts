@@ -29,15 +29,28 @@ export function loadCatalogue(locale: string): Promise<MessageSchema> {
     return catalogueLoaders[`./${locale}/index.ts`]().then(module => module.default);
 }
 
-export function resolveLocale(
+export function matchLocale(
     saved: string | null,
     browserLanguages: readonly string[],
     supported: readonly string[],
-): string {
+): string | null {
     if (saved && supported.includes(saved)) return saved;
     for (const tag of browserLanguages) {
         const language = tag.toLowerCase().split('-')[0];
         if (supported.includes(language)) return language;
     }
-    return DEFAULT_LOCALE;
+    return null;
+}
+
+export function resolveLocale(
+    saved: string | null,
+    browserLanguages: readonly string[],
+    supported: readonly string[],
+    settingsDefault: string | null = null,
+): string {
+    const matched = matchLocale(saved, browserLanguages, supported);
+    if (matched) return matched;
+    return settingsDefault && supported.includes(settingsDefault)
+        ? settingsDefault
+        : DEFAULT_LOCALE;
 }

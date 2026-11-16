@@ -4,6 +4,7 @@ import {
     DEFAULT_LOCALE,
     SUPPORTED_LOCALES,
     loadCatalogue,
+    matchLocale,
     resolveLocale,
     type MessageSchema,
 } from './locales';
@@ -58,6 +59,13 @@ export async function setLocale(locale: string): Promise<void> {
     if (await applyLocale(locale)) saveLocale(locale);
 }
 
-export async function initLocale(): Promise<void> {
-    await applyLocale(resolveLocale(readSavedLocale(), navigator.languages, SUPPORTED_LOCALES));
+export async function initLocale(
+    fetchSettingsDefault: () => Promise<string | null>,
+): Promise<void> {
+    const saved = readSavedLocale();
+    const matched = matchLocale(saved, navigator.languages, SUPPORTED_LOCALES);
+    const settingsDefault = matched ? null : await fetchSettingsDefault().catch(() => null);
+    await applyLocale(
+        resolveLocale(saved, navigator.languages, SUPPORTED_LOCALES, settingsDefault),
+    );
 }

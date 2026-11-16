@@ -8799,6 +8799,7 @@ export type Query = {
     shippingMethod: Maybe<ShippingMethod>;
     shippingMethods: ShippingMethodList;
     signInCaptchaRequirement: SignInCaptchaRequirement;
+    siteDefaultLanguage: Maybe<Scalars['String']['output']>;
     /** Generate slug for entity */
     slugForEntity: Scalars['String']['output'];
     stockLocation: Maybe<StockLocation>;
@@ -15163,6 +15164,10 @@ export type UnsortedAdministratorsQuery = {
     };
 };
 
+export type SiteDefaultLanguageQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SiteDefaultLanguageQuery = { siteDefaultLanguage: string | null };
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -19486,4 +19491,13 @@ export const UnsortedAdministratorsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UnsortedAdministratorsQuery,
     UnsortedAdministratorsQueryVariables
+>;
+
+export const SiteDefaultLanguageDocument = new TypedDocumentString(`
+    query SiteDefaultLanguage {
+  siteDefaultLanguage
+}
+    `) as unknown as TypedDocumentString<
+    SiteDefaultLanguageQuery,
+    SiteDefaultLanguageQueryVariables
 >;
