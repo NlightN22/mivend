@@ -1,20 +1,39 @@
 <script setup lang="ts">
-// Plain backoffice <select> wrapper — filter dropdowns across the manager portal (status,
-// date range, manager, ...). Deliberately native, not Element Plus, to stay light for simple
-// option lists; revisit if a page needs search-within-options.
+// Backoffice select — native <select> for short option lists, a type-to-search picker above
+// SEARCHABLE_OPTION_COUNT options (manager, branch, ...), so every caller gets search for free.
+import { computed } from 'vue';
+import { SEARCHABLE_OPTION_COUNT } from '../MvColumnFilter/filterOptionsByQuery';
+import MvSearchSelect from './MvSearchSelect.vue';
+
 export interface SelectOption {
     value: string;
     label: string;
 }
 
-withDefaults(defineProps<{ modelValue: string; options: SelectOption[]; disabled?: boolean }>(), {
-    disabled: false,
-});
+const props = withDefaults(
+    defineProps<{
+        modelValue: string;
+        options: SelectOption[];
+        disabled?: boolean;
+        title?: string;
+    }>(),
+    { disabled: false, title: '' },
+);
 defineEmits<{ 'update:modelValue': [value: string] }>();
+const searchable = computed(() => props.options.length > SEARCHABLE_OPTION_COUNT);
 </script>
 
 <template>
+    <MvSearchSelect
+        v-if="searchable"
+        :model-value="modelValue"
+        :options="options"
+        :disabled="disabled"
+        :title="title"
+        @update:model-value="$emit('update:modelValue', $event)"
+    />
     <select
+        v-else
         class="mv-select"
         :value="modelValue"
         :disabled="disabled"

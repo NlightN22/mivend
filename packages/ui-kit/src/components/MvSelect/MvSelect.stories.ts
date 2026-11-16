@@ -46,3 +46,29 @@ export const Disabled: Story = {
         template: '<MvSelect v-bind="args" />',
     }),
 };
+
+const PEOPLE: SelectOption[] = [
+    'Artamonov Vladimir',
+    'Artemev Sergey',
+    'Artyukhov Denis',
+    'Artamonova Olga',
+    'Artemov Pavel',
+    'Artemeva Irina',
+    'Matveev Dmitry',
+    'Matveev Alexander',
+    'Matveev Igor',
+    'Matveev Pavel',
+].map(label => ({ value: label.toLowerCase().replace(' ', '-'), label }));
+
+export const LongListWithSearch: Story = {
+    args: { modelValue: '', options: PEOPLE, title: 'Pick a manager' },
+    render: args => ({
+        components: { MvSelect },
+        setup: () => {
+            const value = ref(args.modelValue);
+            return { args, value };
+        },
+        template:
+            '<MvSelect v-bind="args" :model-value="value" @update:model-value="value = $event" />',
+    }),
+};
