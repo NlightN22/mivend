@@ -7,6 +7,7 @@ import {
     JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
+    SelectQueryBuilder,
 } from 'typeorm';
 import type { OrderListOptions } from '@vendure/common/lib/generated-types';
 import type { ListQueryBuilder, RequestContext } from '@vendure/core';
@@ -85,7 +86,7 @@ beforeAll(async () => {
     );
     const realScope = new AccessScopeService({} as never, {} as never, {} as never);
     // Stands in for Vendure's ListQueryBuilder: applies only the filters the service sends.
-    const build = (_entity: unknown, options?: OrderListOptions) => {
+    const build = (_entity: unknown, options?: OrderListOptions): SelectQueryBuilder<TestOrder> => {
         const qb = dataSource.getRepository(TestOrder).createQueryBuilder('order');
         const f = options?.filter;
         if (f?.id?.in)

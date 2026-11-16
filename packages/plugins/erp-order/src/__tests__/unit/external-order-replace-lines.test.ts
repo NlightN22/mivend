@@ -1,11 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { ExternalOrderService } from '../../external-order.service';
 import type { ExternalOrderInput } from '../../external-order.types';
 
 const ctx = {} as RequestContext;
 
-function setup(current: Array<{ id: number; productVariantId: number; quantity: number }>) {
+function setup(current: Array<{ id: number; productVariantId: number; quantity: number }>): {
+    service: ExternalOrderService;
+    del: Mock;
+    insertLines: Mock;
+} {
     const del = vi.fn().mockImplementation(async (criteria: unknown[]) => {
         if (!criteria.length)
             throw new Error('Empty criteria(s) are not allowed for the delete method.');

@@ -208,7 +208,12 @@ describe('core order scope on real SQL', () => {
     });
 
     it('a new-customer input naming an existing foreign customer by email is refused', async () => {
-        const draft = (emailAddress: string) => ({ orderId: 1, input: { emailAddress } });
+        const draft = (
+            emailAddress: string,
+        ): { orderId: number; input: { emailAddress: string } } => ({
+            orderId: 1,
+            input: { emailAddress },
+        });
         await expect(
             service().assertInScope(
                 ctx,

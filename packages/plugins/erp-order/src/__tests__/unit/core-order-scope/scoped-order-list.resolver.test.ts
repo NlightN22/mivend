@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { EntityNotFoundError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -9,10 +9,21 @@ import {
     ScopedOrdersResolver,
 } from '../../../core-order-scope/scoped-order-list.resolver';
 
-const ctx = (superAdmin: boolean) =>
+const ctx = (superAdmin: boolean): RequestContext =>
     ({ userHasPermissions: () => superAdmin }) as unknown as RequestContext;
+interface DepsResult {
+    visibility: {
+        findVisible: Mock<() => Promise<{ items: never[]; totalItems: number }>>;
+        visibleIds: Mock<(_c: unknown, ids: unknown[]) => Promise<Set<string>>>;
+    };
+    orderService: {
+        findAll: Mock<() => Promise<{ items: never[]; totalItems: number }>>;
+        findByCustomerId: Mock<() => Promise<{ items: never[]; totalItems: number }>>;
+        findOneByOrderLineId: Mock<() => Promise<{ id: string }>>;
+    };
+}
 
-function deps(visible: string[] = []) {
+function deps(visible: string[] = []): DepsResult {
     const visibility = {
         findVisible: vi.fn(async () => ({ items: [], totalItems: 0 })),
         visibleIds: vi.fn(

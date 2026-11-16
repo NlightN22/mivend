@@ -33,7 +33,11 @@ describe('placementDenormalizeProcess (#258)', () => {
 });
 
 describe('placementDenormalizeProcess onTransitionStart (#347)', () => {
-    const start = (from: OrderState, to: OrderState) =>
+    type StartResult = ReturnType<
+        NonNullable<typeof placementDenormalizeProcess.onTransitionStart>
+    >;
+
+    const start = (from: OrderState, to: OrderState): StartResult =>
         placementDenormalizeProcess.onTransitionStart?.(from, to, {
             ctx: {} as RequestContext,
             order: { id: 1 } as Order,

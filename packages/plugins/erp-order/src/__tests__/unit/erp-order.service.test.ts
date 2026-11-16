@@ -255,8 +255,8 @@ describe('ErpOrderService', () => {
     });
 
     describe('order without a trading point (#347)', () => {
-        const order = () => ({ id: 1, customFields: {}, customerId: 'cust-1' }) as never;
-        const branchOf = (o: never) =>
+        const order = (): never => ({ id: 1, customFields: {}, customerId: 'cust-1' }) as never;
+        const branchOf = (o: never): string | undefined =>
             (o as { customFields: { branchId?: string } }).customFields.branchId;
 
         beforeEach(() => {

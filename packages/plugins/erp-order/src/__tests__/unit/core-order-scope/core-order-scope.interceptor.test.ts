@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import * as core from '@vendure/core';
@@ -10,7 +10,12 @@ vi.mock('@vendure/core', async importOriginal => ({
     internal_getRequestContext: vi.fn(),
 }));
 
-function run(field: string, parent = 'Mutation', apiType = 'admin', superAdmin = false) {
+function run(
+    field: string,
+    parent = 'Mutation',
+    apiType = 'admin',
+    superAdmin = false,
+): { result: ReturnType<CoreOrderScopeInterceptor['intercept']>; scope: { assertInScope: Mock } } {
     vi.mocked(core.internal_getRequestContext).mockReturnValue({
         apiType,
         userHasPermissions: () => superAdmin,
