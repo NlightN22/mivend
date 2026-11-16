@@ -33,9 +33,8 @@ export class BranchService {
     async upsert(ctx: RequestContext, record: BranchRecordInput): Promise<Branch> {
         const repo = this.connection.getRepository(ctx, Branch);
         let branch = await repo.findOne({ where: { erpId: record.erpId } });
-        if (branch) {
-            branch.name = record.name;
-        } else {
+        // The name is the administrator's once the row exists (#286): a sync never undoes a rename.
+        if (!branch) {
             branch = repo.create({ erpId: record.erpId, name: record.name });
         }
         const saved = await repo.save(branch);

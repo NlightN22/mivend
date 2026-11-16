@@ -49,12 +49,14 @@ describe('BranchService', () => {
         expect(repo.save).toHaveBeenCalled();
     });
 
-    it('updates an existing branch in place, never creating a duplicate', async () => {
-        const existing = { erpId: 'branch-central', name: 'Old name' };
+    it('never creates a duplicate and never overwrites an administrator rename (#286)', async () => {
+        const existing = { erpId: 'branch-central', name: 'Renamed by admin' };
         repo.findOne.mockResolvedValue(existing);
-        await service.upsert(ctx, { erpId: 'branch-central', name: 'New name' });
+        await service.upsert(ctx, { erpId: 'branch-central', name: 'Name from the ERP' });
         expect(repo.create).not.toHaveBeenCalled();
-        expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'New name' }));
+        expect(repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Renamed by admin' }),
+        );
     });
 
     it('findAll returns rows ordered by name', async () => {

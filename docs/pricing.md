@@ -36,6 +36,7 @@ type by code. Idempotent, never overrides admin-set values. If the price type ha
 there is no default until the next restart (the lookup is retried on every bootstrap).
 Once `defaultBranchId` is set, bootstrap creates and renames no branch: the administrator owns them
 from then on, so renaming a branch or changing `BOOTSTRAP_BRANCH_NAMES` afterwards adds nothing (#286).
+The ERP branch sync creates a branch but never overwrites the name of an existing one, so a rename sticks.
 
 Default branch (#286): the fallback for guests and customers whose counterparty has no branch (price
 type, warehouse and stock come from its `BranchSettings`), for staff without branch settings, and for
