@@ -1,9 +1,9 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { ID } from '@vendure/common/lib/shared-types';
+import { ID, PaginatedList } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission, UnsortedAdministratorService } from '@mivend/plugin-access-control';
 
-import { PriceTypeGapService } from '../price-type-gap.service';
+import { PriceTypeGapRow, PriceTypeGapService } from '../price-type-gap.service';
 import { UnsortedCounterpartyService } from './unsorted-counterparty.service';
 import {
     VisibilityGrantListArgs,
@@ -11,9 +11,19 @@ import {
     VisibilityGrantRow,
 } from './visibility-grant-query.service';
 import { VisibilityGrantService } from './visibility-grant.service';
+import { Counterparty } from '../entities/counterparty.entity';
 
 const MANAGE = CustomPermission.ManageVisibilityGrants.Permission;
 const MANAGE_ACCESS = CustomPermission.ManageAccessControl.Permission;
+
+interface UnsortedAdministratorRow {
+    id: string;
+    firstName: string;
+    lastName: string;
+    emailAddress: string;
+    departmentId: string | null;
+    roleCodes: string[];
+}
 
 @Resolver()
 export class VisibilityResolver {
@@ -70,7 +80,7 @@ export class VisibilityResolver {
     async unsortedAdministrators(
         @Ctx() ctx: RequestContext,
         @Args() args: { take?: number; skip?: number },
-    ) {
+    ): Promise<{ totalItems: number; items: UnsortedAdministratorRow[] }> {
         const page = await this.administratorsService.findPage(ctx, args);
         return {
             totalItems: page.totalItems,

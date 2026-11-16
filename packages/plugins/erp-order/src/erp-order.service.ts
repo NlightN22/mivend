@@ -10,7 +10,11 @@ import {
 } from '@vendure/core';
 import { IsNull } from 'typeorm';
 import { BranchSettingsService } from '@mivend/plugin-access-control';
-import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
+import {
+    CounterpartyService,
+    TradingPoint,
+    TradingPointService,
+} from '@mivend/plugin-counterparty';
 import { ActingContextService } from '@mivend/plugin-session-management';
 import { HistoryEntryType } from '@vendure/common/lib/generated-types';
 import { getManyBounded } from 'shared';

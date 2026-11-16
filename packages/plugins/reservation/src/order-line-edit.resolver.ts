@@ -4,9 +4,10 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { OrderLineAddService } from './order-line-add.service';
-import { OrderLineQuoteService } from './order-line-quote.service';
+import { OrderLineQuote, OrderLineQuoteService } from './order-line-quote.service';
 import { OrderLineEditService } from './order-line-edit.service';
-import { OrderLineShortfallService } from './order-line-shortfall.service';
+import { OrderLineShortfallRow, OrderLineShortfallService } from './order-line-shortfall.service';
+import type { LineAvailability } from './order-line-availability.port';
 
 @Resolver()
 export class OrderLineEditResolver {
@@ -19,7 +20,10 @@ export class OrderLineEditResolver {
 
     @Query()
     @Allow(Permission.ReadOrder)
-    async orderLineAvailability(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
+    async orderLineAvailability(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID },
+    ): Promise<(Omit<LineAvailability, 'lineId'> & { orderLineId: string })[]> {
         const rows = await this.edits.availability(ctx, args.orderId);
         return rows.map(({ lineId, ...rest }) => ({ orderLineId: lineId, ...rest }));
     }

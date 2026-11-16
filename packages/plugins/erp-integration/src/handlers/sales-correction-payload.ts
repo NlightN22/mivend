@@ -66,7 +66,19 @@ export function salesCorrectionFields(p: Payload): ErpHeaderFields<SalesCorrecti
     };
 }
 
-const beforeValues = (l: Payload) => ({
+interface BeforeValues {
+    quantityBeforeCorrection: number | null;
+    priceBeforeCorrectionMinor: number | null;
+    amountBeforeCorrectionMinor: number | null;
+    vatAmountBeforeCorrectionMinor: number | null;
+    quantityBeforeChange: number | null;
+    priceBeforeChangeMinor: number | null;
+    amountBeforeChangeMinor: number | null;
+    vatAmountBeforeChangeMinor: number | null;
+    vatCodeBeforeChange: string | null;
+}
+
+const beforeValues = (l: Payload): BeforeValues => ({
     quantityBeforeCorrection: flt(l.quantityBeforeCorrection),
     priceBeforeCorrectionMinor: money(l.priceBeforeCorrection),
     amountBeforeCorrectionMinor: money(l.amountBeforeCorrection),
