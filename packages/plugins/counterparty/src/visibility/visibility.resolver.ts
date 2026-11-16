@@ -27,7 +27,10 @@ export class VisibilityResolver {
 
     @Query()
     @Allow(MANAGE, MANAGE_ACCESS)
-    visibilityGrants(@Ctx() ctx: RequestContext, @Args() args: VisibilityGrantListArgs) {
+    visibilityGrants(
+        @Ctx() ctx: RequestContext,
+        @Args() args: VisibilityGrantListArgs,
+    ): Promise<{ items: VisibilityGrantRow[]; totalItems: number }> {
         return this.query.findPage(ctx, args);
     }
 
@@ -49,7 +52,7 @@ export class VisibilityResolver {
     unsortedCounterparties(
         @Ctx() ctx: RequestContext,
         @Args() args: { take?: number; skip?: number; search?: string },
-    ) {
+    ): Promise<PaginatedList<Counterparty>> {
         return this.counterpartiesService.findPage(ctx, args);
     }
 
@@ -58,7 +61,7 @@ export class VisibilityResolver {
     priceTypeGapCounterparties(
         @Ctx() ctx: RequestContext,
         @Args() args: { take?: number; skip?: number; search?: string },
-    ) {
+    ): Promise<PaginatedList<PriceTypeGapRow>> {
         return this.priceTypeGaps.findPage(ctx, args);
     }
 

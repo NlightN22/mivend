@@ -12,7 +12,7 @@ const meta: Meta<typeof ProformaInvoiceDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof ProformaInvoiceDetailPage>;
 
-const variant = (name: string, sku: string) => ({ name, sku });
+const variant = (name: string, sku: string): { name: string; sku: string } => ({ name, sku });
 const v1Lines = [
     {
         quantity: 2,

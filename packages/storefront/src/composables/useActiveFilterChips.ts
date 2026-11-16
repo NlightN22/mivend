@@ -63,7 +63,7 @@ export function useActiveFilterChips(
     filters: Ref<FilterState>,
     facetGroups: Ref<FacetGroup[]>,
     labels: () => ChipLabels,
-) {
+): { chips: ComputedRef<ActiveFilter[]>; remove: (key: string) => void; clear: () => void } {
     // Facet-value chips need the facet names, so they appear only once facets have loaded.
     const chips = computed(() =>
         buildActiveFilterChips(filters.value, facetGroups.value, labels()),

@@ -12,7 +12,7 @@ export function countComparisonView(summary: unknown): CountComparisonRow[] {
     if (!Array.isArray(list)) return [];
     return list.flatMap((raw: Record<string, unknown>) => {
         if (typeof raw?.stream !== 'string' || typeof raw.status !== 'string') return [];
-        const num = (v: unknown) => (typeof v === 'number' ? v : null);
+        const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
         return [
             {
                 stream: raw.stream,

@@ -30,17 +30,24 @@ export function records(v: unknown): Payload[] {
 
 export const lineNumber = (item: Payload): number => int(item.lineNumber) ?? 0;
 
-export const discounts = (item: Payload) => ({
+export const discounts = (
+    item: Payload,
+): { automaticDiscountPercent: number | null; manualDiscountPercent: number | null } => ({
     automaticDiscountPercent: flt(item.automaticDiscountPercent),
     manualDiscountPercent: flt(item.manualDiscountPercent),
 });
 
-export const vat = (item: Payload) => ({
+export const vat = (item: Payload): { vatCode: string | null; vatAmountMinor: number | null } => ({
     vatCode: str(item.vatCode),
     vatAmountMinor: money(item.vatAmount),
 });
 
-export const discountCondition = (item: Payload) => ({
+export const discountCondition = (
+    item: Payload,
+): {
+    automaticDiscountCondition: ErpRef | null;
+    automaticDiscountConditionValue: string | null;
+} => ({
     automaticDiscountCondition: ref(item.automaticDiscountCondition),
     automaticDiscountConditionValue: str(item.automaticDiscountConditionValue),
 });

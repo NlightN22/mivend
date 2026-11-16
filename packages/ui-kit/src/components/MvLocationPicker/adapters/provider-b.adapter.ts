@@ -59,7 +59,10 @@ interface GoogleMaps {
 const READY_CALLBACK = '__mvProviderBReady';
 const BIAS_RADIUS_METERS = 50_000;
 const MAX_SUGGESTIONS = 6;
-const toLiteral = (p: GeoPoint) => ({ lat: p.latitude, lng: p.longitude });
+const toLiteral = (p: GeoPoint): { lat: number; lng: number } => ({
+    lat: p.latitude,
+    lng: p.longitude,
+});
 const fromLatLng = (l: LatLng): GeoPoint => ({ latitude: l.lat(), longitude: l.lng() });
 
 export class ProviderBAdapter implements MapAdapter {

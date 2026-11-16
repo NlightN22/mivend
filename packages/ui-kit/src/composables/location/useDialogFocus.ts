@@ -7,7 +7,7 @@ export function useDialogFocus(
     dialog: Ref<HTMLElement | null>,
     onEscape: () => void,
     enabled = true,
-) {
+): void {
     let opener: HTMLElement | null = null;
 
     function focusable(): HTMLElement[] {

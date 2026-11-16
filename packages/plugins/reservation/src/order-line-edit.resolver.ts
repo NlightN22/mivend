@@ -29,13 +29,16 @@ export class OrderLineEditResolver {
     orderLineQuote(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID; sku: string; quantity?: number | null },
-    ) {
+    ): Promise<OrderLineQuote> {
         return this.quotes.quote(ctx, args.orderId, args.sku, args.quantity ?? 1);
     }
 
     @Query()
     @Allow(Permission.ReadOrder)
-    orderLineShortfalls(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
+    orderLineShortfalls(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID },
+    ): Promise<OrderLineShortfallRow[]> {
         return this.shortfalls.forOrder(ctx, args.orderId);
     }
 
@@ -75,7 +78,10 @@ export class OrderLineEditResolver {
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ConfirmOrder.Permission)
-    async splitOrderLinesByStock(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
+    async splitOrderLinesByStock(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID },
+    ): Promise<{ requested: number; kept: number; shortfall: number; orderLineId: string }[]> {
         const outcomes = await this.edits.splitByStock(ctx, args.orderId);
         return outcomes.map(({ lineId, ...rest }) => ({ orderLineId: lineId, ...rest }));
     }

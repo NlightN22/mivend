@@ -116,7 +116,11 @@ export class ErpOrderService {
 
     // Staff pick the point explicitly (setDraftOrderTradingPoint); none chosen means self-pickup,
     // so the customer's preferred point must not leak into tradingPointId/deliveryAddress.
-    private async placementPoints(ctx: RequestContext, order: Order, isStaff: boolean) {
+    private async placementPoints(
+        ctx: RequestContext,
+        order: Order,
+        isStaff: boolean,
+    ): Promise<{ deliveryPoint: TradingPoint | null; branchPoint: TradingPoint | null }> {
         const chosenPointId = isStaff ? await this.staffChosenPointId(ctx, order) : null;
         const chosen = chosenPointId
             ? await this.tradingPointService.findById(ctx, chosenPointId)
