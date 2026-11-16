@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
-import { useRowSelection } from '../../components/MvAdvancedDataTable/useRowSelection';
+import { describe, expect, it, Mock, vi } from 'vitest';
+import {
+    UseRowSelection,
+    useRowSelection,
+} from '../../components/MvAdvancedDataTable/useRowSelection';
 
 const rows = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-function setup(selected: string[], blocked: number[] = []) {
+function setup(
+    selected: string[],
+    blocked: number[] = [],
+): { selection: UseRowSelection<{ id: number }>; onChange: Mock } {
     const onChange = vi.fn();
     const selection = useRowSelection<{ id: number }>({
         rows: () => rows,

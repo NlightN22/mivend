@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createApp, nextTick } from 'vue';
-import { createMemoryHistory, createRouter } from 'vue-router';
+import { createMemoryHistory, createRouter, Router } from 'vue-router';
 import { useUrlState } from '../../composables/useUrlState';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 
-async function setup(url: string) {
+async function setup(url: string): Promise<{ router: Router; run: <T>(fn: () => T) => T }> {
     const router = createRouter({
         history: createMemoryHistory(),
         routes: [{ path: '/list', component: { render: () => null } }],

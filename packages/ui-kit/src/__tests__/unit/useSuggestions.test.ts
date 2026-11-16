@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, ref } from 'vue';
-import { useSuggestions } from '../../components/MvFilterBuilder/useSuggestions';
+import { UseSuggestions, useSuggestions } from '../../components/MvFilterBuilder/useSuggestions';
 import type { FilterSuggest } from '../../components/MvFilterBuilder/filterBuilderTypes';
 
-function setup(fetcher: FilterSuggest | undefined) {
+function setup(fetcher: FilterSuggest | undefined): UseSuggestions {
     let state!: ReturnType<typeof useSuggestions>;
     createApp({
         setup() {
@@ -15,7 +15,7 @@ function setup(fetcher: FilterSuggest | undefined) {
     return state;
 }
 
-const key = (name: string) => {
+const key = (name: string): KeyboardEvent => {
     const event = new KeyboardEvent('keydown', { key: name, cancelable: true });
     return event;
 };

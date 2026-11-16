@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import MvLocationPicker from '../../../components/MvLocationPicker/MvLocationPicker.vue';
 import { makeStubAdapter, type StubAdapter } from './stubAdapter';
 
@@ -12,7 +12,7 @@ const config = {
     defaultZoom: 5,
 };
 
-function build(adapter: StubAdapter, extra: Record<string, unknown> = {}) {
+function build(adapter: StubAdapter, extra: Record<string, unknown> = {}): VueWrapper {
     return mount(MvLocationPicker, {
         props: {
             modelValue: null,
@@ -26,7 +26,7 @@ function build(adapter: StubAdapter, extra: Record<string, unknown> = {}) {
     });
 }
 
-const saveButton = () =>
+const saveButton = (): HTMLButtonElement =>
     [...document.body.querySelectorAll('button')].find(
         b => b.textContent?.trim() === 'Save',
     ) as HTMLButtonElement;

@@ -38,18 +38,18 @@ function stubA(): { click: (c: [number, number]) => void } {
         ) {
             this.location = props.location;
         }
-        setLocation(l: { center: [number, number]; zoom: number }) {
+        setLocation(l: { center: [number, number]; zoom: number }): void {
             this.location = l;
         }
-        addChild() {}
-        removeChild() {}
-        destroy() {}
+        addChild(): void {}
+        removeChild(): void {}
+        destroy(): void {}
     }
     class Any {
         constructor(props: { onClick?: typeof onClick } = {}) {
             if (props.onClick) onClick = props.onClick;
         }
-        update() {}
+        update(): void {}
     }
     vi.stubGlobal('ymaps3', {
         ready: Promise.resolve(),
@@ -76,26 +76,26 @@ function stubB(): { click: (lat: number, lng: number) => void } {
             this.c = o.center;
             this.z = o.zoom;
         }
-        setCenter(c: { lat: number; lng: number }) {
+        setCenter(c: { lat: number; lng: number }): void {
             this.c = c;
         }
-        setZoom(z: number) {
+        setZoom(z: number): void {
             this.z = z;
         }
-        getCenter() {
+        getCenter(): { lat: () => number; lng: () => number } {
             return { lat: () => this.c.lat, lng: () => this.c.lng };
         }
-        getZoom() {
+        getZoom(): number {
             return this.z;
         }
-        addListener(n: string, f: (typeof handlers)[string]) {
+        addListener(n: string, f: (typeof handlers)[string]): void {
             handlers[n] = f;
         }
     }
     class Marker {
-        setPosition() {}
-        setMap() {}
-        addListener() {}
+        setPosition(): void {}
+        setMap(): void {}
+        addListener(): void {}
     }
     const fetchAutocompleteSuggestions = vi.fn(async () => ({
         suggestions: [
@@ -111,7 +111,7 @@ function stubB(): { click: (lat: number, lng: number) => void } {
         ],
     }));
     class Geocoder {
-        async geocode() {
+        async geocode(): Promise<{ results: { formatted_address: string }[] }> {
             return { results: [{ formatted_address: 'Some street 1' }] };
         }
     }

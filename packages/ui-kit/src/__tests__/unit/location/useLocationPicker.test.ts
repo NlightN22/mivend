@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLocationPicker } from '../../../composables/location/useLocationPicker';
+import {
+    UseLocationPicker,
+    useLocationPicker,
+} from '../../../composables/location/useLocationPicker';
 import type { GeoConfig, ReverseFn, SearchFn } from '../../../components/MvLocationPicker/types';
 import { makeStubAdapter, type StubAdapter } from './stubAdapter';
 
@@ -26,7 +29,7 @@ beforeEach(() => {
 
 function setup(
     over: { failFirst?: boolean; current?: { latitude: number; longitude: number } | null } = {},
-) {
+): { picker: UseLocationPicker; adapters: StubAdapter[] } {
     const adapters: StubAdapter[] = [];
     let first = over.failFirst ?? false;
     const picker = useLocationPicker({
@@ -46,7 +49,11 @@ function setup(
 }
 
 describe('useLocationPicker adapter-own search and reverse', () => {
-    function withOwn(host: { search: SearchFn; reverse: ReverseFn }) {
+    function withOwn(host: { search: SearchFn; reverse: ReverseFn }): {
+        picker: UseLocationPicker;
+        own: StubAdapter;
+        plain: StubAdapter;
+    } {
         const own = makeStubAdapter();
         own.search = vi.fn(async () => [
             { address: 'own', resolve: async () => ({ latitude: 3, longitude: 4 }) },
@@ -193,7 +200,12 @@ describe('useLocationPicker', () => {
         const { picker } = setup();
         await picker.attach(el);
         const release: Record<string, (p: { latitude: number; longitude: number }) => void> = {};
-        const lazy = (name: string) => ({
+        interface LazyResult {
+            address: string;
+            resolve: () => Promise<{ latitude: number; longitude: number }>;
+        }
+
+        const lazy = (name: string): LazyResult => ({
             address: name,
             resolve: () =>
                 new Promise<{ latitude: number; longitude: number }>(r => (release[name] = r)),

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import MvLocationPicker from '../../../components/MvLocationPicker/MvLocationPicker.vue';
 import type { SearchMode } from '../../../components/MvLocationPicker/types';
 import { makeStubAdapter } from './stubAdapter';
@@ -13,7 +13,7 @@ const config = {
     defaultZoom: 5,
 };
 
-function build(searchMode?: SearchMode) {
+function build(searchMode?: SearchMode): VueWrapper {
     const adapter = makeStubAdapter();
     Object.assign(adapter, { searchMode });
     return mount(MvLocationPicker, {

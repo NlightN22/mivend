@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { nextTick, ref } from 'vue';
+import { describe, expect, it, Mock, vi } from 'vitest';
+import { nextTick, Ref, ref } from 'vue';
 import { useOtpAutoSubmit } from '../../composables/twoFactor/useOtpAutoSubmit';
 import { useTwoFactorSignIn } from '../../composables/twoFactor/useTwoFactorSignIn';
 import { useTwoFactorRecovery } from '../../composables/twoFactor/useTwoFactorRecovery';
@@ -253,7 +253,16 @@ describe('useTwoFactorSettings', () => {
 });
 
 describe('useOtpAutoSubmit', () => {
-    function setup() {
+    interface SetupResult {
+        submit: Mock<(_code: string) => void>;
+        onReset: Mock;
+        loading: Ref<boolean, boolean>;
+        finish: (failure: string | null) => Promise<void>;
+        code: Ref<string>;
+        trigger: () => void;
+    }
+
+    function setup(): SetupResult {
         const loading = ref(false);
         const error = ref<string | null>(null);
         const submit = vi.fn((_code: string) => {

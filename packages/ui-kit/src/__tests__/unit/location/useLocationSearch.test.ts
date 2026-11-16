@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLocationSearch } from '../../../composables/location/useLocationSearch';
+import {
+    UseLocationSearch,
+    useLocationSearch,
+} from '../../../composables/location/useLocationSearch';
 
 const bias = { latitude: 1, longitude: 2 };
 
@@ -9,7 +12,7 @@ afterEach(() => vi.useRealTimers());
 function setup(
     search: (q: string) => Promise<{ address: string }[]>,
     getMode?: () => 'host-submit',
-) {
+): UseLocationSearch {
     return useLocationSearch({
         search: (q, b, p) =>
             p === 'open' && b === bias ? search(q) : Promise.reject(new Error('args')),
