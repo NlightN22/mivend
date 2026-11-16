@@ -121,14 +121,19 @@ const open = async (): Promise<string[]> =>
     (await service.findOpen(ctx)).items.map(i => i.orderEntityId).sort();
 
 describe('reservation reconciliation scope SQL with grants (#123, real Postgres)', () => {
-    it('shows branch (incl. default-branch) and granted-manager issues, hides the rest', async () => {
+    it('shows granted-manager issues, hides other-branch and branchless ones', async () => {
         scope = { kind: 'department', branchId: 'branch-a', grantedManagerIds: ['m-1'] };
-        expect(await open()).toEqual(['issue-branchless', 'issue-granted']);
+        expect(await open()).toEqual(['issue-granted']);
     });
 
-    it('an empty grant set (expired or revoked) shows only the default-branch issue', async () => {
+    it('an empty grant set (expired or revoked) shows no issue of another branch', async () => {
         scope = { kind: 'department', branchId: 'branch-a', grantedManagerIds: [] };
-        expect(await open()).toEqual(['issue-branchless']);
+        expect(await open()).toEqual([]);
+    });
+
+    it('shows the issues of the own branch and hides the branchless one', async () => {
+        scope = { kind: 'department', branchId: 'branch-b', grantedManagerIds: [] };
+        expect(await open()).toEqual(['issue-granted', 'issue-other']);
     });
 
     it('an own-scoped caller sees exactly the granted manager', async () => {

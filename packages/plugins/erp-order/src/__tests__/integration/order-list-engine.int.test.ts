@@ -162,7 +162,7 @@ describe('visibleOrders on the shared list engine (real Postgres)', () => {
         const counted = await service.findVisible(ctx, { take: 0 });
         expect(counted).toEqual({ items: [], totalItems: 3 });
         scope = { kind: 'department', branchId: 'branch-default' } as AccessScope;
-        expect(await codes({})).toEqual(['Z9', 'B1', 'A2', 'A1']);
+        expect(await codes({})).toEqual([]);
     });
 
     it('filters by every whitelisted column', async () => {

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
+import { AutoIncrementIdStrategy } from '@vendure/core';
+import { setEntityIdStrategy } from '@vendure/core/dist/entity/set-entity-id-strategy';
 import {
     createTestConnection,
     createTestSchema,
@@ -17,6 +19,8 @@ let dataSource: DataSource;
 let service: BranchService;
 
 beforeAll(async () => {
+    // A real VendureEntity gets its primary column from the id strategy that bootstrap() sets.
+    setEntityIdStrategy(new AutoIncrementIdStrategy(), [Branch]);
     await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
