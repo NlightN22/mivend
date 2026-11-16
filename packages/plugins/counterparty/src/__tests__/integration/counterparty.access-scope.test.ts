@@ -34,6 +34,7 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) departmentId!: string | null;
     @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpGroupLabel!: string | null;
+    @Column({ type: 'int', default: 0 }) version!: number;
 }
 
 // Required by the EXISTS subquery in the mocked applyOwnCounterpartyFilter; must be a real table
