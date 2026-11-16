@@ -109,19 +109,17 @@ async function grantForRole(
     roleCode: string,
     lists: ReleaseGrantLists,
 ): Promise<string[]> {
-    // unbounded-ok: role.code identifies one row
-    const role = await client.query(`SELECT permissions FROM role WHERE code = $1 FOR UPDATE`, [
-        roleCode,
-    ]);
-    if (!role.rows[0]) return [];
-    // unbounded-ok: role_access_scope.roleCode is unique
-    const scopeRow = await client.query(
-        `SELECT "accessScopeConfig" FROM role_access_scope WHERE "roleCode" = $1 FOR UPDATE`,
+    const role = await client.query(
+        `SELECT permissions FROM role WHERE code = $1 LIMIT 1 FOR UPDATE`,
         [roleCode],
     );
-    // unbounded-ok: at most one row per release entry of this role
+    if (!role.rows[0]) return [];
+    const scopeRow = await client.query(
+        `SELECT "accessScopeConfig" FROM role_access_scope WHERE "roleCode" = $1 LIMIT 1 FOR UPDATE`,
+        [roleCode],
+    );
     const recorded = await client.query(
-        `SELECT "grantKey" FROM role_default_grant WHERE "roleCode" = $1`,
+        `SELECT "grantKey" FROM role_default_grant WHERE "roleCode" = $1 LIMIT 1000`,
         [roleCode],
     );
     const stored = String(role.rows[0].permissions)
