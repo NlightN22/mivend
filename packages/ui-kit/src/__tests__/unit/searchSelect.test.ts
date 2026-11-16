@@ -45,6 +45,17 @@ describe('MvSelect', () => {
         expect(wrapper.find('.mv-search-select__trigger').text()).toBe('Alpha');
     });
 
+    it('puts aria-label and data-testid on the trigger button, not the wrapper', () => {
+        wrapper = mount(MvSelect, {
+            props: { modelValue: '', options: LONG },
+            attrs: { 'aria-label': 'Branch', 'data-testid': 'quick-filter-branch' },
+        });
+        const trigger = wrapper.get('button.mv-search-select__trigger');
+        expect(trigger.attributes('aria-label')).toBe('Branch');
+        expect(trigger.attributes('data-testid')).toBe('quick-filter-branch');
+        expect(wrapper.element.getAttribute('data-testid')).toBeNull();
+    });
+
     it('relays the picked value from the searchable picker', async () => {
         wrapper = mount(MvSelect, {
             attachTo: document.body,
@@ -105,6 +116,11 @@ describe('MvSearchSelect', () => {
         await openPanel();
         await openPanel();
         expect(optionLabels()).toEqual(names);
+    });
+
+    it('renders no title element when no title is given', async () => {
+        await mountOpen();
+        expect(document.body.querySelector('.mv-search-select__title')).toBeNull();
     });
 
     it('marks the panel as nested so the filter builder does not close on a pick', async () => {

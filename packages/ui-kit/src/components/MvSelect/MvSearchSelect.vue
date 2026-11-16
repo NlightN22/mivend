@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { useUiLabels } from '../../utils/uiLabels';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ref } from 'vue';
 import { IconChevronDown, IconSearch, IconX } from '@tabler/icons-vue';
 import { useAnchoredPanel } from '../../composables/useAnchoredPanel';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
-import { filterOptionsByQuery } from '../MvColumnFilter/filterOptionsByQuery';
+import { useSearchSelect } from './useSearchSelect';
 import type { SelectOption } from './MvSelect.vue';
 const uiLabel = useUiLabels();
 
 // Single-value picker with type-to-search: a dropdown under the trigger, a bottom sheet on phones.
+// Attributes (aria-label, id, data-testid) land on the trigger button, like on a native select.
+defineOptions({ inheritAttrs: false });
 const props = withDefaults(
     defineProps<{
         modelValue: string;
@@ -20,77 +22,27 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
-const open = ref(false);
-const query = ref('');
-const active = ref(0);
 const rootEl = ref<HTMLElement | null>(null);
 const panelEl = ref<HTMLElement | null>(null);
 const searchEl = ref<HTMLInputElement | null>(null);
+const { open, query, active, visible, selectedLabel, pick, onSearchKey } = useSearchSelect({
+    options: () => props.options,
+    selected: () => props.modelValue,
+    pick: value => emit('update:modelValue', value),
+    root: rootEl,
+    panel: panelEl,
+    search: searchEl,
+});
 const sheet = useIsMobileViewport(640);
 const { style } = useAnchoredPanel({ open, anchor: () => rootEl.value, width: 320, sheet });
 const listId = `mv-search-select-${Math.random().toString(36).slice(2, 9)}`;
-
-const visible = computed(() => filterOptionsByQuery(props.options, query.value));
-const selectedLabel = computed(
-    () => props.options.find(o => o.value === props.modelValue)?.label ?? '',
-);
-
-watch(query, () => {
-    active.value = 0;
-});
-watch(open, async isOpen => {
-    if (!isOpen) {
-        query.value = '';
-        return;
-    }
-    active.value = Math.max(
-        0,
-        visible.value.findIndex(o => o.value === props.modelValue),
-    );
-    await nextTick();
-    searchEl.value?.focus();
-});
-
-function pick(value: string): void {
-    emit('update:modelValue', value);
-    open.value = false;
-}
-function onSearchKey(e: KeyboardEvent): void {
-    const last = visible.value.length - 1;
-    if (e.key === 'ArrowDown') active.value = Math.min(active.value + 1, last);
-    else if (e.key === 'ArrowUp') active.value = Math.max(active.value - 1, 0);
-    else if (e.key === 'Enter') {
-        const option = visible.value[active.value];
-        if (option) pick(option.value);
-    } else return;
-    e.preventDefault();
-}
-function onDocClick(e: MouseEvent): void {
-    const path = e.composedPath();
-    if (path.includes(rootEl.value as EventTarget) || path.includes(panelEl.value as EventTarget))
-        return;
-    open.value = false;
-}
-function onKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Escape' && open.value) {
-        open.value = false;
-        e.stopImmediatePropagation();
-    }
-}
-onMounted(() => {
-    document.addEventListener('click', onDocClick);
-    document.addEventListener('keydown', onKeydown, true);
-});
-onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocClick);
-    document.removeEventListener('keydown', onKeydown, true);
-});
 </script>
 
 <template>
     <div ref="rootEl" class="mv-search-select">
         <button
             type="button"
+            v-bind="$attrs"
             class="mv-search-select__trigger"
             :disabled="disabled"
             :aria-expanded="open"
@@ -117,7 +69,7 @@ onBeforeUnmount(() => {
                 data-mv-nested
             >
                 <header v-if="sheet" class="mv-search-select__head">
-                    <h2 class="mv-search-select__title">{{ title }}</h2>
+                    <h2 v-if="title" class="mv-search-select__title">{{ title }}</h2>
                     <button
                         type="button"
                         class="mv-search-select__close"
@@ -262,6 +214,7 @@ onBeforeUnmount(() => {
 
 .mv-search-select__close {
     display: flex;
+    margin-left: auto;
     border: 0;
     background: none;
     color: var(--el-text-color-secondary);
