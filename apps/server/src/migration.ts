@@ -1,6 +1,7 @@
 import { generateMigration, revertLastMigration, runMigrations } from '@vendure/core';
 import path from 'path';
 
+import { runGrantMissingDefaultPermissions } from './grant-default-role-permissions';
 import { config } from './vendure-config';
 
 // Dev used synchronize: true; production has no migration tooling yet, so schema changes go here.
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
             break;
         case 'run':
             await runMigrations(config);
+            await runGrantMissingDefaultPermissions();
             break;
         case 'revert':
             await revertLastMigration(config);

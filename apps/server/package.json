@@ -12,6 +12,7 @@
         "start": "node dist/main.js",
         "start:worker": "node dist/worker.js",
         "two-factor:reset": "ts-node --transpile-only src/two-factor-reset.cli.ts",
+        "roles:grant-missing": "ts-node --transpile-only src/grant-default-role-permissions.cli.ts",
         "migration:generate": "ts-node --transpile-only src/migration.ts generate",
         "migration:run": "ts-node --transpile-only src/migration.ts run",
         "migration:revert": "ts-node --transpile-only src/migration.ts revert"

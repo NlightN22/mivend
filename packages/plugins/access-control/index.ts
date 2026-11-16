@@ -6,6 +6,8 @@ export { HiddenCategoryProductsService } from './src/hidden-category-products.se
 export { TeamAdministratorService } from './src/team-administrator.service';
 export { RoleScopeConfigService } from './src/role-scope-config.service';
 export type { AccessScopeConfig } from './src/role-scope-config.service';
+export { grantMissingDefaultPermissions } from './src/grant-missing-permissions';
+export type { GrantOutcome } from './src/grant-missing-permissions';
 export { RoleAccessScope } from './src/entities/role-access-scope.entity';
 export { Department } from './src/entities/department.entity';
 export { DepartmentService } from './src/department.service';
