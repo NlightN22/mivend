@@ -3,7 +3,17 @@ import { useHorizontalScrollFade } from '../../composables/useHorizontalScrollFa
 
 // PrimeVue owns the scrollable element, so the fade gets a live-DOM getter. `remountKey` is read
 // only to make the composable re-attach after the forced remount.
-export function useTableScrollHost(containerWidth: Ref<number>, remountKey: Ref<number>) {
+export interface UseTableScrollHost {
+    tableWrapper: Ref<HTMLElement | null>;
+    canScrollLeft: Ref<boolean>;
+    canScrollRight: Ref<boolean>;
+    scrollBy: (direction: 1 | -1) => void;
+}
+
+export function useTableScrollHost(
+    containerWidth: Ref<number>,
+    remountKey: Ref<number>,
+): UseTableScrollHost {
     const tableWrapper = ref<HTMLElement | null>(null);
     function getScrollContainer(): HTMLElement | null {
         void remountKey.value;

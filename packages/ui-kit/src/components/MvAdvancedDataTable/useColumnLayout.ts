@@ -1,7 +1,14 @@
-import { computed, ref, type Ref } from 'vue';
+import { computed, ComputedRef, ref, type Ref } from 'vue';
 import type { DataTableState } from '../../composables/useDataTableState';
 import { fitColumnWidths } from '../../utils/fitColumnWidths';
 import type { AdvancedDataTableColumn } from './advancedDataTableTypes';
+import { ColumnFilterConfig } from '../MvColumnFilter/columnFilterTypes';
+import {
+    FilterType,
+    FilterOption,
+    FilterOperator,
+    FilterSuggest,
+} from '../MvFilterBuilder/filterBuilderTypes';
 
 const SELECT_COLUMN_WIDTH = 48;
 
@@ -15,12 +22,44 @@ export function columnStyle(col: AdvancedDataTableColumn): Record<string, string
 }
 
 // Order/width/visibility live in the consumer-owned `tableState`; this only reads and writes it.
+export interface UseColumnLayout {
+    visibleColumns: ComputedRef<
+        {
+            width: number;
+            field: string;
+            header: string;
+            minWidth?: number;
+            maxWidth?: number;
+            align?: 'start' | 'end';
+            priority?: number;
+            required?: boolean;
+            sortField?: string;
+            filterConfig: ColumnFilterConfig;
+            filterType?: FilterType;
+            filterOptions?: FilterOption[];
+            filterOperators?: FilterOperator[];
+            filterField?: string;
+            filterScale?: number;
+            filterSuggest?: FilterSuggest;
+            mobile?: { primary?: boolean; badge?: boolean; hidden?: boolean };
+        }[]
+    >;
+    columnToggleItems: ComputedRef<
+        { key: string; label: string; required: boolean | undefined; visible: boolean }[]
+    >;
+    tableRemountKey: Ref<number>;
+    onColumnToggle: (field: string) => void;
+    onColumnsReorder: (order: string[]) => void;
+    onColumnsReset: () => void;
+    onColumnResizeEnd: (event: { element: HTMLElement; delta: number }) => void;
+}
+
 export function useColumnLayout(opts: {
     columns: () => AdvancedDataTableColumn[];
     selectable: () => boolean;
     tableState: Ref<DataTableState>;
     containerWidth: Ref<number>;
-}) {
+}): UseColumnLayout {
     const { tableState } = opts;
 
     const visibleColumns = computed(() => {

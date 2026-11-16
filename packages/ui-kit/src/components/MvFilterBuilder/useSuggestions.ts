@@ -9,7 +9,15 @@ export const SUGGEST_DEBOUNCE_MS = 300;
 export const SUGGEST_MAX_ITEMS = 10;
 
 // Debounced typeahead state: a newer keystroke aborts the stale request and a sequence guard drops its late answer.
-export function useSuggestions(fetcher: Ref<SuggestFetcher | undefined>) {
+export interface UseSuggestions {
+    items: Ref<string[]>;
+    active: Ref<number>;
+    query: (raw: string) => void;
+    close: () => void;
+    onKey: (event: KeyboardEvent, pick: (value: string) => void) => boolean;
+}
+
+export function useSuggestions(fetcher: Ref<SuggestFetcher | undefined>): UseSuggestions {
     const items = ref<string[]>([]);
     const active = ref(-1);
     let timer: ReturnType<typeof setTimeout> | undefined;

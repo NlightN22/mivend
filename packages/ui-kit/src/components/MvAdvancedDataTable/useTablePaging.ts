@@ -4,12 +4,17 @@ import type { DataTableState } from '../../composables/useDataTableState';
 
 // `first` is bound to PrimeVue's paginator and reset together with `reset-page`, otherwise the
 // highlighted page and the fetched page drift apart.
+export interface UseTablePaging {
+    first: Ref<number>;
+    onPage: (event: { page: number; rows: number }) => void;
+}
+
 export function useTablePaging(opts: {
     tableState: Ref<DataTableState>;
     conditions: Ref<FilterCondition[]>;
     onResetPage: () => void;
     onPageChange: (page: number) => void;
-}) {
+}): UseTablePaging {
     const { tableState } = opts;
     const first = ref(0);
 

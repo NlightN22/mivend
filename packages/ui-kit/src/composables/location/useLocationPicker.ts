@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ComputedRef, Ref, ref, shallowRef } from 'vue';
 import type {
     AdapterFactory,
     GeoConfig,
@@ -13,7 +13,7 @@ import type {
 import { isValidPoint, nudgePoint, parseCoordinate, validateCoordinates } from './coordinates';
 import { resolveInitialView } from './initialView';
 import { chooseProvider, readStoredProvider, storeProvider } from './providerPreference';
-import { useLocationSearch } from './useLocationSearch';
+import { useLocationSearch, type UseLocationSearch } from './useLocationSearch';
 import { useLatestRequest } from '../useLatestRequest';
 
 export interface LocationPickerInput {
@@ -36,7 +36,26 @@ function parseParams(raw?: string | null): Record<string, string> {
     }
 }
 
-export function useLocationPicker(input: LocationPickerInput) {
+export interface UseLocationPicker {
+    provider: Ref<string>;
+    point: Ref<GeoPoint | null>;
+    status: Ref<'idle' | 'loading' | 'ready' | 'failed'>;
+    address: Ref<string | null>;
+    manualError: Ref<'latitude' | 'longitude' | 'notSet' | null>;
+    canSave: ComputedRef<boolean>;
+    search: UseLocationSearch;
+    searchMode: Ref<SearchMode>;
+    attach: (el: HTMLElement) => Promise<void>;
+    switchProvider: (key: string) => Promise<void>;
+    retry: () => Promise<void>;
+    pickSuggestion: (s: GeoSuggestion) => Promise<void>;
+    setManual: (latitude: string, longitude: string) => void;
+    nudge: (direction: 'up' | 'down' | 'left' | 'right') => void;
+    setPoint: (next: GeoPoint, moveMap: boolean) => void;
+    destroy: () => void;
+}
+
+export function useLocationPicker(input: LocationPickerInput): UseLocationPicker {
     const start = resolveInitialView({
         suggestion: isValidPoint(input.current) ? input.current : input.suggestionPoint,
         sibling: input.siblingPoint,

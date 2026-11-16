@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import type {
     GeoPoint,
     GeoSuggestion,
@@ -10,13 +10,24 @@ import { useLatestRequest } from '../useLatestRequest';
 export const MIN_QUERY_LENGTH = 3;
 export const SUBMIT_ONLY_PAUSE_MS = 1500;
 
+export interface UseLocationSearch {
+    query: Ref<string>;
+    suggestions: Ref<GeoSuggestion[]>;
+    failed: Ref<boolean>;
+    loading: Ref<boolean>;
+    onInput: (text: string) => void;
+    submit: () => void;
+    clear: () => void;
+    dispose: () => void;
+}
+
 export function useLocationSearch(options: {
     search: SearchFn;
     getBias: () => GeoPoint | null;
     getProvider: () => string;
     getMode?: () => SearchMode;
     debounceMs?: number;
-}) {
+}): UseLocationSearch {
     const query = ref('');
     const suggestions = ref<GeoSuggestion[]>([]);
     const failed = ref(false);

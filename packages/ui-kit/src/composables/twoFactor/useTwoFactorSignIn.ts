@@ -1,4 +1,4 @@
-import { reactive, toRefs } from 'vue';
+import { reactive, Ref, toRefs } from 'vue';
 import {
     normalizeCode,
     type TwoFactorEnrolment,
@@ -8,7 +8,21 @@ import {
 
 export type SignInStep = 'password' | 'verify' | 'enrol' | 'recovery-sent' | 'done';
 
-export function useTwoFactorSignIn(api: TwoFactorSignInApi) {
+export interface UseTwoFactorSignIn {
+    submitPassword: (username: string, password: string, remember: boolean) => Promise<void>;
+    submitCode: (rawCode: string) => Promise<void>;
+    requestRecovery: () => Promise<void>;
+    backToCode: () => void;
+    back: () => void;
+    step: Ref<SignInStep>;
+    error: Ref<TwoFactorUiError | null>;
+    loading: Ref<boolean>;
+    enrolment: Ref<{ otpauthUri: string; secret: string; expiresAt: string } | null>;
+    username: Ref<string>;
+    maskedEmail: Ref<string>;
+}
+
+export function useTwoFactorSignIn(api: TwoFactorSignInApi): UseTwoFactorSignIn {
     const state = reactive<{
         step: SignInStep;
         error: TwoFactorUiError | null;

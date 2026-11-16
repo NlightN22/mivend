@@ -1,4 +1,13 @@
-import { computed } from 'vue';
+import { computed, type ComputedRef } from 'vue';
+
+export interface UseRowSelection<TRow> {
+    isRowSelected: (row: TRow) => boolean;
+    toggleRowSelected: (row: TRow) => void;
+    selectablePageRows: ComputedRef<TRow[]>;
+    headerCheckboxState: ComputedRef<{ checked: boolean; indeterminate: boolean }>;
+    toggleSelectAllOnPage: () => void;
+    resetSelection: () => void;
+}
 
 // Selection spans only the loaded page (bulk select across pages is tracked in #136).
 export function useRowSelection<TRow extends Record<string, unknown>>(opts: {
@@ -7,7 +16,7 @@ export function useRowSelection<TRow extends Record<string, unknown>>(opts: {
     selectedIds: () => Set<string>;
     rowSelectable: () => (row: TRow) => boolean;
     onChange: (ids: Set<string>) => void;
-}) {
+}): UseRowSelection<TRow> {
     function rowId(row: TRow): string {
         return String(row[opts.dataKey()]);
     }

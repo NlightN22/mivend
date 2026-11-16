@@ -1,7 +1,17 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+
+export interface UseLineSelection {
+    selected: Ref<Set<string>>;
+    active: Ref<boolean>;
+    count: ComputedRef<number>;
+    allSelected: ComputedRef<boolean>;
+    toggle: (id: string) => void;
+    setAll: (on: boolean) => void;
+    clear: () => void;
+}
 
 // Selection state only; the entry gesture (checkbox column today, long-press on a phone) is the caller's.
-export function useLineSelection(ids: Ref<string[]>) {
+export function useLineSelection(ids: Ref<string[]>): UseLineSelection {
     const selected = ref<Set<string>>(new Set());
     const active = ref(false);
 

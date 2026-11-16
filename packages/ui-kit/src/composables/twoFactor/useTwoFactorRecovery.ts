@@ -1,9 +1,19 @@
-import { reactive, toRefs } from 'vue';
+import { reactive, Ref, toRefs } from 'vue';
 import type { TwoFactorRecoveryApi, TwoFactorUiError } from './twoFactorTypes';
 
 export type RecoveryView = 'form' | 'invalid' | 'done';
 
-export function useTwoFactorRecovery(token: string, api: TwoFactorRecoveryApi) {
+export interface UseTwoFactorRecovery {
+    submit: (password: string) => Promise<void>;
+    view: Ref<RecoveryView>;
+    error: Ref<TwoFactorUiError | null>;
+    loading: Ref<boolean>;
+}
+
+export function useTwoFactorRecovery(
+    token: string,
+    api: TwoFactorRecoveryApi,
+): UseTwoFactorRecovery {
     const state = reactive<{
         view: RecoveryView;
         error: TwoFactorUiError | null;

@@ -4,7 +4,12 @@ import type { DataTableState, DataTableSortMeta } from '../../composables/useDat
 import type { AdvancedDataTableColumn } from './advancedDataTableTypes';
 
 // Custom single-column sort: PrimeVue's own `sortable` fights its whole-header click binding.
-export function useColumnSort(tableState: Ref<DataTableState>) {
+export interface UseColumnSort {
+    toggleSort: (col: AdvancedDataTableColumn) => void;
+    sortIconFor: (col: AdvancedDataTableColumn) => Component;
+}
+
+export function useColumnSort(tableState: Ref<DataTableState>): UseColumnSort {
     function toggleSort(col: AdvancedDataTableColumn): void {
         if (!col.sortField) return;
         const current = tableState.value.sort[0];

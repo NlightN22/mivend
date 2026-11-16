@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue';
+import { computed, ComputedRef, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue';
 import type { DataTableFilterMeta } from 'primevue/datatable';
 import {
     interactionMode,
@@ -14,13 +14,23 @@ import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChip
 import type { DataTableState } from '../../composables/useDataTableState';
 import type { AdvancedDataTableColumn } from './advancedDataTableTypes';
 
+export interface UseColumnFilters {
+    columnFilters: Ref<DataTableFilterMeta>;
+    setFilter: (key: string, value: unknown) => void;
+    onFilterValueChange: (col: AdvancedDataTableColumn, value: unknown) => void;
+    isFiltered: (field: string) => boolean;
+    activeFilterChips: ComputedRef<ActiveFilterChip[]>;
+    onRemoveFilterChip: (key: string) => void;
+    clearFilters: () => void;
+}
+
 export function useColumnFilters(opts: {
     columns: () => AdvancedDataTableColumn[];
     defaultFilters: () => Record<string, unknown>;
     tableState: Ref<DataTableState>;
     conditions: Ref<FilterCondition[]>;
     onCleared: () => void;
-}) {
+}): UseColumnFilters {
     const { tableState } = opts;
     const formatLocale = useUiFormatLocale('en-US');
     const uiLabel = useUiLabels();
