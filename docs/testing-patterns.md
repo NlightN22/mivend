@@ -404,7 +404,7 @@ SQL actually issued; one integration case per list only when its scope clauses c
 
 **Exceptions**: reads with an `unbounded-ok` reason (see testing-strategy "Commands").
 
-**Count-only fields**: a list field that asks only for `totalItems` still hydrates a default page of 1000 rows with their joins unless `take: 0` is passed; the lint rule cannot see this (the page is within `MAX_TAKE`, the cost is in the joins). `countOnlyQueries.test.ts` (manager) checks every `{ totalItems }` selection in `packages/manager/src/api/*.graphql`. Measured 2026-11-16 on prod (#370): the dashboard's four order counters hydrated up to 1000 orders each, blocking the Node event loop for about 2.7 s while the database logged nothing over 200 ms; repeat by comparing `DashboardOrders` time in the `[slow-request]` log before and after.
+**Count-only fields**: a list field that asks only for `totalItems` still hydrates a default page of 1000 rows with their joins unless `take: 0` is passed; the lint rule cannot see this (the page is within `MAX_TAKE`, the cost is in the joins). `pagedFieldsTake.test.ts` (manager) checks every paged field (selecting `items` or `totalItems`) in `packages/manager/src/api/*.graphql`: it must state `take` (0 for a count) or take its options from a variable, with a short explicit allowlist. Measured 2026-11-16 on prod (#370): the dashboard's four order counters hydrated up to 1000 orders each, blocking the Node event loop for about 2.7 s while the database logged nothing over 200 ms; repeat by comparing `DashboardOrders` time in the `[slow-request]` log before and after.
 
 ## Authorization and visibility
 
