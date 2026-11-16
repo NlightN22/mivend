@@ -16,7 +16,7 @@ PGID_FILE="/tmp/mivend-dev-branch.pgid"
 source "$(dirname "$0")/dev-kill-lib.sh"
 kill_recorded_group "$PGID_FILE"
 
-roots=$(pgrep -f "apps/server/\.env\.branch\b" 2>/dev/null || true)
+roots=$(pgrep -f "apps/server/\.env\.branch\b" 2>/dev/null | only_this_repo || true)
 
 all_pids=""
 for root in $roots; do
@@ -30,7 +30,6 @@ fi
 
 # Catch any straggler still bound to the branch instance's own ports (central uses 3000/3002,
 # manager/storefront use 5173-5176 — see dev-kill.sh; these are branch-only, safe to force-free).
-fuser -k 3001/tcp 2>/dev/null || true
-fuser -k 3003/tcp 2>/dev/null || true
+kill_repo_port_owners 3001 3003
 
 exit 0

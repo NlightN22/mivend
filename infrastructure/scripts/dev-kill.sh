@@ -27,7 +27,7 @@ kill_recorded_group "$PGID_FILE"
 
 # Roots belonging to OTHER contours/instances — this script (and everything it kills below) must
 # never touch these PIDs or anything descended from them.
-other_roots=$(pgrep -f "apps/server/\.env\.branch\b|apps/server/\.env\.central\.staging-integration\b" 2>/dev/null || true)
+other_roots=$(pgrep -f "apps/server/\.env\.branch\b|apps/server/\.env\.central\.staging-integration\b" 2>/dev/null | only_this_repo || true)
 protected_pids=" "
 for root in $other_roots; do
     protected_pids="$protected_pids $root $(collect_descendants "$root" | tr '\n' ' ') "
@@ -41,7 +41,7 @@ is_protected() {
 }
 
 exclude_other_contours() {
-    while read -r pid; do
+    only_this_repo | skip_test_runners | while read -r pid; do
         [ -z "$pid" ] && continue
         is_protected "$pid" && continue
         cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
@@ -71,11 +71,6 @@ pids=$(pgrep -f "concurrently/dist/bin/concurrently" 2>/dev/null | exclude_other
 pids=$(pgrep -f "vite" 2>/dev/null | exclude_other_contours)
 [ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
 
-fuser -k 3000/tcp 2>/dev/null || true
-fuser -k 3002/tcp 2>/dev/null || true
-fuser -k 5173/tcp 2>/dev/null || true
-fuser -k 5174/tcp 2>/dev/null || true
-fuser -k 5175/tcp 2>/dev/null || true
-fuser -k 5176/tcp 2>/dev/null || true
+kill_repo_port_owners 3000 3002 5173 5174 5175 5176
 
 exit 0

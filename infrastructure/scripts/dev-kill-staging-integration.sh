@@ -18,7 +18,7 @@ PGID_FILE="/tmp/mivend-dev-staging-integration.pgid"
 source "$(dirname "$0")/dev-kill-lib.sh"
 kill_recorded_group "$PGID_FILE"
 
-roots=$(pgrep -f "apps/server/\.env\.central\.staging-integration\b" 2>/dev/null || true)
+roots=$(pgrep -f "apps/server/\.env\.central\.staging-integration\b" 2>/dev/null | only_this_repo || true)
 
 all_pids=""
 for root in $roots; do
@@ -29,7 +29,7 @@ done
 # dev:storefront:staging-integration/dev:manager:staging-integration in package.json) — they're
 # plain `vite --mode staging-integration` invocations, identified here by that literal substring
 # on their own command line instead of by ancestry.
-vite_pids=$(pgrep -f "vite --mode staging-integration" 2>/dev/null || true)
+vite_pids=$(pgrep -f "vite --mode staging-integration" 2>/dev/null | only_this_repo || true)
 all_pids="$all_pids $vite_pids"
 
 if [ -n "$(echo "$all_pids" | tr -d '[:space:]')" ]; then
@@ -40,10 +40,6 @@ fi
 # Catch any straggler still bound to the staging-integration contour's own ports (local uses
 # 3000/3002/5173/5174, branch uses 3001/3003 — see dev-kill.sh/dev-kill-branch.sh; these are
 # staging-integration-only, safe to force-free).
-fuser -k 3010/tcp 2>/dev/null || true
-fuser -k 3012/tcp 2>/dev/null || true
-fuser -k 5183/tcp 2>/dev/null || true
-fuser -k 5184/tcp 2>/dev/null || true
-fuser -k 5185/tcp 2>/dev/null || true
+kill_repo_port_owners 3010 3012 5183 5184 5185
 
 exit 0

@@ -35,5 +35,31 @@ kill_recorded_group "$pidfile"
 sleep 0.2
 ! kill -0 "$own" 2>/dev/null || fail "kill_recorded_group left the repo's own group alive"
 
+sibling="$REPO_ROOT-sibling-$$"
+mkdir -p "$sibling"
+cp /bin/sleep "$sleeper/vitest-run"
+(cd "$REPO_ROOT" && exec "$sleeper/leaf" 30) & in_repo=$!
+(cd "$sibling" && exec "$sleeper/leaf" 30) & in_sibling=$!
+(cd / && exec "$sleeper/leaf" 30) & elsewhere=$!
+(cd "$REPO_ROOT" && exec "$sleeper/vitest-run" 30) & test_runner=$!
+sleep 0.3
+kept=$(printf '%s\n' "$in_repo" "$in_sibling" "$elsewhere" "$test_runner" | only_this_repo | tr '\n' ' ')
+[ "$kept" = "$in_repo $test_runner " ] || fail "only_this_repo: expected [$in_repo $test_runner ], got [$kept] (a sibling checkout sharing the path prefix must not match)"
+runners=$(printf '%s\n' "$in_repo" "$test_runner" | skip_test_runners | tr '\n' ' ')
+[ "$runners" = "$in_repo " ] || fail "skip_test_runners: expected [$in_repo ], got [$runners]"
+
+port=$((20000 + RANDOM % 20000))
+(cd "$REPO_ROOT" && exec python3 -m http.server "$port" --bind 127.0.0.1 >/dev/null 2>&1) & own_listener=$!
+(cd "$sibling" && exec python3 -m http.server "$((port + 1))" --bind 127.0.0.1 >/dev/null 2>&1) & sibling_listener=$!
+sleep 1
+kill_repo_port_owners "$port" "$((port + 1))"
+sleep 0.3
+{ wait "$own_listener"; } 2>/dev/null || true
+! kill -0 "$own_listener" 2>/dev/null || fail "kill_repo_port_owners left the repo's own listener alive"
+kill -0 "$sibling_listener" 2>/dev/null || fail "kill_repo_port_owners killed a listener of a sibling checkout"
+kill "$sibling_listener" "$in_repo" "$in_sibling" "$elsewhere" "$test_runner" 2>/dev/null || true
+rmdir "$sibling"
+
+
 rm -rf "$sleeper"
 echo "dev-kill-lib: ok"
