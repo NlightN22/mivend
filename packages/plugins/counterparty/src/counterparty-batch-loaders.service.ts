@@ -6,6 +6,7 @@ import { In, Not } from 'typeorm';
 
 import { loadLastOrderDates } from './counterparty-last-order.sql';
 import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
+import { loadPortalStates, type PortalState } from './counterparty-portal-state.sql';
 import { ContactPointService, type ChosenContact } from './contact-point.service';
 import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
 import { Counterparty } from './entities/counterparty.entity';
@@ -28,6 +29,11 @@ export class CounterpartyBatchLoaders {
     private readiness = new CtxLoader<PortalReadiness>(async (ctx, keys) => {
         const found = await loadPortalReadiness(this.connection, ctx, keys.filter(isRowId));
         return keys.map(key => found.get(key) ?? 'missing-data');
+    });
+
+    private portalStates = new CtxLoader<PortalState>(async (ctx, keys) => {
+        const found = await loadPortalStates(this.connection, ctx, keys.filter(isRowId));
+        return keys.map(key => found.get(key) ?? 'none');
     });
 
     private lastOrder = new CtxLoader<Date | null>(async (ctx, keys) => {
@@ -60,6 +66,10 @@ export class CounterpartyBatchLoaders {
         counterpartyId: string | number,
     ): Promise<PortalReadiness> {
         return this.readiness.load(ctx, counterpartyId);
+    }
+
+    portalState(ctx: RequestContext, counterpartyId: string | number): Promise<PortalState> {
+        return this.portalStates.load(ctx, counterpartyId);
     }
 
     isHidden(ctx: RequestContext, counterpartyId: string | number): Promise<boolean> {

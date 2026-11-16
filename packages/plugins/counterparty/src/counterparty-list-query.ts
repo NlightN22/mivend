@@ -15,6 +15,7 @@ import {
     ensureLastOrderJoin,
     filterUsesLastOrder,
 } from './counterparty-last-order.sql';
+import { PORTAL_STATE_CASE_SQL } from './counterparty-portal-state.sql';
 import { READINESS_CASE_SQL } from './counterparty-readiness-filter';
 import type { Counterparty } from './entities/counterparty.entity';
 
@@ -62,6 +63,11 @@ const FIELDS: Record<string, FieldSpec> = {
     readiness: {
         kind: 'string',
         sql: READINESS_CASE_SQL,
+        operators: ['eq', 'notEq', 'in', 'notIn'],
+    },
+    portalState: {
+        kind: 'string',
+        sql: PORTAL_STATE_CASE_SQL,
         operators: ['eq', 'notEq', 'in', 'notIn'],
     },
     creditLimit: { kind: 'number', sql: 'c."creditLimit"', operators: NUMBER_OPERATORS },

@@ -112,6 +112,15 @@ export class CounterpartyCustomerLinkResolver {
     ): Promise<string> {
         return this.loaders.portalReadiness(ctx, counterparty.id);
     }
+
+    @ResolveField()
+    async portalState(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string | null> {
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return null;
+        return this.loaders.portalState(ctx, counterparty.id);
+    }
 }
 
 // phone and officialEmail show the chosen contact channels; the legacy columns are only a fallback.

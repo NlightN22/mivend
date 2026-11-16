@@ -93,6 +93,8 @@ import { CreditTermScopeRegistrar } from './credit-term-scope.registrar';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
 import { AdministratorContactsListener } from './administrator-contacts.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
+import { CounterpartyPortalRestoreService } from './counterparty-portal-restore.service';
+import { CounterpartyPasswordResetExecutor } from './counterparty-password-reset.executor';
 import { CounterpartyPortalAccessExecutor } from './counterparty-portal-access.executor';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
 import {
@@ -207,6 +209,7 @@ const adminResolvers = [
         CounterpartySearchProvider,
         ...visibilityBundle.providers,
         CounterpartyPortalAccessExecutor,
+        CounterpartyPasswordResetExecutor,
         CounterpartyService,
         CounterpartyErpDriftService,
         CounterpartyErpMirrorService,
@@ -237,6 +240,7 @@ const adminResolvers = [
         EntityVersionScopeRegistrar,
         CreditTermScopeRegistrar,
         CounterpartyPortalAccessService,
+        CounterpartyPortalRestoreService,
         ContractService,
         PowerOfAttorneyErpService,
         PowerOfAttorneyListService,

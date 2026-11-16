@@ -91,6 +91,7 @@ beforeAll(async () => {
                     ids.map(id => [id, { email: rows[id].officialEmail, phone: rows[id].phone }]),
                 ),
         } as never,
+        { restore: async () => null } as never,
     );
 });
 

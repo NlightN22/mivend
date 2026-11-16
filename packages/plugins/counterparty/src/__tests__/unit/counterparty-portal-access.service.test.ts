@@ -74,6 +74,7 @@ describe('CounterpartyPortalAccessService', () => {
             mockCustomerService as never,
             mockAccessScopeService,
             mockContactPoints as never,
+            { restore: vi.fn(async () => null) } as never,
         );
     });
 

@@ -71,6 +71,7 @@ beforeAll(async () => {
                     ],
                 ]),
         } as never,
+        { restore: async () => null } as never,
     );
 });
 

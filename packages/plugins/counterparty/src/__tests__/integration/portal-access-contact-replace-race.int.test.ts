@@ -119,6 +119,7 @@ beforeAll(async () => {
         customerService as never,
         { assertCounterpartyWritable: async () => undefined } as never,
         contacts,
+        { restore: async () => null } as never,
     );
 }, 30_000);
 

@@ -1,12 +1,16 @@
 import type { SelectQueryBuilder } from 'typeorm';
 
 import { LAST_ORDER_AT_SQL, ensureLastOrderJoin } from './counterparty-last-order.sql';
+import { PORTAL_STATE_RANK_SQL } from './counterparty-portal-state.sql';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartySortParameter } from './types';
 
 // Column name must come from a whitelist of CounterpartySortParameter fields, never caller input
 // Today only GraphQL-validated enum keys arrive, but the whitelist must hold regardless
-const SORTABLE_COLUMNS: Record<Exclude<keyof CounterpartySortParameter, 'lastOrderAt'>, string> = {
+const SORTABLE_COLUMNS: Record<
+    Exclude<keyof CounterpartySortParameter, 'lastOrderAt' | 'portalState'>,
+    string
+> = {
     shortName: 'c.shortName',
     inn: 'c.inn',
     managerErpId: 'c.managerErpId',
@@ -19,6 +23,7 @@ const SORTABLE_COLUMNS: Record<Exclude<keyof CounterpartySortParameter, 'lastOrd
 // Only the first non-null sort key applies: one active sort, matching MvAdvancedDataTable
 // A selected alias, not a raw expression: take/skip paging resolves order keys through the selection.
 const LAST_ORDER_ALIAS = 'last_order_sort';
+const PORTAL_STATE_ALIAS = 'portal_state_sort';
 
 export function applyCounterpartySort(
     qb: SelectQueryBuilder<Counterparty>,
@@ -35,6 +40,11 @@ export function applyCounterpartySort(
                 LAST_ORDER_ALIAS,
                 order,
                 'NULLS LAST',
+            );
+        } else if (field === 'portalState') {
+            qb.addSelect(PORTAL_STATE_RANK_SQL, PORTAL_STATE_ALIAS).orderBy(
+                PORTAL_STATE_ALIAS,
+                order,
             );
         } else {
             qb.orderBy(SORTABLE_COLUMNS[field], order);

@@ -32,6 +32,8 @@ export const adminApiSchema = gql`
         innStatus: String!
         "ready | missing-data | inn-duplicate | erp-inactive | activated, the same rule the activation executor applies"
         portalReadiness: String!
+        "none | invited | verified | active, the state of the portal account (#375); null when the counterparty is hidden from the viewer"
+        portalState: String
         departmentId: String
         branchId: String
         creditTermOverrideExtraDays: Int
@@ -126,6 +128,8 @@ export const adminApiSchema = gql`
         innStatus: StringOperators
         "ready | missing-data | inn-duplicate | erp-inactive | activated, the same value as Counterparty.portalReadiness"
         readiness: StringOperators
+        "none | invited | verified | active, the same value as Counterparty.portalState"
+        portalState: StringOperators
         "Needs ReadCounterpartyCredit"
         creditLimit: NumberOperators
         "Needs ReadCounterpartyCredit"
@@ -166,6 +170,8 @@ export const adminApiSchema = gql`
         creditBalance: SortOrder
         "Never-ordered counterparties come last in either direction"
         lastOrderAt: SortOrder
+        "Orders none, invited, verified, active"
+        portalState: SortOrder
     }
 
     type CounterpartySummary {

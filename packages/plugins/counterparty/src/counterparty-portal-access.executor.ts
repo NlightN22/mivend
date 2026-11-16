@@ -14,13 +14,16 @@ import {
     type BulkUndoPlan,
 } from '@mivend/plugin-bulk-operations';
 
-import { getRawManyBounded } from 'shared';
 import { Counterparty } from './entities/counterparty.entity';
 import { findLinkedInnDuplicate, normalizeInn } from './counterparty-inn-guard';
 import { parseCounterpartyMatching, resolveCounterpartyIds } from './counterparty-bulk-matching';
 import { ContactPointService } from './contact-point.service';
 import { CounterpartyService } from './counterparty.service';
-import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
+import {
+    findCounterpartyTarget,
+    isCounterpartyWritable,
+    visibleCounterpartyTargets,
+} from './counterparty-bulk-targets';
 import {
     CounterpartyPortalAccessService,
     PortalAccessPreconditionError,
@@ -28,7 +31,6 @@ import {
 } from './counterparty-portal-access.service';
 
 export const PORTAL_ACCESS_OPERATION = 'counterparty-portal-access';
-const ID_CHUNK = 5000;
 
 const skip = (code: string, message: string, label: string | null): BulkRecordVerdict => ({
     outcome: 'skipped',
@@ -155,39 +157,15 @@ export class CounterpartyPortalAccessExecutor implements BulkExecutor, OnModuleI
         }
     }
 
-    async visibleTargets(ctx: RequestContext, targetIds: string[]): Promise<Set<string>> {
-        const numeric = [...new Set(targetIds.filter(id => /^\d+$/.test(id)))];
-        const visible = new Set<string>();
-        for (let i = 0; i < numeric.length; i += ID_CHUNK) {
-            const chunk = numeric.slice(i, i + ID_CHUNK);
-            const qb = this.connection
-                .getRepository(ctx, Counterparty)
-                .createQueryBuilder('c')
-                .select('c.id', 'id')
-                .where('c.id IN (:...ids)', { ids: chunk });
-            const rows = await getRawManyBounded<{ id: number }>(
-                await applyCounterpartyVisibilityScope(this.accessScope, ctx, qb),
-                chunk.length,
-            );
-            for (const row of rows) visible.add(String(row.id));
-        }
-        return visible;
+    visibleTargets(ctx: RequestContext, targetIds: string[]): Promise<Set<string>> {
+        return visibleCounterpartyTargets(this.connection, this.accessScope, ctx, targetIds);
     }
 
-    private async find(ctx: RequestContext, targetId: string): Promise<Counterparty | null> {
-        if (!/^\d+$/.test(targetId)) return null;
-        return this.connection
-            .getRepository(ctx, Counterparty)
-            .findOne({ where: { id: targetId } });
+    private find(ctx: RequestContext, targetId: string): Promise<Counterparty | null> {
+        return findCounterpartyTarget(this.connection, ctx, targetId);
     }
 
-    private async writable(ctx: RequestContext, counterparty: Counterparty): Promise<boolean> {
-        try {
-            await this.accessScope.assertCounterpartyWritable(ctx, counterparty);
-            return true;
-        } catch (e) {
-            if (e instanceof ForbiddenError) return false;
-            throw e;
-        }
+    private writable(ctx: RequestContext, counterparty: Counterparty): Promise<boolean> {
+        return isCounterpartyWritable(this.accessScope, ctx, counterparty);
     }
 }

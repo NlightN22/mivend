@@ -15,6 +15,7 @@ import { loggerCtx } from './types';
 import { ctxQuery, ctxQueryBounded, withAggregateLock } from 'shared';
 import { withInnBindingGuard } from './counterparty-inn-guard';
 import { ContactPointService } from './contact-point.service';
+import { CounterpartyPortalRestoreService } from './counterparty-portal-restore.service';
 import { PortalAccessPreconditionError } from './portal-access-precondition';
 
 export { PortalAccessPreconditionError };
@@ -41,6 +42,7 @@ export class CounterpartyPortalAccessService {
         private customerService: CustomerService,
         private accessScopeService: AccessScopeService,
         private contactPoints: ContactPointService,
+        private restoreService: CounterpartyPortalRestoreService,
     ) {}
 
     async findPortalUsers(ctx: RequestContext, counterpartyId: ID): Promise<Customer[]> {
@@ -215,6 +217,8 @@ export class CounterpartyPortalAccessService {
         counterparty: Counterparty,
         contact: { email: string; phone: string },
     ): Promise<Customer> {
+        const restored = await this.restoreService.restore(ctx, counterparty.id, contact.email);
+        if (restored) return restored;
         // Password is omitted on purpose: Customer.create publishes AccountRegistrationEvent instead.
         // The counterparty sets their own password later via the storefront reset-link flow.
         const result = await this.customerService.create(ctx, {

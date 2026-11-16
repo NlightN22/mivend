@@ -14,6 +14,7 @@ export interface CounterpartySortParameter {
     creditLimit?: 'ASC' | 'DESC' | null;
     creditBalance?: 'ASC' | 'DESC' | null;
     lastOrderAt?: 'ASC' | 'DESC' | null;
+    portalState?: 'ASC' | 'DESC' | null;
 }
 
 export interface CounterpartyUpsertPayload {
