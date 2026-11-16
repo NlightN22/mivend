@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
-import { AccountRegistrationEvent } from '@vendure/core';
+import { AccountRegistrationEvent, Customer } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
@@ -50,10 +50,28 @@ beforeAll(async () => {
     const base = createTestConnection(dataSource);
     connection = {
         withTransaction: base.withTransaction.bind(base),
-        getRepository: (ctx: RequestContext, entity: unknown) =>
-            entity === Counterparty
-                ? { findOne: async () => counterparty }
-                : base.getRepository(ctx, entity as never),
+        getRepository: (ctx: RequestContext, entity: unknown) => {
+            if (entity === Counterparty) return { findOne: async () => counterparty };
+            if (entity === Customer) {
+                const em = (ctx as { em?: DataSource['manager'] }).em ?? dataSource.manager;
+                return {
+                    findOne: async ({ where }: { where: { id: number | string } }) => {
+                        const [row] = await em.query(
+                            `SELECT id, "customFieldsCounterpartyid" AS cp, "deletedAt" FROM customer WHERE id = $1`,
+                            [where.id],
+                        );
+                        return row
+                            ? {
+                                  id: row.id,
+                                  deletedAt: row.deletedAt,
+                                  customFields: { counterpartyId: row.cp },
+                              }
+                            : null;
+                    },
+                };
+            }
+            return base.getRepository(ctx, entity as never);
+        },
     } as unknown as TransactionalConnection;
     const em = (ctx: unknown) => (ctx as { em?: DataSource['manager'] }).em ?? dataSource.manager;
     const customerService = {
@@ -110,7 +128,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.query('TRUNCATE customer, "user", authentication_method RESTART IDENTITY');
+    await dataSource.query(
+        'TRUNCATE customer, "user", authentication_method, counterparty RESTART IDENTITY',
+    );
     contactEmail = 'office@example.com';
     created = [];
     tokenSetFor = [];
@@ -166,6 +186,7 @@ describe('portal access restore (real Postgres, #375)', () => {
 
         const [user] = await dataSource.query(`SELECT "lastLogin" FROM "user"`);
         expect(user.lastLogin).toBeNull();
+        await dataSource.query(`INSERT INTO counterparty (id) VALUES ($1)`, [counterparty.id]);
         const states = await loadPortalStates(connection, ctx, [counterparty.id]);
         expect(states.get(counterparty.id)).toBe('invited');
     });
