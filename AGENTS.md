@@ -390,7 +390,7 @@ the release owner's own. Order: implement, checks, audit, fixes, push, then bump
 - Deploying first and auditing afterwards is not allowed, even on the owner's request to hurry,
   unless the owner explicitly accepts an unaudited release in the chat for that release.
 - Default roles are edited in the admin UI and survive restarts (bootstrap only creates, #374); a right added to
-  `default-roles.ts` reaches existing environments through the additive step `migrate` runs. The release owner checks
+  `default-roles.ts` reaches existing environments through a listed entry the additive step `migrate` runs applies once. The release owner checks
   the `default-roles.ts` diff for removed or renamed rights, which need their own migration.
 - A coordinated multi-session release ships everything together in one version; the release owner
   waits for every session's audit result before the bump.

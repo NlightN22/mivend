@@ -1,60 +1,90 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_ROLES } from '../../default-roles';
-import { grantMissingDefaultPermissions, type SqlClient } from '../../grant-missing-permissions';
+import {
+    PERMISSIONS_ADDED_BY_RELEASE,
+    SCOPE_KEYS_ADDED_BY_RELEASE,
+} from '../../default-role-release-grants';
+import { planRoleGrants } from '../../grant-missing-permissions';
 
-function fakeDb(initial: Record<string, string>): {
-    client: SqlClient;
-    roles: Map<string, string>;
-} {
-    const roles = new Map(Object.entries(initial));
-    const client: SqlClient = {
-        async query(sql, params = []) {
-            if (sql.startsWith('SELECT')) {
-                const stored = roles.get(String(params[0]));
-                return { rows: stored === undefined ? [] : [{ permissions: stored }] };
-            }
-            if (sql.startsWith('UPDATE')) roles.set(String(params[0]), String(params[1]));
-            return { rows: [] };
-        },
-    };
-    return { client, roles };
-}
+const perm = [{ release: 'r1', roleCode: 'manager', permission: 'NewRight' }];
 
-const full = (code: string): string => {
-    const definition = DEFAULT_ROLES.find(d => d.code === code)!;
-    return ['Authenticated', ...definition.permissions].join(',');
-};
+describe('release grant entries', () => {
+    it('name existing default roles and rights the code lists for that role', () => {
+        for (const grant of PERMISSIONS_ADDED_BY_RELEASE) {
+            const role = DEFAULT_ROLES.find(d => d.code === grant.roleCode);
+            expect(role?.permissions).toContain(grant.permission);
+        }
+        for (const grant of SCOPE_KEYS_ADDED_BY_RELEASE) {
+            const role = DEFAULT_ROLES.find(d => d.code === grant.roleCode);
+            expect(role?.accessScopeConfig).toHaveProperty(grant.resource);
+        }
+    });
 
-describe('grantMissingDefaultPermissions', () => {
-    it('adds a right missing from a role and keeps every right already there, edits included', async () => {
-        const { client, roles } = fakeDb({
-            'department-head': `Authenticated,SomeHandGrantedRight`,
+    it('deliver the 1.1.8 power-of-attorney right to its four roles', () => {
+        expect(PERMISSIONS_ADDED_BY_RELEASE.map(g => g.roleCode).sort()).toEqual([
+            'department-head',
+            'general-director',
+            'portal-admin',
+            'security-officer',
+        ]);
+    });
+});
+
+describe('planRoleGrants', () => {
+    it('first run: adds an unrecorded right the role lacks, keeps hand-granted ones, records it', () => {
+        const plan = planRoleGrants(
+            'manager',
+            ['Authenticated', 'Hand'],
+            null,
+            new Set(),
+            perm,
+            [],
+        );
+        expect(plan.permissions).toEqual(['Authenticated', 'Hand', 'NewRight']);
+        expect(plan.record).toEqual(['NewRight']);
+    });
+
+    it('records without changing a role that already holds the right', () => {
+        const plan = planRoleGrants('manager', ['NewRight'], null, new Set(), perm, []);
+        expect(plan.permissions).toEqual(['NewRight']);
+        expect(plan.added).toEqual([]);
+        expect(plan.record).toEqual(['NewRight']);
+    });
+
+    it('does not re-add a recorded right an admin removed', () => {
+        const plan = planRoleGrants(
+            'manager',
+            ['Authenticated'],
+            null,
+            new Set(['NewRight']),
+            perm,
+            [],
+        );
+        expect(plan.permissions).toEqual(['Authenticated']);
+        expect(plan.record).toEqual([]);
+    });
+
+    it('ignores entries of another role', () => {
+        const plan = planRoleGrants('operator', ['Authenticated'], null, new Set(), perm, []);
+        expect(plan.permissions).toEqual(['Authenticated']);
+    });
+
+    it('adds a missing scope key from DEFAULT_ROLES without touching existing keys', () => {
+        const withKey = [{ release: 'r2', roleCode: 'manager', resource: 'order' }];
+        const plan = planRoleGrants('manager', [], { counterparty: 'all' }, new Set(), [], withKey);
+        expect(plan.scope).toEqual({
+            counterparty: 'all',
+            order: DEFAULT_ROLES.find(d => d.code === 'manager')!.accessScopeConfig.order,
         });
-        const outcomes = await grantMissingDefaultPermissions(client);
-
-        const stored = roles.get('department-head')!.split(',');
-        expect(stored).toContain('SomeHandGrantedRight');
-        expect(stored).toContain('ReadDeletedContractPowerOfAttorney');
-        expect(outcomes.map(o => o.roleCode)).toEqual(['department-head']);
+        expect(plan.record).toEqual(['scope:order']);
     });
 
-    it('is idempotent: the second run changes nothing', async () => {
-        const { client, roles } = fakeDb({ manager: 'Authenticated' });
-        await grantMissingDefaultPermissions(client);
-        const afterFirst = roles.get('manager');
-        const second = await grantMissingDefaultPermissions(client);
-
-        expect(second).toEqual([]);
-        expect(roles.get('manager')).toBe(afterFirst);
-    });
-
-    it('never removes a right and leaves a complete role and a missing role alone', async () => {
-        const { client, roles } = fakeDb({ operator: full('operator') });
-        const outcomes = await grantMissingDefaultPermissions(client);
-
-        expect(outcomes).toEqual([]);
-        expect(roles.get('operator')).toBe(full('operator'));
-        expect(roles.has('manager')).toBe(false);
+    it('never changes an existing scope key value, and skips a missing scope row', () => {
+        const withKey = [{ release: 'r2', roleCode: 'manager', resource: 'order' }];
+        const kept = planRoleGrants('manager', [], { order: 'all' }, new Set(), [], withKey);
+        expect(kept.scope).toEqual({ order: 'all' });
+        const none = planRoleGrants('manager', [], null, new Set(), [], withKey);
+        expect(none.record).toEqual([]);
     });
 });

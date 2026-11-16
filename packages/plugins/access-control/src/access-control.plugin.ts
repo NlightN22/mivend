@@ -52,6 +52,7 @@ import { ErpPosition } from './entities/erp-position.entity';
 import { PositionService } from './position.service';
 import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
+import { RoleDefaultGrant } from './entities/role-default-grant.entity';
 import { RoleProvisioningService } from './role-provisioning.service';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { ACCESS_CONTROL_PLUGIN_OPTIONS, AccessControlPluginOptions } from './types';
@@ -62,6 +63,7 @@ import { WarehouseService } from './warehouse.service';
     imports: [PluginCommonModule, CustomerPricingPlugin],
     entities: [
         RoleAccessScope,
+        RoleDefaultGrant,
         Department,
         ErpPosition,
         Branch,
