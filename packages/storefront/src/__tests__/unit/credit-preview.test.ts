@@ -30,7 +30,9 @@ const make = (over: Partial<CreditPreview> = {}): CreditPreview => ({
 });
 const over = (extra: Partial<CreditPreview> = {}): CreditPreview =>
     make({ exceeded: true, acknowledgementRequired: true, payableCardAmount: 900, ...extra });
-const preview = (value: CreditPreview) => ({ deferredCreditPreview: value });
+const preview = (value: CreditPreview): { deferredCreditPreview: CreditPreview } => ({
+    deferredCreditPreview: value,
+});
 
 describe('checkout credit gating', () => {
     beforeEach(() => setActivePinia(createPinia()));

@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { contractDebt, initialAmountText } from '../../pages/account/contractPayment';
 
 const now = new Date('2026-10-20T00:00:00Z');
-const doc = (contractId: string, openAmount: number, dueDate: string | null) => ({
+interface DocResult {
+    id: string;
+    currency: string;
+    amount: number;
+    openAmount: number;
+    dueDate: string | null;
+    orders: never[];
+    contractId: string;
+}
+
+const doc = (contractId: string, openAmount: number, dueDate: string | null): DocResult => ({
     id: `${contractId}-${openAmount}`,
     currency: 'RUB',
     amount: openAmount * 2,

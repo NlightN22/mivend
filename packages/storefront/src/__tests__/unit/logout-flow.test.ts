@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLogout } from '../../composables/logoutFlow';
 
 afterEach(() => vi.useRealTimers());
+interface DepsResult {
+    calls: string[];
+    deps: { setGuard: () => number; logout: () => Promise<void>; navigate: () => number };
+}
 
-function deps(logout: () => Promise<void>) {
+function deps(logout: () => Promise<void>): DepsResult {
     const calls: string[] = [];
     return {
         calls,

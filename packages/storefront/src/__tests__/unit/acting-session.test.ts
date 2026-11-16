@@ -125,7 +125,7 @@ describe('acting token transport', () => {
 });
 
 describe('manager url', () => {
-    const doc = (content: string) =>
+    const doc = (content: string): Document =>
         ({ querySelector: () => ({ getAttribute: () => content }) }) as unknown as Document;
 
     it('builds the order link from the configured base', () => {

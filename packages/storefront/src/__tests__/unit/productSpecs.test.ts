@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { facetSpecs } from '../../utils/productSpecs';
 
-const fv = (code: string, facetName: string, name: string) => ({
+const fv = (
+    code: string,
+    facetName: string,
+    name: string,
+): { name: string; facet: { code: string; name: string } } => ({
     name,
     facet: { code, name: facetName },
 });

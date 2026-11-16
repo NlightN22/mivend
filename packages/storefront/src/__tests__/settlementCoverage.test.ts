@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { unexplainedByCurrency } from '../pages/settlements/settlementCoverage';
 
-const card = (currency: string, unexplained: number) => ({ currency, unexplained });
+const card = (
+    currency: string,
+    unexplained: number,
+): { currency: string; unexplained: number } => ({ currency, unexplained });
 
 describe('unexplainedByCurrency', () => {
     it('sums the cards of one currency', () => {

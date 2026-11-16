@@ -7,13 +7,13 @@ vi.mock('../../stores/geo', () => ({
 }));
 vi.mock('@mivend/ui-kit', () => ({ searchesThroughHost: (key: string) => key === 'open' }));
 
-import { useLocationPick } from '../../pages/account/useLocationPick';
+import { LocationPick, useLocationPick } from '../../pages/account/useLocationPick';
 
-function config(defaultProvider: string) {
+function config(defaultProvider: string): void {
     loadConfig.mockResolvedValue({ providers: [{ key: defaultProvider }], defaultProvider });
 }
 
-async function start() {
+async function start(): Promise<LocationPick> {
     const pick = useLocationPick(
         () => 'Some street 1',
         () => null,

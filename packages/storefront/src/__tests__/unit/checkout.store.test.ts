@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, MockedFunction } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
@@ -6,8 +6,9 @@ vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 import { shopApi } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
 import { useCheckoutStore } from '../../stores/checkout';
+type EligibleResult = MockedFunction<typeof shopApi>;
 
-const eligible = (...codes: string[]) =>
+const eligible = (...codes: string[]): EligibleResult =>
     vi.mocked(shopApi).mockResolvedValueOnce({
         eligibleShippingMethods: codes.map((code, i) => ({ id: String(i), code })),
     } as never);

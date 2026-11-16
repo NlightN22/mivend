@@ -14,7 +14,7 @@ describe('flatPercentOf', () => {
 });
 
 describe('useTierProgressView', () => {
-    function view(tp: object, flat: number) {
+    function view(tp: object, flat: number): ReturnType<typeof useTierProgressView>['value'] {
         store.byVariant = { v1: tp };
         return useTierProgressView(ref('p1'), ref('v1'), ref(flat)).value;
     }

@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { orderFacetGroups } from '../../composables/facetOrder';
 
-const value = (name: string, count: number) => ({ id: name, code: name, name, count });
+const value = (
+    name: string,
+    count: number,
+): { id: string; code: string; name: string; count: number } => ({
+    id: name,
+    code: name,
+    name,
+    count,
+});
 
 describe('orderFacetGroups', () => {
     it('orders manufacturer values by count desc, ties by name', () => {
