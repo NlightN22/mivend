@@ -179,14 +179,15 @@ export const orderContractErpIds = (key: CounterpartyKey): string[] =>
         .sort();
 
 // Read-time order branch: point override, else counterparty branch (docs/access-control.md).
-// Branch scope sees its branch's orders plus own, team and granted clients' orders anywhere.
+// Branch scope sees its branch's orders plus own, team and granted clients' orders anywhere;
+// an order with no branch is visible to scope all only (#286).
 export const VISIBLE_ORDERS: Record<ActorKey, OrderKey[]> = {
     'manager-a': ['a-own', 'a-own-paid', 'a-point'],
     'manager-b': ['b-own'],
     'head-a': ['a-own', 'a-own-paid'],
     'operator-a': ['a-own', 'a-own-paid', 'b-own'],
     'head-b': ['a-point', 'b-own'],
-    'head-default': ['none'],
+    'head-default': [],
     director: ['a-own', 'a-own-paid', 'a-point', 'none', 'b-own'],
 };
 
