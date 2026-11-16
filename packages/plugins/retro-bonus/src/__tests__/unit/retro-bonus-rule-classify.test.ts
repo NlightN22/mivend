@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { classifyRule } from '../../retro-bonus-rule-classify';
 
-const ref = (refId: string) => ({ refId });
+const ref = (refId: string): { refId: string } => ({ refId });
 const base = {
     counterpartyMode: 'list',
     allCounterparties: false,

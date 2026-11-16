@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import type {
     ChannelService,
     PaymentMethodService,
@@ -9,7 +9,7 @@ import type {
 import { OnlineStubBootstrapService } from '../../online-stub-bootstrap.service';
 import { ONLINE_STUB_METHOD_CODE } from '../../online-stub-handler';
 
-function createMockRepo() {
+function createMockRepo(): { findOne: Mock } {
     return {
         findOne: vi.fn(),
     };

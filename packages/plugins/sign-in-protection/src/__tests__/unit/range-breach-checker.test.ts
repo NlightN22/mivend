@@ -1,12 +1,16 @@
 import { createHash } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { RangeBreachChecker } from '../../breach/range-breach-checker';
 
 const sha1 = (value: string): string =>
     createHash('sha1').update(value).digest('hex').toUpperCase();
+interface CheckerResult {
+    fetchImpl: Mock<() => Promise<Response>>;
+    checker: RangeBreachChecker;
+}
 
-function checker(respond: () => Promise<Response>) {
+function checker(respond: () => Promise<Response>): CheckerResult {
     const fetchImpl = vi.fn(respond);
     return { fetchImpl, checker: new RangeBreachChecker('https://range.test', 1000, fetchImpl) };
 }

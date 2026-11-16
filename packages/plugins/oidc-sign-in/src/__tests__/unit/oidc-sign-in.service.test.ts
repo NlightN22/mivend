@@ -1,9 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OidcSignInService } from '../../oidc-sign-in.service';
 
 const ctx = { apiType: 'admin' } as RequestContext;
+interface BuildResult {
+    service: OidcSignInService;
+    requests: {
+        beginExchange: () => Promise<unknown>;
+        markVerified: Mock;
+        create: () => Promise<string | null | undefined>;
+        claimVerified: () => Promise<string>;
+    };
+    tokens: {
+        save: Mock;
+        takeForSession: Mock<() => Promise<{ idToken: string } | null | undefined>>;
+    };
+    failures: string[];
+    tx: { open: number; openAtExchange: number; transactions: number };
+}
 
 function build(over: {
     exchange?: unknown;
@@ -14,7 +29,7 @@ function build(over: {
     verified?: boolean;
     create?: string | null;
     taken?: { idToken: string } | null;
-}) {
+}): BuildResult {
     const failures: string[] = [];
     const tx = { open: 0, openAtExchange: -1, transactions: 0 };
     const connection = {

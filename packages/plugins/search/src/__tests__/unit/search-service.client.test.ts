@@ -128,7 +128,18 @@ describe('SearchServiceClient.resolveQuery', () => {
 
 describe('SearchServiceClient end-user id and limit errors', () => {
     const headers = (h: Record<string, string> = {}): Headers => new Headers(h);
-    const failing = (status: number, body: unknown, h: Record<string, string> = {}) => ({
+    interface FailingResult {
+        ok: boolean;
+        status: number;
+        headers: Headers;
+        text: () => Promise<string>;
+    }
+
+    const failing = (
+        status: number,
+        body: unknown,
+        h: Record<string, string> = {},
+    ): FailingResult => ({
         ok: false,
         status,
         headers: headers(h),

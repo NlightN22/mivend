@@ -1,14 +1,24 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CategoryHandler } from '../../handlers/category.handler';
 
 type Existing = { id: string; isPrivate?: boolean };
+interface BuildResult {
+    handler: CategoryHandler;
+    collectionService: {
+        findOneBySlug: Mock<(_ctx: unknown, slug: string) => Promise<Existing>>;
+        create: Mock;
+        update: Mock;
+        move: Mock;
+        getBreadcrumbs: Mock;
+    };
+}
 
 function build(
     collections: Record<string, Existing> = {},
     breadcrumbs: Array<{ id: string }> = [{ id: 'root' }, { id: 'col-1' }],
-) {
+): BuildResult {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue({ id: 'facet-1' }),
         create: vi.fn(),

@@ -5,7 +5,9 @@ import { CODE_FIELDS } from '../../code-index-fields';
 import { mapSearchQuery, mapSearchSort } from '../../code-match-query';
 import { HAS_ORGANIZATION_FIELD } from '../../sellable-filter';
 
-const base = () => ({ bool: { filter: [{ term: { channelId: 1 } }] as unknown[] } });
+const base = (): { bool: { filter: unknown[] } } => ({
+    bool: { filter: [{ term: { channelId: 1 } }] as unknown[] },
+});
 const fieldsIn = (value: unknown): string[] =>
     [...JSON.stringify(value).matchAll(/"(product-\w+Normalized)"/g)].map(m => m[1]);
 

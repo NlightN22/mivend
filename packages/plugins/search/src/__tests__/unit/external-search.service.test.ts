@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { Product, RequestContext } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
@@ -562,7 +562,13 @@ describe('ExternalSearchService.search', () => {
 });
 
 describe('ExternalSearchService price type', () => {
-    function build(priceTypeId: string | null) {
+    interface BuildResult {
+        client: { resolveQuery: Mock };
+        priceTypes: { resolveExternalId: Mock };
+        service: ExternalSearchService;
+    }
+
+    function build(priceTypeId: string | null): BuildResult {
         const client = { resolveQuery: vi.fn().mockResolvedValue({ items: [], total: 0 }) };
         const priceTypes = { resolveExternalId: vi.fn().mockResolvedValue(priceTypeId) };
         const service = new ExternalSearchService(
@@ -656,7 +662,7 @@ describe('ExternalSearchService excludeCategoryIds', () => {
                 hiddenCategoryErpIds: vi.fn().mockResolvedValue(ids),
             } as never,
         );
-    const client = () => ({
+    const client = (): { resolveQuery: Mock } => ({
         resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
     });
 

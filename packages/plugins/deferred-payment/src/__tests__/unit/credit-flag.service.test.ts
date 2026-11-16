@@ -1,11 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CreditFlagService } from '../../credit-flag.service';
 
 const ctx = {} as RequestContext;
+interface VisibleQueryResult {
+    alias: string;
+    select: Mock;
+    distinct: Mock;
+    orderBy: Mock;
+    andWhere: Mock;
+    limit: Mock;
+    getRawMany: Mock;
+}
 
-function visibleQuery(rows: unknown[]) {
+function visibleQuery(rows: unknown[]): VisibleQueryResult {
     return {
         alias: 'Order',
         select: vi.fn().mockReturnThis(),
@@ -31,7 +40,7 @@ describe('CreditFlagService.flaggedCounterpartyIds', () => {
     });
 
     it('passes at the counterparty ceiling and fails one over, never truncating', async () => {
-        const run = (count: number) =>
+        const run = (count: number): Promise<string[]> =>
             serviceWith(
                 visibleQuery(Array.from({ length: count }, (_, i) => ({ counterpartyId: `${i}` }))),
             ).flaggedCounterpartyIds(ctx);

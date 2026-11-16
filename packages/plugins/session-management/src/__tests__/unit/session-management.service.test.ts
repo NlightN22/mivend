@@ -196,7 +196,7 @@ describe('SessionManagementService', () => {
     });
 
     it('fails the sign-out of other sessions over the read ceiling, ending none', async () => {
-        const many = (n: number) =>
+        const many = (n: number): FakeSession[] =>
             Array.from({ length: n }, (_, i) => makeSession({ id: `s-${i}`, token: `t-${i}` }));
         repo.find.mockResolvedValue(many(1000));
         await expect(service.endOtherSessions(ctxFor('user-1', 't-0'))).resolves.toBe(true);

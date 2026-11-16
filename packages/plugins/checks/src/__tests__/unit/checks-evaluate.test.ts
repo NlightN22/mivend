@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CheckRegistry } from '../../check-registry';
@@ -7,8 +7,22 @@ import { ManagerSubjectRegistrar } from '../../manager-subject.registrar';
 import type { Consequence } from '../../types';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    service: ChecksService;
+    evaluate: Mock<() => Promise<{ severity: 'warning'; facts: object; messageKey: string }[]>>;
+    effectiveForStage: Mock<
+        () => Promise<
+            Map<string, { consequence: Consequence; enabled: boolean; recipient: string | null }>
+        >
+    >;
+    connection: { getRepository: Mock<() => never> };
+}
 
-function setup(policy: { consequence: Consequence; enabled: boolean; recipient?: string | null }) {
+function setup(policy: {
+    consequence: Consequence;
+    enabled: boolean;
+    recipient?: string | null;
+}): SetupResult {
     const registry = new CheckRegistry();
     new ManagerSubjectRegistrar(registry).onModuleInit();
     const evaluate = vi.fn(async () => [
@@ -118,7 +132,10 @@ describe('manager subject type', () => {
         const registry = new CheckRegistry();
         new ManagerSubjectRegistrar(registry).onModuleInit();
         const def = registry.getSubjectType('manager');
-        const allowed = (stage: string) => registry.allowedConsequences(def, stage);
+        const allowed = (
+            stage: string,
+        ): readonly ('info' | 'warn' | 'hold' | 'block' | 'require-approval')[] =>
+            registry.allowedConsequences(def, stage);
         expect(allowed('extend-reservation')).toEqual(['info', 'warn', 'block']);
         expect(allowed('extend-credit-term')).toContain('require-approval');
         expect(allowed('adjust-price')).toContain('require-approval');

@@ -1,10 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { PriceTypeHandler } from '../../handlers/price-type.handler';
 
 const ctx = {} as RequestContext;
+interface BuildResult {
+    handler: PriceTypeHandler;
+    service: { upsertPriceTypeByCode: Mock<() => Promise<object>> };
+}
 
-function build() {
+function build(): BuildResult {
     const service = { upsertPriceTypeByCode: vi.fn(async () => ({})) };
     return { handler: new PriceTypeHandler(service as never), service };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
-import { CheckPolicyService } from '../../check-policy.service';
+import { CheckPolicyService, EffectivePolicy } from '../../check-policy.service';
 import { CheckRegistry } from '../../check-registry';
 
 const provider = {
@@ -42,7 +42,7 @@ function service(rowCount: number): CheckPolicyService {
     );
 }
 
-const read = (s: CheckPolicyService) =>
+const read = (s: CheckPolicyService): Promise<Map<string, EffectivePolicy>> =>
     s.effectiveForStage({} as RequestContext, [provider as never], 'cart', 'b-1');
 
 describe('CheckPolicyService.effectiveForStage ceiling', () => {

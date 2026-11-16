@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { WarehouseHandler } from '../../handlers/warehouse.handler';
 
@@ -9,8 +9,16 @@ const record = {
     branchErpId: 'branch-a',
     isActive: true,
 };
+interface BuildResult {
+    handler: WarehouseHandler;
+    warehouseService: { upsert: Mock<() => Promise<object>> };
+    stockLocationService: {
+        create: Mock<() => Promise<object>>;
+        update: Mock<() => Promise<object>>;
+    };
+}
 
-function build(rows: Array<{ id: string } | undefined>) {
+function build(rows: Array<{ id: string } | undefined>): BuildResult {
     const getRawOne = vi.fn();
     for (const row of rows) getRawOne.mockResolvedValueOnce(row);
     const qb = {

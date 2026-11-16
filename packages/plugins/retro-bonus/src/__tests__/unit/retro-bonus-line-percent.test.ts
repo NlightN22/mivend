@@ -4,7 +4,18 @@ import { lineRetroBonus } from '../../retro-bonus-line-percent';
 import { RetroBonusOrderResolver } from '../../retro-bonus-order.resolver';
 
 const NOW = new Date('2026-11-10T00:00:00Z');
-const rule = (over: Record<string, unknown> = {}) => ({
+interface RuleResult {
+    percent: number;
+    allProducts: boolean;
+    productMode: string;
+    inactiveReason: null;
+    validFrom: Date;
+    validTo: null;
+    conditionAmount: null;
+    conditionQuantity: null;
+}
+
+const rule = (over: Record<string, unknown> = {}): RuleResult => ({
     percent: 3,
     allProducts: false,
     productMode: 'list',

@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { SearchResultAvailabilityResolver } from '../../search-result-availability.resolver';
 
-const resolverWith = (rows: Array<{ id: number }>) => {
+const resolverWith = (
+    rows: Array<{ id: number }>,
+): { resolver: SearchResultAvailabilityResolver; query: Mock } => {
     const query = vi.fn().mockResolvedValue(rows);
     const connection = { getRepository: () => ({ query }) } as unknown as TransactionalConnection;
     return { resolver: new SearchResultAvailabilityResolver(connection), query };

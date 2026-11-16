@@ -1,10 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { StockHandler } from '../../handlers/stock.handler';
 
 const ctx = {} as RequestContext;
+interface BuildResult {
+    handler: StockHandler;
+    qb: {
+        select: Mock;
+        from: Mock;
+        where: Mock;
+        update: Mock;
+        set: Mock;
+        execute: Mock<() => Promise<object>>;
+        getRawOne: Mock;
+    };
+    levels: {
+        findOne: Mock<() => Promise<object | undefined>>;
+        create: Mock<(v: object) => object>;
+        save: Mock<(v: object) => Promise<object>>;
+    };
+}
 
-function build(rows: Array<{ id: string } | undefined>, existingLevel?: object) {
+function build(rows: Array<{ id: string } | undefined>, existingLevel?: object): BuildResult {
     const getRawOne = vi.fn();
     for (const row of rows) getRawOne.mockResolvedValueOnce(row);
     const qb = {

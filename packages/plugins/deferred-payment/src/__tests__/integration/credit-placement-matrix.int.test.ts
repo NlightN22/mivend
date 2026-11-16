@@ -3,11 +3,15 @@ import { FREIGHT_SHIPPING_METHOD_CODE } from 'shared';
 
 import { PLACEMENT_CASES, type PlacementCase } from '../../placement-cases';
 import { useCreditPlacementHarness } from './credit-placement.harness';
+import { PlacementResult } from '../../credit-placement.service';
 
 const h = useCreditPlacementHarness('credit_placement_matrix');
 const ORDER_ID = 999_999;
 
-async function placeCase(c: PlacementCase, metadata: Record<string, unknown> = {}) {
+async function placeCase(
+    c: PlacementCase,
+    metadata: Record<string, unknown> = {},
+): Promise<PlacementResult> {
     const buyer = await h.addBuyer(1_000_000, 0, c.terms === 'deferred' ? 14 : 0);
     await h.addShippingLine(
         ORDER_ID,
@@ -66,7 +70,7 @@ describe('confirmation matrix at placement (real Postgres)', () => {
         const c = PLACEMENT_CASES[0];
         await h.setCasePolicy(c.code, 'warn');
         await h.setCasePolicy(c.code, 'hold', true, 'branch-a');
-        const branchOrder = async (branchId: string) => {
+        const branchOrder = async (branchId: string): Promise<PlacementResult> => {
             const buyer = await h.addBuyer(1_000_000, 0, c.terms === 'deferred' ? 14 : 0);
             await h.addShippingLine(ORDER_ID, 'pickup');
             const order = h.orderOf(buyer, 1_000, ORDER_ID);

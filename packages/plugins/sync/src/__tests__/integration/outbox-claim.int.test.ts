@@ -46,13 +46,17 @@ afterAll(async () => {
 describe('SyncService.processOutbox claim (integration, real Postgres)', () => {
     it('overlapping sweeps split the backlog: each entry once, and both sweeps publish', async () => {
         const publishedBy: Record<string, string[]> = { a: [], b: [] };
-        const rabbitFor = (sweep: string) => ({
+        interface RabbitForResult {
+            publish: (_key: string, event: { eventId: string }) => Promise<void>;
+        }
+
+        const rabbitFor = (sweep: string): RabbitForResult => ({
             publish: async (_key: string, event: { eventId: string }) => {
                 await new Promise(r => setTimeout(r, 50));
                 publishedBy[sweep].push(event.eventId);
             },
         });
-        const make = (sweep: string) =>
+        const make = (sweep: string): SyncService =>
             new SyncService(
                 createTestConnection(dataSource),
                 rabbitFor(sweep) as never,

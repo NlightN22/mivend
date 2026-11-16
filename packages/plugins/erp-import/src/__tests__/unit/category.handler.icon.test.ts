@@ -1,12 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import { Asset, type RequestContext } from '@vendure/core';
 
 import { CategoryHandler } from '../../handlers/category.handler';
 import type { CategoryRecord } from '../../types';
 
 const ctx = {} as RequestContext;
+interface BuildResult {
+    handler: CategoryHandler;
+    collectionService: {
+        findOneBySlug: Mock<() => Promise<{ featuredAsset?: unknown; id: string } | null>>;
+        update: Mock;
+    };
+    assetService: { createFromFileStream: Mock<() => Promise<Asset & { id: string }>> };
+    getStreamFromPath: Mock<() => Promise<object>>;
+}
 
-function build(existing: { featuredAsset?: unknown } | null) {
+function build(existing: { featuredAsset?: unknown } | null): BuildResult {
     const collectionService = {
         findOneBySlug: vi.fn(async () => (existing ? { id: 'c1', ...existing } : null)),
         update: vi.fn(),

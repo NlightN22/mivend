@@ -1,6 +1,6 @@
 import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import type { CaptchaProvider, CaptchaVerdict } from '../../captcha/captcha-provider';
 import { CaptchaService } from '../../captcha/captcha.service';
@@ -9,8 +9,12 @@ import type { SignInThrottleService } from '../../sign-in-throttle.service';
 import type { SignInProtectionOptions } from '../../types';
 
 const limits = { threshold: 5, baseLockMs: 1, maxLockMs: 1 };
+interface ServiceResult {
+    verify: Mock<() => Promise<CaptchaVerdict>>;
+    captcha: CaptchaService;
+}
 
-function service(failures: number, verdict: CaptchaVerdict | null) {
+function service(failures: number, verdict: CaptchaVerdict | null): ServiceResult {
     const verify = vi.fn(async () => verdict ?? 'valid');
     const provider: CaptchaProvider | null =
         verdict === null
@@ -38,7 +42,7 @@ function service(failures: number, verdict: CaptchaVerdict | null) {
     return { verify, captcha: new CaptchaService(throttle, options) };
 }
 
-const withToken = (token?: string) =>
+const withToken = (token?: string): RequestContext =>
     ({
         req: { headers: token ? { 'x-captcha-token': token } : {}, ip: '1.2.3.4' },
     }) as unknown as RequestContext;
@@ -82,7 +86,7 @@ describe('CaptchaService', () => {
 });
 
 describe('WidgetCaptchaProvider', () => {
-    const make = (respond: () => Promise<Response>) =>
+    const make = (respond: () => Promise<Response>): WidgetCaptchaProvider =>
         new WidgetCaptchaProvider(
             {
                 siteKey: 'site',

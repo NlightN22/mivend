@@ -17,8 +17,8 @@ const ctx = {} as RequestContext;
 function makeResolver(
     data: { collections?: unknown[]; facetValues?: unknown[] },
     warehouseIds: string[] = [],
-) {
-    const qbFor = (rows: unknown[]) => {
+): SearchFilterResolver {
+    const qbFor = (rows: unknown[]): Record<string, unknown> => {
         const qb: Record<string, unknown> = {};
         for (const m of ['leftJoinAndSelect', 'whereInIds', 'take']) qb[m] = () => qb;
         qb.getMany = async () => rows;

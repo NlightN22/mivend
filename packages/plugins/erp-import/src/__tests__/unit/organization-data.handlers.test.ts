@@ -1,12 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import type { TransactionalConnection } from '@vendure/core';
 import { StockOrganizationHandler } from '../../handlers/stock-organization.handler';
 import { StorageLocationHandler } from '../../handlers/storage-location.handler';
 
 const ctx = {} as RequestContext;
+interface ConnectionResult {
+    query: Mock<() => Promise<undefined>>;
+    conn: TransactionalConnection;
+}
 
-function connection() {
+function connection(): ConnectionResult {
     const query = vi.fn(async () => undefined);
     return {
         query,

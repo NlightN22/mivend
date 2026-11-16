@@ -1,12 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CheckRegistry } from '../../check-registry';
 import { ChecksService } from '../../checks.service';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    find: Mock<() => Promise<{ id: number }[]>>;
+    service: ChecksService;
+}
 
-function setup(visible: string[] | null) {
+function setup(visible: string[] | null): SetupResult {
     const registry = new CheckRegistry();
     registry.registerSubjectType({
         type: 'thing',

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import {
@@ -28,8 +28,13 @@ function input(
         ...overrides,
     };
 }
+interface CreateServiceResult {
+    service: GrantedRetroBonusService;
+    repo: { findOne: Mock; create: Mock<(v: object) => object>; save: Mock };
+    build: Mock;
+}
 
-function createService(existing: Record<string, unknown> | null) {
+function createService(existing: Record<string, unknown> | null): CreateServiceResult {
     const repo = {
         findOne: vi.fn().mockResolvedValue(existing),
         create: vi.fn((v: object) => ({ ...v })),

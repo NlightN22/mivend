@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { useCreditPlacementHarness } from './credit-placement.harness';
+import { PlacementDecision } from '../../placement-policy';
 
 const h = useCreditPlacementHarness('credit_placement');
 
@@ -122,7 +123,10 @@ describe('placement matrix on real data', () => {
 
 describe('credit-exposure lock (concurrent writers, real Postgres)', () => {
     // Mirrors addPaymentToOrder: the placement and the payment row share one transaction.
-    async function placeAndPay(buyer: Awaited<ReturnType<typeof h.addBuyer>>, orderId: number) {
+    async function placeAndPay(
+        buyer: Awaited<ReturnType<typeof h.addBuyer>>,
+        orderId: number,
+    ): Promise<PlacementDecision> {
         return h.connection.withTransaction({}, async tx => {
             const result = await h.placement.place(
                 tx as never,

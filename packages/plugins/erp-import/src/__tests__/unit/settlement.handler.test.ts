@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { SettlementHandler } from '../../handlers/settlement.handler';
 
 const ctx = {} as RequestContext;
+interface BuildResult {
+    handler: SettlementHandler;
+    documents: { apply: Mock<() => Promise<string>> };
+    balances: { apply: Mock<() => Promise<string>> };
+    types: { apply: Mock<() => Promise<string>> };
+}
 
-function build() {
+function build(): BuildResult {
     const documents = { apply: vi.fn(async () => 'applied') };
     const balances = { apply: vi.fn(async () => 'applied') };
     const types = { apply: vi.fn(async () => 'applied') };

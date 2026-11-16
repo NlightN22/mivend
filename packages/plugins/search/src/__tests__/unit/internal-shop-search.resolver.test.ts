@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 
 import { InternalShopSearchResolver } from '../../internal-shop-search.resolver';
 
 describe('InternalShopSearchResolver', () => {
-    function build(hiddenIds: string[]) {
+    function build(hiddenIds: string[]): {
+        search: Mock;
+        get: Mock;
+        resolver: InternalShopSearchResolver;
+    } {
         const search = vi.fn().mockResolvedValue({ items: [], totalItems: 0 });
         const get = vi.fn().mockReturnValue({ search });
         const hidden = { hiddenFacetValueIds: vi.fn().mockResolvedValue(hiddenIds) };

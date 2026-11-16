@@ -1,7 +1,7 @@
 import type { Collection, RequestContext, TransactionalConnection } from '@vendure/core';
 import { describe, expect, it } from 'vitest';
 
-import { mapFacetsToCollections } from '../../category-facet-mapper';
+import { ExternalCollectionResult, mapFacetsToCollections } from '../../category-facet-mapper';
 
 function connectionReturning(collections: unknown[]): TransactionalConnection {
     const qb = {
@@ -15,7 +15,10 @@ function connectionReturning(collections: unknown[]): TransactionalConnection {
 
 const collection = (slug: string): Collection =>
     ({ id: slug, translations: [{ slug }] }) as unknown as Collection;
-const run = (conn: TransactionalConnection, category?: Array<{ value: string; count: number }>) =>
+const run = (
+    conn: TransactionalConnection,
+    category?: Array<{ value: string; count: number }>,
+): Promise<ExternalCollectionResult[]> =>
     mapFacetsToCollections(conn, {} as RequestContext, { manufacturer: [], category });
 
 describe('mapFacetsToCollections', () => {

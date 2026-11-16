@@ -13,7 +13,7 @@ vi.mock('shared', async importOriginal => ({
 
 const ctx = {} as RequestContext;
 
-function setup() {
+function setup(): { service: CheckPolicyService; saved: Partial<CheckPolicy>[] } {
     const registry = new CheckRegistry();
     registry.registerSubjectType({
         type: 'manager',

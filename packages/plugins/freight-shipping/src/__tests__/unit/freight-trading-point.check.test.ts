@@ -20,7 +20,7 @@ const gap = (
         shippingMethodIds?: number[];
         placedPointId?: string | null;
     } = {},
-) =>
+): Promise<boolean> =>
     hasFreightWithoutTradingPoint(deps, ctx, {
         customerId: 1,
         shippingMethodIds: [5],

@@ -3,6 +3,8 @@ import type { RequestContext } from '@vendure/core';
 
 import { CheckPolicyService } from '../../check-policy.service';
 import { CheckRegistry } from '../../check-registry';
+import { CheckProvider } from '../../registry-types';
+import { Consequence } from '../../types';
 
 interface Row {
     branchId: string | null;
@@ -50,7 +52,11 @@ function service(rows: Row[]): CheckPolicyService {
 }
 
 const ctx = {} as RequestContext;
-const resolve = (s: CheckPolicyService, stage: string, branchId: string | null) =>
+const resolve = (
+    s: CheckPolicyService,
+    stage: string,
+    branchId: string | null,
+): Promise<{ consequence: Consequence; enabled: boolean }> =>
     s.resolve(ctx, 'order.multiplicity', stage, branchId);
 
 describe('CheckPolicyService.resolve', () => {
@@ -83,7 +89,7 @@ describe('CheckPolicyService.resolve', () => {
 });
 
 describe('CheckPolicyService.effectiveForStage', () => {
-    const providerFor = (s: CheckPolicyService) =>
+    const providerFor = (s: CheckPolicyService): CheckProvider<unknown> =>
         (s as unknown as { registry: CheckRegistry }).registry.getCheck('order.multiplicity')!;
 
     it('falls back to declared defaults with a null recipient and never writes', async () => {

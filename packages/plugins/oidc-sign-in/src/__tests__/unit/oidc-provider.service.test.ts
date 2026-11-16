@@ -61,7 +61,7 @@ afterEach(() => {
 function token(
     claims: Record<string, unknown>,
     over: { iss?: string; aud?: string; exp?: string } = {},
-) {
+): Promise<string> {
     return new SignJWT(claims)
         .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
         .setIssuer(over.iss ?? ISSUER)

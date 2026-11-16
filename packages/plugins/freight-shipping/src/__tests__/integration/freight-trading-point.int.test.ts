@@ -3,7 +3,7 @@ import { Column, DataSource, Entity, ManyToOne, OneToMany, PrimaryGeneratedColum
 import type { Relation } from 'typeorm';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { TransactionalConnection } from '@vendure/core';
-import type { Injector, Order, RequestContext } from '@vendure/core';
+import type { ID, Injector, Order, RequestContext } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
@@ -87,23 +87,26 @@ async function addPoint(
     return Number(p.id);
 }
 
-const setPreferred = (customerId: number, pointId: number | null) =>
+const setPreferred = (
+    customerId: number,
+    pointId: number | null,
+): Promise<Record<string, unknown>[]> =>
     run(`UPDATE customer SET "customFieldsPreferredtradingpointid" = $2 WHERE id = $1`, [
         customerId,
         pointId === null ? null : String(pointId),
     ]);
 
-const storedPreferred = async (customerId: number) =>
+const storedPreferred = async (customerId: number): Promise<unknown> =>
     (
         await run(`SELECT "customFieldsPreferredtradingpointid" AS p FROM customer WHERE id = $1`, [
             customerId,
         ])
     )[0].p;
 
-const preferredId = async (customerId: number) =>
+const preferredId = async (customerId: number): Promise<ID | undefined> =>
     (await tradingPointService.getPreferredForCustomer(ctx, customerId))?.id;
 
-const eligible = (customerId: number) =>
+const eligible = (customerId: number): Promise<boolean> =>
     freightEligibilityChecker.check(
         ctx,
         { customer: { id: customerId } } as Order,
@@ -111,7 +114,7 @@ const eligible = (customerId: number) =>
         {} as never,
     );
 
-const checkout = (customerId: number) =>
+const checkout = (customerId: number): Promise<boolean> =>
     hasFreightWithoutTradingPoint(
         {
             connection: { getRepository: connectionGetRepository } as never,

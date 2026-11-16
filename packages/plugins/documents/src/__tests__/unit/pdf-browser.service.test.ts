@@ -1,11 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 
 const { launch } = vi.hoisted(() => ({ launch: vi.fn() }));
 vi.mock('puppeteer', () => ({ default: { launch } }));
 
 import { PdfBrowserService } from '../../pdf/pdf-browser.service';
+interface MakeBrowserResult {
+    page: { setContent: Mock; pdf: Mock<() => Promise<Uint8Array<ArrayBuffer>>>; close: Mock };
+    connected: boolean;
+    handlers: Record<string, () => void>;
+    on: Mock<(event: string, handler: () => void) => void>;
+    newPage: Mock;
+    close: Mock;
+}
 
-function makeBrowser(pdfGate?: Promise<void>) {
+function makeBrowser(pdfGate?: Promise<void>): MakeBrowserResult {
     const page = {
         setContent: vi.fn().mockResolvedValue(undefined),
         pdf: vi.fn(async () => {

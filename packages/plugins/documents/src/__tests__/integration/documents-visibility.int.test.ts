@@ -81,7 +81,14 @@ beforeEach(async () => {
         { erpId: 'b1', shortName: 'Beta 1', branchId: 'branch-b' },
     ]);
     ids = { a1: String(cps[0].id), a2: String(cps[1].id), b1: String(cps[2].id) };
-    const doc = (counterpartyId: string, number: string, type: string, day: number) => ({
+    interface DocResult {
+        counterpartyId: string;
+        number: string;
+        type: string;
+        issueDate: Date;
+    }
+
+    const doc = (counterpartyId: string, number: string, type: string, day: number): DocResult => ({
         counterpartyId,
         number,
         type,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { ContractHandler } from '../../handlers/contract.handler';
 
@@ -11,8 +11,12 @@ const record = {
     debtDaysLimit: 14,
     isActive: true,
 };
+interface BuildResult {
+    handler: ContractHandler;
+    contractService: { upsertActiveState: Mock<() => Promise<void>> };
+}
 
-function build(counterparty: { id: number } | null) {
+function build(counterparty: { id: number } | null): BuildResult {
     const contractService = { upsertActiveState: vi.fn(async () => {}) };
     const counterpartyService = { findByErpId: vi.fn(async () => counterparty) };
     const handler = new ContractHandler(contractService as never, counterpartyService as never);

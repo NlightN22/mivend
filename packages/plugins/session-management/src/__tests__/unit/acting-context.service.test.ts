@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ActingContextService } from '../../acting-context.service';
 
-function setup(rows: unknown[]) {
+function setup(rows: unknown[]): { service: ActingContextService; query: Mock } {
     const query = vi.fn().mockResolvedValue(rows);
     const service = new ActingContextService({ getRepository: () => ({ query }) } as never);
     return { service, query };

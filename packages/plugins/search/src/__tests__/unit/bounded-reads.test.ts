@@ -1,9 +1,9 @@
-import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import type { Product, RequestContext, TransactionalConnection } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 import { describe, expect, it } from 'vitest';
 
-import { mapFacetsToCollections } from '../../category-facet-mapper';
-import { mapFacetsToFacetValues } from '../../facet-mapper';
+import { ExternalCollectionResult, mapFacetsToCollections } from '../../category-facet-mapper';
+import { ExternalFacetValueResult, mapFacetsToFacetValues } from '../../facet-mapper';
 import { ProductLookupService } from '../../product-lookup.service';
 
 const ctx = { channelId: 1 } as RequestContext;
@@ -17,12 +17,15 @@ function connectionReturning(rows: unknown[]): TransactionalConnection {
 
 const rows = (n: number, make: (i: number) => unknown): unknown[] =>
     Array.from({ length: n }, (_, i) => make(i));
-const bucket = (n: number) => rows(n, i => ({ value: `m${i}`, count: 1 }));
+const bucket = (n: number): unknown[] => rows(n, i => ({ value: `m${i}`, count: 1 }));
 
 describe('search id-list reads state their ceiling', () => {
     it('category facets: one collection per slug passes, one over throws', async () => {
-        const collection = (i: number) => ({ id: i, translations: [{ slug: `cat-m${i}` }] });
-        const run = (found: number) =>
+        const collection = (i: number): { id: number; translations: { slug: string }[] } => ({
+            id: i,
+            translations: [{ slug: `cat-m${i}` }],
+        });
+        const run = (found: number): Promise<ExternalCollectionResult[]> =>
             mapFacetsToCollections(connectionReturning(rows(found, collection)), ctx, {
                 manufacturer: [],
                 category: bucket(2),
@@ -32,13 +35,20 @@ describe('search id-list reads state their ceiling', () => {
     });
 
     it('manufacturer facets: one value per code passes, one over throws', async () => {
-        const value = (i: number) => ({
+        interface ValueResult2 {
+            id: number;
+            code: string;
+            facet: { code: string };
+            translations: { name: string }[];
+        }
+
+        const value = (i: number): ValueResult2 => ({
             id: i,
             code: `m${i}`,
             facet: { code: 'manufacturer' },
             translations: [{ name: `Name ${i}` }],
         });
-        const run = (found: number) =>
+        const run = (found: number): Promise<ExternalFacetValueResult[]> =>
             mapFacetsToFacetValues(connectionReturning(rows(found, value)), ctx, {
                 manufacturer: bucket(2),
             } as never);
@@ -47,8 +57,20 @@ describe('search id-list reads state their ceiling', () => {
     });
 
     it('characteristic facets: the facet x code cross product is the ceiling', async () => {
-        const value = (i: number) => ({ id: i, code: 'x', facet: { code: 'f' }, translations: [] });
-        const run = (found: number) =>
+        interface ValueResult {
+            id: number;
+            code: string;
+            facet: { code: string };
+            translations: never[];
+        }
+
+        const value = (i: number): ValueResult => ({
+            id: i,
+            code: 'x',
+            facet: { code: 'f' },
+            translations: [],
+        });
+        const run = (found: number): Promise<ExternalFacetValueResult[]> =>
             mapFacetsToFacetValues(connectionReturning(rows(found, value)), ctx, {
                 manufacturer: [],
                 characteristics: [{ key: 'k', normalized: 'x', count: 1 }],
@@ -58,8 +80,11 @@ describe('search id-list reads state their ceiling', () => {
     });
 
     it('product lookup by external ids: one product per id passes, one over throws', async () => {
-        const product = (i: number) => ({ id: i, customFields: { externalId: `e${i}` } });
-        const run = (found: number) =>
+        const product = (i: number): { id: number; customFields: { externalId: string } } => ({
+            id: i,
+            customFields: { externalId: `e${i}` },
+        });
+        const run = (found: number): Promise<Map<string, Product>> =>
             new ProductLookupService(connectionReturning(rows(found, product))).findByExternalIds(
                 ctx,
                 ['e0', 'e1'],

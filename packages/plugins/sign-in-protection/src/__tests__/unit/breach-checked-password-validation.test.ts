@@ -1,6 +1,6 @@
 import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import {
     BreachCheckedPasswordValidationStrategy,
@@ -9,8 +9,12 @@ import {
 import type { BreachVerdict } from '../../breach/breached-password-checker';
 
 const ctx = {} as RequestContext;
+interface StrategyResult {
+    check: Mock<() => Promise<BreachVerdict>>;
+    strategy: BreachCheckedPasswordValidationStrategy;
+}
 
-function strategy(inner: boolean | string, verdict: BreachVerdict) {
+function strategy(inner: boolean | string, verdict: BreachVerdict): StrategyResult {
     const check = vi.fn(async () => verdict);
     return {
         check,

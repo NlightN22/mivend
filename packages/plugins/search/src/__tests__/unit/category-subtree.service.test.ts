@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { CategorySubtreeService } from '../../category-subtree.service';
+interface BuildResult {
+    query: Mock<[_sql: string, _params?: unknown[] | undefined], Promise<unknown[]>>;
+    service: CategorySubtreeService;
+}
 
-function build(rows: unknown[]) {
+function build(rows: unknown[]): BuildResult {
     const query = vi.fn(async (_sql: string, _params?: unknown[]) => rows);
     const connection = { getRepository: () => ({ query }) };
     return { query, service: new CategorySubtreeService(connection as never) };

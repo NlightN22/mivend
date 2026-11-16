@@ -1,8 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { ShopSearchFacetValuesResolver } from '../../shop-search-facet-values.resolver';
+interface SetupResult {
+    resolver: ShopSearchFacetValuesResolver;
+    facetValues: Mock;
+    collections: Mock;
+}
 
-function setup() {
+function setup(): SetupResult {
     const facetValues = vi.fn().mockResolvedValue([]);
     const collections = vi.fn().mockResolvedValue([]);
     const hidden = {

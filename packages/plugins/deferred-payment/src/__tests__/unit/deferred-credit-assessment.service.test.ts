@@ -4,6 +4,7 @@ import type { Order, RequestContext } from '@vendure/core';
 
 import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
 import { decidePlacement } from '../../placement-policy';
+import { PlacementRoute } from 'shared';
 
 const getForCustomer = vi.fn();
 const sumUnconfirmedRubles = vi.fn();
@@ -127,7 +128,10 @@ describe('DeferredCreditAssessmentService.assess', () => {
             creditBalance: 1000,
             paymentDelayDays: 14,
         });
-        const routeFor = async (consequence: string, acknowledged: boolean) => {
+        const routeFor = async (
+            consequence: string,
+            acknowledged: boolean,
+        ): Promise<PlacementRoute> => {
             resolvePolicy.mockResolvedValue({ enabled: true, consequence });
             const a = await service.assess(ctx, order(100, 7, 'branch-a'));
             return decidePlacement({

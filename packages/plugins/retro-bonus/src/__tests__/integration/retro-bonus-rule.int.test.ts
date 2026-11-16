@@ -16,7 +16,7 @@ import {
     RetroBonusRuleProduct,
 } from '../../retro-bonus-rule-membership.entity';
 import { RetroBonusRuleReclassifyService } from '../../retro-bonus-rule-reclassify.service';
-import { RetroBonusRuleService } from '../../retro-bonus-rule.service';
+import { RetroBonusRuleService, RetroBonusSetupInput } from '../../retro-bonus-rule.service';
 import { TestRetroBonusRule, input } from './retro-bonus-rule-harness';
 
 const { schema, extra } = testSchemaOptions('retro_bonus_rule');
@@ -208,8 +208,11 @@ describe('RetroBonusRuleService.findForCounterparty (real Postgres)', () => {
         expect(found.map(r => r.erpId).sort()).toEqual(['any', 'k1']);
     });
 
-    const ref = (refId: string) => ({ refId });
-    const counterpartyFilter = (comparison: string, ...ids: string[]) => [
+    const ref = (refId: string): { refId: string } => ({ refId });
+    const counterpartyFilter = (
+        comparison: string,
+        ...ids: string[]
+    ): { field: string; comparison: string; values: { refId: string }[] }[] => [
         { field: 'Контрагент', comparison, values: ids.map(ref) },
     ];
 
@@ -233,7 +236,7 @@ describe('RetroBonusRuleService.findForCounterparty (real Postgres)', () => {
     });
 
     it('replaces the terms with a newer version and drops them when the filter is unsupported', async () => {
-        const filtered = (comparison: string, version: string) =>
+        const filtered = (comparison: string, version: string): RetroBonusSetupInput =>
             input(version, [], [], {
                 counterpartyMode: 'filter',
                 counterpartyFilter: counterpartyFilter(comparison, 'c1'),

@@ -1,6 +1,6 @@
 import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CheckPolicyService, CheckRegistry, ChecksService } from '@mivend/plugin-checks';
 import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
 import type { Order, RequestContext } from '@vendure/core';
@@ -29,7 +29,66 @@ interface TxCtx {
 
 // Only other plugins' services are stubbed; advisory lock needs a real transaction held to commit
 // Schema replica must mirror Vendure tables exactly, or the SQL under test diverges.
-export function useCreditPlacementHarness(schemaName: string) {
+interface UseCreditPlacementHarnessResult {
+    state: { maxAgeDays: number | null; allowExceeding: boolean; reserveDays: number };
+    run: (sql: string, params?: unknown[]) => Promise<Array<Record<string, unknown>>>;
+    addBuyer: (creditLimit: number, creditBalance?: number, delayDays?: number) => Promise<Buyer>;
+    addOrder: (
+        buyer: Buyer,
+        rubles: number,
+        opts?: {
+            erpStatus?: string;
+            method?: string;
+            paymentState?: string;
+            state?: string;
+            placedDaysAgo?: number;
+            metadata?: object;
+        },
+    ) => Promise<number>;
+    addOrderRow: (
+        buyer: Buyer,
+        rubles: number,
+        placedDaysAgo?: number,
+        erpStatus?: string,
+        state?: string,
+    ) => Promise<number>;
+    addPayment: (
+        orderId: number,
+        method: string,
+        paymentState: string,
+        kopecks: number,
+        metadata?: object,
+    ) => Promise<void>;
+    place: (
+        buyer: Buyer,
+        rubles: number,
+        form?: PaymentForm,
+        orderId?: number,
+        metadata?: Record<string, unknown>,
+    ) => Promise<PlacementResult>;
+    orderOf: (buyer: Buyer, rubles: number, id?: number) => Order;
+    setCasePolicy: (
+        checkCode: string,
+        consequence: string,
+        enabled?: boolean,
+        branchId?: string | null,
+    ) => Promise<void>;
+    addShippingLine: (orderId: number, methodCode: string) => Promise<void>;
+    connection: {
+        withTransaction<T>(c: TxCtx, work: (tx: TxCtx) => Promise<T>): Promise<T>;
+        getRepository: (
+            c: TxCtx,
+            entity?: unknown,
+        ) =>
+            | Repository<CheckPolicyMirror>
+            | { query: (sql: string, p: unknown[]) => Promise<Record<string, unknown>[]> };
+    };
+    placement: CreditPlacementService;
+    ctx: RequestContext;
+    readonly dataSource: DataSource;
+}
+
+export function useCreditPlacementHarness(schemaName: string): UseCreditPlacementHarnessResult {
     const { schema, extra } = testSchemaOptions(schemaName);
     let dataSource: DataSource;
     const state = { maxAgeDays: 7 as number | null, allowExceeding: false, reserveDays: 3 };
@@ -37,7 +96,11 @@ export function useCreditPlacementHarness(schemaName: string) {
 
     const run = (sql: string, params: unknown[] = []): Promise<Array<Record<string, unknown>>> =>
         dataSource.query(sql, params);
-    const runIn = (c: unknown, sql: string, params: unknown[] = []) =>
+    const runIn = (
+        c: unknown,
+        sql: string,
+        params: unknown[] = [],
+    ): Promise<Record<string, unknown>[]> =>
         ((c as TxCtx).qr ?? dataSource).query(sql, params) as Promise<
             Array<Record<string, unknown>>
         >;

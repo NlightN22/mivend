@@ -1,12 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { CheckRegistry } from '../../check-registry';
 import { ChecksService } from '../../checks.service';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    service: ChecksService;
+    evaluate: Mock<
+        (
+            _s: unknown,
+            { input }: { input?: unknown },
+        ) => { severity: 'info'; facts: object; messageKey: string }[]
+    >;
+    effectiveForStage: Mock<
+        () => Promise<Map<string, { consequence: string; enabled: boolean; recipient: null }>>
+    >;
+}
 
-function setup() {
+function setup(): SetupResult {
     const registry = new CheckRegistry();
     registry.registerSubjectType({
         type: 'doc',

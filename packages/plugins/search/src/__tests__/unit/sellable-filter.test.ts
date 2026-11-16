@@ -8,7 +8,7 @@ import {
     restrictToSellable,
 } from '../../sellable-filter';
 
-const variant = (customFields: Record<string, unknown> | undefined) =>
+const variant = (customFields: Record<string, unknown> | undefined): ProductVariant =>
     ({ customFields }) as unknown as ProductVariant;
 
 describe('restrictToSellable', () => {

@@ -1,16 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { SearchPriceTypeService } from '../../search-price-type.service';
 
 const ctx = {} as RequestContext;
+interface MakeResult {
+    service: SearchPriceTypeService;
+    branch: { resolveEffective: Mock<[], Promise<{ defaultPriceTypeId: string } | null>> };
+}
 
 function make(opts: {
     codeByUser?: Record<string, string | null>;
     types: Array<{ id: string; code: string; externalId: string | null }>;
     defaultId?: string | null;
     allowed?: string[];
-}) {
+}): MakeResult {
     const repo = {
         findOne: vi.fn(
             async ({ where }: { where: { code?: string; id?: string } }) =>

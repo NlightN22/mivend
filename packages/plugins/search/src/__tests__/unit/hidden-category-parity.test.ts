@@ -109,7 +109,16 @@ describe('hidden categories reach each backend as the same hidden set', () => {
 });
 
 describe('a visible override under a hidden ancestor stays hidden on both backends', () => {
-    const node = (id: string, parentId: string | null, over: string | null) => ({
+    interface NodeResult {
+        id: string;
+        parentId: string | null;
+        slug: string;
+        feedHidden: boolean;
+        visibilityOverride: string | null;
+        isPrivate: boolean;
+    }
+
+    const node = (id: string, parentId: string | null, over: string | null): NodeResult => ({
         id,
         parentId,
         slug: categorySlug(id),

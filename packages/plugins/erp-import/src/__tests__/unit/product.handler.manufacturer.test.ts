@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { ProductHandler } from '../../handlers/product.handler';
 import { ManufacturerHandler } from '../../handlers/manufacturer.handler';
@@ -12,8 +12,16 @@ const record = {
     price: 10,
     stockOnHand: 5,
 };
+interface BuildResult {
+    handler: ProductHandler;
+    productService: {
+        create: Mock<() => Promise<{ id: string }>>;
+        update: Mock<() => Promise<object>>;
+    };
+    manufacturerService: { ensureReference: Mock<() => Promise<{ id: number }>> };
+}
 
-function build(existing: { id: string } | undefined) {
+function build(existing: { id: string } | undefined): BuildResult {
     const qb = {
         select: vi.fn().mockReturnThis(),
         from: vi.fn().mockReturnThis(),

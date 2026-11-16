@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type { ProcessContext, ShippingMethodService, TransactionalConnection } from '@vendure/core';
 
 import { PickupShippingBootstrapService } from '../../pickup-shipping-bootstrap.service';
 import { PICKUP_SHIPPING_METHOD_CODE } from '../../constants';
 
-function createMockRepo() {
+function createMockRepo(): { findOne: Mock } {
     return {
         findOne: vi.fn(),
     };

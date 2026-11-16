@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 
 import { InternalCodeMatchesService } from '../../internal-code-matches.service';
+interface SetupResult {
+    service: InternalCodeMatchesService;
+    search: Mock;
+    totalHits: Mock;
+    get: Mock;
+}
 
-function setup(totalItems = 2) {
+function setup(totalItems = 2): SetupResult {
     const search = vi.fn().mockResolvedValue({
         items: [
             { sku: '48.3855', productId: '1' },
@@ -78,7 +84,13 @@ describe('InternalCodeMatchesService', () => {
 });
 
 describe('InternalCodeMatchesService facets (#307)', () => {
-    function facetSetup() {
+    interface FacetSetupResult {
+        service: InternalCodeMatchesService;
+        facetValues: Mock;
+        collections: Mock;
+    }
+
+    function facetSetup(): FacetSetupResult {
         const facetValues = vi.fn().mockResolvedValue([
             { facetValue: { facet: { isPrivate: false } }, count: 2 },
             { facetValue: { facet: { isPrivate: true } }, count: 1 },

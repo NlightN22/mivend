@@ -14,7 +14,7 @@ const injector = {
               ? { findVisibleForCounterparty }
               : undefined,
 } as unknown as Injector;
-const check = (order: Partial<Order>) =>
+const check = (order: Partial<Order>): Promise<boolean> =>
     freightEligibilityChecker.check({} as RequestContext, order as Order, [], {} as never);
 
 beforeEach(() => {
