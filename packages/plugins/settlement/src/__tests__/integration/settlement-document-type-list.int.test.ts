@@ -5,6 +5,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { SettlementAdminResolver } from '../../settlement-admin.resolver';
 import { createHarness, ctx, documentInput } from './settlement-harness';
 import type { Harness } from './settlement-harness';
+import { SettlementApplyResult } from '../../types';
 
 let h: Harness;
 
@@ -19,7 +20,12 @@ const register = (documentType: string, label: string, isDeleted = false): Promi
         sortOrder: 1,
     });
 
-const doc = (erpId: string, documentType: string, label: string, isDeleted = false) =>
+const doc = (
+    erpId: string,
+    documentType: string,
+    label: string,
+    isDeleted = false,
+): Promise<SettlementApplyResult> =>
     h.documents.apply(
         ctx,
         documentInput(erpId, {

@@ -6,7 +6,10 @@ import { SettlementAdminResolver } from '../../settlement-admin.resolver';
 import { summariseOverdue } from '../../settlement-aging';
 
 const NOW = new Date('2026-11-10T00:00:00Z');
-const card = (overdue: number, due: string | null) => ({
+const card = (
+    overdue: number,
+    due: string | null,
+): { overdue: number; currency: string; oldestOverdueDue: Date | null } => ({
     overdue,
     currency: 'RUB',
     oldestOverdueDue: due ? new Date(due) : null,

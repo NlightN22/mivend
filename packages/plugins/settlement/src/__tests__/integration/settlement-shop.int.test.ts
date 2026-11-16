@@ -275,7 +275,7 @@ describe('settlement shop queries (real Postgres)', () => {
             date: new Date('2026-09-02T23:59:00Z'),
             entries: [entry()],
         });
-        const day = async (from: string, to: string) =>
+        const day = async (from: string, to: string): Promise<number> =>
             (await shop.documents(ctx, '1', { dateFrom: from, dateTo: to }, 0, 20)).totalItems;
         expect(await day('2026-09-02', '2026-09-02')).toBe(1);
         expect(await day('2026-09-03', '2026-09-03')).toBe(0);

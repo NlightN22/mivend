@@ -1,19 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { SettlementSuggestService } from '../../settlement-suggest.service';
 
 const ctx = {} as RequestContext;
 
-function setup(visible: { sql: string; params: Record<string, unknown> } | null, rows: unknown[]) {
+function setup(
+    visible: { sql: string; params: Record<string, unknown> } | null,
+    rows: unknown[],
+): {
+    service: SettlementSuggestService;
+    qb: Record<string, Mock>;
+    where: [string, unknown?][];
+    connection: { getRepository: Mock };
+    counterparties: { visibleErpIdsSql: Mock };
+} {
     const where: [string, unknown?][] = [];
-    const qb = {
-        innerJoin: () => qb,
-        leftJoin: () => qb,
-        select: () => qb,
-        andWhere: (sql: string, params?: unknown) => (where.push([sql, params]), qb),
-        setParameters: () => qb,
-        orderBy: () => qb,
+    const qb: Record<string, Mock> = {
+        innerJoin: vi.fn(() => qb),
+        leftJoin: vi.fn(() => qb),
+        select: vi.fn(() => qb),
+        andWhere: vi.fn((sql: string, params?: unknown) => (where.push([sql, params]), qb)),
+        setParameters: vi.fn(() => qb),
+        orderBy: vi.fn(() => qb),
         limit: vi.fn(() => qb),
         getRawMany: vi.fn(async () => rows),
     };

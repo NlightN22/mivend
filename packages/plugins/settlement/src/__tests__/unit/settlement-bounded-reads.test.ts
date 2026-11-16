@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
@@ -7,8 +7,26 @@ import { SettlementDocumentTypeService } from '../../settlement-document-type.se
 import { SettlementReferenceResolver } from '../../settlement-reference-resolver';
 
 const ctx = {} as RequestContext;
+interface QueryReturningResult {
+    query: Mock<
+        (
+            _sql: string,
+            _params?: unknown[],
+        ) => Promise<{ id: number; erpOrderId: string; uuid: null }[]>
+    >;
+    connection: {
+        getRepository: () => {
+            query: Mock<
+                (
+                    _sql: string,
+                    _params?: unknown[],
+                ) => Promise<{ id: number; erpOrderId: string; uuid: null }[]>
+            >;
+        };
+    };
+}
 
-function queryReturning(n: number) {
+function queryReturning(n: number): QueryReturningResult {
     const query = vi.fn(async (_sql: string, _params?: unknown[]) =>
         Array.from({ length: n }, (_, i) => ({ id: i, erpOrderId: `o${i}`, uuid: null })),
     );
@@ -54,13 +72,15 @@ describe('settlement reads are bounded', () => {
     });
 
     it('type counts: 1000 groups pass, 1001 throws', async () => {
-        const build = (n: number) => {
-            const qb = {
-                select: () => qb,
-                addSelect: () => qb,
-                groupBy: () => qb,
-                orderBy: () => qb,
-                addOrderBy: () => qb,
+        const build = (
+            n: number,
+        ): { service: SettlementAdminListService; qb: Record<string, Mock> } => {
+            const qb: Record<string, Mock> = {
+                select: vi.fn(() => qb),
+                addSelect: vi.fn(() => qb),
+                groupBy: vi.fn(() => qb),
+                orderBy: vi.fn(() => qb),
+                addOrderBy: vi.fn(() => qb),
                 limit: vi.fn(() => qb),
                 getRawMany: vi.fn(async () =>
                     Array.from({ length: n }, (_, i) => ({
