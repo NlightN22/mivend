@@ -442,11 +442,11 @@ async function ensureBranchSettingsSeeded() {
 
 const PSQL = `docker exec -i docker-postgres-central-1 psql -U postgres -d ${process.env.SEED_DB_NAME ?? 'mivend_central'} -v ON_ERROR_STOP=1`;
 
-// Unlinked ERP users: the manager filter lists them next to linked administrators, and six of
+// Unlinked ERP users: the manager filter lists them next to linked administrators, and ten of
 // them put it past the type-to-search threshold (#377). The Administrator erpId is read-only.
 function seedDemoErpUsers() {
     const rows = Array.from(
-        { length: 6 },
+        { length: 10 },
         (_, i) =>
             `('seed-erp-user-${i + 1}', 'Seed Manager${i + 1}', 'seed.manager${i + 1}@mivend.dev', now(), now())`,
     );
