@@ -3,21 +3,27 @@ query DashboardOrders(
     $since24h: DateTime!
     $overdueBefore: DateTime!
 ) {
-    activeOrders: visibleOrders(options: { filter: { state: { notIn: $excludedStates } } }) {
+    activeOrders: visibleOrders(
+        options: { take: 0, filter: { state: { notIn: $excludedStates } } }
+    ) {
         totalItems
     }
     activeOrdersLast24h: visibleOrders(
         options: {
+            take: 0
             filter: { state: { notIn: $excludedStates }, orderPlacedAt: { after: $since24h } }
         }
     ) {
         totalItems
     }
-    awaitingShipment: visibleOrders(options: { filter: { state: { eq: "PaymentSettled" } } }) {
+    awaitingShipment: visibleOrders(
+        options: { take: 0, filter: { state: { eq: "PaymentSettled" } } }
+    ) {
         totalItems
     }
     overdue: visibleOrders(
         options: {
+            take: 0
             filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
         }
     ) {

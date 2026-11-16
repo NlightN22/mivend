@@ -17027,22 +17027,22 @@ export const ActiveDiscountCountsDocument = new TypedDocumentString(`
 export const DashboardOrdersDocument = new TypedDocumentString(`
     query DashboardOrders($excludedStates: [String!]!, $since24h: DateTime!, $overdueBefore: DateTime!) {
   activeOrders: visibleOrders(
-    options: {filter: {state: {notIn: $excludedStates}}}
+    options: {take: 0, filter: {state: {notIn: $excludedStates}}}
   ) {
     totalItems
   }
   activeOrdersLast24h: visibleOrders(
-    options: {filter: {state: {notIn: $excludedStates}, orderPlacedAt: {after: $since24h}}}
+    options: {take: 0, filter: {state: {notIn: $excludedStates}, orderPlacedAt: {after: $since24h}}}
   ) {
     totalItems
   }
   awaitingShipment: visibleOrders(
-    options: {filter: {state: {eq: "PaymentSettled"}}}
+    options: {take: 0, filter: {state: {eq: "PaymentSettled"}}}
   ) {
     totalItems
   }
   overdue: visibleOrders(
-    options: {filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+    options: {take: 0, filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
   ) {
     totalItems
   }
