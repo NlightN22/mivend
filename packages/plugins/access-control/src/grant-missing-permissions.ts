@@ -26,6 +26,8 @@ export function scopeGrantKey(resource: string): string {
     return `scope:${resource}`;
 }
 
+const RECORDED_LIMIT = 1000;
+
 // Pure: applies the release entries of one role that are not yet recorded; never removes or changes a value.
 export function planRoleGrants(
     roleCode: string,
@@ -110,7 +112,7 @@ async function grantForRole(
     lists: ReleaseGrantLists,
 ): Promise<string[]> {
     const role = await client.query(
-        `SELECT permissions FROM role WHERE code = $1 LIMIT 1 FOR UPDATE`,
+        `SELECT permissions FROM role WHERE code = $1 ORDER BY id LIMIT 1 FOR UPDATE`,
         [roleCode],
     );
     if (!role.rows[0]) return [];
@@ -119,9 +121,12 @@ async function grantForRole(
         [roleCode],
     );
     const recorded = await client.query(
-        `SELECT "grantKey" FROM role_default_grant WHERE "roleCode" = $1 LIMIT 1000`,
+        `SELECT "grantKey" FROM role_default_grant WHERE "roleCode" = $1 LIMIT ${RECORDED_LIMIT}`,
         [roleCode],
     );
+    if (recorded.rows.length >= RECORDED_LIMIT) {
+        throw new Error(`Role ${roleCode} has too many recorded default grants to read safely`);
+    }
     const stored = String(role.rows[0].permissions)
         .split(',')
         .filter(permission => permission !== '');
