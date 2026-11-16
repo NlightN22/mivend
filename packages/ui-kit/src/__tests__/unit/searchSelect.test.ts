@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import MvMultiSelect from '../../components/MvMultiSelect/MvMultiSelect.vue';
 import MvSearchSelect from '../../components/MvSelect/MvSearchSelect.vue';
@@ -10,7 +10,14 @@ const LONG = names.map(label => ({ value: label.toLowerCase(), label }));
 const SHORT = LONG.slice(0, 3);
 
 let wrapper: VueWrapper | null = null;
+beforeEach(() => {
+    vi.stubGlobal(
+        'matchMedia',
+        vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    );
+});
 afterEach(() => {
+    vi.unstubAllGlobals();
     wrapper?.unmount();
     wrapper = null;
     document.body.innerHTML = '';
