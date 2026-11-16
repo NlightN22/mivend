@@ -1,8 +1,8 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { AppSidebarItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
-import type { SearchHit } from '../api/globalSearch';
+import type { SearchGroup, SearchHit } from '../api/globalSearch';
 import {
     addRecent,
     loadRecent,
@@ -14,7 +14,28 @@ import { searchHitKey, searchTarget } from '../utils/searchTarget';
 import type { SearchShortcut } from '../components/layout/SearchPanel.vue';
 import { useGlobalSearchResults } from './useGlobalSearchResults';
 
-export function useHeaderSearch(menuItems: Ref<AppSidebarItem[]>) {
+export interface UseHeaderSearch {
+    query: Ref<string>;
+    recent: Ref<string[]>;
+    shortcuts: ComputedRef<SearchShortcut[]>;
+    state: ComputedRef<{
+        groups: SearchGroup[];
+        active: boolean;
+        pending: boolean;
+        failed: boolean;
+        tooShort: boolean;
+        empty: boolean;
+    }>;
+    activeKey: ComputedRef<string | null>;
+    run: (text: string) => void;
+    select: (kind: string, hit: SearchHit) => void;
+    onKeydown: (event: KeyboardEvent) => void;
+    remove: (text: string) => void;
+    clear: () => void;
+    open: (path: string) => void;
+}
+
+export function useHeaderSearch(menuItems: Ref<AppSidebarItem[]>): UseHeaderSearch {
     const router = useRouter();
     const authStore = useAuthStore();
     const query = ref('');

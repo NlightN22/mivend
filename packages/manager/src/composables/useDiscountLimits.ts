@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { tr } from '../utils/lazyLabels';
 import {
     fetchDiscountLimits,
@@ -9,7 +9,19 @@ import {
     type ScopeOption,
 } from '../api/discountLimits';
 
-export function useDiscountLimits(administratorId: string) {
+export interface UseDiscountLimits {
+    rows: Ref<DiscountLimitRow[]>;
+    names: Ref<Map<string, string>>;
+    suggestions: Ref<ScopeOption[]>;
+    suggest: (kind: string, search: string) => Promise<void>;
+    busy: Ref<boolean>;
+    error: Ref<string>;
+    load: () => Promise<void>;
+    save: (kind: string, scopeRef: string, percent: number) => Promise<void>;
+    remove: (row: DiscountLimitRow) => Promise<void>;
+}
+
+export function useDiscountLimits(administratorId: string): UseDiscountLimits {
     const rows = ref<DiscountLimitRow[]>([]);
     const names = ref(new Map<string, string>());
     const suggestions = ref<ScopeOption[]>([]);

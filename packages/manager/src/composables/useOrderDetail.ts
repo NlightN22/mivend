@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
     fetchOrderDetail,
     fetchPriceAdjustmentRequestsForOrder,
@@ -12,7 +12,21 @@ import { fetchCreditForCounterparty, type CustomerCredit } from '../api/customer
 import { fetchOrderLineShortfalls, type OrderLineShortfallRow } from '../api/orderLineEdit';
 import { fetchOrderReservations, type OrderReservation } from '../api/reservation';
 
-export function useOrderDetail(code: () => string) {
+export interface UseOrderDetail {
+    order: Ref<OrderDetail | null>;
+    managerName: ComputedRef<string | null>;
+    adjustmentRequests: Ref<PriceAdjustmentRequestSummary[]>;
+    documents: Ref<RelatedDocument[]>;
+    loading: Ref<boolean>;
+    notFound: Ref<boolean>;
+    credit: Ref<CustomerCredit | null>;
+    reservations: Ref<OrderReservation[]>;
+    shortfalls: Ref<OrderLineShortfallRow[]>;
+    load: () => Promise<void>;
+    reload: () => Promise<void>;
+}
+
+export function useOrderDetail(code: () => string): UseOrderDetail {
     const order = ref<OrderDetail | null>(null);
     const managers = ref<ManagerOption[]>([]);
     const adjustmentRequests = ref<PriceAdjustmentRequestSummary[]>([]);

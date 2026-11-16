@@ -1,7 +1,13 @@
-import { ref, watch } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 import { fetchProformaCard, type ProformaCard } from '../api/proformaInvoiceCard';
 
-export function useProformaCard(id: () => string) {
+export interface UseProformaCard {
+    card: Ref<ProformaCard | null>;
+    loading: Ref<boolean>;
+    notFound: Ref<boolean>;
+}
+
+export function useProformaCard(id: () => string): UseProformaCard {
     const card = ref<ProformaCard | null>(null);
     const loading = ref(true);
     const notFound = ref(false);

@@ -1,5 +1,5 @@
 import { tr } from '../utils/lazyLabels';
-import { computed, onMounted, reactive, ref, watch, type Ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
     confirmOrder,
     extendOrderReservation,
@@ -9,12 +9,26 @@ import {
 } from '../api/reservation';
 import { useAuthStore } from '../stores/auth';
 
+export interface UseReservationActions {
+    form: { days: string; extendDays: string };
+    submitting: Ref<boolean>;
+    error: Ref<string>;
+    extensionMaxDays: Ref<number | null>;
+    reserved: ComputedRef<boolean>;
+    expiresAt: ComputedRef<OrderReservation['expiresAt'] | null>;
+    canExtend: ComputedRef<boolean>;
+    canConfirm: ComputedRef<boolean>;
+    confirm: () => Promise<boolean>;
+    extend: () => Promise<boolean>;
+    release: () => Promise<boolean>;
+}
+
 export function useReservationActions(options: {
     orderId: () => string;
     reservations: Ref<OrderReservation[]>;
     defaultDays: () => number;
     onChanged: () => void;
-}) {
+}): UseReservationActions {
     const authStore = useAuthStore();
     const form = reactive({ days: String(options.defaultDays()), extendDays: '1' });
     const submitting = ref(false);

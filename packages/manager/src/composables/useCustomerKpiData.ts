@@ -5,7 +5,14 @@ import { fetchCounterpartyOverdue, type CounterpartyOverdue } from '../api/count
 import { fetchOutstandingBalance, type OutstandingBalance } from '../api/proforma-invoices';
 
 // Same queries as the customer card's KPI row; credit is passed in by callers that already load it.
-export function useCustomerKpiData(counterpartyId: Ref<string | null>) {
+export interface UseCustomerKpiData {
+    orders: Ref<CustomerOrderItem[]>;
+    outstanding: Ref<OutstandingBalance | null>;
+    overdue: Ref<CounterpartyOverdue | null>;
+    loaded: Ref<boolean>;
+}
+
+export function useCustomerKpiData(counterpartyId: Ref<string | null>): UseCustomerKpiData {
     const orders = ref<CustomerOrderItem[]>([]);
     const outstanding = ref<OutstandingBalance | null>(null);
     const overdue = ref<CounterpartyOverdue | null>(null);
