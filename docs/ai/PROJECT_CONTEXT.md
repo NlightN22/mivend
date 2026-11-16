@@ -58,7 +58,7 @@ Updated: 2026-11-14
 - Customer price type: counterparty main contract -> `contract.priceTypeId` -> `PriceType.externalId`, then `BranchSettings.defaultPriceTypeId` (manager portal Settings -> Branches). Only 3 of 29 warehouses have a branch, on purpose. Not run: e2e group `visibility-storefront`.
 
 ## #137 / #280 production email, site identity, mail languages (DONE, release 0.0.4, accepted on prod; full text: `.backup/PROJECT_CONTEXT-2026-10-31-137-280-290-full.md`)
-- `EMAIL_TRANSPORT=file|smtp`; with smtp in production `MANAGER_PUBLIC_URL`, `STOREFRONT_PUBLIC_URL`, `SITE_NAME` are mandatory (never taken from Host/Origin). Every mail ships in ru and en (guard test, skill `email-templates`); language: request `languageCode` -> `SITE_DEFAULT_LANGUAGE` -> en. Site identity env `SITE_NAME`, `SITE_FAVICON_URL`, `EMAIL_FOOTER_TEXT`. Docs: `docs/deployment.md`.
+- `EMAIL_TRANSPORT=file|smtp`; with smtp in production `MANAGER_PUBLIC_URL`, `STOREFRONT_PUBLIC_URL`, `SITE_NAME` are mandatory (never taken from Host/Origin). Every mail ships in ru and en (guard test, skill `email-templates`); language: request `languageCode` -> Global Settings `defaultLanguage` (#373, plugin-site-language, also the portals' default) -> `SITE_DEFAULT_LANGUAGE` -> en. Site identity env `SITE_NAME`, `SITE_FAVICON_URL`, `EMAIL_FOOTER_TEXT`. Docs: `docs/deployment.md`.
 - Gaps (no issue): frontends do not send `languageCode`; storefront "forgot password" link is `#`; address-change mail has no confirmation page.
 
 ## #342 customer statement kinds (DONE, shipped 0.0.78-0.0.81, closed; full text: `.backup/PROJECT_CONTEXT-2026-11-14-qr-348-342-full.md`)

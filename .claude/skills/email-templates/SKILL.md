@@ -16,7 +16,7 @@ Hard rule: every email template is created in at least two languages (`ru` and `
 ## Language
 
 - Supported languages: `EMAIL_LANGUAGES` in `email-language.ts`; `LanguageTemplateLoader` reads `body.<lang>.hbs` for `templateVars.emailLanguage` and falls back to `en`.
-- Chosen by `resolveEmailLanguage(event.ctx, fallback)`: the explicit `languageCode` query of the request, else `SITE_DEFAULT_LANGUAGE` (default `en`, invalid value fails boot). Background mails have no request and use the default.
+- Chosen by `resolveEmailLanguage(event.ctx, fallback)`: the explicit `languageCode` query of the request, else the Global Settings custom field `defaultLanguage` (`siteLanguageSnapshot` of `@mivend/plugin-site-language`, edited in the Vendure admin), else `SITE_DEFAULT_LANGUAGE` (default `en`, invalid value fails boot). Background mails have no request and use the Global Settings value, then the env.
 - Every handler must set `emailLanguage` in `setTemplateVars` and take its subject from `EMAIL_SUBJECTS` by that language.
 - Adding a language: add the code to `EMAIL_LANGUAGES`, a subject per mail, and a `body.<lang>.hbs` per type; the guard test lists what is missing.
 
@@ -26,7 +26,7 @@ Global (`emailGlobalTemplateVars` in `email-config.ts`): `fromAddress`, `siteNam
 
 ## Viewing a mail locally
 
-Start the stack with `make dev` (never by hand) with `EMAIL_DEV_MAILBOX_ENABLED=true`, trigger the mail, open `/mailbox` on the server. To see a language, send `?languageCode=ru` on the triggering API request, or set `SITE_DEFAULT_LANGUAGE=ru`.
+Start the stack with `make dev` (never by hand) with `EMAIL_DEV_MAILBOX_ENABLED=true`, trigger the mail, open `/mailbox` on the server. To see a language, send `?languageCode=ru` on the triggering API request, or set the Global Settings default language (or `SITE_DEFAULT_LANGUAGE=ru`).
 
 ## Tests
 
