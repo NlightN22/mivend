@@ -203,6 +203,7 @@ describe('integrationOutboxHealth', () => {
         const rows = await resolver.integrationOutboxHealth(testRequestContext);
 
         expect(rows.map(row => row.eventType).sort()).toEqual([
+            'counterparty.changed',
             'order.cancel-requested',
             'order.confirmed',
             'trading-point.changed',

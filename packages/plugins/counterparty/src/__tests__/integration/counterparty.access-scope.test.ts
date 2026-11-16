@@ -14,11 +14,12 @@ import { CounterpartyManagerAssignmentService } from '../../counterparty-manager
 import { CounterpartyService } from '../../counterparty.service';
 
 // Vendure's VendureEntity needs an EntityIdStrategy from bootstrap() for its primary column,
-// so the real Counterparty class can't run on a standalone DataSource; use a hand-rolled table.
+// so the real Counterparty class can't run on a standalone DataSource; use a hand-rolled table
+// with the production int primary key (raw SQL casts ids to int[]).
 @Entity('counterparty')
 class TestCounterparty {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    @PrimaryGeneratedColumn()
+    id!: number;
 
     @Column({ type: 'varchar' }) erpId!: string;
     @Column({ type: 'varchar' }) legalName!: string;
