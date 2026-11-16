@@ -10,6 +10,7 @@ import {
 } from './locales';
 
 const STORAGE_KEY = 'mivend.locale';
+const SETTINGS_DEFAULT_TIMEOUT_MS = 1500;
 
 function slavicPlural(choice: number): number {
     const n = Math.abs(choice) % 100;
@@ -59,12 +60,22 @@ export async function setLocale(locale: string): Promise<void> {
     if (await applyLocale(locale)) saveLocale(locale);
 }
 
+function fetchWithTimeout(fetchDefault: () => Promise<string | null>): Promise<string | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>(resolve => {
+        timer = setTimeout(() => resolve(null), SETTINGS_DEFAULT_TIMEOUT_MS);
+    });
+    return Promise.race([fetchDefault().catch(() => null), timeout]).finally(() =>
+        clearTimeout(timer),
+    );
+}
+
 export async function initLocale(
     fetchSettingsDefault: () => Promise<string | null>,
 ): Promise<void> {
     const saved = readSavedLocale();
     const matched = matchLocale(saved, navigator.languages, SUPPORTED_LOCALES);
-    const settingsDefault = matched ? null : await fetchSettingsDefault().catch(() => null);
+    const settingsDefault = matched ? null : await fetchWithTimeout(fetchSettingsDefault);
     await applyLocale(
         resolveLocale(saved, navigator.languages, SUPPORTED_LOCALES, settingsDefault),
     );

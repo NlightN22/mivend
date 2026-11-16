@@ -47,4 +47,34 @@ describe('initLocale', () => {
         await initLocale(async () => 'en');
         expect(i18n.global.locale.value).toBe('ru');
     });
+
+    it('falls back to the code constant when the settings query is slow', async () => {
+        vi.useFakeTimers();
+        try {
+            browserLanguages(['fr']);
+            const done = initLocale(
+                () => new Promise(resolve => setTimeout(() => resolve('ru'), 10_000)),
+            );
+            await vi.advanceTimersByTimeAsync(1600);
+            await done;
+            expect(i18n.global.locale.value).toBe('en');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('applies a settings default that arrives within the timeout', async () => {
+        vi.useFakeTimers();
+        try {
+            browserLanguages(['fr']);
+            const done = initLocale(
+                () => new Promise(resolve => setTimeout(() => resolve('ru'), 500)),
+            );
+            await vi.advanceTimersByTimeAsync(600);
+            await done;
+            expect(i18n.global.locale.value).toBe('ru');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 });
