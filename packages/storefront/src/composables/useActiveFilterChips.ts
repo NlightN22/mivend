@@ -1,4 +1,4 @@
-import { computed, type Ref } from 'vue';
+import { computed, type ComputedRef, type Ref } from 'vue';
 import type { ActiveFilter } from '@mivend/ui-kit';
 import type { FacetGroup } from '../../../shared/src/catalogFacets';
 import type { FilterState } from './useProductList';
