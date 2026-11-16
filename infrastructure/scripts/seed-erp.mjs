@@ -204,6 +204,14 @@ async function ensureTaxSetup() {
 // needed — but this still looks the role up by code and skips with a warning rather than failing
 // the whole seed run, in case a role name here ever drifts from
 // packages/plugins/access-control/src/default-roles.ts.
+// Enough managers that the manager filter list crosses the type-to-search threshold (#377).
+const SEED_MANAGERS = Array.from({ length: 6 }, (_, i) => ({
+    n: i + 1,
+    email: `seed.manager${i + 1}@mivend.dev`,
+    firstName: 'Seed',
+    lastName: `Manager${i + 1}`,
+}));
+
 async function ensureOrgStructureAdmins() {
     let session = await adminGraphqlWithSession(`
         mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
@@ -274,6 +282,7 @@ async function ensureOrgStructureAdmins() {
             lastName: 'Security',
             roleCode: 'security-officer',
         },
+        ...SEED_MANAGERS.map(m => ({ ...m, roleCode: 'manager' })),
     ];
 
     let created = 0;
@@ -1563,6 +1572,13 @@ async function main() {
             roleCode: 'general-director',
             positionErpId: 'pos-director',
         },
+        ...SEED_MANAGERS.map(m => ({
+            erpId: `emp-10${m.n}`,
+            email: m.email,
+            departmentErpId: 'dept-sales',
+            roleCode: 'manager',
+            positionErpId: 'pos-manager',
+        })),
     ];
     console.log(`Sending ${employees.length} employees...`);
     const employeeResult = await postBatch(

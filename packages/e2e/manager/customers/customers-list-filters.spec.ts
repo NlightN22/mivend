@@ -49,4 +49,30 @@ test.describe('customers list filters @on:manager-portal-admin @read-only', () =
         await page.reload();
         await expect(page.getByTestId('filter-chip')).toHaveCount(1);
     });
+
+    test('the manager filter lists many managers behind a search box that narrows them (#377)', async ({
+        page,
+    }) => {
+        await page.goto('/customers');
+        await page.getByTestId('filter-trigger').click();
+        await page.getByTestId('filter-column-manager').click();
+
+        const trigger = page.locator(
+            'button.mv-search-select__trigger[data-testid="filter-value"]',
+        );
+        await expect(trigger).toBeVisible({ timeout: 15000 });
+        await trigger.click();
+        const options = page.getByTestId('search-select-option');
+        expect(await options.count()).toBeGreaterThan(8);
+
+        await page.getByTestId('search-select-input').fill('Manager3');
+        await expect(options).toHaveCount(1);
+        await page.getByTestId('search-select-input').fill('no-such-manager');
+        await expect(page.getByTestId('search-select-empty')).toBeVisible();
+
+        await page.getByTestId('search-select-input').fill('Manager3');
+        await options.first().click();
+        await page.getByRole('button', { name: 'Apply filter' }).click();
+        await expect(page.getByTestId('filter-chip')).toHaveCount(1);
+    });
 });
