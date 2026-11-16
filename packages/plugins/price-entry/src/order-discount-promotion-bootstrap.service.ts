@@ -42,7 +42,14 @@ export class OrderDiscountPromotionBootstrapService implements OnApplicationBoot
             const existing = promotions.find(
                 p => !p.deletedAt && p.actions.some(a => a.code === ORDER_DISCOUNT_ACTION_CODE),
             );
-            if (existing) return;
+            if (existing) {
+                if (!existing.enabled)
+                    Logger.warn(
+                        'The order-discount promotion is disabled; order discounts are off',
+                        loggerCtx,
+                    );
+                return;
+            }
             await this.promotionService.createPromotion(txCtx, {
                 enabled: true,
                 conditions: [{ code: ORDER_DISCOUNT_CONDITION_CODE, arguments: [] }],

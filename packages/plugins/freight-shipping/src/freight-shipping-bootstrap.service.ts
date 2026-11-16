@@ -40,7 +40,14 @@ export class FreightShippingBootstrapService implements OnApplicationBootstrap {
         const ctx = RequestContext.empty();
         const repo = this.connection.getRepository(ctx, ShippingMethod);
         const existing = await repo.findOne({ where: { code: FREIGHT_SHIPPING_METHOD_CODE } });
-        if (existing) return;
+        if (existing) {
+            if (existing.checker?.code !== freightEligibilityChecker.code)
+                Logger.warn(
+                    `Shipping method "${FREIGHT_SHIPPING_METHOD_CODE}" uses checker "${existing.checker?.code}", not the code's`,
+                    loggerCtx,
+                );
+            return;
+        }
 
         await this.shippingMethodService.create(ctx, {
             code: FREIGHT_SHIPPING_METHOD_CODE,
