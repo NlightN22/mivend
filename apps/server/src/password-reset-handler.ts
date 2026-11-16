@@ -1,11 +1,13 @@
-import {
-    Administrator,
-    PasswordResetEvent,
-    RequestContext,
-    TransactionalConnection,
-} from '@vendure/core';
+import { PasswordResetEvent, TransactionalConnection } from '@vendure/core';
 import { EMAIL_SUBJECTS } from './account-email-handlers';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
+import {
+    EmailSource,
+    EmailSourceConfig,
+    isStaffUser,
+    resolveEmailSource,
+    sourceTemplateVars,
+} from './email-source';
 import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 
 export interface PasswordResetUrls {
@@ -13,20 +15,13 @@ export interface PasswordResetUrls {
     customer: string;
 }
 
-export function isStaffUser(
-    connection: TransactionalConnection,
-    ctx: RequestContext,
-    userId: number | string,
-): Promise<boolean> {
-    return connection.getRepository(ctx, Administrator).exists({ where: { user: { id: userId } } });
-}
-
 export function createPasswordResetHandler(
     urls: PasswordResetUrls,
     fallback: EmailLanguage,
+    sources: EmailSourceConfig,
 ): EmailEventHandler<
     'password-reset',
-    EventWithAsyncData<PasswordResetEvent, { passwordResetUrl: string }>
+    EventWithAsyncData<PasswordResetEvent, { passwordResetUrl: string; source: EmailSource }>
 > {
     return new EmailEventListener('password-reset')
         .on(PasswordResetEvent)
@@ -36,14 +31,20 @@ export function createPasswordResetHandler(
                 event.ctx,
                 event.user.id,
             );
-            return { passwordResetUrl: isStaff ? urls.staff : urls.customer };
+            return {
+                passwordResetUrl: isStaff ? urls.staff : urls.customer,
+                source: resolveEmailSource(sources, event.ctx, isStaff),
+            };
         })
         .setRecipient(event => event.user.identifier)
-        .setFrom('{{ fromAddress }}')
+        .setFrom('{{ sourceFrom }}')
         .setSubject(
-            event => EMAIL_SUBJECTS.passwordReset[resolveEmailLanguage(event.ctx, fallback)],
+            event =>
+                event.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.passwordReset[resolveEmailLanguage(event.ctx, fallback)],
         )
         .setTemplateVars(event => ({
+            ...sourceTemplateVars(event.data.source),
             emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             passwordResetToken: event.user.getNativeAuthenticationMethod().passwordResetToken,
             passwordResetUrl: event.data.passwordResetUrl,

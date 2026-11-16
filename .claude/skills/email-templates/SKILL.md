@@ -20,6 +20,10 @@ Hard rule: every email template is created in at least two languages (`ru` and `
 - Every handler must set `emailLanguage` in `setTemplateVars` and take its subject from `EMAIL_SUBJECTS` by that language.
 - Adding a language: add the code to `EMAIL_LANGUAGES`, a subject per mail, and a `body.<lang>.hbs` per type; the guard test lists what is missing.
 
+## Source portal
+
+Every handler calls `loadEmailSource`/`resolveEmailSource` (`email-source.ts`) in `loadData`, sets `.setFrom('{{ sourceFrom }}')`, prefixes the subject with `source.subjectPrefix` and spreads `sourceTemplateVars` (`sourceDomain`, `sourceFrom`). Never use `{{ fromAddress }}` in a handler.
+
 ## Variables
 
 Global (`emailGlobalTemplateVars` in `email-config.ts`): `fromAddress`, `siteName`, `footerText`, `verifyEmailAddressUrl`. `changeEmailAddressUrl` (used by `email-address-change`) is not defined yet: no storefront page and no flow triggers that mail; do not invent a URL. Per-mail variables come from the handler's `setTemplateVars`/`loadData`. Handlebars escapes `{{ }}` output.

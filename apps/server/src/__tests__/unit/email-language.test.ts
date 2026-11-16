@@ -14,6 +14,7 @@ import {
     defaultEmailLanguage,
     resolveEmailLanguage,
 } from '../../email-language';
+import { emailSourceConfigFromEnv } from '../../email-source';
 import { emailFooterText } from '../../site-config';
 
 const loader = new LanguageTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
@@ -50,7 +51,8 @@ const RECOVERY_URLS = {
     staff: 'https://m.example.org/two-factor-recovery',
     customer: 'https://shop.example.org/two-factor-recovery',
 };
-const REGISTERED = createEmailHandlers(URLS, RECOVERY_URLS, 'en').map(h => h.type);
+const NO_DOMAINS = emailSourceConfigFromEnv({ SITE_NAME: 'Site A' }, 'no-reply@example.org');
+const REGISTERED = createEmailHandlers(URLS, RECOVERY_URLS, 'en', NO_DOMAINS).map(h => h.type);
 type MailType =
     | 'password-reset'
     | 'email-verification'
@@ -83,7 +85,7 @@ async function render(
         authenticationMethods: [],
         getNativeAuthenticationMethod: () => method,
     };
-    const handler = createEmailHandlers(URLS, RECOVERY_URLS, fallback).find(
+    const handler = createEmailHandlers(URLS, RECOVERY_URLS, fallback, NO_DOMAINS).find(
         h => h.type === type,
     ) as unknown as {
         handle: (
@@ -324,6 +326,7 @@ describe('registered mail types', () => {
         { staff: '', customer: '' },
         { staff: '', customer: '' },
         'en',
+        NO_DOMAINS,
     ).map(h => h.type);
     const templatesDir = path.join(__dirname, '../../../static/email/templates');
 

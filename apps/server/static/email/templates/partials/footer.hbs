@@ -4,6 +4,11 @@
         <mj-text align="center" color="#eee">
             <span>{{#if footerText}}{{ footerText }}{{else}}{{ defaultFooter }}{{/if}}</span>
         </mj-text>
+        {{#if sourceDomain}}
+        <mj-text align="center" color="#eee" font-size="12px">
+            <span>{{ sentBy }} {{ sourceDomain }}</span>
+        </mj-text>
+        {{/if}}
     </mj-column>
 </mj-section>
 </mj-body>

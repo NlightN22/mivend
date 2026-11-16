@@ -1,6 +1,16 @@
 import { AccountRegistrationEvent, IdentifierChangeRequestEvent } from '@vendure/core';
-import { EmailEventHandler, EmailEventListener } from '@vendure/email-plugin';
+import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
+import {
+    EmailSource,
+    EmailSourceConfig,
+    loadEmailSource,
+    sourceTemplateVars,
+} from './email-source';
+
+interface SourceData {
+    source: EmailSource;
+}
 
 export const EMAIL_SUBJECTS = {
     passwordReset: { en: 'Forgotten password reset', ru: 'Восстановление пароля' },
@@ -36,16 +46,26 @@ export const EMAIL_SUBJECTS = {
 
 export function createEmailVerificationHandler(
     fallback: EmailLanguage,
-): EmailEventHandler<'email-verification', AccountRegistrationEvent> {
+    sources: EmailSourceConfig,
+): EmailEventHandler<
+    'email-verification',
+    EventWithAsyncData<AccountRegistrationEvent, SourceData>
+> {
     return new EmailEventListener('email-verification')
         .on(AccountRegistrationEvent)
         .filter(event => !!event.user.getNativeAuthenticationMethod().identifier)
         .setRecipient(event => event.user.identifier)
-        .setFrom('{{ fromAddress }}')
+        .loadData(async ({ event, injector }) => ({
+            source: await loadEmailSource(sources, injector, event),
+        }))
+        .setFrom('{{ sourceFrom }}')
         .setSubject(
-            event => EMAIL_SUBJECTS.emailVerification[resolveEmailLanguage(event.ctx, fallback)],
+            event =>
+                event.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.emailVerification[resolveEmailLanguage(event.ctx, fallback)],
         )
         .setTemplateVars(event => ({
+            ...sourceTemplateVars(event.data.source),
             emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             verificationToken: event.user.getNativeAuthenticationMethod().verificationToken,
         }));
@@ -53,15 +73,25 @@ export function createEmailVerificationHandler(
 
 export function createEmailAddressChangeHandler(
     fallback: EmailLanguage,
-): EmailEventHandler<'email-address-change', IdentifierChangeRequestEvent> {
+    sources: EmailSourceConfig,
+): EmailEventHandler<
+    'email-address-change',
+    EventWithAsyncData<IdentifierChangeRequestEvent, SourceData>
+> {
     return new EmailEventListener('email-address-change')
         .on(IdentifierChangeRequestEvent)
         .setRecipient(event => event.user.getNativeAuthenticationMethod().pendingIdentifier ?? '')
-        .setFrom('{{ fromAddress }}')
+        .loadData(async ({ event, injector }) => ({
+            source: await loadEmailSource(sources, injector, event),
+        }))
+        .setFrom('{{ sourceFrom }}')
         .setSubject(
-            event => EMAIL_SUBJECTS.emailAddressChange[resolveEmailLanguage(event.ctx, fallback)],
+            event =>
+                event.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.emailAddressChange[resolveEmailLanguage(event.ctx, fallback)],
         )
         .setTemplateVars(event => ({
+            ...sourceTemplateVars(event.data.source),
             emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             identifierChangeToken: event.user.getNativeAuthenticationMethod().identifierChangeToken,
         }));

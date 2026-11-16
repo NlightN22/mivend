@@ -4,6 +4,7 @@ import {
     createEmailVerificationHandler,
 } from './account-email-handlers';
 import { EmailLanguage } from './email-language';
+import { EmailSourceConfig } from './email-source';
 import { createNewDeviceSignInHandler } from './new-device-email-handler';
 import { PasswordResetUrls, createPasswordResetHandler } from './password-reset-handler';
 import { createTwoFactorEmailHandlers } from './two-factor-email-handlers';
@@ -13,12 +14,13 @@ export function createEmailHandlers(
     urls: PasswordResetUrls,
     recoveryUrls: PasswordResetUrls,
     fallback: EmailLanguage,
+    sources: EmailSourceConfig,
 ): EmailPluginOptions['handlers'] {
     return [
-        createEmailVerificationHandler(fallback),
-        createPasswordResetHandler(urls, fallback),
-        createEmailAddressChangeHandler(fallback),
-        ...createTwoFactorEmailHandlers(recoveryUrls, fallback),
-        createNewDeviceSignInHandler(fallback),
+        createEmailVerificationHandler(fallback, sources),
+        createPasswordResetHandler(urls, fallback, sources),
+        createEmailAddressChangeHandler(fallback, sources),
+        ...createTwoFactorEmailHandlers(recoveryUrls, fallback, sources),
+        createNewDeviceSignInHandler(fallback, sources),
     ];
 }

@@ -1,3 +1,4 @@
+import { emailSourceConfigFromEnv } from '../../email-source';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { Injector, RequestContext } from '@vendure/core';
@@ -28,11 +29,11 @@ async function renderedLink(isStaff: boolean): Promise<string> {
     const event = { ctx, user } as unknown as Parameters<
         ReturnType<typeof createPasswordResetHandler>['handle']
     >[0];
-    const details = await createPasswordResetHandler(urls, 'en').handle(
-        event,
-        { fromAddress: 'no-reply@example.org' },
-        injector,
-    );
+    const details = await createPasswordResetHandler(
+        urls,
+        'en',
+        emailSourceConfigFromEnv({}, 'no-reply@example.org'),
+    ).handle(event, { fromAddress: 'no-reply@example.org' }, injector);
     if (!details) throw new Error('handler produced no mail');
     const generator = new HandlebarsMjmlGenerator();
     await generator.onInit({ templateLoader: loader } as unknown as InitializedEmailPluginOptions);

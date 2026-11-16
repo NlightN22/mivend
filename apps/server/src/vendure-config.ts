@@ -22,6 +22,7 @@ import { assetUrlPrefix } from './asset-url-prefix';
 import { AssetServerPlugin, configureS3AssetStorage } from '@vendure/asset-server-plugin';
 import { EmailPlugin } from '@vendure/email-plugin';
 import { createEmailHandlers } from './email-handlers';
+import { emailSourceConfigFromEnv } from './email-source';
 import { LanguageTemplateLoader, defaultEmailLanguage } from './email-language';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
@@ -139,10 +140,11 @@ const instancePlugins = [AcquiringPlugin.init({})];
 const sessionOptions = sessionOptionsFromEnv(process.env);
 const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
 siteFaviconUrl(process.env);
-const { fromAddress: emailFromAddress, ...emailTransportOptions } = resolveEmailConfig(
-    process.env,
-    emailOutputPath,
-);
+const {
+    fromAddress: emailFromAddress,
+    fromEmail: emailFromEmail,
+    ...emailTransportOptions
+} = resolveEmailConfig(process.env, emailOutputPath);
 
 // Vendure core cannot know the manager portal's public URL, so it comes from a per-contour env var.
 // Unset yields a host-less link, not a boot failure: a missing var must not take the server down.
@@ -162,6 +164,7 @@ const emailPlugin = EmailPlugin.init({
             customer: `${process.env.STOREFRONT_PUBLIC_URL ?? ''}/two-factor-recovery`,
         },
         emailLanguage,
+        emailSourceConfigFromEnv(process.env, emailFromEmail),
     ),
     globalTemplateVars: emailGlobalTemplateVars(
         emailFromAddress,

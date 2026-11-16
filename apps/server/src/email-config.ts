@@ -1,4 +1,5 @@
 import { EmailPluginOptions } from '@vendure/email-plugin';
+import { emailSourceConfigFromEnv } from './email-source';
 import { emailFooterText, siteName } from './site-config';
 
 type Env = Record<string, string | undefined>;
@@ -15,6 +16,7 @@ const SMTP_REQUIRED = [
 const SMTP_PRODUCTION_REQUIRED = [
     'MANAGER_PUBLIC_URL',
     'STOREFRONT_PUBLIC_URL',
+    'DASHBOARD_PUBLIC_URL',
     'SITE_NAME',
 ] as const;
 
@@ -24,6 +26,7 @@ export interface EmailTransportConfig {
     outputPath?: string;
     route?: string;
     fromAddress: string;
+    fromEmail: string;
 }
 
 function required(env: Env, name: string): string {
@@ -61,12 +64,12 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
         );
     }
     if (selected === 'file') {
-        const fromAddress = env.EMAIL_FROM_ADDRESS
-            ? formatFrom(env)
-            : `"${siteName(env)}" <noreply@localhost>`;
+        const fromEmail = env.EMAIL_FROM_ADDRESS || 'noreply@localhost';
+        const fromAddress = `"${siteName(env)}" <${fromEmail}>`;
+        emailSourceConfigFromEnv(env, fromEmail);
         return env.EMAIL_DEV_MAILBOX_ENABLED === 'true'
-            ? { devMode: true, outputPath, route: 'mailbox', fromAddress }
-            : { transport: { type: 'file', outputPath }, fromAddress };
+            ? { devMode: true, outputPath, route: 'mailbox', fromAddress, fromEmail }
+            : { transport: { type: 'file', outputPath }, fromAddress, fromEmail };
     }
     if (selected !== 'smtp') {
         throw new Error(`EMAIL_TRANSPORT must be file or smtp, got ${selected}`);
@@ -78,6 +81,7 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
                 throw new Error(`${name} is required in production when EMAIL_TRANSPORT=smtp`);
         }
     }
+    emailSourceConfigFromEnv(env, '');
     const secure = env.EMAIL_SMTP_SECURE;
     if (secure !== 'starttls' && secure !== 'tls') {
         throw new Error('EMAIL_SMTP_SECURE must be starttls or tls');
@@ -100,5 +104,6 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
             auth: { user: required(env, 'EMAIL_SMTP_USER'), pass: password },
         },
         fromAddress: formatFrom(env),
+        fromEmail: required(env, 'EMAIL_FROM_ADDRESS'),
     };
 }

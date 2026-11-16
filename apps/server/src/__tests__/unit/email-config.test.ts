@@ -82,6 +82,7 @@ describe('resolveEmailConfig', () => {
                     EMAIL_SMTP_PASSWORD: 'change-me',
                     MANAGER_PUBLIC_URL: 'https://m.example.org',
                     STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+                    DASHBOARD_PUBLIC_URL: 'https://d.example.org',
                 },
                 out,
             ),
@@ -102,6 +103,7 @@ describe('resolveEmailConfig', () => {
             NODE_ENV: 'production',
             MANAGER_PUBLIC_URL: 'https://m.example.org',
             STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+            DASHBOARD_PUBLIC_URL: 'https://d.example.org',
         };
         expect(resolveEmailConfig(prod, out).transport).toMatchObject({ type: 'smtp' });
         expect(() =>
@@ -118,6 +120,7 @@ describe('resolveEmailConfig', () => {
             NODE_ENV: 'production',
             MANAGER_PUBLIC_URL: 'https://m.example.org',
             STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+            DASHBOARD_PUBLIC_URL: 'https://d.example.org',
         };
         expect(() => resolveEmailConfig({ ...prod, SITE_NAME: undefined }, out)).toThrow(
             /SITE_NAME/,

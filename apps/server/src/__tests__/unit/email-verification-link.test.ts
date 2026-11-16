@@ -4,13 +4,16 @@ import { Injector, NativeAuthenticationMethod, RequestContext } from '@vendure/c
 import { HandlebarsMjmlGenerator, InitializedEmailPluginOptions } from '@vendure/email-plugin';
 import { createEmailVerificationHandler } from '../../account-email-handlers';
 import { emailGlobalTemplateVars } from '../../email-config';
+import { emailSourceConfigFromEnv } from '../../email-source';
 import { LanguageTemplateLoader } from '../../email-language';
 
 const loader = new LanguageTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
 
 describe('email-verification link target', () => {
     it('points the activation link at the storefront /verify page', async () => {
-        const injector = {} as unknown as Injector;
+        const injector = {
+            get: () => ({ getRepository: () => ({ exists: async () => false }) }),
+        } as unknown as Injector;
         const ctx = {
             channel: { code: 'default' },
             languageCode: 'en',
@@ -33,7 +36,10 @@ describe('email-verification link target', () => {
             'https://shop.example.org',
             {},
         );
-        const details = await createEmailVerificationHandler('en').handle(event, vars, injector);
+        const details = await createEmailVerificationHandler(
+            'en',
+            emailSourceConfigFromEnv({}, 'no-reply@example.org'),
+        ).handle(event, vars, injector);
         if (!details) throw new Error('handler produced no mail');
         const generator = new HandlebarsMjmlGenerator();
         await generator.onInit({

@@ -8,11 +8,23 @@ import {
 } from '@mivend/plugin-two-factor';
 import { EMAIL_SUBJECTS } from './account-email-handlers';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
-import { PasswordResetUrls, isStaffUser } from './password-reset-handler';
+import {
+    EmailSource,
+    EmailSourceConfig,
+    isStaffUser,
+    loadEmailSource,
+    resolveEmailSource,
+    sourceTemplateVars,
+} from './email-source';
+import { PasswordResetUrls } from './password-reset-handler';
 
 interface UserEvent {
     ctx: RequestContext;
     user: User;
+}
+
+interface SourceData {
+    source: EmailSource;
 }
 
 type Subjects = Record<EmailLanguage, string>;
@@ -22,23 +34,36 @@ function notice<E extends VendureEvent & UserEvent>(
     event: Type<E>,
     subjects: Subjects,
     fallback: EmailLanguage,
-): EmailEventHandler<string, E> {
+    sources: EmailSourceConfig,
+): EmailEventHandler<string, EventWithAsyncData<E, SourceData>> {
     return new EmailEventListener(type)
         .on(event)
         .setRecipient(e => e.user.identifier)
-        .setFrom('{{ fromAddress }}')
-        .setSubject(e => subjects[resolveEmailLanguage(e.ctx, fallback)])
-        .setTemplateVars(e => ({ emailLanguage: resolveEmailLanguage(e.ctx, fallback) }));
+        .loadData(async ({ event, injector }) => ({
+            source: await loadEmailSource(sources, injector, event),
+        }))
+        .setFrom('{{ sourceFrom }}')
+        .setSubject(
+            e => e.data.source.subjectPrefix + subjects[resolveEmailLanguage(e.ctx, fallback)],
+        )
+        .setTemplateVars(e => ({
+            ...sourceTemplateVars(e.data.source),
+            emailLanguage: resolveEmailLanguage(e.ctx, fallback),
+        }));
 }
 
 export function createTwoFactorEmailHandlers(
     urls: PasswordResetUrls,
     fallback: EmailLanguage,
+    sources: EmailSourceConfig,
 ): (
-    | EmailEventHandler<string, TwoFactorEnabledEvent>
+    | EmailEventHandler<string, EventWithAsyncData<TwoFactorEnabledEvent, SourceData>>
     | EmailEventHandler<
           'two-factor-recovery',
-          EventWithAsyncData<TwoFactorRecoveryRequestedEvent, { twoFactorRecoveryUrl: string }>
+          EventWithAsyncData<
+              TwoFactorRecoveryRequestedEvent,
+              { twoFactorRecoveryUrl: string } & SourceData
+          >
       >
 )[] {
     const recovery = new EmailEventListener('two-factor-recovery')
@@ -49,12 +74,20 @@ export function createTwoFactorEmailHandlers(
                 event.ctx,
                 event.user.id,
             );
-            return { twoFactorRecoveryUrl: staff ? urls.staff : urls.customer };
+            return {
+                twoFactorRecoveryUrl: staff ? urls.staff : urls.customer,
+                source: resolveEmailSource(sources, event.ctx, staff),
+            };
         })
         .setRecipient(e => e.user.identifier)
-        .setFrom('{{ fromAddress }}')
-        .setSubject(e => EMAIL_SUBJECTS.twoFactorRecovery[resolveEmailLanguage(e.ctx, fallback)])
+        .setFrom('{{ sourceFrom }}')
+        .setSubject(
+            e =>
+                e.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.twoFactorRecovery[resolveEmailLanguage(e.ctx, fallback)],
+        )
         .setTemplateVars(e => ({
+            ...sourceTemplateVars(e.data.source),
             emailLanguage: resolveEmailLanguage(e.ctx, fallback),
             twoFactorRecoveryToken: e.token,
             twoFactorRecoveryUrl: e.data.twoFactorRecoveryUrl,
@@ -65,12 +98,14 @@ export function createTwoFactorEmailHandlers(
             TwoFactorEnabledEvent,
             EMAIL_SUBJECTS.twoFactorEnabled,
             fallback,
+            sources,
         ),
         notice(
             'two-factor-changed',
             TwoFactorChangedEvent,
             EMAIL_SUBJECTS.twoFactorChanged,
             fallback,
+            sources,
         ),
         recovery,
         notice(
@@ -78,6 +113,7 @@ export function createTwoFactorEmailHandlers(
             TwoFactorRecoveryCompletedEvent,
             EMAIL_SUBJECTS.twoFactorRecoveryCompleted,
             fallback,
+            sources,
         ),
     ];
 }
