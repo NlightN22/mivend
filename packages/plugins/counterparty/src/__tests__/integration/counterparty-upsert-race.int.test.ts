@@ -54,8 +54,18 @@ let service: CounterpartyService;
 let streamState: CounterpartyStreamStateService;
 const published: string[] = [];
 const ctx = testRequestContext;
+interface PayloadResult {
+    erpId: string;
+    legalName: string;
+    shortName: string;
+    creditLimit: number;
+    creditBalance: number;
+    paymentDelayDays: number;
+    priceType: string;
+    isActive: boolean;
+}
 
-const payload = (legalName: string) => ({
+const payload = (legalName: string): PayloadResult => ({
     erpId: 'cp-erp-1',
     legalName,
     shortName: legalName,

@@ -9,7 +9,10 @@ import { Contract } from '../../entities/contract.entity';
 describe('CreditLimitCheckService.decide', () => {
     const service = new CreditLimitCheckService(null as never, null as never);
 
-    const counterparty = (creditLimit: number, creditBalance: number) =>
+    const counterparty = (
+        creditLimit: number,
+        creditBalance: number,
+    ): Pick<Counterparty, 'creditLimit' | 'creditBalance'> =>
         ({ creditLimit, creditBalance }) as Pick<Counterparty, 'creditLimit' | 'creditBalance'>;
 
     const contract = (

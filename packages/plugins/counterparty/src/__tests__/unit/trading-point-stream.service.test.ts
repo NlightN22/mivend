@@ -223,7 +223,22 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
         });
 
         describe('coordinates from the stream (the stream only fills a missing location)', () => {
-            const existing = (latitude: number | null, longitude: number | null) => ({
+            interface ExistingResult {
+                id: string;
+                erpId: string;
+                name: string;
+                address: string;
+                latitude: number | null;
+                longitude: number | null;
+                isActive: boolean;
+                counterpartyId: string;
+                contacts: never[];
+            }
+
+            const existing = (
+                latitude: number | null,
+                longitude: number | null,
+            ): ExistingResult => ({
                 id: 'tp-1',
                 erpId: 'pos-1',
                 name: 'N',
@@ -234,7 +249,17 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
                 counterpartyId: 'cp-1',
                 contacts: [],
             });
-            const event = (latitude?: number | null, longitude?: number | null) => ({
+            interface EventResult {
+                name: string;
+                counterpartyId: string;
+                servicingBranchId: null;
+                isActive: boolean;
+                address: string;
+                latitude: number | null | undefined;
+                longitude: number | null | undefined;
+            }
+
+            const event = (latitude?: number | null, longitude?: number | null): EventResult => ({
                 name: 'N',
                 counterpartyId: 'cp-1',
                 servicingBranchId: null,

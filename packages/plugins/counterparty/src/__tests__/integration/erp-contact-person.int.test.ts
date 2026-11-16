@@ -95,8 +95,14 @@ afterAll(async () => {
     await dataSource.destroy();
     await dropTestSchema(schema);
 });
+interface FieldsResult {
+    name: string;
+    position: null;
+    isActive: boolean;
+    counterpartyId: number | null;
+}
 
-const fields = (counterpartyId: number | null = null) => ({
+const fields = (counterpartyId: number | null = null): FieldsResult => ({
     name: 'Person A',
     position: null,
     isActive: true,

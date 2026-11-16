@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { chooseOrderContract } from '../../order-contract-rule';
+interface ContractResult {
+    erpId: string;
+    counterpartyId: string;
+    organizationId: string;
+    isActive: boolean;
+    priceTypeId?: string;
+    createdAt?: Date;
+}
 
 const contract = (
     erpId: string,
     over: Partial<Parameters<typeof chooseOrderContract>[1]> = {},
-) => ({
+): ContractResult => ({
     erpId,
     counterpartyId: 'cp-1',
     organizationId: 'org-1',
@@ -46,7 +54,10 @@ describe('chooseOrderContract', () => {
     describe('fallback to another active contract', () => {
         const old = new Date('2020-01-01');
         const recent = new Date('2025-01-01');
-        const pick = (candidates: ReturnType<typeof contract>[], priceType?: string) =>
+        const pick = (
+            candidates: ReturnType<typeof contract>[],
+            priceType?: string,
+        ): string | undefined =>
             chooseOrderContract(
                 'cp-1',
                 null,

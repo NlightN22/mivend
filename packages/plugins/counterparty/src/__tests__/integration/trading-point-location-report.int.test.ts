@@ -53,7 +53,7 @@ async function seed(
     latitude: number | null,
     longitude: number | null,
     isActive = true,
-) {
+): Promise<void> {
     await dataSource
         .getRepository(TradingPointRecord)
         .save({ erpId, latitude, longitude, isActive });

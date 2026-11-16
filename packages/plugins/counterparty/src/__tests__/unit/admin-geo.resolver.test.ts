@@ -1,12 +1,17 @@
 import { Permission } from '@vendure/common/lib/generated-types';
 import { PERMISSIONS_METADATA_KEY } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { AdminGeoResolver } from '../../geo/admin-geo.resolver';
 import { AddressSuggestService } from '../../address-suggest.service';
 import { GeoService } from '../../geo/geo.service';
+interface BuildResult {
+    geo: { search: Mock; reverse: Mock; publicConfig: Mock };
+    suggestions: { suggest: Mock };
+    resolver: AdminGeoResolver;
+}
 
-function build() {
+function build(): BuildResult {
     const geo = {
         search: vi.fn().mockResolvedValue([{ address: 'Street 1', lat: 1, lng: 2 }]),
         reverse: vi.fn().mockResolvedValue('Street 1'),

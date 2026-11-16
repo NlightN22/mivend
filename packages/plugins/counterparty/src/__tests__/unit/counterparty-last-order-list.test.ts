@@ -1,11 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { SelectQueryBuilder } from 'typeorm';
 
 import { applyCounterpartyFilterParameter } from '../../counterparty-list-query';
 import { applyCounterpartySort } from '../../counterparty-sort';
 import type { Counterparty } from '../../entities/counterparty.entity';
+interface FakeQbResult {
+    qb: SelectQueryBuilder<Counterparty>;
+    andWhere: Mock<(sql: string, params?: Record<string, unknown>) => unknown>;
+    addSelect: Mock<(sql: string, alias: string) => unknown>;
+    orderBy: Mock<(key: string, order: string, nulls?: string) => unknown>;
+    addOrderBy: Mock<(key: string, order: string) => unknown>;
+    leftJoin: Mock<(...args: unknown[]) => unknown>;
+}
 
-function fakeQb() {
+function fakeQb(): FakeQbResult {
     const andWhere = vi.fn<(sql: string, params?: Record<string, unknown>) => unknown>();
     const addSelect = vi.fn<(sql: string, alias: string) => unknown>();
     const orderBy = vi.fn<(key: string, order: string, nulls?: string) => unknown>();

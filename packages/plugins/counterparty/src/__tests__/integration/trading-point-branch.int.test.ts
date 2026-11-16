@@ -10,6 +10,7 @@ import {
 } from 'shared';
 import { TradingPointService } from '../../trading-point.service';
 import { TradingPointAdminResolver } from '../../trading-point.resolver';
+import { TradingPoint } from '../../entities/trading-point.entity';
 
 @Entity('counterparty')
 class TestCounterparty {
@@ -54,7 +55,10 @@ beforeEach(async () => {
     defaultBranchId = 'branch-default';
 });
 
-async function point(counterpartyBranch: string | null, own: string | null = null) {
+async function point(
+    counterpartyBranch: string | null,
+    own: string | null = null,
+): Promise<{ servicingBranchId: string | null; counterpartyId: string }> {
     const cp = await dataSource
         .getRepository(TestCounterparty)
         .save({ branchId: counterpartyBranch });
@@ -94,10 +98,17 @@ describe('TradingPointService.resolveServicingBranchId (real Postgres)', () => {
 });
 
 describe('TradingPointAdminResolver.tradingPoint for a hidden client (real Postgres, #263)', () => {
-    const headOf = (branchId: string) => ({
+    interface HeadOfResult {
+        resolveCounterpartyScope: () => Promise<{ kind: string; branchId: string }>;
+    }
+
+    const headOf = (branchId: string): HeadOfResult => ({
         resolveCounterpartyScope: async () => ({ kind: 'department', branchId }),
     });
-    const read = async (p: Awaited<ReturnType<typeof point>>, branchId: string) =>
+    const read = async (
+        p: Awaited<ReturnType<typeof point>>,
+        branchId: string,
+    ): Promise<TradingPoint | null> =>
         new TradingPointAdminResolver(
             {
                 findById: async () => ({ id: '1', ...p }),

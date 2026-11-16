@@ -1,11 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { PriceTypeGapService } from '../../price-type-gap.service';
 
 const MAX_TAKE = 100;
+interface MakeQbResult {
+    andWhere: Mock;
+    orderBy: Mock;
+    addOrderBy: Mock;
+    take: Mock;
+    skip: Mock;
+    getManyAndCount: Mock;
+    getCount: Mock;
+}
 
-function makeQb() {
+function makeQb(): MakeQbResult {
     const qb = {
         andWhere: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),

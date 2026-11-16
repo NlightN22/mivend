@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, PrimaryGeneratedColumn, Repository } from 'typeorm';
 import {
     createTestSchema,
     dropTestSchema,
@@ -42,13 +42,13 @@ beforeEach(async () => {
     await dataSource.getRepository(TradingPointRecord).clear();
 });
 
-const repo = () => dataSource.getRepository(TradingPointRecord);
+const repo = (): Repository<TradingPointRecord> => dataSource.getRepository(TradingPointRecord);
 
 async function seed(latitude: number | null, longitude: number | null): Promise<number> {
     return (await repo().save({ erpId: 'pos-1', latitude, longitude })).id;
 }
 
-async function read(id: number) {
+async function read(id: number): Promise<{ latitude: number | null; longitude: number | null }> {
     const row = await repo().findOneByOrFail({ id });
     return { latitude: row.latitude, longitude: row.longitude };
 }

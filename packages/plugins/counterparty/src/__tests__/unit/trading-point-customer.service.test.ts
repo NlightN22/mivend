@@ -225,7 +225,20 @@ describe('TradingPointService — customer methods', () => {
 
     describe('customerEdit of an ERP-confirmed point', () => {
         const base = { name: 'Point A', address: 'Main street 12, office 3', workingHours: '9-18' };
-        const erpPoint = () => ({
+        interface ErpPointResult {
+            id: string;
+            counterpartyId: string;
+            customerOwned: boolean;
+            name: string;
+            address: string;
+            workingHours: string;
+            deliveryComment: string | null;
+            latitude: number;
+            longitude: number;
+            contacts: never[];
+        }
+
+        const erpPoint = (): ErpPointResult => ({
             id: 'tp1',
             counterpartyId: 'cp1',
             customerOwned: false,

@@ -119,7 +119,13 @@ beforeAll(async () => {
     await dataSource.initialize();
     conn = mirrored();
     reader = new VisibilityGrantReader(conn);
-    const viewerRow = () => ({
+    interface ViewerRowResult {
+        id: number;
+        customFields: { branchId: string };
+        user: { roles: { code: string }[] };
+    }
+
+    const viewerRow = (): ViewerRowResult => ({
         id: adminIds.viewer,
         customFields: { branchId: 'branch-a' },
         user: { roles: [{ code: 'r' }] },
@@ -160,7 +166,19 @@ beforeEach(async () => {
     const repo = dataSource.getRepository(TestAdministrator);
     const [viewer, head, m7, m8] = await repo.save([{}, {}, {}, {}]);
     adminIds = { viewer: viewer.id, head: head.id, m7: m7.id, m8: m8.id };
-    const cp = (erpId: string, assignedManagerId: string | null, branchId: string | null) => ({
+    interface CpResult {
+        erpId: string;
+        legalName: string;
+        shortName: string;
+        assignedManagerId: string | null;
+        branchId: string | null;
+    }
+
+    const cp = (
+        erpId: string,
+        assignedManagerId: string | null,
+        branchId: string | null,
+    ): CpResult => ({
         erpId,
         legalName: erpId,
         shortName: erpId,
@@ -193,7 +211,7 @@ const erpIds = async (): Promise<string[]> =>
 
 describe('VisibilityGrantReader validity window (real Postgres)', () => {
     const now = new Date('2030-06-15T12:00:00Z');
-    const manager = (ref: string, over: Partial<TestGrant>) =>
+    const manager = (ref: string, over: Partial<TestGrant>): Promise<TestGrant> =>
         insertGrant({ subjectRef: ref, ...over });
 
     it('applies permanent grants and open windows, not future, expired or revoked ones', async () => {
@@ -256,7 +274,13 @@ describe('visible counterparties are the union of the layers (real Postgres)', (
 });
 
 describe('grant and revoke against concurrent writers and readers (real Postgres)', () => {
-    const input = () => ({
+    interface InputResult {
+        granteeAdministratorId: number;
+        managerAdministratorId: number;
+        reason: string;
+    }
+
+    const input = (): InputResult => ({
         granteeAdministratorId: adminIds.viewer,
         managerAdministratorId: adminIds.m7,
         reason: 'race',

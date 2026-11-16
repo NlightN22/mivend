@@ -1,18 +1,31 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import type { CreditTermLimitService } from '@mivend/plugin-access-control';
-import { CheckRegistry, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
+import {
+    CheckRegistry,
+    Finding,
+    MANAGER_STAGES,
+    MANAGER_SUBJECT_TYPE,
+} from '@mivend/plugin-checks';
 
 import { CreditTermExtensionCheck } from '../../credit-term-extension.check';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    run: (days: number, amount: number | null, recipient?: string | null) => Promise<Finding[]>;
+    getLimit: Mock<() => Promise<{ maxExtraDays: number; maxAmount: number | null } | null>>;
+}
 
-function setup(limit: { maxExtraDays: number; maxAmount: number | null } | null) {
+function setup(limit: { maxExtraDays: number; maxAmount: number | null } | null): SetupResult {
     const getLimit = vi.fn(async () => limit);
     const check = new CreditTermExtensionCheck(new CheckRegistry(), {
         getLimit,
     } as unknown as CreditTermLimitService);
-    const run = (days: number, amount: number | null, recipient: string | null = 'approver') =>
+    const run = (
+        days: number,
+        amount: number | null,
+        recipient: string | null = 'approver',
+    ): Promise<Finding[]> =>
         check.evaluate(
             {
                 roleCodes: ['r'],

@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { resolveContactPoints } from '../../contact-point-normalize';
 import { planContactPointReplace } from '../../contact-point-replace-plan';
 
-const phone = (value: string, extra = {}) => ({ type: 'phone' as const, value, ...extra });
+const phone = (value: string, extra = {}): { type: 'phone'; value: string } => ({
+    type: 'phone' as const,
+    value,
+    ...extra,
+});
 
 describe('resolveContactPoints', () => {
     it('normalizes a phone to E.164 and keeps the value as received', () => {
@@ -46,12 +50,25 @@ describe('resolveContactPoints', () => {
 });
 
 describe('planContactPointReplace', () => {
+    interface StoredResult {
+        id: number;
+        linkId: number;
+        type: 'phone';
+        value: string;
+        normalizedValue: string;
+        isUsable: boolean;
+        label: string | null;
+        comment: null;
+        source: 'erp' | 'manual';
+        isPrimary: boolean;
+    }
+
     const stored = (
         id: number,
         source: 'erp' | 'manual',
         n: string,
         extra: { isPrimary?: boolean; label?: string | null } = {},
-    ) => ({
+    ): StoredResult => ({
         id,
         linkId: id * 10,
         type: 'phone' as const,

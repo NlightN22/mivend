@@ -6,7 +6,12 @@ const rawQuery = vi.fn();
 const getGlobalDefaultBranchId = vi.fn();
 const connection = { getRepository: () => ({ query: rawQuery }) };
 const ctx = {} as RequestContext;
-const point = (servicingBranchId: string | null) => ({ servicingBranchId, counterpartyId: '5' });
+const point = (
+    servicingBranchId: string | null,
+): { servicingBranchId: string | null; counterpartyId: string } => ({
+    servicingBranchId,
+    counterpartyId: '5',
+});
 
 describe('TradingPointService.resolveServicingBranchId', () => {
     let service: TradingPointService;

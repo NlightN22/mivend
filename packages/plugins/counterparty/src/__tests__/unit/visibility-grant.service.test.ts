@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { ForbiddenError, UserInputError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -11,22 +11,29 @@ function setup(options: {
     team?: number[];
     granted?: string[];
     replica?: boolean;
-}) {
+}): {
+    service: VisibilityGrantService;
+    ctx: RequestContext;
+    versioning: { recordChange: Mock };
+    saved: Array<Record<string, unknown>>;
+    repo: Record<string, Mock>;
+    qb: Record<string, Mock>;
+} {
     const saved: Array<Record<string, unknown>> = [];
-    const qb = {
-        where: () => qb,
+    const qb: Record<string, Mock> = {
+        where: vi.fn(() => qb),
         andWhere: vi.fn((..._args: unknown[]) => qb),
         getCount: vi.fn().mockResolvedValue(0),
     };
     const repo = {
         query: vi.fn().mockResolvedValue([]),
         find: vi.fn(async ({ where }: { where: unknown[] }) => where.map(() => ({}))),
-        create: (input: Record<string, unknown>) => input,
+        create: vi.fn((input: Record<string, unknown>) => input),
         save: vi.fn(async (input: Record<string, unknown>) => {
             saved.push(input);
             return { id: 1, ...input };
         }),
-        createQueryBuilder: () => qb,
+        createQueryBuilder: vi.fn(() => qb),
         findOne: vi.fn(),
         update: vi.fn(),
     };
@@ -49,8 +56,13 @@ function setup(options: {
     } as unknown as RequestContext;
     return { service, ctx, versioning, saved, repo, qb };
 }
+interface InputResult {
+    granteeAdministratorId: number;
+    managerAdministratorId: number;
+    reason: string;
+}
 
-const input = (over: Record<string, unknown> = {}) => ({
+const input = (over: Record<string, unknown> = {}): InputResult => ({
     granteeAdministratorId: 20,
     managerAdministratorId: 30,
     reason: 'covers two branches',
@@ -143,7 +155,14 @@ describe('VisibilityGrantService.grant', () => {
 });
 
 describe('VisibilityGrantService.revoke', () => {
-    const openRow = (over: Record<string, unknown> = {}) => ({
+    interface OpenRowResult {
+        id: number;
+        subjectRef: string;
+        grantedByAdministratorId: string;
+        revokedAt: null;
+    }
+
+    const openRow = (over: Record<string, unknown> = {}): OpenRowResult => ({
         id: 1,
         subjectRef: '30',
         grantedByAdministratorId: '99',

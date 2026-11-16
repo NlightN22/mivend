@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { GeoFetch, GeoProvider } from '../../geo/geo-provider';
 import { OpenAdapter } from '../../geo/open.adapter';
 
-const json = (body: unknown, ok = true, status = 200) =>
+const json = (body: unknown, ok = true, status = 200): Response =>
     ({ ok, status, json: async () => body }) as Response;
 
 interface Case {

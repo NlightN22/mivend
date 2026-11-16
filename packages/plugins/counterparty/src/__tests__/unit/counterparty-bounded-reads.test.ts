@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
@@ -8,10 +8,10 @@ import { CounterpartyBatchLoaders } from '../../counterparty-batch-loaders.servi
 import { CounterpartyPortalAccessExecutor } from '../../counterparty-portal-access.executor';
 
 const ctx = { apiType: 'admin' } as RequestContext;
-const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i + 1 }));
+const rows = (n: number): { id: number }[] => Array.from({ length: n }, (_, i) => ({ id: i + 1 }));
 const scopeAll = { resolveCounterpartyScope: vi.fn(async () => ({ kind: 'all' })) };
 
-function connectionOf(repo: object) {
+function connectionOf(repo: object): never {
     return { getRepository: () => repo } as never;
 }
 
@@ -30,7 +30,17 @@ describe('findBounded sites (ContractService)', () => {
 });
 
 describe('getManyBounded site (hidden flag loader)', () => {
-    function loaders(count: number) {
+    interface LoadersResult2 {
+        built: CounterpartyBatchLoaders;
+        qb: {
+            select: Mock;
+            where: Mock;
+            take: Mock;
+            getMany: Mock<() => Promise<{ id: number }[]>>;
+        };
+    }
+
+    function loaders(count: number): LoadersResult2 {
         const qb = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
@@ -60,7 +70,12 @@ describe('getManyBounded site (hidden flag loader)', () => {
 });
 
 describe('findBounded site with several rows per id (trading point loader)', () => {
-    function loaders(count: number) {
+    interface LoadersResult {
+        built: CounterpartyBatchLoaders;
+        find: Mock<() => Promise<{ counterpartyId: string; id: number }[]>>;
+    }
+
+    function loaders(count: number): LoadersResult {
         const find = vi.fn(async () => rows(count).map(r => ({ ...r, counterpartyId: '1' })));
         const built = new CounterpartyBatchLoaders(
             connectionOf({ find }),
@@ -81,7 +96,17 @@ describe('findBounded site with several rows per id (trading point loader)', () 
 });
 
 describe('getRawManyBounded site (visibleTargets)', () => {
-    function executor(count: number) {
+    interface ExecutorResult {
+        built: CounterpartyPortalAccessExecutor;
+        qb: {
+            select: Mock;
+            where: Mock;
+            limit: Mock;
+            getRawMany: Mock<() => Promise<{ id: number }[]>>;
+        };
+    }
+
+    function executor(count: number): ExecutorResult {
         const qb = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
@@ -110,7 +135,12 @@ describe('getRawManyBounded site (visibleTargets)', () => {
 });
 
 describe('ctxQueryBounded site (chosenContacts)', () => {
-    function service(count: number) {
+    interface ServiceResult {
+        service: ContactPointService;
+        query: Mock<() => Promise<{ id: number }[]>>;
+    }
+
+    function service(count: number): ServiceResult {
         const query = vi.fn(async () => rows(count));
         return { service: new ContactPointService(connectionOf({ query })), query };
     }

@@ -189,7 +189,7 @@ describe('ContractService.deactivateTombstone (real Postgres)', () => {
 });
 
 describe('ContractService order contract lookup (real Postgres)', () => {
-    const seed = (erpId: string, counterpartyId: string, isActive = true) =>
+    const seed = (erpId: string, counterpartyId: string, isActive = true): Promise<void> =>
         service.upsertActiveState(ctx, erpId, {
             ...baseFields,
             name: erpId,
