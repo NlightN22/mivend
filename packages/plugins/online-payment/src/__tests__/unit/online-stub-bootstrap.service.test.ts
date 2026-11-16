@@ -77,14 +77,11 @@ describe('OnlineStubBootstrapService', () => {
         expect(paymentMethodService.update).not.toHaveBeenCalled();
     });
 
-    it('disables an existing method and creates nothing when the flag is off', async () => {
+    it('leaves an existing method alone when the flag is off, and creates nothing', async () => {
         vi.stubEnv('ONLINE_PAYMENT_STUB_ENABLED', '');
         repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE, enabled: true });
         await service.onApplicationBootstrap();
-        expect(paymentMethodService.update).toHaveBeenCalledWith(expect.anything(), {
-            id: 1,
-            enabled: false,
-        });
+        expect(paymentMethodService.update).not.toHaveBeenCalled();
 
         repo.findOne.mockResolvedValue(null);
         await service.onApplicationBootstrap();
@@ -96,7 +93,7 @@ describe('OnlineStubBootstrapService', () => {
         await expect(service.onApplicationBootstrap()).resolves.toBeUndefined();
     });
 
-    it('refuses to enable the stub under NODE_ENV=production and disables an existing one', async () => {
+    it('disables an enabled stub under NODE_ENV=production, the one safety exception', async () => {
         vi.stubEnv('NODE_ENV', 'production');
         repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE, enabled: true });
         await service.onApplicationBootstrap();

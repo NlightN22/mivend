@@ -12,7 +12,7 @@ import {
 import { freightEligibilityChecker } from './freight-eligibility-checker';
 import { FREIGHT_SHIPPING_METHOD_CODE, loggerCtx } from './constants';
 
-// Idempotent, runs on every boot of both instance types (a branch can originate its own checkout).
+// Create-only, runs on every boot of both instance types (a branch can originate its own checkout).
 @Injectable()
 export class FreightShippingBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -40,14 +40,7 @@ export class FreightShippingBootstrapService implements OnApplicationBootstrap {
         const ctx = RequestContext.empty();
         const repo = this.connection.getRepository(ctx, ShippingMethod);
         const existing = await repo.findOne({ where: { code: FREIGHT_SHIPPING_METHOD_CODE } });
-        if (existing) {
-            if (existing.checker?.code !== freightEligibilityChecker.code) {
-                await repo.update(existing.id, {
-                    checker: { code: freightEligibilityChecker.code, args: [] },
-                });
-            }
-            return;
-        }
+        if (existing) return;
 
         await this.shippingMethodService.create(ctx, {
             code: FREIGHT_SHIPPING_METHOD_CODE,

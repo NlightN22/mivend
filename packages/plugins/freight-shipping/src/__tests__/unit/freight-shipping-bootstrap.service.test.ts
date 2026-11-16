@@ -67,7 +67,7 @@ describe('FreightShippingBootstrapService', () => {
         expect(repo.update).not.toHaveBeenCalled();
     });
 
-    it('migrates an existing method that still has the default checker', async () => {
+    it('does not rewrite the checker of an existing method', async () => {
         repo.findOne.mockResolvedValue({
             id: 1,
             code: FREIGHT_SHIPPING_METHOD_CODE,
@@ -75,9 +75,7 @@ describe('FreightShippingBootstrapService', () => {
         });
         await service.onApplicationBootstrap();
 
-        expect(repo.update).toHaveBeenCalledWith(1, {
-            checker: { code: 'freight-eligibility-checker', args: [] },
-        });
+        expect(repo.update).not.toHaveBeenCalled();
     });
 
     it('swallows a provisioning failure rather than crashing bootstrap', async () => {

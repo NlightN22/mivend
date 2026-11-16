@@ -61,13 +61,10 @@ describe('OrderDiscountPromotionBootstrapService', () => {
         expect(promotionService.updatePromotion).not.toHaveBeenCalled();
     });
 
-    it('re-enables a disabled promotion instead of creating a second one', async () => {
+    it('leaves a disabled promotion disabled and creates no second one', async () => {
         const { service, promotionService } = setup([promotion(false)]);
         await service.onApplicationBootstrap();
-        expect(promotionService.updatePromotion).toHaveBeenCalledWith(expect.anything(), {
-            id: 5,
-            enabled: true,
-        });
+        expect(promotionService.updatePromotion).not.toHaveBeenCalled();
         expect(promotionService.createPromotion).not.toHaveBeenCalled();
     });
 

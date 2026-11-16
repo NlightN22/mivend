@@ -16,7 +16,7 @@ import {
 } from './order-discount.promotion';
 import { loggerCtx } from './types';
 
-// Failing to provision must stop boot: without the promotion every order-dependent discount silently vanishes.
+// Create-only: staff may disable it. Failing to provision must stop boot: without the promotion every order-dependent discount silently vanishes.
 @Injectable()
 export class OrderDiscountPromotionBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -42,16 +42,7 @@ export class OrderDiscountPromotionBootstrapService implements OnApplicationBoot
             const existing = promotions.find(
                 p => !p.deletedAt && p.actions.some(a => a.code === ORDER_DISCOUNT_ACTION_CODE),
             );
-            if (existing) {
-                if (!existing.enabled) {
-                    await this.promotionService.updatePromotion(txCtx, {
-                        id: existing.id,
-                        enabled: true,
-                    });
-                    Logger.warn('Re-enabled the order-discount promotion', loggerCtx);
-                }
-                return;
-            }
+            if (existing) return;
             await this.promotionService.createPromotion(txCtx, {
                 enabled: true,
                 conditions: [{ code: ORDER_DISCOUNT_CONDITION_CODE, arguments: [] }],

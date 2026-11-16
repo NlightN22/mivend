@@ -365,7 +365,7 @@ worth knowing it exists.
 ## Currency
 
 The default Channel's currency is set by config (`DEFAULT_CURRENCY_CODE`, default `RUB`) and
-reapplied at every boot by `DefaultChannelCurrencyBootstrapService` (single available currency).
+reapplied at every boot by `DefaultChannelCurrencyBootstrapService` (single available currency; an exception to create-only bootstrap, see `docs/access-control.md`).
 Config is the source of truth: a currency changed in the admin UI is reverted on restart.
 
 ## Brand / manufacturer
@@ -420,8 +420,8 @@ Vendure promotion, not part of the line's list price:
 - Amount thresholds (`minAmount`, setup amount conditions) are measured BEFORE discounts (list-price line
   totals, shipping and surcharges excluded). A manual-price line gets no discount but still counts toward its
   siblings' weight, amount and quantity (pinned by a unit test).
-- The bootstrap re-enables the promotion at every boot if staff disabled it (warn log): that is intended, a disabled
-  promotion silently removes every order-dependent discount.
+- The bootstrap only creates the promotion (#374); if staff disable it, it stays disabled and every order-dependent
+  discount is off until it is enabled again.
 - Size: before #271 the evaluation was linear, about 60 ms per line per mutation (41 lines: add ~2.5 s, adjust ~2.4 s,
   read ~1.9 s). Now `preloadOrderLookups` seeds the memo with one query each for variants (facets, weight, erp id),
   promo rules and base prices (plus one query for the branch default type, only for variants the customer type lacks), so the per-line pass only reads memory. Measured on the local

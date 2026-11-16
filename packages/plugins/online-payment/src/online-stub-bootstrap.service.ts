@@ -21,7 +21,7 @@ export function onlineStubEnabled(): boolean {
     return false;
 }
 
-// Runs on every boot of every instance type, so it must be idempotent and avoid ERP/Kafka.
+// Create-only (env sets `enabled` at creation); the one exception: a production server disables an enabled stub; runs on every instance type, so no ERP/Kafka.
 // Branch instances run it locally without ERP/Kafka, so no remote dependency is allowed.
 @Injectable()
 export class OnlineStubBootstrapService implements OnApplicationBootstrap {
@@ -53,8 +53,8 @@ export class OnlineStubBootstrapService implements OnApplicationBootstrap {
         const existing = await repo.findOne({ where: { code: ONLINE_STUB_METHOD_CODE } });
         const enabled = onlineStubEnabled();
         if (existing) {
-            if (existing.enabled !== enabled) {
-                await this.paymentMethodService.update(ctx, { id: existing.id, enabled });
+            if (existing.enabled && process.env.NODE_ENV === 'production') {
+                await this.paymentMethodService.update(ctx, { id: existing.id, enabled: false });
             }
             return;
         }

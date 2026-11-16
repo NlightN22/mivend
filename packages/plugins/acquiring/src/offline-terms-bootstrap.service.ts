@@ -13,7 +13,7 @@ import {
 import { OFFLINE_TERMS_METHOD_CODE } from './offline-terms-handler';
 import { loggerCtx } from './types';
 
-// Idempotent, safe on every boot; the central instance only, as a byproduct of AcquiringPlugin's loading.
+// Create-only: the env flag decides `enabled` at creation, later edits in the admin UI stay. The central instance only, as a byproduct of AcquiringPlugin's loading.
 @Injectable()
 export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -43,12 +43,7 @@ export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
         const repo = this.connection.getRepository(ctx, PaymentMethod);
         const existing = await repo.findOne({ where: { code: OFFLINE_TERMS_METHOD_CODE } });
         const enabled = process.env.OFFLINE_TERMS_ENABLED !== 'false';
-        if (existing) {
-            if (existing.enabled !== enabled) {
-                await this.paymentMethodService.update(ctx, { id: existing.id, enabled });
-            }
-            return;
-        }
+        if (existing) return;
         if (!enabled) return;
 
         const defaultChannel = await this.channelService.getDefaultChannel();

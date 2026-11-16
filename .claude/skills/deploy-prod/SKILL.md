@@ -64,6 +64,7 @@ Rules:
   backfill, index builds on big tables, anything holding long locks), and let `migrate` finish before starting
   them. Workers write the same tables (jobs, Kafka-driven imports), so running them mid-migration risks lock waits
   and half-applied data. Light additive migrations do not need this.
+- `migrate` also adds missing default-role rights (additive, removes nothing; `docs/access-control.md`, "Bootstrap only creates").
 - Migrations are forward-only; production runs `synchronize: false`. A migration that cannot be undone by
   redeploying the old image needs the database backup as its rollback.
 

@@ -175,7 +175,7 @@ access scope (#320 discussion, 2026-11-08). On 2026-11-12 the owner also decided
 counterparty sees its balance, turnover, credit limit and overdue figures: `ReadCounterpartyCredit` is granted to
 every default role, and the counterparty scope is the only restriction. The rows are limited to the counterparties the caller sees (`CounterpartyService.visibleErpIdsSql`),
 applied before any client filter, search or counterparty argument. The grant lives in `default-roles.ts`
-(re-provisioned on every start, never by hand in the Admin UI).
+(the initial state of a new environment; an existing role is changed in the Admin UI, and new rights reach it through the additive step below).
 The last order date follows the same rule (#344): `Counterparty.lastOrderAt` and its list filter/sort are the latest placed order over all orders of the counterparty, not limited to the orders the caller may see, and need no permission beyond seeing the counterparty.
 
 `settlementDocumentTypes` returns the document type list (code, label, category) with no counts and no counterparty
@@ -267,9 +267,21 @@ order fields added by mivend plugins are scoped by their own services (`OrderVis
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
 
-## Default roles are re-provisioned on every start
+## Bootstrap only creates (#374)
 
-`RoleProvisioning` rewrites the permissions of every default role (`default-roles.ts`) to the listed set at each server start, so a permission granted to such a role by hand in the Admin UI is lost on the next deploy. A needed permission goes into the role's definition; the category visibility page needs `UpdateCatalog` (general-director, portal-admin).
+`default-roles.ts` is the **initial state**, not the enforced state. At server start `RoleProvisioning` creates a default role (permissions, description, default channel) and its `role_access_scope` row only when missing; an existing role or scope row is never modified, so edits made in the Admin UI (permissions, description, scope config) survive restarts and deploys. A deleted role or row is recreated with the defaults. `roleAccessScopeProvisioningStatus` (health alert) reports only absent scope rows, never an edited config.
+
+**A new right for existing roles** reaches them through `grantMissingDefaultPermissions` (access-control plugin): for every role in `DEFAULT_ROLES` that exists, it adds the listed rights it lacks and removes nothing, idempotent. It runs automatically at the end of `node dist/migration.js run` (the production `migrate` step of every deploy) and by hand with `pnpm --filter server roles:grant-missing` against the target contour's env. Adding a right to `default-roles.ts` is therefore the whole change; removing or renaming a right needs its own migration. After a deploy, grants made in the Admin UI are kept; only rights listed in the code and missing are added back.
+
+**Exceptions to "bootstrap only creates"** (code- or environment-owned values):
+
+| Where | Why it stays code/env-owned |
+|---|---|
+| default channel currency (`DefaultChannelCurrencyBootstrapService`) | follows `defaultCurrencyCode` of the environment; the catalogue is priced in one currency |
+| mivend order status dictionary (`OrderStatusProvisioningService`, `source = 'mivend'`) | the order pipeline depends on its flags and ranks |
+| online payment stub under `NODE_ENV=production` | an enabled stub is disabled, because it accepts any card |
+
+Create-only: roles and scope rows, payment methods (`enabled` from the env only at creation), the freight shipping method (its checker), the order-discount promotion (staff may disable it), the default branch, the cash and pickup methods, discount condition and operation kinds, the legal-name abbreviations seed. The boot reclassifiers (`discount-setup-reclassify`, `retro-bonus-rule-reclassify`) only touch ERP-owned rows still carrying a legacy `inactiveReason`; no admin edit can produce that value, so they cannot undo one.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 

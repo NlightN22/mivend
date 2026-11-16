@@ -19,7 +19,10 @@ describe('OfflineTermsBootstrapService', () => {
     let repo: ReturnType<typeof createMockRepo>;
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
     let channelService: { getDefaultChannel: ReturnType<typeof vi.fn> };
-    let paymentMethodService: { create: ReturnType<typeof vi.fn> };
+    let paymentMethodService: {
+        create: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+    };
     let processContext: { isWorker: boolean };
     let service: OfflineTermsBootstrapService;
 
@@ -29,7 +32,10 @@ describe('OfflineTermsBootstrapService', () => {
         channelService = {
             getDefaultChannel: vi.fn().mockResolvedValue({ id: 1, code: '__default_channel__' }),
         };
-        paymentMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }) };
+        paymentMethodService = {
+            create: vi.fn().mockResolvedValue({ id: 1 }),
+            update: vi.fn(),
+        };
         processContext = { isWorker: false };
         service = new OfflineTermsBootstrapService(
             connection as unknown as TransactionalConnection,
@@ -63,6 +69,14 @@ describe('OfflineTermsBootstrapService', () => {
         await service.onApplicationBootstrap();
 
         expect(paymentMethodService.create).not.toHaveBeenCalled();
+    });
+
+    it('does not flip `enabled` of an existing method to follow the env flag', async () => {
+        vi.stubEnv('OFFLINE_TERMS_ENABLED', 'false');
+        repo.findOne.mockResolvedValue({ id: 1, code: OFFLINE_TERMS_METHOD_CODE, enabled: true });
+        await service.onApplicationBootstrap();
+        expect(paymentMethodService.update).not.toHaveBeenCalled();
+        vi.unstubAllEnvs();
     });
 
     it('swallows a provisioning failure rather than crashing bootstrap', async () => {
