@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { countComparisonView } from '../../count-comparison-view';
+interface RowResult {
+    stream: string;
+    status: string;
+    mirrorCount: number;
+    expectedCount: number;
+    differing: boolean;
+}
 
-const row = (over: Record<string, unknown>) => ({
+const row = (over: Record<string, unknown>): RowResult => ({
     stream: 'price',
     status: 'ok',
     mirrorCount: 10,

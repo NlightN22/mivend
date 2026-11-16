@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { Order, ProductVariant, RequestContext } from '@vendure/core';
 
 import { CustomerPriceCalculationStrategy } from '../../customer-price-calculation.strategy';
+interface BuildResult {
+    strategy: CustomerPriceCalculationStrategy;
+    resolve: Mock<() => Promise<{ customerPrice: number; compareAtPrice: number }>>;
+    preload: Mock<() => Promise<undefined>>;
+}
 
-function build() {
+function build(): BuildResult {
     const resolve = vi.fn(async () => ({ customerPrice: 900, compareAtPrice: 1000 }));
     const preload = vi.fn(async () => undefined);
     const strategy = new CustomerPriceCalculationStrategy();
@@ -14,7 +19,7 @@ function build() {
     return { strategy, resolve, preload };
 }
 
-const variant = (id: number) =>
+const variant = (id: number): ProductVariant =>
     ({ id, listPrice: 5, listPriceIncludesTax: false }) as unknown as ProductVariant;
 const orderOf = (id: number, lines: number): Order =>
     ({ id, lines: Array.from({ length: lines }, (_, i) => ({ id: i })) }) as unknown as Order;

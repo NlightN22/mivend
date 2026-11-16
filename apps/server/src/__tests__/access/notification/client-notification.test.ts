@@ -11,7 +11,11 @@ const LIST = `query($s: String!) { notifications(options: { search: $s, take: 10
 const READ = `mutation($id: ID!) { markNotificationRead(id: $id) { id } }`;
 
 const marker = `client-popup-${Date.now()}`;
-const input = (who: string) => ({ kind: 'error', title: '', message: `${marker} ${who}` });
+const input = (who: string): { kind: string; title: string; message: string } => ({
+    kind: 'error',
+    title: '',
+    message: `${marker} ${who}`,
+});
 
 interface Listed {
     notifications: { totalItems: number; items: Array<{ id: string; message: string }> };

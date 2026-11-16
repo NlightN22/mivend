@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, inject, it } from 'vitest';
 
 import { DENIED, admin, customerToken, seed, staffToken } from '../harness/actors';
-import { gql } from '../harness/graphql';
+import { gql, GqlResult } from '../harness/graphql';
 import {
     CHANGE_JOURNAL_READERS,
     COUNTERPARTIES,
@@ -86,7 +86,7 @@ const ACTING = { 'x-acting-session': '1' };
 
 // Renames the customer and back; returns the journal entry of the rename.
 async function renameCustomer(token: string, headers: Record<string, string>): Promise<Entry> {
-    const call = <T>(query: string, variables?: Record<string, unknown>) =>
+    const call = <T>(query: string, variables?: Record<string, unknown>): Promise<GqlResult<T>> =>
         gql<T>(inject('accessBaseUrl'), 'shop-api', query, variables, token, headers);
     const me = await call<{ activeCustomer: { id: string; firstName: string } }>(
         `query { activeCustomer { id firstName } }`,
@@ -94,7 +94,7 @@ async function renameCustomer(token: string, headers: Record<string, string>): P
     expect(me.errors).toEqual([]);
     const { id, firstName: before } = me.data!.activeCustomer;
     const after = `${before}-x`;
-    const rename = (f: string) =>
+    const rename = (f: string): Promise<GqlResult<unknown>> =>
         call(`mutation($f: String!) { updateCustomer(input: { firstName: $f }) { id } }`, { f });
     expect((await rename(after)).errors).toEqual([]);
     try {

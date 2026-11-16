@@ -14,6 +14,7 @@ import {
     type Account,
     type Stack,
 } from './second-step-stack';
+import { GqlResult } from '../harness/graphql';
 
 // With TWO_FACTOR_REQUIRED=true no route may yield a session from the password alone, nor from a wrong code.
 const LOGIN = `mutation($u: String!, $p: String!) { login(username: $u, password: $p) {
@@ -51,15 +52,26 @@ afterAll(async () => {
 
 type Doc = { __typename: string; authenticationError?: string };
 
-async function passwordLogin(account: Account, doc: string, password = PASSWORD) {
+async function passwordLogin(
+    account: Account,
+    doc: string,
+    password = PASSWORD,
+): Promise<{ token: string | null; outcome: Doc | undefined }> {
     const result = await stack.call<{ login?: Doc; authenticate?: Doc }>(account.api, doc, {
         u: account.username,
         p: password,
     });
     return { token: result.token, outcome: result.data?.login ?? result.data?.authenticate };
 }
+type SignInStepResult = Promise<{
+    __typename: string;
+    stage?: string;
+    challenge?: string;
+    failure?: string;
+    token: string | null;
+}>;
 
-async function signInStep(account: Account) {
+async function signInStep(account: Account): SignInStepResult {
     const result = await stack.call<{
         startTwoFactorSignIn: {
             __typename: string;
@@ -71,19 +83,29 @@ async function signInStep(account: Account) {
     return { token: result.token, ...result.data!.startTwoFactorSignIn };
 }
 
-async function secondStep(account: Account, challenge: string, code: string) {
+async function secondStep(
+    account: Account,
+    challenge: string,
+    code: string,
+): Promise<{ token: string | null; outcome: Doc | undefined }> {
     const result = await stack.call<{ authenticate: Doc }>(account.api, SECOND, {
         c: challenge,
         k: code,
     });
     return { token: result.token, outcome: result.data?.authenticate };
 }
+type StartEnrolmentResult = Promise<{
+    __typename?: string | undefined;
+    secret?: string;
+    failure?: string;
+    errors: string[];
+}>;
 
 async function startEnrolment(
     account: Account,
     args: Record<string, string | null>,
     token?: string,
-) {
+): StartEnrolmentResult {
     const result = await stack.call<{
         startTwoFactorEnrolment: { __typename: string; secret?: string; failure?: string };
     }>(account.api, ENROL, args, token);
@@ -225,7 +247,13 @@ describe.each(['admin', 'customer'] as const)('%s account', kind => {
     });
 
     it('recovers a lost device only with the emailed link and the password', async () => {
-        const request = async (challenge: string) =>
+        type RequestResult = Promise<{
+            __typename: string;
+            maskedEmailAddress?: string;
+            failure?: string;
+        }>;
+
+        const request = async (challenge: string): RequestResult =>
             (
                 await stack.call<{
                     requestTwoFactorRecovery: {
@@ -260,7 +288,18 @@ describe.each(['admin', 'customer'] as const)('%s account', kind => {
         expect((await request(challenge!)).__typename).toBe('TwoFactorRecoveryRequested');
         await idle(3_000);
         expect(await mails()).toBe(before + 1);
-        const complete = (password: string, token = link) =>
+        type CompleteResult = Promise<
+            GqlResult<{
+                completeTwoFactorRecovery: {
+                    __typename: string;
+                    stage?: string;
+                    challenge?: string;
+                    failure?: string;
+                };
+            }>
+        >;
+
+        const complete = (password: string, token = link): CompleteResult =>
             stack.call<{
                 completeTwoFactorRecovery: {
                     __typename: string;

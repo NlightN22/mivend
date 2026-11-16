@@ -49,7 +49,11 @@ afterAll(async () => {
     await removeAccounts(accounts.created);
 });
 
-async function attempt(account: Account, username: string, password: string) {
+async function attempt(
+    account: Account,
+    username: string,
+    password: string,
+): Promise<{ __typename: string } | undefined> {
     const result = await stack.call<{ login: { __typename: string } }>(account.api, LOGIN, {
         u: username,
         p: password,

@@ -1,9 +1,13 @@
 import type { Client } from 'pg';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { withBootstrapLock } from '../../bootstrap-lock';
+interface FakeClientResult {
+    client: Client;
+    query: Mock<() => Promise<{ rows: { locked: boolean }[] }>>;
+}
 
-function fakeClient(...attempts: boolean[]) {
+function fakeClient(...attempts: boolean[]): FakeClientResult {
     const query = vi.fn(async () => ({ rows: [{ locked: attempts.shift() ?? true }] }));
     const client = {
         connect: vi.fn(),
