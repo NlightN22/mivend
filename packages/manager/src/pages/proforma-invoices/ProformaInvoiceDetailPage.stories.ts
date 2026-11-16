@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import ProformaInvoiceDetailPage from './ProformaInvoiceDetailPage.vue';
+import type { ProformaCard } from '../../api/proformaInvoiceCard';
 
 const meta: Meta<typeof ProformaInvoiceDetailPage> = {
     title: 'Pages/ProformaInvoices/ProformaInvoiceDetailPage',
@@ -37,7 +38,7 @@ const v2Lines = [
     ...v1Lines.slice(1),
 ];
 
-const card = (over: Record<string, unknown>) => ({
+const card = (over: Record<string, unknown>): ProformaCard => ({
     id: '2',
     number: '1000001-01-2',
     version: 2,
