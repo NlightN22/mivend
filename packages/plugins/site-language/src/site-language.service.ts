@@ -53,7 +53,9 @@ export class SiteLanguageService implements OnApplicationBootstrap, OnApplicatio
 
     private async refresh(): Promise<void> {
         const settings = await this.globalSettings.getSettings(RequestContext.empty());
-        siteLanguageSnapshot.value = asSiteLanguage(settings.customFields.defaultLanguage);
+        const stored = asSiteLanguage(settings.customFields.defaultLanguage);
+        const available: string[] = settings.availableLanguages ?? [];
+        siteLanguageSnapshot.value = stored && available.includes(stored) ? stored : undefined;
         this.loadedAt = Date.now();
     }
 }

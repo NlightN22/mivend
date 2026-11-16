@@ -76,11 +76,16 @@ describe('siteDefaultLanguage public query', () => {
 });
 
 describe('SiteLanguageService cache', () => {
-    function build(language: unknown): {
+    function build(
+        language: unknown,
+        availableLanguages: string[] = ['en', 'ru'],
+    ): {
         service: SiteLanguageService;
         read: ReturnType<typeof vi.fn>;
     } {
-        const read = vi.fn().mockResolvedValue({ customFields: { defaultLanguage: language } });
+        const read = vi
+            .fn()
+            .mockResolvedValue({ customFields: { defaultLanguage: language }, availableLanguages });
         const service = new SiteLanguageService({ getSettings: read } as never, {} as never);
         return { service, read };
     }
@@ -94,6 +99,11 @@ describe('SiteLanguageService cache', () => {
 
     it('ignores a stored value that is not a supported language', async () => {
         const { service } = build('de');
+        expect(await service.getDefault()).toBeUndefined();
+    });
+
+    it('ignores a stored value whose language was removed from Available Languages', async () => {
+        const { service } = build('ru', ['en']);
         expect(await service.getDefault()).toBeUndefined();
     });
 });
