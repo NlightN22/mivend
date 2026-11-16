@@ -56,6 +56,7 @@ export function BranchesPage({ route }: { route: AnyRoute }) {
                     isDefault: {
                         header: 'Default',
                         enableSorting: false,
+                        enableColumnFilter: false,
                         cell: ({ row }) =>
                             row.original.isDefault ? (
                                 <Badge variant="secondary">Default</Badge>
