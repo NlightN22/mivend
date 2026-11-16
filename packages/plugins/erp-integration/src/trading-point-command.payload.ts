@@ -3,6 +3,9 @@ import type { TradingPoint } from '@mivend/plugin-counterparty';
 // Wire values of the ERP's contact kinds, the same ones the inbound contact parser reads.
 const PHONE_KIND = 'Телефон';
 const EMAIL_KIND = 'АдресЭлектроннойПочты';
+// Contact-information kinds of the ERP dictionary that trading points already use; a contact person's name is not a kind.
+const PHONE_KIND_NAME = 'Телефон для оповещения торговой точки';
+const EMAIL_KIND_NAME = 'Адрес электронной почты';
 const ERP_ID_FOR_CUSTOMER_POINT = /^cust_/;
 
 // Proto-JSON of TradingPointCommand (camelCase names, int64 as a decimal string, the record inside the
@@ -19,7 +22,7 @@ export function toTradingPointCommandPayload(
             ? [
                   {
                       type: PHONE_KIND,
-                      kindName: c.name,
+                      kindName: PHONE_KIND_NAME,
                       isPrimary: c.isPrimary,
                       presentation: c.phone,
                   },
@@ -29,7 +32,7 @@ export function toTradingPointCommandPayload(
             ? [
                   {
                       type: EMAIL_KIND,
-                      kindName: c.name,
+                      kindName: EMAIL_KIND_NAME,
                       isPrimary: c.isPrimary,
                       presentation: c.email,
                   },

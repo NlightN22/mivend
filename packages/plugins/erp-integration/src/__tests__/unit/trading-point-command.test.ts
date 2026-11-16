@@ -66,6 +66,18 @@ describe('trading point command payload', () => {
         ]);
     });
 
+    it('sends a dictionary contact kind, never the contact person name', () => {
+        const payload = toTradingPointCommandPayload(basePoint, 'erp-cp-1', 'ev-1', new Date(0));
+        const infos = (payload.tradingPointSnapshot as { contactInfos: { kindName: string }[] })
+            .contactInfos;
+
+        expect(infos.map(c => c.kindName)).toEqual([
+            'Телефон для оповещения торговой точки',
+            'Адрес электронной почты',
+        ]);
+        expect(JSON.stringify(infos)).not.toContain('Ivan');
+    });
+
     it('leaves erp_id unset for a customer-added point and flags a hidden one', () => {
         const point = { ...basePoint, erpId: 'cust_abc', customerStatus: 'hidden' } as TradingPoint;
         const envelope = fromBinary(
