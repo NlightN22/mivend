@@ -62,9 +62,13 @@ export class CounterpartyPortalRestoreService {
             `UPDATE customer SET "deletedAt" = NULL WHERE id = $1`,
             [login.customerId],
         );
-        await ctxQuery(this.connection, ctx, `UPDATE "user" SET "deletedAt" = NULL WHERE id = $1`, [
-            login.userId,
-        ]);
+        // The old sign-in history goes with the old password, so the portal state is invited again.
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `UPDATE "user" SET "deletedAt" = NULL, "lastLogin" = NULL WHERE id = $1`,
+            [login.userId],
+        );
         // The old password is dropped: the contact sets a new one from the mail.
         await ctxQuery(
             this.connection,

@@ -12,6 +12,7 @@ import {
 
 import { CounterpartyPortalAccessService } from '../../counterparty-portal-access.service';
 import { CounterpartyPortalRestoreService } from '../../counterparty-portal-restore.service';
+import { loadPortalStates } from '../../counterparty-portal-state.sql';
 import { Counterparty } from '../../entities/counterparty.entity';
 
 const { schema, extra } = testSchemaOptions('portal_access_restore');
@@ -23,6 +24,7 @@ const counterparty = {
 };
 let contactEmail: string;
 let dataSource: DataSource;
+let connection: TransactionalConnection;
 let service: CounterpartyPortalAccessService;
 let created: string[];
 let tokenSetFor: number[];
@@ -40,13 +42,13 @@ beforeAll(async () => {
     await dataSource.query(`CREATE TABLE customer (id serial PRIMARY KEY,
         "customFieldsCounterpartyid" varchar, "userId" int, "emailAddress" varchar, "deletedAt" timestamp)`);
     await dataSource.query(`CREATE TABLE "user" (id serial PRIMARY KEY, identifier varchar,
-        verified boolean DEFAULT false, "deletedAt" timestamp)`);
+        verified boolean DEFAULT false, "lastLogin" timestamp, "deletedAt" timestamp)`);
     await dataSource.query(`CREATE TABLE authentication_method (id serial PRIMARY KEY, "userId" int,
         type varchar, "passwordHash" varchar DEFAULT '', "passwordResetToken" varchar)`);
     await dataSource.query(`CREATE TABLE counterparty (id int PRIMARY KEY, "erpId" varchar,
         "shortName" varchar, inn varchar, "isActive" boolean)`);
     const base = createTestConnection(dataSource);
-    const connection = {
+    connection = {
         withTransaction: base.withTransaction.bind(base),
         getRepository: (ctx: RequestContext, entity: unknown) =>
             entity === Counterparty
@@ -154,6 +156,18 @@ describe('portal access restore (real Postgres, #375)', () => {
         expect(method).toEqual({ passwordHash: '', passwordResetToken: null });
         expect(tokenSetFor).toHaveLength(1);
         expect(published.filter(e => e instanceof AccountRegistrationEvent)).toHaveLength(1);
+    });
+
+    it('a restored login that had signed in is invited again, not active', async () => {
+        await activateAndRevoke();
+        await dataSource.query(`UPDATE "user" SET "lastLogin" = now(), verified = true`);
+
+        await service.activate(ctx, counterparty.id);
+
+        const [user] = await dataSource.query(`SELECT "lastLogin" FROM "user"`);
+        expect(user.lastLogin).toBeNull();
+        const states = await loadPortalStates(connection, ctx, [counterparty.id]);
+        expect(states.get(counterparty.id)).toBe('invited');
     });
 
     it('matches the contact e-mail without regard to case', async () => {
