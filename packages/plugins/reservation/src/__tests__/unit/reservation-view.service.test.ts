@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { loadLineFlags } from '../../reservation-line-flags';
@@ -42,8 +42,12 @@ describe('loadLineFlags', () => {
 
 describe('ReservationViewService.holders', () => {
     const ctx = {} as RequestContext;
+    interface CreateResult {
+        service: ReservationViewService;
+        query: Mock<() => Promise<{ orderId: string }[]>>;
+    }
 
-    function create(pages: Array<Array<{ orderId: string }>>, visible: Set<string>) {
+    function create(pages: Array<Array<{ orderId: string }>>, visible: Set<string>): CreateResult {
         const query = vi.fn(async () => pages.shift() ?? []);
         const connection = { getRepository: () => ({ query }) };
         const visibility = {
@@ -64,8 +68,17 @@ describe('ReservationViewService.holders', () => {
             query,
         };
     }
+    interface RowResult {
+        orderId: string;
+        orderCode: string;
+        source: string;
+        quantity: number;
+        until: null;
+        counterpartyName: null;
+        managerName: string;
+    }
 
-    const row = (orderId: string) => ({
+    const row = (orderId: string): RowResult => ({
         orderId,
         orderCode: `C-${orderId}`,
         source: 'LOCAL',

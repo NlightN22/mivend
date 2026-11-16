@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderLineEditGuard } from '../../order-line-edit.guard';
@@ -22,8 +22,86 @@ interface Setup {
     notAllocated?: boolean;
     locations?: string;
 }
+interface BuildResult {
+    order: {
+        id: string;
+        state: string;
+        active: boolean;
+        customerId: string;
+        lines: {
+            productVariantId: string;
+            productVariant: { sku: string };
+            customFields: { organizationId: number };
+            id: string;
+            quantity: number;
+        }[];
+        customFields: { erpStatus: string | null; erpOrderId: string | null; isExternal: boolean };
+    };
+    service: OrderLineEditService;
+    guard: OrderLineEditGuard;
+    statuses: { dictionary: () => Promise<{ get: () => null }> };
+    stock: {
+        createAllocationsForOrderLines: Mock<() => Promise<never[]>>;
+        createReleasesForOrderLines: Mock<() => Promise<never[]>>;
+    };
+    released: Mock<() => Promise<number>>;
+    skipPending: Mock<() => Promise<boolean>>;
+    editHook: Mock<() => Promise<undefined>>;
+    orderChecks: { run: Mock<() => Promise<undefined>> };
+    orderService: {
+        findOne: () => Promise<{
+            id: string;
+            state: string;
+            active: boolean;
+            customerId: string;
+            lines: {
+                productVariantId: string;
+                productVariant: { sku: string };
+                customFields: { organizationId: number };
+                id: string;
+                quantity: number;
+            }[];
+            customFields: {
+                erpStatus: string | null;
+                erpOrderId: string | null;
+                isExternal: boolean;
+            };
+        }>;
+        applyPriceAdjustments: Mock<
+            () => Promise<{
+                id: string;
+                state: string;
+                active: boolean;
+                customerId: string;
+                lines: {
+                    productVariantId: string;
+                    productVariant: { sku: string };
+                    customFields: { organizationId: number };
+                    id: string;
+                    quantity: number;
+                }[];
+                customFields: {
+                    erpStatus: string | null;
+                    erpOrderId: string | null;
+                    isExternal: boolean;
+                };
+            }>
+        >;
+    };
+    history: { createHistoryEntryForOrder: Mock<() => Promise<undefined>> };
+    eventBus: { publish: Mock };
+    saved: unknown[];
+    removed: unknown[];
+    lines: {
+        productVariantId: string;
+        productVariant: { sku: string };
+        customFields: { organizationId: number };
+        id: string;
+        quantity: number;
+    }[];
+}
 
-function build(setup: Setup = {}) {
+function build(setup: Setup = {}): BuildResult {
     const lines = (setup.lines ?? [{ id: '1', quantity: 10 }]).map(l => ({
         ...l,
         productVariantId: 'v' + l.id,
@@ -44,9 +122,20 @@ function build(setup: Setup = {}) {
     };
     const saved: unknown[] = [];
     const removed: unknown[] = [];
-    const repo = (entity: { name: string }) => ({
+    const repo = (entity: {
+        name: string;
+    }): {
+        createQueryBuilder: () => Record<string, () => unknown>;
+        query: (
+            sql: string,
+            params: unknown[],
+        ) => Promise<{ type: string; total: string; locations: string }[] | undefined>;
+        count: () => Promise<number>;
+        save: (rows: unknown) => Promise<unknown>;
+        remove: (row: unknown) => Promise<void>;
+    } => ({
         createQueryBuilder: () => {
-            const qb = {
+            const qb: Record<string, () => unknown> = {
                 setLock: () => qb,
                 where: () => qb,
                 select: () => qb,

@@ -25,7 +25,16 @@ function loadedOrder(customFields: Record<string, unknown>): Order {
 
 const ctx = {} as RequestContext;
 const counterparty = { id: 5, mainContractId: 'main' };
-const contract = (erpId: string, over: Record<string, unknown> = {}) => ({
+interface ContractResult {
+    erpId: string;
+    name: string;
+    counterpartyId: string;
+    organizationId: string;
+    paymentKind: null;
+    isActive: boolean;
+}
+
+const contract = (erpId: string, over: Record<string, unknown> = {}): ContractResult => ({
     erpId,
     name: erpId,
     counterpartyId: '5',

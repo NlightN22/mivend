@@ -159,13 +159,22 @@ describe('OrderCancellationService.cancel (real Postgres)', () => {
 });
 
 describe('OrderCancelResultService.apply (real Postgres)', () => {
-    async function requestedOrder(f: ReturnType<typeof buildCancellationFixture>) {
+    async function requestedOrder(
+        f: ReturnType<typeof buildCancellationFixture>,
+    ): Promise<{ id: string; uuid: string }> {
         f.port.submission = 'sent';
         const order = await seedCancellableOrder(h, { erpOrderId: 'erp-1' });
         await f.service.cancel(mockCtx, order.id, 'customer-request');
         return order;
     }
-    const answer = (uuid: string, status: 'cancelled' | 'rejected') => ({
+    interface AnswerResult {
+        orderUuid: string;
+        status: 'cancelled' | 'rejected';
+        rejectionReasonCode: string | null;
+        rejectionReasonText: string | null;
+    }
+
+    const answer = (uuid: string, status: 'cancelled' | 'rejected'): AnswerResult => ({
         orderUuid: uuid,
         status,
         rejectionReasonCode: status === 'rejected' ? 'IN_PROGRESS' : null,

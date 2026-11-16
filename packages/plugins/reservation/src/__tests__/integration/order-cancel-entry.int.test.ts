@@ -15,7 +15,9 @@ const h = useReserveOrderHarness('order_cancel_entry');
 
 // Real resolvers, entry service, cancellation service and Postgres; the customer lookup and the
 // visibility scope (branch-1 only) are the boundaries faked.
-async function build() {
+type BuildResult = Promise<{ shop: ShopCancelOrderResolver; admin: AdminCancelOrderResolver }>;
+
+async function build(): BuildResult {
     await h.dataSource
         .getRepository(TestCustomer)
         .save([{ id: 'customer-1' }, { id: 'customer-2' }]);

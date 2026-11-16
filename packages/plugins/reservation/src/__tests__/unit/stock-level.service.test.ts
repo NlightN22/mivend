@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type {
     CustomerService,
     GlobalSettingsService,
@@ -10,6 +10,13 @@ import type { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import type { ReservationAvailabilityService } from '../../reservation-availability.service';
 import { StockLevelService } from '../../stock-level.service';
+interface BuildResult {
+    service: StockLevelService;
+    batch: Mock<() => Promise<Map<string, number>>>;
+    ctx: RequestContext;
+    query: Mock<() => Promise<{ id: string; ratio: number }[]>>;
+    resolveEffective: Mock<() => Promise<{ packagesOnly: boolean }>>;
+}
 
 function build(options: {
     activeUserId?: string;
@@ -20,7 +27,7 @@ function build(options: {
     ratios?: Record<string, number>;
     packagesOnly?: boolean;
     warehouses?: Array<{ branchId: string | null; erpId: string; includedInBranchAtp: boolean }>;
-}) {
+}): BuildResult {
     const batch = vi.fn(
         async () => new Map(Object.entries(options.atp ?? {})) as Map<string, number>,
     );

@@ -11,6 +11,7 @@ import { OrderCancellationService } from '../../order-cancellation.service';
 import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync.service';
 import { TestOrder, TestPayment, TestReservation } from './reserve-order.harness';
 import type { ReserveOrderHarness } from './reserve-order.harness';
+import { EntityManager } from 'typeorm';
 
 const statuses = { dictionary: async () => testOrderStatusDictionary() } as never;
 
@@ -65,7 +66,7 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
         published: [] as unknown[],
     } as CancellationFixture;
 
-    const manager = (ctx: RequestContext) =>
+    const manager = (ctx: RequestContext): EntityManager =>
         (ctx as unknown as { __manager: import('typeorm').EntityManager }).__manager;
     const orderService = {
         cancelOrder: async (ctx: RequestContext, input: { orderId: string }) => {

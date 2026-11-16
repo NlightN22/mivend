@@ -1,11 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ReservationExtensionLimitService } from '../../reservation-extension-limit.service';
 
 const ctx = {} as RequestContext;
+interface SetupResult {
+    service: ReservationExtensionLimitService;
+    find: Mock<() => Promise<{ roleCode: string; maxExtraDays: number }[]>>;
+}
 
-function setup(rows: Array<{ roleCode: string; maxExtraDays: number }>) {
+function setup(rows: Array<{ roleCode: string; maxExtraDays: number }>): SetupResult {
     const find = vi.fn(async () => rows);
     const connection = { getRepository: () => ({ find }) };
     return {

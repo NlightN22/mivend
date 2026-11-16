@@ -1,10 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ErpOrderReserveService } from '../../erp-order-reserve.service';
 
 describe('ErpOrderReserveService.record', () => {
-    function create() {
+    interface CreateResult {
+        service: ErpOrderReserveService;
+        query: Mock<() => Promise<undefined>>;
+        connection: {
+            getRepository: () => { query: Mock<() => Promise<undefined>> };
+            withTransaction: Mock<
+                (ctx: unknown, fn: (c: unknown) => Promise<void>) => Promise<void>
+            >;
+        };
+    }
+
+    function create(): CreateResult {
         const query = vi.fn(async () => undefined);
         const connection = {
             getRepository: () => ({ query }),

@@ -95,8 +95,23 @@ beforeAll(async () => {
 beforeEach(async () => {
     await h.dataSource.query('TRUNCATE TABLE stock_movement');
 });
+type AllocatedLineResult = Promise<{
+    order: { customerId: string; customFields: { branchId: string } } & TestOrder;
+    line: {
+        orderId: string;
+        productVariantId: string;
+        productVariantEntityId: string;
+        quantity: number;
+    } & TestOrderLine;
+    other: {
+        orderId: string;
+        productVariantId: string;
+        productVariantEntityId: string;
+        quantity: number;
+    } & TestOrderLine;
+}>;
 
-async function allocatedLine(quantity: number, allocate: boolean) {
+async function allocatedLine(quantity: number, allocate: boolean): AllocatedLineResult {
     await h.dataSource.getRepository(TestStockLevel).save({
         productVariantId: 'variant-s1',
         stockLocationId: h.location.id,

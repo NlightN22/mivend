@@ -88,7 +88,13 @@ describe('ReservationPaymentService', () => {
     });
 
     describe('autoReserveOnPlacement', () => {
-        const placed = () => ({
+        interface PlacedResult {
+            id: string;
+            customFields: { reservationState: string };
+            payments: never[];
+        }
+
+        const placed = (): PlacedResult => ({
             id: 'order-1',
             customFields: { reservationState: 'NOT_REQUIRED' },
             payments: [],
@@ -156,7 +162,13 @@ describe('ReservationPaymentService', () => {
 
         // Scenario 6 of #199: the switch is read per placement event, never retroactively.
         it('reads the switch at placement: only orders placed while it is on are auto-reserved', async () => {
-            const placedAs = (id: string) => ({ ...placed(), id });
+            interface PlacedAsResult {
+                id: string;
+                customFields: { reservationState: string };
+                payments: never[];
+            }
+
+            const placedAs = (id: string): PlacedAsResult => ({ ...placed(), id });
 
             autoReserveOnPlacement = false;
             await service.handleOrderPlaced(ctx, placedAs('order-off') as never);

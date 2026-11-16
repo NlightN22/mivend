@@ -1,9 +1,30 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderLineAddService } from '../../order-line-add.service';
 
 const ctx = {} as unknown as RequestContext;
+interface BuildResult {
+    service: OrderLineAddService;
+    edits: {
+        edit: Mock<
+            (
+                c: unknown,
+                _id: unknown,
+                _kind: string,
+                change: (c: unknown, o: unknown) => Promise<string | null>,
+            ) => Promise<undefined>
+        >;
+        persist: Mock<() => Promise<undefined>>;
+    };
+    modifier: {
+        getOrCreateOrderLine: Mock<
+            () => Promise<{ id: string; quantity: number; customFields?: object }>
+        >;
+    };
+    stockSync: { addQuantity: Mock<() => Promise<undefined>> };
+    line: { id: string; quantity: number; customFields?: object };
+}
 
 function build(
     opts: {
@@ -13,7 +34,7 @@ function build(
         priced?: boolean;
         existing?: number;
     } = {},
-) {
+): BuildResult {
     const order = {
         id: '5',
         customerId: 'c1',

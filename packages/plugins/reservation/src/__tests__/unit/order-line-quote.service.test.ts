@@ -1,9 +1,17 @@
 import { EntityNotFoundError, UserInputError } from '@vendure/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 
 import { OrderLineQuoteService } from '../../order-line-quote.service';
 
 const ctx = {} as never;
+interface BuildResult {
+    service: OrderLineQuoteService;
+    availability: {
+        findBranchStockLocationIds: Mock<() => Promise<string[]>>;
+        getFreeByLocation: Mock<() => Promise<Map<string, Map<string, number>>>>;
+    };
+    quoteFn: ReturnType<typeof vi.fn>;
+}
 
 function build(opts: {
     visible?: boolean;
@@ -14,7 +22,7 @@ function build(opts: {
     organization?: number | null;
     unit?: string | null;
     free?: Map<string, Map<string, number>>;
-}) {
+}): BuildResult {
     const variants = opts.variants ?? [
         {
             id: '7',

@@ -5,8 +5,20 @@ import { TestReservation, mockCtx, useReserveOrderHarness } from './reserve-orde
 import { buildCancellationFixture, seedCancellableOrder } from './order-cancellation.harness';
 
 const h = useReserveOrderHarness('reserve_handover');
+interface ChangedResult {
+    orderUuid: string;
+    orderEntityId: string;
+    status: string;
+    reservedLines: { productVariantId: string; reservedQuantity: number }[];
+    contractId: null;
+    derivedStatus: never;
+}
 
-function changed(orderUuid: string, reservedQuantity: number, warehouseStarted = false) {
+function changed(
+    orderUuid: string,
+    reservedQuantity: number,
+    warehouseStarted = false,
+): ChangedResult {
     return {
         orderUuid,
         orderEntityId: 'erp-order-1',

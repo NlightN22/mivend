@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { ForbiddenError, PERMISSIONS_METADATA_KEY } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
@@ -9,8 +9,13 @@ import { OrderChecksResolver } from '../../order-checks.resolver';
 import { OrderChecksService } from '../../order-checks.service';
 
 const ctx = {} as RequestContext;
+interface ServiceResult {
+    run: Mock<() => Promise<{ findings: never[]; strongestConsequence: string | null }>>;
+    record: Mock<() => Promise<undefined>>;
+    orders: OrderChecksService;
+}
 
-function service(strongest: string | null | Error) {
+function service(strongest: string | null | Error): ServiceResult {
     const run = vi.fn(async () => {
         if (strongest instanceof Error) throw strongest;
         return { findings: [], strongestConsequence: strongest };

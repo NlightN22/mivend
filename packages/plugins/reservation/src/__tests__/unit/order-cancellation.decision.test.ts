@@ -7,10 +7,10 @@ import {
     erpStageFacts,
     isOrderCancellable,
 } from '../../order-cancellation.decision';
-import type { CancelFacts } from '../../order-cancellation.decision';
+import type { CancelFacts, ErpStageFacts } from '../../order-cancellation.decision';
 
 const dictionary = testOrderStatusDictionary();
-const stage = (code: string) => erpStageFacts(dictionary, code);
+const stage = (code: string): ErpStageFacts | null => erpStageFacts(dictionary, code);
 
 const base: CancelFacts = {
     orderState: 'PaymentAuthorized',

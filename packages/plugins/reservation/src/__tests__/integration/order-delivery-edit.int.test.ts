@@ -38,8 +38,14 @@ function deliveryService(published: string[] = []): OrderDeliveryEditService {
         { run: async () => undefined } as never,
     );
 }
+type PlacedOrderWithReservationResult = Promise<{
+    order: { customerId: string; customFields: { branchId: string } } & TestOrder;
+    shippingLine: { orderId: string; shippingMethodId: string } & TestShippingLine;
+    freight: { code: string } & TestShippingMethod;
+    pickup: { code: string } & TestShippingMethod;
+}>;
 
-async function placedOrderWithReservation() {
+async function placedOrderWithReservation(): PlacedOrderWithReservationResult {
     const [freight, pickup] = await h.dataSource
         .getRepository(TestShippingMethod)
         .save([{ code: 'freight-delivery' }, { code: 'pickup' }]);

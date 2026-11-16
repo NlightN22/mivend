@@ -213,7 +213,11 @@ export function useReserveOrderHarness(
         await h.dataSource.initialize();
 
         // The mivend#85 export gate reads Product.customFields.externalId: every product gets a fake one.
-        const rawQuery = (manager: EntityManager | undefined, sql: string, params?: unknown[]) =>
+        const rawQuery = (
+            manager: EntityManager | undefined,
+            sql: string,
+            params?: unknown[],
+        ): Promise<unknown> =>
             sql.includes('FROM product p')
                 ? Promise.resolve([{ id: 'product-x', externalId: 'ext-product-x' }])
                 : sql.includes('"customFieldsUuid"')

@@ -141,8 +141,19 @@ describe('order cancel vs competing writers (real Postgres)', () => {
         expect(outcome).toEqual({ kind: 'cancel-requested' });
         expect((await loadOrder(h, order.id)).state).not.toBe('Cancelled');
     });
+    interface ChangedResult {
+        orderUuid: string;
+        orderEntityId: string;
+        status: string;
+        reservedLines: never[];
+        contractId: null;
+        derivedStatus: 'PICKING' | 'SHIPPING' | 'CANCELLED';
+    }
 
-    const changed = (orderUuid: string, derivedStatus: 'PICKING' | 'SHIPPING' | 'CANCELLED') => ({
+    const changed = (
+        orderUuid: string,
+        derivedStatus: 'PICKING' | 'SHIPPING' | 'CANCELLED',
+    ): ChangedResult => ({
         orderUuid,
         orderEntityId: 'erp-order-1',
         status: '',

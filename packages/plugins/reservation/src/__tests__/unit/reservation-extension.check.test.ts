@@ -1,13 +1,28 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
-import { CheckRegistry, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
+import {
+    CheckRegistry,
+    Finding,
+    MANAGER_STAGES,
+    MANAGER_SUBJECT_TYPE,
+} from '@mivend/plugin-checks';
 
 import { ReservationExtensionCheck } from '../../reservation-extension.check';
 import type { ReservationExtensionLimitService } from '../../reservation-extension-limit.service';
 
 const ctx = {} as RequestContext;
+interface RunResult {
+    findings: Promise<Finding[]>;
+    getLimit: Mock<
+        (_ctx: RequestContext, codes: string[]) => Promise<{ maxExtraDays: number } | null>
+    >;
+}
 
-function run(limit: { maxExtraDays: number } | null, days: number, roleCodes: string[] = ['r']) {
+function run(
+    limit: { maxExtraDays: number } | null,
+    days: number,
+    roleCodes: string[] = ['r'],
+): RunResult {
     const getMaxLimit = vi.fn(async (_ctx: RequestContext, codes: string[]) =>
         codes.length > 0 ? limit : null,
     );

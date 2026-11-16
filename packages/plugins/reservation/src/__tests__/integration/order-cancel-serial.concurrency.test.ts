@@ -18,10 +18,11 @@ import {
     mockCtx,
     useReserveOrderHarness,
 } from './reserve-order.harness';
+import { EntityManager } from 'typeorm';
 
 const h = useReserveOrderHarness('order_cancel_serial_concurrency');
 
-const manager = (ctx: RequestContext) =>
+const manager = (ctx: RequestContext): EntityManager =>
     (ctx as unknown as { __manager: import('typeorm').EntityManager }).__manager;
 
 // Mirrors core's cancelOrder: release the allocation of a not-yet-cancelled order, then transition,

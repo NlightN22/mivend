@@ -4,8 +4,12 @@ import type { RequestContext } from '@vendure/core';
 import { OrderLineShortfallService } from '../../order-line-shortfall.service';
 
 const ctx = {} as RequestContext;
+interface BuildResult {
+    service: OrderLineShortfallService;
+    find: { shortfallWhere: unknown };
+}
 
-function build(visible: boolean) {
+function build(visible: boolean): BuildResult {
     const qb = {
         alias: 'o',
         andWhere: () => qb,

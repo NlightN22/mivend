@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mock, vi } from 'vitest';
 import { EntityNotFoundError, Permission } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
@@ -34,7 +34,16 @@ describe('toOrderCancelResult', () => {
 });
 
 describe('OrderCancelEntryService', () => {
-    const build = (order: { id: string } | null, customer: { id: string } | undefined) => {
+    interface BuildResult {
+        service: OrderCancelEntryService;
+        findOne: Mock<() => Promise<{ id: string } | null>>;
+        cancel: Mock<() => Promise<CancelOutcome>>;
+    }
+
+    const build = (
+        order: { id: string } | null,
+        customer: { id: string } | undefined,
+    ): BuildResult => {
         const findOne = vi.fn(async () => order);
         const cancel = vi.fn(
             async (): Promise<CancelOutcome> => ({
