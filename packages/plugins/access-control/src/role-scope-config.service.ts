@@ -69,16 +69,16 @@ export class RoleScopeConfigService {
         return row ? parseAccessScopeConfig(row) : null;
     }
 
-    // Reports only absent rows (deleted, or a role added to DEFAULT_ROLES); an edited config is intentional.
+    // Reports absent or unparseable rows only; a config edited to other valid values is intentional.
     async getProvisioningStatus(
         ctx: RequestContext,
     ): Promise<Array<{ roleCode: string; missing: boolean }>> {
         const rows = await findBounded(this.connection.getRepository(ctx, RoleAccessScope));
-        const presentCodes = new Set(rows.map(row => row.roleCode));
-        return DEFAULT_ROLES.map(definition => ({
-            roleCode: definition.code,
-            missing: !presentCodes.has(definition.code),
-        }));
+        const rowByCode = new Map(rows.map(row => [row.roleCode, row]));
+        return DEFAULT_ROLES.map(definition => {
+            const row = rowByCode.get(definition.code);
+            return { roleCode: definition.code, missing: !row || !parseAccessScopeConfig(row) };
+        });
     }
 
     async createScopeIfMissing(

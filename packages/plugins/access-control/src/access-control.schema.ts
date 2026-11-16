@@ -71,7 +71,7 @@ export const adminApiSchema: DocumentNode = gql`
     }
 
     # Issue #134 Part 2 — defense in depth for RoleProvisioningService's bootstrap-time
-    # self-provisioning. "missing" means the scope row is absent; an edited config is not flagged.
+    # self-provisioning. "missing" means the scope row is absent or unparseable; an edited config is not flagged.
     type RoleAccessScopeProvisioningStatusItem {
         roleCode: String!
         missing: Boolean!

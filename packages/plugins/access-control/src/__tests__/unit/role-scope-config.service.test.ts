@@ -128,6 +128,12 @@ describe('RoleScopeConfigService', () => {
             expect(status.find(item => item.roleCode === 'manager')?.missing).toBe(false);
         });
 
+        it('flags a role whose stored config JSON does not parse', async () => {
+            repo.find.mockResolvedValue([scopeRow('manager', '{not json')]);
+            const status = await service.getProvisioningStatus(ctx);
+            expect(status.find(item => item.roleCode === 'manager')?.missing).toBe(true);
+        });
+
         it('flags only the roles whose row is absent', async () => {
             repo.find.mockResolvedValue([scopeRow('manager', {})]);
             const status = await service.getProvisioningStatus(ctx);
