@@ -14,14 +14,23 @@ import type { VersioningService } from '@mivend/plugin-versioning';
 
 import {
     CounterpartyManagerAssignmentService,
+    ManagerChangedSinceError,
     MAX_BULK_REASSIGN,
 } from '../../counterparty-manager-assignment.service';
 import type { CounterpartyService } from '../../counterparty.service';
 
+vi.mock('shared', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared')>()),
+    withAggregateLock: vi.fn(
+        async (_c: unknown, ctx: unknown, _k: string, work: (c: unknown) => Promise<unknown>) =>
+            work(ctx),
+    ),
+}));
+
 const mockRepo = { findOne: vi.fn(), save: vi.fn(), update: vi.fn() };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
 const mockCounterpartyService = { visibleFilteredQb: vi.fn() };
-const mockTeamAdministratorService = { findInBranch: vi.fn() };
+const mockTeamAdministratorService = { findInBranch: vi.fn(), findLive: vi.fn() };
 
 // Mirrors findInBranch: the target is found only when its branch equals the caller's.
 function targetInBranch(branchId: string | null): void {
@@ -163,5 +172,92 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
             service.reassignManagerByFilter(mockCtx, {}, 'admin-9', MAX_BULK_REASSIGN + 1),
         ).rejects.toThrow(UserInputError);
         expect(mockCounterpartyService.visibleFilteredQb).not.toHaveBeenCalled();
+    });
+});
+
+describe('CounterpartyManagerAssignmentService.reassignOne (#366)', () => {
+    const assignOne = { assignCounterparties: vi.fn() };
+    let service: CounterpartyManagerAssignmentService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        service = new CounterpartyManagerAssignmentService(
+            mockConnection as unknown as TransactionalConnection,
+            mockCounterpartyService as unknown as CounterpartyService,
+            accessScopeService,
+            mockTeamAdministratorService as unknown as TeamAdministratorService,
+            mockVersioningService as unknown as VersioningService,
+            assignOne as never,
+            mockVersions as never,
+        );
+    });
+
+    it('changes the manager, bumps the version, records it and recomputes the branch', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-1' }));
+        resolveScope.mockResolvedValue({ kind: 'all' });
+        mockTeamAdministratorService.findLive.mockResolvedValue({ id: 'admin-9' });
+
+        expect(await service.reassignOne(mockCtx, 'cp-1', 'admin-9')).toEqual({
+            previous: 'admin-1',
+            changed: true,
+        });
+        expect(mockRepo.update).toHaveBeenCalledWith('cp-1', { assignedManagerId: 'admin-9' });
+        expect(mockVersions.bump).toHaveBeenCalledWith(mockCtx, 'cp-1');
+        expect(assignOne.assignCounterparties).toHaveBeenCalledWith(mockCtx, { ids: ['cp-1'] });
+    });
+
+    it('writes nothing when the manager is already the target', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-9' }));
+        resolveScope.mockResolvedValue({ kind: 'all' });
+        mockTeamAdministratorService.findLive.mockResolvedValue({ id: 'admin-9' });
+
+        expect(await service.reassignOne(mockCtx, 'cp-1', 'admin-9')).toMatchObject({
+            changed: false,
+        });
+        expect(mockRepo.update).not.toHaveBeenCalled();
+        expect(mockVersions.bump).not.toHaveBeenCalled();
+    });
+
+    it('refuses a deactivated or unknown target even for an all-scope caller', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty());
+        resolveScope.mockResolvedValue({ kind: 'all' });
+        mockTeamAdministratorService.findLive.mockResolvedValue(undefined);
+
+        await expect(service.reassignOne(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a target outside the branch of a department head', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty());
+        resolveScope.mockResolvedValue(departmentScope);
+        targetInBranch('branch-b');
+
+        await expect(service.reassignOne(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a client of another branch before looking at the target', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ branchId: 'branch-b' }));
+        resolveScope.mockResolvedValue(departmentScope);
+
+        await expect(service.reassignOne(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(mockTeamAdministratorService.findInBranch).not.toHaveBeenCalled();
+    });
+
+    it('stops when the manager is no longer the one an undo expects', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-5' }));
+        resolveScope.mockResolvedValue({ kind: 'all' });
+        mockTeamAdministratorService.findLive.mockResolvedValue({ id: 'admin-1' });
+
+        await expect(service.reassignOne(mockCtx, 'cp-1', 'admin-1', 'admin-9')).rejects.toThrow(
+            ManagerChangedSinceError,
+        );
+        expect(mockRepo.update).not.toHaveBeenCalled();
     });
 });

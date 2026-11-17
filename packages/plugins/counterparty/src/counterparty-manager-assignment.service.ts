@@ -14,6 +14,7 @@ import {
     TeamAdministratorService,
 } from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
+import { withAggregateLock } from 'shared';
 
 import { CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyService } from './counterparty.service';
@@ -23,6 +24,8 @@ import { loggerCtx } from './types';
 
 // Keeps one bulk call's row locks, history writes and bind parameters bounded (#136).
 export const MAX_BULK_REASSIGN = 2000;
+
+export class ManagerChangedSinceError extends Error {}
 
 // Changes Counterparty.assignedManagerId — CustomPermission.ReassignCounterpartyManager holders only.
 @Injectable()
@@ -60,6 +63,64 @@ export class CounterpartyManagerAssignmentService {
         await this.recordReassignment(ctx, saved.id, previousManagerId, saved.assignedManagerId);
         await this.branchAssignment.assignCounterparties(ctx, { ids: [String(saved.id)] });
         return saved;
+    }
+
+    // One record of a bulk batch: re-validates scope and target under the row lock, returns the old manager.
+    async reassignOne(
+        ctx: RequestContext,
+        counterpartyId: ID,
+        administratorId: ID,
+        expectedCurrent?: string,
+    ): Promise<{ previous: string | null; changed: boolean }> {
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `counterparty-manager:${counterpartyId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, Counterparty);
+                const counterparty = await repo.findOne({ where: { id: counterpartyId } });
+                if (!counterparty) {
+                    throw new UserInputError(`Counterparty not found: id=${counterpartyId}`);
+                }
+                const scope = await this.accessScopeService.resolveCounterpartyScope(txCtx);
+                this.accessScopeService.assertCounterpartyWritableInScope(scope, counterparty);
+                if (!(await this.isTargetAssignable(txCtx, scope, administratorId))) {
+                    throw new ForbiddenError();
+                }
+                const previous = counterparty.assignedManagerId;
+                if (expectedCurrent && previous !== expectedCurrent) {
+                    throw new ManagerChangedSinceError();
+                }
+                const next = String(administratorId);
+                if (previous === next) return { previous, changed: false };
+                await repo.update(counterparty.id, { assignedManagerId: next });
+                await this.versions.bump(txCtx, counterparty.id);
+                await this.recordReassignment(txCtx, counterparty.id, previous, next);
+                await this.branchAssignment.assignCounterparties(txCtx, {
+                    ids: [String(counterparty.id)],
+                });
+                return { previous, changed: true };
+            },
+        );
+    }
+
+    // A live administrator; for a department head also one of their own branch (never a deactivated one).
+    async isTargetAssignable(
+        ctx: RequestContext,
+        scope: AccessScope,
+        administratorId: ID,
+    ): Promise<boolean> {
+        if (scope.kind === 'department') {
+            if (scope.branchId == null) return false;
+            return (
+                (await this.teamAdministratorService.findInBranch(
+                    ctx,
+                    scope.branchId,
+                    administratorId,
+                )) !== undefined
+            );
+        }
+        return (await this.teamAdministratorService.findLive(ctx, administratorId)) !== undefined;
     }
 
     // Filter-shaped bulk variant; expectedCount rejects the call if the match set drifted.

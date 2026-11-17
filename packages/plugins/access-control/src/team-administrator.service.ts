@@ -57,6 +57,13 @@ export class TeamAdministratorService {
         return customFields?.branchId ?? undefined;
     }
 
+    async findLive(ctx: RequestContext, administratorId: ID): Promise<Administrator | undefined> {
+        const admin = await this.connection
+            .getRepository(ctx, Administrator)
+            .findOne({ where: { id: administratorId, deletedAt: IsNull() } });
+        return admin ?? undefined;
+    }
+
     // Undefined unless the target is a live administrator in the caller's branch.
     async findInBranch(
         ctx: RequestContext,

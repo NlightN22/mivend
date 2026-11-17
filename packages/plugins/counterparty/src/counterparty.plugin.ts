@@ -94,6 +94,7 @@ import { AdministratorLinkedListener } from './administrator-linked.listener';
 import { AdministratorContactsListener } from './administrator-contacts.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
 import { CounterpartyPortalRestoreService } from './counterparty-portal-restore.service';
+import { CounterpartyManagerReassignExecutor } from './counterparty-manager-reassign.executor';
 import { CounterpartyPasswordResetExecutor } from './counterparty-password-reset.executor';
 import { CounterpartyPortalAccessExecutor } from './counterparty-portal-access.executor';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
@@ -210,6 +211,7 @@ const adminResolvers = [
         ...visibilityBundle.providers,
         CounterpartyPortalAccessExecutor,
         CounterpartyPasswordResetExecutor,
+        CounterpartyManagerReassignExecutor,
         CounterpartyService,
         CounterpartyErpDriftService,
         CounterpartyErpMirrorService,
