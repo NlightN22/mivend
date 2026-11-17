@@ -46,6 +46,18 @@ describe('release grant entries', () => {
     });
 });
 
+describe('manager card grant', () => {
+    it('delivers ReadManagerCard to manager, department-head and general-director once', () => {
+        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === 'ReadManagerCard');
+        expect(roles.map(g => g.roleCode).sort()).toEqual([
+            'department-head',
+            'general-director',
+            'manager',
+        ]);
+        expect(new Set(roles.map(g => g.release))).toEqual(new Set(['1.1.19']));
+    });
+});
+
 describe('planRoleGrants', () => {
     it('first run: adds an unrecorded right the role lacks, keeps hand-granted ones, records it', () => {
         const plan = planRoleGrants(
