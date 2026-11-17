@@ -31,6 +31,10 @@ const catalogStore = useCatalogStore();
 
 const { searchQuery, filters, bindFacetGroups, toggleFacetValue, clearFacetValues, resetFilters } =
     useCatalogFilterUrl();
+const searchHint = computed(() => {
+    if (!searchQuery.value) return undefined;
+    return t(authStore.isLoggedIn ? 'productList.memberSearchHint' : 'productList.guestSearchHint');
+});
 const activeCollectionSlug = computed(() => (route.query.collection as string) || undefined);
 
 const {
@@ -193,7 +197,7 @@ onMounted(() => {
                     :total-items="totalItems"
                     :has-code-matches="hasCodeMatches"
                     :code-matches-truncated="codeMatchesTruncated"
-                    :guest-search-hint="!authStore.isLoggedIn && !!searchQuery"
+                    :search-hint="searchHint"
                     :loading="loading"
                     :load-error="loadError"
                     :error-title="loadErrorInfo.title"

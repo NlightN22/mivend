@@ -65,6 +65,8 @@ export default {
         packOf: 'pack of {n}',
         sortTextOnly: 'Sorting applies to the text results only',
         codeMatchesTruncated: 'Too many code matches; refine the query to see them all',
+        memberSearchHint:
+            'Search covers articles, part numbers, manufacturer codes, cross references and code beginnings',
         guestSearchHint:
             'Sign in to also search by manufacturer codes, cross references and code beginnings',
         match: {
