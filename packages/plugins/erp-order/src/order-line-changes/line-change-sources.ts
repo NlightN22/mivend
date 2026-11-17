@@ -11,6 +11,27 @@ import type {
 import { isReflectedInAccounting } from './line-change-accounting';
 import type { LineChangeSource } from './line-change.types';
 
+// Order.totalWithTax includes VAT, so an amount the ERP states without VAT gets the line's VAT added.
+function withVat(includesVat: boolean | null, amount: number, vat: number | null): number {
+    return includesVat === false ? amount + (vat ?? 0) : amount;
+}
+
+function correctionMoney(
+    doc: SalesCorrectionErp,
+    line: SalesCorrectionGoodsLineErp | SalesCorrectionServiceLineErp,
+): number {
+    const now = withVat(doc.amountIncludesVat, line.amountMinor, line.vatAmountMinor);
+    const before =
+        line.amountBeforeCorrectionMinor === null
+            ? now
+            : withVat(
+                  doc.amountIncludesVat,
+                  line.amountBeforeCorrectionMinor,
+                  line.vatAmountBeforeCorrectionMinor,
+              );
+    return now - before;
+}
+
 // Quantity change of a correction line in base units; shippedDelta is the fallback when the old value is not sent.
 export function correctionGoodsSource(
     doc: SalesCorrectionErp,
@@ -24,7 +45,7 @@ export function correctionGoodsSource(
         kind: 'realization-correction',
         productErpId: line.productId ?? '',
         quantity: delta * (line.unitCoefficient || 1),
-        amountMinor: line.amountMinor - (line.amountBeforeCorrectionMinor ?? line.amountMinor),
+        amountMinor: correctionMoney(doc, line),
         reflectedInAccounting: isReflectedInAccounting(doc.accounting),
         documentNumber: doc.number,
         documentDate: doc.date,
@@ -39,7 +60,7 @@ export function correctionServiceSource(
         kind: 'realization-correction',
         productErpId: '',
         quantity: 0,
-        amountMinor: line.amountMinor - (line.amountBeforeCorrectionMinor ?? line.amountMinor),
+        amountMinor: correctionMoney(doc, line),
         reflectedInAccounting: isReflectedInAccounting(doc.accounting),
         documentNumber: doc.number,
         documentDate: doc.date,
@@ -55,7 +76,7 @@ export function claimGoodsSource(
         kind: 'return',
         productErpId: line.productId ?? '',
         quantity: -line.quantity * (line.unitCoefficient || 1),
-        amountMinor: -line.amountMinor,
+        amountMinor: -withVat(doc.amountIncludesVat, line.amountMinor, line.vatAmountMinor),
         reflectedInAccounting: false,
         documentNumber: doc.number,
         documentDate: doc.date,
@@ -70,7 +91,7 @@ export function claimServiceSource(
         kind: 'return',
         productErpId: '',
         quantity: 0,
-        amountMinor: -line.amountMinor,
+        amountMinor: -withVat(doc.amountIncludesVat, line.amountMinor, line.vatAmountMinor),
         reflectedInAccounting: false,
         documentNumber: doc.number,
         documentDate: doc.date,

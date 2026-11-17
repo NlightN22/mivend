@@ -60,11 +60,11 @@ describe('buildOrderChanges', () => {
         const change = result.lines[0];
         expect(change.events.map(e => [e.quantity, e.remainder])).toEqual([
             [-1, 9],
-            [-2, 7],
+            [-1, 8],
         ]);
-        expect([change.ordered, change.actual]).toEqual([10, 7]);
+        expect([change.ordered, change.actual]).toEqual([10, 8]);
         expect(change.events[0].subtitleKey).toBe('decreased');
-        expect(result.amountDeltaMinor).toBe(-1000);
+        expect(result.amountDeltaMinor).toBe(-750);
     });
 
     it('shows a customer only accounting-reflected documents and no money', () => {
@@ -111,6 +111,28 @@ describe('buildOrderChanges', () => {
 });
 
 describe('sources', () => {
+    it('adds the line VAT to amounts the ERP states without VAT', () => {
+        const net = { number: '7', date: null, amountIncludesVat: false, accounting: {} };
+        const claim = claimGoodsSource(
+            net as never,
+            { productId: 'p', quantity: 1, amountMinor: 100, vatAmountMinor: 20 } as never,
+        );
+        expect(claim.amountMinor).toBe(-120);
+        const fix = correctionGoodsSource(
+            net as never,
+            {
+                productId: 'p',
+                quantity: 1,
+                quantityBeforeCorrection: 2,
+                amountMinor: 100,
+                vatAmountMinor: 20,
+                amountBeforeCorrectionMinor: 200,
+                vatAmountBeforeCorrectionMinor: 40,
+            } as never,
+        );
+        expect(fix.amountMinor).toBe(-120);
+    });
+
     const doc = { number: '7', date: null, accounting: { reflectedInAccounting: true } };
 
     it('derives a correction delta from the old quantity, else from shippedDelta, in base units', () => {
@@ -166,8 +188,18 @@ describe('order line change resolvers', () => {
         const resolver = new AdminOrderLineChangesResolver({ forOrder } as never);
         expect(await resolver.soldTotalWithTax(ctx, order)).toBe(7500);
         forOrder.mockResolvedValue({ lines: [], amountDeltaMinor: -99999 });
-        expect(await resolver.soldTotalWithTax(ctx, order)).toBe(0);
+        expect(await resolver.soldTotalWithTax(ctx, { ...order })).toBe(0);
         forOrder.mockResolvedValue({ lines: [], amountDeltaMinor: 0 });
-        expect(await resolver.soldTotalWithTax(ctx, order)).toBeNull();
+        expect(await resolver.soldTotalWithTax(ctx, { ...order })).toBeNull();
+    });
+
+    it('computes once per order when both admin fields are read', async () => {
+        const forOrder = vi.fn().mockResolvedValue(changes);
+        const resolver = new AdminOrderLineChangesResolver({ forOrder } as never);
+        await resolver.lineChanges(ctx, order);
+        await resolver.soldTotalWithTax(ctx, order);
+        expect(forOrder).toHaveBeenCalledTimes(1);
+        await resolver.lineChanges(ctx, { id: 2, totalWithTax: 1 } as never);
+        expect(forOrder).toHaveBeenCalledTimes(2);
     });
 });

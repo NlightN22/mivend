@@ -201,7 +201,13 @@ also need `ReadOrder`. The Shop field returns only quantity events from document
 `reflectedInAccounting = true`; a document with no flags (customer claims have no accounting attribute) or with the flag
 false or absent is never shown, which is stricter than the settlement list (hidden only when explicitly false). It carries no
 money and the customer's order total is never reduced. Staff get every event and `soldTotalWithTax` (order total plus the
-money effect of the corrections and worked-out claims, floored at zero; null when the order has no changes). Pinned by
+money effect of the corrections and worked-out claims, floored at zero; null when the order has no changes). A worked-out claim and the sales correction it produces
+are one return: per order and product the claim quantity is consumed by the corrections' decreases (oldest claim first), only
+the uncovered part of a claim is shown, with its money pro rata, so quantity, remainder and the sold total never count it
+twice (service-line money has no product and is not netted). ERP amounts are read as VAT-inclusive like `Order.totalWithTax`;
+when the document says `amountIncludesVat = false` the line's VAT amount is added (a correction uses the VAT before the
+change for its old amount). Both Admin fields are detail-only (about 5 queries per order, computed once per request), so
+never select them in an order list. Pinned by
 `access/order/order-line-changes.test.ts` and `order-line-changes.int.test.ts` (customer audience, foreign order, tombstones).
 
 ### ERP powers of attorney (#333)
