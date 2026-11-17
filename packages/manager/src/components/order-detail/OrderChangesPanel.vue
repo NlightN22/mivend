@@ -5,7 +5,9 @@ import { MvLineChangeCell, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import type { LineChangeViewEvent } from '@mivend/ui-kit';
 import type { OrderDetail } from '../../api/orderDetail';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+const known = (group: string, key: string): string =>
+    te(`orderDetail.changes.${group}.${key}`) ? key : 'other';
 const props = defineProps<{ order: OrderDetail }>();
 
 interface ChangedLine {
@@ -28,8 +30,8 @@ const rows = computed<ChangedLine[]>(() =>
             actual: change?.actual ?? line.quantity,
             events: (change?.events ?? []).map(e => ({
                 kind: e.kind,
-                title: t(`orderDetail.changes.kinds.${e.titleKey}`),
-                subtitle: t(`orderDetail.changes.subtitles.${e.subtitleKey}`),
+                title: t(`orderDetail.changes.kinds.${known('kinds', e.titleKey)}`),
+                subtitle: t(`orderDetail.changes.subtitles.${known('subtitles', e.subtitleKey)}`),
                 quantity: e.quantity,
                 remainder: e.remainder,
                 reference: t('orderDetail.changes.document', { number: e.documentNumber }),

@@ -13,7 +13,9 @@ export function useLineChanges(order: () => OrderDetail): {
     hasChanges: ComputedRef<boolean>;
     changeOf: (lineId: string) => LineChangeView | undefined;
 } {
-    const { t } = useI18n();
+    const { t, te } = useI18n();
+    const known = (group: string, key: string): string =>
+        te(`orders.detail.changes.${group}.${key}`) ? key : 'other';
     const byLine = computed(() => {
         const map = new Map<string, LineChangeView>();
         for (const change of order().lineChanges) {
@@ -22,8 +24,10 @@ export function useLineChanges(order: () => OrderDetail): {
                 actual: change.actual,
                 events: change.events.map(e => ({
                     kind: e.kind,
-                    title: t(`orders.detail.changes.kinds.${e.titleKey}`),
-                    subtitle: t(`orders.detail.changes.subtitles.${e.subtitleKey}`),
+                    title: t(`orders.detail.changes.kinds.${known('kinds', e.titleKey)}`),
+                    subtitle: t(
+                        `orders.detail.changes.subtitles.${known('subtitles', e.subtitleKey)}`,
+                    ),
                     quantity: e.quantity,
                     remainder: e.remainder,
                     reference: t('orders.detail.changes.document', { number: e.documentNumber }),

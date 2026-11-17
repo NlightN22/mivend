@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vue-i18n', () => ({
     useI18n: () => ({
         t: (key: string, params?: { number?: string }) => `${key}${params?.number ?? ''}`,
+        te: (key: string) => !key.endsWith('.mystery'),
     }),
 }));
 
@@ -48,5 +49,32 @@ describe('useLineChanges', () => {
             () => ({ lineChanges: [] }) as unknown as OrderDetail,
         );
         expect(hasChanges.value).toBe(false);
+    });
+
+    it('falls back to a neutral title and subtitle for an unknown kind', () => {
+        const unknown = {
+            lineChanges: [
+                {
+                    orderLineId: '7',
+                    ordered: 1,
+                    actual: 1,
+                    events: [
+                        {
+                            kind: 'mystery',
+                            titleKey: 'mystery',
+                            subtitleKey: 'mystery',
+                            quantity: 0,
+                            remainder: 1,
+                            documentNumber: '1',
+                        },
+                    ],
+                },
+            ],
+        } as unknown as OrderDetail;
+        const event = useLineChanges(() => unknown).changeOf('7')?.events[0];
+        expect([event?.title, event?.subtitle]).toEqual([
+            'orders.detail.changes.kinds.other',
+            'orders.detail.changes.subtitles.other',
+        ]);
     });
 });

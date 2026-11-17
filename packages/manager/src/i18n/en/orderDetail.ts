@@ -123,12 +123,14 @@ export default {
             realization: 'Realization',
             'realization-correction': 'Realization correction',
             return: 'Return',
+            other: 'Other',
         },
         subtitles: {
             shipped: 'Shipped from the warehouse',
             decreased: 'Quantity decreased',
             increased: 'Quantity increased',
             fromCustomer: 'Return from the customer',
+            other: 'Quantity changed',
         },
     },
     history: {

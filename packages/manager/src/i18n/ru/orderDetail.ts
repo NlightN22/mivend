@@ -125,12 +125,14 @@ const orderDetail: typeof en = {
             realization: 'Реализация',
             'realization-correction': 'Корректировка реализации',
             return: 'Возврат',
+            other: 'Другое',
         },
         subtitles: {
             shipped: 'Отгружено со склада',
             decreased: 'Количество уменьшено',
             increased: 'Количество увеличено',
             fromCustomer: 'Возврат от покупателя',
+            other: 'Изменение количества',
         },
     },
     history: {
