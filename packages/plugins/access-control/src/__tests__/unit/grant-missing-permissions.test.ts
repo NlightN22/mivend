@@ -6,6 +6,7 @@ import {
     SCOPE_KEYS_ADDED_BY_RELEASE,
 } from '../../default-role-release-grants';
 import { planRoleGrants } from '../../grant-missing-permissions';
+import { DEFAULT_ROLE_PERMISSIONS_AT_1_1_18 } from './default-role-permissions-baseline';
 
 const perm = [{ release: 'r1', roleCode: 'manager', permission: 'NewRight' }];
 
@@ -22,12 +23,26 @@ describe('release grant entries', () => {
     });
 
     it('deliver the 1.1.8 power-of-attorney right to its four roles', () => {
-        expect(PERMISSIONS_ADDED_BY_RELEASE.map(g => g.roleCode).sort()).toEqual([
+        const grants = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.release === '1.1.8');
+        expect(grants.map(g => g.roleCode).sort()).toEqual([
             'department-head',
             'general-director',
             'portal-admin',
             'security-officer',
         ]);
+    });
+
+    it('list every right a default role gained after the baseline, so existing roles receive it', () => {
+        const listed = new Set(
+            PERMISSIONS_ADDED_BY_RELEASE.map(g => `${g.roleCode}:${g.permission}`),
+        );
+        const missing = DEFAULT_ROLES.flatMap(role =>
+            role.permissions
+                .filter(p => !DEFAULT_ROLE_PERMISSIONS_AT_1_1_18[role.code]?.includes(p))
+                .filter(p => !listed.has(`${role.code}:${p}`))
+                .map(p => `${role.code}:${p}`),
+        );
+        expect(missing).toEqual([]);
     });
 });
 

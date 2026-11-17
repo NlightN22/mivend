@@ -20,6 +20,7 @@ export const PERMISSIONS_ADDED_BY_RELEASE: ReleasePermissionGrant[] = [
             permission: 'ReadDeletedContractPowerOfAttorney',
         }),
     ),
+    { release: '1.1.19', roleCode: 'general-director', permission: 'RemoveCounterpartyManager' },
 ];
 
 export const SCOPE_KEYS_ADDED_BY_RELEASE: ReleaseScopeKeyGrant[] = [];
