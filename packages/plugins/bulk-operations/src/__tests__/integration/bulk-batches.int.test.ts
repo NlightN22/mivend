@@ -221,6 +221,50 @@ describe('partial failure', () => {
     });
 });
 
+describe('undo with per-record data', () => {
+    // Sets writes to a value from the parameters and records the old one so an undo restores each row.
+    function restoringExecutor(): ReturnType<typeof fakeExecutor> {
+        const connection = connectionFor(dataSource);
+        const base = fakeExecutor(connection);
+        const read = async (id: string): Promise<number> =>
+            (await dataSource.getRepository(FakeTarget).findOneByOrFail({ id: Number(id) })).writes;
+        return {
+            ...base,
+            validate: p => ({ writes: p.writes ?? null, restore: p.restore ?? false }),
+            undoPlan: () => ({ type: FAKE_TYPE, parameters: { restore: true } }),
+            async inspect() {
+                return { outcome: 'applied', reasonCode: null, message: null, label: null };
+            },
+            async apply(ctx, id, parameters, input) {
+                const previous = await read(id);
+                const next = parameters.restore ? Number(input?.writes) : Number(parameters.writes);
+                await connection
+                    .getRepository(ctx, 'Channel')
+                    .query('UPDATE fake_target SET writes = $2 WHERE id = $1', [id, next]);
+                return {
+                    outcome: 'applied',
+                    reasonCode: null,
+                    message: null,
+                    label: null,
+                    undoData: { writes: previous },
+                };
+            },
+        };
+    }
+
+    it('gives every record of the undo batch the value its own apply recorded', async () => {
+        await dataSource.query('UPDATE fake_target SET writes = id * 10');
+        const stack = buildStack(connectionFor(dataSource), restoringExecutor());
+        const draft = await stack.batches.preview(actor, FAKE_TYPE, { writes: 99 }, ['1', '2']);
+        await runAndWait(stack, draft.uuid);
+        expect((await targetRow('1'))?.writes).toBe(99);
+        const undo = await stack.batches.undo(actor, draft.uuid);
+        await stack.runner.execute(actor, undo.uuid);
+        expect((await targetRow('1'))?.writes).toBe(10);
+        expect((await targetRow('2'))?.writes).toBe(20);
+    });
+});
+
 describe('undo', () => {
     it('creates one linked batch with its own number, only for the applied records', async () => {
         const stack = buildStack(

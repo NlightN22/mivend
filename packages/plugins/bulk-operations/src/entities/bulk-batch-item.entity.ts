@@ -34,4 +34,12 @@ export class BulkBatchItem extends VendureEntity {
 
     @Column({ type: 'text', nullable: true })
     message!: string | null;
+
+    // Per-record input of this batch; an undo batch gets it from the original record's undoData.
+    @Column({ type: 'jsonb', nullable: true })
+    input!: Record<string, unknown> | null;
+
+    // What apply() recorded so an undo can restore this record; null when nothing is needed.
+    @Column({ type: 'jsonb', nullable: true })
+    undoData!: Record<string, unknown> | null;
 }

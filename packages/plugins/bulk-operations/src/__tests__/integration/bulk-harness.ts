@@ -52,6 +52,8 @@ export class TestItem {
     @Column({ type: 'varchar', nullable: true }) outcome!: string | null;
     @Column({ type: 'varchar', nullable: true }) reasonCode!: string | null;
     @Column({ type: 'text', nullable: true }) message!: string | null;
+    @Column({ type: 'jsonb', nullable: true }) input!: Record<string, unknown> | null;
+    @Column({ type: 'jsonb', nullable: true }) undoData!: Record<string, unknown> | null;
 }
 
 // The "business data" the fake operation changes; an id absent here is unknown to the operation.

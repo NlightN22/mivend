@@ -89,7 +89,7 @@ export class BulkBatchRunner {
         let result: Omit<BulkRecordVerdict, 'outcome'> & { outcome: string };
         try {
             this.registry.assertAllowed(ctx, executor);
-            result = await executor.apply(ctx, item.targetId, batch.parameters);
+            result = await executor.apply(ctx, item.targetId, batch.parameters, item.input);
         } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
             Logger.warn(

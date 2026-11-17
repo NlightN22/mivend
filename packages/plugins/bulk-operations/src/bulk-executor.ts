@@ -9,6 +9,8 @@ export interface BulkRecordVerdict {
     reasonCode: string | null;
     message: string | null;
     label: string | null;
+    // Recorded on an applied record so an undo can restore its own previous state.
+    undoData?: BulkParameters | null;
 }
 
 export interface BulkUndoPlan {
@@ -30,12 +32,14 @@ export interface BulkExecutor {
         ctx: RequestContext,
         targetId: string,
         parameters: BulkParameters,
+        input: BulkParameters | null,
     ): Promise<BulkRecordVerdict>;
     // Re-validates under the row lock, applies, and reports; a thrown error becomes a failed row.
     apply(
         ctx: RequestContext,
         targetId: string,
         parameters: BulkParameters,
+        input: BulkParameters | null,
     ): Promise<BulkRecordVerdict>;
     // The subset of ids the actor may see; the history list shows only these.
     visibleTargets(ctx: RequestContext, targetIds: string[]): Promise<Set<string>>;

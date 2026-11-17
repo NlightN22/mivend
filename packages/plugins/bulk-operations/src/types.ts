@@ -47,6 +47,7 @@ export interface BulkItemRow {
     outcome: BulkItemOutcome | null;
     reasonCode: string | null;
     message: string | null;
+    input: Record<string, unknown> | null;
 }
 
 export function clampTake(take: number | null | undefined, fallback: number): number {

@@ -107,6 +107,7 @@ export interface PreviewItemInput {
     label: string | null;
     previewOutcome: string;
     previewReasonCode: string | null;
+    input?: Record<string, unknown> | null;
 }
 
 // Re-previewing the same draft replaces its verdicts in place; nothing is applied here.
@@ -119,9 +120,9 @@ export async function upsertPreviewItems(
     await ctxQuery(
         db,
         ctx,
-        `INSERT INTO bulk_batch_item ("batchId", "targetId", label, "previewOutcome", "previewReasonCode")
-         SELECT $1, t.target, t.label, t.outcome, t.reason
-         FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS t(target, label, outcome, reason)
+        `INSERT INTO bulk_batch_item ("batchId", "targetId", label, "previewOutcome", "previewReasonCode", input)
+         SELECT $1, t.target, t.label, t.outcome, t.reason, t.input::jsonb
+         FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[]) AS t(target, label, outcome, reason, input)
          ON CONFLICT ("batchId", "targetId") DO UPDATE SET label = EXCLUDED.label,
             "previewOutcome" = EXCLUDED."previewOutcome",
             "previewReasonCode" = EXCLUDED."previewReasonCode", "updatedAt" = now()`,
@@ -131,6 +132,7 @@ export async function upsertPreviewItems(
             items.map(i => i.label),
             items.map(i => i.previewOutcome),
             items.map(i => i.previewReasonCode),
+            items.map(i => (i.input ? JSON.stringify(i.input) : null)),
         ],
     );
 }
@@ -145,7 +147,7 @@ export function pendingItems(
         db,
         ctx,
         `SELECT id, "batchId", "targetId", label, "previewOutcome", "previewReasonCode", outcome,
-            "reasonCode", message FROM bulk_batch_item
+            "reasonCode", message, input FROM bulk_batch_item
          WHERE "batchId" = $1 AND outcome IS NULL ORDER BY id LIMIT $2`,
         [batchId, limit],
     );
@@ -160,14 +162,22 @@ export async function recordOutcome(
         reasonCode: string | null;
         message: string | null;
         label: string | null;
+        undoData?: Record<string, unknown> | null;
     },
 ): Promise<void> {
     await ctxQuery(
         db,
         ctx,
         `UPDATE bulk_batch_item SET outcome = $2, "reasonCode" = $3, message = $4,
-            label = COALESCE($5, label), "updatedAt" = now() WHERE id = $1`,
-        [itemId, result.outcome, result.reasonCode, result.message, result.label],
+            label = COALESCE($5, label), "undoData" = $6::jsonb, "updatedAt" = now() WHERE id = $1`,
+        [
+            itemId,
+            result.outcome,
+            result.reasonCode,
+            result.message,
+            result.label,
+            result.undoData ? JSON.stringify(result.undoData) : null,
+        ],
     );
 }
 

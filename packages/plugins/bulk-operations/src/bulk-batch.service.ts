@@ -62,6 +62,7 @@ export class BulkBatchService {
         rawParameters: BulkParameters,
         ids: string[],
         undoOfBatchId: number | null = null,
+        inputs: Map<string, BulkParameters> = new Map(),
     ): Promise<BulkBatchRow> {
         const executor = this.registry.get(type);
         this.registry.assertAllowed(ctx, executor);
@@ -69,7 +70,7 @@ export class BulkBatchService {
         const targetIds = normaliseSelection(ids);
         const hash = selectionHash(type, parameters, targetIds);
         const actor = await this.actorId(ctx);
-        const verdicts = await this.inspectAll(ctx, executor, targetIds, parameters);
+        const verdicts = await this.inspectAll(ctx, executor, targetIds, parameters, inputs);
 
         return withAggregateLock(
             this.connection,
@@ -141,7 +142,17 @@ export class BulkBatchService {
                 const existing = await findUndoOf(this.connection, txCtx, original.id);
                 if (existing) return existing;
                 const applied = await this.visibleAppliedTargets(txCtx, executor, original.id);
-                return this.preview(txCtx, plan.type, plan.parameters, applied, original.id);
+                const inputs = new Map(
+                    applied.flatMap(a => (a.undoData ? [[a.targetId, a.undoData] as const] : [])),
+                );
+                return this.preview(
+                    txCtx,
+                    plan.type,
+                    plan.parameters,
+                    applied.map(a => a.targetId),
+                    original.id,
+                    inputs,
+                );
             },
         );
         if (undoBatch.createdById !== actor) return undoBatch;
@@ -159,11 +170,11 @@ export class BulkBatchService {
         ctx: RequestContext,
         executor: BulkExecutor,
         batchId: number,
-    ): Promise<string[]> {
-        const rows = await ctxQueryBounded<{ targetId: string }>(
+    ): Promise<Array<{ targetId: string; undoData: BulkParameters | null }>> {
+        const rows = await ctxQueryBounded<{ targetId: string; undoData: BulkParameters | null }>(
             this.connection,
             ctx,
-            `SELECT "targetId" FROM bulk_batch_item WHERE "batchId" = $1 AND outcome = 'applied'`,
+            `SELECT "targetId", "undoData" FROM bulk_batch_item WHERE "batchId" = $1 AND outcome = 'applied'`,
             [batchId],
             MAX_SELECTION,
         );
@@ -171,7 +182,7 @@ export class BulkBatchService {
             ctx,
             rows.map(r => r.targetId),
         );
-        return rows.map(r => r.targetId).filter(id => visible.has(id));
+        return rows.filter(r => visible.has(r.targetId));
     }
 
     private async inspectAll(
@@ -179,11 +190,14 @@ export class BulkBatchService {
         executor: BulkExecutor,
         targetIds: string[],
         parameters: BulkParameters,
+        inputs: Map<string, BulkParameters>,
     ): Promise<PreviewItemInput[]> {
         const items: PreviewItemInput[] = [];
         for (const targetId of targetIds) {
-            const verdict = await executor.inspect(ctx, targetId, parameters);
+            const input = inputs.get(targetId) ?? null;
+            const verdict = await executor.inspect(ctx, targetId, parameters, input);
             items.push({
+                input,
                 targetId,
                 label: verdict.label,
                 previewOutcome: verdict.outcome === 'applied' ? 'apply' : 'skip',
