@@ -2,12 +2,14 @@
 import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvLineChangeCell, MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetail } from './useOrderDetail';
 import { formatAmount } from './orderFormat';
+import { useLineChanges } from './useLineChanges';
 
 const props = defineProps<{ order: OrderDetail }>();
 const { t } = useI18n();
+const { hasChanges, changeOf } = useLineChanges(() => props.order);
 const anyReserved = computed(() => props.order.lines.some(line => line.reserved));
 
 function formatUntil(iso: string): string {
@@ -17,14 +19,29 @@ function formatUntil(iso: string): string {
 
 <template>
     <div class="olt">
-        <h2 class="olt-title">{{ t('orders.detail.items') }}</h2>
+        <div class="olt-head">
+            <h2 class="olt-title">{{ t('orders.detail.items') }}</h2>
+            <MvStatusBadge v-if="hasChanges" variant="warning">{{
+                t('orders.detail.changes.badge')
+            }}</MvStatusBadge>
+        </div>
         <table class="olt-table">
             <thead>
                 <tr>
                     <th>{{ t('orders.detail.sku') }}</th>
                     <th>{{ t('orders.detail.product') }}</th>
                     <th v-if="anyReserved">{{ t('orders.detail.reserve') }}</th>
-                    <th class="olt-num">{{ t('orders.detail.qty') }}</th>
+                    <th class="olt-num">
+                        {{
+                            hasChanges ? t('orders.detail.changes.ordered') : t('orders.detail.qty')
+                        }}
+                    </th>
+                    <th v-if="hasChanges" class="olt-num">
+                        {{ t('orders.detail.changes.actual') }}
+                    </th>
+                    <th v-if="hasChanges" class="olt-num">
+                        {{ t('orders.detail.changes.change') }}
+                    </th>
                     <th class="olt-num">{{ t('orders.detail.price') }}</th>
                     <th class="olt-num">{{ t('orders.detail.total') }}</th>
                 </tr>
@@ -46,6 +63,27 @@ function formatUntil(iso: string): string {
                         </template>
                     </td>
                     <td class="olt-num">{{ line.quantity }}</td>
+                    <td v-if="hasChanges" class="olt-num">
+                        {{ changeOf(line.id)?.actual ?? line.quantity }}
+                    </td>
+                    <td v-if="hasChanges" class="olt-num">
+                        <MvLineChangeCell
+                            v-if="changeOf(line.id)"
+                            :events="changeOf(line.id)!.events"
+                            :ordered="changeOf(line.id)!.ordered"
+                            :actual="changeOf(line.id)!.actual"
+                            :heading="t('orders.detail.changes.heading')"
+                            :product-name="line.productVariant.product.name"
+                            :sku="line.productVariant.sku"
+                            :footer="
+                                t('orders.detail.changes.footer', {
+                                    actual: changeOf(line.id)!.actual,
+                                    ordered: changeOf(line.id)!.ordered,
+                                })
+                            "
+                            :info-label="t('orders.detail.changes.info')"
+                        />
+                    </td>
                     <td class="olt-num">
                         {{ formatAmount(line.discountedUnitPriceWithTax, order.currencyCode) }}
                     </td>
@@ -67,8 +105,14 @@ function formatUntil(iso: string): string {
     border-radius: 20px;
     padding: 18px 20px;
 }
-.olt-title {
+.olt-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0 0 14px;
+}
+.olt-title {
+    margin: 0;
     font-size: 20px;
     font-weight: 950;
     letter-spacing: -0.035em;

@@ -30,6 +30,19 @@ query OrderDetail($id: ID!) {
                 }
             }
         }
+        lineChanges {
+            orderLineId
+            ordered
+            actual
+            events {
+                kind
+                titleKey
+                subtitleKey
+                quantity
+                remainder
+                documentNumber
+            }
+        }
         statusHistory {
             uuid
             status
