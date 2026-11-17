@@ -51,13 +51,8 @@ export class SettlementDocumentService {
                     const result = await this.write(lockedCtx, input);
                     if (result === 'applied') {
                         const touched = [...stored, ...input.entries.map(e => e.counterpartyErpId)];
-                        const earlier = [storedDate, input.date].filter(
-                            (d): d is Date => d != null,
-                        );
-                        const touchedFrom = earlier.length
-                            ? new Date(Math.min(...earlier.map(d => d.getTime())))
-                            : null;
-                        await this.rollup.recompute(lockedCtx, touched, touchedFrom);
+                        const dates = [storedDate, input.date].filter((d): d is Date => d != null);
+                        await this.rollup.recompute(lockedCtx, touched, dates);
                     }
                     return result;
                 });

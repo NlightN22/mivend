@@ -13,13 +13,13 @@ export class SettlementTurnoverRollupService {
     async recompute(
         ctx: RequestContext,
         counterpartyErpIds: string[],
-        touchedFrom: Date | null,
+        touchedDates: Date[],
     ): Promise<void> {
         const ids = [...new Set(counterpartyErpIds)];
-        if (ids.length === 0) return;
+        if (ids.length === 0 || touchedDates.length === 0) return;
         const repo = this.connection.getRepository(ctx, SettlementDocument);
         const zone = processTimeZone();
-        await repo.query(ROLLUP_DELETE_SQL, [ids, zone, touchedFrom]);
-        await repo.query(ROLLUP_INSERT_SQL, [ids, zone]);
+        await repo.query(ROLLUP_DELETE_SQL, [ids, zone, touchedDates]);
+        await repo.query(ROLLUP_INSERT_SQL, [ids, zone, touchedDates]);
     }
 }

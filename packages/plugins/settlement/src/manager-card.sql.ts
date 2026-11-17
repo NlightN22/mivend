@@ -20,7 +20,7 @@ GROUP BY r.currency`;
 // $1 erp ids, $2 12-month start, $3 today, $4 currency codes of the card currency.
 export const LAST_SALE_SQL = `
 SELECT r."counterpartyErpId" AS "erpId",
-    MAX(r.day) FILTER (WHERE r."saleDocuments" > 0) AS "lastSale",
+    (MAX(r.day) FILTER (WHERE r."saleDocuments" > 0))::text AS "lastSale",
     COALESCE(SUM(r."turnoverMinor") FILTER (WHERE r.currency = ANY($4::text[])), 0) AS "turnover12m"
 FROM settlement_turnover_daily r
 WHERE r."counterpartyErpId" = ANY($1::text[]) AND r.day BETWEEN $2::date AND $3::date
@@ -49,6 +49,6 @@ WITH per AS (
     WHERE r."counterpartyErpId" = ANY($1::text[]) AND r.day >= $5::date
     GROUP BY r."counterpartyErpId"
 )
-SELECT MIN(first_day) AS "historyStartsAt",
+SELECT MIN(first_day)::text AS "historyStartsAt",
     ${[counts(0, '$2::date'), counts(1, '$3::date'), counts(2, '$4::date')].join(',')}
 FROM per`;

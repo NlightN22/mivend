@@ -35,8 +35,7 @@ interface Customer {
 }
 
 const num = (v: unknown): number => Number(v ?? 0);
-const dayOf = (v: unknown): string =>
-    v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10);
+const dayOf = (v: unknown): string => String(v).slice(0, 10);
 
 @Injectable()
 export class ManagerCardService {

@@ -137,6 +137,19 @@ describe('settlement turnover rollup', () => {
         ]);
     });
 
+    it('rewrites only the days the applied document touches', async () => {
+        await doc('d1', 'Sale', '2026-11-03T08:00:00Z', 1000);
+        await doc('d2', 'Sale', '2026-11-05T08:00:00Z', 2000);
+        await h.dataSource.query(
+            `UPDATE settlement_turnover_daily SET "turnoverMinor" = 1 WHERE day = '2026-11-03'`,
+        );
+        await doc('d2', 'Sale', '2026-11-05T09:00:00Z', 3000, { version: '2026-11-05T09:00:00Z' });
+        expect(await rows()).toEqual([
+            { day: '2026-11-03', turnover: 1, docs: 1 },
+            { day: '2026-11-05', turnover: 3000, docs: 1 },
+        ]);
+    });
+
     it('stays correct when two documents of one counterparty apply concurrently', async () => {
         await Promise.all(
             Array.from({ length: 6 }, (_, i) => doc(`c${i}`, 'Sale', '2026-11-03T08:00:00Z', 100)),
