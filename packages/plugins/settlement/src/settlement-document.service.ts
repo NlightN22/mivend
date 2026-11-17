@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { getRawManyBounded, withAggregateLock } from 'shared';
 
 import { toMinorUnits } from './amount';
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
@@ -19,6 +19,8 @@ import type { SettlementApplyResult, SettlementDocumentInput } from './types';
 import { shouldApplyDocument } from './version';
 
 export const documentLockKey = (erpId: string): string => `settlement-document:${erpId}`;
+
+const DOCUMENT_COUNTERPARTY_CEILING = 1000;
 
 @Injectable()
 export class SettlementDocumentService {
@@ -69,13 +71,13 @@ export class SettlementDocumentService {
 
     // The document lock is held, so these entries cannot change before the counterparty locks are taken.
     private async storedCounterparties(ctx: RequestContext, erpId: string): Promise<string[]> {
-        const rows: { id: string }[] = await this.connection
+        const qb = this.connection
             .getRepository(ctx, SettlementDocumentEntry)
             .createQueryBuilder('e')
             .innerJoin('e.document', 'd')
             .where('d.erpId = :erpId', { erpId })
-            .select('DISTINCT e.counterpartyErpId', 'id')
-            .getRawMany(); // unbounded-ok: distinct counterparties of one document's entries
+            .select('DISTINCT e.counterpartyErpId', 'id');
+        const rows = await getRawManyBounded<{ id: string }>(qb, DOCUMENT_COUNTERPARTY_CEILING);
         return rows.map(r => r.id);
     }
 

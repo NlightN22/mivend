@@ -33,6 +33,7 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     ErpReconciliationIssue: 'computed reconciliation finding, rewritten by sweeps',
     CheckResult: 'computed check result cache',
     CheckStaleRequest: 'recompute request queue',
+    SettlementTurnoverDaily: 'derived rollup of settlement documents, recomputed on every apply',
     OrderCheckFailure: 'computed check failure, pruned by a sweep',
     Notification: 'user notifications and read flags, high volume',
     StockLevel: 'ERP stock mirror updated by every stock event, high volume',
