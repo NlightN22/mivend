@@ -13,7 +13,11 @@ import {
     DEFAULT_HIDDEN_COLUMNS,
     UNASSIGNED_BRANCH,
 } from '../../components/bulk-operations/activationColumns';
-import { readinessOf, readinessText } from '../../components/bulk-operations/activationReadiness';
+import {
+    readinessBlocker,
+    readinessOf,
+    readinessText,
+} from '../../components/bulk-operations/activationReadiness';
 
 describe('activation table columns', () => {
     const columns = buildActivationColumns([
@@ -144,11 +148,20 @@ describe('readinessText', () => {
         );
     });
 
+    it('explains a blocker and says nothing for a record that can be activated', () => {
+        expect(readinessBlocker('erp-inactive')).toBe(
+            'Cannot be activated: the counterparty is inactive in the ERP',
+        );
+        expect(readinessBlocker('inn-duplicate')).toContain('already has a portal login');
+        expect(readinessBlocker('ready')).toBe('');
+        expect(readinessBlocker('activated')).toBe('');
+    });
+
     it('uses the plain label for the other states', () => {
         expect(readinessText('ready', full)).toBe('Ready to activate');
         expect(readinessText('inn-duplicate', full)).toBe('Duplicate INN');
         expect(readinessText('erp-inactive', { phone: null, officialEmail: null, inn: null })).toBe(
-            'ERP inactive',
+            'Inactive in ERP',
         );
     });
 });

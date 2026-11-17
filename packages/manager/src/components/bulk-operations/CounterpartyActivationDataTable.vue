@@ -18,6 +18,7 @@ import TableViewsMenu from '../TableViewsMenu.vue';
 import { buildActivationColumns, DEFAULT_HIDDEN_COLUMNS } from './activationColumns';
 import {
     READINESS_BADGE_VARIANT,
+    readinessBlocker,
     readinessOf,
     readinessText,
     type Readiness,
@@ -108,6 +109,7 @@ const rows = computed(() =>
                 : t('bulkOperations.activation.no'),
             readiness,
             readinessText: readinessText(readiness, c),
+            readinessBlocker: readinessBlocker(readiness),
         };
     }),
 );
@@ -228,7 +230,10 @@ function applyView(state: TableViewState): void {
             }}</a>
         </template>
         <template #cell-readiness="{ data }">
-            <MvStatusBadge :variant="READINESS_BADGE_VARIANT[(data as Row).readiness]">
+            <MvStatusBadge
+                :variant="READINESS_BADGE_VARIANT[(data as Row).readiness]"
+                :title="(data as Row).readinessBlocker"
+            >
                 {{ (data as Row).readinessText }}
             </MvStatusBadge>
         </template>

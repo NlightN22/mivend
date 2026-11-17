@@ -158,7 +158,7 @@ const bulkOperations: typeof en = {
             manager: 'Менеджер',
             branch: 'Филиал',
             officialEmail: 'Официальный e-mail',
-            readiness: 'Доступ в портал',
+            readiness: 'Активация',
             phone: 'Телефон',
             isActive: 'Активен в ERP',
         },
@@ -169,6 +169,12 @@ const bulkOperations: typeof en = {
             'inn-duplicate': 'Дубликат ИНН',
             'erp-inactive': 'Неактивен в ERP',
             activated: 'Активирован',
+        },
+        blocker: {
+            'missing-data': 'Активация невозможна, пока в ERP не будут внесены недостающие данные',
+            'inn-duplicate':
+                'Активация невозможна: у другого активного контрагента с этим ИНН уже есть вход в портал',
+            'erp-inactive': 'Активация невозможна: контрагент неактивен в ERP',
         },
         missing: {
             phone: 'телефон',

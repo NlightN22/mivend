@@ -35,7 +35,7 @@ async function listCount(page: Page): Promise<number> {
 }
 
 async function activeKpi(page: Page): Promise<number> {
-    const match = /Active clients\s+(\d[\d\s,]*)/.exec(await page.locator('main').innerText());
+    const match = /Active in ERP\s+(\d[\d\s,]*)/.exec(await page.locator('main').innerText());
     return match ? Number(match[1].replace(/\D/g, '')) : -1;
 }
 

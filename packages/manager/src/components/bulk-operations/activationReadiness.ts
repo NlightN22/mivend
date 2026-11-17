@@ -38,6 +38,12 @@ export function missingFields(
     return missing;
 }
 
+// Why an activation is not possible; empty for a record that can be activated or already is.
+export function readinessBlocker(readiness: Readiness): string {
+    const key = `bulkOperations.activation.blocker.${readiness}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : '';
+}
+
 export function readinessText(
     readiness: Readiness,
     c: Pick<ActivationCandidate, 'phone' | 'officialEmail' | 'inn'>,

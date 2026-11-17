@@ -4,7 +4,7 @@ export default {
         titleManager: 'My Clients',
         breadcrumb: 'Customers',
         kpi: {
-            activeClients: 'Active clients',
+            activeClients: 'Active in ERP',
             creditUsed: 'Credit balance used',
             creditUsedCaption: '{count} client above 80% | {count} clients above 80%',
             expiringDiscounts: 'Discounts expiring soon',
@@ -32,7 +32,7 @@ export default {
         activeDiscounts: '{count} active',
         views: {
             all: 'All',
-            none: 'No access',
+            none: 'Not activated',
             invited: 'Invited',
             verified: 'Verified',
             active: 'Active',
@@ -53,10 +53,10 @@ export default {
             isActive: 'Status in ERP',
         },
         unassigned: 'Unassigned',
-        status: { active: 'Active', inactive: 'Inactive' },
+        status: { active: 'Active in ERP', inactive: 'Inactive in ERP' },
         innStatus: { ok: 'OK', missing: 'Missing', duplicate: 'Duplicate' },
         portalState: {
-            none: 'No access',
+            none: 'Not activated',
             invited: 'Invited',
             verified: 'Verified, not signed in',
             active: 'Active',

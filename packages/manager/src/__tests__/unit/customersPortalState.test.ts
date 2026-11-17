@@ -46,8 +46,8 @@ describe('customers portal state column', () => {
             expect(col.header).toBe(locale === 'en' ? 'Portal' : 'Портал');
             expect(col.filterOptions?.map(o => o.label)).toEqual(
                 locale === 'en'
-                    ? ['No access', 'Invited', 'Verified, not signed in', 'Active']
-                    : ['Нет доступа', 'Приглашён', 'Подтверждён, не входил', 'Активен'],
+                    ? ['Not activated', 'Invited', 'Verified, not signed in', 'Active']
+                    : ['Не активирован', 'Приглашён', 'Подтверждён, не входил', 'Активен'],
             );
             expect(cols.find(c => c.field === 'isActive')!.header).toBe(
                 locale === 'en' ? 'Status in ERP' : 'Статус в ERP',

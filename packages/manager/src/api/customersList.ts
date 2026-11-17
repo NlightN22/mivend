@@ -18,7 +18,7 @@ import { mergeFilters } from './orders-filter';
 export type CustomersView = 'all' | 'none' | 'invited' | 'verified' | 'active';
 export const CUSTOMERS_VIEWS: { key: CustomersView; label: string }[] = [
     { key: 'all', label: 'All' },
-    { key: 'none', label: 'No access' },
+    { key: 'none', label: 'Not activated' },
     { key: 'invited', label: 'Invited' },
     { key: 'verified', label: 'Verified' },
     { key: 'active', label: 'Active' },

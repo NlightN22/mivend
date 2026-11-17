@@ -6,7 +6,7 @@ const customers: typeof en = {
         titleManager: 'Мои клиенты',
         breadcrumb: 'Клиенты',
         kpi: {
-            activeClients: 'Активные клиенты',
+            activeClients: 'Активны в ERP',
             creditUsed: 'Использовано кредита',
             creditUsedCaption:
                 '{count} клиент выше 80% | {count} клиента выше 80% | {count} клиентов выше 80%',
@@ -35,7 +35,7 @@ const customers: typeof en = {
         activeDiscounts: '{count} акт.',
         views: {
             all: 'Все',
-            none: 'Нет доступа',
+            none: 'Не активированы',
             invited: 'Приглашены',
             verified: 'Подтверждены',
             active: 'Активны',
@@ -56,10 +56,10 @@ const customers: typeof en = {
             isActive: 'Статус в ERP',
         },
         unassigned: 'Не назначен',
-        status: { active: 'Активен', inactive: 'Неактивен' },
+        status: { active: 'Активен в ERP', inactive: 'Неактивен в ERP' },
         innStatus: { ok: 'В порядке', missing: 'Не указан', duplicate: 'Дубль' },
         portalState: {
-            none: 'Нет доступа',
+            none: 'Не активирован',
             invited: 'Приглашён',
             verified: 'Подтверждён, не входил',
             active: 'Активен',

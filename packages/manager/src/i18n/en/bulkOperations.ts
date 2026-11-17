@@ -151,7 +151,7 @@ export default {
             manager: 'Manager',
             branch: 'Branch',
             officialEmail: 'Official email',
-            readiness: 'Portal access',
+            readiness: 'Activation',
             phone: 'Phone',
             isActive: 'Active in ERP',
         },
@@ -160,8 +160,14 @@ export default {
             ready: 'Ready to activate',
             'missing-data': 'Missing data',
             'inn-duplicate': 'Duplicate INN',
-            'erp-inactive': 'ERP inactive',
+            'erp-inactive': 'Inactive in ERP',
             activated: 'Activated',
+        },
+        blocker: {
+            'missing-data': 'Cannot be activated until the missing data is added in the ERP',
+            'inn-duplicate':
+                'Cannot be activated: another active counterparty with this INN already has a portal login',
+            'erp-inactive': 'Cannot be activated: the counterparty is inactive in the ERP',
         },
         missing: {
             phone: 'phone',

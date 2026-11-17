@@ -4,7 +4,7 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { INN_TWIN_A, INN_UNIQUE } from '../../fixtures/seed-inn';
 
 const STATE_LABEL: Record<string, string> = {
-    none: 'No access',
+    none: 'Not activated',
     invited: 'Invited',
     verified: 'Verified, not signed in',
     active: 'Active',
@@ -51,7 +51,7 @@ test.describe('customers list portal state (#375) @on:manager-portal-admin @read
         const states = await seededStates();
         expect(states.without).toBe('none');
         await page.goto('/customers?search=E2E%20INN');
-        await expect(row(page, INN_UNIQUE.shortName)).toContainText('No access', {
+        await expect(row(page, INN_UNIQUE.shortName)).toContainText('Not activated', {
             timeout: 15000,
         });
         await expect(row(page, INN_TWIN_A.shortName)).toContainText(STATE_LABEL[states.withLogin]);
@@ -75,15 +75,15 @@ test.describe('customers list portal state (#375) @on:manager-portal-admin @read
         await expect(row(page, INN_UNIQUE.shortName)).toHaveCount(0);
     });
 
-    test('the No access view chip keeps only rows without a login', async ({ page }) => {
+    test('the Not activated view chip keeps only rows without a login', async ({ page }) => {
         await page.goto('/customers?search=E2E%20INN');
         await expect(row(page, INN_TWIN_A.shortName)).toBeVisible({ timeout: 15000 });
 
-        await page.getByRole('button', { name: /^No access/ }).click();
+        await page.getByRole('button', { name: /^Not activated/ }).click();
         await expect(row(page, INN_UNIQUE.shortName)).toBeVisible({ timeout: 15000 });
         await expect(row(page, INN_TWIN_A.shortName)).toHaveCount(0);
         for (const cell of await page.locator('tbody tr').allInnerTexts()) {
-            expect(cell).toContain('No access');
+            expect(cell).toContain('Not activated');
         }
     });
 });
