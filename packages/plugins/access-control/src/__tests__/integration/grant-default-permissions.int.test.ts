@@ -43,7 +43,13 @@ const ROLE = 'department-head';
 const { schema, extra } = testSchemaOptions('access_control_grant_defaults');
 let dataSource: DataSource;
 
-async function run(lists?: ReleaseGrantLists): Promise<unknown> {
+// Pinned to the 1.1.8 right so later release entries do not change what these tests expect.
+const POA_GRANTS: ReleaseGrantLists = {
+    permissions: PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === RIGHT),
+    scopeKeys: [],
+};
+
+async function run(lists: ReleaseGrantLists = POA_GRANTS): Promise<unknown> {
     const runner = dataSource.createQueryRunner();
     await runner.connect();
     const client: SqlClient = {
@@ -125,18 +131,18 @@ describe('grantMissingDefaultPermissions against a real database', () => {
     });
 
     it('two parallel runs give one result and no duplicates', async () => {
-        for (const grant of PERMISSIONS_ADDED_BY_RELEASE) {
+        for (const grant of POA_GRANTS.permissions) {
             await dataSource
                 .getRepository(TestRole)
                 .save({ code: grant.roleCode, permissions: 'Authenticated' });
         }
         await Promise.all([run(), run()]);
 
-        for (const grant of PERMISSIONS_ADDED_BY_RELEASE) {
+        for (const grant of POA_GRANTS.permissions) {
             expect(await permissionsOf(grant.roleCode)).toEqual(['Authenticated', RIGHT]);
         }
         expect(await dataSource.getRepository(TestGrant).count()).toBe(
-            PERMISSIONS_ADDED_BY_RELEASE.length,
+            POA_GRANTS.permissions.length,
         );
     });
 
