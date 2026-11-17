@@ -38,15 +38,13 @@ The card is a page with a header (name, department, customer count, `computedAt`
 and the lost-customers list), **Customers** and **Orders** (the standard lists with a fixed parent filter, as on the
 customer card, so the filter builder, sorting, saved views and bulk actions are the same as everywhere else).
 
-## Phase 2: needs data we do not have
+## Phase 2: not implemented yet
 
-- **Plan against fact.** No plan reaches mivend from the ERP. Proposal: a mivend-owned monthly plan per manager (sales
-  amount, optionally per manufacturer) entered by the department head on the card; the ERP can send it later without
-  changing the card. The plan tile shows plan, fact, percent done and the run rate needed to reach it.
-- **Sales by key brand.** The product has a manufacturer entity (the ERP's own id, name from its stream), so the unit
-  is there. Sales by manufacturer need line-level sales: the settlement stream carries document amounts, not lines. Until
-  the ERP side agrees to send turnover by manufacturer per customer and month, a "by brand" block can only count
-  portal orders (a part of the real sales) and must say so on the tile.
+The owner decided (2026-11-17) that these stay placeholders until the data exists. The card shows both tiles with the
+text "Not implemented yet" so they are not forgotten; tracked in a separate low-priority issue.
+
+- **Plan against fact.** No plan reaches mivend from the ERP, and mivend does not own one. Nothing is built.
+- **Sales by key brand.** Brands come with the plans, and the settlement stream has no line-level data. Nothing is built.
 
 ## Architecture
 
@@ -56,10 +54,7 @@ the viewer's visible customers. Dynamics and lost-customer figures need the roll
 `counterpartyMetrics` cannot give them cheaply); if the rollup is not built when this starts, building it is the first
 step of the work and a separate change. The list queries use the shared list filter engine; no bespoke filter code.
 
-## Open questions
+## Decisions (owner, 2026-11-17)
 
-1. Phase 1 as the first release, plan and brands later: confirm.
-2. Plan: mivend-owned entry by the head, or wait for an ERP stream.
-3. Brands: ask the ERP side for turnover by manufacturer per customer and month, or accept the portal-order proxy.
-4. Lost-customer thresholds 60 / 90 / 180 days and the "returned after 90 idle days" rule: confirm or change.
-5. Attribution by the current owner (history moves with a reassignment): confirm.
+Phase 1 as listed is approved; plan and brand tiles are "Not implemented yet" placeholders; lost-customer thresholds
+60 / 90 / 180 days, the 90-idle-day return rule and attribution by the current owner are confirmed.
