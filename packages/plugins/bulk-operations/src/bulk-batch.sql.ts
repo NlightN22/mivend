@@ -125,7 +125,7 @@ export async function upsertPreviewItems(
          FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[]) AS t(target, label, outcome, reason, input)
          ON CONFLICT ("batchId", "targetId") DO UPDATE SET label = EXCLUDED.label,
             "previewOutcome" = EXCLUDED."previewOutcome",
-            "previewReasonCode" = EXCLUDED."previewReasonCode", "updatedAt" = now()`,
+            "previewReasonCode" = EXCLUDED."previewReasonCode", input = EXCLUDED.input, "updatedAt" = now()`,
         [
             batchId,
             items.map(i => i.targetId),
