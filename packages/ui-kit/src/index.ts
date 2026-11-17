@@ -372,3 +372,6 @@ export {
     THEME_PREFERENCES,
     type ThemePreference,
 } from './theme/theme';
+export { default as MvLineChangeCell } from './components/MvLineChangeCell/MvLineChangeCell.vue';
+export { formatSigned } from './components/MvLineChangeCell/lineChange';
+export type { LineChangeViewEvent } from './components/MvLineChangeCell/lineChange';
