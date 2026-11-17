@@ -193,6 +193,17 @@ invisible below scope 'all'. Decision: the scope is the counterparty scope, not 
 of an order outside the caller's order scope are shown on a visible counterparty's document by design.
 `relatedErpDocumentCounts` counts with exactly the same scope. Pinned by `access/document/erp-document-visibility.test.ts`.
 
+### Order line changes (#372)
+
+`Order.lineChanges` exists on both APIs and `Order.soldTotalWithTax` on the Admin API only. Both are fields of `Order`, so they
+are reachable only through an order the caller may already read (Admin: the order scope; Shop: the owner). The Admin fields
+also need `ReadOrder`. The Shop field returns only quantity events from documents whose ERP accounting block says
+`reflectedInAccounting = true`; a document with no flags (customer claims have no accounting attribute) or with the flag
+false or absent is never shown, which is stricter than the settlement list (hidden only when explicitly false). It carries no
+money and the customer's order total is never reduced. Staff get every event and `soldTotalWithTax` (order total plus the
+money effect of the corrections and worked-out claims, floored at zero; null when the order has no changes). Pinned by
+`access/order/order-line-changes.test.ts` and `order-line-changes.int.test.ts` (customer audience, foreign order, tombstones).
+
 ### ERP powers of attorney (#333)
 
 `visiblePowersOfAttorney` needs `ReadCounterparty`; the `powersOfAttorney` count of `relatedErpDocumentCounts` (asked by

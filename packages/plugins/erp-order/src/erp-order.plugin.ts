@@ -64,6 +64,15 @@ import { AdminOrderCounterpartyResolver } from './admin-order-counterparty.resol
 import { OrderCounterpartyLoader } from './order-counterparty.loader';
 import { adminApiSchema } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
+import {
+    adminLineChangesSchema,
+    shopLineChangesSchema,
+} from './order-line-changes/order-line-changes.schema';
+import {
+    AdminOrderLineChangesResolver,
+    ShopOrderLineChangesResolver,
+} from './order-line-changes/order-line-changes.resolver';
+import { OrderLineChangesService } from './order-line-changes/order-line-changes.service';
 import { orderListSchema } from './api/order-list.schema';
 import { OrderListService } from './order-list.service';
 import { erpDocumentListSchema } from './erp-document-list/erp-document-list.schema';
@@ -85,6 +94,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         ErpDocumentWriter,
         ErpOrderService,
         OrderStatusHistoryService,
+        OrderLineChangesService,
         OrderStatusReferenceService,
         OrderStatusProvisioningService,
         OrderVisibilityService,
@@ -112,8 +122,9 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
     ],
     entities: [OrderStatusHistoryEntry, OrderStatusReference, ...ERP_DOCUMENT_ENTITIES],
     shopApiExtensions: {
-        schema: shopApiExtensions,
+        schema: concatAST([shopApiExtensions, shopLineChangesSchema]),
         resolvers: [
+            ShopOrderLineChangesResolver,
             ErpOrderResolver,
             OrderStatusHistoryResolver,
             OrderStatusReferenceResolver,
@@ -121,11 +132,17 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         ],
     },
     adminApiExtensions: {
-        schema: concatAST([adminApiSchema, orderListSchema, erpDocumentListSchema]),
+        schema: concatAST([
+            adminApiSchema,
+            orderListSchema,
+            erpDocumentListSchema,
+            adminLineChangesSchema,
+        ]),
         resolvers: [
             AdminOrderVisibilityResolver,
             ErpDocumentListResolver,
             AdminOrderStatusHistoryResolver,
+            AdminOrderLineChangesResolver,
             AdminOrderCounterpartyResolver,
             OrderStatusReferenceResolver,
             OrderVisibilityAggregatesResolver,

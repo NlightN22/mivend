@@ -398,7 +398,7 @@ carries the document's "reflect in ..." flags, passed as is; absent means the do
 Today the flags are only stored (`SettlementDocument.accounting`, `Order` custom fields `erpAccounting`,
 `erpLinkedDocuments`, and the correction documents' own records). No customer-facing query filters on an accounting
 flag (the customer's document list is filtered by the document type's `customerVisible` and category) and no stock
-or reserve logic reads the management flag; the customer-side filter by this flag is planned in #372.
+or reserve logic reads the management flag; the one customer-side filter is the order card's line changes (#372): only `reflectedInAccounting = true` counts, absent flags are hidden.
 
 ## Chosen contact for activation and readiness (#332)
 
