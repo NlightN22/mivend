@@ -14,15 +14,21 @@ const HISTORY = `query { bulkBatches(options: { take: 100 }) { totalItems } }`;
 
 const NOT_HOLDERS: ActorKey[] = ['manager-a', 'manager-b', 'head-a', 'head-b', 'operator-a'];
 const allIds = (): string[] => ALL_KEYS.map(idOf);
+// Heads hold the manager change (ReassignCounterpartyManager), nothing else.
+const HEAD_OPERATIONS = ['counterparty-manager-reassign'];
+const catalogOf = (key: ActorKey): string[] => (key.startsWith('head-') ? HEAD_OPERATIONS : []);
 
 describe('bulk operations', () => {
     it.each(NOT_HOLDERS)(
-        '%s does not hold the operation permission: empty catalog, no preview, empty history',
+        '%s does not hold the operation permission: no such operation in the catalog, no preview, empty history',
         async key => {
             const token = await staffToken(key);
-            const catalog = await admin<{ bulkOperationCatalog: unknown[] }>(token, CATALOG);
+            const catalog = await admin<{ bulkOperationCatalog: Array<{ type: string }> }>(
+                token,
+                CATALOG,
+            );
             expect(catalog.errors).toEqual([]);
-            expect(catalog.data?.bulkOperationCatalog).toEqual([]);
+            expect(catalog.data?.bulkOperationCatalog.map(o => o.type)).toEqual(catalogOf(key));
 
             const attempt = await admin(token, PREVIEW, {
                 t: OPERATION,
