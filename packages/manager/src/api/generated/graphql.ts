@@ -4373,6 +4373,94 @@ export type LocalizedString = {
 
 export type LogicalOperator = 'AND' | 'OR';
 
+export type ManagerAgingBuckets = {
+    notDueMinor: Scalars['Money']['output'];
+    overdue1to30Minor: Scalars['Money']['output'];
+    overdue31to60Minor: Scalars['Money']['output'];
+    overdueOver60Minor: Scalars['Money']['output'];
+};
+
+/**
+ * Analytics of one manager over the customers the caller may see; customersTotal counts all assigned customers,
+ * customersVisible the ones inside the caller's scope.
+ */
+export type ManagerCard = {
+    administratorId: Scalars['ID']['output'];
+    administratorName: Scalars['String']['output'];
+    computedAt: Scalars['DateTime']['output'];
+    currency: Scalars['String']['output'];
+    customersTotal: Scalars['Int']['output'];
+    customersVisible: Scalars['Int']['output'];
+    dynamics: ManagerDynamics;
+    lost: ManagerLostCustomers;
+    openOrders: Scalars['Int']['output'];
+    receivables: ManagerReceivables;
+    sales: ManagerSales;
+};
+
+export type ManagerDebtor = {
+    counterpartyId: Scalars['ID']['output'];
+    debtMinor: Scalars['Money']['output'];
+    name: Scalars['String']['output'];
+    overdueMinor: Scalars['Money']['output'];
+};
+
+export type ManagerDynamics = {
+    current: ManagerDynamicsPoint;
+    /** First day with rolled-up turnover; comparisons that start earlier are incomplete. */
+    historyStartsAt: Maybe<Scalars['String']['output']>;
+    previous: ManagerDynamicsPoint;
+    previousYear: ManagerDynamicsPoint;
+};
+
+export type ManagerDynamicsPoint = {
+    active: Scalars['Int']['output'];
+    lost: Scalars['Int']['output'];
+    newCustomers: Scalars['Int']['output'];
+    returned: Scalars['Int']['output'];
+};
+
+export type ManagerLostCustomer = {
+    counterpartyId: Scalars['ID']['output'];
+    idleDays: Scalars['Int']['output'];
+    lastSaleDay: Scalars['String']['output'];
+    name: Scalars['String']['output'];
+    turnover12mMinor: Scalars['Money']['output'];
+};
+
+export type ManagerLostCustomers = {
+    count60: Scalars['Int']['output'];
+    count90: Scalars['Int']['output'];
+    count180: Scalars['Int']['output'];
+    rows: Array<ManagerLostCustomer>;
+    thresholdDays: Scalars['Int']['output'];
+};
+
+export type ManagerReceivables = {
+    aging: ManagerAgingBuckets;
+    debtMinor: Scalars['Money']['output'];
+    overdueMinor: Scalars['Money']['output'];
+    topDebtors: Array<ManagerDebtor>;
+};
+
+export type ManagerSales = {
+    /** Net turnover of 12 months per sales document; null without a sales document. */
+    averageCheckMinor: Maybe<Scalars['Money']['output']>;
+    /** Last 30 days against the 30 before. */
+    last30: ManagerSalesComparison;
+    /** Month to date against the same days of the previous month. */
+    monthToDayVsPrevMonth: ManagerSalesComparison;
+    /** Month to date against the same days of the same month a year ago. */
+    monthToDayVsPrevYear: ManagerSalesComparison;
+    saleDocuments12m: Scalars['Int']['output'];
+    yearToDay: ManagerSalesComparison;
+};
+
+export type ManagerSalesComparison = {
+    currentMinor: Scalars['Money']['output'];
+    previousMinor: Scalars['Money']['output'];
+};
+
 export type ManualPaymentInput = {
     metadata?: InputMaybe<Scalars['JSON']['input']>;
     method: Scalars['String']['input'];
@@ -7618,6 +7706,8 @@ export type Permission =
     | 'ReadEntityHistory'
     /** Grants permission to read Facet */
     | 'ReadFacet'
+    /** Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362) */
+    | 'ReadManagerCard'
     /** Grants permission to read Order */
     | 'ReadOrder'
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -8742,6 +8832,8 @@ export type Query = {
     /** Latest placed-order date per listed counterparty, visible orders only */
     lastOrderDates: Array<CounterpartyLastOrder>;
     legalNameAbbreviations: LegalNameAbbreviationList;
+    /** Needs ReadManagerCard; null when the manager is outside the caller's scope. lostAfterDays is 60, 90 or 180. */
+    managerCard: Maybe<ManagerCard>;
     me: Maybe<CurrentUser>;
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
@@ -9253,6 +9345,11 @@ export type QueryLastOrderDatesArgs = {
 
 export type QueryLegalNameAbbreviationsArgs = {
     options?: InputMaybe<LegalNameAbbreviationListOptions>;
+};
+
+export type QueryManagerCardArgs = {
+    administratorId: Scalars['ID']['input'];
+    lostAfterDays?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMyApprovalRequestsSummaryArgs = {
@@ -13436,6 +13533,66 @@ export type OrderCheckHealthQuery = {
         orderCount: number;
         staleOrderCount: number;
     }>;
+};
+
+export type ManagerCardQueryVariables = Exact<{
+    administratorId: Scalars['ID']['input'];
+    lostAfterDays?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ManagerCardQuery = {
+    managerCard: {
+        administratorId: string;
+        administratorName: string;
+        currency: string;
+        customersTotal: number;
+        customersVisible: number;
+        openOrders: number;
+        computedAt: any;
+        sales: {
+            averageCheckMinor: any | null;
+            saleDocuments12m: number;
+            last30: { currentMinor: any; previousMinor: any };
+            monthToDayVsPrevMonth: { currentMinor: any; previousMinor: any };
+            monthToDayVsPrevYear: { currentMinor: any; previousMinor: any };
+            yearToDay: { currentMinor: any; previousMinor: any };
+        };
+        receivables: {
+            debtMinor: any;
+            overdueMinor: any;
+            aging: {
+                notDueMinor: any;
+                overdue1to30Minor: any;
+                overdue31to60Minor: any;
+                overdueOver60Minor: any;
+            };
+            topDebtors: Array<{
+                counterpartyId: string;
+                name: string;
+                debtMinor: any;
+                overdueMinor: any;
+            }>;
+        };
+        lost: {
+            thresholdDays: number;
+            count60: number;
+            count90: number;
+            count180: number;
+            rows: Array<{
+                counterpartyId: string;
+                name: string;
+                lastSaleDay: string;
+                idleDays: number;
+                turnover12mMinor: any;
+            }>;
+        };
+        dynamics: {
+            historyStartsAt: string | null;
+            current: { active: number; newCustomers: number; returned: number; lost: number };
+            previous: { active: number; newCustomers: number; returned: number; lost: number };
+            previousYear: { active: number; newCustomers: number; returned: number; lost: number };
+        };
+    } | null;
 };
 
 export type NotificationFieldsFragment = {
@@ -17695,6 +17852,89 @@ export const OrderCheckHealthDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderCheckHealthQuery, OrderCheckHealthQueryVariables>;
+export const ManagerCardDocument = new TypedDocumentString(`
+    query ManagerCard($administratorId: ID!, $lostAfterDays: Int) {
+  managerCard(administratorId: $administratorId, lostAfterDays: $lostAfterDays) {
+    administratorId
+    administratorName
+    currency
+    customersTotal
+    customersVisible
+    openOrders
+    sales {
+      last30 {
+        currentMinor
+        previousMinor
+      }
+      monthToDayVsPrevMonth {
+        currentMinor
+        previousMinor
+      }
+      monthToDayVsPrevYear {
+        currentMinor
+        previousMinor
+      }
+      yearToDay {
+        currentMinor
+        previousMinor
+      }
+      averageCheckMinor
+      saleDocuments12m
+    }
+    receivables {
+      debtMinor
+      overdueMinor
+      aging {
+        notDueMinor
+        overdue1to30Minor
+        overdue31to60Minor
+        overdueOver60Minor
+      }
+      topDebtors {
+        counterpartyId
+        name
+        debtMinor
+        overdueMinor
+      }
+    }
+    lost {
+      thresholdDays
+      count60
+      count90
+      count180
+      rows {
+        counterpartyId
+        name
+        lastSaleDay
+        idleDays
+        turnover12mMinor
+      }
+    }
+    dynamics {
+      current {
+        active
+        newCustomers
+        returned
+        lost
+      }
+      previous {
+        active
+        newCustomers
+        returned
+        lost
+      }
+      previousYear {
+        active
+        newCustomers
+        returned
+        lost
+      }
+      historyStartsAt
+    }
+    computedAt
+  }
+}
+    `) as unknown as TypedDocumentString<ManagerCardQuery, ManagerCardQueryVariables>;
 export const NotificationsDocument = new TypedDocumentString(`
     query Notifications($options: NotificationListOptions) {
   notifications(options: $options) {

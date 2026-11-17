@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import {
     MvAdvancedDataTable,
     MvButton,
     MvStatusBadge,
     useDataTableState,
     type AdvancedDataTableColumn,
+    type AdvancedDataTableRowClickPayload,
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
 import {
     TEAM_STATUS_BADGE_VARIANT,
     type BranchOption,
@@ -19,6 +22,8 @@ import {
 } from '../../api/team';
 
 const { t } = useI18n();
+const router = useRouter();
+const canOpenCards = useAuthStore().hasPermission('ReadManagerCard');
 
 // Server-side paginated + filtered (manager-table-standard). No sortField: the directory has one
 // stable order and a name sort would leak the order of masked names. Position has no
@@ -198,6 +203,16 @@ watch(
     },
 );
 
+function onRowClick(event: AdvancedDataTableRowClickPayload<TeamRow>): void {
+    if (!canOpenCards) return;
+    const target = event.originalEvent.target;
+    if (target instanceof Element && target.closest('a, button')) return;
+    const href = router.resolve(`/team/${event.row.id}`).href;
+    const mouse = event.originalEvent as MouseEvent;
+    if (mouse.ctrlKey || mouse.metaKey) window.open(href, '_blank', 'noopener');
+    else void router.push(href);
+}
+
 function branchName(branchId: string | null): string {
     if (!branchId) return '—';
     return props.branches.find(b => b.id === branchId)?.name ?? '—';
@@ -254,6 +269,7 @@ const rows = computed<TeamRow[]>(() =>
         :empty-message="t('team.table.empty')"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
+        @row-click="onRowClick"
     >
         <template #toolbar-start>
             <slot name="view-chips" />

@@ -1,0 +1,81 @@
+query ManagerCard($administratorId: ID!, $lostAfterDays: Int) {
+    managerCard(administratorId: $administratorId, lostAfterDays: $lostAfterDays) {
+        administratorId
+        administratorName
+        currency
+        customersTotal
+        customersVisible
+        openOrders
+        sales {
+            last30 {
+                currentMinor
+                previousMinor
+            }
+            monthToDayVsPrevMonth {
+                currentMinor
+                previousMinor
+            }
+            monthToDayVsPrevYear {
+                currentMinor
+                previousMinor
+            }
+            yearToDay {
+                currentMinor
+                previousMinor
+            }
+            averageCheckMinor
+            saleDocuments12m
+        }
+        receivables {
+            debtMinor
+            overdueMinor
+            aging {
+                notDueMinor
+                overdue1to30Minor
+                overdue31to60Minor
+                overdueOver60Minor
+            }
+            topDebtors {
+                counterpartyId
+                name
+                debtMinor
+                overdueMinor
+            }
+        }
+        lost {
+            thresholdDays
+            count60
+            count90
+            count180
+            rows {
+                counterpartyId
+                name
+                lastSaleDay
+                idleDays
+                turnover12mMinor
+            }
+        }
+        dynamics {
+            current {
+                active
+                newCustomers
+                returned
+                lost
+            }
+            previous {
+                active
+                newCustomers
+                returned
+                lost
+            }
+            previousYear {
+                active
+                newCustomers
+                returned
+                lost
+            }
+            historyStartsAt
+        }
+        computedAt
+    }
+}

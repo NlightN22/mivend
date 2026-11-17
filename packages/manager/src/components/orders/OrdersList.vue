@@ -17,17 +17,20 @@ import { toOrderRows } from './ordersListRows';
 
 // `customerId` is a preset: it narrows the list, is never shown as a filter, and the server
 // scopes the result exactly as it does the unfiltered list.
-const props = defineProps<{ customerId?: string; urlPrefix?: string }>();
+const props = defineProps<{ customerId?: string; managerId?: string; urlPrefix?: string }>();
 
 const authStore = useAuthStore();
 const statuses = useOrderStatusesStore();
 void statuses.load();
 
-const list = useOrdersList({ customerId: props.customerId }, props.urlPrefix);
-const viewCounts = useOrdersViewCounts(props.customerId, list.filters);
+const list = useOrdersList(
+    { customerId: props.customerId, managerId: props.managerId },
+    props.urlPrefix,
+);
+const viewCounts = useOrdersViewCounts(props.customerId, list.filters, props.managerId);
 
 // Manager sees only their own customers, so a manager column and filter would be redundant.
-const showManagerColumn = computed(() => authStore.roleCode !== 'manager');
+const showManagerColumn = computed(() => authStore.roleCode !== 'manager' && !props.managerId);
 
 const rows = computed(() =>
     toOrderRows(list.items.value, {

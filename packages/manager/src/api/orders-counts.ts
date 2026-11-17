@@ -20,6 +20,7 @@ export function countsQueryVariables(
     customerId: string | undefined,
     rejectedCodes: string[],
     now: Date,
+    presetManagerId?: string,
 ): OrdersViewCountsQueryVariables {
     const forView = (view: OrdersView): OrderListFilter | undefined => {
         const { filter } = buildOrdersListQuery({ ...filters, view }, rejectedCodes, now);
@@ -28,7 +29,7 @@ export function countsQueryVariables(
     const { managerId, search } = buildOrdersListQuery(filters, rejectedCodes, now);
     return {
         customerId,
-        managerId,
+        managerId: presetManagerId ?? managerId,
         search,
         overdueBefore: new Date(now.getTime() - OVERDUE_AFTER_DAYS * 86_400_000).toISOString(),
         all: forView('all'),
@@ -48,10 +49,11 @@ export async function fetchOrdersViewCounts(
     customerId: string | undefined,
     rejectedCodes: string[],
     now: Date = new Date(),
+    presetManagerId?: string,
 ): Promise<OrdersViewCountsResult> {
     const result = await adminApi(
         OrdersViewCountsDocument,
-        countsQueryVariables(filters, customerId, rejectedCodes, now),
+        countsQueryVariables(filters, customerId, rejectedCodes, now, presetManagerId),
     );
     return {
         counts: {

@@ -14,6 +14,7 @@ export interface OrdersViewCountsState {
 export function useOrdersViewCounts(
     customerId: string | undefined,
     filters: Ref<OrdersListFilters>,
+    presetManagerId?: string,
 ): OrdersViewCountsState {
     const statuses = useOrderStatusesStore();
     const counts = ref<OrdersViewCounts | null>(null);
@@ -22,7 +23,13 @@ export function useOrdersViewCounts(
     const { loading, run } = useLatestRequest(
         async () => {
             await statuses.load();
-            return fetchOrdersViewCounts(filters.value, customerId, statuses.rejectedCodes);
+            return fetchOrdersViewCounts(
+                filters.value,
+                customerId,
+                statuses.rejectedCodes,
+                new Date(),
+                presetManagerId,
+            );
         },
         result => {
             counts.value = result.counts;

@@ -1,0 +1,68 @@
+import type en from '../en/managerCard';
+
+const managerCard: typeof en = {
+    page: {
+        breadcrumb: 'Команда',
+        notFound: 'Эта карточка вам недоступна',
+        loadFailed: 'Не удалось загрузить карточку менеджера',
+    },
+    tabs: { overview: 'Обзор', customers: 'Клиенты', orders: 'Заказы' },
+    partial: 'Показано {visible} из {total} клиентов менеджера',
+    kpi: {
+        sales30: 'Продажи, последние 30 дней',
+        salesMonth: 'Продажи с начала месяца',
+        salesYear: 'Продажи с начала года',
+        averageCheck: 'Средний чек',
+        perSalesDocument: 'на документ продажи',
+        customers: 'Клиенты',
+        openOrders: 'Открытые заказы',
+        vsPrevious: '{percent} к прошлому периоду',
+        vsPrevMonth: '{percent} к прошлому месяцу',
+        vsPrevYear: '{percent} к прошлому году',
+        none: 'раньше продаж не было',
+    },
+    receivables: {
+        title: 'Дебиторская задолженность',
+        debt: 'Общий долг',
+        overdue: 'Просрочено',
+        overdueShare: '{percent} долга',
+        aging: 'По возрасту',
+        notDue: 'Не просрочено',
+        d1to30: '1–30 дней',
+        d31to60: '31–60 дней',
+        over60: 'Больше 60 дней',
+        topDebtors: 'Крупнейшие должники',
+        empty: 'Задолженности нет',
+    },
+    lost: {
+        title: 'Потерянные клиенты',
+        hint: 'Покупали за последние 12 месяцев, но больше {days} дней ничего не брали',
+        threshold: '{days} дн.',
+        count: '{count} клиентов',
+        lastSale: 'Последняя продажа',
+        idle: '{days} дн.',
+        turnover12m: 'Оборот за 12 месяцев',
+        empty: 'Потерянных клиентов за этот период нет',
+    },
+    dynamics: {
+        title: 'Динамика клиентов',
+        hint: 'Клиенты с продажей за последние 30 дней',
+        active: 'Активные',
+        newCustomers: 'Новые',
+        returned: 'Вернулись после 90 дней простоя',
+        lost: 'Потеряны (простой больше 90 дней)',
+        now: 'Сейчас',
+        prevPeriod: '30 дней назад',
+        prevYear: 'Год назад',
+        noHistory: 'Сравнение неполное: история продаж начинается {date}',
+    },
+    plan: { title: 'План и факт', message: 'ERP пока не присылает планы менеджеров.' },
+    brands: {
+        title: 'Продажи по ключевым брендам',
+        message: 'Нужны планы и строки продаж по производителям.',
+    },
+    notImplemented: 'Пока не реализовано',
+    calculated: 'Рассчитано {date}',
+};
+
+export default managerCard;

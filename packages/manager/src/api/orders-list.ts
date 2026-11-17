@@ -69,6 +69,7 @@ export interface OrdersListFilters {
 // It narrows the list only; the server checks scope the same way with or without it.
 export interface OrdersListPreset {
     customerId?: string;
+    managerId?: string;
 }
 
 export const BLANK_ORDERS_FILTERS: OrdersListFilters = {
@@ -154,7 +155,7 @@ export async function fetchOrdersList(
             sort,
             ...(Object.keys(query.filter).length ? { filter: query.filter } : {}),
         },
-        managerId: query.managerId,
+        managerId: preset.managerId ?? query.managerId,
         customerId: preset.customerId,
         search: query.search,
     });

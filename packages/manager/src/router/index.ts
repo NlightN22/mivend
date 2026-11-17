@@ -234,6 +234,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true, title: 'Team' },
                 },
                 {
+                    path: 'team/:id',
+                    name: 'manager-card',
+                    component: () => import('../pages/team/ManagerCardPage.vue'),
+                    meta: { requiresAuth: true, requiresAnyPermission: ['ReadManagerCard'] },
+                },
+                {
                     path: 'change-journal',
                     name: 'change-journal',
                     component: () => import('../pages/change-journal/ChangeJournalPage.vue'),
