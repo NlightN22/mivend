@@ -2401,6 +2401,8 @@ export type Order = Node & {
     fulfillments?: Maybe<Array<Fulfillment>>;
     history: HistoryEntryList;
     id: Scalars['ID']['output'];
+    /** Quantity changes after placing, only from documents reflected in accounting; never money */
+    lineChanges: Array<OrderLineChange>;
     lines: Array<OrderLine>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
@@ -2643,6 +2645,27 @@ export type OrderLine = Node & {
     /** Non-zero if the unitPriceWithTax has changed since it was initially added to Order */
     unitPriceWithTaxChangeSinceAdded: Scalars['Money']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type OrderLineChange = {
+    /** Ordered plus all shown events */
+    actual: Scalars['Float']['output'];
+    events: Array<OrderLineChangeEvent>;
+    orderLineId: Scalars['ID']['output'];
+    ordered: Scalars['Float']['output'];
+};
+
+export type OrderLineChangeEvent = {
+    documentDate?: Maybe<Scalars['DateTime']['output']>;
+    documentNumber: Scalars['String']['output'];
+    /** realization, realization-correction or return; the client picks icon and wording by it */
+    kind: Scalars['String']['output'];
+    /** Signed, in the order line's unit */
+    quantity: Scalars['Float']['output'];
+    /** Quantity left after this event */
+    remainder: Scalars['Float']['output'];
+    subtitleKey: Scalars['String']['output'];
+    titleKey: Scalars['String']['output'];
 };
 
 export type OrderLineCustomFields = {
@@ -5693,6 +5716,19 @@ export type OrderDetailQuery = {
                 product: { name: string; slug: string };
             };
         }>;
+        lineChanges: Array<{
+            orderLineId: string;
+            ordered: number;
+            actual: number;
+            events: Array<{
+                kind: string;
+                titleKey: string;
+                subtitleKey: string;
+                quantity: number;
+                remainder: number;
+                documentNumber: string;
+            }>;
+        }>;
         statusHistory: Array<{
             uuid: string;
             status: string;
@@ -7349,6 +7385,19 @@ export const OrderDetailDocument = new TypedDocumentString(`
           name
           slug
         }
+      }
+    }
+    lineChanges {
+      orderLineId
+      ordered
+      actual
+      events {
+        kind
+        titleKey
+        subtitleKey
+        quantity
+        remainder
+        documentNumber
       }
     }
     statusHistory {

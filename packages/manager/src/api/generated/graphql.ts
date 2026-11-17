@@ -544,11 +544,42 @@ export type BooleanStructFieldConfig = StructField & {
     ui: Maybe<Scalars['JSON']['output']>;
 };
 
-export type Branch = {
+export type Branch = Node & {
+    createdAt: Scalars['DateTime']['output'];
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
     isDefault: Scalars['Boolean']['output'];
     name: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+};
+
+export type BranchFilterParameter = {
+    _and?: InputMaybe<Array<BranchFilterParameter>>;
+    _or?: InputMaybe<Array<BranchFilterParameter>>;
+    createdAt?: InputMaybe<DateOperators>;
+    erpId?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    isDefault?: InputMaybe<BooleanOperators>;
+    name?: InputMaybe<StringOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+};
+
+export type BranchList = PaginatedList & {
+    items: Array<Branch>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type BranchListOptions = {
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<BranchFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
+    /** Skips the first n results, for use in pagination */
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Specifies which properties to sort the results by */
+    sort?: InputMaybe<BranchSortParameter>;
+    /** Takes n results, for use in pagination */
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type BranchSettings = {
@@ -561,6 +592,14 @@ export type BranchSettings = {
     proformaPaymentTermDays: Scalars['Int']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
+};
+
+export type BranchSortParameter = {
+    createdAt?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    name?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
 };
 
 export type BulkBatch = {
@@ -6427,6 +6466,8 @@ export type Order = Node & {
     fulfillments: Maybe<Array<Fulfillment>>;
     history: HistoryEntryList;
     id: Scalars['ID']['output'];
+    /** Every quantity change from the ERP documents, accounting-reflected or not */
+    lineChanges: Array<OrderLineChange>;
     lines: Array<OrderLine>;
     modifications: Array<OrderModification>;
     multiplicityEnforced: Scalars['Boolean']['output'];
@@ -6445,6 +6486,8 @@ export type Order = Node & {
     shippingAddress: Maybe<OrderAddress>;
     shippingLines: Array<ShippingLine>;
     shippingWithTax: Scalars['Money']['output'];
+    /** Order total after corrections and returns; null when the order has no changes */
+    soldTotalWithTax: Maybe<Scalars['Money']['output']>;
     state: Scalars['String']['output'];
     statusHistory: Array<OrderStatusHistoryEntry>;
     /**
@@ -6628,6 +6671,8 @@ export type OrderFilterParameter = {
     selectedContractId?: InputMaybe<StringOperators>;
     shipping?: InputMaybe<NumberOperators>;
     shippingWithTax?: InputMaybe<NumberOperators>;
+    /** Order total after corrections and returns; null when the order has no changes */
+    soldTotalWithTax?: InputMaybe<NumberOperators>;
     sourceOrderId?: InputMaybe<StringOperators>;
     state?: InputMaybe<StringOperators>;
     /**
@@ -6741,6 +6786,27 @@ export type OrderLineAvailability = {
     /** The pack multiple the quantity must respect. */
     step: Scalars['Int']['output'];
     warehouses: Array<OrderLineWarehouseStock>;
+};
+
+export type OrderLineChange = {
+    /** Ordered plus all shown events */
+    actual: Scalars['Float']['output'];
+    events: Array<OrderLineChangeEvent>;
+    orderLineId: Scalars['ID']['output'];
+    ordered: Scalars['Float']['output'];
+};
+
+export type OrderLineChangeEvent = {
+    documentDate: Maybe<Scalars['DateTime']['output']>;
+    documentNumber: Scalars['String']['output'];
+    /** realization, realization-correction or return; the client picks icon and wording by it */
+    kind: Scalars['String']['output'];
+    /** Signed, in the order line's unit */
+    quantity: Scalars['Float']['output'];
+    /** Quantity left after this event */
+    remainder: Scalars['Float']['output'];
+    subtitleKey: Scalars['String']['output'];
+    titleKey: Scalars['String']['output'];
 };
 
 export type OrderLineCustomFields = {
@@ -6988,6 +7054,8 @@ export type OrderSortParameter = {
     selectedContractId?: InputMaybe<SortOrder>;
     shipping?: InputMaybe<SortOrder>;
     shippingWithTax?: InputMaybe<SortOrder>;
+    /** Order total after corrections and returns; null when the order has no changes */
+    soldTotalWithTax?: InputMaybe<SortOrder>;
     sourceOrderId?: InputMaybe<SortOrder>;
     state?: InputMaybe<SortOrder>;
     /**
@@ -8586,6 +8654,7 @@ export type Query = {
     /** Get a list of Assets */
     assets: AssetList;
     availableStock: Scalars['Int']['output'];
+    branchList: BranchList;
     branchSettings: Maybe<BranchSettings>;
     branches: Array<Branch>;
     bulkBatch: BulkBatch;
@@ -8915,6 +8984,10 @@ export type QueryAssetsArgs = {
 export type QueryAvailableStockArgs = {
     orderId?: InputMaybe<Scalars['ID']['input']>;
     productVariantId: Scalars['ID']['input'];
+};
+
+export type QueryBranchListArgs = {
+    options?: InputMaybe<BranchListOptions>;
 };
 
 export type QueryBranchSettingsArgs = {
@@ -13645,6 +13718,7 @@ export type OrderDetailQuery = {
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
+            soldTotalWithTax: any | null;
             payments: Array<{
                 id: string;
                 method: string;
@@ -13670,6 +13744,19 @@ export type OrderDetailQuery = {
                 deliveryAddress: string | null;
             } | null;
             shippingLines: Array<{ shippingMethod: { code: string } }>;
+            lineChanges: Array<{
+                orderLineId: string;
+                ordered: number;
+                actual: number;
+                events: Array<{
+                    kind: string;
+                    titleKey: string;
+                    subtitleKey: string;
+                    quantity: number;
+                    remainder: number;
+                    documentNumber: string;
+                }>;
+            }>;
             statusHistory: Array<{
                 uuid: string;
                 status: string;
@@ -17921,6 +18008,20 @@ export const OrderDetailDocument = new TypedDocumentString(`
       shippingLines {
         shippingMethod {
           code
+        }
+      }
+      soldTotalWithTax
+      lineChanges {
+        orderLineId
+        ordered
+        actual
+        events {
+          kind
+          titleKey
+          subtitleKey
+          quantity
+          remainder
+          documentNumber
         }
       }
       statusHistory {
