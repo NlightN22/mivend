@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 
-const SEARCH_PLACEHOLDER = 'Article, VIN, brand, name or OEM';
+const SEARCH_PLACEHOLDER = 'Article, brand, name or OEM';
 
 // Fuzzy search ranks other E2E SKUs too, so pick the result by its own SKU.
 const cardFor = (page: Page, sku: string): Locator =>

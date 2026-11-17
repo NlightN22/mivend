@@ -36,7 +36,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    placeholder: 'Search by article, VIN, brand, OEM, name',
+    placeholder: 'Search by article, brand, OEM, name',
     loading: false,
     disabled: false,
     error: undefined,

@@ -78,7 +78,7 @@ test.describe('Markup rule (negative discount percent) is shown only as the fina
     test('catalog card and product page show the base price plus the markup, no discount or markup indication', async () => {
         await page.goto('/catalog');
         await page.getByRole('button', { name: 'Grid' }).click();
-        const search = page.getByPlaceholder('Article, VIN, brand, name or OEM');
+        const search = page.getByPlaceholder('Article, brand, name or OEM');
         await search.fill(MARKUP_PRODUCT_A.sku);
         await search.press('Enter');
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const SEARCH_PLACEHOLDER = 'Article, VIN, brand, name or OEM';
+const SEARCH_PLACEHOLDER = 'Article, brand, name or OEM';
 
 test.describe('Catalog search', () => {
     test.beforeEach(async ({ page }) => {
