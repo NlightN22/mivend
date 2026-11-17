@@ -42,6 +42,20 @@ query OrderDetail($code: String!) {
                     code
                 }
             }
+            soldTotalWithTax
+            lineChanges {
+                orderLineId
+                ordered
+                actual
+                events {
+                    kind
+                    titleKey
+                    subtitleKey
+                    quantity
+                    remainder
+                    documentNumber
+                }
+            }
             statusHistory {
                 uuid
                 status

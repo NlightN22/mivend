@@ -21,6 +21,7 @@ import { orderNotes, type PanelNotes } from '../../utils/orderPanelNotes';
 import OrderApprovalsPanel from '../../components/order-detail/OrderApprovalsPanel.vue';
 import OrderCustomerSummary from '../../components/order-detail/OrderCustomerSummary.vue';
 import OrderHeader from '../../components/order-detail/OrderHeader.vue';
+import OrderChangesPanel from '../../components/order-detail/OrderChangesPanel.vue';
 import OrderHistory from '../../components/order-detail/OrderHistory.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import OrderLinesTotals from '../../components/order-detail/OrderLinesTotals.vue';
@@ -184,6 +185,8 @@ watch([orderId, reservations], () => {
                 </template>
             </OrderLinesTable>
         </MvPanel>
+
+        <OrderChangesPanel :order="order" />
 
         <div class="order-detail__below">
             <OrderHistory :history="order.statusHistory" />
