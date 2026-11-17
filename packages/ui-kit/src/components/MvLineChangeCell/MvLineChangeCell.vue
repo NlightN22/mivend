@@ -118,6 +118,7 @@ const iconOf = (kind: string): Component => KIND_ICONS[kind] ?? IconPoint;
 }
 .mv-line-change__panel {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
     color: var(--app-text-body2);
     font-size: 13px;
@@ -137,6 +138,7 @@ const iconOf = (kind: string): Component => KIND_ICONS[kind] ?? IconPoint;
 }
 .mv-line-change__events {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin: 8px 0 4px;
     padding: 10px 0;
@@ -162,6 +164,7 @@ const iconOf = (kind: string): Component => KIND_ICONS[kind] ?? IconPoint;
 }
 .mv-line-change__text {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
 }
 .mv-line-change__title {
@@ -174,6 +177,7 @@ const iconOf = (kind: string): Component => KIND_ICONS[kind] ?? IconPoint;
 }
 .mv-line-change__numbers {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     justify-items: end;
 }
 .mv-line-change__qty {
