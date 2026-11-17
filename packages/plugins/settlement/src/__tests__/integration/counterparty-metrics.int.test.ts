@@ -100,7 +100,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await h.dataSource.query(
-        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
+        'TRUNCATE settlement_document, settlement_turnover_daily, settlement_balance, settlement_document_type, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
     );
     h.counterparties.clear();
     h.contracts.clear();

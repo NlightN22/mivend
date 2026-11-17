@@ -17,6 +17,8 @@ import {
     SettlementOrderLink,
     SettlementPendingService,
     SettlementReferenceResolver,
+    SettlementTurnoverDaily,
+    SettlementTurnoverRollupService,
 } from '@mivend/plugin-settlement';
 import type { KafkaMessage } from 'kafkajs';
 import { DataSource } from 'typeorm';
@@ -57,6 +59,7 @@ beforeAll(async () => {
             SettlementOrderLink,
             SettlementBalance,
             SettlementDocumentType,
+            SettlementTurnoverDaily,
         ],
         synchronize: true,
     });
@@ -81,7 +84,11 @@ beforeAll(async () => {
     } as never);
     const pending = new SettlementPendingService(connection);
     documentHandler = new SettlementDocumentStreamHandler(
-        new SettlementDocumentService(connection, resolver),
+        new SettlementDocumentService(
+            connection,
+            resolver,
+            new SettlementTurnoverRollupService(connection),
+        ),
     );
     balanceHandler = new SettlementBalanceStreamHandler(
         new SettlementBalanceService(connection, resolver),
@@ -108,7 +115,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order" RESTART IDENTITY CASCADE',
+        'TRUNCATE settlement_document, settlement_turnover_daily, settlement_balance, settlement_document_type, "order" RESTART IDENTITY CASCADE',
     );
     contractsByErpId.clear();
 });

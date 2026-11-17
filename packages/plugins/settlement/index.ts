@@ -26,3 +26,5 @@ export {
     TURNOVER_CATEGORIES,
     movesTurnoverByDefault,
 } from './src/settlement-turnover';
+export { SettlementTurnoverDaily } from './src/entities/settlement-turnover-daily.entity';
+export { SettlementTurnoverRollupService } from './src/settlement-turnover-rollup.service';

@@ -6,6 +6,7 @@ import { toMinorUnits } from './amount';
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { SettlementOrderLink } from './entities/settlement-order-link.entity';
+import { SettlementTurnoverRollupService } from './settlement-turnover-rollup.service';
 import { SettlementReferenceResolver } from './settlement-reference-resolver';
 import type { ResolvedReferences } from './settlement-reference-resolver';
 import {
@@ -24,22 +25,49 @@ export class SettlementDocumentService {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly resolver: SettlementReferenceResolver,
+        private readonly rollup: SettlementTurnoverRollupService,
     ) {}
 
     async apply(
         ctx: RequestContext,
         input: SettlementDocumentInput,
     ): Promise<SettlementApplyResult> {
-        const keys = input.entries.flatMap(entry => [
-            counterpartyLockKey(entry.counterpartyErpId),
-            contractLockKey(entry.contractErpId),
-            ...entry.orderLinks.map(link => orderLockKey(link.orderErpId)),
-        ]);
-        return withAggregateLock(this.connection, ctx, documentLockKey(input.erpId), docCtx =>
-            withSortedLocks(this.connection, docCtx, keys, lockedCtx =>
-                this.write(lockedCtx, input),
-            ),
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            documentLockKey(input.erpId),
+            async docCtx => {
+                const stored = await this.storedCounterparties(docCtx, input.erpId);
+                const keys = [
+                    ...stored.map(counterpartyLockKey),
+                    ...input.entries.flatMap(entry => [
+                        counterpartyLockKey(entry.counterpartyErpId),
+                        contractLockKey(entry.contractErpId),
+                        ...entry.orderLinks.map(link => orderLockKey(link.orderErpId)),
+                    ]),
+                ];
+                return withSortedLocks(this.connection, docCtx, keys, async lockedCtx => {
+                    const result = await this.write(lockedCtx, input);
+                    if (result === 'applied') {
+                        const touched = [...stored, ...input.entries.map(e => e.counterpartyErpId)];
+                        await this.rollup.recompute(lockedCtx, touched);
+                    }
+                    return result;
+                });
+            },
         );
+    }
+
+    // The document lock is held, so these entries cannot change before the counterparty locks are taken.
+    private async storedCounterparties(ctx: RequestContext, erpId: string): Promise<string[]> {
+        const rows: { id: string }[] = await this.connection
+            .getRepository(ctx, SettlementDocumentEntry)
+            .createQueryBuilder('e')
+            .innerJoin('e.document', 'd')
+            .where('d.erpId = :erpId', { erpId })
+            .select('DISTINCT e.counterpartyErpId', 'id')
+            .getRawMany(); // unbounded-ok: distinct counterparties of one document's entries
+        return rows.map(r => r.id);
     }
 
     private async write(

@@ -11,6 +11,8 @@ import { SettlementBalance } from '../../entities/settlement-balance.entity';
 import { SettlementDocumentType } from '../../entities/settlement-document-type.entity';
 import { SettlementDocumentEntry } from '../../entities/settlement-document-entry.entity';
 import { SettlementDocument } from '../../entities/settlement-document.entity';
+import { SettlementTurnoverDaily } from '../../entities/settlement-turnover-daily.entity';
+import { SettlementTurnoverRollupService } from '../../settlement-turnover-rollup.service';
 import { SettlementOrderLink } from '../../entities/settlement-order-link.entity';
 import { SettlementBalanceService } from '../../settlement-balance.service';
 import { SettlementDocumentService } from '../../settlement-document.service';
@@ -52,6 +54,7 @@ export async function createHarness(tag: string): Promise<Harness> {
             SettlementOrderLink,
             SettlementBalance,
             SettlementDocumentType,
+            SettlementTurnoverDaily,
         ],
         synchronize: true,
     });
@@ -94,7 +97,11 @@ export async function createHarness(tag: string): Promise<Harness> {
         counterparties,
         contracts,
         lookupDelayMs,
-        documents: new SettlementDocumentService(connection, resolver),
+        documents: new SettlementDocumentService(
+            connection,
+            resolver,
+            new SettlementTurnoverRollupService(connection),
+        ),
         balances: new SettlementBalanceService(connection, resolver),
         types: new SettlementDocumentTypeService(connection),
         pending,

@@ -12,6 +12,8 @@ import { SettlementBalance } from './entities/settlement-balance.entity';
 import { SettlementDocumentType } from './entities/settlement-document-type.entity';
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocument } from './entities/settlement-document.entity';
+import { SettlementTurnoverDaily } from './entities/settlement-turnover-daily.entity';
+import { SettlementTurnoverRollupService } from './settlement-turnover-rollup.service';
 import { SettlementOrderLink } from './entities/settlement-order-link.entity';
 import { CounterpartyMetricsService } from './counterparty-metrics.service';
 import { SettlementBalanceService } from './settlement-balance.service';
@@ -41,6 +43,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementOrderLink,
         SettlementBalance,
         SettlementDocumentType,
+        SettlementTurnoverDaily,
     ],
     adminApiExtensions: { schema: adminApiExtensions, resolvers: [SettlementAdminResolver] },
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [SettlementShopResolver] },
@@ -58,6 +61,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementAdminListService,
         SettlementSuggestService,
         CounterpartyMetricsService,
+        SettlementTurnoverRollupService,
     ],
     exports: [
         SettlementDocumentService,
