@@ -44,6 +44,18 @@ describe('findOmittedTake', () => {
         expect(find(query, {})).toEqual(['items']);
     });
 
+    it('counts a variable default as take when the client omits the variable', () => {
+        expect(
+            find('query Q($t: Int = 20) { items(options: { take: $t }) { totalItems } }', {}),
+        ).toEqual([]);
+        expect(
+            find(
+                'query Q($o: ListOptions = { take: 20 }) { items(options: $o) { totalItems } }',
+                {},
+            ),
+        ).toEqual([]);
+    });
+
     it('ignores fields that are not paged lists', () => {
         expect(find('{ item(id: "1") { id } }')).toEqual([]);
     });
@@ -59,6 +71,15 @@ describe('createOmittedTakeWarner', () => {
         run(schema, doc, undefined, 'Other');
         expect(warn).toHaveBeenCalledTimes(2);
         expect(warn.mock.calls[0]?.[0]).toContain('items in Dash');
+    });
+
+    it('reports the cap once instead of dropping silently', () => {
+        const warn = vi.fn();
+        const run = createOmittedTakeWarner(warn);
+        const doc = parse('{ items { totalItems } }');
+        for (let i = 0; i < 502; i++) run(schema, doc, undefined, `Op${i}`);
+        expect(warn).toHaveBeenCalledTimes(501);
+        expect(warn.mock.calls[500]?.[0]).toContain('capped');
     });
 
     it('stays silent when every list sets take', () => {
