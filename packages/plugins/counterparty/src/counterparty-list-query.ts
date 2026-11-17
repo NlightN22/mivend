@@ -49,6 +49,11 @@ const FIELDS: Record<string, FieldSpec> = {
     phone: text('c.phone'),
     officialEmail: text('c."officialEmail"'),
     managerErpId: { ...text('c."managerErpId"'), containsAlsoSql: MANAGER_NAME_SQL },
+    assignedManagerId: {
+        kind: 'string',
+        sql: `NULLIF(c."assignedManagerId", '')`,
+        operators: ['eq', 'notEq', 'in', 'notIn'],
+    },
     branchId: {
         kind: 'string',
         sql: `NULLIF(c."branchId", '')`,
