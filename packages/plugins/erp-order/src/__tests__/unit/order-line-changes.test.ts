@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { RequestContext } from '@vendure/core';
+import type { Order, RequestContext } from '@vendure/core';
 
 import { isReflectedInAccounting } from '../../order-line-changes/line-change-accounting';
 import { buildOrderChanges } from '../../order-line-changes/line-change-events';
@@ -170,7 +170,7 @@ describe('sources', () => {
 
 describe('order line change resolvers', () => {
     const ctx = {} as RequestContext;
-    const order = { id: 1, totalWithTax: 10000 } as never;
+    const order = { id: 1, totalWithTax: 10000 } as unknown as Order;
     const changes = { lines: [{ orderLineId: 1 }], amountDeltaMinor: -2500 };
 
     it('the shop resolver asks for the customer audience and returns lines only', async () => {
@@ -188,9 +188,9 @@ describe('order line change resolvers', () => {
         const resolver = new AdminOrderLineChangesResolver({ forOrder } as never);
         expect(await resolver.soldTotalWithTax(ctx, order)).toBe(7500);
         forOrder.mockResolvedValue({ lines: [], amountDeltaMinor: -99999 });
-        expect(await resolver.soldTotalWithTax(ctx, { ...order })).toBe(0);
+        expect(await resolver.soldTotalWithTax(ctx, { ...order } as Order)).toBe(0);
         forOrder.mockResolvedValue({ lines: [], amountDeltaMinor: 0 });
-        expect(await resolver.soldTotalWithTax(ctx, { ...order })).toBeNull();
+        expect(await resolver.soldTotalWithTax(ctx, { ...order } as Order)).toBeNull();
     });
 
     it('computes once per order when both admin fields are read', async () => {
