@@ -96,6 +96,13 @@ Refinements of the model above; the sections above stay the contract.
 - **Undo.** `undoBulkBatch(uuid)` creates (one non-draft undo per original, enforced by a partial unique index; every actor may keep their own undo draft) a new linked batch for the
   applied records the viewer can see and runs it. Only an operation that declares `undoPlan` offers it. Activation
   grants are undoable; a revoke is not (the customer login is soft-deleted and a re-grant would create a new one).
+  An operation whose undo differs per record (the manager change: each client had another manager) returns `undoData`
+  from `apply`; it is stored on the record, and the undo batch hands it back to `inspect`/`apply` as that record's `input`.
+- **Change manager (#366).** `counterparty-manager-reassign`, permission `ReassignCounterpartyManager`, parameter
+  `administratorId` (always a manager: a client is never left without one). The target must be a live administrator, for a
+  department head one of the own branch; each record re-checks scope and target under a row lock and the review shows the
+  reason (`out_of_scope`, `target_not_allowed`, `already_assigned`). Its undo puts the previous manager back only while the
+  batch manager is still in place (`changed_since` otherwise). The customer card runs the same operation with one record.
 - **History scope.** The list shows finished batches of the types the viewer holds; the header (number, operation,
   who, when) is visible to every holder of the permission, while counters and the per-record table cover only the
   records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date
