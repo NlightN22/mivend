@@ -44,7 +44,9 @@ async function forceInactiveTradingPoint(page: import('@playwright/test').Page):
 
 test('customers page shows the client list and KPIs @read-only', async ({ page }) => {
     await page.goto('/customers?search=E2E%20Co');
-    await expect(page.getByText('Active in ERP')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mv-kpi-card__label', { hasText: 'Active in ERP' })).toBeVisible({
+        timeout: 15000,
+    });
     await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
 
     const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();
