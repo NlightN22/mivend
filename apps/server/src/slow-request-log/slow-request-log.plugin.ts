@@ -3,6 +3,7 @@ import { Logger, PluginCommonModule, VendurePlugin, type ApiOptions } from '@ven
 
 import { startLagMonitor, type LagMonitor } from './event-loop-lag';
 import { createInFlightOperations } from './in-flight';
+import { createOmittedTakeWarner } from './omitted-take-warning';
 import {
     actorLabel,
     envMs,
@@ -15,6 +16,7 @@ type ApolloServerPlugin = NonNullable<ApiOptions['apolloServerPlugins']>[number]
 
 const loggerCtx = 'slow-request';
 const inFlight = createInFlightOperations();
+const warnOmittedTake = createOmittedTakeWarner(message => Logger.warn(message, loggerCtx));
 
 function slowRequestApolloPlugin(thresholdMs: number): ApolloServerPlugin {
     return {
@@ -24,6 +26,7 @@ function slowRequestApolloPlugin(thresholdMs: number): ApolloServerPlugin {
             return {
                 async didResolveOperation(rc) {
                     finish = inFlight.start(rc.operationName, startedAt);
+                    warnOmittedTake(rc.schema, rc.document, rc.request.variables, rc.operationName);
                 },
                 async willSendResponse(rc) {
                     finish?.();
