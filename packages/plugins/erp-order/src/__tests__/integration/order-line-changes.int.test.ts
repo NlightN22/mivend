@@ -102,7 +102,7 @@ describe('OrderLineChangesService', () => {
         expect((await service.forOrder(ctx, foreignOrder, 'staff')).lines).toEqual([]);
     });
 
-    it('a claim is staff-only and counts only when worked out', async () => {
+    it('a worked-out claim changes nothing for either audience', async () => {
         const [{ id }] = await dataSource.query(
             `INSERT INTO customer_claim_erp ("erpId","sourceVersion","orderId",number,"workedOut") VALUES ('k-1','1','o-1','k-1',true) RETURNING id`,
         );
@@ -111,23 +111,9 @@ describe('OrderLineChangesService', () => {
             [id],
         );
         expect((await service.forOrder(ctx, order, 'customer')).lines).toEqual([]);
-        const staff = await service.forOrder(ctx, order, 'staff');
-        expect(staff.lines[0].actual).toBe(8);
-        await dataSource.query(`UPDATE customer_claim_erp SET "workedOut" = false`);
-        expect((await service.forOrder(ctx, order, 'staff')).lines).toEqual([]);
-    });
-
-    it('a worked-out claim and the correction it produced count once', async () => {
-        const [{ id }] = await dataSource.query(
-            `INSERT INTO customer_claim_erp ("erpId","sourceVersion","orderId",number,"workedOut") VALUES ('k-1','1','o-1','k-1',true) RETURNING id`,
-        );
-        await dataSource.query(
-            `INSERT INTO customer_claim_goods_line_erp ("documentId","lineNumber","productId",quantity,"amountMinor") VALUES ($1,1,'prod-1',1,100)`,
-            [id],
-        );
-        await correction('c-1', 'o-1', null);
-        const staff = await service.forOrder(ctx, order, 'staff');
-        expect(staff.lines[0].events).toHaveLength(1);
-        expect([staff.lines[0].actual, staff.amountDeltaMinor]).toEqual([9, -100]);
+        expect(await service.forOrder(ctx, order, 'staff')).toEqual({
+            lines: [],
+            amountDeltaMinor: 0,
+        });
     });
 });

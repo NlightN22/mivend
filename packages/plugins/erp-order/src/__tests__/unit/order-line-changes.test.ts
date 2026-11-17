@@ -3,10 +3,7 @@ import type { Order, RequestContext } from '@vendure/core';
 
 import { isReflectedInAccounting } from '../../order-line-changes/line-change-accounting';
 import { buildOrderChanges } from '../../order-line-changes/line-change-events';
-import {
-    claimGoodsSource,
-    correctionGoodsSource,
-} from '../../order-line-changes/line-change-sources';
+import { correctionGoodsSource } from '../../order-line-changes/line-change-sources';
 import type { LineChangeSource } from '../../order-line-changes/line-change.types';
 import {
     AdminOrderLineChangesResolver,
@@ -48,7 +45,7 @@ describe('buildOrderChanges', () => {
             lines,
             [
                 source({
-                    quantity: -2,
+                    quantity: -1,
                     kind: 'return',
                     documentNumber: '12',
                     documentDate: new Date('2026-01-05'),
@@ -64,7 +61,7 @@ describe('buildOrderChanges', () => {
         ]);
         expect([change.ordered, change.actual]).toEqual([10, 8]);
         expect(change.events[0].subtitleKey).toBe('decreased');
-        expect(result.amountDeltaMinor).toBe(-750);
+        expect(result.amountDeltaMinor).toBe(-1000);
     });
 
     it('shows a customer only accounting-reflected documents and no money', () => {
@@ -113,11 +110,6 @@ describe('buildOrderChanges', () => {
 describe('sources', () => {
     it('adds the line VAT to amounts the ERP states without VAT', () => {
         const net = { number: '7', date: null, amountIncludesVat: false, accounting: {} };
-        const claim = claimGoodsSource(
-            net as never,
-            { productId: 'p', quantity: 1, amountMinor: 100, vatAmountMinor: 20 } as never,
-        );
-        expect(claim.amountMinor).toBe(-120);
         const fix = correctionGoodsSource(
             net as never,
             {
@@ -152,19 +144,6 @@ describe('sources', () => {
         expect(
             correctionGoodsSource(doc as never, line({ quantityBeforeCorrection: null })).quantity,
         ).toBe(-2);
-    });
-
-    it('never marks a claim as reflected in accounting', () => {
-        const s = claimGoodsSource(
-            { number: '9', date: null } as never,
-            { productId: 'p-1', quantity: 2, unitCoefficient: null, amountMinor: 50 } as never,
-        );
-        expect([s.kind, s.quantity, s.amountMinor, s.reflectedInAccounting]).toEqual([
-            'return',
-            -2,
-            -50,
-            false,
-        ]);
     });
 });
 

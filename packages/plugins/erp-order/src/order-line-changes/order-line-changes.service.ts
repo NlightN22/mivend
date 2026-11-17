@@ -3,23 +3,13 @@ import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQueryBounded, findBounded } from 'shared';
 import { In } from 'typeorm';
 
-import { CustomerClaimErp } from '../erp-documents/customer-claim-erp.entity';
-import {
-    CustomerClaimGoodsLineErp,
-    CustomerClaimServiceLineErp,
-} from '../erp-documents/customer-claim-line-erp.entity';
 import { SalesCorrectionErp } from '../erp-documents/sales-correction-erp.entity';
 import {
     SalesCorrectionGoodsLineErp,
     SalesCorrectionServiceLineErp,
 } from '../erp-documents/sales-correction-line-erp.entity';
 import { buildOrderChanges, type OrderLineRef } from './line-change-events';
-import {
-    claimGoodsSource,
-    claimServiceSource,
-    correctionGoodsSource,
-    correctionServiceSource,
-} from './line-change-sources';
+import { correctionGoodsSource, correctionServiceSource } from './line-change-sources';
 import type { LineChangeAudience, LineChangeSource, OrderChanges } from './line-change.types';
 
 const EMPTY: OrderChanges = { lines: [], amountDeltaMinor: 0 };
@@ -74,11 +64,6 @@ export class OrderLineChangesService {
                 where: { orderId: erpOrderId, isDeleted: false },
             },
         );
-        const claims = (
-            await findBounded(this.connection.getRepository(ctx, CustomerClaimErp), {
-                where: { orderId: erpOrderId, isDeleted: false },
-            })
-        ).filter(c => c.workedOut === true);
         const sources: LineChangeSource[] = [];
         const correctionIds = corrections.map(c => c.id);
         if (correctionIds.length > 0) {
@@ -94,23 +79,6 @@ export class OrderLineChangesService {
                     ...services
                         .filter(l => l.documentId === doc.id)
                         .map(l => correctionServiceSource(doc, l)),
-                );
-            }
-        }
-        const claimIds = claims.map(c => c.id);
-        if (claimIds.length > 0) {
-            const [goods, services] = await Promise.all([
-                this.lines(ctx, CustomerClaimGoodsLineErp, claimIds),
-                this.lines(ctx, CustomerClaimServiceLineErp, claimIds),
-            ]);
-            for (const doc of claims) {
-                sources.push(
-                    ...goods
-                        .filter(l => l.documentId === doc.id)
-                        .map(l => claimGoodsSource(doc, l)),
-                    ...services
-                        .filter(l => l.documentId === doc.id)
-                        .map(l => claimServiceSource(doc, l)),
                 );
             }
         }

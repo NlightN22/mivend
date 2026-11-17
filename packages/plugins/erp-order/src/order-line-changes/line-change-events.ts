@@ -1,4 +1,3 @@
-import { netClaimsAgainstCorrections } from './line-change-claims';
 import type {
     LineChangeAudience,
     LineChangeEvent,
@@ -30,9 +29,7 @@ export function buildOrderChanges(
     sources: LineChangeSource[],
     audience: LineChangeAudience,
 ): OrderChanges {
-    const shown = netClaimsAgainstCorrections(sources).filter(
-        s => audience === 'staff' || s.reflectedInAccounting,
-    );
+    const shown = sources.filter(s => audience === 'staff' || s.reflectedInAccounting);
     const lineByProduct = new Map<string, OrderLineRef>();
     for (const line of lines) {
         if (line.productErpId && !lineByProduct.has(line.productErpId)) {

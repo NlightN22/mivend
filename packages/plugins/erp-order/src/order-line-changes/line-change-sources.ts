@@ -1,8 +1,3 @@
-import type { CustomerClaimErp } from '../erp-documents/customer-claim-erp.entity';
-import type {
-    CustomerClaimGoodsLineErp,
-    CustomerClaimServiceLineErp,
-} from '../erp-documents/customer-claim-line-erp.entity';
 import type { SalesCorrectionErp } from '../erp-documents/sales-correction-erp.entity';
 import type {
     SalesCorrectionGoodsLineErp,
@@ -62,37 +57,6 @@ export function correctionServiceSource(
         quantity: 0,
         amountMinor: correctionMoney(doc, line),
         reflectedInAccounting: isReflectedInAccounting(doc.accounting),
-        documentNumber: doc.number,
-        documentDate: doc.date,
-    };
-}
-
-// A claim document has no accounting attribute, so it is never customer-visible.
-export function claimGoodsSource(
-    doc: CustomerClaimErp,
-    line: CustomerClaimGoodsLineErp,
-): LineChangeSource {
-    return {
-        kind: 'return',
-        productErpId: line.productId ?? '',
-        quantity: -line.quantity * (line.unitCoefficient || 1),
-        amountMinor: -withVat(doc.amountIncludesVat, line.amountMinor, line.vatAmountMinor),
-        reflectedInAccounting: false,
-        documentNumber: doc.number,
-        documentDate: doc.date,
-    };
-}
-
-export function claimServiceSource(
-    doc: CustomerClaimErp,
-    line: CustomerClaimServiceLineErp,
-): LineChangeSource {
-    return {
-        kind: 'return',
-        productErpId: '',
-        quantity: 0,
-        amountMinor: -withVat(doc.amountIncludesVat, line.amountMinor, line.vatAmountMinor),
-        reflectedInAccounting: false,
         documentNumber: doc.number,
         documentDate: doc.date,
     };
