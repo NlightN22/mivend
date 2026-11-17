@@ -15,9 +15,7 @@ import type { VersioningService } from '@mivend/plugin-versioning';
 import {
     CounterpartyManagerAssignmentService,
     ManagerChangedSinceError,
-    MAX_BULK_REASSIGN,
 } from '../../counterparty-manager-assignment.service';
-import type { CounterpartyService } from '../../counterparty.service';
 
 vi.mock('shared', async importOriginal => ({
     ...(await importOriginal<typeof import('shared')>()),
@@ -29,7 +27,6 @@ vi.mock('shared', async importOriginal => ({
 
 const mockRepo = { findOne: vi.fn(), save: vi.fn(), update: vi.fn() };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
-const mockCounterpartyService = { visibleFilteredQb: vi.fn() };
 const mockTeamAdministratorService = { findInBranch: vi.fn(), findLive: vi.fn() };
 
 // Mirrors findInBranch: the target is found only when its branch equals the caller's.
@@ -72,7 +69,6 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         mockRepo.save.mockImplementation(async (c: unknown) => c);
         service = new CounterpartyManagerAssignmentService(
             mockConnection as unknown as TransactionalConnection,
-            mockCounterpartyService as unknown as CounterpartyService,
             accessScopeService,
             mockTeamAdministratorService as unknown as TeamAdministratorService,
             mockVersioningService as unknown as VersioningService,
@@ -166,13 +162,6 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
             UserInputError,
         );
     });
-
-    it('reassignManagerByFilter rejects above the bulk cap before querying anything', async () => {
-        await expect(
-            service.reassignManagerByFilter(mockCtx, {}, 'admin-9', MAX_BULK_REASSIGN + 1),
-        ).rejects.toThrow(UserInputError);
-        expect(mockCounterpartyService.visibleFilteredQb).not.toHaveBeenCalled();
-    });
 });
 
 describe('CounterpartyManagerAssignmentService.reassignOne (#366)', () => {
@@ -183,7 +172,6 @@ describe('CounterpartyManagerAssignmentService.reassignOne (#366)', () => {
         vi.clearAllMocks();
         service = new CounterpartyManagerAssignmentService(
             mockConnection as unknown as TransactionalConnection,
-            mockCounterpartyService as unknown as CounterpartyService,
             accessScopeService,
             mockTeamAdministratorService as unknown as TeamAdministratorService,
             mockVersioningService as unknown as VersioningService,

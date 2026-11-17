@@ -1293,23 +1293,6 @@ export type CounterpartyList = PaginatedList & {
     totalItems: Scalars['Int']['output'];
 };
 
-/** Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136) */
-export type CounterpartyListFilter = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
-    /** When true, overrides branchId and filters to counterparties with no branch */
-    branchUnassigned?: InputMaybe<Scalars['Boolean']['input']>;
-    groupLabel?: InputMaybe<Scalars['String']['input']>;
-    /** missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225) */
-    innStatus?: InputMaybe<Scalars['String']['input']>;
-    managerErpId?: InputMaybe<Scalars['String']['input']>;
-    managerId?: InputMaybe<Scalars['ID']['input']>;
-    /** ready | missing-data | inn-duplicate | erp-inactive | activated — whether portal access can be switched on */
-    readiness?: InputMaybe<Scalars['String']['input']>;
-    search?: InputMaybe<Scalars['String']['input']>;
-    status?: InputMaybe<Scalars['String']['input']>;
-    unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
 export type CounterpartyListOptions = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     /** When true, overrides branchId and filters to counterparties with no branch */
@@ -4754,7 +4737,6 @@ export type Mutation = {
     prepareOidcSignOut: Maybe<Scalars['String']['output']>;
     previewBulkBatch: BulkBatch;
     reassignCounterpartyManager: Counterparty;
-    reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
     /** Rebuilds the event of a skipped outbox row from its source data (issue #200). */
     rebuildSkippedIntegrationOutbox: RebuildSkippedOutcome;
     /** Recomputes the ERP-requirement checks of one visible order and returns its stored results (#237). Needs ReadCheckResults. */
@@ -5602,12 +5584,6 @@ export type MutationPreviewBulkBatchArgs = {
 export type MutationReassignCounterpartyManagerArgs = {
     administratorId: Scalars['ID']['input'];
     counterpartyId: Scalars['ID']['input'];
-};
-
-export type MutationReassignCounterpartyManagerByFilterArgs = {
-    administratorId: Scalars['ID']['input'];
-    expectedCount: Scalars['Int']['input'];
-    filter: CounterpartyListFilter;
 };
 
 export type MutationRebuildSkippedIntegrationOutboxArgs = {
@@ -10071,7 +10047,7 @@ export type ScheduledTask = {
     scheduleDescription: Scalars['String']['output'];
 };
 
-/** Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items. */
+/** Products matched by an article, part number, manufacturer code, cross reference or code prefix, disjoint and excluded from the full-text items. */
 export type SearchCodeMatches = {
     items: Array<SearchResult>;
     total: Scalars['Int']['output'];
@@ -10100,10 +10076,12 @@ export type SearchReindexResponse = {
 
 export type SearchResponse = {
     collections: Array<CollectionResult>;
+    crossMatches: Maybe<SearchCodeMatches>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
     manufacturerCodeMatches: Maybe<SearchCodeMatches>;
     partNumberMatches: Maybe<SearchCodeMatches>;
+    prefixMatches: Maybe<SearchCodeMatches>;
     prices: SearchResponsePriceData;
     skuMatches: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];

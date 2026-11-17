@@ -6,8 +6,7 @@ import { INN_DIGITS_SQL } from './counterparty-inn-guard';
 import { portalReadinessSql } from './counterparty-readiness-filter';
 import { Counterparty } from './entities/counterparty.entity';
 
-// Mirrors the GraphQL `CounterpartyListFilter` input — the narrowing half of
-// `CounterpartyListOptions`, shared by the list query and filter-shaped bulk mutations (#136).
+// The narrowing half of `CounterpartyListOptions`.
 export const MAX_ERP_IDS = 200;
 
 export interface CounterpartyListFilter {

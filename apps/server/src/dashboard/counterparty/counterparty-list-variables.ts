@@ -32,12 +32,3 @@ export function toCounterpartyListFilter(
         managerErpId: managerErpId || undefined,
     };
 }
-
-// Offered only once the whole visible page is selected and the filter matches more than that.
-export function shouldOfferAllMatching(
-    allPageRowsSelected: boolean,
-    selectedCount: number,
-    totalMatching: number,
-): boolean {
-    return allPageRowsSelected && totalMatching > selectedCount;
-}

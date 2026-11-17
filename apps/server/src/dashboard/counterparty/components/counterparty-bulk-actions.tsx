@@ -9,22 +9,11 @@ import {
 import { LinkIcon, UnlinkIcon, UserRoundIcon } from 'lucide-react';
 
 import { applyCounterpartyPortalAccessChangesDocument } from '../counterparty.graphql.js';
-import { useCounterpartyListFilter } from '../counterparty-list-filter-context.js';
-import { shouldOfferAllMatching } from '../counterparty-list-variables.js';
 import { AssignManagerDialog } from './assign-manager-dialog.js';
 
 export const AssignManagerBulkAction: BulkActionComponent<any> = ({ selection, table }) => {
     const { refetchPaginatedList } = usePaginatedList();
     const [dialogOpen, setDialogOpen] = useState(false);
-    const filter = useCounterpartyListFilter();
-    const totalItems = table.getRowCount();
-    const allMatching = shouldOfferAllMatching(
-        table.getIsAllPageRowsSelected(),
-        selection.length,
-        totalItems,
-    )
-        ? { filter, totalItems }
-        : undefined;
 
     return (
         <>
@@ -39,7 +28,6 @@ export const AssignManagerBulkAction: BulkActionComponent<any> = ({ selection, t
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
                 counterpartyIds={selection.map((s: { id: string }) => s.id)}
-                allMatching={allMatching}
                 onSuccess={() => {
                     refetchPaginatedList();
                     table.resetRowSelection();

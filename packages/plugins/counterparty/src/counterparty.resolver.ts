@@ -11,7 +11,6 @@ import {
 } from '@vendure/core';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
-import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyService } from './counterparty.service';
@@ -280,22 +279,6 @@ export class CounterpartyResolver {
             ctx,
             args.counterpartyId,
             args.administratorId,
-        );
-    }
-
-    @Transaction()
-    @Mutation()
-    @Allow(CustomPermission.ReassignCounterpartyManager.Permission)
-    async reassignCounterpartyManagerByFilter(
-        @Ctx() ctx: RequestContext,
-        @Args()
-        args: { filter: CounterpartyListFilter; administratorId: string; expectedCount: number },
-    ): Promise<number> {
-        return this.managerAssignmentService.reassignManagerByFilter(
-            ctx,
-            args.filter,
-            args.administratorId,
-            args.expectedCount,
         );
     }
 }

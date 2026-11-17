@@ -113,20 +113,6 @@ export const reassignCounterpartyManagerDocument = graphql(`
     }
 `);
 
-export const reassignCounterpartyManagerByFilterDocument = graphql(`
-    mutation ReassignCounterpartyManagerByFilterFromDashboard(
-        $filter: CounterpartyListFilter!
-        $administratorId: ID!
-        $expectedCount: Int!
-    ) {
-        reassignCounterpartyManagerByFilter(
-            filter: $filter
-            administratorId: $administratorId
-            expectedCount: $expectedCount
-        )
-    }
-`);
-
 // One mutation per selected row, each result reported independently:
 // a bad row (missing phone/officialEmail, already linked, out of scope) never blocks the rest.
 export const applyCounterpartyPortalAccessChangesDocument = graphql(`
