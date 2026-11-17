@@ -25,6 +25,7 @@ const props = defineProps<{
     gridColumns?: number;
     hasCodeMatches?: boolean;
     codeMatchesTruncated?: boolean;
+    guestSearchHint?: boolean;
     filterCount?: number;
     showFilterButton?: boolean;
     scopeLabel?: string;
@@ -130,6 +131,9 @@ onBeforeUnmount(() => observer?.disconnect());
 
         <div v-if="codeMatchesTruncated && !loading" class="plv-note" role="status">
             {{ t('productList.codeMatchesTruncated') }}
+        </div>
+        <div v-if="guestSearchHint && !loading" class="plv-note" role="status">
+            {{ t('productList.guestSearchHint') }}
         </div>
         <div v-if="loading" class="plv-state">{{ t('productList.loading') }}</div>
         <MvErrorState

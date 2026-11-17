@@ -17,6 +17,7 @@ import { codeIndexMappingProperties, codeProductMappings } from './code-index-fi
 import { mapSearchQuery, mapSearchSort } from './code-match-query';
 import { InternalCodeMatchesPlugin } from './internal-code-matches.plugin';
 import { ExternalSearchPlugin } from './external-search.plugin';
+import { SEARCH_API_KEY_ENV } from './search-access';
 import { SearchCapabilitiesResolver } from './search-capabilities';
 import { SearchResultAvailabilityResolver } from './search-result-availability.resolver';
 import { SearchResultResolver } from './search.resolver';
@@ -26,7 +27,7 @@ import { SearchService } from './search.service';
 import { getSearchBackend, loggerCtx } from './types';
 
 const codeMatchesSchema = gql`
-    "Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items."
+    "Products matched by an article, part number, manufacturer code, cross reference or code prefix, disjoint and excluded from the full-text items."
     type SearchCodeMatches {
         items: [SearchResult!]!
         total: Int!
@@ -36,6 +37,8 @@ const codeMatchesSchema = gql`
         skuMatches: SearchCodeMatches
         partNumberMatches: SearchCodeMatches
         manufacturerCodeMatches: SearchCodeMatches
+        crossMatches: SearchCodeMatches
+        prefixMatches: SearchCodeMatches
     }
 `;
 
@@ -177,7 +180,7 @@ export class SearchPlugin {}
 function buildSearchPlugins(): Array<Type<unknown>> {
     const backend = getSearchBackend();
     if (backend === 'external') {
-        for (const name of ['SEARCH_SERVICE_URL', 'SEARCH_SERVICE_API_KEY']) {
+        for (const name of ['SEARCH_SERVICE_URL', ...Object.values(SEARCH_API_KEY_ENV)]) {
             if (!process.env[name]) {
                 throw new Error(
                     `SEARCH_BACKEND=external requires ${name} to be set (see ` +

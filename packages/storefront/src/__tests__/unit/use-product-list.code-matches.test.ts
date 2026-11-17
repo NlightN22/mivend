@@ -63,6 +63,30 @@ describe('useProductList code matches (#307)', () => {
         expect(list.hasCodeMatches.value).toBe(true);
     });
 
+    it('labels cross and prefix groups, and a weak cross as a possible analogue', async () => {
+        respond({
+            totalItems: 0,
+            items: [],
+            crossMatches: {
+                total: 2,
+                items: [
+                    { ...hit('1'), matchReasons: ['crossReference'] },
+                    { ...hit('2'), matchReasons: ['weakCross'] },
+                ],
+            },
+            prefixMatches: { total: 1, items: [{ ...hit('3'), matchReasons: ['prefixCode'] }] },
+        });
+        const { useProductList } = await import('../../composables/useProductList');
+        const list = useProductList({ query: ref('48.38') });
+        await list.load();
+        expect(list.items.value.map(i => [i.id, i.codeMatch])).toEqual([
+            ['1', 'cross'],
+            ['2', 'weakCross'],
+            ['3', 'prefix'],
+        ]);
+        expect(list.totalItems.value).toBe(3);
+    });
+
     it('pages over the full-text part only and never re-adds the code groups', async () => {
         const text = Array.from({ length: 24 }, (_, i) => hit(`t${i}`));
         respond({

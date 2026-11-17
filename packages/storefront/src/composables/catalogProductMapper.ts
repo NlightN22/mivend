@@ -39,7 +39,13 @@ export interface ProductItem {
 // Mirrors CODE_GROUP_LIMIT of the search plugin: hits asked per code group on the first page.
 const CODE_GROUP_LIMIT = 24;
 
-export type CodeMatchKind = 'sku' | 'partNumber' | 'manufacturerCode';
+export type CodeMatchKind =
+    | 'sku'
+    | 'partNumber'
+    | 'manufacturerCode'
+    | 'cross'
+    | 'weakCross'
+    | 'prefix';
 
 type EsSearchItem = CatalogProductsQuery['search']['items'][number];
 
@@ -57,6 +63,8 @@ export function mapCodeGroups(
         ['sku', search.skuMatches],
         ['partNumber', search.partNumberMatches],
         ['manufacturerCode', search.manufacturerCodeMatches],
+        ['cross', search.crossMatches],
+        ['prefix', search.prefixMatches],
     ];
     const items: ProductItem[] = [];
     let total = 0;
@@ -65,9 +73,20 @@ export function mapCodeGroups(
         if (!group) continue;
         total += group.total;
         truncated ||= group.total > CODE_GROUP_LIMIT;
-        items.push(...mapItems(group.items, facetValues).map(item => ({ ...item, codeMatch })));
+        const mapped = mapItems(group.items, facetValues);
+        items.push(
+            ...mapped.map((item, i) => ({
+                ...item,
+                codeMatch: weakCrossOf(codeMatch, group.items[i]),
+            })),
+        );
     }
     return { items, total, truncated };
+}
+
+// A weak cross is shown as a possible analogue; the part it crosses with is never exposed.
+function weakCrossOf(kind: CodeMatchKind, source: EsSearchItem | undefined): CodeMatchKind {
+    return kind === 'cross' && source?.matchReasons?.includes('weakCross') ? 'weakCross' : kind;
 }
 
 export function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {

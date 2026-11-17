@@ -3997,7 +3997,7 @@ export type SearchCapabilities = {
     sortKeys: Array<Scalars['String']['output']>;
 };
 
-/** Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items. */
+/** Products matched by an article, part number, manufacturer code, cross reference or code prefix, disjoint and excluded from the full-text items. */
 export type SearchCodeMatches = {
     items: Array<SearchResult>;
     total: Scalars['Int']['output'];
@@ -4026,10 +4026,12 @@ export type SearchReindexResponse = {
 
 export type SearchResponse = {
     collections: Array<CollectionResult>;
+    crossMatches?: Maybe<SearchCodeMatches>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
     manufacturerCodeMatches?: Maybe<SearchCodeMatches>;
     partNumberMatches?: Maybe<SearchCodeMatches>;
+    prefixMatches?: Maybe<SearchCodeMatches>;
     prices: SearchResponsePriceData;
     skuMatches?: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];
@@ -5033,6 +5035,62 @@ export type CatalogProductsQuery = {
             }>;
         } | null;
         manufacturerCodeMatches?: {
+            total: number;
+            items: Array<{
+                productId: string;
+                productVariantId: string;
+                productName: string;
+                galleryPreviews: Array<string>;
+                slug: string;
+                sku: string;
+                currencyCode: CurrencyCode;
+                stockLevel: string;
+                unitName?: string | null;
+                unitRatioToBase?: number | null;
+                multiplicity?: number | null;
+                facetValueIds: Array<string>;
+                customerPrice?: number | null;
+                compareAtPrice?: number | null;
+                matchReasons?: Array<string> | null;
+                manufacturer?: { name?: string | null } | null;
+                priceWithTax: { min: any } | { value: any };
+                packagingLevels: Array<{ name: string; ratioToBase: number }>;
+                discountTiers: Array<{
+                    percent: number;
+                    minWeightKg?: number | null;
+                    minAmount?: number | null;
+                }>;
+            }>;
+        } | null;
+        crossMatches?: {
+            total: number;
+            items: Array<{
+                productId: string;
+                productVariantId: string;
+                productName: string;
+                galleryPreviews: Array<string>;
+                slug: string;
+                sku: string;
+                currencyCode: CurrencyCode;
+                stockLevel: string;
+                unitName?: string | null;
+                unitRatioToBase?: number | null;
+                multiplicity?: number | null;
+                facetValueIds: Array<string>;
+                customerPrice?: number | null;
+                compareAtPrice?: number | null;
+                matchReasons?: Array<string> | null;
+                manufacturer?: { name?: string | null } | null;
+                priceWithTax: { min: any } | { value: any };
+                packagingLevels: Array<{ name: string; ratioToBase: number }>;
+                discountTiers: Array<{
+                    percent: number;
+                    minWeightKg?: number | null;
+                    minAmount?: number | null;
+                }>;
+            }>;
+        } | null;
+        prefixMatches?: {
             total: number;
             items: Array<{
                 productId: string;
@@ -6617,6 +6675,18 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       }
     }
     manufacturerCodeMatches {
+      total
+      items {
+        ...CatalogSearchItem
+      }
+    }
+    crossMatches {
+      total
+      items {
+        ...CatalogSearchItem
+      }
+    }
+    prefixMatches {
       total
       items {
         ...CatalogSearchItem

@@ -7,6 +7,7 @@ import {
     SearchOffsetTooLargeError,
     SearchRateLimitedError,
 } from './search-errors';
+import { SEARCH_API_KEY_ENV, type SearchAccess } from './search-access';
 import { loggerCtx } from './types';
 
 export interface ResolveQueryResponseItem {
@@ -15,11 +16,13 @@ export interface ResolveQueryResponseItem {
     manufacturer?: string;
     canonicalName: string;
     categoryPath: string[];
-    manufacturerCodes: Array<{ lineNumber: number; code: string; manufacturer: string }>;
+    // Absent on the public endpoint.
+    manufacturerCodes?: Array<{ lineNumber: number; code: string; manufacturer: string }>;
     hasAvailableOffer: boolean;
     hasPrice: boolean;
     // Open set: search-service may add reasons, consumers must ignore unknown ones.
     matchReasons?: string[];
+    crossStrength?: 'strong' | 'weak';
     score: number;
 }
 
@@ -40,6 +43,8 @@ export interface ResolveQueryResponse {
     skuMatches?: ResolveQueryCodeGroup;
     partNumberMatches?: ResolveQueryCodeGroup;
     manufacturerCodeMatches?: ResolveQueryCodeGroup;
+    crossMatches?: ResolveQueryCodeGroup;
+    prefixMatches?: ResolveQueryCodeGroup;
     facets?: ResolveQueryFacets;
 }
 
@@ -55,6 +60,7 @@ const DEFAULT_RETRY_AFTER_SECONDS = 1;
 export class SearchServiceClient {
     async resolveQuery(
         request: ResolveQueryRequest,
+        access: SearchAccess,
         endUserId?: string,
     ): Promise<ResolveQueryResponse> {
         const baseUrl = process.env.SEARCH_SERVICE_URL;
@@ -65,15 +71,17 @@ export class SearchServiceClient {
             );
         }
 
-        const apiKey = process.env.SEARCH_SERVICE_API_KEY;
+        const keyEnv = SEARCH_API_KEY_ENV[access];
+        const apiKey = process.env[keyEnv];
         if (!apiKey) {
             throw new Error(
-                'SEARCH_SERVICE_API_KEY is required when SEARCH_BACKEND=external — set it in the ' +
+                `${keyEnv} is required when SEARCH_BACKEND=external — set it in the ` +
                     'contour env file (see docs/environments.md).',
             );
         }
 
-        const url = `${baseUrl.replace(/\/$/, '')}/resolve-query`;
+        const path = access === 'public' ? '/resolve-query/public' : '/resolve-query';
+        const url = `${baseUrl.replace(/\/$/, '')}${path}`;
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'X-Api-Key': apiKey,
@@ -97,10 +105,7 @@ export class SearchServiceClient {
             // Full response body is logged server-side only (audit finding, mivend.audit.70:
             // the raw body must never reach the GraphQL error surfaced to storefront callers).
             const body = await response.text().catch(() => '');
-            Logger.error(
-                `search-service /resolve-query returned ${response.status}: ${body}`,
-                loggerCtx,
-            );
+            Logger.error(`search-service ${path} returned ${response.status}: ${body}`, loggerCtx);
             const code = errorCode(body);
             if (response.status === 403 && code === 'END_USER_BLOCKED') {
                 throw new SearchEndUserBlockedError();

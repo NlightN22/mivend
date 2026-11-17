@@ -76,7 +76,9 @@ export default async function setup(project: TestProject): Promise<() => Promise
             // The external backend connects lazily, so search needs no running service here.
             SEARCH_BACKEND: 'external',
             SEARCH_SERVICE_URL: 'http://127.0.0.1:9',
-            SEARCH_SERVICE_API_KEY: 'access-test',
+            SEARCH_SERVICE_API_KEY_PUBLIC: 'access-test',
+            SEARCH_SERVICE_API_KEY_STOREFRONT: 'access-test',
+            SEARCH_SERVICE_API_KEY_MANAGER: 'access-test',
             S3_ENDPOINT: '',
             // Only builds the acting hand-off link; no storefront is contacted.
             STOREFRONT_PUBLIC_URL: 'http://127.0.0.1:9',

@@ -156,8 +156,10 @@ company-name sort order), with no error until someone notices broken UI ordering
 
 **Storefront search backend per contour (issue #69)**: `local` uses `internal` (`ElasticsearchPlugin`
 against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integration` and
-`production` use `external` (search-service's `POST /resolve-query`, `SEARCH_BACKEND=external` +
-required `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`, sent as `X-Api-Key`). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
+`production` use `external` (search-service, `SEARCH_BACKEND=external` + required `SEARCH_SERVICE_URL`
+and three keys sent as `X-Api-Key`: `SEARCH_SERVICE_API_KEY_PUBLIC` (scope `query`, anonymous shoppers, `POST /resolve-query/public`:
+exact article, part number and name only) and `SEARCH_SERVICE_API_KEY_STOREFRONT` / `SEARCH_SERVICE_API_KEY_MANAGER` (scope `search:full`,
+signed-in shoppers / staff, `POST /resolve-query`: also manufacturer codes, cross references and prefixes)). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
 `packages/plugins/search/src/types.ts`) is decided once at bootstrap in `search.plugin.ts` — a
 per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
 are never registered together.

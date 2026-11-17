@@ -8,6 +8,8 @@ interface SearchParent {
     input: SearchInput;
 }
 
+// Cross and prefix groups are external-only; the internal backend leaves them null (parity no-op).
+// Manufacturer codes are for signed-in shoppers only, as on the external public endpoint.
 @Resolver('SearchResponse')
 export class ShopCodeMatchesResolver {
     constructor(private matches: InternalCodeMatchesService) {}
@@ -30,6 +32,7 @@ export class ShopCodeMatchesResolver {
         @Ctx() ctx: RequestContext,
         @Parent() p: SearchParent,
     ): Promise<CodeMatches | null> {
+        if (!ctx.activeUserId) return Promise.resolve(null);
         return this.matches.find(ctx, p.input, 'manufacturerCode', true);
     }
 }

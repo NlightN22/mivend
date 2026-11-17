@@ -62,7 +62,9 @@ describe('SearchResponse resolver precedence (internal backend)', () => {
         vi.resetModules();
         process.env.SEARCH_BACKEND = 'external';
         process.env.SEARCH_SERVICE_URL = 'http://search.test';
-        process.env.SEARCH_SERVICE_API_KEY = 'key';
+        process.env.SEARCH_SERVICE_API_KEY_PUBLIC = 'key';
+        process.env.SEARCH_SERVICE_API_KEY_STOREFRONT = 'key';
+        process.env.SEARCH_SERVICE_API_KEY_MANAGER = 'key';
         const { searchPlugins } = await import('../../search.plugin');
         const resolvers = getPluginAPIExtensions(searchPlugins, 'shop').flatMap(
             e => (typeof e.resolvers === 'function' ? e.resolvers() : (e.resolvers ?? [])) as Cls[],

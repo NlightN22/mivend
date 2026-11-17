@@ -71,7 +71,12 @@ const ru: typeof en = {
             sku: 'Артикул',
             partNumber: 'Номер детали',
             manufacturerCode: 'Код производителя',
+            cross: 'Кросс',
+            weakCross: 'Возможный аналог',
+            prefix: 'Начало номера',
         },
+        guestSearchHint:
+            'Войдите, чтобы искать также по кодам производителя, кроссам и началу номера',
     },
     productCard: {
         previousPhoto: 'Предыдущее фото',

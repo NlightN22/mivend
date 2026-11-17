@@ -193,6 +193,7 @@ onMounted(() => {
                     :total-items="totalItems"
                     :has-code-matches="hasCodeMatches"
                     :code-matches-truncated="codeMatchesTruncated"
+                    :guest-search-hint="!authStore.isLoggedIn && !!searchQuery"
                     :loading="loading"
                     :load-error="loadError"
                     :error-title="loadErrorInfo.title"

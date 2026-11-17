@@ -78,6 +78,18 @@ query CatalogProducts(
                 ...CatalogSearchItem
             }
         }
+        crossMatches {
+            total
+            items {
+                ...CatalogSearchItem
+            }
+        }
+        prefixMatches {
+            total
+            items {
+                ...CatalogSearchItem
+            }
+        }
         items {
             ...CatalogSearchItem
         }

@@ -114,6 +114,57 @@ describe('ExternalSearchService.search', () => {
         expect(result.items).toEqual([]);
     });
 
+    it('maps the cross and prefix groups and keeps the cross reasons', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({
+                items: [],
+                total: 0,
+                crossMatches: {
+                    items: [makeItem({ matchReasons: ['weakCross'], crossStrength: 'weak' })],
+                    total: 5,
+                },
+                prefixMatches: { items: [], total: 2 },
+            }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+            noHidden as never,
+        );
+        const result = await service.search(ctx, { term: '48.3855', take: 24 } as SearchInput);
+        expect(result.crossMatches?.total).toBe(5);
+        expect(result.crossMatches?.items.map(i => i.matchReasons)).toEqual([['weakCross']]);
+        expect(result.prefixMatches).toEqual({ items: [], total: 2 });
+    });
+
+    it.each([
+        ['anonymous shopper', {}, 'public'],
+        ['signed-in shopper', { activeUserId: 7 }, 'storefront'],
+        ['staff on the admin api', { apiType: 'admin', activeUserId: 7 }, 'manager'],
+    ])('asks search-service as a %s with %s access', async (_label, extra, access) => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+            noHidden as never,
+        );
+        await service.search(
+            { ...ctx, ...extra } as unknown as RequestContext,
+            {
+                term: 'oil',
+            } as SearchInput,
+        );
+        expect(client.resolveQuery.mock.calls[0]?.[1]).toBe(access);
+    });
+
     it('omits the groups when search-service returns none (text-only query)', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
@@ -211,6 +262,7 @@ describe('ExternalSearchService.search', () => {
         expect(client.resolveQuery).toHaveBeenNthCalledWith(
             1,
             expect.objectContaining({ requireOrganization: true }),
+            'public',
             undefined,
         );
         expect(client.resolveQuery.mock.calls[1][0]).not.toHaveProperty('requireOrganization');
@@ -354,6 +406,7 @@ describe('ExternalSearchService.search', () => {
         expect(result.items).toHaveLength(1);
         expect(client.resolveQuery).toHaveBeenCalledWith(
             expect.objectContaining({ query: 'oil' }),
+            'public',
             undefined,
         );
     });
@@ -392,6 +445,7 @@ describe('ExternalSearchService.search', () => {
 
         expect(client.resolveQuery).toHaveBeenCalledWith(
             expect.objectContaining({ query: '', categoryId: 'cat-erp' }),
+            'public',
             undefined,
         );
         expect(result.totalItems).toBe(410);
@@ -471,6 +525,7 @@ describe('ExternalSearchService.search', () => {
                 sort: 'priceDesc',
                 filters: { priceRange: { min: 10, max: 50 } },
             }),
+            'public',
             undefined,
         );
     });
@@ -671,6 +726,7 @@ describe('ExternalSearchService excludeCategoryIds', () => {
         await make(c, ['h1', 'h2']).search(ctx, { term: 'oil' } as SearchInput);
         expect(c.resolveQuery).toHaveBeenCalledWith(
             expect.objectContaining({ excludeCategoryIds: ['h1', 'h2'] }),
+            'public',
             undefined,
         );
     });

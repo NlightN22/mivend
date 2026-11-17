@@ -65,7 +65,16 @@ export default {
         packOf: 'pack of {n}',
         sortTextOnly: 'Sorting applies to the text results only',
         codeMatchesTruncated: 'Too many code matches; refine the query to see them all',
-        match: { sku: 'Article', partNumber: 'Part number', manufacturerCode: 'Manufacturer code' },
+        guestSearchHint:
+            'Sign in to also search by manufacturer codes, cross references and code beginnings',
+        match: {
+            sku: 'Article',
+            partNumber: 'Part number',
+            manufacturerCode: 'Manufacturer code',
+            cross: 'Cross',
+            weakCross: 'Possible analogue',
+            prefix: 'Code beginning',
+        },
     },
     productCard: {
         previousPhoto: 'Previous photo',

@@ -21,6 +21,7 @@ import { SearchFilterResolver } from './search-filter-resolver.service';
 import { ProductLookupService } from './product-lookup.service';
 import { SearchPriceTypeService } from './search-price-type.service';
 import { assertSearchDepth, searchEndUserId } from './search-end-user-id';
+import { searchAccessOf } from './search-access';
 import { SearchServiceClient } from './search-service.client';
 
 interface SearchResultAssetVM {
@@ -60,6 +61,8 @@ export interface ExternalSearchResponse {
     skuMatches?: ExternalCodeMatches;
     partNumberMatches?: ExternalCodeMatches;
     manufacturerCodeMatches?: ExternalCodeMatches;
+    crossMatches?: ExternalCodeMatches;
+    prefixMatches?: ExternalCodeMatches;
     facetValues: ExternalFacetValueResult[];
     collections: ExternalCollectionResult[];
 }
@@ -104,12 +107,18 @@ export class ExternalSearchService {
             return this.browseLocally(ctx, input, includeDisabled, resolved.warehouseIds);
         }
 
-        const response = await this.client.resolveQuery(request, searchEndUserId(ctx));
+        const response = await this.client.resolveQuery(
+            request,
+            searchAccessOf(ctx),
+            searchEndUserId(ctx),
+        );
 
         const groups = {
             skuMatches: response.skuMatches,
             partNumberMatches: response.partNumberMatches,
             manufacturerCodeMatches: response.manufacturerCodeMatches,
+            crossMatches: response.crossMatches,
+            prefixMatches: response.prefixMatches,
         };
         const hits = [
             ...Object.values(groups).flatMap(group => group?.items ?? []),
