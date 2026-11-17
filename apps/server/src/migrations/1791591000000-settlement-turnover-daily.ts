@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class SettlementTurnoverDaily1791590000000 implements MigrationInterface {
-    name = 'SettlementTurnoverDaily1791590000000';
+export class SettlementTurnoverDaily1791591000000 implements MigrationInterface {
+    name = 'SettlementTurnoverDaily1791591000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
