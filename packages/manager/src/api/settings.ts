@@ -78,6 +78,7 @@ export const PERMISSION_CATEGORIES: { key: string; permissionNames: string[] }[]
             'ReadCounterparty',
             'ReadCounterpartyCredit',
             'ReassignCounterpartyManager',
+            'RemoveCounterpartyManager',
         ],
     },
     {

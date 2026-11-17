@@ -2,6 +2,7 @@ import type { Component } from 'vue';
 import ActivationParametersStep from './ActivationParametersStep.vue';
 import ActivationSelectStep from './ActivationSelectStep.vue';
 import ManagerReassignParametersStep from './ManagerReassignParametersStep.vue';
+import ManagerRemoveParametersStep from './ManagerRemoveParametersStep.vue';
 import PasswordResetParametersStep from './PasswordResetParametersStep.vue';
 import { BULK_PERMISSIONS } from './operationPermissions';
 
@@ -35,6 +36,13 @@ export const OPERATION_UI: Record<string, OperationUi> = {
         defaultParameters: { administratorId: '' },
         recordNoun: 'counterparties',
         required: { name: 'administratorId', hintKey: 'bulkOperations.managerReassign.choose' },
+    },
+    'counterparty-manager-remove': {
+        selectStep: ActivationSelectStep,
+        parametersStep: ManagerRemoveParametersStep,
+        defaultParameters: { confirmed: false },
+        recordNoun: 'counterparties',
+        required: { name: 'confirmed', hintKey: 'bulkOperations.managerRemove.mustConfirm' },
     },
 };
 

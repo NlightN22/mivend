@@ -194,6 +194,43 @@ describe('CounterpartyManagerAssignmentService.reassignOne (#366)', () => {
         expect(assignOne.assignCounterparties).toHaveBeenCalledWith(mockCtx, { ids: ['cp-1'] });
     });
 
+    it('removes the manager without looking at a target and records it', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-1' }));
+        resolveScope.mockResolvedValue(departmentScope);
+
+        expect(await service.reassignOne(mockCtx, 'cp-1', null)).toEqual({
+            previous: 'admin-1',
+            changed: true,
+        });
+        expect(mockRepo.update).toHaveBeenCalledWith('cp-1', { assignedManagerId: null });
+        expect(mockTeamAdministratorService.findInBranch).not.toHaveBeenCalled();
+        expect(mockVersioningService.recordChange).toHaveBeenCalledWith(
+            mockCtx,
+            expect.objectContaining({
+                changedFields: { assignedManagerId: { from: 'admin-1', to: null } },
+            }),
+        );
+    });
+
+    it('writes nothing when there is no manager to remove', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: null }));
+        resolveScope.mockResolvedValue({ kind: 'all' });
+
+        expect(await service.reassignOne(mockCtx, 'cp-1', null)).toMatchObject({ changed: false });
+        expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('restores a manager only while the client is still without one', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-5' }));
+        resolveScope.mockResolvedValue({ kind: 'all' });
+        mockTeamAdministratorService.findLive.mockResolvedValue({ id: 'admin-1' });
+
+        await expect(service.reassignOne(mockCtx, 'cp-1', 'admin-1', null)).rejects.toThrow(
+            ManagerChangedSinceError,
+        );
+        expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
     it('writes nothing when the manager is already the target', async () => {
         mockRepo.findOne.mockResolvedValue(counterparty({ assignedManagerId: 'admin-9' }));
         resolveScope.mockResolvedValue({ kind: 'all' });

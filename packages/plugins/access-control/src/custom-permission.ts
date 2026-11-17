@@ -79,6 +79,11 @@ export const CustomPermission = {
         description:
             "Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3)",
     }),
+    RemoveCounterpartyManager: new PermissionDefinition({
+        name: 'RemoveCounterpartyManager',
+        description:
+            "Leave counterparties without a primary manager (the client then follows the ERP's manager again) — general director by default, one operation with its own confirmation (#366)",
+    }),
     ManageCounterpartyTeam: new PermissionDefinition({
         name: 'ManageCounterpartyTeam',
         description:

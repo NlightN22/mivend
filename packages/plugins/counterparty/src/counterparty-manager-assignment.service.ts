@@ -58,11 +58,12 @@ export class CounterpartyManagerAssignmentService {
     }
 
     // One record of a bulk batch: re-validates scope and target under the row lock, returns the old manager.
+    // A null target leaves the counterparty without a primary manager; a null expectedCurrent requires that state.
     async reassignOne(
         ctx: RequestContext,
         counterpartyId: ID,
-        administratorId: ID,
-        expectedCurrent?: string,
+        administratorId: ID | null,
+        expectedCurrent?: string | null,
     ): Promise<{ previous: string | null; changed: boolean }> {
         return withAggregateLock(
             this.connection,
@@ -76,14 +77,17 @@ export class CounterpartyManagerAssignmentService {
                 }
                 const scope = await this.accessScopeService.resolveCounterpartyScope(txCtx);
                 this.accessScopeService.assertCounterpartyWritableInScope(scope, counterparty);
-                if (!(await this.isTargetAssignable(txCtx, scope, administratorId))) {
+                if (
+                    administratorId !== null &&
+                    !(await this.isTargetAssignable(txCtx, scope, administratorId))
+                ) {
                     throw new ForbiddenError();
                 }
                 const previous = counterparty.assignedManagerId;
-                if (expectedCurrent && previous !== expectedCurrent) {
+                if (expectedCurrent !== undefined && previous !== expectedCurrent) {
                     throw new ManagerChangedSinceError();
                 }
-                const next = String(administratorId);
+                const next = administratorId === null ? null : String(administratorId);
                 if (previous === next) return { previous, changed: false };
                 await repo.update(counterparty.id, { assignedManagerId: next });
                 await this.versions.bump(txCtx, counterparty.id);

@@ -25,7 +25,8 @@ is listed there, and a unit test pins the portal-owned set.
   `CounterpartyCommand` (`oneof command { counterparty_snapshot }`).
 - Managers: `manager_id` = owner, `manager_ids` = owner plus other team members as ERP user ids. An administrator
   without an ERP user link is skipped and listed by `counterpartiesWithUnlinkedManagers`. Roles stay portal-only.
-  `ReassignCounterpartyManager` and the scope rules (#366) are unchanged.
+  `ReassignCounterpartyManager` and the scope rules (#366) are unchanged. Clearing the portal value is the separate
+  `RemoveCounterpartyManager` operation (`docs/bulk-operations.md`): the stream may then fill the column from the ERP again.
 - Drift (`ManageErpIntegration`): `counterpartiesDifferingFromErp`, `counterpartiesNotConfirmedByErp`,
   `counterpartiesWithUnlinkedManagers`.
 - `notification_phone` is in the contract but mivend stores no such column, so it is never sent.

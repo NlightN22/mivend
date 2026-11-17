@@ -3212,6 +3212,8 @@ export enum Permission {
     ReassignCounterpartyManager = 'ReassignCounterpartyManager',
     /** Requeue failed and rebuild skipped outbound integration events (issue #200); a write action, separate from the read-only ManageErpIntegration health views */
     RecoverIntegrationEvents = 'RecoverIntegrationEvents',
+    /** Leave counterparties without a primary manager (the client then follows the ERP's manager again) — general director by default, one operation with its own confirmation (#366) */
+    RemoveCounterpartyManager = 'RemoveCounterpartyManager',
     /** Create a credit-term approval request (layer 5) */
     RequestCreditTermApproval = 'RequestCreditTermApproval',
     /** Create/renew a standing discount grant approval request (layer 5) */

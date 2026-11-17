@@ -28,6 +28,7 @@ export default {
         loadFailedMessage: 'Check the connection and try again.',
         exportPage: 'Export page (CSV)',
         changeManager: 'Change manager',
+        removeManager: 'Remove manager',
         activeDiscounts: '{count} active',
         views: {
             all: 'All',

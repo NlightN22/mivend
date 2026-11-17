@@ -31,6 +31,7 @@ const customers: typeof en = {
         loadFailedMessage: 'Проверьте соединение и попробуйте снова.',
         exportPage: 'Экспорт страницы (CSV)',
         changeManager: 'Сменить менеджера',
+        removeManager: 'Снять менеджера',
         activeDiscounts: '{count} акт.',
         views: {
             all: 'Все',

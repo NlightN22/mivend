@@ -64,6 +64,7 @@ export default {
         target_not_allowed: 'The manager is not in your branch or is deactivated',
         changed_since: 'The manager was changed after this batch',
         nothing_to_restore: 'There was no previous manager to restore',
+        no_manager: 'Already without a manager',
         error: 'Could not be applied',
     },
     report: {
@@ -105,6 +106,11 @@ export default {
         choose: 'Choose the new manager',
         failed: 'Could not load the managers',
         notice: 'Every selected counterparty moves to this manager. A counterparty is never left without one. Records outside your branch or already with this manager are skipped and listed on the next step; the batch can be undone from its result.',
+    },
+    managerRemove: {
+        notice: 'The selected counterparties are left without a primary manager and follow the manager the ERP reports again. Records that already have no manager or are outside your scope are skipped and listed on the next step; the batch can be undone from its result.',
+        confirm: 'I confirm removing the primary manager from the selected counterparties',
+        mustConfirm: 'Confirm the removal to continue',
     },
     passwordReset: {
         notice: 'Sends each selected counterparty a new password link. Records without a portal login are skipped and listed on the next step.',

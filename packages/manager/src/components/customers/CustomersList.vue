@@ -27,6 +27,9 @@ const router = useRouter();
 const canChangeManagers = computed(
     () => !props.fixedFilter && authStore.hasPermission('ReassignCounterpartyManager'),
 );
+const canRemoveManagers = computed(
+    () => !props.fixedFilter && authStore.hasPermission('RemoveCounterpartyManager'),
+);
 const { formatWhole } = useCurrency();
 const withManagerFilter = authStore.roleCode !== 'manager';
 const list = useCustomersList(() => props.fixedFilter, withManagerFilter, urlPrefix);
@@ -116,14 +119,24 @@ function exportCsv(): void {
         @retry="list.reload"
         @export="exportCsv"
     >
-        <template v-if="canChangeManagers" #toolbar-actions>
+        <template v-if="canChangeManagers || canRemoveManagers" #toolbar-actions>
             <MvButton
+                v-if="canChangeManagers"
                 size="sm"
                 variant="secondary"
                 data-testid="customers-change-manager"
                 @click="router.push('/bulk-operations/counterparty-manager-reassign')"
             >
                 {{ t('customers.list.changeManager') }}
+            </MvButton>
+            <MvButton
+                v-if="canRemoveManagers"
+                size="sm"
+                variant="secondary"
+                data-testid="customers-remove-manager"
+                @click="router.push('/bulk-operations/counterparty-manager-remove')"
+            >
+                {{ t('customers.list.removeManager') }}
             </MvButton>
         </template>
         <template #view-chips>

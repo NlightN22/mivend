@@ -103,6 +103,11 @@ Refinements of the model above; the sections above stay the contract.
   department head one of the own branch; each record re-checks scope and target under a row lock and the review shows the
   reason (`out_of_scope`, `target_not_allowed`, `already_assigned`). Its undo puts the previous manager back only while the
   batch manager is still in place (`changed_since` otherwise). The customer card runs the same operation with one record.
+- **Remove manager (#366).** `counterparty-manager-remove`, permission `RemoveCounterpartyManager` (general director by
+  default), parameter `confirmed: true` (the server refuses an unconfirmed run). It clears the portal-owned
+  `assignedManagerId`, so the client follows the manager the ERP reports again (the stream fills an empty column; a client the
+  ERP delivers without a resolvable manager stays without one). A record without a manager is skipped (`no_manager`); the undo
+  puts the previous manager back only while the client is still without one (`changed_since` otherwise).
 - **History scope.** The list shows finished batches of the types the viewer holds; the header (number, operation,
   who, when) is visible to every holder of the permission, while counters and the per-record table cover only the
   records inside the viewer's scope. Filters are a fixed whitelist (operation, status, creator, number prefix, date

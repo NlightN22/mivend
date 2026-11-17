@@ -133,6 +133,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCheckPolicies',
             'ManageDiscountLimits',
             'ReassignCounterpartyManager',
+            'RemoveCounterpartyManager',
             'ManageCounterpartyTeam',
             'ManageCounterpartyPortalAccess',
             'ManageVisibilityGrants',

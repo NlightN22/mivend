@@ -95,6 +95,7 @@ import { AdministratorContactsListener } from './administrator-contacts.listener
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
 import { CounterpartyPortalRestoreService } from './counterparty-portal-restore.service';
 import { CounterpartyManagerReassignExecutor } from './counterparty-manager-reassign.executor';
+import { CounterpartyManagerRemoveExecutor } from './counterparty-manager-remove.executor';
 import { CounterpartyPasswordResetExecutor } from './counterparty-password-reset.executor';
 import { CounterpartyPortalAccessExecutor } from './counterparty-portal-access.executor';
 import { BulkOperationsPlugin } from '@mivend/plugin-bulk-operations';
@@ -212,6 +213,7 @@ const adminResolvers = [
         CounterpartyPortalAccessExecutor,
         CounterpartyPasswordResetExecutor,
         CounterpartyManagerReassignExecutor,
+        CounterpartyManagerRemoveExecutor,
         CounterpartyService,
         CounterpartyErpDriftService,
         CounterpartyErpMirrorService,
