@@ -187,6 +187,7 @@ function applyView(state: TableViewState): void {
         </template>
 
         <template #toolbar-end>
+            <slot name="toolbar-actions" />
             <MvButton size="sm" variant="secondary" @click="emit('export')">{{
                 t('customers.list.exportPage')
             }}</MvButton>

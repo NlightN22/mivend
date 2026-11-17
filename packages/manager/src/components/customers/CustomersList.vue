@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
+import { useRouter } from 'vue-router';
+import { MvButton, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import { useCustomersList } from '../../composables/useCustomersList';
@@ -22,6 +23,10 @@ const urlPrefix = props.urlPrefix ?? (props.fixedFilter ? 'nested.' : '');
 
 const { t } = useI18n();
 const authStore = useAuthStore();
+const router = useRouter();
+const canChangeManagers = computed(
+    () => !props.fixedFilter && authStore.hasPermission('ReassignCounterpartyManager'),
+);
 const { formatWhole } = useCurrency();
 const withManagerFilter = authStore.roleCode !== 'manager';
 const list = useCustomersList(() => props.fixedFilter, withManagerFilter, urlPrefix);
@@ -111,6 +116,16 @@ function exportCsv(): void {
         @retry="list.reload"
         @export="exportCsv"
     >
+        <template v-if="canChangeManagers" #toolbar-actions>
+            <MvButton
+                size="sm"
+                variant="secondary"
+                data-testid="customers-change-manager"
+                @click="router.push('/bulk-operations/counterparty-manager-reassign')"
+            >
+                {{ t('customers.list.changeManager') }}
+            </MvButton>
+        </template>
         <template #view-chips>
             <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
         </template>

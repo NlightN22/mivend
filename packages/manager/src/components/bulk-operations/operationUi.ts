@@ -1,6 +1,7 @@
 import type { Component } from 'vue';
 import ActivationParametersStep from './ActivationParametersStep.vue';
 import ActivationSelectStep from './ActivationSelectStep.vue';
+import ManagerReassignParametersStep from './ManagerReassignParametersStep.vue';
 import PasswordResetParametersStep from './PasswordResetParametersStep.vue';
 import { BULK_PERMISSIONS } from './operationPermissions';
 
@@ -10,6 +11,8 @@ export interface OperationUi {
     parametersStep: Component;
     defaultParameters: Record<string, unknown>;
     recordNoun: string;
+    // A parameter the next step cannot start without, and the label key that says so.
+    required?: { name: string; hintKey: string };
 }
 
 // Add an operation here after registering its executor on the server; the menu and catalog follow.
@@ -25,6 +28,13 @@ export const OPERATION_UI: Record<string, OperationUi> = {
         parametersStep: PasswordResetParametersStep,
         defaultParameters: {},
         recordNoun: 'counterparties',
+    },
+    'counterparty-manager-reassign': {
+        selectStep: ActivationSelectStep,
+        parametersStep: ManagerReassignParametersStep,
+        defaultParameters: { administratorId: '' },
+        recordNoun: 'counterparties',
+        required: { name: 'administratorId', hintKey: 'bulkOperations.managerReassign.choose' },
     },
 };
 

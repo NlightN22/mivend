@@ -60,6 +60,10 @@ export default {
         no_inn: 'INN is missing in the ERP',
         inn_duplicate: 'INN is used by another counterparty with portal access',
         actor_not_allowed: 'Your access changed before this record was reached',
+        already_assigned: 'Already assigned to this manager',
+        target_not_allowed: 'The manager is not in your branch or is deactivated',
+        changed_since: 'The manager was changed after this batch',
+        nothing_to_restore: 'There was no previous manager to restore',
         error: 'Could not be applied',
     },
     report: {
@@ -94,6 +98,13 @@ export default {
             records: 'Records',
             result: 'Result',
         },
+    },
+    managerReassign: {
+        legend: 'New manager',
+        placeholder: 'Select a manager',
+        choose: 'Choose the new manager',
+        failed: 'Could not load the managers',
+        notice: 'Every selected counterparty moves to this manager. A counterparty is never left without one. Records outside your branch or already with this manager are skipped and listed on the next step; the batch can be undone from its result.',
     },
     passwordReset: {
         notice: 'Sends each selected counterparty a new password link. Records without a portal login are skipped and listed on the next step.',

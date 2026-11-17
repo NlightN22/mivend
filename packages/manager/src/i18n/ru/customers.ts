@@ -30,6 +30,7 @@ const customers: typeof en = {
         loadFailedTitle: 'Не удалось загрузить клиентов',
         loadFailedMessage: 'Проверьте соединение и попробуйте снова.',
         exportPage: 'Экспорт страницы (CSV)',
+        changeManager: 'Сменить менеджера',
         activeDiscounts: '{count} акт.',
         views: {
             all: 'Все',
@@ -275,6 +276,9 @@ const customers: typeof en = {
         location: 'Местоположение',
         creditLimit: 'Кредитный лимит',
         paymentTerms: 'Отсрочка платежа',
+        changeManager: 'Сменить менеджера',
+        changeManagerConfirm: 'Передать {name} от {from} к {to}?',
+        changeManagerApply: 'Сменить менеджера',
         primaryManager: 'Основной менеджер',
         backupManager: 'Резервный менеджер',
         observers: 'Наблюдатели',

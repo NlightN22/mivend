@@ -47,6 +47,8 @@ export function useBulkWizard(type: string, ui: OperationUi): BulkWizard {
             return t('selectAtLeastOne');
         if (step.value === 'select' && selectionCount(selection.value) > maxRecords.value)
             return t('overLimit', { max: maxRecords.value });
+        if (step.value === 'parameters' && ui.required && !parameters.value[ui.required.name])
+            return i18n.global.t(ui.required.hintKey);
         if (step.value === 'review' && willChange.value === 0) return t('nothingWouldChange');
         return '';
     });

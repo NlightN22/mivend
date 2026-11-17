@@ -27,6 +27,7 @@ export default {
         loadFailedTitle: 'Could not load customers',
         loadFailedMessage: 'Check the connection and try again.',
         exportPage: 'Export page (CSV)',
+        changeManager: 'Change manager',
         activeDiscounts: '{count} active',
         views: {
             all: 'All',
@@ -269,6 +270,9 @@ export default {
         creditLimit: 'Credit limit',
         paymentTerms: 'Payment terms',
         primaryManager: 'Primary manager',
+        changeManager: 'Change manager',
+        changeManagerConfirm: 'Move {name} from {from} to {to}?',
+        changeManagerApply: 'Change manager',
         backupManager: 'Backup manager',
         observers: 'Observers',
         unassigned: 'Unassigned',

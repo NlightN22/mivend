@@ -26,6 +26,7 @@ import CustomerInfoRow from '../../components/customers/CustomerInfoRow.vue';
 import CustomerTabBar from '../../components/customers/CustomerTabBar.vue';
 import CustomerTabContent from '../../components/customers/CustomerTabContent.vue';
 import ErpDocumentsLink from '../../components/erp-documents/ErpDocumentsLink.vue';
+import CustomerChangeManager from '../../components/customers/CustomerChangeManager.vue';
 import ActAsCustomerButton from '../../components/acting/ActAsCustomerButton.vue';
 
 const { t } = useI18n();
@@ -131,6 +132,14 @@ watch(() => route.params.id, load);
             {{ t('customers.detail.inn', { inn: customer.inn }) }}
         </p>
         <ActAsCustomerButton :counterparty-id="customer.id" />
+        <CustomerChangeManager
+            v-if="authStore.hasPermission('ReassignCounterpartyManager')"
+            :counterparty-id="customer.id"
+            :counterparty-name="customer.shortName"
+            :current-manager-id="customer.assignedManagerId ?? null"
+            :managers="managers"
+            @changed="load"
+        />
         <ErpDocumentsLink :counterparty-id="customer.id" class="customer-detail__documents-link" />
         <MvStatusBadge
             v-if="customer.innStatus === 'missing'"
