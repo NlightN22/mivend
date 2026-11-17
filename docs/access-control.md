@@ -178,6 +178,12 @@ applied before any client filter, search or counterparty argument. The grant liv
 (the initial state of a new environment; an existing role is changed in the Admin UI, and new rights reach it through the additive step below).
 The last order date follows the same rule (#344): `Counterparty.lastOrderAt` and its list filter/sort are the latest placed order over all orders of the counterparty, not limited to the orders the caller may see, and need no permission beyond seeing the counterparty.
 
+`ReadManagerCard` (#362) opens a manager's analytics card (`managerCard`, plugin-settlement): default roles manager,
+department head and general director. Whose card: the own card always; with counterparty scope `department` the cards of
+the managers of the same department and granted managers; with scope `all` every card; otherwise the answer is null,
+like a missing manager. The figures cover only the manager's customers inside the viewer's counterparty scope
+(`CounterpartyService.visibleFilteredQb`), and `customersTotal` against `customersVisible` shows when the view is partial.
+
 `settlementDocumentTypes` returns the document type list (code, label, category) with no counts and no counterparty
 scope: it is ERP reference metadata (the registry plus codes seen on documents), carries no per-customer data, and
 exists so the manager portal can colour types consistently without the scoped count aggregate. It sits behind the

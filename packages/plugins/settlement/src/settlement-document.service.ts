@@ -38,6 +38,7 @@ export class SettlementDocumentService {
             documentLockKey(input.erpId),
             async docCtx => {
                 const stored = await this.storedCounterparties(docCtx, input.erpId);
+                const storedDate = await this.storedDate(docCtx, input.erpId);
                 const keys = [
                     ...stored.map(counterpartyLockKey),
                     ...input.entries.flatMap(entry => [
@@ -50,12 +51,25 @@ export class SettlementDocumentService {
                     const result = await this.write(lockedCtx, input);
                     if (result === 'applied') {
                         const touched = [...stored, ...input.entries.map(e => e.counterpartyErpId)];
-                        await this.rollup.recompute(lockedCtx, touched);
+                        const earlier = [storedDate, input.date].filter(
+                            (d): d is Date => d != null,
+                        );
+                        const touchedFrom = earlier.length
+                            ? new Date(Math.min(...earlier.map(d => d.getTime())))
+                            : null;
+                        await this.rollup.recompute(lockedCtx, touched, touchedFrom);
                     }
                     return result;
                 });
             },
         );
+    }
+
+    private async storedDate(ctx: RequestContext, erpId: string): Promise<Date | null> {
+        const row = await this.connection
+            .getRepository(ctx, SettlementDocument)
+            .findOne({ where: { erpId }, select: { id: true, date: true } });
+        return row?.date ?? null;
     }
 
     // The document lock is held, so these entries cannot change before the counterparty locks are taken.

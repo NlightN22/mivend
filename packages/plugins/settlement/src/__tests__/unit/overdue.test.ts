@@ -68,6 +68,7 @@ describe('SettlementAdminResolver', () => {
             {} as never,
             {} as never,
             {} as never,
+            {} as never,
         );
         expect(await resolver.counterpartyOverdue({} as never, { counterpartyId: '1' })).toBeNull();
     });
@@ -77,6 +78,7 @@ describe('SettlementAdminResolver', () => {
         const resolver = new SettlementAdminResolver(
             { overdue: async () => summary } as never,
             { findOneVisible: async () => ({ id: 1 }) } as never,
+            {} as never,
             {} as never,
             {} as never,
             {} as never,

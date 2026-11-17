@@ -1,6 +1,9 @@
 import { gql } from 'graphql-tag';
 
+import { managerCardSdl } from './manager-card.schema';
+
 export const adminApiExtensions = gql`
+    ${managerCardSdl}
     "Overdue debt of one counterparty over all its customer contracts; oldestDays is null when no due date is known."
     type CounterpartyOverdue {
         amount: Money!

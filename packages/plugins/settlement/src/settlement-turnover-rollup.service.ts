@@ -10,12 +10,16 @@ export class SettlementTurnoverRollupService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     // Caller holds the counterparty locks and runs inside the apply transaction.
-    async recompute(ctx: RequestContext, counterpartyErpIds: string[]): Promise<void> {
+    async recompute(
+        ctx: RequestContext,
+        counterpartyErpIds: string[],
+        touchedFrom: Date | null,
+    ): Promise<void> {
         const ids = [...new Set(counterpartyErpIds)];
         if (ids.length === 0) return;
         const repo = this.connection.getRepository(ctx, SettlementDocument);
-        const params = [ids, processTimeZone()];
-        await repo.query(ROLLUP_DELETE_SQL, params);
-        await repo.query(ROLLUP_INSERT_SQL, params);
+        const zone = processTimeZone();
+        await repo.query(ROLLUP_DELETE_SQL, [ids, zone, touchedFrom]);
+        await repo.query(ROLLUP_INSERT_SQL, [ids, zone]);
     }
 }

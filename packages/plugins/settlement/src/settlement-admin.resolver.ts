@@ -3,6 +3,8 @@ import { Allow, Ctx, ID, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
+import { ManagerCardService, LOST_THRESHOLDS } from './manager-card.service';
+import type { ManagerCard } from './manager-card.types';
 import { CounterpartyMetricsService } from './counterparty-metrics.service';
 import type { CounterpartyMetrics } from './counterparty-metrics.types';
 import { SettlementAdminListService } from './settlement-admin-list.service';
@@ -28,6 +30,7 @@ export class SettlementAdminResolver {
         private readonly suggestService: SettlementSuggestService,
         private readonly documentTypes: SettlementDocumentTypeService,
         private readonly metrics: CounterpartyMetricsService,
+        private readonly managerCards: ManagerCardService,
     ) {}
 
     // A finance figure behind the credit right (every default role has it); an invisible counterparty answers like a missing one.
@@ -50,6 +53,22 @@ export class SettlementAdminResolver {
     ): Promise<CounterpartyMetrics | null> {
         if (!(await this.counterparties.findOneVisible(ctx, args.counterpartyId))) return null;
         return this.metrics.metrics(ctx, String(args.counterpartyId));
+    }
+
+    // Figures are bounded by the caller's counterparty scope; a manager outside it answers like a missing one.
+    @Query()
+    @Allow(CustomPermission.ReadManagerCard.Permission)
+    async managerCard(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { administratorId: ID; lostAfterDays?: number },
+    ): Promise<ManagerCard | null> {
+        const administratorId = String(args.administratorId);
+        const name = await this.managerCards.openName(ctx, administratorId);
+        if (name === null) return null;
+        const days = (LOST_THRESHOLDS as readonly number[]).includes(args.lostAfterDays ?? 90)
+            ? (args.lostAfterDays ?? 90)
+            : 90;
+        return this.managerCards.card(ctx, administratorId, name, days);
     }
 
     @Query()

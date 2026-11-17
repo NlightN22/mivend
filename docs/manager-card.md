@@ -1,13 +1,14 @@
 # Manager card (manager portal)
 
 Concept for the card behind a row of `/team`. Issue #362. Customer figures follow `docs/customer-metrics.md`; scope
-follows `docs/access-control.md`. Nothing here is built yet.
+follows `docs/access-control.md`. Phase 1 is built; the plan and brand tiles are placeholders.
 
 ## Who sees what
 
 - A **manager** opens only their own card. A **department head** opens the cards of the managers of their department.
-  A **general director** (scope `all`) opens every card. The rule is the existing access scope on the manager's
-  department; no new scope kind.
+  A **general director** (scope `all`) opens every card. The rule reads the viewer's counterparty scope: `own` opens
+  only the own card, `department` the cards of the managers in the same department (and granted managers), `all`
+  every card. No new scope kind; a card outside the scope answers like a missing one.
 - Every figure is computed over the customers the viewer may see (counterparty visibility scope) and that belong to
   the manager. A viewer who sees only part of a manager's customers gets figures for that part and a visible
   "partial: n of m customers" note, never a silently smaller number.

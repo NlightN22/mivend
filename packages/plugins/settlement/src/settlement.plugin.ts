@@ -4,6 +4,7 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { StaffSearchPlugin } from '@mivend/plugin-staff-search';
 import { SettlementSearchProvider } from './settlement-search.provider';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
@@ -14,6 +15,7 @@ import { SettlementDocumentEntry } from './entities/settlement-document-entry.en
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { SettlementTurnoverDaily } from './entities/settlement-turnover-daily.entity';
 import { SettlementTurnoverRollupService } from './settlement-turnover-rollup.service';
+import { ManagerCardService } from './manager-card.service';
 import { SettlementOrderLink } from './entities/settlement-order-link.entity';
 import { CounterpartyMetricsService } from './counterparty-metrics.service';
 import { SettlementBalanceService } from './settlement-balance.service';
@@ -36,7 +38,7 @@ import { SettlementShopService } from './settlement-shop.service';
 import { DEFAULT_RETENTION_MONTHS } from './types';
 
 @VendurePlugin({
-    imports: [StaffSearchPlugin, PluginCommonModule, CounterpartyPlugin],
+    imports: [StaffSearchPlugin, PluginCommonModule, CounterpartyPlugin, AccessControlPlugin],
     entities: [
         SettlementDocument,
         SettlementDocumentEntry,
@@ -61,6 +63,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementAdminListService,
         SettlementSuggestService,
         CounterpartyMetricsService,
+        ManagerCardService,
         SettlementTurnoverRollupService,
     ],
     exports: [

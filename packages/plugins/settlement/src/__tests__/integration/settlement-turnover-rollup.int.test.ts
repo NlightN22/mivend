@@ -48,7 +48,7 @@ const doc = (
                     counterpartyErpId: over.cp ?? 'cp-1',
                     contractErpId: 'ct-1',
                     currency: 'RUB',
-                    amount,
+                    amount: amount / 100,
                     dueDate: null,
                     orderLinks: [],
                 },

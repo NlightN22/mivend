@@ -12,6 +12,11 @@ export const CustomPermission = {
         description:
             "Read a counterparty's creditLimit/creditBalance (financial data, layer 4 redaction)",
     }),
+    ReadManagerCard: new PermissionDefinition({
+        name: 'ReadManagerCard',
+        description:
+            "Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362)",
+    }),
     ManageAccessControl: new PermissionDefinition({
         name: 'ManageAccessControl',
         description:
