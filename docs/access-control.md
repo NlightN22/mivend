@@ -185,7 +185,7 @@ like a missing manager. The figures cover only the manager's customers inside th
 (`CounterpartyService.visibleFilteredQb`), and `customersTotal` against `customersVisible` shows when the view is partial.
 
 `ReadAnalytics` (#363) opens the Analytics section and its report catalog (`analyticsReports`, plugin-analytics): default roles
-department head and general director, delivered to existing roles by the additive release step. The catalog lists only reports the
+manager, department head and general director (not the operator), delivered to existing roles by the additive release step. The catalog lists only reports the
 caller holds the permission for; the rows of a report, once built, follow the counterparty scope (`docs/analytics.md`).
 
 `settlementDocumentTypes` returns the document type list (code, label, category) with no counts and no counterparty

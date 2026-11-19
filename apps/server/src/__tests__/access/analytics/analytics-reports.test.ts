@@ -17,19 +17,20 @@ async function reports(
 }
 
 describe('analyticsReports access', () => {
-    it.each<ActorKey | 'superadmin'>(['head-a', 'head-b', 'director', 'superadmin'])(
-        '%s sees the catalog',
-        async actor => {
-            const list = await reports(actor);
-            expect(list.length).toBeGreaterThan(0);
-            expect(list.every(r => r.status === 'planned')).toBe(true);
-        },
-    );
+    it.each<ActorKey | 'superadmin'>([
+        'manager-a',
+        'manager-b',
+        'head-a',
+        'head-b',
+        'director',
+        'superadmin',
+    ])('%s sees the catalog', async actor => {
+        const list = await reports(actor);
+        expect(list.length).toBeGreaterThan(0);
+        expect(list.every(r => r.status === 'planned')).toBe(true);
+    });
 
-    it.each<ActorKey>(['manager-a', 'manager-b', 'operator-a'])(
-        '%s sees an empty catalog',
-        async actor => {
-            expect(await reports(actor)).toEqual([]);
-        },
-    );
+    it.each<ActorKey>(['operator-a'])('%s sees an empty catalog', async actor => {
+        expect(await reports(actor)).toEqual([]);
+    });
 });

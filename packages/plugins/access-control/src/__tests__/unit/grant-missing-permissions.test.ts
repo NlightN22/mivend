@@ -59,9 +59,13 @@ describe('manager card grant', () => {
 });
 
 describe('analytics grant', () => {
-    it('delivers ReadAnalytics to department-head and general-director only', () => {
+    it('delivers ReadAnalytics to manager, department-head and general-director, not the operator', () => {
         const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === 'ReadAnalytics');
-        expect(roles.map(g => g.roleCode).sort()).toEqual(['department-head', 'general-director']);
+        expect(roles.map(g => g.roleCode).sort()).toEqual([
+            'department-head',
+            'general-director',
+            'manager',
+        ]);
     });
 });
 

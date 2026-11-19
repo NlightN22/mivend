@@ -58,6 +58,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadCounterparty',
             'ReadCounterpartyCredit',
             'ReadManagerCard',
+            'ReadAnalytics',
             'AdjustPriceWithinLimit',
             'RequestPriceAdjustmentApproval',
             'RequestDiscountGrantApproval',
