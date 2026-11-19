@@ -22,10 +22,10 @@ export class LegalDocuments1791593000000 implements MigrationInterface {
             )`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_legal_document_version_uuid" ON "legal_document_version" ("uuid")`,
+            `CREATE UNIQUE INDEX "IDX_02d322ec53f6807f4248868423" ON "legal_document_version" ("uuid")`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_legal_document_version_kind_version_locale" ON "legal_document_version" ("kind", "version", "locale")`,
+            `CREATE UNIQUE INDEX "IDX_9e5372a5fdf57bcdf5e702e30e" ON "legal_document_version" ("kind", "version", "locale")`,
         );
         await queryRunner.query(
             `CREATE TABLE "legal_acceptance" (
@@ -45,10 +45,10 @@ export class LegalDocuments1791593000000 implements MigrationInterface {
             )`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_legal_acceptance_uuid" ON "legal_acceptance" ("uuid")`,
+            `CREATE UNIQUE INDEX "IDX_6516a20d15514391d9db82662f" ON "legal_acceptance" ("uuid")`,
         );
         await queryRunner.query(
-            `CREATE INDEX "IDX_legal_acceptance_customer_kind" ON "legal_acceptance" ("customerId", "kind")`,
+            `CREATE INDEX "IDX_7d69b74da43c8ce913d11907e5" ON "legal_acceptance" ("customerId", "kind")`,
         );
     }
 
