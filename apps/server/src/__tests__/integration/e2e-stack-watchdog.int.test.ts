@@ -13,6 +13,12 @@ const alive = (pid: number): boolean => {
     }
 };
 
+// The kill lands asynchronously and the process stays visible until it is reaped, so wait for it instead of a fixed pause.
+async function waitUntilGone(pid: number, timeoutMs = 5000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (alive(pid) && Date.now() < deadline) await new Promise(r => setTimeout(r, 50));
+}
+
 // A leader with a grandchild, like pnpm -> playwright: the grandchild pid is printed on stdout.
 function spawnTree(): Promise<{ leader: ChildProcess; grandchild: number }> {
     const leader = spawn('sh', ['-c', 'sleep 300 & echo $!; wait'], {
@@ -34,7 +40,7 @@ describe('e2e stack watchdog', () => {
             }),
         );
         expect(reason).toMatch(/exited/);
-        await new Promise(r => setTimeout(r, 200));
+        await waitUntilGone(grandchild);
         expect(alive(grandchild)).toBe(false);
     });
 
@@ -45,7 +51,7 @@ describe('e2e stack watchdog', () => {
             watchStack([server], 300, why => void stopGroup(leader).then(() => done(why))),
         );
         expect(reason).toMatch(/exceeded/);
-        await new Promise(r => setTimeout(r, 200));
+        await waitUntilGone(grandchild);
         expect(alive(grandchild)).toBe(false);
         await stopGroup(server);
     });
@@ -58,7 +64,7 @@ describe('e2e stack watchdog', () => {
         });
         expect(alive(grandchild)).toBe(true);
         await stopGroup(leader);
-        await new Promise(r => setTimeout(r, 200));
+        await waitUntilGone(grandchild);
         expect(alive(grandchild)).toBe(false);
     });
 });
