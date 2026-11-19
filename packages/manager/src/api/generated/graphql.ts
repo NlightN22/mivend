@@ -205,6 +205,15 @@ export type AlreadyRefundedError = ErrorResult & {
     refundId: Scalars['ID']['output'];
 };
 
+export type AnalyticsReport = {
+    area: Scalars['String']['output'];
+    description: Scalars['String']['output'];
+    key: Scalars['String']['output'];
+    note: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+    title: Scalars['String']['output'];
+};
+
 export type ApiKey = Node & {
     createdAt: Scalars['DateTime']['output'];
     customFields: Maybe<Scalars['JSON']['output']>;
@@ -7672,6 +7681,8 @@ export type Permission =
     | 'ReadAdministrator'
     /** Read customer price types of every branch, beyond the branch allow-list */
     | 'ReadAllCustomerPriceTypes'
+    /** Open the Analytics section and its report catalog; rows of a report stay inside the viewer scope (#363) */
+    | 'ReadAnalytics'
     /** Grants permission to read ApiKey */
     | 'ReadApiKey'
     /** Grants permission to read Asset */
@@ -8713,6 +8724,7 @@ export type Query = {
     administrator: Maybe<Administrator>;
     administratorForPasswordResetToken: Maybe<PasswordResetIdentity>;
     administrators: AdministratorList;
+    analyticsReports: Array<AnalyticsReport>;
     apiKey: Maybe<ApiKey>;
     apiKeys: ApiKeyList;
     approvalRequest: Maybe<ApprovalRequest>;
@@ -11703,6 +11715,19 @@ export type StartActingSessionMutationVariables = Exact<{
 
 export type StartActingSessionMutation = {
     startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
+};
+
+export type AnalyticsReportsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type AnalyticsReportsQuery = {
+    analyticsReports: Array<{
+        key: string;
+        title: string;
+        description: string;
+        area: string;
+        status: string;
+        note: string;
+    }>;
 };
 
 export type PendingApprovalsBadgeCountQueryVariables = Exact<{ [key: string]: never }>;
@@ -16126,6 +16151,18 @@ export const StartActingSessionDocument = new TypedDocumentString(`
     StartActingSessionMutation,
     StartActingSessionMutationVariables
 >;
+export const AnalyticsReportsDocument = new TypedDocumentString(`
+    query AnalyticsReports {
+  analyticsReports {
+    key
+    title
+    description
+    area
+    status
+    note
+  }
+}
+    `) as unknown as TypedDocumentString<AnalyticsReportsQuery, AnalyticsReportsQueryVariables>;
 export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
     query PendingApprovalsBadgeCount {
   myApprovalRequestsSummary(recentLimit: 0) {

@@ -13,6 +13,7 @@
         { "path": "./retro-bonus" },
         { "path": "./settlement" },
         { "path": "./bulk-operations" },
+        { "path": "./analytics" },
         { "path": "./counterparty" },
         { "path": "./documents" },
         { "path": "./deferred-payment" },

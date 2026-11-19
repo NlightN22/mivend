@@ -1,0 +1,10 @@
+query AnalyticsReports {
+    analyticsReports {
+        key
+        title
+        description
+        area
+        status
+        note
+    }
+}

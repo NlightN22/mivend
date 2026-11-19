@@ -5,7 +5,7 @@ import {
     filterOperations,
     groupOperations,
     searchable,
-} from '../../components/bulk-operations/catalogGroups';
+} from '../../components/catalog/catalogGroups';
 import { canOpenBulkOperations, operationUi } from '../../components/bulk-operations/operationUi';
 
 const op = (i: number, area = 'customers'): BulkOperationInfo => ({

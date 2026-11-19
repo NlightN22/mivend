@@ -65,7 +65,6 @@ export default {
         title: 'Coming soon',
         text: "This section of the manager portal is not built yet — it's on the roadmap.",
         newCustomer: 'New client',
-        analytics: 'Analytics',
     },
     notFound: {
         text: 'This page does not exist.',

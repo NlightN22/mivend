@@ -33,4 +33,13 @@ describe('useNavItems', () => {
         expect(sidebar).not.toContain('Settings');
         expect(sheet).not.toContain('Settings');
     });
+
+    it('lists Analytics in both menus only with ReadAnalytics', () => {
+        granted.clear();
+        expect(flatLabels().sidebar).not.toContain('Analytics');
+        expect(flatLabels().sheet).not.toContain('Analytics');
+        granted.add('ReadAnalytics');
+        expect(flatLabels().sidebar).toContain('Analytics');
+        expect(flatLabels().sheet).toContain('Analytics');
+    });
 });

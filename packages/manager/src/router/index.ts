@@ -287,19 +287,38 @@ export const router = createRouter({
                     },
                 },
                 {
+                    path: 'analytics',
+                    name: 'analytics',
+                    component: () => import('../pages/analytics/AnalyticsPage.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Analytics',
+                        requiresAnyPermission: ['ReadAnalytics'],
+                    },
+                },
+                {
+                    path: 'analytics/:report',
+                    name: 'analytics-report',
+                    component: () => import('../pages/analytics/AnalyticsReportPage.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Analytics report',
+                        requiresAnyPermission: ['ReadAnalytics'],
+                    },
+                },
+                {
                     path: 'profile',
                     name: 'profile',
                     component: () => import('../pages/profile/ProfilePage.vue'),
                     meta: { requiresAuth: true },
                 },
-                ...[
-                    { path: 'customers/new', titleKey: 'shell.comingSoon.newCustomer' },
-                    { path: 'analytics', titleKey: 'shell.comingSoon.analytics' },
-                ].map(({ path, titleKey }) => ({
-                    path,
-                    component: () => import('../pages/error/ComingSoonPage.vue'),
-                    meta: { requiresAuth: true, titleKey },
-                })),
+                ...[{ path: 'customers/new', titleKey: 'shell.comingSoon.newCustomer' }].map(
+                    ({ path, titleKey }) => ({
+                        path,
+                        component: () => import('../pages/error/ComingSoonPage.vue'),
+                        meta: { requiresAuth: true, titleKey },
+                    }),
+                ),
                 {
                     path: ':pathMatch(.*)*',
                     component: () => import('../pages/error/NotFoundPage.vue'),

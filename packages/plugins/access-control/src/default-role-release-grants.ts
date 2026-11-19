@@ -26,6 +26,11 @@ export const PERMISSIONS_ADDED_BY_RELEASE: ReleasePermissionGrant[] = [
         roleCode,
         permission: 'ReadManagerCard',
     })),
+    ...['department-head', 'general-director'].map(roleCode => ({
+        release: '1.1.21',
+        roleCode,
+        permission: 'ReadAnalytics',
+    })),
 ];
 
 export const SCOPE_KEYS_ADDED_BY_RELEASE: ReleaseScopeKeyGrant[] = [];

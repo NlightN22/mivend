@@ -17,6 +17,11 @@ export const CustomPermission = {
         description:
             "Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362)",
     }),
+    ReadAnalytics: new PermissionDefinition({
+        name: 'ReadAnalytics',
+        description:
+            'Open the Analytics section and its report catalog; rows of a report stay inside the viewer scope (#363)',
+    }),
     ManageAccessControl: new PermissionDefinition({
         name: 'ManageAccessControl',
         description:

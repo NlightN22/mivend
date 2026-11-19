@@ -58,6 +58,13 @@ describe('manager card grant', () => {
     });
 });
 
+describe('analytics grant', () => {
+    it('delivers ReadAnalytics to department-head and general-director only', () => {
+        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === 'ReadAnalytics');
+        expect(roles.map(g => g.roleCode).sort()).toEqual(['department-head', 'general-director']);
+    });
+});
+
 describe('planRoleGrants', () => {
     it('first run: adds an unrecorded right the role lacks, keeps hand-granted ones, records it', () => {
         const plan = planRoleGrants(

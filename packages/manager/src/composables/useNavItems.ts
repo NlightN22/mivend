@@ -22,7 +22,7 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
     const t = (key: string): string => i18n.global.t(key);
     const authStore = useAuthStore();
 
-    // Order per docs/manager-portal-ui-concept.md; Analytics routes to the shared "coming soon" page.
+    // Order per docs/manager-portal-ui-concept.md.
     const menuItems = computed<AppSidebarItem[]>(() => {
         // Proforma invoices are gated on the same permissions as their visible* queries.
         const documents: AppSidebarItem[] = [{ label: t('shell.nav.orders'), path: '/orders' }];
@@ -60,7 +60,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
         if (canOpenBulkOperations(authStore.hasPermission)) {
             items.push({ label: t('shell.nav.bulkOperations'), path: '/bulk-operations' });
         }
-        items.push({ label: t('shell.nav.analytics'), path: '/analytics' });
+        if (authStore.hasPermission('ReadAnalytics'))
+            items.push({ label: t('shell.nav.analytics'), path: '/analytics' });
         if (authStore.hasPermission('ReadChangeJournal'))
             items.push({ label: CHANGE_JOURNAL_LABELS.pageTitle, path: '/change-journal' });
         // Permission-gated (ManageAccessControl), not a role allowlist: granting it in Vendure admin
@@ -121,10 +122,9 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
                 label: t('shell.nav.settlements'),
                 path: '/settlements',
             });
-        items.push(
-            { key: 'team', label: t('shell.nav.team'), path: '/team' },
-            { key: 'analytics', label: t('shell.nav.analytics'), path: '/analytics' },
-        );
+        items.push({ key: 'team', label: t('shell.nav.team'), path: '/team' });
+        if (authStore.hasPermission('ReadAnalytics'))
+            items.push({ key: 'analytics', label: t('shell.nav.analytics'), path: '/analytics' });
         if (authStore.hasPermission('ReadChangeJournal'))
             items.push({
                 key: 'changeJournal',
