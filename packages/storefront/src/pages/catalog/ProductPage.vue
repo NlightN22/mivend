@@ -14,6 +14,7 @@ import { useAuthStore } from '../../stores/auth';
 import { assetUrl } from '../../composables/assetUrl';
 import { useCartActions } from '../../composables/useCartActions';
 import { flatPercentOf, useTierProgressView } from '../../composables/useTierProgressView';
+import { useProductFavorite } from '../../composables/useProductFavorite';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
 import { shopApi } from '../../api/client';
@@ -48,6 +49,10 @@ const tierProgress = useTierProgressView(
     computed(() => product.value?.id),
     computed(() => variant.value?.id),
     computed(() => flatPercentOf(variant.value?.customerPrice, variant.value?.compareAtPrice)),
+);
+const { isFavorited, toggleFavorite } = useProductFavorite(
+    computed(() => product.value?.id),
+    computed(() => variant.value?.id),
 );
 const packagesOnly = ref(false);
 const multiplicityEnforced = ref(false);
@@ -204,6 +209,7 @@ onMounted(() => {
                     :sales-unit="salesUnit"
                     :nearest-pack="nearestPack"
                     :tier-progress="tierProgress"
+                    :is-favorited="isFavorited"
                     :required-multiple="
                         multiplicityEnforced ? (variant?.customFields?.multiplicity ?? 1) : 1
                     "
@@ -211,6 +217,7 @@ onMounted(() => {
                         (qty: number) => onAddToCart(variant?.id, variant?.customFields, qty)
                     "
                     @update-cart-qty="onUpdateQty"
+                    @toggle-favorite="toggleFavorite"
                 />
             </div>
         </template>
