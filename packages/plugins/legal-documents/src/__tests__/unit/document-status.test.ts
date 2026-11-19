@@ -67,6 +67,12 @@ describe('documentStatuses', () => {
         expect(marketing).toMatchObject({ accepted: false, pending: false, required: false });
     });
 
+    it('does not ask again when no version is flagged and an earlier one was accepted', () => {
+        const published = [v('agreement', 1, false), v('agreement', 2, false)];
+        const records = [{ kind: 'agreement', version: 1, accepted: true }];
+        expect(pending(documentStatuses(published, records))).not.toContain('agreement');
+    });
+
     it('lists nothing for a kind that has no published version', () => {
         expect(documentStatuses([v('policy', 1)], [])).toEqual([]);
     });

@@ -11,6 +11,8 @@ export const ACTING_REFUSED_MUTATIONS: ReadonlySet<string> = new Set([
     'updateCustomerPassword',
     'requestUpdateCustomerEmailAddress',
     'updateCustomerEmailAddress',
+    // A consent must come from the person, never from staff acting for them.
+    'acceptLegalDocuments',
 ]);
 
 // Stand-in for the change journal: who acted, what they changed and when, for every acting-session mutation.

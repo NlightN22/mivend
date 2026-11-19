@@ -227,7 +227,8 @@ in repeatedly and never call the network; the throttle itself is covered against
 ### Legal documents
 
 Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). All
-seven are required: with any of them empty nothing is published and nobody is asked to accept.
+seven are required: with any of them empty nothing is published and nobody is asked to accept. A published version is
+immutable and is what customers accept, so do not set them on production until the owner has approved every bundled text.
 
 | Variable | Meaning |
 | --- | --- |

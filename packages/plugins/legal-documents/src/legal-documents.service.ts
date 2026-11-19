@@ -10,7 +10,7 @@ import { getPageAndCount, withAggregateLock } from 'shared';
 import { LessThanOrEqual } from 'typeorm';
 
 import { documentStatuses } from './document-status';
-import type { AcceptanceRecord, DocumentStatus } from './document-status';
+import type { AcceptanceRecord, DocumentStatus, PublishedVersion } from './document-status';
 import { LegalAcceptance } from './entities/legal-acceptance.entity';
 import { LegalDocumentVersion } from './entities/legal-document-version.entity';
 import { LEGAL_KIND_RULES, LEGAL_KINDS, isLegalKind } from './legal-kinds';
@@ -26,6 +26,9 @@ export interface AcceptanceInput {
 const HISTORY_CEILING = 100;
 // A handful of kinds times versions times languages; far above any real count.
 const VERSION_CEILING = 500;
+// The newest rows of one kind span at most a few languages of the current version.
+const LOCALE_CEILING = 50;
+const LOCALE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 
 @Injectable()
 export class LegalDocumentsService {
@@ -35,10 +38,13 @@ export class LegalDocumentsService {
         @Inject(LEGAL_DOCUMENTS_OPTIONS) private options: LegalDocumentsOptions,
     ) {}
 
-    private async published(ctx: RequestContext): Promise<LegalDocumentVersion[]> {
-        return this.connection
-            .getRepository(ctx, LegalDocumentVersion)
-            .find({ where: { effectiveDate: LessThanOrEqual(new Date()) }, take: VERSION_CEILING });
+    // Only what the rules read: no template or body text.
+    private async published(ctx: RequestContext): Promise<PublishedVersion[]> {
+        return this.connection.getRepository(ctx, LegalDocumentVersion).find({
+            select: { kind: true, version: true, requiresReacceptance: true },
+            where: { effectiveDate: LessThanOrEqual(new Date()) },
+            take: VERSION_CEILING,
+        });
     }
 
     // The newest published text of a kind, in the requested language or the fallback one.
@@ -47,7 +53,11 @@ export class LegalDocumentsService {
         kind: string,
         locale?: string | null,
     ): Promise<LegalDocumentVersion | null> {
-        const rows = (await this.published(ctx)).filter(row => row.kind === kind);
+        const rows = await this.connection.getRepository(ctx, LegalDocumentVersion).find({
+            where: { kind, effectiveDate: LessThanOrEqual(new Date()) },
+            order: { version: 'DESC' },
+            take: LOCALE_CEILING,
+        });
         if (rows.length === 0) return null;
         const latest = Math.max(...rows.map(row => row.version));
         const current = rows.filter(row => row.version === latest);
@@ -113,7 +123,7 @@ export class LegalDocumentsService {
                 for (const input of inputs) {
                     const row = {
                         customerId,
-                        locale: locale || this.options.fallbackLocale,
+                        locale: this.acceptedLocale(locale),
                         ...technical,
                     };
                     await this.recordOne(tx, published, records, input, row);
@@ -125,7 +135,7 @@ export class LegalDocumentsService {
 
     private async recordOne(
         ctx: RequestContext,
-        published: LegalDocumentVersion[],
+        published: PublishedVersion[],
         records: AcceptanceRecord[],
         input: AcceptanceInput,
         row: Pick<LegalAcceptance, 'customerId' | 'locale' | 'portal' | 'ip' | 'userAgent'>,
@@ -156,6 +166,10 @@ export class LegalDocumentsService {
             }),
         );
         records.push({ kind: input.kind, version: input.version, accepted: input.accepted });
+    }
+
+    private acceptedLocale(locale?: string | null): string {
+        return locale && LOCALE_TAG.test(locale) ? locale : this.options.fallbackLocale;
     }
 
     private technicalData(

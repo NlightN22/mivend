@@ -66,6 +66,7 @@ describe('ActingMutationLogInterceptor', () => {
         'updateCustomerPassword',
         'requestUpdateCustomerEmailAddress',
         'updateCustomerEmailAddress',
+        'acceptLegalDocuments',
     ])('refuses %s in an acting session but lets the customer run it', async field => {
         state.field = field;
         const acting = new ActingMutationLogInterceptor({

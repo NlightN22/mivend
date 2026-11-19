@@ -25,7 +25,9 @@ export interface DocumentStatus {
 // A version flagged requiresReacceptance resets the question; a minor edit keeps earlier answers valid.
 function requiredVersion(versions: PublishedVersion[], current: number): number {
     const flagged = versions.filter(v => v.requiresReacceptance && v.version <= current);
-    return flagged.length ? Math.max(...flagged.map(v => v.version)) : current;
+    return flagged.length
+        ? Math.max(...flagged.map(v => v.version))
+        : Math.min(...versions.map(v => v.version));
 }
 
 export function documentStatuses(

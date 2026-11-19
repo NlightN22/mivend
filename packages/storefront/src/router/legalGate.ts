@@ -1,4 +1,5 @@
 import type { RouteLocationRaw } from 'vue-router';
+import { useActingStore } from '../stores/acting';
 import { useAuthStore } from '../stores/auth';
 import { useLegalStore } from '../stores/legal';
 
@@ -12,6 +13,8 @@ export async function legalRedirect(
 ): Promise<RouteLocationRaw | null> {
     const auth = useAuthStore();
     if (auth.authStatus !== 'authenticated' || !auth.customer) return null;
+    // A consent must come from the person; a manager acting for them is never asked.
+    if (useActingStore().isActing) return null;
     if (EXEMPT.some(prefix => path === prefix || path.startsWith(prefix))) return null;
     const legal = useLegalStore();
     if (legal.loadedFor !== auth.customer.id) {
