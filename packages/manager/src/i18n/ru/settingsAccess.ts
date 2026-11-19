@@ -15,6 +15,7 @@ const settingsAccess: typeof en = {
         settlements: 'Взаиморасчёты',
         customers: 'Клиенты и контрагенты',
         pricing: 'Цены и скидки',
+        analytics: 'Аналитика',
         admin: 'Администрирование и аудит',
     },
     roles: {

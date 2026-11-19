@@ -13,6 +13,7 @@ export default {
         settlements: 'Settlements',
         customers: 'Customers & Counterparties',
         pricing: 'Pricing & Discounts',
+        analytics: 'Analytics',
         admin: 'Administration & Audit',
     },
     roles: {
