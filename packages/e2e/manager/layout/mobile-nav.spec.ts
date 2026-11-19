@@ -28,7 +28,8 @@ test('More sheet opens, lists secondary nav, and closes on backdrop click @on:ma
 
     const sheet = page.locator('.mv-mobile-sheet');
     await expect(sheet).toHaveClass(/mv-mobile-sheet--open/);
-    await expect(sheet.getByRole('link', { name: 'Analytics' })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Discounts' })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Analytics' })).toHaveCount(0);
     await expect(sheet.getByRole('link', { name: 'Payments', exact: true })).toHaveCount(0);
 
     // The sheet is capped at 72vh and scrolls; its head covers the backdrop centre, so click the top strip.
@@ -43,9 +44,9 @@ test('More sheet items actually navigate, not just close the sheet @on:manager-o
     await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
 
     const sheet = page.locator('.mv-mobile-sheet');
-    await sheet.getByRole('link', { name: 'Analytics' }).click();
+    await sheet.getByRole('link', { name: 'Discounts' }).click();
 
-    await expect(page).toHaveURL(/\/analytics/);
+    await expect(page).toHaveURL(/\/discounts/);
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
