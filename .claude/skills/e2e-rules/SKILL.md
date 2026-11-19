@@ -71,6 +71,10 @@ A test must pass in any order and alone.
   only, and `@read-only` on one that changes no shared data; never `test.skip` on the project name
   (`docs/e2e-testing.md` "Manager portal role projects", `docs/testing-strategy.md` "E2E parallelism").
 
+- **Speed**: every run ends with an `e2e timing` summary (slowest spec files and tests, time in hooks and fixtures;
+  `E2E_TIMINGS_JSON=<path>` writes every test). A new spec is read in that summary: a test of one page view
+  taking over 10 s, or a `beforeAll`/fixture that dominates it, is fixed before commit (`docs/e2e-testing.md` "Timing report").
+
 ## 5. Checklist (fill in before committing)
 
 Copy into your report and tick every item, or write why it does not apply.
@@ -87,6 +91,7 @@ Copy into your report and tick every item, or write why it does not apply.
 - [ ] The spec passes alone and inside its whole group.
 - [ ] The issue names its e2e group(s) and only they were run via `make e2e-group` (`docs/testing-strategy.md` "E2E groups").
 - [ ] Only own specs were run, one at a time, with an explicit `--project`.
+- [ ] The `e2e timing` summary of the group shows no new slow test or hook-dominated spec.
 - [ ] `make lint` passes; commits stage explicit paths, hooks on, no push.
 
 ## 6. Final stage: audit the checklist

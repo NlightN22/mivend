@@ -37,7 +37,14 @@ async function warmStorefront(page: Page): Promise<void> {
     }
 }
 
+let markedAt = Date.now();
+function mark(label: string): void {
+    console.log(`e2e setup: ${label} ${((Date.now() - markedAt) / 1000).toFixed(1)}s`);
+    markedAt = Date.now();
+}
+
 export default async function globalSetup(): Promise<void> {
+    markedAt = Date.now();
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
     // A second Playwright pass or group on the same stack reuses the seed and sessions of the first one.
     const doneMarker = path.join(AUTH_DIR, 'setup-done');
@@ -75,8 +82,10 @@ export default async function globalSetup(): Promise<void> {
     const exchangeId = `e2e-seed-${Date.now()}`;
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
+    mark('seed batch');
 
     if (process.env.E2E_PICKER_SEED !== '0') await seedPicker(adminToken);
+    mark('picker');
 
     // erp-import never writes servicingBranchId, so e2e trading points start null. Order visibility and
     // stock allocation key on the Branch row id, so patch it through the staff-editing mutation.
@@ -183,6 +192,7 @@ export default async function globalSetup(): Promise<void> {
     if (!preferred.setPreferredTradingPoint) throw new Error('setPreferredTradingPoint failed');
 
     await seedPaidOrders({ operatorToken, customerId, customerCookie, productVariantId });
+    mark('paid orders');
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
 
@@ -281,9 +291,13 @@ export default async function globalSetup(): Promise<void> {
         otherCounterpartyId,
     });
     await seedPendingGrantRequests(managerToken, otherCounterpartyId);
+    mark('discount grants');
     const visIds = await seedVisibility(adminToken);
+    mark('visibility');
     seedErpDocuments(await readVisOrders(adminToken, visIds));
+    mark('erp documents');
     await reindexSearch(adminToken);
+    mark('reindex');
 
     const browser = await chromium.launch();
     const context = await browser.newContext({
@@ -295,6 +309,7 @@ export default async function globalSetup(): Promise<void> {
     await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
     await context.storageState({ path: path.join(AUTH_DIR, 'storefront-user.json') });
     await warmStorefront(page);
+    mark('storefront login+warm');
     await context.close();
 
     for (const [key, account] of Object.entries(MANAGER_ACCOUNTS)) {
@@ -309,6 +324,7 @@ export default async function globalSetup(): Promise<void> {
     }
 
     await browser.close();
+    mark('manager logins');
     if (stackName) fs.writeFileSync(doneMarker, stackName);
     const leakBaseline = process.env.E2E_LEAK_SNAPSHOT;
     if (leakBaseline)

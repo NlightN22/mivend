@@ -27,6 +27,7 @@ export default defineConfig({
         ['html', { open: 'never' }],
         ['line'],
         ['./skip-guard-reporter.ts'],
+        ['./timing-reporter.ts'],
         ...(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ? [['json'] as ['json']] : []),
     ],
     use: {

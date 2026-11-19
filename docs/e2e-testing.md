@@ -200,6 +200,13 @@ Round 2 findings (#336), batch storefront-catalog + manager-orders + manager-cus
 - The seed (about 81 s) is dominated by categories 30 s, customers 17 s and products 14 s of server work; starting the customer batch early did not shorten it. Server boot is 46-62 s.
 - A production build of the portals would halve page loads but changes DEV-only behaviour under test; not done.
 
+## Timing report (#336)
+
+Every Playwright pass ends with `e2e timing` (`packages/e2e/timing-reporter.ts`): the test count, the seconds spent in
+tests and in their hooks and fixtures, the 12 slowest spec files and the 12 slowest tests (seconds, of which hooks/fixtures).
+`E2E_TIMINGS_JSON=<path>` writes every test (`file`, `project`, `title`, `ms`, `hookMs`) for a full breakdown.
+`global-setup.ts` prints `e2e setup: <phase> Ns` per phase. Read both before deciding where to optimise.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test (`manager-operator`, `manager-manager`,
