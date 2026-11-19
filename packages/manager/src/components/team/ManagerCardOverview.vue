@@ -123,6 +123,17 @@ const { t } = useI18n();
     flex-wrap: wrap;
 }
 
+.manager-overview :deep(.manager-panel__list a) {
+    color: var(--el-text-color-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.manager-overview :deep(.manager-panel__list a:hover) {
+    color: var(--el-color-primary);
+    text-decoration: underline;
+}
+
 .manager-overview :deep(.manager-panel__table) {
     width: 100%;
     border-collapse: collapse;
