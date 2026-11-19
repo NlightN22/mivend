@@ -2,7 +2,7 @@
 import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvFavoriteButton, MvTierLadder, stockVariantFromLevel, type TierLadder } from '@mivend/ui-kit';
+import { MvTierLadder, stockVariantFromLevel, type TierLadder } from '@mivend/ui-kit';
 import { useProductLabels } from '../../composables/useProductLabels';
 import { useDemoMode } from '../../composables/useDemoMode';
 import { noPriceAction } from './noPriceAction';
@@ -20,7 +20,6 @@ interface Props {
     requiredMultiple?: number;
     nearestPack?: { name: string; ratio: number; baseQty: number } | null;
     tierProgress?: TierLadder | null;
-    isFavorited?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -34,13 +33,11 @@ const props = withDefaults(defineProps<Props>(), {
     nearestPack: null,
     tierProgress: null,
     requiredMultiple: 1,
-    isFavorited: false,
 });
 
 const emit = defineEmits<{
     'add-to-cart': [qty: number];
     'update-cart-qty': [lineId: string, qty: number];
-    'toggle-favorite': [];
 }>();
 
 const { t } = useI18n();
@@ -157,12 +154,6 @@ function onStepper(lineId: string | undefined, value: number): void {
             >
                 {{ t('buyPanel.addToCart') }}
             </button>
-            <MvFavoriteButton
-                class="buy-panel__favorite"
-                :is-favorited="isFavorited"
-                :aria-label="labels.card.favorite"
-                @toggle="emit('toggle-favorite')"
-            />
         </div>
     </div>
 </template>
@@ -221,10 +212,6 @@ function onStepper(lineId: string | undefined, value: number): void {
     font-size: 12px;
     color: var(--app-nav-text-faint);
     margin-bottom: 16px;
-}
-
-.buy-panel__favorite {
-    width: 100%;
 }
 
 .buy-panel__add-pack {

@@ -7,14 +7,15 @@ const props = withDefaults(
         productName: string;
         emoji?: string;
         showFavorite?: boolean;
+        isFavorited?: boolean;
         images?: { thumb: string; full: string }[];
     }>(),
-    { showFavorite: true, images: () => [] },
+    { showFavorite: true, isFavorited: false, images: () => [] },
 );
+const emit = defineEmits<{ 'toggle-favorite': [] }>();
 
 const PLACEHOLDER_THUMBS = ['📦', '🏷️', '🔍', '📋', '🧾'];
 const active = ref(0);
-const favorited = ref(false);
 
 const hasImages = computed(() => props.images.length > 0);
 const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
@@ -53,8 +54,8 @@ const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
                     v-if="showFavorite"
                     class="gallery__fav"
                     overlay
-                    :is-favorited="favorited"
-                    @toggle="favorited = !favorited"
+                    :is-favorited="isFavorited"
+                    @toggle="emit('toggle-favorite')"
                 />
                 <img
                     v-if="hasImages"

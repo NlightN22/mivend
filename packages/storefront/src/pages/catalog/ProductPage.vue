@@ -171,6 +171,8 @@ onMounted(() => {
                     class="product-page__gallery"
                     :product-name="product.name"
                     :images="galleryImages"
+                    :is-favorited="isFavorited"
+                    @toggle-favorite="toggleFavorite"
                 />
 
                 <MvProductMainCards
@@ -209,7 +211,6 @@ onMounted(() => {
                     :sales-unit="salesUnit"
                     :nearest-pack="nearestPack"
                     :tier-progress="tierProgress"
-                    :is-favorited="isFavorited"
                     :required-multiple="
                         multiplicityEnforced ? (variant?.customFields?.multiplicity ?? 1) : 1
                     "
@@ -217,7 +218,6 @@ onMounted(() => {
                         (qty: number) => onAddToCart(variant?.id, variant?.customFields, qty)
                     "
                     @update-cart-qty="onUpdateQty"
-                    @toggle-favorite="toggleFavorite"
                 />
             </div>
         </template>
