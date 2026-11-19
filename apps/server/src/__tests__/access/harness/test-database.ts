@@ -40,6 +40,28 @@ export async function createDatabase(name: string): Promise<void> {
     }
 }
 
+export async function cloneDatabase(name: string, template: string): Promise<void> {
+    await onMaintenanceDb(client =>
+        client.query(`CREATE DATABASE "${name}" TEMPLATE "${template}"`),
+    );
+}
+
+export async function setDatabaseComment(name: string, comment: string): Promise<void> {
+    await onMaintenanceDb(client =>
+        client.query(`COMMENT ON DATABASE "${name}" IS '${comment.replace(/'/g, "''")}'`),
+    );
+}
+
+export async function readDatabaseComment(name: string): Promise<string | null> {
+    const { rows } = await onMaintenanceDb(client =>
+        client.query<{ comment: string | null }>(
+            `SELECT shobj_description(oid, 'pg_database') AS comment FROM pg_database WHERE datname = $1`,
+            [name],
+        ),
+    );
+    return rows[0]?.comment ?? null;
+}
+
 export async function dropDatabase(name: string): Promise<void> {
     await onMaintenanceDb(client => client.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`));
 }

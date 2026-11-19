@@ -20,7 +20,7 @@ Each target boots its own throwaway stack (#274, `apps/server/src/__tests__/e2e-
 same name, the server (`:3020`), both workers, and the storefront (`:5193`) and manager (`:5194`) as Vite dev
 servers. It seeds the database with `infrastructure/scripts/seed-erp.mjs`, runs Playwright with
 `SERVER_URL`/`STOREFRONT_URL`/`MANAGER_URL`/`E2E_DB_NAME` pointing at it, then stops everything and drops the
-database, vhost and indices. Boot and seed take about 75 s. `make dev` does not need to run, and its database
+database, vhost and indices. Boot takes about 65 s from a template (below), a full seed about 6 minutes. `make dev` does not need to run, and its database
 (`mivend_central`) is never touched; `make seed` stays a dev-only command.
 
 No single run may take longer than 30 minutes. The full suite takes about an hour in one Playwright run, so
@@ -43,6 +43,24 @@ not part of the suite at all: `playwright.config.ts` ignores it unless `E2E_RESI
 Every Playwright run is two passes on the same stack (`infrastructure/scripts/e2e-playwright.sh`): tests tagged
 `@read-only` on `E2E_PARALLEL_WORKERS` workers (default 3), then everything else on one worker. The second pass reuses
 the seed and sessions of the first (`global-setup` writes `.auth/setup-done`). Rules: `docs/testing-strategy.md` "E2E parallelism".
+
+## Seeded template database (#336)
+
+Seeding a stack (the server's own seed, the ERP import, `stack-data.ts` and the search reindex) takes about 6 minutes, so
+`run.ts` does it once and copies the result. The first run for a given code state builds `mivend_e2etpl_<hash>`: a
+stack seeded exactly as before (including the picker data), stopped once its jobs are idle, with its search indices
+write-blocked and its metadata (build time, the shared e2e order) stored as the database comment. Every run then
+`CREATE DATABASE ... TEMPLATE`s it, clones the search indices under its own prefix (`_clone`, no reindex), boots the server on
+the copy and skips the seed: a stack is ready in about 65 s instead of 6-7 minutes. The sessions are still created per
+run by `global-setup.ts` (so token lifetimes do not matter) and the run's own database is dropped at the end as before.
+
+- The `<hash>` covers the server and plugin sources (tests and `dist` excluded), `packages/shared/src`, the e2e `fixtures`
+  and `helpers`, `stack-data.ts`, the seed scripts and the lockfile; any change there builds a new template (one slower run,
+  about 1.5 minutes more than a plain run). Portal and spec changes keep the template.
+- A template lives 48 h (`E2E_TEMPLATE_TTL_HOURS`), the 3 newest are kept, and a build killed half way leaves a database
+  without metadata that the next run drops. `E2E_TEMPLATE=0` seeds a stack from scratch as before.
+- The picker data is always in the template, so `E2E_PICKER_SEED` only matters with `E2E_TEMPLATE=0`.
+- Data a spec needs belongs in `stack-data.ts` (the template), sessions and browser work in `global-setup.ts`.
 
 ## Several groups on one stack (#316)
 

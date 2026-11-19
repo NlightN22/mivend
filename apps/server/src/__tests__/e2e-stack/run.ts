@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 import { createVhost, deleteVhost } from '../access/harness/rabbit-vhost';
 import { stopGroup } from '../access/harness/server-process';
-import { createDatabase, dropDatabase } from '../access/harness/test-database';
+import { cloneDatabase, createDatabase, dropDatabase } from '../access/harness/test-database';
 import { killRecordedGroups, recordGroups, sweepLeftovers } from './leftovers';
 import {
     assertPortsFree,
@@ -16,7 +16,9 @@ import {
     waitForMockOidcProvider,
     waitForServer,
 } from './processes';
-import { deleteIndices } from './search-indices';
+import { cloneIndices, deleteIndices } from './search-indices';
+import { buildTemplate } from './template-build';
+import { findTemplate, sweepTemplates, templateName } from './template';
 import { watchStack } from './watchdog';
 import {
     E2E_AUTH_DIR,
@@ -34,6 +36,9 @@ const command = process.argv.slice(2);
 const base = localContourEnv();
 const name = `${E2E_PREFIX}${Date.now()}`;
 const children: ChildProcess[] = [];
+// E2E_TEMPLATE=0 seeds every stack from scratch instead of copying the seeded template database.
+const useTemplate = process.env.E2E_TEMPLATE !== '0';
+let seededOrder: string | undefined;
 let foreground: ChildProcess | undefined;
 const elapsed = (since: number): string => `${((Date.now() - since) / 1000).toFixed(0)}s`;
 
@@ -66,10 +71,27 @@ async function stopAndDrop(): Promise<void> {
     killRecordedGroups();
 }
 
+async function createSeededDatabase(): Promise<void> {
+    if (!useTemplate) return createDatabase(name);
+    const template = templateName();
+    await sweepTemplates(base, template);
+    let meta = await findTemplate(template);
+    if (!meta) {
+        await buildTemplate(base, template, track);
+        children.length = 0;
+        record();
+        meta = await findTemplate(template);
+    }
+    if (!meta) throw new Error(`e2e template ${template} is missing after its build`);
+    await cloneDatabase(name, template);
+    await cloneIndices(base, `${template}-`, `${name}-`);
+    seededOrder = JSON.stringify(meta.order);
+}
+
 async function bootAndSeed(): Promise<void> {
     const started = Date.now();
     await assertPortsFree();
-    await createDatabase(name);
+    await createSeededDatabase();
     const env = serverEnv(base, name, await createVhost(name));
     const mockOidc = spawnMockOidcProvider();
     const backend = spawnBackend(env);
@@ -81,14 +103,16 @@ async function bootAndSeed(): Promise<void> {
     await waitForMockOidcProvider(mockOidc);
     await waitForServer(backend[0]);
     console.log(`e2e stack: server up on :${E2E_PORTS.server} after ${elapsed(started)}`);
-    const seeded = Date.now();
-    const seedCode = await runForeground(['node', 'infrastructure/scripts/seed-erp.mjs'], {
-        PORT: String(E2E_PORTS.server),
-        ERP_IMPORT_TOKEN: base.ERP_IMPORT_TOKEN,
-        SEED_DB_NAME: name,
-    });
-    if (seedCode !== 0) throw new Error(`seed-erp.mjs exited with ${seedCode}`);
-    console.log(`e2e stack: seeded in ${elapsed(seeded)}`);
+    if (!seededOrder) {
+        const seeded = Date.now();
+        const seedCode = await runForeground(['node', 'infrastructure/scripts/seed-erp.mjs'], {
+            PORT: String(E2E_PORTS.server),
+            ERP_IMPORT_TOKEN: base.ERP_IMPORT_TOKEN,
+            SEED_DB_NAME: name,
+        });
+        if (seedCode !== 0) throw new Error(`seed-erp.mjs exited with ${seedCode}`);
+        console.log(`e2e stack: seeded in ${elapsed(seeded)}`);
+    }
     await waitForPortal(portals[0], 'storefront', E2E_PORTS.storefront);
     await waitForPortal(portals[1], 'manager', E2E_PORTS.manager);
     console.log(`e2e stack: ready after ${elapsed(started)} (database ${name}, logs ${STACK_DIR})`);
@@ -110,15 +134,22 @@ async function main(): Promise<number> {
         await bootAndSeed();
         let failure: string | undefined;
         let stopWatch = (): void => undefined;
-        const code = await runForeground(command, testRunEnv(base, name), child => {
-            foreground = child;
-            record();
-            stopWatch = watchStack(children, RUN_TIMEOUT_MS, reason => {
-                failure = reason;
-                console.error(`e2e stack: ${reason}; stopping the test run`);
-                void stopGroup(child);
-            });
-        });
+        const code = await runForeground(
+            command,
+            {
+                ...testRunEnv(base, name),
+                ...(seededOrder ? { E2E_SEEDED_ORDER: seededOrder } : {}),
+            },
+            child => {
+                foreground = child;
+                record();
+                stopWatch = watchStack(children, RUN_TIMEOUT_MS, reason => {
+                    failure = reason;
+                    console.error(`e2e stack: ${reason}; stopping the test run`);
+                    void stopGroup(child);
+                });
+            },
+        );
         stopWatch();
         return failure ? 1 : code;
     } finally {
