@@ -18,20 +18,27 @@ import { publishTemplate } from './template';
 
 const IDLE_TIMEOUT_MS = 90_000;
 
-// A copy taken while a job is half done would hold a record no worker finishes.
-async function waitForIdleJobs(name: string): Promise<void> {
+// A copy taken mid-work would carry rows no worker finishes. integration_outbox is left out: without a broker its pending rows are the normal state.
+const OPEN_WORK = [
+    `SELECT count(*) AS open FROM job_record WHERE state IN ('PENDING', 'RUNNING', 'RETRYING')`,
+    `SELECT count(*) AS open FROM integration_inbox_event WHERE status = 'pending'`,
+    `SELECT count(*) AS open FROM sync_outbox WHERE status = 'pending'`,
+    `SELECT count(*) AS open FROM erp_import_run WHERE status NOT IN ('done', 'failed')`,
+];
+
+async function waitForIdle(name: string): Promise<void> {
     const client = new Client({ ...testDbConnection(), database: name });
     await client.connect();
     try {
         const deadline = Date.now() + IDLE_TIMEOUT_MS;
         while (Date.now() < deadline) {
-            const { rows } = await client.query<{ open: string }>(
-                `SELECT count(*) AS open FROM job_record WHERE state IN ('PENDING', 'RUNNING', 'RETRYING')`,
-            );
-            if (Number(rows[0].open) === 0) return;
+            let open = 0;
+            for (const sql of OPEN_WORK)
+                open += Number((await client.query<{ open: string }>(sql)).rows[0].open);
+            if (open === 0) return;
             await new Promise(r => setTimeout(r, 1000));
         }
-        throw new Error(`jobs still open in ${name} after ${IDLE_TIMEOUT_MS / 1000}s`);
+        throw new Error(`work still open in ${name} after ${IDLE_TIMEOUT_MS / 1000}s`);
     } finally {
         await client.end();
     }
@@ -73,7 +80,7 @@ export async function buildTemplate(
         { ...testRunEnv(base, name), E2E_PICKER_SEED: '1', E2E_ORDER_FILE: orderFile },
     );
     if (dataCode !== 0) throw new Error(`seeding the stack data exited with ${dataCode}`);
-    await waitForIdleJobs(name);
+    await waitForIdle(name);
     await Promise.all([mockOidc, ...backend].map(stopGroup));
     await deleteVhost(name);
     const order: unknown = JSON.parse(readFileSync(orderFile, 'utf8'));

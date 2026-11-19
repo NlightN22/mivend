@@ -55,10 +55,12 @@ the copy and skips the seed: a stack is ready in about 65 s instead of 6-7 minut
 run by `global-setup.ts` (so token lifetimes do not matter) and the run's own database is dropped at the end as before.
 
 - The `<hash>` covers the server and plugin sources (tests and `dist` excluded), `packages/shared/src`, the e2e `fixtures`
-  and `helpers`, `stack-data.ts`, the seed scripts and the lockfile; any change there builds a new template (one slower run,
+  and `helpers`, `stack-data.ts`, `infrastructure/fixtures`, the seed scripts, `e2e-stack/stack-env.ts`, the lockfile and the
+  current UTC date (seeded dates are relative to now, so a template never outlives its day); any change there builds a new template (one slower run,
   about 1.5 minutes more than a plain run). Portal and spec changes keep the template.
-- A template lives 48 h (`E2E_TEMPLATE_TTL_HOURS`), the 3 newest are kept, and a build killed half way leaves a database
-  without metadata that the next run drops. `E2E_TEMPLATE=0` seeds a stack from scratch as before.
+- A template lives 24 h (`E2E_TEMPLATE_TTL_HOURS`), the 3 newest are kept, and a build killed half way leaves a database
+  without metadata (and orphan indices) that the next run drops. Before the copy the build waits for open jobs, inbox
+  rows, sync outbox rows and import runs (not the integration outbox, whose pending rows are normal without a broker). `E2E_TEMPLATE=0` seeds a stack from scratch as before.
 - The picker data is always in the template, so `E2E_PICKER_SEED` only matters with `E2E_TEMPLATE=0`.
 - Data a spec needs belongs in `stack-data.ts` (the template), sessions and browser work in `global-setup.ts`.
 

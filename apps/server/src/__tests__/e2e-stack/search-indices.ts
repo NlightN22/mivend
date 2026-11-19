@@ -2,6 +2,15 @@ export function esHost(env: Record<string, string>): string {
     return env.ELASTICSEARCH_HOST || 'http://localhost:9200';
 }
 
+export async function listIndexNames(
+    env: Record<string, string>,
+    prefix: string,
+): Promise<string[]> {
+    const res = await fetch(`${esHost(env)}/_cat/indices/${prefix}*?format=json&h=index`);
+    if (!res.ok) throw new Error(`Elasticsearch GET _cat/indices: ${res.status}`);
+    return ((await res.json()) as { index: string }[]).map(i => i.index);
+}
+
 export async function deleteIndices(env: Record<string, string>, prefix: string): Promise<void> {
     const host = esHost(env);
     const res = await fetch(`${host}/_cat/indices/${prefix}*?format=json&h=index`);

@@ -10,11 +10,11 @@ import {
     readDatabaseComment,
     setDatabaseComment,
 } from '../access/harness/test-database';
-import { blockIndexWrites, deleteIndices } from './search-indices';
+import { blockIndexWrites, deleteIndices, listIndexNames } from './search-indices';
 import { REPO_ROOT } from './stack-env';
 
 export const TEMPLATE_PREFIX = 'mivend_e2etpl_';
-const TTL_MS = Number(process.env.E2E_TEMPLATE_TTL_HOURS ?? 48) * 3_600_000;
+const TTL_MS = Number(process.env.E2E_TEMPLATE_TTL_HOURS ?? 24) * 3_600_000;
 const KEEP = 3;
 
 // Everything that decides what the seeded database holds; the portals and the specs do not.
@@ -29,12 +29,17 @@ const KEY_PATHS = [
     'packages/e2e/helpers',
     'packages/e2e/stack-data.ts',
     'packages/e2e/seed-stack-data.ts',
+    'infrastructure/fixtures',
+    'infrastructure/scripts/price-type-visibility.sql',
     'infrastructure/scripts/seed-erp.mjs',
     'infrastructure/scripts/seed-balance-demo.mjs',
     'infrastructure/scripts/seed-statement-kinds.mjs',
     'infrastructure/scripts/seed-tier-showcase.mjs',
     'pnpm-lock.yaml',
 ];
+
+// Outside the pathspec above because it excludes __tests__: the flags the build server runs with decide the seeded data.
+const KEY_FILES = ['apps/server/src/__tests__/e2e-stack/stack-env.ts'];
 
 export interface TemplateMeta {
     createdAt: number;
@@ -51,8 +56,8 @@ export function templateName(): string {
         .split('\0')
         .filter(Boolean)
         .sort();
-    const hash = createHash('sha1');
-    for (const file of files) {
+    const hash = createHash('sha1').update(new Date().toISOString().slice(0, 10));
+    for (const file of [...files, ...KEY_FILES]) {
         try {
             hash.update(file).update(readFileSync(resolve(REPO_ROOT, file)));
         } catch {
@@ -96,6 +101,9 @@ export async function sweepTemplates(base: Record<string, string>, keep: string)
     fresh.sort((a, b) => b[1] - a[1]);
     for (const [name] of fresh.filter(([n], i) => n !== keep && i >= KEEP)) stale.push(name);
     for (const name of stale) await dropTemplate(base, name);
+    const named = new Set(await listDatabases(TEMPLATE_PREFIX));
+    for (const name of await listIndexNames(base, TEMPLATE_PREFIX))
+        if (!named.has(name.slice(0, name.indexOf('-')))) await deleteIndices(base, `${name}`);
 }
 
 export async function publishTemplate(
