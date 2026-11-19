@@ -1846,6 +1846,45 @@ export enum LanguageCode {
     Zu = 'zu',
 }
 
+export type LegalAcceptance = {
+    accepted: Scalars['Boolean']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    kind: Scalars['String']['output'];
+    locale: Scalars['String']['output'];
+    portal: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
+};
+
+export type LegalAcceptanceInput = {
+    accepted: Scalars['Boolean']['input'];
+    kind: Scalars['String']['input'];
+    version: Scalars['Int']['input'];
+};
+
+export type LegalAcceptanceList = {
+    items: Array<LegalAcceptance>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type LegalDocument = {
+    body: Scalars['String']['output'];
+    effectiveDate: Scalars['DateTime']['output'];
+    kind: Scalars['String']['output'];
+    locale: Scalars['String']['output'];
+    title: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
+    versionLabel: Scalars['String']['output'];
+};
+
+export type LegalDocumentStatus = {
+    accepted: Scalars['Boolean']['output'];
+    kind: Scalars['String']['output'];
+    pending: Scalars['Boolean']['output'];
+    required: Scalars['Boolean']['output'];
+    version: Scalars['Int']['output'];
+};
+
 export type LocaleStringCustomFieldConfig = CustomField & {
     deprecated?: Maybe<Scalars['Boolean']['output']>;
     deprecationReason?: Maybe<Scalars['String']['output']>;
@@ -1900,6 +1939,7 @@ export type MoneyAmount = {
 };
 
 export type Mutation = {
+    acceptLegalDocuments: Array<LegalDocumentStatus>;
     /** Adds an item to the Order. If custom fields are defined on the OrderLine entity, a third argument 'customFields' will be available. */
     addItemToOrder: UpdateOrderItemsResult;
     /** Adds mutliple items to the Order. Returns a list of errors for each item that failed to add. It will still add successful items. */
@@ -2045,6 +2085,11 @@ export type Mutation = {
      * provided here.
      */
     verifyCustomerAccount: VerifyCustomerAccountResult;
+};
+
+export type MutationAcceptLegalDocumentsArgs = {
+    input: Array<LegalAcceptanceInput>;
+    locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationAddItemToOrderArgs = {
@@ -3142,6 +3187,8 @@ export enum Permission {
     ReadAdministrator = 'ReadAdministrator',
     /** Read customer price types of every branch, beyond the branch allow-list */
     ReadAllCustomerPriceTypes = 'ReadAllCustomerPriceTypes',
+    /** Open the Analytics section and its report catalog; rows of a report stay inside the viewer scope (#363) */
+    ReadAnalytics = 'ReadAnalytics',
     /** Grants permission to read ApiKey */
     ReadApiKey = 'ReadApiKey',
     /** Grants permission to read Asset */
@@ -3176,6 +3223,8 @@ export enum Permission {
     ReadEntityHistory = 'ReadEntityHistory',
     /** Grants permission to read Facet */
     ReadFacet = 'ReadFacet',
+    /** Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362) */
+    ReadManagerCard = 'ReadManagerCard',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -3729,6 +3778,9 @@ export type Query = {
     /** A list of Facets available to the shop */
     facets: FacetList;
     geoConfig: GeoConfig;
+    legalAcceptanceHistory: LegalAcceptanceList;
+    legalDocument?: Maybe<LegalDocument>;
+    legalDocumentStatus: Array<LegalDocumentStatus>;
     /** Returns information about the current authenticated User */
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
@@ -3799,6 +3851,16 @@ export type QueryFacetArgs = {
 
 export type QueryFacetsArgs = {
     options?: InputMaybe<FacetListOptions>;
+};
+
+export type QueryLegalAcceptanceHistoryArgs = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryLegalDocumentArgs = {
+    kind: Scalars['String']['input'];
+    locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type QueryMyDocumentsArgs = {
@@ -4707,6 +4769,50 @@ export type Zone = Node & {
     members: Array<Region>;
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LegalDocumentQueryVariables = Exact<{
+    kind: Scalars['String']['input'];
+    locale?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type LegalDocumentQuery = {
+    legalDocument?: {
+        kind: string;
+        version: number;
+        versionLabel: string;
+        locale: string;
+        title: string;
+        body: string;
+        effectiveDate: any;
+    } | null;
+};
+
+export type LegalDocumentStatusQueryVariables = Exact<{ [key: string]: never }>;
+
+export type LegalDocumentStatusQuery = {
+    legalDocumentStatus: Array<{
+        kind: string;
+        version: number;
+        required: boolean;
+        accepted: boolean;
+        pending: boolean;
+    }>;
+};
+
+export type AcceptLegalDocumentsMutationVariables = Exact<{
+    input: Array<LegalAcceptanceInput> | LegalAcceptanceInput;
+    locale?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type AcceptLegalDocumentsMutation = {
+    acceptLegalDocuments: Array<{
+        kind: string;
+        version: number;
+        required: boolean;
+        accepted: boolean;
+        pending: boolean;
+    }>;
 };
 
 export type NotificationFieldsFragment = {
@@ -6406,6 +6512,47 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'ProductWidgetFields' },
 ) as unknown as TypedDocumentString<ProductWidgetFieldsFragment, unknown>;
+export const LegalDocumentDocument = new TypedDocumentString(`
+    query LegalDocument($kind: String!, $locale: String) {
+  legalDocument(kind: $kind, locale: $locale) {
+    kind
+    version
+    versionLabel
+    locale
+    title
+    body
+    effectiveDate
+  }
+}
+    `) as unknown as TypedDocumentString<LegalDocumentQuery, LegalDocumentQueryVariables>;
+export const LegalDocumentStatusDocument = new TypedDocumentString(`
+    query LegalDocumentStatus {
+  legalDocumentStatus {
+    kind
+    version
+    required
+    accepted
+    pending
+  }
+}
+    `) as unknown as TypedDocumentString<
+    LegalDocumentStatusQuery,
+    LegalDocumentStatusQueryVariables
+>;
+export const AcceptLegalDocumentsDocument = new TypedDocumentString(`
+    mutation AcceptLegalDocuments($input: [LegalAcceptanceInput!]!, $locale: String) {
+  acceptLegalDocuments(input: $input, locale: $locale) {
+    kind
+    version
+    required
+    accepted
+    pending
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AcceptLegalDocumentsMutation,
+    AcceptLegalDocumentsMutationVariables
+>;
 export const NotificationsDocument = new TypedDocumentString(`
     query Notifications($options: NotificationListOptions) {
   notifications(options: $options) {

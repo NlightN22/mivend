@@ -43,6 +43,7 @@
         "@mivend/plugin-freight-shipping": "workspace:*",
         "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
+        "@mivend/plugin-legal-documents": "workspace:*",
         "@mivend/plugin-site-language": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-order-identity": "workspace:*",

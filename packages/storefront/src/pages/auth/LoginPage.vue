@@ -154,6 +154,7 @@ function handleSubmit(): Promise<void> {
                 <a href="/">{{ t('auth.publicCatalog') }}</a>
                 <a href="#">{{ t('auth.help') }}</a>
                 <a href="#">{{ t('auth.security') }}</a>
+                <a href="/legal/policy" data-testid="login-policy-link">{{ t('legal.policy') }}</a>
             </nav>
         </div>
     </main>

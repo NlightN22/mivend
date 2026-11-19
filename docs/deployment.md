@@ -224,6 +224,22 @@ Five layers, none of them a single point of failure.
 A wrong value fails boot. Local, branch and staging-integration contours keep both switches `false` so tests and e2e can sign
 in repeatedly and never call the network; the throttle itself is covered against a throwaway server by the access suite.
 
+### Legal documents
+
+Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). All
+seven are required: with any of them empty nothing is published and nobody is asked to accept.
+
+| Variable | Meaning |
+| --- | --- |
+| `LEGAL_PLATFORM_NAME` | Name of the platform shown in the documents. |
+| `LEGAL_OPERATOR_NAME` | Full name of the operator of personal data. |
+| `LEGAL_OPERATOR_STATUS` | Legal status of the operator, as it must read in the documents. |
+| `LEGAL_CONTACT_EMAIL` | Contact e-mail for requests and consent withdrawal. |
+| `LEGAL_CONTACT_ADDRESS` | Postal address for requests. |
+| `LEGAL_PORTAL_URL` | Public address of the portal. |
+| `LEGAL_JURISDICTION` | Law the documents refer to, in the genitive case as the Russian templates use it. |
+| `LEGAL_FALLBACK_LOCALE` | Language served when a document has no text in the requested one (default `ru`). |
+
 ## First boot and duplicate superadmin (#285)
 
 Vendure creates the superadmin in every process that bootstraps (`server`, `worker`, `worker-email`) with a

@@ -14,3 +14,4 @@ export type {
 export { PASSWORD_BREACHED_MESSAGE } from './src/breach/breach-checked-password-validation';
 export { CAPTCHA_TOKEN_HEADER } from './src/types';
 export type { SignInProtectionOptions, ThrottleLimits, ThrottleScope } from './src/types';
+export { clientIp } from './src/client-ip';

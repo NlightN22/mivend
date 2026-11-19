@@ -11,6 +11,7 @@ import finance from './finance';
 import orders from './orders';
 import requests from './requests';
 import demo from './demo';
+import legal from './legal';
 import terms from './terms';
 import twoFactor from './twoFactor';
 
@@ -28,6 +29,7 @@ export default {
     ...requests,
     ...demo,
     ...terms,
+    ...legal,
     ...acting,
     ...twoFactor,
 };

@@ -123,7 +123,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 
 | Group | Suite | Covers | Args |
 | --- | --- | --- | --- |
-| `storefront-auth` | dev | storefront login, set-password and account activation pages, trading-point selection, guest theme switch (no stored session) | `--project=storefront-noauth` |
+| `storefront-auth` | dev | storefront login, set-password and account activation pages, trading-point selection, guest theme switch (no stored session), legal documents acceptance (publishes and removes its own versions) | `--project=storefront-noauth` |
 | `storefront-account` | dev | storefront account pages | `--project=storefront storefront/account` |
 | `storefront-api` | dev | storefront REST/Swagger docs surface | `--project=storefront storefront/api` |
 | `storefront-cart` | dev | cart behaviour | `--project=storefront storefront/cart` |

@@ -42,6 +42,7 @@ import {
 } from '@mivend/plugin-erp-integration';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
+import { LegalDocumentsPlugin } from '@mivend/plugin-legal-documents';
 import { SiteLanguagePlugin } from '@mivend/plugin-site-language';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
@@ -56,6 +57,7 @@ import { ActingSessionPlugin } from '@mivend/plugin-acting-session';
 import { SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
 import { OidcSignInPlugin } from '@mivend/plugin-oidc-sign-in';
 import { TwoFactorPlugin } from '@mivend/plugin-two-factor';
+import { legalDocumentsOptionsFromEnv } from './legal-documents-options';
 import { signInProtectionOptionsFromEnv } from './sign-in-protection-options';
 import { oidcOptionsFromEnv } from './oidc-options';
 import { twoFactorOptionsFromEnv } from './two-factor-options';
@@ -688,6 +690,7 @@ export const config: VendureConfig = {
         ErpOrderPlugin,
         PopularProductsPlugin,
         SiteLanguagePlugin,
+        LegalDocumentsPlugin.init(legalDocumentsOptionsFromEnv(process.env)),
         SyncPlugin.init({
             instanceType,
             instanceId: process.env.INSTANCE_ID ?? 'central',

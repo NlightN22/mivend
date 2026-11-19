@@ -39,6 +39,7 @@
         { "path": "./checks" },
         { "path": "./numbering" },
         { "path": "./change-journal" },
-        { "path": "./site-language" }
+        { "path": "./site-language" },
+        { "path": "./legal-documents" }
     ]
 }

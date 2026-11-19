@@ -1,0 +1,31 @@
+query LegalDocument($kind: String!, $locale: String) {
+    legalDocument(kind: $kind, locale: $locale) {
+        kind
+        version
+        versionLabel
+        locale
+        title
+        body
+        effectiveDate
+    }
+}
+
+query LegalDocumentStatus {
+    legalDocumentStatus {
+        kind
+        version
+        required
+        accepted
+        pending
+    }
+}
+
+mutation AcceptLegalDocuments($input: [LegalAcceptanceInput!]!, $locale: String) {
+    acceptLegalDocuments(input: $input, locale: $locale) {
+        kind
+        version
+        required
+        accepted
+        pending
+    }
+}

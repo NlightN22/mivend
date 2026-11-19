@@ -1,0 +1,10 @@
+export { LegalDocumentsPlugin } from './src/legal-documents.plugin';
+export { LegalDocumentsService } from './src/legal-documents.service';
+export { LegalPublisherService } from './src/legal-publisher.service';
+export { documentStatuses } from './src/document-status';
+export { LEGAL_KIND_RULES } from './src/legal-kinds';
+export { missingRequisites, renderTemplate } from './src/requisites';
+export type { LegalRequisites } from './src/requisites';
+export type { LegalKind } from './src/legal-kinds';
+export type { DocumentStatus } from './src/document-status';
+export type { LegalDocumentsOptions } from './src/types';

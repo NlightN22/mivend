@@ -5,6 +5,8 @@ const HISTORY = 'already an append-only history or log of other changes';
 
 export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     ChangeJournalEntry: 'the journal itself',
+    LegalDocumentVersion: 'immutable published text, a change is a new row',
+    LegalAcceptance: 'append-only acceptance log, itself the audit record',
     RoleDefaultGrant: 'config table written only by migrate and the CLI, never by a user action',
     Session: AUTH,
     AnonymousSession: AUTH,

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { legalRedirect } from './legalGate';
 
 export const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,6 +9,11 @@ export const router = createRouter({
             path: '/login',
             component: () => import('../pages/auth/LoginPage.vue'),
             meta: { layout: 'auth' },
+        },
+        {
+            path: '/legal-consent',
+            component: () => import('../pages/auth/LegalConsentPage.vue'),
+            meta: { layout: 'auth', requiresAuth: true },
         },
         {
             path: '/acting',
@@ -153,6 +159,10 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'legal/:kind',
+                    component: () => import('../pages/legal/LegalDocumentPage.vue'),
+                },
+                {
                     path: 'terms',
                     component: () => import('../pages/terms/TermsPage.vue'),
                 },
@@ -176,7 +186,9 @@ router.beforeEach(async (to, _from, next) => {
     // so a prolonged server outage never logs out a still-valid session.
     if (to.meta.requiresAuth && authStore.authStatus === 'unauthenticated') {
         next({ path: '/login', query: { redirect: to.fullPath } });
-    } else {
-        next();
+        return;
     }
+    const redirect = await legalRedirect(to.path, to.fullPath);
+    if (redirect) next(redirect);
+    else next();
 });

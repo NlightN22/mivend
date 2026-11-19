@@ -7,6 +7,7 @@ import SettingsSecurity from './SettingsSecurity.vue';
 import SettingsTwoFactor from './SettingsTwoFactor.vue';
 import SettingsProfile from './SettingsProfile.vue';
 import SettingsPreferences from './SettingsPreferences.vue';
+import SettingsMarketingConsent from './SettingsMarketingConsent.vue';
 
 const authStore = useAuthStore();
 const { demoAllowed } = useDemoMode();
@@ -43,6 +44,7 @@ async function signOutAll() {
 
             <SettingsProfile />
             <SettingsPreferences />
+            <SettingsMarketingConsent />
 
             <SettingsSecurity />
             <SettingsTwoFactor />
