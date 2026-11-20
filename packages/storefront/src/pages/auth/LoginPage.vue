@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
     MvCaptchaWidget,
+    MvCheckbox,
     MvTwoFactorSignInStep,
     readSiteIconUrl,
     readSiteName,
@@ -166,10 +167,11 @@ function handleSubmit(): Promise<void> {
                         />
 
                         <div class="login-form__row">
-                            <label class="login-form__remember">
-                                <input v-model="form.remember" type="checkbox" />
-                                <span>{{ t('auth.rememberMe') }}</span>
-                            </label>
+                            <MvCheckbox
+                                v-model="form.remember"
+                                class="login-form__remember"
+                                :label="t('auth.rememberMe')"
+                            />
                             <a class="login-form__forgot" href="#">{{
                                 t('auth.forgotPassword')
                             }}</a>
@@ -266,16 +268,9 @@ function handleSubmit(): Promise<void> {
 }
 
 .login-form__remember {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--app-slate-fg);
-    cursor: pointer;
-}
-
-.login-form__remember input {
-    accent-color: var(--el-color-primary);
 }
 
 .login-form__forgot {

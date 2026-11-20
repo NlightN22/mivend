@@ -9,7 +9,7 @@ export const POLICY_EN = `# Personal Data Processing Policy
 
 1.1. This Policy describes how the operator processes and protects the personal data of users of the {{platformName}} information platform, hereinafter the Platform.
 
-1.2. The personal data operator is {{operatorName}} ({{operatorStatus}}), hereinafter the Operator. Contact email: {{contactEmail}}. Address for inquiries: {{contactAddress}}.
+1.2. The personal data operator is {{operatorName}} ({{operatorStatus}}), hereinafter the Operator. Contact email: {{contactEmail}}.
 
 1.3. The Policy is publicly available and is published at {{portalUrl}}.
 
@@ -55,7 +55,7 @@ export const POLICY_EN = `# Personal Data Processing Policy
 
 6.2. Consent to receive advertising mailings can be changed at any time in the profile on the Platform.
 
-6.3. Requests are sent to the email {{contactEmail}} or to the address {{contactAddress}}. The Operator responds within the time limits established by legislation.
+6.3. Requests are sent to the email {{contactEmail}}. The Operator responds within the time limits established by legislation.
 
 ## 7. Data protection
 

@@ -83,13 +83,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
             // Only builds the acting hand-off link; no storefront is contacted.
             STOREFRONT_PUBLIC_URL: 'http://127.0.0.1:9',
             DOCUMENT_PDF_DIR: pdfDir,
-            LEGAL_PLATFORM_NAME: 'Access Portal',
             LEGAL_OPERATOR_NAME: 'Access Operator',
-            LEGAL_OPERATOR_STATUS: 'Test status',
             LEGAL_CONTACT_EMAIL: 'legal@access.test',
-            LEGAL_CONTACT_ADDRESS: 'Test address',
-            LEGAL_PORTAL_URL: 'https://access.test',
-            LEGAL_JURISDICTION: 'Testland',
         };
         const server = await startServer(env, resolve(LOG_DIR, 'server.log'));
         stop = server.stop;

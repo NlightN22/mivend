@@ -3,7 +3,6 @@ export interface LegalRequisites {
     operatorName: string;
     operatorStatus: string;
     contactEmail: string;
-    contactAddress: string;
     portalUrl: string;
     jurisdiction: string;
 }
@@ -13,7 +12,6 @@ export const REQUISITE_KEYS = [
     'operatorName',
     'operatorStatus',
     'contactEmail',
-    'contactAddress',
     'portalUrl',
     'jurisdiction',
 ] as const satisfies readonly (keyof LegalRequisites)[];

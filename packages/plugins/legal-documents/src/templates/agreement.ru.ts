@@ -125,7 +125,6 @@ export const AGREEMENT_RU = `# Пользовательское соглашен
 **ФИО:** {{operatorName}}  
 **Статус:** {{operatorStatus}}  
 **Контактный email:** {{contactEmail}}  
-**Адрес для обращений:** {{contactAddress}}  
 **Адрес Платформы:** {{portalUrl}}
 
 ---

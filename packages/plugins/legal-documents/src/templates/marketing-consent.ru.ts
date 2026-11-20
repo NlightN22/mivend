@@ -9,7 +9,6 @@ export const MARKETING_CONSENT_RU = `# Согласие на получение 
 
 **ФИО:** {{operatorName}}  
 **Статус:** {{operatorStatus}}  
-**Адрес:** {{contactAddress}}  
 **Контактный email:** {{contactEmail}}
 
 ## 2. Предоставление согласия

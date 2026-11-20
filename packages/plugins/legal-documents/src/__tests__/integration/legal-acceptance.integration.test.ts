@@ -20,7 +20,6 @@ const requisites = {
     operatorName: 'Operator',
     operatorStatus: 'Status',
     contactEmail: 'legal@example.com',
-    contactAddress: 'Street 1',
     portalUrl: 'https://portal.example.com',
     jurisdiction: 'Country',
 };

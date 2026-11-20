@@ -9,7 +9,6 @@ export const MARKETING_CONSENT_EN = `# Consent to Receive Informational and Adve
 
 **Full name:** {{operatorName}}  
 **Status:** {{operatorStatus}}  
-**Address:** {{contactAddress}}  
 **Contact email:** {{contactEmail}}
 
 ## 2. Giving consent

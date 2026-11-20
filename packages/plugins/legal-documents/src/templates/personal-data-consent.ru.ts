@@ -11,7 +11,6 @@ export const PERSONAL_DATA_CONSENT_RU = `# Согласие на обработ�
 
 **ФИО:** {{operatorName}}  
 **Статус:** {{operatorStatus}}  
-**Адрес:** {{contactAddress}}  
 **Контактный email:** {{contactEmail}}
 
 ## 2. Предоставление согласия

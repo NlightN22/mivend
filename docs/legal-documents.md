@@ -14,7 +14,7 @@ marketing consent and the log of who accepted what. Nothing of it lives in the s
 
 The kinds and their flags are fixed in code (`legal-kinds.ts`): the screen has one checkbox per kind. Texts are
 templates in `packages/plugins/legal-documents/src/templates/` with placeholders `{{platformName}}`, `{{operatorName}}`,
-`{{operatorStatus}}`, `{{contactEmail}}`, `{{contactAddress}}`, `{{portalUrl}}`, `{{jurisdiction}}`, `{{version}}`,
+`{{operatorStatus}}`, `{{contactEmail}}`, `{{portalUrl}}`, `{{jurisdiction}}`, `{{version}}`,
 `{{effectiveDate}}`. Only Russian texts are bundled; another language is served the fallback (`LEGAL_FALLBACK_LOCALE`,
 default `ru`) until its templates are added.
 

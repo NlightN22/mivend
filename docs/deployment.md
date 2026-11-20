@@ -226,19 +226,17 @@ in repeatedly and never call the network; the throttle itself is covered against
 
 ### Legal documents
 
-Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). All
-seven are required: with any of them empty nothing is published and nobody is asked to accept. A published version is
-immutable and is what customers accept, so do not set them on production until the owner has approved every bundled text.
+Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). Two
+are required: with either empty nothing is published and nobody is asked to accept. The platform name and address are the
+storefront's own domain (`STOREFRONT_PUBLIC_URL`). A published version is immutable and is what customers accept, so do
+not set them on production until the owner has approved every bundled text.
 
 | Variable | Meaning |
 | --- | --- |
-| `LEGAL_PLATFORM_NAME` | Name of the platform shown in the documents. |
-| `LEGAL_OPERATOR_NAME` | Full name of the operator of personal data. |
-| `LEGAL_OPERATOR_STATUS` | Legal status of the operator, as it must read in the documents. |
-| `LEGAL_CONTACT_EMAIL` | Contact e-mail for requests and consent withdrawal. |
-| `LEGAL_CONTACT_ADDRESS` | Postal address for requests. |
-| `LEGAL_PORTAL_URL` | Public address of the portal. |
-| `LEGAL_JURISDICTION` | Law the documents refer to, in the genitive case as the Russian templates use it. |
+| `LEGAL_OPERATOR_NAME` | Required. Full name of the operator of personal data. |
+| `LEGAL_CONTACT_EMAIL` | Required. Contact e-mail for requests and consent withdrawal. |
+| `LEGAL_OPERATOR_STATUS` | Legal status of the operator as the documents read (default: individual, in Russian). |
+| `LEGAL_JURISDICTION` | Law the documents refer to, genitive case as the Russian templates use it (default: Russian Federation). |
 | `LEGAL_FALLBACK_LOCALE` | Language served when a document has no text in the requested one (default `ru`). |
 
 ## First boot and duplicate superadmin (#285)

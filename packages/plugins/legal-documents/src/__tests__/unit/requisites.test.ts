@@ -8,7 +8,6 @@ const requisites = {
     operatorName: 'Operator',
     operatorStatus: 'Sole proprietor',
     contactEmail: 'legal@example.com',
-    contactAddress: 'Street 1',
     portalUrl: 'https://portal.example.com',
     jurisdiction: 'Country',
 };

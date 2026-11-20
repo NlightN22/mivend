@@ -11,7 +11,6 @@ The personal data operator is:
 
 **Full name:** {{operatorName}}  
 **Status:** {{operatorStatus}}  
-**Address:** {{contactAddress}}  
 **Contact email:** {{contactEmail}}
 
 ## 2. Giving consent

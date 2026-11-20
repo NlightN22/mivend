@@ -125,7 +125,6 @@ export const AGREEMENT_EN = `# User Agreement
 **Full name:** {{operatorName}}  
 **Status:** {{operatorStatus}}  
 **Contact email:** {{contactEmail}}  
-**Address for inquiries:** {{contactAddress}}  
 **Platform address:** {{portalUrl}}
 
 ---
