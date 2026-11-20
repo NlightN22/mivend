@@ -72,31 +72,42 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         await expect(page.getByText('E2E text of policy v1')).toBeVisible();
     });
 
-    test('a first sign-in asks for the documents, the required ones gate the button', async ({
+    test('the form carries the documents, the required ones are needed to sign in', async ({
         page,
     }) => {
+        await page.goto('/login');
+        await page.locator('input[type="email"]').fill(email);
+        await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
         await signIn(page);
+        await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
         await expect(page).toHaveURL(/\/login/);
-        const submit = page.getByTestId('legal-consent-submit');
-        await expect(submit).toBeDisabled();
+        expect(
+            psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
+        ).toBe('0');
         await page.getByTestId('legal-check-agreement').check();
-        await expect(submit).toBeDisabled();
         await page.getByTestId('legal-check-personal-data-consent').check();
-        await expect(submit).toBeEnabled();
-        await submit.click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('3');
     });
 
-    test('a second sign-in is a plain form', async ({ page }) => {
+    test('a customer who already accepted signs in without ticking', async ({ page }) => {
         await signIn(page);
         await page.waitForURL(url => !url.pathname.includes('/login'));
-        expect(page.url()).not.toContain('/legal-consent');
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('3');
+    });
+
+    test('a browser that saved the acceptance hides the boxes', async ({ page }) => {
+        await signIn(page);
+        await page.waitForURL(url => !url.pathname.includes('/login'));
+        await page.context().clearCookies();
+        await page.goto('/login');
+        await page.locator('input[type="email"]').fill(email);
+        await expect(page.getByTestId('legal-check-agreement')).toHaveCount(0);
     });
 
     test('a new version that requires re-acceptance asks again, for that document only', async ({
@@ -104,10 +115,10 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
     }) => {
         publish('agreement', 2);
         await signIn(page);
+        await expect(page).toHaveURL(/\/login/);
         await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
-        await expect(page.getByTestId('legal-check-personal-data-consent')).toHaveCount(0);
         await page.getByTestId('legal-check-agreement').check();
-        await page.getByTestId('legal-consent-submit').click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(

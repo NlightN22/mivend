@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -13,9 +13,10 @@ import {
 import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
-import LegalConsentForm from '../../components/LegalConsentForm.vue';
+import LegalConsentChecks from '../../components/LegalConsentChecks.vue';
 import { useCartStore } from '../../stores/cart';
 import { useLegalStore } from '../../stores/legal';
+import { useLoginConsents } from './useLoginConsents';
 import { useTwoFactorLabels } from './useTwoFactorLabels';
 
 const siteName = readSiteName();
@@ -27,7 +28,8 @@ const { t } = useI18n();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const legal = useLegalStore();
-const consenting = ref(false);
+const consents = useLoginConsents();
+const consentMissing = ref(false);
 const labels = useTwoFactorLabels();
 
 const form = reactive({ email: '', password: '', remember: false });
@@ -54,32 +56,24 @@ async function finishSignIn(): Promise<void> {
     );
 }
 
-// Consents are asked on this card once the password is verified, so the form never reveals whose account is missing them.
-async function requestConsents(): Promise<boolean> {
-    if (!authStore.customer) return false;
-    try {
-        await legal.load(authStore.customer.id);
-    } catch {
-        return false;
-    }
-    return legal.blocking;
-}
-
-function leaveConsents(): void {
-    consenting.value = false;
-    signIn.back();
+function leaveUnconfirmed(): Promise<void> {
+    consentMissing.value = true;
+    legal.reset();
+    return authStore.logout().then(() => signIn.back());
 }
 
 watch(step, async value => {
     if (value !== 'done') return;
     captcha.clear();
-    await cartStore.fetchCart();
-    if (await requestConsents()) {
-        consenting.value = true;
+    if (authStore.customer && !(await consents.settle(authStore.customer.id))) {
+        await leaveUnconfirmed();
         return;
     }
+    await cartStore.fetchCart();
     await finishSignIn();
 });
+
+onMounted(() => void consents.load());
 
 function passwordError(): string {
     if (!error.value) return '';
@@ -101,13 +95,8 @@ function handleSubmit(): Promise<void> {
             </a>
 
             <div class="login-card">
-                <template v-if="consenting">
-                    <h1 class="login-card__title">{{ t('legal.consent.title') }}</h1>
-                    <p class="login-card__subtitle">{{ t('legal.consent.subtitle') }}</p>
-                    <LegalConsentForm @done="finishSignIn" @left="leaveConsents" />
-                </template>
                 <MvTwoFactorSignInStep
-                    v-else-if="step !== 'password' && step !== 'done'"
+                    v-if="step !== 'password' && step !== 'done'"
                     :step="step"
                     :error="error"
                     :loading="loading"
@@ -134,6 +123,7 @@ function handleSubmit(): Promise<void> {
                         <MvFormField :label="t('auth.emailOrPhone')">
                             <MvInput
                                 v-model="form.email"
+                                @update:model-value="consents.email.value = String($event)"
                                 type="email"
                                 :placeholder="t('auth.emailPlaceholder')"
                                 autocomplete="username"
@@ -150,6 +140,17 @@ function handleSubmit(): Promise<void> {
                                 :error="!!error"
                             />
                         </MvFormField>
+
+                        <template v-if="consents.visible.value">
+                            <MvNotice v-if="consentMissing" variant="error">
+                                {{ t('legal.login.required') }}
+                            </MvNotice>
+                            <LegalConsentChecks
+                                :pending="consents.checks.value"
+                                :checked="consents.checked"
+                                @toggle="(kind, value) => (consents.checked[kind] = value)"
+                            />
+                        </template>
 
                         <MvCaptchaWidget
                             v-if="captcha.required.value"
@@ -177,7 +178,9 @@ function handleSubmit(): Promise<void> {
                             class="login-form__submit"
                             native-type="submit"
                         >
-                            {{ t('auth.login') }}
+                            {{
+                                consents.visible.value ? t('legal.login.confirm') : t('auth.login')
+                            }}
                         </MvButton>
                     </form>
                 </template>
