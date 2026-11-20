@@ -84,8 +84,8 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('0');
-        await page.getByTestId('legal-check-agreement').check();
-        await page.getByTestId('legal-check-personal-data-consent').check();
+        await page.getByTestId('legal-check-agreement').locator('input').check();
+        await page.getByTestId('legal-check-personal-data-consent').locator('input').check();
         await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
@@ -117,7 +117,7 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         await signIn(page);
         await expect(page).toHaveURL(/\/login/);
         await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
-        await page.getByTestId('legal-check-agreement').check();
+        await page.getByTestId('legal-check-agreement').locator('input').check();
         await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
