@@ -14,10 +14,16 @@ const props = withDefaults(
         // directly in the template and needs a ref + watcher instead (see MvAdvancedDataTable's
         // select-all header checkbox for the real consumer).
         indeterminate?: boolean;
+        // Validation failed for this box: a red outline, same colour as an invalid MvInput.
+        error?: boolean;
+        // Long labels wrap; the box stays level with the first line.
+        multiline?: boolean;
     }>(),
     {
         disabled: false,
         indeterminate: false,
+        error: false,
+        multiline: false,
     },
 );
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
@@ -38,13 +44,21 @@ watch(
 </script>
 
 <template>
-    <label class="mv-checkbox" :class="{ 'mv-checkbox--disabled': disabled }">
+    <label
+        class="mv-checkbox"
+        :class="{
+            'mv-checkbox--disabled': disabled,
+            'mv-checkbox--error': error,
+            'mv-checkbox--multiline': multiline,
+        }"
+    >
         <input
             ref="inputEl"
             type="checkbox"
             class="mv-checkbox__input"
             :checked="modelValue"
             :disabled="disabled"
+            :aria-invalid="error || undefined"
             @change="$emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
         />
         <span v-if="label" class="mv-checkbox__label">{{ label }}</span>
@@ -62,6 +76,19 @@ watch(
     color: var(--el-text-color-primary);
 }
 
+.mv-checkbox--multiline {
+    align-items: flex-start;
+}
+
+.mv-checkbox--multiline .mv-checkbox__input {
+    margin-top: 1px;
+}
+
+.mv-checkbox--error .mv-checkbox__input {
+    outline: 2px solid var(--app-danger-btn);
+    outline-offset: 1px;
+}
+
 .mv-checkbox--disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -70,6 +97,7 @@ watch(
 .mv-checkbox__input {
     width: 16px;
     height: 16px;
+    flex: none;
     accent-color: var(--el-color-primary);
     border-radius: var(--app-radius-sm, 8px);
     cursor: inherit;

@@ -39,6 +39,15 @@ Forbidden at the page/feature level:
 If a ui-kit component does not support a required variant, **add the variant to the ui-kit** and use it everywhere.
 This keeps the design consistent and changes visible across the whole application.
 
+### Field errors
+
+A failed check is shown on the control itself and in words next to it, from the ui-kit component, never styled in a page:
+
+- Text, password, e-mail and similar inputs: `MvInput` (and its variants) with `error` for the red border, plus `MvFormField` `error` for the message under the field.
+- Checkbox: `MvCheckbox` with `error` for the red outline on each box that blocks the action (an unticked required box), plus a message right next to the group (`MvNotice` or the field message).
+- Use `MvCheckbox` for every checkbox (a label with links goes in its slot); a raw `<input type="checkbox">` in a page is a defect.
+- A control that cannot show an error yet gets the state added in the ui-kit first.
+
 ### Location input
 
 Use `MvLocationPicker` for any location input and never hand-roll a map; map-provider code stays in the picker adapters (`packages/ui-kit/src/components/MvLocationPicker/adapters/`).
@@ -150,6 +159,7 @@ storefront route at 360px; run it after any storefront layout change.
 
 ## Final checklist (before calling frontend work done)
 
+- [ ] Every control that can fail validation shows the error on the control and in words (see "Field errors"); checkboxes are `MvCheckbox`.
 - [ ] Only ui-kit components/tokens used; no parallel local component. No color literal and no `--palette-*` outside `ui-kit/src/styles/` (`make lint` is green).
 - [ ] Both themes checked by screenshot, with hover/active/selected/disabled states; any new role exists in light and dark.
 - [ ] Every new `z-index` uses a `--mv-z-*` token (or `calc` on one); `make test` passes `layers.test.ts`.

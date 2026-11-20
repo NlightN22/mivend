@@ -49,3 +49,12 @@ export const Disabled: Story = {
         template: '<MvCheckbox v-bind="args" />',
     }),
 };
+
+export const Error: Story = {
+    args: { modelValue: false, error: true },
+    render: args => ({
+        components: { MvCheckbox },
+        setup: () => ({ args }),
+        template: '<MvCheckbox v-bind="args" label="I accept the terms" />',
+    }),
+};

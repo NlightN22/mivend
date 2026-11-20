@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -30,6 +30,11 @@ const cartStore = useCartStore();
 const legal = useLegalStore();
 const consents = useLoginConsents();
 const consentMissing = ref(false);
+const consentError = computed(() =>
+    consentMissing.value && consents.checks.value.some(c => c.required && !consents.checked[c.kind])
+        ? t('legal.login.required')
+        : '',
+);
 const labels = useTwoFactorLabels();
 
 const form = reactive({ email: '', password: '', remember: false });
@@ -142,16 +147,14 @@ function handleSubmit(): Promise<void> {
                             />
                         </MvFormField>
 
-                        <MvNotice v-if="consentMissing" variant="error">
-                            {{ t('legal.login.required') }}
-                        </MvNotice>
-                        <template v-if="consents.visible.value">
+                        <MvFormField v-if="consents.visible.value" :error="consentError">
                             <LegalConsentChecks
                                 :pending="consents.checks.value"
                                 :checked="consents.checked"
+                                :invalid="consentMissing"
                                 @toggle="(kind, value) => (consents.checked[kind] = value)"
                             />
-                        </template>
+                        </MvFormField>
 
                         <MvCaptchaWidget
                             v-if="captcha.required.value"
