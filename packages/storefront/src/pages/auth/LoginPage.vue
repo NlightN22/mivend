@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -13,7 +13,9 @@ import {
 import { fetchCaptchaRequirement } from '../../api/signInCaptcha';
 import { createSignInApi } from '../../api/twoFactor';
 import { useAuthStore } from '../../stores/auth';
+import LegalConsentForm from '../../components/LegalConsentForm.vue';
 import { useCartStore } from '../../stores/cart';
+import { useLegalStore } from '../../stores/legal';
 import { useTwoFactorLabels } from './useTwoFactorLabels';
 
 const siteName = readSiteName();
@@ -24,6 +26,8 @@ const route = useRoute();
 const { t } = useI18n();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const legal = useLegalStore();
+const consenting = ref(false);
 const labels = useTwoFactorLabels();
 
 const form = reactive({ email: '', password: '', remember: false });
@@ -42,15 +46,39 @@ watch(error, value => {
     if (value) void captcha.refresh(form.email);
 });
 
-watch(step, async value => {
-    if (value !== 'done') return;
-    captcha.clear();
-    await cartStore.fetchCart();
+async function finishSignIn(): Promise<void> {
     await router.push(
         authStore.passwordChangeRequired
             ? '/account/settings'
             : ((route.query.redirect as string) ?? '/'),
     );
+}
+
+// Consents are asked on this card once the password is verified, so the form never reveals whose account is missing them.
+async function requestConsents(): Promise<boolean> {
+    if (!authStore.customer) return false;
+    try {
+        await legal.load(authStore.customer.id);
+    } catch {
+        return false;
+    }
+    return legal.blocking;
+}
+
+function leaveConsents(): void {
+    consenting.value = false;
+    signIn.back();
+}
+
+watch(step, async value => {
+    if (value !== 'done') return;
+    captcha.clear();
+    await cartStore.fetchCart();
+    if (await requestConsents()) {
+        consenting.value = true;
+        return;
+    }
+    await finishSignIn();
 });
 
 function passwordError(): string {
@@ -73,8 +101,13 @@ function handleSubmit(): Promise<void> {
             </a>
 
             <div class="login-card">
+                <template v-if="consenting">
+                    <h1 class="login-card__title">{{ t('legal.consent.title') }}</h1>
+                    <p class="login-card__subtitle">{{ t('legal.consent.subtitle') }}</p>
+                    <LegalConsentForm @done="finishSignIn" @left="leaveConsents" />
+                </template>
                 <MvTwoFactorSignInStep
-                    v-if="step !== 'password' && step !== 'done'"
+                    v-else-if="step !== 'password' && step !== 'done'"
                     :step="step"
                     :error="error"
                     :loading="loading"

@@ -33,7 +33,10 @@ the user saw. Changing a requisite or a text means a new template version (`vers
 - `legal_acceptance` is append-only: customer, kind, version, accepted, locale, portal (request origin), IP, user agent.
   Giving, declining and withdrawing are each a new row. Submitting the same state twice is a no-op (per-customer advisory
   lock); a stale version, the policy, or declining a required document is rejected.
-- The storefront asks after sign-in: the router sends a customer with an unanswered required document to `/legal-consent`
-  (sessions are not dropped, an existing session is asked on its next navigation). The marketing consent can be changed in
+- The storefront asks on the sign-in card itself: once the password (and second factor) is verified, the same card shows the
+  checkboxes before the sign-in completes, so the form never reveals whose account lacks them. A customer already signed in
+  is sent to `/legal-consent` on the next navigation (sessions are not dropped). The marketing consent can be changed in
   the account settings.
 - The IP is read like the sign-in throttle reads it (`SIGN_IN_TRUSTED_PROXY_HOPS`).
+
+The bundled templates exist in Russian and English; the customer gets the browser language, falling back to `ru`.

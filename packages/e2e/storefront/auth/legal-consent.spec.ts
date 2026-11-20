@@ -76,7 +76,7 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         page,
     }) => {
         await signIn(page);
-        await expect(page).toHaveURL(/\/legal-consent/);
+        await expect(page).toHaveURL(/\/login/);
         const submit = page.getByTestId('legal-consent-submit');
         await expect(submit).toBeDisabled();
         await page.getByTestId('legal-check-agreement').check();
@@ -84,7 +84,7 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         await page.getByTestId('legal-check-personal-data-consent').check();
         await expect(submit).toBeEnabled();
         await submit.click();
-        await page.waitForURL(url => !url.pathname.includes('/legal-consent'));
+        await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('3');
@@ -104,12 +104,11 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
     }) => {
         publish('agreement', 2);
         await signIn(page);
-        await expect(page).toHaveURL(/\/legal-consent/);
         await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
         await expect(page.getByTestId('legal-check-personal-data-consent')).toHaveCount(0);
         await page.getByTestId('legal-check-agreement').check();
         await page.getByTestId('legal-consent-submit').click();
-        await page.waitForURL(url => !url.pathname.includes('/legal-consent'));
+        await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(
                 `SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId} AND kind = 'agreement' AND version = 2`,
