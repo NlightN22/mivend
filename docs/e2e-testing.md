@@ -70,6 +70,7 @@ run by `global-setup.ts` (so token lifetimes do not matter) and the run's own da
 one after another through the same two passes; `make e2e-group G=<name>` is unchanged and still runs one group. The
 stack boot and the seed (about 90 s plus the 30-45 s picker seed) are paid once instead of once per group. The target
 holds the same `/tmp/mivend-e2e.lock` as every e2e target.
+The 30-minute cap applies to the whole batch: the stack runner stops at "run exceeded 30 min" and cuts the group that is running, so keep a batch short enough to fit (six groups did not).
 
 Between groups `infrastructure/scripts/e2e-leak.sh` compares a snapshot of the stack database before and after each
 group: active reservations and orders in any state except Cancelled, AddingItems, ArrangingPayment and Draft. Carts (AddingItems, ArrangingPayment, Draft) are deliberately not counted, and only an increase counts. A difference
