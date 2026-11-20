@@ -117,7 +117,7 @@ const accept = (
 describe('publishing', () => {
     it('is idempotent and does not republish an existing version', async () => {
         expect(await publisher.publishMissing(ctxOf(null))).toBe(0);
-        expect(await dataSource.getRepository(VersionRow).count()).toBe(4);
+        expect(await dataSource.getRepository(VersionRow).count()).toBe(8);
     });
 
     it('publishes nothing while a requisite is missing', async () => {
@@ -132,9 +132,10 @@ describe('publishing', () => {
 
     it('stores the text with the requisites substituted', async () => {
         const doc = await service.currentDocument(ctxOf(null), 'agreement', 'en');
-        expect(doc?.locale).toBe('ru');
+        expect(doc?.locale).toBe('en');
         expect(doc?.body).toContain('Operator');
         expect(doc?.body).not.toContain('{{');
+        expect((await service.currentDocument(ctxOf(null), 'agreement', 'de'))?.locale).toBe('ru');
     });
 });
 
