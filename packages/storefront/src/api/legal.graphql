@@ -10,6 +10,14 @@ query LegalDocument($kind: String!, $locale: String) {
     }
 }
 
+query LegalConsentOffer {
+    legalConsentOffer {
+        kind
+        version
+        required
+    }
+}
+
 query LegalDocumentStatus {
     legalDocumentStatus {
         kind

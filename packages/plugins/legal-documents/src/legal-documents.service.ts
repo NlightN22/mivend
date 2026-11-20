@@ -68,6 +68,24 @@ export class LegalDocumentsService {
         );
     }
 
+    async consentOffer(
+        ctx: RequestContext,
+    ): Promise<{ kind: string; version: number; required: boolean }[]> {
+        const offers = await Promise.all(
+            LEGAL_KINDS.filter(kind => LEGAL_KIND_RULES[kind].acceptable).map(async kind => {
+                const document = await this.currentDocument(ctx, kind);
+                return (
+                    document && {
+                        kind,
+                        version: document.version,
+                        required: LEGAL_KIND_RULES[kind].required,
+                    }
+                );
+            }),
+        );
+        return offers.filter((offer): offer is NonNullable<typeof offer> => offer !== null);
+    }
+
     private async customerId(ctx: RequestContext): Promise<number | null> {
         if (!ctx.activeUserId) return null;
         const customer = await this.customers.findOneByUserId(ctx, ctx.activeUserId);

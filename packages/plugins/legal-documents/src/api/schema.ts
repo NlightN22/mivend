@@ -11,6 +11,12 @@ export const legalDocumentsSchema = gql`
         effectiveDate: DateTime!
     }
 
+    type LegalConsentOffer {
+        kind: String!
+        version: Int!
+        required: Boolean!
+    }
+
     type LegalDocumentStatus {
         kind: String!
         version: Int!
@@ -42,6 +48,7 @@ export const legalDocumentsSchema = gql`
 
     extend type Query {
         legalDocument(kind: String!, locale: String): LegalDocument
+        legalConsentOffer: [LegalConsentOffer!]!
         legalDocumentStatus: [LegalDocumentStatus!]!
         legalAcceptanceHistory(skip: Int, take: Int): LegalAcceptanceList!
     }

@@ -22,6 +22,15 @@ export class LegalDocumentsResolver {
         return document && { ...document, versionLabel: `${document.version}.0` };
     }
 
+    // Public: the sign-in form lists what a customer will be asked to accept.
+    @Query()
+    @Allow(Permission.Public)
+    legalConsentOffer(
+        @Ctx() ctx: RequestContext,
+    ): Promise<{ kind: string; version: number; required: boolean }[]> {
+        return this.legal.consentOffer(ctx);
+    }
+
     // Authenticated only: the service scopes every row to the caller's own customer.
     @Query()
     @Allow(Permission.Authenticated)

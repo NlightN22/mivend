@@ -59,6 +59,7 @@ async function finishSignIn(): Promise<void> {
 function leaveUnconfirmed(): Promise<void> {
     consentMissing.value = true;
     legal.reset();
+    void consents.load();
     return authStore.logout().then(() => signIn.back());
 }
 
@@ -141,10 +142,10 @@ function handleSubmit(): Promise<void> {
                             />
                         </MvFormField>
 
+                        <MvNotice v-if="consentMissing" variant="error">
+                            {{ t('legal.login.required') }}
+                        </MvNotice>
                         <template v-if="consents.visible.value">
-                            <MvNotice v-if="consentMissing" variant="error">
-                                {{ t('legal.login.required') }}
-                            </MvNotice>
                             <LegalConsentChecks
                                 :pending="consents.checks.value"
                                 :checked="consents.checked"

@@ -1,10 +1,8 @@
 import { computed, reactive, ref, type ComputedRef, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { fetchLegalDocument, type LegalStatus } from '../../api/legal';
+import { fetchLegalOffer, type LegalStatus } from '../../api/legal';
 import { useLegalStore } from '../../stores/legal';
 
-const KINDS = ['agreement', 'personal-data-consent', 'marketing-consent'];
-const REQUIRED = ['agreement', 'personal-data-consent'];
 const STORAGE_KEY = 'mv.legalAccepted';
 
 type Remembered = Record<string, string>;
@@ -34,6 +32,15 @@ function writeRemembered(map: Remembered): void {
     }
 }
 
+// A fingerprint keeps addresses out of a possibly shared browser's storage; a collision only hides the boxes.
+function fingerprint(email: string): string {
+    let hash = 0x811c9dc5;
+    for (const char of email.trim().toLowerCase()) {
+        hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+    }
+    return hash.toString(16);
+}
+
 // The consents sit on the sign-in form and are saved by the same click. A browser that already
 // saved them for an address hides the boxes; the server still decides whether they are needed.
 export function useLoginConsents(): LoginConsents {
@@ -53,56 +60,58 @@ export function useLoginConsents(): LoginConsents {
     const visible = computed(
         () =>
             checks.value.length > 0 &&
-            (forced.value ||
-                readRemembered()[email.value.trim().toLowerCase()] !== signature.value),
+            (forced.value || readRemembered()[fingerprint(email.value)] !== signature.value),
     );
 
     async function load(): Promise<void> {
-        const docs = await Promise.all(
-            KINDS.map(kind => fetchLegalDocument(kind, locale.value).catch(() => null)),
-        );
-        checks.value = docs.flatMap((d, i) =>
-            d
-                ? [
-                      {
-                          kind: KINDS[i],
-                          version: d.version,
-                          required: REQUIRED.includes(KINDS[i]),
-                          accepted: false,
-                          pending: true,
-                      },
-                  ]
-                : [],
-        );
+        try {
+            checks.value = (await fetchLegalOffer()).map(o => ({
+                ...o,
+                accepted: false,
+                pending: true,
+            }));
+        } catch {
+            // Kept as is: a sign-in that needs a missing box is refused and then shows what is needed.
+        }
     }
 
     function remember(): void {
-        writeRemembered({
-            ...readRemembered(),
-            [email.value.trim().toLowerCase()]: signature.value,
-        });
+        writeRemembered({ ...readRemembered(), [fingerprint(email.value)]: signature.value });
     }
 
-    // Saves the ticked documents for the signed-in customer; false means a required one is missing.
+    // Shows exactly what the server still needs, with the boxes cleared so nothing unseen counts as ticked.
+    function showPending(pending: LegalStatus[]): void {
+        checks.value = pending.map(s => ({ ...s }));
+        for (const kind of Object.keys(checked)) delete checked[kind];
+        forced.value = true;
+    }
+
+    // Saves the ticked documents for the signed-in customer; false means the sign-in must be refused.
     async function settle(customerId: string): Promise<boolean> {
         try {
             await legal.load(customerId);
         } catch {
             return true;
         }
-        if (!legal.blocking) {
-            remember();
-            return true;
-        }
         const pending = legal.pending;
-        if (!pending.filter(s => s.required).every(s => checked[s.kind])) {
+        const seen = new Map(checks.value.map(c => [c.kind, c.version]));
+        if (pending.some(s => s.required && seen.get(s.kind) !== s.version)) {
+            showPending(pending);
+            return false;
+        }
+        if (pending.some(s => s.required && !checked[s.kind])) {
             forced.value = true;
             return false;
         }
-        await legal.accept(
-            pending.map(s => ({ kind: s.kind, version: s.version, accepted: !!checked[s.kind] })),
-            locale.value,
+        const asked = pending.filter(
+            s => seen.get(s.kind) === s.version && (s.required || visible.value),
         );
+        if (asked.length > 0) {
+            await legal.accept(
+                asked.map(s => ({ kind: s.kind, version: s.version, accepted: !!checked[s.kind] })),
+                locale.value,
+            );
+        }
         remember();
         return true;
     }

@@ -1867,6 +1867,12 @@ export type LegalAcceptanceList = {
     totalItems: Scalars['Int']['output'];
 };
 
+export type LegalConsentOffer = {
+    kind: Scalars['String']['output'];
+    required: Scalars['Boolean']['output'];
+    version: Scalars['Int']['output'];
+};
+
 export type LegalDocument = {
     body: Scalars['String']['output'];
     effectiveDate: Scalars['DateTime']['output'];
@@ -3779,6 +3785,7 @@ export type Query = {
     facets: FacetList;
     geoConfig: GeoConfig;
     legalAcceptanceHistory: LegalAcceptanceList;
+    legalConsentOffer: Array<LegalConsentOffer>;
     legalDocument?: Maybe<LegalDocument>;
     legalDocumentStatus: Array<LegalDocumentStatus>;
     /** Returns information about the current authenticated User */
@@ -4786,6 +4793,12 @@ export type LegalDocumentQuery = {
         body: string;
         effectiveDate: any;
     } | null;
+};
+
+export type LegalConsentOfferQueryVariables = Exact<{ [key: string]: never }>;
+
+export type LegalConsentOfferQuery = {
+    legalConsentOffer: Array<{ kind: string; version: number; required: boolean }>;
 };
 
 export type LegalDocumentStatusQueryVariables = Exact<{ [key: string]: never }>;
@@ -6525,6 +6538,15 @@ export const LegalDocumentDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<LegalDocumentQuery, LegalDocumentQueryVariables>;
+export const LegalConsentOfferDocument = new TypedDocumentString(`
+    query LegalConsentOffer {
+  legalConsentOffer {
+    kind
+    version
+    required
+  }
+}
+    `) as unknown as TypedDocumentString<LegalConsentOfferQuery, LegalConsentOfferQueryVariables>;
 export const LegalDocumentStatusDocument = new TypedDocumentString(`
     query LegalDocumentStatus {
   legalDocumentStatus {
