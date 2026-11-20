@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { MvNotice } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { useLegalStore } from '../stores/legal';
+import { rememberAcceptance } from '../pages/auth/legalMemory';
 import LegalConsentChecks from './LegalConsentChecks.vue';
 
 const emit = defineEmits<{ (e: 'done'): void; (e: 'left'): void }>();
@@ -29,6 +30,10 @@ async function submit(): Promise<void> {
                 accepted: !!checked[s.kind],
             })),
             locale.value,
+        );
+        rememberAcceptance(
+            [authStore.customer?.emailAddress ?? ''],
+            legal.statuses.filter(s => s.required),
         );
         emit('done');
     } catch {

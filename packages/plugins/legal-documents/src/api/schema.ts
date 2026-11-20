@@ -14,6 +14,7 @@ export const legalDocumentsSchema = gql`
     type LegalConsentOffer {
         kind: String!
         version: Int!
+        requiredVersion: Int!
         required: Boolean!
     }
 

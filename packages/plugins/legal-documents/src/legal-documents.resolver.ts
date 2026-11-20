@@ -27,7 +27,7 @@ export class LegalDocumentsResolver {
     @Allow(Permission.Public)
     legalConsentOffer(
         @Ctx() ctx: RequestContext,
-    ): Promise<{ kind: string; version: number; required: boolean }[]> {
+    ): Promise<{ kind: string; version: number; requiredVersion: number; required: boolean }[]> {
         return this.legal.consentOffer(ctx);
     }
 

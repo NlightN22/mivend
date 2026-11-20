@@ -1870,6 +1870,7 @@ export type LegalAcceptanceList = {
 export type LegalConsentOffer = {
     kind: Scalars['String']['output'];
     required: Scalars['Boolean']['output'];
+    requiredVersion: Scalars['Int']['output'];
     version: Scalars['Int']['output'];
 };
 
@@ -4798,7 +4799,12 @@ export type LegalDocumentQuery = {
 export type LegalConsentOfferQueryVariables = Exact<{ [key: string]: never }>;
 
 export type LegalConsentOfferQuery = {
-    legalConsentOffer: Array<{ kind: string; version: number; required: boolean }>;
+    legalConsentOffer: Array<{
+        kind: string;
+        version: number;
+        requiredVersion: number;
+        required: boolean;
+    }>;
 };
 
 export type LegalDocumentStatusQueryVariables = Exact<{ [key: string]: never }>;
@@ -6543,6 +6549,7 @@ export const LegalConsentOfferDocument = new TypedDocumentString(`
   legalConsentOffer {
     kind
     version
+    requiredVersion
     required
   }
 }

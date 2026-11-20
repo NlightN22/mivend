@@ -1,11 +1,9 @@
 import { computed, reactive, ref, type ComputedRef, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { fetchLegalOffer, type LegalStatus } from '../../api/legal';
+import { useAuthStore } from '../../stores/auth';
 import { useLegalStore } from '../../stores/legal';
-
-const STORAGE_KEY = 'mv.legalAccepted';
-
-type Remembered = Record<string, string>;
+import { acceptanceRemembered, rememberAcceptance } from './legalMemory';
 
 interface LoginConsents {
     checks: Ref<LegalStatus[]>;
@@ -16,57 +14,43 @@ interface LoginConsents {
     settle: (customerId: string) => Promise<boolean>;
 }
 
-function readRemembered(): Remembered {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Remembered;
-    } catch {
-        return {};
-    }
-}
-
-function writeRemembered(map: Remembered): void {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-    } catch {
-        // Storage can be blocked; the boxes are simply shown again next time.
-    }
-}
-
-// A fingerprint keeps addresses out of a possibly shared browser's storage; a collision only hides the boxes.
-function fingerprint(email: string): string {
-    let hash = 0x811c9dc5;
-    for (const char of email.trim().toLowerCase()) {
-        hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
-    }
-    return hash.toString(16);
-}
-
 // The consents sit on the sign-in form and are saved by the same click. A browser that already
 // saved them for an address hides the boxes; the server still decides whether they are needed.
 export function useLoginConsents(): LoginConsents {
     const { locale } = useI18n();
     const legal = useLegalStore();
+    const authStore = useAuthStore();
+    const requiredVersions = ref<Record<string, number>>({});
     const checks = ref<LegalStatus[]>([]);
     const checked = reactive<Record<string, boolean>>({});
     const forced = ref(false);
     const email = ref('');
 
-    const signature = computed(() =>
-        checks.value
-            .filter(c => c.required)
-            .map(c => `${c.kind}:${c.version}`)
-            .join(','),
-    );
     const visible = computed(
         () =>
             checks.value.length > 0 &&
-            (forced.value || readRemembered()[fingerprint(email.value)] !== signature.value),
+            (forced.value ||
+                !acceptanceRemembered(
+                    email.value,
+                    checks.value
+                        .filter(c => c.required)
+                        .map(c => ({
+                            kind: c.kind,
+                            requiredVersion: requiredVersions.value[c.kind] ?? c.version,
+                        })),
+                )),
     );
 
     async function load(): Promise<void> {
         try {
-            checks.value = (await fetchLegalOffer()).map(o => ({
-                ...o,
+            const offers = await fetchLegalOffer();
+            requiredVersions.value = Object.fromEntries(
+                offers.map(o => [o.kind, o.requiredVersion]),
+            );
+            checks.value = offers.map(o => ({
+                kind: o.kind,
+                version: o.version,
+                required: o.required,
                 accepted: false,
                 pending: true,
             }));
@@ -76,7 +60,10 @@ export function useLoginConsents(): LoginConsents {
     }
 
     function remember(): void {
-        writeRemembered({ ...readRemembered(), [fingerprint(email.value)]: signature.value });
+        rememberAcceptance(
+            [email.value, authStore.customer?.emailAddress ?? ''],
+            legal.statuses.filter(st => st.required),
+        );
     }
 
     // Shows exactly what the server still needs, with the boxes cleared so nothing unseen counts as ticked.

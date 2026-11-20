@@ -9,7 +9,7 @@ import { clientIp, SignInProtectionPlugin } from '@mivend/plugin-sign-in-protect
 import { getPageAndCount, withAggregateLock } from 'shared';
 import { LessThanOrEqual } from 'typeorm';
 
-import { documentStatuses } from './document-status';
+import { documentStatuses, requiredVersion } from './document-status';
 import type { AcceptanceRecord, DocumentStatus, PublishedVersion } from './document-status';
 import { LegalAcceptance } from './entities/legal-acceptance.entity';
 import { LegalDocumentVersion } from './entities/legal-document-version.entity';
@@ -68,22 +68,24 @@ export class LegalDocumentsService {
         );
     }
 
+    // What the sign-in form may ask, from version numbers alone (no document text is read).
     async consentOffer(
         ctx: RequestContext,
-    ): Promise<{ kind: string; version: number; required: boolean }[]> {
-        const offers = await Promise.all(
-            LEGAL_KINDS.filter(kind => LEGAL_KIND_RULES[kind].acceptable).map(async kind => {
-                const document = await this.currentDocument(ctx, kind);
-                return (
-                    document && {
-                        kind,
-                        version: document.version,
-                        required: LEGAL_KIND_RULES[kind].required,
-                    }
-                );
-            }),
-        );
-        return offers.filter((offer): offer is NonNullable<typeof offer> => offer !== null);
+    ): Promise<{ kind: string; version: number; requiredVersion: number; required: boolean }[]> {
+        const published = await this.published(ctx);
+        return LEGAL_KINDS.flatMap(kind => {
+            const versions = published.filter(v => v.kind === kind);
+            if (!LEGAL_KIND_RULES[kind].acceptable || versions.length === 0) return [];
+            const version = Math.max(...versions.map(v => v.version));
+            return [
+                {
+                    kind,
+                    version,
+                    requiredVersion: requiredVersion(versions, version),
+                    required: LEGAL_KIND_RULES[kind].required,
+                },
+            ];
+        });
     }
 
     private async customerId(ctx: RequestContext): Promise<number | null> {

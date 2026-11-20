@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DENIED, admin, customerToken, shop, staffToken } from '../harness/actors';
 
 const DOCUMENT = `query($k: String!) { legalDocument(kind: $k) { kind version body } }`;
-const OFFER = `query { legalConsentOffer { kind version required } }`;
+const OFFER = `query { legalConsentOffer { kind version requiredVersion required } }`;
 const STATUS = `query { legalDocumentStatus { kind version required accepted pending } }`;
 const HISTORY = `query { legalAcceptanceHistory { totalItems items { kind version accepted } } }`;
 const ACCEPT = `mutation($input: [LegalAcceptanceInput!]!) {
@@ -22,10 +22,9 @@ describe('legal documents', () => {
         const doc = await shop<{ legalDocument: { body: string } }>('', DOCUMENT, { k: 'policy' });
         expect(doc.errors).toEqual([]);
         expect(doc.data!.legalDocument.body).toContain('Access Operator');
-        const offer = await shop<{ legalConsentOffer: { kind: string; required: boolean }[] }>(
-            '',
-            OFFER,
-        );
+        const offer = await shop<{
+            legalConsentOffer: { kind: string; required: boolean; requiredVersion: number }[];
+        }>('', OFFER);
         expect(offer.errors).toEqual([]);
         expect(offer.data!.legalConsentOffer.map(o => o.kind).sort()).toEqual([
             'agreement',
@@ -35,6 +34,7 @@ describe('legal documents', () => {
         expect(
             offer.data!.legalConsentOffer.find(o => o.kind === 'marketing-consent')!.required,
         ).toBe(false);
+        expect(offer.data!.legalConsentOffer.every(o => o.requiredVersion === 1)).toBe(true);
         for (const query of [STATUS, HISTORY]) {
             expect((await shop('', query)).errors.join(' ')).toMatch(DENIED);
         }
