@@ -39,6 +39,8 @@ export const operations = `
         ): CounterpartyList!
         "Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll."
         kafkaConsumerLag: [KafkaTopicLag!]!
+        "ERP exchange health read from the Integration Service on a schedule (issue #386); UNKNOWN with a reason when it cannot be read."
+        exchangeHealth: ExchangeHealthReport!
         "Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog."
         integrationInboxBacklog: [IntegrationInboxBacklogByStream!]!
         "One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195)."

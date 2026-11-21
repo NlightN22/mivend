@@ -199,6 +199,10 @@ export interface ErpIntegrationPluginOptions {
     // Never hardcoded or logged. Required by the REST clients (they throw naming the missing key).
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
+    // Separate read-only key for GET /api/ops/v1/exchange-health; never the reconciliation/replay key, never logged.
+    integrationOpsApiKey?: string;
+    // Defaults to EXCHANGE_HEALTH_POLL_INTERVAL_DEFAULT.
+    exchangeHealthPollIntervalMs?: number;
     // Read-only GitHub Packages token used only to look up the latest published event-contracts version.
     eventContractsRegistryToken?: string;
     // sourceSystem sent to the resync replay API; required by the replay client.
@@ -388,5 +392,6 @@ export const EVENT_CONTRACTS_REGISTRY_URL =
 // Frequent enough to catch a stalled consumer well before it becomes a support ticket, without
 // hammering the broker's admin API — no sub-minute freshness requirement raised for issue #91.
 export const KAFKA_LAG_POLL_INTERVAL_DEFAULT = 60_000;
+export const EXCHANGE_HEALTH_POLL_INTERVAL_DEFAULT = 60_000;
 export const KAFKA_LAG_WARN_THRESHOLD_DEFAULT = 1000;
 export const loggerCtx = 'ErpIntegrationPlugin';

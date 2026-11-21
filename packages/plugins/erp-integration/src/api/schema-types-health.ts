@@ -1,5 +1,66 @@
 // GraphQL SDL fragment of the admin API extension (combined in admin.schema.ts).
 export const healthTypes = `
+    type ExchangeStream {
+        stream: String!
+        entityType: String!
+        "OK | DEGRADED | DOWN"
+        status: String!
+        lastActivityAt: String
+        "Ingest/pull: rows or commands pending. Ack: commands delivered and not yet acknowledged."
+        pending: Int
+        oldestAgeSeconds: Int
+        "Ingest: failed inbox rows. Ack: commands the ERP rejected. Pull: null."
+        failedLast24h: Int
+    }
+
+    type ExchangeChannel {
+        "ingest | pull | ack"
+        channel: String!
+        status: String!
+        lastActivityAt: String
+        streams: [ExchangeStream!]!
+    }
+
+    type ExchangeFailures {
+        status: String!
+        inboxFailedLast24h: Int
+        outboxFailedLast24h: Int
+        outboundRejectedLast24h: Int
+    }
+
+    type ExchangeResyncSignal {
+        id: String!
+        stream: String!
+        dryRun: Boolean!
+        status: String!
+        createdAt: String!
+    }
+
+    type ExchangeResync {
+        pending: Int
+        delivered: Int
+        acknowledgedLast24h: Int
+        rejectedLast24h: Int
+        open: [ExchangeResyncSignal!]!
+    }
+
+    type ExchangeHealth {
+        generatedAt: String!
+        status: String!
+        channels: [ExchangeChannel!]!
+        failures: ExchangeFailures!
+        resync: ExchangeResync!
+    }
+
+    type ExchangeHealthReport {
+        "OK | DEGRADED | DOWN | UNKNOWN"
+        state: String!
+        "Set only when state is UNKNOWN: NOT_CONFIGURED | UNAUTHORIZED | TIMEOUT | UNREACHABLE | SERVER_ERROR | BAD_RESPONSE | NEVER_POLLED | STALE"
+        reason: String
+        polledAt: DateTime
+        health: ExchangeHealth
+    }
+
     type KafkaTopicLagPartition {
         partition: Int!
         committedOffset: String

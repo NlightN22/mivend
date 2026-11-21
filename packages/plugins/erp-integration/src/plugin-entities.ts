@@ -4,6 +4,7 @@ import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.enti
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
+import { ExchangeHealthSnapshot } from './entities/exchange-health-snapshot.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
 import { ProductCategoryFlag } from './entities/product-category-flag.entity';
 import { Manufacturer } from './entities/manufacturer.entity';
@@ -30,6 +31,7 @@ export const PLUGIN_ENTITIES = [
     IntegrationInboxEvent,
     KafkaConsumerStatus,
     KafkaConsumerLagEntry,
+    ExchangeHealthSnapshot,
     ProductTaxCodeFlag,
     ProductCategoryFlag,
     Manufacturer,

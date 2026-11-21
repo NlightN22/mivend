@@ -5,6 +5,7 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
+import { exchangeDegradedAlert, exchangeDownAlert } from './exchange-alerts.js';
 import { InboxIssuesPage } from './inbox-issues-page.js';
 import { IntegrationHealthPage } from './integration-health-page.js';
 import { INBOX_ISSUES_PATH, OUTBOUND_PROBLEMS_PATH } from './issue-links.js';
@@ -163,6 +164,8 @@ defineDashboardExtension({
         outboxSkippedAlert,
         outboxHeldAlert,
         rejectedOrdersAlert,
+        exchangeDownAlert,
+        exchangeDegradedAlert,
     ],
     routes: [
         {

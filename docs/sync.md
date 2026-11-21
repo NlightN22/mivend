@@ -303,6 +303,25 @@ Use a unique index on `eventId` in any processed-events log table as a hard safe
 
 ---
 
+## Exchange health from Integration Service (issue #386)
+
+`plugin-erp-integration` (central hub) reads `GET /api/ops/v1/exchange-health` every minute
+(`EXCHANGE_HEALTH_POLL_INTERVAL_MS`) with a dedicated read-only key `INTEGRATION_SERVICE_OPS_API_KEY`
+(`X-Api-Key`; never the reconciliation/replay key, never logged or returned by the API). The last answer is
+one row in `exchange_health_snapshot`, shown on the admin Integration health page (tab "Exchange") and behind the
+`exchangeHealth` admin query (`ManageErpIntegration`).
+
+- `OK` / `DEGRADED` / `DOWN`: the service's own overall status (worst of the ingest, pull and ack channels).
+  `DEGRADED` is a backlog older than its threshold or a delivered command left unacknowledged; `DOWN` is the ERP
+  making no call at all for longer than the pull threshold. Failures in the last 24 h and open resync signals are
+  shown but are not part of the overall status.
+- `UNKNOWN` with a reason, never green or empty: `NOT_CONFIGURED` (no base URL or ops key), `UNAUTHORIZED`
+  (401/403), `TIMEOUT`, `UNREACHABLE`, `SERVER_ERROR` (other non-2xx), `BAD_RESPONSE` (not JSON, or a status or
+  channel missing), `NEVER_POLLED`, `STALE` (no poll for three intervals, the worker stopped).
+- Unknown response fields are ignored; the schema only adds fields.
+- Alerts (existing admin alert path, no new channel): an error alert on `DOWN` and a warning alert on `DEGRADED`,
+  both linking to the page. `UNKNOWN` is shown on the page only.
+
 ## Reconciliation against Integration Service (issue #84)
 
 Idempotent consumers and outbox/inbox retries (above) guarantee no message is silently dropped,

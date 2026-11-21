@@ -105,6 +105,10 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
 import { KafkaLagPollerService } from './kafka-lag-poller.service';
 import { createKafkaLagPollTask } from './kafka-lag-poll.scheduled-task';
 import { KafkaLagResolver } from './kafka-lag.resolver';
+import { ExchangeHealthClient } from './exchange-health.client';
+import { ExchangeHealthPollerService } from './exchange-health-poller.service';
+import { createExchangeHealthPollTask } from './exchange-health-poll.scheduled-task';
+import { ExchangeHealthResolver } from './exchange-health.resolver';
 import { IntegrationStreamHealthResolver } from './integration-stream-health.resolver';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
@@ -222,6 +226,8 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ConsistencyReportService,
         ConsistencyPollerService,
         KafkaLagPollerService,
+        ExchangeHealthClient,
+        ExchangeHealthPollerService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,
             useFactory: (): ErpIntegrationPluginOptions => ErpIntegrationPlugin.options,
@@ -235,6 +241,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             ReconciliationResolver,
             ConsistencyReportResolver,
             KafkaLagResolver,
+            ExchangeHealthResolver,
             IntegrationStreamHealthResolver,
             IntegrationEventListResolver,
             IntegrationInboxIssueResolver,
@@ -275,6 +282,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createConsistencyPollTask(ErpIntegrationPlugin.options),
                 createConsistencyRetentionTask(ErpIntegrationPlugin.options),
                 createKafkaLagPollTask(ErpIntegrationPlugin.options),
+                createExchangeHealthPollTask(ErpIntegrationPlugin.options),
                 createProductPhotoRecoveryTask(ErpIntegrationPlugin.options),
             ];
         }
