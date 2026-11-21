@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { DataSource } from 'typeorm';
+import { DataSource, EntitySchema } from 'typeorm';
 import {
     createTestConnection,
     createTestSchema,
@@ -14,6 +14,24 @@ import { ExchangeHealthReadError } from '../../exchange-health';
 import type { ExchangeHealth } from '../../exchange-health';
 import { ExchangeHealthPollerService } from '../../exchange-health-poller.service';
 import { ExchangeHealthResolver } from '../../exchange-health.resolver';
+
+// VendureEntity's id column is only wired up by Vendure's own bootstrap, so the table is mapped here.
+const snapshotSchema = new EntitySchema({
+    name: 'ExchangeHealthSnapshot',
+    target: ExchangeHealthSnapshot,
+    tableName: 'exchange_health_snapshot',
+    columns: {
+        id: { type: Number, primary: true, generated: true },
+        createdAt: { type: 'timestamp', createDate: true },
+        updatedAt: { type: 'timestamp', updateDate: true },
+        key: { type: String },
+        state: { type: String },
+        reason: { type: String, nullable: true },
+        health: { type: 'jsonb', nullable: true },
+        polledAt: { type: 'timestamp' },
+    },
+    uniques: [{ columns: ['key'] }],
+});
 
 const { schema, extra } = testSchemaOptions('erp_exchange_health_snapshot');
 let dataSource: DataSource;
@@ -41,7 +59,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [ExchangeHealthSnapshot],
+        entities: [snapshotSchema],
         synchronize: true,
     });
     await dataSource.initialize();
