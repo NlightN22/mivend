@@ -37,3 +37,13 @@ export function formatAgeSeconds(seconds: number | null): string {
     if (seconds < 86400) return `${Math.round(seconds / 3600)} h`;
     return `${Math.round(seconds / 86400)} d`;
 }
+
+// Not configured (dev, branch hubs) and not yet polled are expected and stay quiet.
+const QUIET_UNKNOWN_REASONS = ['NOT_CONFIGURED', 'NEVER_POLLED'];
+
+export function isExchangeUnreadable(
+    state: string | null | undefined,
+    reason: string | null | undefined,
+): boolean {
+    return state === 'UNKNOWN' && !QUIET_UNKNOWN_REASONS.includes(reason ?? '');
+}

@@ -29,13 +29,10 @@ export class ExchangeHealthClient {
         }
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        let response: Response;
         try {
-            response = await fetch(new URL('/api/ops/v1/exchange-health', baseUrl), {
-                headers: { 'X-Api-Key': key },
-                signal: controller.signal,
-            });
+            return parseExchangeHealth(await this.fetchBody(key, baseUrl, controller.signal));
         } catch (err) {
+            if (err instanceof ExchangeHealthReadError) throw err;
             const timedOut = controller.signal.aborted;
             throw new ExchangeHealthReadError(
                 timedOut ? 'TIMEOUT' : 'UNREACHABLE',
@@ -46,18 +43,26 @@ export class ExchangeHealthClient {
         } finally {
             clearTimeout(timeout);
         }
+    }
+
+    // The timer covers the body read too; a redirect is an error so the key never follows it elsewhere.
+    private async fetchBody(key: string, baseUrl: string, signal: AbortSignal): Promise<unknown> {
+        const response = await fetch(new URL('/api/ops/v1/exchange-health', baseUrl), {
+            headers: { 'X-Api-Key': key },
+            signal,
+            redirect: 'error',
+        });
         if (!response.ok) {
             throw new ExchangeHealthReadError(
                 reasonForHttpStatus(response.status),
                 `exchange health endpoint returned ${response.status}`,
             );
         }
-        let body: unknown;
         try {
-            body = await response.json();
-        } catch {
+            return await response.json();
+        } catch (err) {
+            if (signal.aborted) throw err;
             throw new ExchangeHealthReadError('BAD_RESPONSE', 'exchange health body is not JSON');
         }
-        return parseExchangeHealth(body);
     }
 }

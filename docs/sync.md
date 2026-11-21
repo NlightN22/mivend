@@ -320,7 +320,7 @@ one row in `exchange_health_snapshot`, shown on the admin Integration health pag
   channel missing), `NEVER_POLLED`, `STALE` (no poll for three intervals, the worker stopped).
 - Unknown response fields are ignored; the schema only adds fields.
 - Alerts (existing admin alert path, no new channel): an error alert on `DOWN` and a warning alert on `DEGRADED`,
-  both linking to the page. `UNKNOWN` is shown on the page only.
+  a warning alert on `UNKNOWN`, except `NOT_CONFIGURED` and `NEVER_POLLED` (dev and branch hubs stay quiet); all link to the page.
 
 ## Reconciliation against Integration Service (issue #84)
 

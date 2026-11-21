@@ -149,6 +149,39 @@ describe('ExchangeHealthClient', () => {
         expect((err as Error).message).not.toContain(OPS_KEY);
     });
 
+    it('refuses redirects so the key is never forwarded', async () => {
+        const fetchMock = respond(200, body());
+        vi.stubGlobal('fetch', fetchMock);
+        await client.fetchHealth();
+        expect((fetchMock.mock.calls[0] as unknown as [URL, RequestInit])[1].redirect).toBe(
+            'error',
+        );
+    });
+
+    it('times out a body that never arrives', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                async (_url: unknown, init: RequestInit) =>
+                    ({
+                        ok: true,
+                        status: 200,
+                        json: () =>
+                            new Promise((_res, rej) =>
+                                init.signal?.addEventListener('abort', () =>
+                                    rej(new DOMException('aborted', 'AbortError')),
+                                ),
+                            ),
+                    }) as unknown as Response,
+            ),
+        );
+        const pending = reasonOf(client.fetchHealth());
+        await vi.advanceTimersByTimeAsync(10_001);
+        expect(await pending).toBe('TIMEOUT');
+        vi.useRealTimers();
+    });
+
     it('maps an aborted request to TIMEOUT', async () => {
         vi.useFakeTimers();
         vi.stubGlobal(

@@ -4,6 +4,7 @@ import {
     UNKNOWN_REASON_TEXT,
     formatAgeSeconds,
     isExchangeState,
+    isExchangeUnreadable,
     stateBadgeVariant,
     unknownReasonText,
 } from '../../exchange-health-view';
@@ -17,6 +18,23 @@ describe('exchange health view', () => {
             expect(isExchangeState(state, 'DOWN')).toBe(false);
             expect(isExchangeState(state, 'DEGRADED')).toBe(false);
         }
+    });
+
+    it('alerts on an unreadable exchange except when not configured or not yet polled', () => {
+        for (const reason of [
+            'UNAUTHORIZED',
+            'TIMEOUT',
+            'UNREACHABLE',
+            'SERVER_ERROR',
+            'BAD_RESPONSE',
+            'STALE',
+        ]) {
+            expect(isExchangeUnreadable('UNKNOWN', reason)).toBe(true);
+        }
+        expect(isExchangeUnreadable('UNKNOWN', 'NOT_CONFIGURED')).toBe(false);
+        expect(isExchangeUnreadable('UNKNOWN', 'NEVER_POLLED')).toBe(false);
+        expect(isExchangeUnreadable('DOWN', null)).toBe(false);
+        expect(isExchangeUnreadable('OK', null)).toBe(false);
     });
 
     it('explains every unknown reason class and falls back for an unlisted one', () => {

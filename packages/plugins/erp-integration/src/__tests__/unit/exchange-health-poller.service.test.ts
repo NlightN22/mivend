@@ -2,7 +2,7 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 
 vi.mock('@vendure/core', async importOriginal => {
     const actual = await importOriginal<typeof import('@vendure/core')>();
-    return { ...actual, Logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } };
+    return { ...actual, Logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } };
 });
 
 import { Logger } from '@vendure/core';
@@ -54,5 +54,15 @@ describe('ExchangeHealthPollerService', () => {
         });
         expect((await service.pollOnce()).reason).toBe('UNREACHABLE');
         expect(upsert).toHaveBeenCalledOnce();
+    });
+
+    it('logs NOT_CONFIGURED at debug, not as a warning every poll', async () => {
+        vi.mocked(Logger.warn).mockClear();
+        const { service } = setup(async () => {
+            throw new ExchangeHealthReadError('NOT_CONFIGURED', 'not configured');
+        });
+        expect((await service.pollOnce()).reason).toBe('NOT_CONFIGURED');
+        expect(Logger.warn).not.toHaveBeenCalled();
+        expect(Logger.debug).toHaveBeenCalled();
     });
 });

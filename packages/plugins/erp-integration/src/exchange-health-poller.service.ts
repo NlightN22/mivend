@@ -30,7 +30,8 @@ export class ExchangeHealthPollerService {
             health = await this.client.fetchHealth();
         } catch (err) {
             reason = err instanceof ExchangeHealthReadError ? err.reason : 'UNREACHABLE';
-            Logger.warn(
+            const log = reason === 'NOT_CONFIGURED' ? Logger.debug : Logger.warn;
+            log(
                 `Exchange health unreadable (${reason}): ${err instanceof Error ? err.message : 'error'}`,
                 loggerCtx,
             );

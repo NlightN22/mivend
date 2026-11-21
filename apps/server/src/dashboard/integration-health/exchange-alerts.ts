@@ -1,11 +1,12 @@
 import { DashboardAlertDefinition, api, graphql } from '@vendure/dashboard';
 
-import { isExchangeState } from './exchange-health-view.js';
+import { isExchangeState, isExchangeUnreadable } from './exchange-health-view.js';
 
 const exchangeStateAlertDocument = graphql(`
     query ExchangeHealthForAlert {
         exchangeHealth {
             state
+            reason
         }
     }
 `);
@@ -60,3 +61,30 @@ export const exchangeDegradedAlert = exchangeAlert(
     'The ERP exchange is degraded',
     'A backlog is older than its threshold or a delivered command is still not acknowledged.',
 );
+
+export const exchangeUnknownAlert: DashboardAlertDefinition<boolean> = {
+    id: 'erp-exchange-unknown',
+    check: async () => {
+        try {
+            const { exchangeHealth } = await api.query(exchangeStateAlertDocument);
+            return isExchangeUnreadable(exchangeHealth.state, exchangeHealth.reason);
+        } catch {
+            return false;
+        }
+    },
+    shouldShow: show => show === true,
+    severity: 'warning',
+    title: () => 'The ERP exchange health cannot be read',
+    description: () =>
+        'The Integration Service is unreachable, rejects the ops key or the poll has stopped; the exchange state is unknown.',
+    actions: [
+        {
+            label: 'View exchange health',
+            onClick: ({ dismiss }) => {
+                dismiss();
+                window.location.href = '/integration-health';
+            },
+        },
+    ],
+    recheckInterval: 60_000,
+};
