@@ -27,6 +27,7 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     IdempotencyKey: 'idempotency bookkeeping of payment calls',
     KafkaConsumerStatus: 'consumer status mirror, rewritten continuously',
     KafkaConsumerLagEntry: 'consumer lag samples, high volume',
+    ExchangeHealthSnapshot: 'poller-written health snapshot, rewritten every minute',
     BulkBatch: 'bulk-operation progress bookkeeping; each changed row is journaled',
     BulkBatchItem: 'bulk-operation progress bookkeeping; each changed row is journaled',
     DiscountRegistryEntry: 'read-model projection of discount sources',
