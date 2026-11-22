@@ -8,6 +8,7 @@ const STATUS = `query { legalDocumentStatus { kind version required accepted pen
 const HISTORY = `query { legalAcceptanceHistory { totalItems items { kind version accepted } } }`;
 const ACCEPT = `mutation($input: [LegalAcceptanceInput!]!) {
     acceptLegalDocuments(input: $input) { kind accepted pending } }`;
+const CONFIRM = `mutation($t: String!) { confirmEmailAddress(token: $t) }`;
 
 interface Status {
     kind: string;
@@ -82,5 +83,23 @@ describe('legal documents', () => {
             const result = await shop(token, ACCEPT, { input: [attempt] });
             expect(result.errors.length).toBeGreaterThan(0);
         }
+    });
+
+    it('confirmEmailAddress: a bad or spent token confirms nothing, for anyone', async () => {
+        const bad = 'f'.repeat(64);
+        const actors = ['', await customerToken('customer-b')];
+        for (const token of actors) {
+            const result = await shop<{ confirmEmailAddress: boolean }>(token, CONFIRM, { t: bad });
+            expect(result.errors).toEqual([]);
+            expect(result.data!.confirmEmailAddress).toBe(false);
+        }
+        const empty = await shop<{ confirmEmailAddress: boolean }>('', CONFIRM, { t: '' });
+        expect(empty.data!.confirmEmailAddress).toBe(false);
+    });
+
+    it('confirmEmailAddress: does not exist in the admin API, staff included', async () => {
+        const token = await staffToken('superadmin');
+        const result = await admin(token, CONFIRM, { t: 'f'.repeat(64) });
+        expect(result.errors.join(' ')).toMatch(/Cannot query field/);
     });
 });

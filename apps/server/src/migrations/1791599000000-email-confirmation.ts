@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class EmailConfirmation1791596000000 implements MigrationInterface {
-    name = 'EmailConfirmation1791596000000';
+export class EmailConfirmation1791599000000 implements MigrationInterface {
+    name = 'EmailConfirmation1791599000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
@@ -14,7 +14,7 @@ export class EmailConfirmation1791596000000 implements MigrationInterface {
                 "confirmedEmail" character varying,
                 "pendingEmail" character varying,
                 "token" character varying,
-                CONSTRAINT "PK_email_confirmation" PRIMARY KEY ("id")
+                CONSTRAINT "PK_ff2b80a46c3992a0046b07c5456" PRIMARY KEY ("id")
             )`,
         );
         await queryRunner.query(

@@ -1,4 +1,4 @@
-import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, Index, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
@@ -66,6 +66,12 @@ class ConfirmationRow {
     @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
 }
 
+@Entity('customer')
+class CustomerRow {
+    @PrimaryColumn({ type: 'int' }) id!: number;
+    @Column({ type: 'varchar' }) emailAddress!: string;
+}
+
 @Entity('legal_document_version')
 @Index(['kind', 'version', 'locale'], { unique: true })
 class VersionRow {
@@ -98,7 +104,7 @@ beforeAll(async () => {
         type: 'postgres',
         ...testDataSourceConnectionOptions(),
         extra,
-        entities: [AcceptanceRow, VersionRow, ConfirmationRow],
+        entities: [AcceptanceRow, VersionRow, ConfirmationRow, CustomerRow],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -128,7 +134,7 @@ afterAll(async () => {
 beforeEach(async () => {
     contacts = { emailAddress: 'Buyer@Example.com', phoneNumber: '+70000000000' };
     await dataSource.query(
-        'TRUNCATE legal_acceptance, legal_document_version, email_confirmation RESTART IDENTITY',
+        'TRUNCATE legal_acceptance, legal_document_version, email_confirmation, customer RESTART IDENTITY',
     );
     await publisher.publishMissing(ctxOf(null));
     await confirmations.markConfirmed(ctxOf(null), 1, 'buyer@example.com');
@@ -253,21 +259,33 @@ describe('contacts of a marketing consent', () => {
     });
 });
 
+const setAddress = async (id: number, email: string): Promise<void> => {
+    await dataSource.query(
+        `INSERT INTO customer (id, "emailAddress") VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET "emailAddress" = $2`,
+        [id, email],
+    );
+};
+
 describe('e-mail confirmation', () => {
     const ctx = ctxOf(null);
+    const request = async (id: number, email: string): Promise<string | null> => {
+        await setAddress(id, email);
+        return confirmations.requestConfirmation(ctx, id, email);
+    };
     const stored = (id: number): Promise<ConfirmationRow | null> =>
         dataSource.getRepository(ConfirmationRow).findOneBy({ customerId: id });
 
     it('leaves an unchanged confirmed customer confirmed and sends no link', async () => {
         expect(await confirmations.isConfirmed(ctx, 1, ' Buyer@Example.com ')).toBe(true);
-        expect(await confirmations.requestConfirmation(ctx, 1, 'buyer@example.com')).toBeNull();
+        expect(await request(1, 'buyer@example.com')).toBeNull();
     });
 
     it('treats a staff-changed address as unconfirmed until the link is followed', async () => {
-        const token = await confirmations.requestConfirmation(ctx, 1, 'new@example.com');
+        const token = await request(1, 'new@example.com');
         expect(token).toMatch(/^[0-9a-f]{64}$/);
         expect(await confirmations.isConfirmed(ctx, 1, 'new@example.com')).toBe(false);
-        expect(await confirmations.requestConfirmation(ctx, 1, 'new@example.com')).toBeNull();
+        expect(await request(1, 'new@example.com')).toBeNull();
         expect(await confirmations.confirmByToken(ctx, token as string)).toEqual({
             customerId: 1,
             confirmedEmail: 'new@example.com',
@@ -277,8 +295,8 @@ describe('e-mail confirmation', () => {
     });
 
     it('spends a link once and replaces it when the address changes again', async () => {
-        const first = (await confirmations.requestConfirmation(ctx, 1, 'a@example.com')) as string;
-        const second = (await confirmations.requestConfirmation(ctx, 1, 'b@example.com')) as string;
+        const first = (await request(1, 'a@example.com')) as string;
+        const second = (await request(1, 'b@example.com')) as string;
         expect(await confirmations.confirmByToken(ctx, first)).toBeNull();
         expect(await confirmations.confirmByToken(ctx, second)).not.toBeNull();
         expect(await confirmations.confirmByToken(ctx, second)).toBeNull();
@@ -286,10 +304,28 @@ describe('e-mail confirmation', () => {
         expect(await confirmations.isConfirmed(ctx, 1, 'a@example.com')).toBe(false);
     });
 
+    it('drops the pending link when the address goes back, so an old link cannot confirm', async () => {
+        const old = (await request(1, 'b@example.com')) as string;
+        expect(await request(1, 'buyer@example.com')).toBeNull();
+        expect(await stored(1)).toMatchObject({ pendingEmail: null, token: null });
+        expect(await confirmations.confirmByToken(ctx, old)).toBeNull();
+        expect(await confirmations.isConfirmed(ctx, 1, 'buyer@example.com')).toBe(true);
+    });
+
+    it('refuses a link for an address the customer no longer has', async () => {
+        const old = (await request(1, 'b@example.com')) as string;
+        await setAddress(1, 'buyer@example.com');
+        expect(await confirmations.confirmByToken(ctx, old)).toBeNull();
+        expect(await confirmations.isConfirmed(ctx, 1, 'b@example.com')).toBe(false);
+    });
+
+    it('stores only a hash of the link token', async () => {
+        const token = (await request(1, 'b@example.com')) as string;
+        expect((await stored(1))?.token).not.toBe(token);
+    });
+
     it('creates one link when the same change is requested concurrently', async () => {
-        const results = await Promise.all(
-            [1, 2, 3, 4].map(() => confirmations.requestConfirmation(ctx, 5, 'c@example.com')),
-        );
+        const results = await Promise.all([1, 2, 3, 4].map(() => request(5, 'c@example.com')));
         expect(results.filter(Boolean)).toHaveLength(1);
         expect(await dataSource.getRepository(ConfirmationRow).countBy({ customerId: 5 })).toBe(1);
     });
@@ -297,11 +333,7 @@ describe('e-mail confirmation', () => {
     it('feeds the legal gate: a changed address needs the link and a new consent', async () => {
         await service.accept(ctxOf(1), [{ kind: 'marketing-consent', version: 1, accepted: true }]);
         contacts = { ...contacts, emailAddress: 'new@example.com' };
-        const token = (await confirmations.requestConfirmation(
-            ctx,
-            1,
-            'new@example.com',
-        )) as string;
+        const token = (await request(1, 'new@example.com')) as string;
         await service.accept(ctxOf(1), [
             { kind: 'marketing-consent', version: 1, accepted: false },
         ]);
