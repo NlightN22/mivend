@@ -1,7 +1,7 @@
 # Analytics
 
-How the manager portal "Analytics" menu item is built. Tracked in #363. The first iteration is a skeleton: a catalog
-of planned reports, no report is implemented.
+How the manager portal "Analytics" menu item is built. Tracked in #363. The catalog lists planned reports; the `orders`
+report (#389) is the first one that returns data.
 
 ## Concept
 
@@ -16,8 +16,8 @@ of planned reports, no report is implemented.
 - **Status** is `planned | available`. All reports are `planned`; a planned report page shows the title, description,
   a "Planned" badge and the implementation note.
 - **Permission `ReadAnalytics`** opens the section. Default roles: department head and general director, the roles
-  that already read customer-wide data. Superadmin has every permission. Manager and operator do not get it by default;
-  a role is changed in the Admin UI.
+  that already read customer-wide data, and the manager (the rows are scoped, see below). Superadmin has every
+  permission. The operator does not get it by default; a role is changed in the Admin UI.
 
 ## Scope rule for the reports to come
 
@@ -25,6 +25,31 @@ A catalog entry is not data. Once a report returns rows, the rows stay inside th
 (`docs/access-control.md`), applied before any filter or aggregate, like the manager card. Reports by responsible
 manager are scoped twice: only the managers the viewer may see, and only their customers inside the viewer's scope. A
 partial view must say so (visible against total), as the manager card does.
+
+## Orders report (#389)
+
+The first report, `orders`, reads order amounts from the analytics service over gRPC
+(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.2.0). The data is order turnover taken from the
+integration service: the sum of order amounts, not sales documents; cancelled and deleted orders are not counted.
+
+- **One report, many places.** The table is one shared component with filters and a dimension (customer, manager, point
+  of sale, organization, or none) and a granularity (none, day, month). The customer and manager cards embed the same
+  component with the entity as a fixed filter. This is the pattern for every later analytical table.
+- **Server side only.** `packages/plugins/analytics` holds the client; the browser calls the admin API query
+  `orderAnalytics`, never the analytics service. The consumer's copy of the `.proto` is `order-metrics.proto.ts`; keep
+  it equal to the contract when the version changes.
+- **Key.** One key per consumer. `ANALYTICS_GRPC_KEY_FILE` holds the PATH of the key file (read on every call, so a
+  rotation needs no restart), never the key. `ANALYTICS_GRPC_ADDRESS` is `host:port` (TLS). Production mounts the host
+  key directory read-only at `/run/analytics-keys` (`ANALYTICS_KEY_DIR`). Without either variable the report shows
+  "not configured". Rotation and new consumers go through the owner of the analytics service.
+- **Scope.** The key is not per user, so mivend applies the viewer's scope itself. The visible customers become the
+  service's `customer_ids` filter (requested customers are intersected with them, more than 1000 are split into several
+  requests and merged exactly; above 20000 visible customers the report fails with an explicit "too large" state). The
+  manager dimension and manager filter keep only the managers the viewer's team visibility allows. A restricted
+  viewer is told the numbers cover the visible customers only. The "visible against total" comparison from the
+  scope rule above is not shown yet: it would need a second, unfiltered request.
+- **Failure.** The report returns a state (`OK`, `NOT_CONFIGURED`, `TOO_LARGE`, `UNAVAILABLE`), never partial rows.
+  A bad request is a user input error. The key never appears in logs or messages.
 
 ## Report catalog
 

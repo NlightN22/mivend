@@ -12,7 +12,14 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { clampSkip, clampTake, withAggregateLock, ctxQuery, getManyBounded } from 'shared';
+import {
+    clampSkip,
+    clampTake,
+    withAggregateLock,
+    ctxQuery,
+    getManyBounded,
+    getRawManyBounded,
+} from 'shared';
 
 import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn-guard';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
@@ -173,6 +180,16 @@ export class CounterpartyService {
             return null;
         const qb = (await this.visibleFilteredQb(ctx, {})).select('c.erpId').orderBy();
         return { sql: qb.getQuery(), params: qb.getParameters() };
+    }
+
+    // The caller's visible erpIds as a list for an external service; null for scope 'all', QueryTooLargeError over the ceiling.
+    async visibleErpIds(ctx: RequestContext, ceiling: number): Promise<string[] | null> {
+        if ((await this.accessScopeService.resolveCounterpartyScope(ctx)).kind === 'all')
+            return null;
+        const qb = (await this.visibleFilteredQb(ctx, {}))
+            .select('c.erpId', 'erpId')
+            .orderBy('c.erpId', 'ASC');
+        return (await getRawManyBounded<{ erpId: string }>(qb, ceiling)).map(r => r.erpId);
     }
 
     // The caller's visible ids (as text, matching varchar foreign keys) as a subquery; null for scope 'all'.

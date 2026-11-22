@@ -4,6 +4,16 @@ const permission = 'ReadAnalytics';
 
 export const SALES_REPORTS: AnalyticsReport[] = [
     {
+        key: 'orders',
+        title: 'Orders',
+        description:
+            'Order amounts and counts per period, by customer, manager, point of sale or organization.',
+        area: 'sales',
+        permission,
+        status: 'available',
+        note: 'Read from the analytics service, which holds order turnover from the integration service (the amounts of orders, not sales documents). Rows stay inside the viewer scope; the same table is embedded in the customer and manager cards with the entity as a fixed filter.',
+    },
+    {
         key: 'sales-dynamics',
         title: 'Sales dynamics',
         description:

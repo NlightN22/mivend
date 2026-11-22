@@ -88,6 +88,8 @@ x-server-env: &server-env
     INTEGRATION_SERVICE_BASE_URL: ${INTEGRATION_SERVICE_BASE_URL:-}
     INTEGRATION_SERVICE_API_KEY: ${INTEGRATION_SERVICE_API_KEY:-}
     INTEGRATION_SERVICE_OPS_API_KEY: ${INTEGRATION_SERVICE_OPS_API_KEY:-}
+    ANALYTICS_GRPC_ADDRESS: ${ANALYTICS_GRPC_ADDRESS:-}
+    ANALYTICS_GRPC_KEY_FILE: ${ANALYTICS_GRPC_KEY_FILE:-}
     INTEGRATION_RESYNC_SOURCE_SYSTEM: ${INTEGRATION_RESYNC_SOURCE_SYSTEM:-}
     INTEGRATION_DEFAULT_VAT_CODE: ${INTEGRATION_DEFAULT_VAT_CODE:-}
     EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:?EMAIL_TRANSPORT must be smtp or file}
@@ -125,6 +127,7 @@ x-server: &server
     volumes:
         - document-pdfs:/data/document-pdfs
         - ${KAFKA_TLS_DIR:-../kafka-tls}:/run/kafka-tls:ro
+        - ${ANALYTICS_KEY_DIR:-../analytics-keys}:/run/analytics-keys:ro
     depends_on:
         postgres:
             condition: service_healthy

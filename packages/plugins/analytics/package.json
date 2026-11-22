@@ -7,13 +7,20 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "tsc --watch"
+        "dev": "tsc --watch",
+        "test:integration": "vitest run --config vitest.integration.config.ts"
     },
     "peerDependencies": {
         "@vendure/core": "^3.7.3"
     },
     "dependencies": {
-        "graphql-tag": "^2.12.6"
+        "@grpc/grpc-js": "^1.14.7",
+        "@grpc/proto-loader": "^0.8.1",
+        "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-counterparty": "workspace:*",
+        "graphql-tag": "^2.12.6",
+        "protobufjs": "^7.6.6",
+        "shared": "workspace:*"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
@@ -21,6 +28,7 @@
         "@vendure/common": "^3.7.3",
         "@vendure/core": "^3.7.3",
         "graphql": "^16.0.0",
+        "typeorm": "^0.3.0",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9"
     }

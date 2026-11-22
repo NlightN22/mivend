@@ -60,6 +60,7 @@ Nothing is configured inside a container by hand.
   `restart: unless-stopped`.
 - **Limits**: memory limits for server, `server-admin` (`SERVER_ADMIN_MEM_LIMIT`), workers and postgres are variables (`*_MEM_LIMIT`).
 - **Logs**: `json-file`, 10 MB x 5 files per service.
+- **Analytics key**: put the key file in `ANALYTICS_KEY_DIR` (mounted read-only at `/run/analytics-keys`) and set `ANALYTICS_GRPC_ADDRESS` and `ANALYTICS_GRPC_KEY_FILE=/run/analytics-keys/<file>`; the variable holds the path, never the key (docs/analytics.md).
 - **Kafka TLS**: put the CA file in `KAFKA_TLS_DIR` (mounted at `/run/kafka-tls`) and set `INTEGRATION_KAFKA_CA_PATH=/run/kafka-tls/<file>`.
 - **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, creates the photo bucket and key,
   runs migrations, starts the rest).

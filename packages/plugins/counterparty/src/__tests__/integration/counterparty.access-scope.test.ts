@@ -3,6 +3,7 @@ import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import {
+    QueryTooLargeError,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
@@ -11,9 +12,8 @@ import {
 
 import { CounterpartyService } from '../../counterparty.service';
 
-// Vendure's VendureEntity needs an EntityIdStrategy from bootstrap() for its primary column,
-// so the real Counterparty class can't run on a standalone DataSource; use a hand-rolled table
-// with the production int primary key (raw SQL casts ids to int[]).
+// VendureEntity needs bootstrap()'s EntityIdStrategy for its primary column, so a hand-rolled table
+// with the production int primary key stands in (raw SQL casts ids to int[]).
 @Entity('counterparty')
 class TestCounterparty {
     @PrimaryGeneratedColumn()
@@ -450,5 +450,46 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         const count = await service.countUnassigned(mockCtx);
 
         expect(count).toBe(2);
+    });
+});
+
+describe('CounterpartyService.visibleErpIds (integration, real Postgres)', () => {
+    it('"own" scope lists only the caller\'s counterparties', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'own',
+            administratorId: 'admin-1',
+        });
+
+        expect(await service.visibleErpIds(mockCtx, 100)).toEqual(['cp-own-mine']);
+    });
+
+    it('"department" scope lists its branch\'s counterparties in a stable order', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+
+        expect(await service.visibleErpIds(mockCtx, 100)).toEqual(['cp-own-mine', 'cp-own-other']);
+    });
+
+    it('"all" scope returns null: no restriction to pass on', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+
+        expect(await service.visibleErpIds(mockCtx, 100)).toBeNull();
+    });
+
+    it('fails above the ceiling instead of returning a partial list', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+
+        await expect(service.visibleErpIds(mockCtx, 1)).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });

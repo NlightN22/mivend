@@ -918,7 +918,10 @@ export const config: VendureConfig = {
         SavedViewsPlugin,
         StaffSearchPlugin,
         BulkOperationsPlugin,
-        AnalyticsPlugin,
+        AnalyticsPlugin.init({
+            orderMetricsAddress: process.env.ANALYTICS_GRPC_ADDRESS || undefined,
+            orderMetricsKeyFile: process.env.ANALYTICS_GRPC_KEY_FILE || undefined,
+        }),
         // After every plugin that registers a scheduled task: it labels their writes in the journal.
         ChangeJournalPlugin.init({}),
         CustomFieldWritePolicyPlugin,
