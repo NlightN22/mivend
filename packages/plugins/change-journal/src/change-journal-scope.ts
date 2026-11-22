@@ -7,6 +7,8 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     ChangeJournalEntry: 'the journal itself',
     LegalDocumentVersion: 'immutable published text, a change is a new row',
     LegalAcceptance: 'append-only acceptance log, itself the audit record',
+    EmailConfirmation:
+        'single-use confirmation token state; the confirmed address is read by the legal gate',
     RoleDefaultGrant: 'config table written only by migrate and the CLI, never by a user action',
     Session: AUTH,
     AnonymousSession: AUTH,
