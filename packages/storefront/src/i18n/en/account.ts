@@ -17,6 +17,15 @@ export default {
         publicCatalog: 'Public catalogue',
         help: 'Help',
         security: 'Security',
+        confirmEmail: {
+            loadingTitle: 'Confirming your e-mail',
+            loadingText: 'Please wait a moment.',
+            successTitle: 'E-mail confirmed',
+            successText: 'Your e-mail address is confirmed. Thank you.',
+            invalidTitle: 'Link cannot be used',
+            invalidText:
+                'This confirmation link has already been used or is no longer valid. If your address is not confirmed yet, ask your manager to send a new link.',
+        },
         verifyAccount: {
             title: 'Activate your account',
             subtitle: 'Choose a password to finish activating your account.',

@@ -31,6 +31,11 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            path: '/confirm-email',
+            component: () => import('../pages/auth/ConfirmEmailPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             path: '/verify',
             component: () => import('../pages/auth/SetPasswordPage.vue'),
             props: { flow: 'verify' },

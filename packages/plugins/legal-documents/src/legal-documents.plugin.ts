@@ -1,5 +1,6 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { Type } from '@vendure/core';
+import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { legalDocumentsSchema } from './api/schema';
 import { EmailConfirmationListener } from './email-confirmation.listener';
@@ -15,7 +16,7 @@ import { LEGAL_DOCUMENTS_OPTIONS } from './types';
 import type { LegalDocumentsOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule],
+    imports: [PluginCommonModule, NotificationPlugin],
     entities: [LegalDocumentVersion, LegalAcceptance, EmailConfirmation],
     providers: [
         LegalDocumentsService,

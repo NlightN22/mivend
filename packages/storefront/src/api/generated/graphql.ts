@@ -1962,6 +1962,7 @@ export type Mutation = {
     /** Cancel the active customer's own order; only while it is pending. */
     cancelOrder: OrderCancelResult;
     completeTwoFactorRecovery: CompleteTwoFactorRecoveryResult;
+    confirmEmailAddress: Scalars['Boolean']['output'];
     confirmTwoFactorEnrolment: ConfirmTwoFactorEnrolmentResult;
     /** Stores a popup the caller saw as their own notification; an identical one within a minute is returned, not duplicated. Null when nothing is stored (acting-as-customer session) (#348). */
     createClientNotification?: Maybe<Notification>;
@@ -2134,6 +2135,10 @@ export type MutationCancelOrderArgs = {
 
 export type MutationCompleteTwoFactorRecoveryArgs = {
     password: Scalars['String']['input'];
+    token: Scalars['String']['input'];
+};
+
+export type MutationConfirmEmailAddressArgs = {
     token: Scalars['String']['input'];
 };
 
@@ -4779,6 +4784,12 @@ export type Zone = Node & {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type ConfirmEmailAddressMutationVariables = Exact<{
+    token: Scalars['String']['input'];
+}>;
+
+export type ConfirmEmailAddressMutation = { confirmEmailAddress: boolean };
+
 export type LegalDocumentQueryVariables = Exact<{
     kind: Scalars['String']['input'];
     locale?: InputMaybe<Scalars['String']['input']>;
@@ -6531,6 +6542,14 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'ProductWidgetFields' },
 ) as unknown as TypedDocumentString<ProductWidgetFieldsFragment, unknown>;
+export const ConfirmEmailAddressDocument = new TypedDocumentString(`
+    mutation ConfirmEmailAddress($token: String!) {
+  confirmEmailAddress(token: $token)
+}
+    `) as unknown as TypedDocumentString<
+    ConfirmEmailAddressMutation,
+    ConfirmEmailAddressMutationVariables
+>;
 export const LegalDocumentDocument = new TypedDocumentString(`
     query LegalDocument($kind: String!, $locale: String) {
   legalDocument(kind: $kind, locale: $locale) {
