@@ -47,7 +47,7 @@ describe('extractBarcodes', () => {
 describe('extractManufacturerCodes', () => {
     it('maps the repeated ManufacturerCode entries', () => {
         const rows = extractManufacturerCodes({
-            manufacturerCodes: [{ lineNumber: 2, code: 'OEM-1', manufacturer: 'guid-other' }],
+            manufacturerCodes: [{ lineNumber: 2, code: 'OEM-1', manufacturerId: 'guid-other' }],
         });
 
         expect(rows).toEqual([{ lineNumber: 2, code: 'OEM-1', manufacturer: 'guid-other' }]);
@@ -59,7 +59,7 @@ describe('extractManufacturerCodes', () => {
 
     it('drops entries with no code', () => {
         const rows = extractManufacturerCodes({
-            manufacturerCodes: [{ lineNumber: 1, code: '', manufacturer: 'guid-other' }],
+            manufacturerCodes: [{ lineNumber: 1, code: '', manufacturerId: 'guid-other' }],
         });
 
         expect(rows).toEqual([]);

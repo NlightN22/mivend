@@ -15,7 +15,11 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { nextExternalErpStatus } from './external-order-state';
 import { buildExternalOrderLines, externalLinesSignature } from './external-order-lines';
 import type { VariantTaxRef } from './external-order-lines';
-import type { ExternalOrderInput, ExternalOrderResult } from './external-order.types';
+import type {
+    ExternalOrderInput,
+    ExternalOrderResult,
+    OrderErpFacts,
+} from './external-order.types';
 import './types';
 
 const counterpartyLockKey = (erpId: string): string => `external-order-counterparty:${erpId}`;
@@ -80,6 +84,60 @@ export class ExternalOrderService {
                           lockedCtx => this.apply(lockedCtx, input),
                       )
                     : this.apply(txCtx, input),
+        );
+    }
+
+    // The order-state values of an ERP-created order; false when the order is not stored here (yet).
+    async applyDerived(
+        ctx: RequestContext,
+        erpOrderId: string,
+        derived: {
+            erpStatus: string | null;
+            erpStatusAt: Date | null;
+            paidAmountMinor: number | null;
+            erpFacts: OrderErpFacts;
+        },
+    ): Promise<boolean> {
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `external-order:${erpOrderId}`,
+            async txCtx => {
+                const existing = await this.findByErpOrderId(txCtx, erpOrderId);
+                if (!existing?.isExternal) return false;
+                const dictionary = await this.statusReference.dictionary(txCtx);
+                const nextStatus = nextExternalErpStatus(
+                    existing.erpStatus,
+                    derived.erpStatus,
+                    dictionary,
+                );
+                const customFields = {
+                    ...(derived.paidAmountMinor === null
+                        ? {}
+                        : { erpPaidAmount: derived.paidAmountMinor }),
+                    ...derived.erpFacts,
+                    ...(nextStatus === null
+                        ? {}
+                        : {
+                              erpStatus: nextStatus,
+                              erpStatusAt: derived.erpStatusAt ?? new Date(),
+                          }),
+                };
+                if (Object.keys(customFields).length === 0) return true;
+                await this.connection.getRepository(txCtx, Order).update(existing.id, {
+                    ...(nextStatus === null ? {} : { state: dictionary.vendureState(nextStatus) }),
+                    customFields,
+                });
+                if (nextStatus !== null) {
+                    await this.statusHistory.record(
+                        txCtx,
+                        existing.id,
+                        nextStatus,
+                        derived.erpStatusAt,
+                    );
+                }
+                return true;
+            },
         );
     }
 

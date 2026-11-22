@@ -1,18 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ContactPointService, ErpContactPersonService } from '@mivend/plugin-counterparty';
+import { ErpContactPersonService } from '@mivend/plugin-counterparty';
 
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { activityFlags, optionalText } from './erp-mirror-upsert';
 import { applyErpPerson, personName, personOutcome } from './erp-person';
 
-// `contact-person` stream: contact person (common catalog, no owner), stored as an ERP-backed contact person with its channels.
+// `contact-person` stream: contact person (common catalog, no owner), stored as an ERP-backed contact person.
 @Injectable()
 export class ContactPersonStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly persons: ErpContactPersonService,
-        private readonly contactPoints: ContactPointService,
     ) {}
 
     async apply(
@@ -25,7 +24,6 @@ export class ContactPersonStreamHandler implements InboundStreamHandler {
             {
                 connection: this.connection,
                 persons: this.persons,
-                contactPoints: this.contactPoints,
             },
             entityId,
             {
@@ -33,7 +31,6 @@ export class ContactPersonStreamHandler implements InboundStreamHandler {
                 position: optionalText(payload.description),
                 counterpartyErpId: null,
                 linkLater: false,
-                contactInfos: payload.contactInfos,
                 ...activityFlags(payload),
             },
         );

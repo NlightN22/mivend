@@ -56,6 +56,10 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     phone!: string | null;
 
+    // BankAccountChanged entity id of the organization's primary account; the bank columns are derived from it.
+    @Column({ type: 'varchar', nullable: true })
+    mainBankAccountId!: string | null;
+
     // Latest ERP signatory list; role is the ERP enum name (e.g. head, chief accountant).
     @Column({ type: 'simple-json', nullable: true })
     signatories!: OrganizationSignatory[] | null;

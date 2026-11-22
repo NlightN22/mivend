@@ -25,6 +25,9 @@ import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.h
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
+import { OrderStateStreamHandler } from './handlers/order-state.handler';
+import { CurrencyStreamHandler } from './handlers/currency.handler';
+import { ContactInfoStreamHandler } from './handlers/contact-info.handler';
 import { IndividualStreamHandler } from './handlers/individual.handler';
 import { ContactPersonStreamHandler } from './handlers/contact-person.handler';
 import { PersonalContactStreamHandler } from './handlers/personal-contact.handler';
@@ -130,6 +133,9 @@ export class IntegrationInboxProcessorService {
         individualHandler: IndividualStreamHandler,
         contactPersonHandler: ContactPersonStreamHandler,
         personalContactHandler: PersonalContactStreamHandler,
+        orderStateHandler: OrderStateStreamHandler,
+        currencyHandler: CurrencyStreamHandler,
+        contactInfoHandler: ContactInfoStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -181,6 +187,9 @@ export class IntegrationInboxProcessorService {
             individual: individualHandler,
             'contact-person': contactPersonHandler,
             'personal-contact': personalContactHandler,
+            'order-state': orderStateHandler,
+            currency: currencyHandler,
+            'contact-info': contactInfoHandler,
         };
     }
 

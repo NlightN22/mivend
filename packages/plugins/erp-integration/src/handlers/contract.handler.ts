@@ -8,6 +8,7 @@ import {
 import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
+import { CurrencyResolver } from '../currency-resolver.service';
 import { MissingReferenceError } from '../types';
 import { powerOfAttorneyItems } from './contract-power-of-attorney';
 import { str } from './erp-document-payload';
@@ -26,6 +27,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         private readonly settlementPending: SettlementPendingService,
         private readonly orderCheckStale: OrderCheckStaleService,
         private readonly powersOfAttorney: PowerOfAttorneyErpService,
+        private readonly currencies: CurrencyResolver,
     ) {}
 
     async apply(
@@ -85,7 +87,9 @@ export class ContractStreamHandler implements InboundStreamHandler {
                     ? ((payload.creditLimit as string | null) ?? null)
                     : undefined,
             currency:
-                'currency' in payload ? ((payload.currency as string | null) ?? null) : undefined,
+                'currencyId' in payload
+                    ? await this.currencies.codeOf(ctx, `contract ${entityId}`, payload.currencyId)
+                    : undefined,
             controlledIndividually,
             debtDaysLimit,
             paymentKind:

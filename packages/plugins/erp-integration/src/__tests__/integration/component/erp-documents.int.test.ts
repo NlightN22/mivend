@@ -73,7 +73,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     const connection = createTestConnection(dataSource);
     const writer = new ErpDocumentWriter(connection);
-    claims = new CustomerClaimStreamHandler(writer);
+    claims = new CustomerClaimStreamHandler(writer, { codeOf: async () => null } as never);
     results = new OrderChangeResultStreamHandler(writer);
     powers = new PowerOfAttorneyErpService(connection);
 });

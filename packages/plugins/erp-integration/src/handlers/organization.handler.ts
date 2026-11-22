@@ -1,21 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { ContactPointService } from '@mivend/plugin-counterparty';
-import { parseContactInfos } from './contact-infos';
-import { OrganizationEventService, REQUISITE_FIELDS } from '@mivend/plugin-documents';
-import type { OrganizationSignatory, RequisiteFields } from '@mivend/plugin-documents';
+import { OrganizationEventService } from '@mivend/plugin-documents';
+import type { RequisiteFields } from '@mivend/plugin-documents';
+
+import { OrganizationBankRequisitesService } from '../organization-bank-requisites.service';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationOrganizationHandler';
 
-// Applies the `organization` stream: name, active state and the legal/bank requisites. An empty
-// requisite means "not provided" and never wipes a stored value (docs/payments.md "Organizations").
+const OWN_REQUISITES = ['inn', 'kpp', 'ogrn'] as const;
+
+// Applies the `organization` stream: name, active state, own legal requisites and the main bank account id.
+// Address, phone and channels come from the contact-info stream, bank requisites from the bank chain.
 @Injectable()
 export class OrganizationStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly organizationEvents: OrganizationEventService,
-        private readonly contactPoints: ContactPointService,
+        private readonly bankRequisites: OrganizationBankRequisitesService,
     ) {}
 
     async apply(
@@ -33,7 +35,7 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
                   ? payload.isActive
                   : undefined;
         const fields: RequisiteFields = {};
-        for (const field of REQUISITE_FIELDS) fields[field] = text(payload[field]);
+        for (const field of OWN_REQUISITES) fields[field] = text(payload[field]);
 
         const stored = await this.organizationEvents.upsertFromEvent(ctx, entityId, {
             legalName,
@@ -41,48 +43,18 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
             controlsStock:
                 typeof payload.controlsStock === 'boolean' ? payload.controlsStock : undefined,
             fields,
-            signatories: toSignatories(payload.signatories),
+            mainBankAccountId:
+                'mainBankAccountId' in payload ? text(payload.mainBankAccountId) : undefined,
         });
         if (!stored) {
             return inboundNoop(`organization ${entityId}: nameless tombstone for an unknown row`);
         }
-        const contactInfos = parseContactInfos(payload.contactInfos);
-        const failure = await this.contactPoints.guarded(
-            ctx,
-            `organization ${entityId}`,
-            async () => {
-                if (contactInfos) {
-                    await this.contactPoints.replaceErpPointsByErpId(
-                        ctx,
-                        'organization',
-                        entityId,
-                        contactInfos,
-                    );
-                }
-            },
-        );
+        await this.bankRequisites.refresh(ctx, { organizationErpId: entityId });
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
-        return inboundApplied(undefined, failure);
+        return inboundApplied();
     }
 }
 
 function text(value: unknown): string | null {
     return typeof value === 'string' && value.trim() !== '' ? value : null;
-}
-
-function toSignatories(value: unknown): OrganizationSignatory[] {
-    if (!Array.isArray(value)) return [];
-    const result: OrganizationSignatory[] = [];
-    for (const item of value as Record<string, unknown>[]) {
-        const role = text(item?.role);
-        const personName = text(item?.personName);
-        if (!role || !personName) continue;
-        result.push({
-            role,
-            roleLabel: text(item.roleLabel) ?? role,
-            personName,
-            position: text(item.position),
-        });
-    }
-    return result;
 }

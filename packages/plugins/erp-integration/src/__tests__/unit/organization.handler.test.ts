@@ -1,4 +1,3 @@
-import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi, Mock } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -7,43 +6,23 @@ import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 const ctx = {} as RequestContext;
 interface SetupResult {
     service: { upsertFromEvent: Mock };
-    points: {
-        guarded: (
-            _ctx: unknown,
-            _label: string,
-            work: () => Promise<void>,
-        ) => Promise<string | null>;
-        replaceErpPointsByErpId: Mock;
-    };
+    bank: { refresh: Mock };
     handler: OrganizationStreamHandler;
 }
 
 const setup = (stored = true): SetupResult => {
     const service = { upsertFromEvent: vi.fn().mockResolvedValue(stored) };
-    const points = {
-        guarded: passthroughGuard,
-        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
-    };
+    const bank = { refresh: vi.fn().mockResolvedValue(1) };
     return {
         service,
-        points,
-        handler: new OrganizationStreamHandler(service as never, points as never),
+        bank,
+        handler: new OrganizationStreamHandler(service as never, bank as never),
     };
 };
-const empty = {
-    inn: null,
-    kpp: null,
-    ogrn: null,
-    legalAddress: null,
-    bankName: null,
-    bankAccount: null,
-    bankBik: null,
-    correspondentAccount: null,
-    phone: null,
-};
+const empty = { inn: null, kpp: null, ogrn: null };
 
 describe('OrganizationStreamHandler', () => {
-    it('maps every contract field onto the requisites input', async () => {
+    it('maps the fields the event still carries onto the requisites input and ignores the removed ones', async () => {
         const { service, handler } = setup();
         const outcome = await handler.apply(ctx, 'org-1', {
             name: 'Short',
@@ -52,48 +31,35 @@ describe('OrganizationStreamHandler', () => {
             inn: '7700000000',
             kpp: '770001001',
             ogrn: '1020000000000',
+            mainBankAccountId: 'acc-1',
             legalAddress: '1 Demo Ave',
             bankName: 'Demo Bank',
-            bankAccount: '40702810000000000001',
-            bankBik: '044525000',
-            correspondentAccount: '30101810000000000002',
             phone: '+0 000 000',
-            signatories: [
-                {
-                    role: 'Руководитель',
-                    roleLabel: 'Head',
-                    personName: 'Head H. H.',
-                    position: 'CEO',
-                },
-                { role: 'Кассир', roleLabel: 'Cashier', personName: '' },
-                { role: '', personName: 'No Role' },
-            ],
+            signatories: [{ role: 'Руководитель', personName: 'Head H. H.' }],
         });
 
         expect(outcome).toEqual({ kind: 'applied' });
         expect(service.upsertFromEvent).toHaveBeenCalledWith(ctx, 'org-1', {
             legalName: 'Full Legal LLC',
             isActive: true,
-            fields: {
-                inn: '7700000000',
-                kpp: '770001001',
-                ogrn: '1020000000000',
-                legalAddress: '1 Demo Ave',
-                bankName: 'Demo Bank',
-                bankAccount: '40702810000000000001',
-                bankBik: '044525000',
-                correspondentAccount: '30101810000000000002',
-                phone: '+0 000 000',
-            },
-            signatories: [
-                {
-                    role: 'Руководитель',
-                    roleLabel: 'Head',
-                    personName: 'Head H. H.',
-                    position: 'CEO',
-                },
-            ],
+            fields: { inn: '7700000000', kpp: '770001001', ogrn: '1020000000000' },
+            mainBankAccountId: 'acc-1',
         });
+    });
+
+    it('refreshes the bank requisites of the organization after each stored event, not for an unknown tombstone', async () => {
+        const { bank, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme' });
+        expect(bank.refresh).toHaveBeenCalledWith(ctx, { organizationErpId: 'org-1' });
+        const unknown = setup(false);
+        await unknown.handler.apply(ctx, 'org-1', { isDeleted: true });
+        expect(unknown.bank.refresh).not.toHaveBeenCalled();
+    });
+
+    it('keeps the stored main bank account when the event omits it', async () => {
+        const { service, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme' });
+        expect(service.upsertFromEvent.mock.calls[0][2].mainBankAccountId).toBeUndefined();
     });
 
     it('falls back to name when legalName is absent or empty', async () => {
@@ -103,13 +69,13 @@ describe('OrganizationStreamHandler', () => {
             legalName: 'Acme',
             isActive: undefined,
             fields: empty,
-            signatories: [],
+            mainBankAccountId: undefined,
         });
     });
 
     it('treats empty strings as not provided (null), never as a value', async () => {
         const { service, handler } = setup();
-        await handler.apply(ctx, 'org-1', { name: 'Acme', inn: '', legalAddress: '  ' });
+        await handler.apply(ctx, 'org-1', { name: 'Acme', inn: '', kpp: '  ' });
         expect(service.upsertFromEvent.mock.calls[0][2].fields).toEqual(empty);
     });
 
@@ -135,19 +101,5 @@ describe('OrganizationStreamHandler', () => {
         await handler.apply(ctx, 'org-1', { name: 'Acme' });
         const flags = service.upsertFromEvent.mock.calls.map(c => c[2].controlsStock);
         expect(flags).toEqual([false, true, undefined]);
-    });
-
-    it('replaces the ERP channels from a present list and keeps them when the list is absent', async () => {
-        const { points, handler } = setup();
-        await handler.apply(ctx, 'org-1', {
-            name: 'Org',
-            contactInfos: [{ type: 'Телефон', presentation: '+7 912 345-67-89' }],
-        });
-        expect(points.replaceErpPointsByErpId).toHaveBeenCalledWith(ctx, 'organization', 'org-1', [
-            expect.objectContaining({ type: 'phone' }),
-        ]);
-        points.replaceErpPointsByErpId.mockClear();
-        await handler.apply(ctx, 'org-1', { name: 'Org' });
-        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
     });
 });

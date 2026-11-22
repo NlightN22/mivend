@@ -87,6 +87,7 @@ import { ReservationReconciliationIssueService } from './reservation-reconciliat
 import { ReservationResolver } from './reservation.resolver';
 import { ReservationService } from './reservation.service';
 import { ReservationWriteOffSyncService } from './reservation-write-off-sync.service';
+import { ReservationOrderStateSyncService } from './reservation-order-state-sync.service';
 import { RESERVATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ReservationPluginOptions } from './types';
 
@@ -134,6 +135,7 @@ import type { ReservationPluginOptions } from './types';
         ReservationErpSyncService,
         ReservationReconciliationIssueService,
         ReservationWriteOffSyncService,
+        ReservationOrderStateSyncService,
         ReservationExpiryService,
         RejectedOrderReleaseService,
         OrderCancellationPortRegistry,
@@ -163,6 +165,7 @@ import type { ReservationPluginOptions } from './types';
         OrderChecksService,
         OrderCheckStaleService,
         ReservationWriteOffSyncService,
+        ReservationOrderStateSyncService,
         StockLevelService,
         OrderCancellationPortRegistry,
         OrderCancellationService,

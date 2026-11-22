@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ContactPointService, ErpContactPersonService } from '@mivend/plugin-counterparty';
+import { ErpContactPersonService } from '@mivend/plugin-counterparty';
 
 import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -8,13 +8,12 @@ import { activityFlags, optionalText } from './erp-mirror-upsert';
 import { applyErpPerson, personName, personOutcome } from './erp-person';
 
 // `individual` stream: a non-group individual becomes an ERP-backed contact person (linked to its counterparty
-// when one is set) with its channels. Personal fields never reach this handler (personal-data-allowlist.ts).
+// when one is set). Personal fields never reach this handler (personal-data-allowlist.ts).
 @Injectable()
 export class IndividualStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly persons: ErpContactPersonService,
-        private readonly contactPoints: ContactPointService,
     ) {}
 
     async apply(
@@ -31,7 +30,6 @@ export class IndividualStreamHandler implements InboundStreamHandler {
             {
                 connection: this.connection,
                 persons: this.persons,
-                contactPoints: this.contactPoints,
             },
             entityId,
             {
@@ -39,7 +37,6 @@ export class IndividualStreamHandler implements InboundStreamHandler {
                 position: null,
                 counterpartyErpId: optionalText(payload.counterpartyId),
                 linkLater: false,
-                contactInfos: payload.contactInfos,
                 ...flags,
             },
         );

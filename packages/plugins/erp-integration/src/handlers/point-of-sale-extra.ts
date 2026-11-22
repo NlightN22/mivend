@@ -25,6 +25,5 @@ export function pointOfSaleExtra(payload: Record<string, unknown>): ErpPointExtr
         managerIds: listJson(payload.managerIds),
         pointTypeIds: listJson(payload.pointTypeIds),
         salesChannels: listJson(payload.salesChannels),
-        contactInfos: listJson(payload.contactInfos),
     };
 }

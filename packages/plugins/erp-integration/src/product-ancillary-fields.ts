@@ -52,7 +52,7 @@ export function extractManufacturerCodes(payload: Record<string, unknown>): Manu
         .map(entry => ({
             lineNumber: typeof entry.lineNumber === 'number' ? entry.lineNumber : 0,
             code: typeof entry.code === 'string' ? entry.code : '',
-            manufacturer: typeof entry.manufacturer === 'string' ? entry.manufacturer : '',
+            manufacturer: typeof entry.manufacturerId === 'string' ? entry.manufacturerId : '',
         }))
         .filter(row => row.code !== '');
 }

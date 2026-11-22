@@ -27,7 +27,6 @@ function message(): KafkaMessage {
         version: '1',
         name: 'Person A',
         isActive: true,
-        contactInfos: [{ type: 'Телефон', presentation: '+7 912 345-67-89' }],
         ...PERSONAL,
     });
     return {
@@ -43,7 +42,6 @@ describe('personal data never reaches the inbox', () => {
         const stored = JSON.stringify(result.input.payload);
         for (const value of Object.values(PERSONAL)) expect(stored).not.toContain(value);
         expect(result.input.payload).toMatchObject({ name: 'Person A', isActive: true });
-        expect(result.input.payload.contactInfos).toHaveLength(1);
     });
 
     it('does not keep the raw bytes of an undecodable personal-stream message', () => {

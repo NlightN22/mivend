@@ -25,9 +25,9 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
-    createTestConnection,
 } from 'shared';
 
+import { OrderLineResolver } from '../../../handlers/order-line-resolver';
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
 
 // Real handler + real ExternalOrderService on real Postgres; hand-rolled tables use the production
@@ -180,12 +180,10 @@ beforeAll(async () => {
         statusReference,
     );
     handler = new OrderChangedStreamHandler(
-        connection as never,
         { handleOrderChanged: vi.fn() } as never,
-        { findByEntityId: vi.fn() } as never,
+        new OrderLineResolver(connection as never, { findByEntityId: vi.fn() } as never),
         externalOrders,
         { attachOrder: vi.fn() } as never,
-        statusReference,
     );
     ctx = { channel: { defaultCurrencyCode: 'RUB' } } as unknown as RequestContext;
 });
@@ -317,12 +315,10 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         });
         const sync = { handleOrderChanged: vi.fn() };
         const mivendHandler = new OrderChangedStreamHandler(
-            createTestConnection(dataSource),
             sync as never,
-            { findByEntityId: vi.fn() } as never,
+            { resolve: vi.fn() } as never,
             externalOrders,
             { attachOrder: vi.fn() } as never,
-            { findActive: vi.fn() } as never,
         );
 
         await mivendHandler.apply(ctx, ERP_ORDER, { lines: [] });

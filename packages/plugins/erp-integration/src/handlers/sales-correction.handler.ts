@@ -7,6 +7,7 @@ import {
     SalesCorrectionServiceLineErp,
 } from '@mivend/plugin-erp-order';
 
+import { CurrencyResolver } from '../currency-resolver.service';
 import { documentEnvelope, documentOutcome } from './erp-document-payload';
 import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -19,7 +20,10 @@ import {
 // Stores `sales-correction` (#254) as received in sales_correction_erp and its line tables; links are plain ERP ids.
 @Injectable()
 export class SalesCorrectionStreamHandler implements InboundStreamHandler {
-    constructor(private readonly writer: ErpDocumentWriter) {}
+    constructor(
+        private readonly writer: ErpDocumentWriter,
+        private readonly currencies: CurrencyResolver,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -32,7 +36,14 @@ export class SalesCorrectionStreamHandler implements InboundStreamHandler {
             target: SalesCorrectionErp,
             erpId: entityId,
             ...envelope,
-            fields: salesCorrectionFields(payload),
+            fields: salesCorrectionFields(
+                payload,
+                await this.currencies.codeOf(
+                    ctx,
+                    `sales-correction ${entityId}`,
+                    payload.currencyId,
+                ),
+            ),
             lines: [
                 { target: SalesCorrectionGoodsLineErp, rows: salesCorrectionGoodsLines(payload) },
                 {

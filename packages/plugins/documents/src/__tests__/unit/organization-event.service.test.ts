@@ -207,32 +207,6 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         );
     });
 
-    it('replaces the signatory list with a non-empty one and keeps it on an empty list', async () => {
-        const stored = [
-            { role: 'Руководитель', roleLabel: 'H', personName: 'Old', position: null },
-        ];
-        const next = [{ role: 'Руководитель', roleLabel: 'H', personName: 'New', position: 'CEO' }];
-        orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A', signatories: stored });
-        await service.upsertFromEvent(ctx, 'org-1', {
-            legalName: null,
-            isActive: true,
-            fields: {},
-            signatories: [],
-        });
-        expect(orgRepo.save).toHaveBeenLastCalledWith(
-            expect.objectContaining({ signatories: stored }),
-        );
-        await service.upsertFromEvent(ctx, 'org-1', {
-            legalName: null,
-            isActive: true,
-            fields: {},
-            signatories: next,
-        });
-        expect(orgRepo.save).toHaveBeenLastCalledWith(
-            expect.objectContaining({ signatories: next }),
-        );
-    });
-
     it('keeps a stored phone when the event phone is empty', async () => {
         orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A', phone: '+0 1' });
         await service.upsertFromEvent(ctx, 'org-1', {
@@ -243,22 +217,84 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         expect(orgRepo.save).toHaveBeenLastCalledWith(expect.objectContaining({ phone: '+0 1' }));
     });
 
-    it('clears a stored phone on a named event with an empty phone, keeps legal requisites', async () => {
+    it('does not touch the phone on a named event: it comes from the contact set', async () => {
         orgRepo.findOne.mockResolvedValue({
             erpId: 'org-1',
             legalName: 'A',
             phone: '+0 1',
             inn: '123',
         });
-        for (let i = 0; i < 2; i++) {
-            await service.upsertFromEvent(ctx, 'org-1', {
-                legalName: 'A',
-                isActive: true,
-                fields: { phone: null, inn: null },
-            });
-        }
+        await service.upsertFromEvent(ctx, 'org-1', {
+            legalName: 'A',
+            isActive: true,
+            fields: { inn: null },
+        });
         expect(orgRepo.save).toHaveBeenLastCalledWith(
-            expect.objectContaining({ phone: null, inn: '123' }),
+            expect.objectContaining({ phone: '+0 1', inn: '123' }),
         );
+    });
+
+    it('stores the main bank account id and keeps it when the event omits it', async () => {
+        orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A' });
+        await service.upsertFromEvent(ctx, 'org-1', {
+            legalName: 'A',
+            fields: {},
+            mainBankAccountId: 'acc-1',
+        });
+        expect(orgRepo.save).toHaveBeenLastCalledWith(
+            expect.objectContaining({ mainBankAccountId: 'acc-1' }),
+        );
+        orgRepo.findOne.mockResolvedValue({
+            erpId: 'org-1',
+            legalName: 'A',
+            mainBankAccountId: 'acc-1',
+        });
+        await service.upsertFromEvent(ctx, 'org-1', { legalName: 'A', fields: {} });
+        expect(orgRepo.save).toHaveBeenLastCalledWith(
+            expect.objectContaining({ mainBankAccountId: 'acc-1' }),
+        );
+    });
+
+    describe('applyDerived', () => {
+        it('returns false for an organization that is not stored', async () => {
+            orgRepo.findOne.mockResolvedValue(null);
+            expect(await service.applyDerived(ctx, 'org-1', { phone: '+0 1' })).toBe(false);
+            expect(orgRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('clears the phone when the contact set has none, but never an address or a bank field', async () => {
+            orgRepo.findOne.mockResolvedValue({
+                erpId: 'org-1',
+                legalName: 'A',
+                phone: '+0 1',
+                legalAddress: 'Street 1',
+                bankName: 'Bank',
+            });
+            await service.applyDerived(ctx, 'org-1', {
+                phone: null,
+                legalAddress: null,
+                bankName: null,
+            });
+            expect(orgRepo.save).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    phone: null,
+                    legalAddress: 'Street 1',
+                    bankName: 'Bank',
+                }),
+            );
+        });
+
+        it('stores the derived bank requisites', async () => {
+            orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A' });
+            await service.applyDerived(ctx, 'org-1', {
+                bankName: 'Bank',
+                bankAccount: '4070',
+                bankBik: '0445',
+                correspondentAccount: '3010',
+            });
+            expect(orgRepo.save).toHaveBeenLastCalledWith(
+                expect.objectContaining({ bankName: 'Bank', bankAccount: '4070', bankBik: '0445' }),
+            );
+        });
     });
 });

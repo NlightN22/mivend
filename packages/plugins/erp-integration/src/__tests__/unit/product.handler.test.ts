@@ -714,8 +714,8 @@ describe('ProductStreamHandler', () => {
                 sku: 'SKU-1',
                 name: 'Widget',
                 barcodes: ['4600000000000'],
-                attributes: { Диаметр: { raw: '15', normalized: ['15'] } },
-                manufacturerCodes: [{ lineNumber: 2, code: 'OEM-1', manufacturer: 'guid-other' }],
+                specifications: { Диаметр: { raw: '15', normalized: ['15'] } },
+                manufacturerCodes: [{ lineNumber: 2, code: 'OEM-1', manufacturerId: 'guid-other' }],
             });
 
             expect(productAncillaryDataService.replaceBarcodes).toHaveBeenCalledWith(ctx, '20', [
@@ -724,7 +724,13 @@ describe('ProductStreamHandler', () => {
             expect(productAncillaryDataService.replaceCharacteristics).toHaveBeenCalledWith(
                 ctx,
                 '10',
-                [expect.objectContaining({ group: 'attribute', key: 'Диаметр', rawValue: '15' })],
+                [
+                    expect.objectContaining({
+                        group: 'specification',
+                        key: 'Диаметр',
+                        rawValue: '15',
+                    }),
+                ],
             );
             expect(productAncillaryDataService.replaceManufacturerCodes).toHaveBeenCalledWith(
                 ctx,

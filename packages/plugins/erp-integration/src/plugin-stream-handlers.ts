@@ -43,6 +43,9 @@ import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
 import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
 import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
 import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
+import { OrderStateStreamHandler } from './handlers/order-state.handler';
+import { CurrencyStreamHandler } from './handlers/currency.handler';
+import { ContactInfoStreamHandler } from './handlers/contact-info.handler';
 
 import { IndividualStreamHandler } from './handlers/individual.handler';
 import { ContactPersonStreamHandler } from './handlers/contact-person.handler';
@@ -98,4 +101,7 @@ export const STREAM_HANDLERS = [
     SalesCorrectionStreamHandler,
     OrderCorrectionStreamHandler,
     OrderChangeResultStreamHandler,
+    OrderStateStreamHandler,
+    CurrencyStreamHandler,
+    ContactInfoStreamHandler,
 ];

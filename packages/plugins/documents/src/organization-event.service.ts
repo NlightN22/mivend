@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { withAggregateLock } from 'shared';
 
-import {
-    OrganizationRequisites,
-    OrganizationSignatory,
-} from './entities/organization-requisites.entity';
+import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { hasRequiredRequisites } from './requisites-completeness';
 import { ProformaRequeueService } from './proforma-requeue.service';
 
@@ -29,11 +26,19 @@ export interface OrganizationEventInput {
     isActive?: boolean;
     controlsStock?: boolean;
     fields: RequisiteFields;
-    signatories?: OrganizationSignatory[];
+    // Absent keeps the stored id: the bank requisites are derived from it by the integration plugin.
+    mainBankAccountId?: string | null;
 }
 
-// Applies the `organization` stream. Legal requisites are sticky: an empty one never wipes a stored
-// value. The phone is contact info: a named event is full state, so an empty phone clears it.
+// Requisites that arrive from other streams (contact set, bank chain); a missing key is left alone.
+export type DerivedRequisites = Partial<
+    Record<
+        'legalAddress' | 'phone' | 'bankName' | 'bankAccount' | 'bankBik' | 'correspondentAccount',
+        string | null
+    >
+>;
+
+// Applies the `organization` stream. Legal requisites are sticky: an empty one never wipes a stored value.
 @Injectable()
 export class OrganizationEventService {
     constructor(
@@ -86,9 +91,39 @@ export class OrganizationEventService {
             const value = input.fields[field];
             if (value) entity[field] = value;
         }
-        if (input.legalName) entity.phone = input.fields.phone ?? null;
-        if (input.signatories?.length) entity.signatories = input.signatories;
+        if (input.mainBankAccountId !== undefined)
+            entity.mainBankAccountId = input.mainBankAccountId;
         return repo.save(entity);
+    }
+
+    // The phone is the full state of the contact set (empty clears); address and bank requisites stay sticky.
+    async applyDerived(
+        ctx: RequestContext,
+        erpId: string,
+        patch: DerivedRequisites,
+    ): Promise<boolean> {
+        const saved = await withAggregateLock(
+            this.connection,
+            ctx,
+            `organization-requisites:${erpId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, OrganizationRequisites);
+                const entity = await repo.findOne({ where: { erpId } });
+                if (!entity) return null;
+                for (const [field, value] of Object.entries(patch) as [
+                    keyof DerivedRequisites,
+                    string | null | undefined,
+                ][]) {
+                    if (field === 'phone' ? value !== undefined : value)
+                        entity[field] = value ?? null;
+                }
+                return repo.save(entity);
+            },
+        );
+        if (!saved) return false;
+        if (isComplete(saved))
+            await this.requeue.requeueForOrganization(ctx, Number(saved.id), saved.erpId);
+        return true;
     }
 }
 

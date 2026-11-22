@@ -22,6 +22,7 @@ function makeHandler(): MakeHandlerResult {
         { attachContract: vi.fn() } as never,
         { requestForContract: vi.fn(), drainSoon: vi.fn() } as never,
         powersOfAttorney as never,
+        { codeOf: vi.fn().mockResolvedValue('USD') } as never,
     );
     return { handler, powersOfAttorney };
 }

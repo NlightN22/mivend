@@ -10,6 +10,7 @@ describe('streamToAggregateType', () => {
         ['order-registration-result', 'orderRegistrationResult'],
         ['product-photo', 'productPhoto'],
         ['bank-account', 'bankAccount'],
+        ['currency', 'currency'],
     ] as const)('%s -> %s', (stream, aggregateType) => {
         expect(streamToAggregateType(stream)).toBe(aggregateType);
     });
@@ -28,6 +29,7 @@ describe('streamToAggregateType', () => {
         expect([...unmapped].sort()).toEqual(
             [
                 'counterparty-contact',
+                'contact-info',
                 'contact-person',
                 'counterparty-group',
                 'customer-claim',
@@ -35,6 +37,7 @@ describe('streamToAggregateType', () => {
                 'order-cancel-result',
                 'order-change-result',
                 'order-correction',
+                'order-state',
                 'personal-contact',
                 'point-of-sale-type',
                 'product-group',

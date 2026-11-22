@@ -19,6 +19,7 @@ import { ProductGroupErp } from './entities/product-group-erp.entity';
 import { SettingErp } from './entities/setting-erp.entity';
 import { LegalFormRecord } from './entities/legal-form-record.entity';
 import { BankRecord } from './entities/bank-record.entity';
+import { CurrencyRecord } from './entities/currency-record.entity';
 import { BankAccountRecord } from './entities/bank-account-record.entity';
 import { ConsistencyReport } from './consistency/consistency-report.entity';
 import { ConsistencySourceState } from './consistency/consistency-source-state.entity';
@@ -47,6 +48,7 @@ export const PLUGIN_ENTITIES = [
     LegalFormRecord,
     BankRecord,
     BankAccountRecord,
+    CurrencyRecord,
     ConsistencyReport,
     ConsistencySourceState,
 ];

@@ -217,6 +217,7 @@ export const JOURNALED_ENTITIES: readonly string[] = [
     'LegalFormRecord',
     'BankRecord',
     'BankAccountRecord',
+    'CurrencyRecord',
     'CheckPolicy',
     'Reservation',
     'ReservationExtensionLimit',

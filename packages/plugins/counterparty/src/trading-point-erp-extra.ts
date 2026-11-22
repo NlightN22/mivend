@@ -20,7 +20,6 @@ export interface ErpPointExtra {
     managerIds: string;
     pointTypeIds: string;
     salesChannels: string;
-    contactInfos: string;
 }
 
 export async function markMirrorDeleted(

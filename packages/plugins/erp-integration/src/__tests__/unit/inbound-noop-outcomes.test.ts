@@ -7,7 +7,6 @@ import { CounterpartyStreamHandler } from '../../handlers/counterparty.handler';
 import { DiscountSetupStreamHandler } from '../../handlers/discount-setup.handler';
 import { GrantedDiscountStreamHandler } from '../../handlers/granted-discount.handler';
 import { GrantedRetroBonusStreamHandler } from '../../handlers/granted-retro-bonus.handler';
-import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler';
 import { OrderRegistrationResultHandler } from '../../handlers/order-registration-result.handler';
 import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 import { PointOfSaleStreamHandler } from '../../handlers/point-of-sale.handler';
@@ -27,13 +26,10 @@ describe.each([
     [
         'point-of-sale',
         (m: boolean) =>
-            new PointOfSaleStreamHandler(
-                {
-                    deactivate: vi.fn().mockResolvedValue(m),
-                    markErpDeleted: vi.fn().mockResolvedValue(false),
-                } as never,
-                {} as never,
-            ),
+            new PointOfSaleStreamHandler({
+                deactivate: vi.fn().mockResolvedValue(m),
+                markErpDeleted: vi.fn().mockResolvedValue(false),
+            } as never),
         { isDeleted: true },
     ],
     [
@@ -45,6 +41,7 @@ describe.each([
                 { attachContract: vi.fn() } as never,
                 { requestForContract: vi.fn(), drainSoon: vi.fn() } as never,
                 { replaceForContract: vi.fn(), markContractDeleted: vi.fn() } as never,
+                { codeOf: vi.fn() } as never,
             ),
         { isDeleted: true },
     ],
@@ -81,7 +78,7 @@ describe.each([
         (m: boolean) =>
             new OrganizationStreamHandler(
                 { upsertFromEvent: vi.fn().mockResolvedValue(m) } as never,
-                { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
+                { refresh: vi.fn() } as never,
             ),
         { isDeleted: true },
     ],
@@ -117,7 +114,6 @@ describe.each([
 });
 
 describe.each([
-    ['order-changed', OrderChangedStreamHandler, 'handleOrderChanged', 'lines'],
     [
         'order-registration-result',
         OrderRegistrationResultHandler,
@@ -129,17 +125,7 @@ describe.each([
         const sync = {
             [syncMethod]: vi.fn(),
         };
-        const handler = new Handler(
-            orderConnection('variant-1'),
-            sync as never,
-            {} as never,
-            {
-                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
-                upsert: vi.fn(),
-            } as never,
-            { attachOrder: vi.fn() } as never,
-            { findActive: vi.fn().mockResolvedValue({}) } as never,
-        );
+        const handler = new Handler(orderConnection('variant-1'), sync as never);
 
         const outcome = await handler.apply(ctx, 'o-1', {
             orderEntityId: 'o-1',
@@ -159,19 +145,9 @@ describe.each([
     });
 
     it('is applied when every line has a productId', async () => {
-        const handler = new Handler(
-            orderConnection('variant-1'),
-            {
-                [syncMethod]: vi.fn(),
-            } as never,
-            {} as never,
-            {
-                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
-                upsert: vi.fn(),
-            } as never,
-            { attachOrder: vi.fn() } as never,
-            { findActive: vi.fn().mockResolvedValue({}) } as never,
-        );
+        const handler = new Handler(orderConnection('variant-1'), {
+            [syncMethod]: vi.fn(),
+        } as never);
 
         const outcome = await handler.apply(ctx, 'o-1', {
             orderEntityId: 'o-1',

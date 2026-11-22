@@ -4,7 +4,11 @@ export { ReservationPaymentService } from './src/reservation-payment.service';
 export { ReservationExtensionService } from './src/reservation-extension.service';
 export { ReservationErpSyncService } from './src/reservation-erp-sync.service';
 export { ReservationWriteOffSyncService } from './src/reservation-write-off-sync.service';
-export type { OrderRegistrationResultInput } from './src/reservation-write-off-sync.service';
+export { ReservationOrderStateSyncService } from './src/reservation-order-state-sync.service';
+export type {
+    OrderRegistrationResultInput,
+    OrderStateInput,
+} from './src/reservation-write-off-sync.service';
 export { ReservationReconciliationIssueService } from './src/reservation-reconciliation-issue.service';
 export { ReservationReconciliationIssue } from './src/entities/reservation-reconciliation-issue.entity';
 export type {

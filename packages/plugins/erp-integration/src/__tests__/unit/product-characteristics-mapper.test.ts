@@ -3,24 +3,15 @@ import { describe, it, expect } from 'vitest';
 import { mapProductCharacteristics } from '../../product-characteristics-mapper';
 
 describe('mapProductCharacteristics', () => {
-    it('maps the attributes map into rows with group "attribute"', () => {
+    it('reads no attribute rows: the attributes map is not part of the event any more', () => {
         const rows = mapProductCharacteristics({
-            attributes: {
-                Диаметр: { raw: '15', normalized: ['15'] },
-                Бренд: { raw: 'Acme', normalized: ['acme'] },
-            },
+            attributes: { Диаметр: { raw: '15', normalized: ['15'] } },
         });
 
-        expect(rows).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({ group: 'attribute', key: 'Диаметр', rawValue: '15' }),
-                expect.objectContaining({ group: 'attribute', key: 'Бренд', rawValue: 'Acme' }),
-            ]),
-        );
-        expect(rows).toHaveLength(2);
+        expect(rows).toEqual([]);
     });
 
-    it('maps specifications/technicalRequirements too, if the payload ever carries them', () => {
+    it('maps specifications and technical requirements', () => {
         const rows = mapProductCharacteristics({
             specifications: { Weight: { raw: '1kg', normalized: ['1kg'] } },
             technicalRequirements: { Voltage: { raw: '220v', normalized: ['220v'] } },
@@ -44,7 +35,7 @@ describe('mapProductCharacteristics', () => {
 
     it('JSON-encodes normalized, and treats an empty normalized array as null', () => {
         const rows = mapProductCharacteristics({
-            attributes: {
+            specifications: {
                 A: { raw: 'x', normalized: ['x', 'x-alt'] },
                 B: { raw: 'y', normalized: [] },
             },
@@ -58,7 +49,7 @@ describe('mapProductCharacteristics', () => {
 
     it('treats structuredJson as null when absent (confirmed always the case today)', () => {
         const rows = mapProductCharacteristics({
-            attributes: { A: { raw: 'x', normalized: ['x'] } },
+            specifications: { A: { raw: 'x', normalized: ['x'] } },
         });
 
         expect(rows[0].structuredJson).toBeNull();

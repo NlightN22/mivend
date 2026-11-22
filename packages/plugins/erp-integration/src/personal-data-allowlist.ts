@@ -8,7 +8,6 @@ const COMMON = [
     'updatedAt',
     'code',
     'name',
-    'contactInfos',
     'isActive',
     'isDeleted',
 ] as const;

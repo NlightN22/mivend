@@ -1,4 +1,4 @@
-import type { ActiveStateFields, ContactPointInput } from '@mivend/plugin-counterparty';
+import type { ActiveStateFields } from '@mivend/plugin-counterparty';
 import type { CounterpartyMirrorFields } from '@mivend/plugin-counterparty';
 
 const json = (value: unknown): string | undefined =>
@@ -8,7 +8,6 @@ const json = (value: unknown): string | undefined =>
 export function mirrorFields(
     fields: ActiveStateFields,
     managerIds: unknown,
-    contactInfos: ContactPointInput[] | undefined,
 ): CounterpartyMirrorFields {
     return {
         name: fields.name,
@@ -20,13 +19,7 @@ export function mirrorFields(
         legalType: fields.legalType,
         legalFormId: fields.legalFormId,
         regionId: fields.regionId,
-        legalAddress: fields.legalAddress,
-        factualAddress: fields.factualAddress,
-        phone: fields.phone,
-        officialEmail: fields.officialEmail,
-        erpGroupLabel: fields.erpGroupLabel,
         managerId: fields.managerErpId,
         managerIds: Array.isArray(managerIds) ? json(managerIds) : undefined,
-        contactInfos: json(contactInfos),
     };
 }

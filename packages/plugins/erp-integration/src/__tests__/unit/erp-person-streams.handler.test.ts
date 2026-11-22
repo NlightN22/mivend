@@ -1,4 +1,3 @@
-import { passthroughGuard } from './contact-guard';
 import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -8,25 +7,9 @@ import { PersonalContactStreamHandler } from '../../handlers/personal-contact.ha
 import { MissingReferenceError } from '../../types';
 
 const ctx = {} as RequestContext;
-const phoneInfo = { type: 'Телефон', presentation: '+7 912 345-67-89' };
-const phonePoint = {
-    type: 'phone',
-    value: '+7 912 345-67-89',
-    label: null,
-    isPrimary: false,
-    comment: null,
-};
 interface DepsResult {
     persons: { upsert: Mock; deactivate: Mock };
-    points: {
-        guarded: (
-            _ctx: unknown,
-            _label: string,
-            work: () => Promise<void>,
-        ) => Promise<string | null>;
-        replaceErpPoints: Mock;
-    };
-    args: [never, never, never];
+    args: [never, never];
 }
 
 function deps(
@@ -37,22 +20,18 @@ function deps(
         upsert: vi.fn().mockResolvedValue(7),
         deactivate: vi.fn().mockResolvedValue(deactivated),
     };
-    const points = { guarded: passthroughGuard, replaceErpPoints: vi.fn() };
     const connection = {
         getRepository: () => ({ findOne: vi.fn().mockResolvedValue(counterparty) }),
     };
-    return { persons, points, args: [connection, persons, points] as [never, never, never] };
+    return { persons, args: [connection, persons] as [never, never] };
 }
 
 describe('IndividualStreamHandler', () => {
     const named = { name: 'Person A', counterpartyId: 'cp-1', isActive: true };
 
-    it('stores a non-group individual linked to its counterparty with its channels', async () => {
-        const { persons, points, args } = deps();
-        const outcome = await new IndividualStreamHandler(...args).apply(ctx, 'i-1', {
-            ...named,
-            contactInfos: [phoneInfo],
-        });
+    it('stores a non-group individual linked to its counterparty', async () => {
+        const { persons, args } = deps();
+        const outcome = await new IndividualStreamHandler(...args).apply(ctx, 'i-1', named);
         expect(outcome.kind).toBe('applied');
         expect(persons.upsert).toHaveBeenCalledWith(ctx, 'i-1', {
             name: 'Person A',
@@ -60,19 +39,6 @@ describe('IndividualStreamHandler', () => {
             isActive: true,
             counterpartyId: 3,
         });
-        expect(points.replaceErpPoints).toHaveBeenCalledWith(ctx, 'contactPerson', 7, [phonePoint]);
-    });
-
-    it('leaves channels alone without a list and clears them for an explicit empty list', async () => {
-        const absent = deps();
-        await new IndividualStreamHandler(...absent.args).apply(ctx, 'i-1', named);
-        expect(absent.points.replaceErpPoints).not.toHaveBeenCalled();
-        const empty = deps();
-        await new IndividualStreamHandler(...empty.args).apply(ctx, 'i-1', {
-            ...named,
-            contactInfos: [],
-        });
-        expect(empty.points.replaceErpPoints).toHaveBeenCalledWith(ctx, 'contactPerson', 7, []);
     });
 
     it('ignores a group', async () => {
@@ -138,13 +104,12 @@ describe.each([
     ['PersonalContactStreamHandler', PersonalContactStreamHandler],
 ])('%s', (_name, Handler) => {
     it('stores a person without an owner, composing the name from parts and keeping the description', async () => {
-        const { persons, points, args } = deps();
+        const { persons, args } = deps();
         await new Handler(...args).apply(ctx, 'p-1', {
             lastName: 'Last',
             firstName: 'First',
             description: 'Buyer',
             isActive: true,
-            contactInfos: [phoneInfo],
         });
         expect(persons.upsert).toHaveBeenCalledWith(ctx, 'p-1', {
             name: 'Last First',
@@ -152,7 +117,6 @@ describe.each([
             isActive: true,
             counterpartyId: null,
         });
-        expect(points.replaceErpPoints).toHaveBeenCalledWith(ctx, 'contactPerson', 7, [phonePoint]);
     });
 
     it('treats an absent isActive as inactive and a tombstone as deactivation', async () => {

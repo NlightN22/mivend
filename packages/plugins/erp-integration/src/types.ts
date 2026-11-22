@@ -166,7 +166,13 @@ export type InboundStream =
     | 'customer-claim'
     | 'sales-correction'
     | 'order-correction'
-    | 'order-change-result';
+    | 'order-change-result'
+    // Derived projection of an order (reserve, status, paid amount), keyed by the order's ERP id; see OrderStateStreamHandler.
+    | 'order-state'
+    // CurrencyChanged: the id space of every currency_id in other events.
+    | 'currency'
+    // Contact information set of one owner (key = owner uuid), parsed on our side; see ContactInfoStreamHandler.
+    | 'contact-info';
 
 // proto3 omits false-valued bool fields from the JSON, so an absent isActive means inactive:
 // read payload.isActive === true, never !== false. isDeleted is unaffected.
@@ -271,6 +277,9 @@ const ALL_INBOUND_STREAMS_MAP = {
     'sales-correction': true,
     'order-correction': true,
     'order-change-result': true,
+    'order-state': true,
+    currency: true,
+    'contact-info': true,
 } satisfies Record<InboundStream, true>;
 export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,
@@ -299,6 +308,7 @@ export const INBOX_CONTACT_STREAMS: readonly InboundStream[] = [
     'individual',
     'contact-person',
     'personal-contact',
+    'contact-info',
 ];
 export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
     stream => !INBOX_CRITICAL_STREAMS.includes(stream) && !INBOX_CONTACT_STREAMS.includes(stream),

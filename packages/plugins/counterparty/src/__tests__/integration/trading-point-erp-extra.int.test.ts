@@ -31,7 +31,6 @@ const sent: ErpPointExtra = {
     managerIds: '[]',
     pointTypeIds: '["type-unknown"]',
     salesChannels: '[]',
-    contactInfos: '[{"type":"phone","presentation":"a@example.com"}]',
 };
 
 beforeAll(async () => {

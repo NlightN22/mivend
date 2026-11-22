@@ -24,7 +24,10 @@ import {
 } from './erp-document-payload';
 import type { Payload } from './erp-document-payload';
 
-export function salesCorrectionFields(p: Payload): ErpHeaderFields<SalesCorrectionErp> {
+export function salesCorrectionFields(
+    p: Payload,
+    currency: string | null,
+): ErpHeaderFields<SalesCorrectionErp> {
     return {
         number: str(p.number) ?? '',
         date: time(p.date),
@@ -39,7 +42,7 @@ export function salesCorrectionFields(p: Payload): ErpHeaderFields<SalesCorrecti
         warehouseId: str(p.warehouseId),
         responsibleId: str(p.responsibleId),
         project: ref(p.project),
-        currency: str(p.currency),
+        currency,
         exchangeRate: flt(p.exchangeRate),
         exchangeMultiplicity: flt(p.exchangeMultiplicity),
         totalAmountMinor: moneyZero(p.totalAmount),

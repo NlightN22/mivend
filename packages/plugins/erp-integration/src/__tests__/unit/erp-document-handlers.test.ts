@@ -9,6 +9,8 @@ import { SalesCorrectionStreamHandler } from '../../handlers/sales-correction.ha
 const ctx = {} as RequestContext;
 const header = { version: '2026-11-08T10:00:00Z', updatedAt: '2026-11-08T10:00:00Z' };
 
+const currencies = { codeOf: vi.fn().mockResolvedValue(null) };
+
 function makeWriter(result = 'applied'): { write: Mock } {
     return { write: vi.fn().mockResolvedValue(result) };
 }
@@ -31,11 +33,10 @@ describe('customer-claim handler', () => {
 
     it('stores header, minor-unit money and both line sets with soft links as plain ids', async () => {
         const writer = makeWriter();
-        const outcome = await new CustomerClaimStreamHandler(writer as never).apply(
-            ctx,
-            'claim-1',
-            body,
-        );
+        const outcome = await new CustomerClaimStreamHandler(
+            writer as never,
+            currencies as never,
+        ).apply(ctx, 'claim-1', body);
 
         expect(outcome.kind).toBe('applied');
         const call = writer.write.mock.calls[0][1];
@@ -61,29 +62,49 @@ describe('customer-claim handler', () => {
         expect(call.lines[1].rows[0]).toMatchObject({ content: 'delivery', amountMinor: 300 });
     });
 
+    it('stores the currency code the currency stream resolves for currencyId', async () => {
+        const writer = makeWriter();
+        currencies.codeOf.mockResolvedValueOnce('USD');
+        await new CustomerClaimStreamHandler(writer as never, currencies as never).apply(
+            ctx,
+            'claim-1',
+            { ...body, currencyId: 'cur-1' },
+        );
+        expect(currencies.codeOf).toHaveBeenCalledWith(ctx, 'customer-claim claim-1', 'cur-1');
+        expect(writer.write.mock.calls[0][1].fields.currency).toBe('USD');
+    });
+
     it('sends empty line sets when the newer version has no lines, so old lines are cleared', async () => {
         const writer = makeWriter();
-        await new CustomerClaimStreamHandler(writer as never).apply(ctx, 'claim-1', {
-            ...header,
-            number: '100',
-        });
+        await new CustomerClaimStreamHandler(writer as never, currencies as never).apply(
+            ctx,
+            'claim-1',
+            {
+                ...header,
+                number: '100',
+            },
+        );
         const call = writer.write.mock.calls[0][1];
         expect(call.lines.map((l: { rows: unknown[] }) => l.rows.length)).toEqual([0, 0]);
     });
 
     it('treats is_deleted without a number as a tombstone that keeps stored data', async () => {
         const writer = makeWriter();
-        await new CustomerClaimStreamHandler(writer as never).apply(ctx, 'claim-1', {
-            ...header,
-            isDeleted: true,
-        });
+        await new CustomerClaimStreamHandler(writer as never, currencies as never).apply(
+            ctx,
+            'claim-1',
+            {
+                ...header,
+                isDeleted: true,
+            },
+        );
         const call = writer.write.mock.calls[0][1];
         expect(call).toMatchObject({ isDeleted: true, hasBody: false });
     });
 
     it('is a noop without a version and maps stale and unknown-deleted results to noops', async () => {
         const writer = makeWriter();
-        const handler = new CustomerClaimStreamHandler(writer as never);
+        const handler = new CustomerClaimStreamHandler(writer as never, currencies as never);
         expect((await handler.apply(ctx, 'c', { number: '1' })).kind).toBe('noop');
         expect(writer.write).not.toHaveBeenCalled();
 
@@ -97,26 +118,30 @@ describe('customer-claim handler', () => {
 describe('sales-correction handler', () => {
     it('stores before-values, shipped delta and the secondary lists as received', async () => {
         const writer = makeWriter();
-        await new SalesCorrectionStreamHandler(writer as never).apply(ctx, 'sc-1', {
-            ...header,
-            number: '7',
-            orderId: 'order-1',
-            totalAmount: 10,
-            traceability: [{ quantity: 1 }],
-            goods: [
-                {
-                    lineNumber: 3,
-                    productId: 'p1',
-                    unitCoefficient: 1,
-                    quantity: 4,
-                    price: 2.5,
-                    amount: 10,
-                    quantityBeforeCorrection: 5,
-                    amountBeforeCorrection: 12.5,
-                    shippedDelta: -1,
-                },
-            ],
-        });
+        await new SalesCorrectionStreamHandler(writer as never, currencies as never).apply(
+            ctx,
+            'sc-1',
+            {
+                ...header,
+                number: '7',
+                orderId: 'order-1',
+                totalAmount: 10,
+                traceability: [{ quantity: 1 }],
+                goods: [
+                    {
+                        lineNumber: 3,
+                        productId: 'p1',
+                        unitCoefficient: 1,
+                        quantity: 4,
+                        price: 2.5,
+                        amount: 10,
+                        quantityBeforeCorrection: 5,
+                        amountBeforeCorrection: 12.5,
+                        shippedDelta: -1,
+                    },
+                ],
+            },
+        );
         const call = writer.write.mock.calls[0][1];
         expect(call.fields).toMatchObject({ orderId: 'order-1', totalAmountMinor: 1000 });
         expect(call.fields.traceability).toEqual([{ quantity: 1 }]);

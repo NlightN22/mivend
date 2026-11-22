@@ -22,18 +22,17 @@ function makeHandler(
     handler: CounterpartyStreamHandler;
     counterpartyService: { upsertActiveState: ReturnType<typeof vi.fn> };
     userEnrichmentService: { findManagerLink: ReturnType<typeof vi.fn> };
-    contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
     persons: { linkWaitingContacts: ReturnType<typeof vi.fn> };
-    mirror: { write: ReturnType<typeof vi.fn> };
+    mirror: { write: ReturnType<typeof vi.fn>; seedContactFromMirror: ReturnType<typeof vi.fn> };
     team: { seedFromErp: ReturnType<typeof vi.fn> };
 } {
     const counterpartyService = { upsertActiveState };
     const userEnrichmentService = { findManagerLink };
-    const contactPoints = {
-        guarded: passthroughGuard,
-        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
+    const contactPoints = { guarded: passthroughGuard };
+    const mirror = {
+        write: vi.fn().mockResolvedValue(undefined),
+        seedContactFromMirror: vi.fn().mockResolvedValue(undefined),
     };
-    const mirror = { write: vi.fn().mockResolvedValue(undefined) };
     const team = { seedFromErp: vi.fn().mockResolvedValue(undefined) };
     const persons = { linkWaitingContacts: vi.fn().mockResolvedValue(undefined) };
     const handler = new CounterpartyStreamHandler(
@@ -53,7 +52,6 @@ function makeHandler(
         handler,
         counterpartyService,
         userEnrichmentService,
-        contactPoints,
         persons,
         mirror,
         team,
@@ -74,64 +72,39 @@ describe('CounterpartyStreamHandler', () => {
         });
     });
 
-    describe('contactInfos', () => {
-        it('replaces the ERP channels from a present list and keeps the legacy phone/e-mail written', async () => {
-            const { handler, counterpartyService, contactPoints } = makeHandler();
+    describe('contact fields (moved to the contact-info stream)', () => {
+        it('never writes address, phone, e-mail, group label or department, whatever the payload carries', async () => {
+            const { handler, counterpartyService, mirror } = makeHandler();
             await handler.apply(ctx, 'cp-1', {
                 name: 'Acme',
-                phone: '+7 912 345-67-89',
-                contactInfos: [
-                    {
-                        type: 'АдресЭлектроннойПочты',
-                        kindName: 'Office',
-                        presentation: 'a@example.com',
-                    },
-                    { type: 'Адрес', kindName: 'Post', presentation: 'Street 1' },
-                ],
+                legalAddress: 'Legal St 1',
+                phone: '+70000000000',
+                officialEmail: 'a@example.com',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+                contactInfos: [{ type: 'Телефон', presentation: '+7 912' }],
             });
-            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
-                ctx,
-                'counterparty',
-                'cp-1',
-                [
-                    {
-                        type: 'email',
-                        value: 'a@example.com',
-                        label: 'Office',
-                        isPrimary: false,
-                        comment: null,
-                    },
-                    {
-                        type: 'address',
-                        value: 'Street 1',
-                        label: 'Post',
-                        isPrimary: false,
-                        comment: null,
-                    },
-                ],
-            );
-            expect(counterpartyService.upsertActiveState.mock.calls[0][2].phone).toBe(
-                '+7 912 345-67-89',
-            );
+            const fields = counterpartyService.upsertActiveState.mock.calls[0][2];
+            for (const key of [
+                'legalAddress',
+                'factualAddress',
+                'phone',
+                'officialEmail',
+                'erpGroupLabel',
+                'departmentId',
+            ]) {
+                expect(fields).not.toHaveProperty(key);
+            }
+            const mirrored = mirror.write.mock.calls[0][2];
+            for (const key of ['legalAddress', 'phone', 'officialEmail', 'contactInfos']) {
+                expect(mirrored[key]).toBeUndefined();
+            }
         });
 
-        it('does not wipe channels when the list is absent, and clears them on an explicit empty list', async () => {
-            const { handler, contactPoints } = makeHandler();
+        it('seeds the empty phone and e-mail from the mirror after each named event', async () => {
+            const { handler, mirror } = makeHandler();
             await handler.apply(ctx, 'cp-1', { name: 'Acme' });
-            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
-            await handler.apply(ctx, 'cp-1', { name: 'Acme', contactInfos: [] });
-            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
-                ctx,
-                'counterparty',
-                'cp-1',
-                [],
-            );
-        });
-
-        it('ignores the list on a nameless tombstone', async () => {
-            const { handler, contactPoints } = makeHandler();
-            await handler.apply(ctx, 'cp-1', { isDeleted: true, contactInfos: [] });
-            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+            expect(mirror.seedContactFromMirror).toHaveBeenCalledWith(ctx, 'cp-1');
         });
     });
 
@@ -142,7 +115,6 @@ describe('CounterpartyStreamHandler', () => {
                 name: 'Acme',
                 inn: '7700000001',
                 managerIds: ['user-1', 'user-2'],
-                contactInfos: [{ type: 'Телефон', presentation: '+70000000001' }],
             });
             expect(mirror.write).toHaveBeenCalledWith(
                 ctx,
@@ -161,11 +133,10 @@ describe('CounterpartyStreamHandler', () => {
             expect(mirror.write).not.toHaveBeenCalled();
         });
 
-        it('replaces contact channels and seeds the team only when the record is seen for the first time', async () => {
+        it('seeds the team only when the record is seen for the first time', async () => {
             const existing = vi.fn(async () => true);
-            const { handler, contactPoints, team } = makeHandler(existing);
-            await handler.apply(ctx, 'cp-1', { name: 'Acme', contactInfos: [] });
-            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
+            const { handler, team } = makeHandler(existing);
+            await handler.apply(ctx, 'cp-1', { name: 'Acme' });
             expect(team.seedFromErp).not.toHaveBeenCalled();
         });
 
@@ -199,14 +170,8 @@ describe('CounterpartyStreamHandler', () => {
                 name: null,
                 isActive: false,
                 inn: undefined,
-                erpGroupLabel: undefined,
-                departmentId: undefined,
                 assignedManagerId: undefined,
                 managerErpId: undefined,
-                legalAddress: undefined,
-                factualAddress: undefined,
-                phone: undefined,
-                officialEmail: undefined,
             },
             expect.any(Function),
         );
@@ -224,14 +189,8 @@ describe('CounterpartyStreamHandler', () => {
                 name: 'Acme Corp',
                 isActive: false,
                 inn: undefined,
-                erpGroupLabel: undefined,
-                departmentId: undefined,
                 assignedManagerId: undefined,
                 managerErpId: undefined,
-                legalAddress: null,
-                factualAddress: null,
-                phone: null,
-                officialEmail: null,
             },
             expect.any(Function),
         );
@@ -296,17 +255,13 @@ describe('CounterpartyStreamHandler', () => {
         );
     });
 
-    // inn, erpGroupLabel and departmentId are real fields in @nlightn22/event-contracts 0.39.0.
-    // Do not skip them based on older notes claiming they are absent.
-    it('passes through inn/erpGroupLabel/departmentId when present', async () => {
+    it('passes through inn when present', async () => {
         const { handler, counterpartyService } = makeHandler();
 
         await handler.apply(ctx, 'cp-1', {
             name: 'Acme Corp',
             isActive: true,
             inn: '7701234567',
-            erpGroupLabel: 'Wholesale',
-            departmentId: 'dept-1',
         });
 
         expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
@@ -316,14 +271,8 @@ describe('CounterpartyStreamHandler', () => {
                 name: 'Acme Corp',
                 isActive: true,
                 inn: '7701234567',
-                erpGroupLabel: 'Wholesale',
-                departmentId: 'dept-1',
                 assignedManagerId: undefined,
                 managerErpId: undefined,
-                legalAddress: null,
-                factualAddress: null,
-                phone: null,
-                officialEmail: null,
             },
             expect.any(Function),
         );
@@ -331,27 +280,23 @@ describe('CounterpartyStreamHandler', () => {
 
     // These are real optional-scalar fields — absence must read as "leave unchanged"
     // (undefined), never fabricated as null just because the key wasn't sent.
-    it('passes undefined for inn/erpGroupLabel/departmentId when absent from the payload', async () => {
+    it('passes undefined for inn when absent from the payload', async () => {
         const { handler, counterpartyService } = makeHandler();
 
         await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true });
 
         const call = counterpartyService.upsertActiveState.mock.calls[0][2];
         expect(call.inn).toBeUndefined();
-        expect(call.erpGroupLabel).toBeUndefined();
-        expect(call.departmentId).toBeUndefined();
     });
 
     // An explicit null (ERP cleared the field) must be applied, not treated as "leave unchanged".
-    it('passes through an explicit null for inn/erpGroupLabel/departmentId', async () => {
+    it('passes through an explicit null for inn', async () => {
         const { handler, counterpartyService } = makeHandler();
 
         await handler.apply(ctx, 'cp-1', {
             name: 'Acme Corp',
             isActive: true,
             inn: null,
-            erpGroupLabel: null,
-            departmentId: null,
         });
 
         expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
@@ -361,101 +306,11 @@ describe('CounterpartyStreamHandler', () => {
                 name: 'Acme Corp',
                 isActive: true,
                 inn: null,
-                erpGroupLabel: null,
-                departmentId: null,
                 assignedManagerId: undefined,
                 managerErpId: undefined,
-                legalAddress: null,
-                factualAddress: null,
-                phone: null,
-                officialEmail: null,
             },
             expect.any(Function),
         );
-    });
-
-    // factualAddress, phone and officialEmail are optional scalars added in 0.39.0; legalAddress is field 15.
-    // Presence and absence are distinct, as with inn/erpGroupLabel/departmentId.
-    it('passes through legalAddress/factualAddress/phone/officialEmail when present', async () => {
-        const { handler, counterpartyService } = makeHandler();
-
-        await handler.apply(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: true,
-            legalAddress: 'Legal St 1',
-            factualAddress: 'Actual Ave 2',
-            phone: '+70000000000',
-            officialEmail: 'contact@acme.example',
-        });
-
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'cp-1',
-            expect.objectContaining({
-                legalAddress: 'Legal St 1',
-                factualAddress: 'Actual Ave 2',
-                phone: '+70000000000',
-                officialEmail: 'contact@acme.example',
-            }),
-            expect.any(Function),
-        );
-    });
-
-    // Named event = full state: absent or empty contact fields clear; a tombstone leaves them alone (#259).
-    it('clears legalAddress/factualAddress/phone/officialEmail when absent or empty on a named event', async () => {
-        const { handler, counterpartyService } = makeHandler();
-
-        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true, phone: '' });
-        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true, phone: '' });
-
-        for (const [, , call] of counterpartyService.upsertActiveState.mock.calls) {
-            expect(call).toMatchObject({
-                legalAddress: null,
-                factualAddress: null,
-                phone: null,
-                officialEmail: null,
-            });
-        }
-    });
-
-    it('passes through an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {
-        const { handler, counterpartyService } = makeHandler();
-
-        await handler.apply(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: true,
-            legalAddress: null,
-            factualAddress: null,
-            phone: null,
-            officialEmail: null,
-        });
-
-        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'cp-1',
-            expect.objectContaining({
-                legalAddress: null,
-                factualAddress: null,
-                phone: null,
-                officialEmail: null,
-            }),
-            expect.any(Function),
-        );
-    });
-
-    // notificationPhone is deliberately never read (see counterparty.handler.ts's own field
-    // accounting comment) — must never leak into upsertActiveState even when present.
-    it('never forwards notificationPhone even when present in the payload', async () => {
-        const { handler, counterpartyService } = makeHandler();
-
-        await handler.apply(ctx, 'cp-1', {
-            name: 'Acme Corp',
-            isActive: true,
-            notificationPhone: '+79999999999',
-        });
-
-        const call = counterpartyService.upsertActiveState.mock.calls[0][2];
-        expect(call.notificationPhone).toBeUndefined();
     });
 
     // findManagerLink has three outcomes: known-but-unlinked must not be retried like never-seen.

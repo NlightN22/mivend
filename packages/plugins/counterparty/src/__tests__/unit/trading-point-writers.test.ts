@@ -9,6 +9,7 @@ const WRITERS: Record<string, 'bumps' | 'inbound' | 'helper'> = {
     'trading-point-customer.service.ts': 'bumps',
     'trading-point-version.service.ts': 'helper',
     'trading-point-location.ts': 'inbound',
+    'trading-point-contact-facts.service.ts': 'inbound',
 };
 // Within trading-point.service.ts, the inbound-only methods (no bump, no send).
 const INBOUND_METHODS = ['upsertFromStream', 'markErpDeleted', 'deactivate'];

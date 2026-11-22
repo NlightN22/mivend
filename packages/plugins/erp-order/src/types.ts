@@ -40,9 +40,11 @@ declare module '@vendure/core' {
         pendingCounterpartyErpId?: string | null;
         // Set when an external order's event had lines for products not imported yet (skipped).
         externalLinesIncomplete?: boolean;
-        // OrderChanged.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
+        // OrderState.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
         erpPaidAmount?: number | null;
-        // OrderChanged accounting flags, linked-document flags and per-line shipped-in-settlements, JSON as received.
+        // OrderChanged.reserve_until: kept on the order because the reserve rows come from order-state.
+        erpReserveUntil?: Date | null;
+        // OrderState accounting flags, linked-document flags and per-line shipped-in-settlements, JSON as received.
         erpAccounting?: string | null;
         erpLinkedDocuments?: string | null;
         erpShippedInSettlements?: string | null;

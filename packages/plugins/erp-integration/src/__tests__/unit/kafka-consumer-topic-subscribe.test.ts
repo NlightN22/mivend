@@ -95,6 +95,9 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 'sales-correction': 'x-sales-correction',
                 'order-correction': 'x-order-correction',
                 'order-change-result': 'erp.order.events.v1',
+                'order-state': 'erp.order-state.events.v1',
+                currency: 'erp.currency.events.v1',
+                'contact-info': 'erp.contact-info.events.v1',
                 individual: 'erp.individual.events.v1',
                 'contact-person': 'erp.contact-person.events.v1',
                 'personal-contact': 'erp.personal-contact.events.v1',
@@ -118,7 +121,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(46);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -133,7 +136,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(46);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
         expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
             expect.objectContaining({ topic: 'orphan-topic' }),
         );
@@ -160,7 +163,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(46);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });

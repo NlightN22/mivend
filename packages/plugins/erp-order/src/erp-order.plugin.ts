@@ -195,6 +195,15 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
                 readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Paid per ERP (minor units)' }],
             },
+            {
+                // Kept on the order because the reserve rows arrive on a separate stream.
+                name: 'erpReserveUntil',
+                type: 'datetime',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP reserve until' }],
+            },
             ...(
                 [
                     ['erpAccounting', 'ERP accounting flags (JSON)'],

@@ -1,4 +1,3 @@
-import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -14,7 +13,6 @@ function makeHandler(
     markErpDeleted = vi.fn().mockResolvedValue(false),
 ): {
     handler: PointOfSaleStreamHandler;
-    contactPoints: { replaceErpPointsByErpId: ReturnType<typeof vi.fn> };
     tradingPointService: {
         findCounterpartyRefByErpId: ReturnType<typeof vi.fn>;
         upsertFromStream: ReturnType<typeof vi.fn>;
@@ -28,65 +26,29 @@ function makeHandler(
         deactivate,
         markErpDeleted,
     };
-    const contactPoints = {
-        guarded: passthroughGuard,
-        replaceErpPointsByErpId: vi.fn().mockResolvedValue(true),
-    };
-    const handler = new PointOfSaleStreamHandler(
-        tradingPointService as never,
-        contactPoints as never,
-    );
-    return { handler, tradingPointService, contactPoints };
+    const handler = new PointOfSaleStreamHandler(tradingPointService as never);
+    return { handler, tradingPointService };
 }
 
 describe('PointOfSaleStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    describe('contactInfos', () => {
-        const named = { name: 'Point', counterpartyId: 'cp-1', address: 'Street 1, 10' };
+    // Address, phone and channels come from the contact-info stream: a point event must never clear them.
+    it('sends no address or phone, so a stored one is kept', async () => {
+        const { handler, tradingPointService } = makeHandler();
 
-        it('replaces the ERP channels of the point from a present list, routing the ERP type names', async () => {
-            const { handler, contactPoints } = makeHandler();
-            await handler.apply(ctx, 'pos-1', {
-                ...named,
-                contactInfos: [
-                    {
-                        type: 'Телефон',
-                        kindName: 'Work',
-                        isPrimary: true,
-                        presentation: '+7 912 345-67-89',
-                    },
-                ],
-            });
-            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
-                ctx,
-                'tradingPoint',
-                'pos-1',
-                [
-                    {
-                        type: 'phone',
-                        value: '+7 912 345-67-89',
-                        label: 'Work',
-                        isPrimary: true,
-                        comment: null,
-                    },
-                ],
-            );
+        await handler.apply(ctx, 'pos-1', {
+            name: 'Kiosk A',
+            counterpartyId: 'cp-erp-1',
+            isActive: true,
+            address: 'Street 1',
+            contactPhone: '+7 999',
         });
 
-        it('treats an explicitly empty list as a replace with nothing, and an absent list as no change', async () => {
-            const { handler, contactPoints } = makeHandler();
-            await handler.apply(ctx, 'pos-1', { ...named, contactInfos: [] });
-            expect(contactPoints.replaceErpPointsByErpId).toHaveBeenCalledWith(
-                ctx,
-                'tradingPoint',
-                'pos-1',
-                [],
-            );
-            contactPoints.replaceErpPointsByErpId.mockClear();
-            await handler.apply(ctx, 'pos-1', named);
-            expect(contactPoints.replaceErpPointsByErpId).not.toHaveBeenCalled();
-        });
+        const fields = tradingPointService.upsertFromStream.mock.calls[0][2];
+        expect(fields).not.toHaveProperty('address');
+        expect(fields).not.toHaveProperty('contactPhone');
+        expect(fields.extra).not.toHaveProperty('contactInfos');
     });
 
     // Audit HIGH: a bare `return` here previously left a deleted-in-ERP point permanently active.
@@ -101,7 +63,7 @@ describe('PointOfSaleStreamHandler', () => {
         expect(tradingPointService.upsertFromStream).not.toHaveBeenCalled();
     });
 
-    it('resolves the counterparty and upserts with address/latitude/longitude/contactPhone', async () => {
+    it('resolves the counterparty and upserts with latitude/longitude', async () => {
         const { handler, tradingPointService } = makeHandler();
 
         await handler.apply(ctx, 'pos-1', {
@@ -109,10 +71,8 @@ describe('PointOfSaleStreamHandler', () => {
             code: 'K-001',
             counterpartyId: 'cp-erp-1',
             isActive: true,
-            address: '655000, Хакасия Респ',
             latitude: 53.1,
             longitude: 91.4,
-            contactPhone: '+7 (999) 123-45-66',
         });
 
         expect(tradingPointService.findCounterpartyRefByErpId).toHaveBeenCalledWith(
@@ -125,10 +85,8 @@ describe('PointOfSaleStreamHandler', () => {
             counterpartyId: 'cp-local-1',
             servicingBranchId: 'branch-a',
             isActive: true,
-            address: '655000, Хакасия Респ',
             latitude: 53.1,
             longitude: 91.4,
-            contactPhone: '+7 (999) 123-45-66',
         });
     });
 
@@ -150,7 +108,6 @@ describe('PointOfSaleStreamHandler', () => {
 
     it('keeps the unread fields as sent: lists as untouched JSON, absent ones cleared, missing region still stored', async () => {
         const { handler, tradingPointService } = makeHandler();
-        const contactInfos = [{ type: 'phone', kindName: 'Main', presentation: 'a@example.com' }];
 
         await handler.apply(ctx, 'pos-1', {
             name: 'Kiosk A',
@@ -159,7 +116,6 @@ describe('PointOfSaleStreamHandler', () => {
             area: 12.5,
             hasCompetitors: true,
             pointTypeIds: ['type-1', 'type-unknown'],
-            contactInfos,
         });
 
         expect(tradingPointService.upsertFromStream.mock.calls[0][2].extra).toMatchObject({
@@ -169,7 +125,6 @@ describe('PointOfSaleStreamHandler', () => {
             mainManagerId: null,
             pointTypeIds: '["type-1","type-unknown"]',
             managerIds: '[]',
-            contactInfos: JSON.stringify(contactInfos),
         });
     });
 
@@ -204,26 +159,20 @@ describe('PointOfSaleStreamHandler', () => {
         );
     });
 
-    // A named event is full state: absent/empty address, coordinates and phone mean cleared (#259).
-    it('sends cleared values for address/latitude/longitude/contactPhone when absent or empty', async () => {
+    // A named event is full state for the fields it still carries: absent coordinates mean cleared (#259).
+    it('sends cleared coordinates when absent', async () => {
         const { handler, tradingPointService } = makeHandler();
         const payload = {
             name: 'Kiosk A',
             counterpartyId: 'cp-erp-1',
             isActive: true,
-            contactPhone: '',
         };
 
         await handler.apply(ctx, 'pos-1', payload);
         await handler.apply(ctx, 'pos-1', payload);
 
         for (const [, , fields] of tradingPointService.upsertFromStream.mock.calls) {
-            expect(fields).toMatchObject({
-                address: '',
-                latitude: null,
-                longitude: null,
-                contactPhone: null,
-            });
+            expect(fields).toMatchObject({ latitude: null, longitude: null });
         }
     });
 

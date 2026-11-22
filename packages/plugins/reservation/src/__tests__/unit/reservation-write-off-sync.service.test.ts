@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { Order } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { ReservationOrderStateSyncService } from '../../reservation-order-state-sync.service';
 import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync.service';
 import { ReservationReconciliationIssueService } from '../../reservation-reconciliation-issue.service';
 import { ReservationService } from '../../reservation.service';
@@ -26,7 +27,7 @@ function loadedOrder(id: string, customFields: Record<string, unknown>): Order {
     return entity;
 }
 
-let erpReserve: { record: ReturnType<typeof vi.fn> };
+let erpReserve: { record: ReturnType<typeof vi.fn>; setReserveUntil?: ReturnType<typeof vi.fn> };
 
 describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     let orderRepo: {
@@ -1115,6 +1116,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         reportUnresolvedProductMapping: ReturnType<typeof vi.fn>;
     };
     let service: ReservationWriteOffSyncService;
+    let stateService: ReservationOrderStateSyncService;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
@@ -1161,81 +1163,60 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             { dictionary: async () => testOrderStatusDictionary() } as never,
             erpReserve as never,
         );
+        stateService = new ReservationOrderStateSyncService(
+            connection as unknown as TransactionalConnection,
+            service,
+            orderErpStatus as never,
+            { dictionary: async () => testOrderStatusDictionary() } as never,
+            erpReserve as never,
+        );
+    });
+
+    const changed = (extra: Record<string, unknown> = {}) => ({
+        orderUuid: null,
+        orderEntityId: 'erp-order-1',
+        status: '',
+        contractId: null,
+        ...extra,
+    });
+    const state = (extra: Record<string, unknown> = {}) => ({
+        orderEntityId: 'erp-order-1',
+        reservedLines: [],
+        derivedStatus: null,
+        ...extra,
+    });
+    const heldReservation = (quantity: number) => ({
+        id: 'res-1',
+        orderId: 'order-1',
+        productVariantId: 'v-1',
+        quantity,
+        status: 'active',
     });
 
     // An order-changed event can race ahead of local order creation, so it must retry;
     // never a silent, permanent skip.
     it('throws when no Order is found for orderEntityId, instead of silently skipping', async () => {
         rawQuery.mockResolvedValue([]);
-        await expect(
-            service.handleOrderChanged(ctx, {
-                orderUuid: null,
-                orderEntityId: 'erp-order-1',
-                status: '',
-                reservedLines: [],
-                contractId: null,
-                derivedStatus: null,
-            }),
-        ).rejects.toThrow(/no Order found/);
+        await expect(service.handleOrderChanged(ctx, changed())).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
     });
 
-    it('records the ERP reserve per variant with the order-level reserve_until', async () => {
+    it('stores the order-level reserve_until on the order and on the reserve rows', async () => {
         const reserveUntil = new Date('2026-11-01T00:00:00Z');
-        const reservedLines = [{ productVariantId: 'v-1', reservedQuantity: 3 }];
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines,
-            contractId: null,
-            derivedStatus: null,
-            reserveUntil,
-        });
-        expect(erpReserve.record).toHaveBeenCalledWith(
-            ctx,
-            'order-1',
-            reservedLines,
-            reserveUntil,
-            true,
-        );
+        erpReserve.setReserveUntil = vi.fn(async () => undefined);
+        await service.handleOrderChanged(ctx, changed({ reserveUntil }));
+        expect(orderRepo.update.mock.calls[0][1].customFields.erpReserveUntil).toBe(reserveUntil);
+        expect(erpReserve.setReserveUntil!).toHaveBeenCalledWith(ctx, 'order-1', reserveUntil);
     });
 
-    it('does not replace the stored reserve set when the handler discarded an event line', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            linesDiscarded: true,
-            contractId: null,
-            derivedStatus: null,
-        });
-
-        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, false);
-    });
-
-    it('passes a null reserve_until when the event carried none', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        });
-        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, true);
+    it('writes no reserve rows and no derived status from an order-changed event', async () => {
+        await service.handleOrderChanged(ctx, changed());
+        expect(erpReserve.record).not.toHaveBeenCalled();
+        expect(orderErpStatus.apply).not.toHaveBeenCalled();
     });
 
     it('persists status onto Order.customFields.erpOrderStatus, never erpRegistrationStatus', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: 'В обработке',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed({ status: 'В обработке' }));
 
         expect(orderRepo.update).toHaveBeenCalledWith(
             'order-1',
@@ -1247,72 +1228,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         expect(customFields.erpRegistrationStatus).toBeUndefined();
     });
 
-    it.each([
-        ['PICKING', false],
-        ['APPROVED', true],
-    ])(
-        'with derived status %s a zero ERP reserve reports a mismatch and releases only by the order scheme: %s',
-        async (derivedStatus, reported) => {
-            reservationRepo.find.mockResolvedValue([
-                {
-                    id: 'res-1',
-                    orderId: 'order-1',
-                    productVariantId: 'v-1',
-                    quantity: 2,
-                    status: 'active',
-                },
-            ]);
-
-            await service.handleOrderChanged(ctx, {
-                orderUuid: null,
-                orderEntityId: 'erp-order-1',
-                status: 'Согласован',
-                reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 0 }],
-                contractId: null,
-                derivedStatus: derivedStatus as never,
-            });
-
-            if (reported) {
-                expect(reservationRepo.save).not.toHaveBeenCalled();
-            } else {
-                expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
-                    expect.objectContaining({ status: 'released' }),
-                );
-            }
-            expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledTimes(
-                reported ? 1 : 0,
-            );
-        },
-    );
-
-    it('writes only the paid amount key when present, never when absent', async () => {
-        const base = {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        };
-        await service.handleOrderChanged(ctx, { ...base, paidAmountMinor: 5000 });
-        await service.handleOrderChanged(ctx, { ...base, paidAmountMinor: null });
-
-        expect(orderRepo.update.mock.calls[0][1].customFields).toEqual({
-            erpOrderStatus: '',
-            erpPaidAmount: 5000,
-        });
-        expect(orderRepo.update.mock.calls[1][1].customFields).toEqual({ erpOrderStatus: '' });
-    });
-
     it('persists contractId when present', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: 'contract-guid-1',
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed({ contractId: 'contract-guid-1' }));
 
         expect(orderRepo.update).toHaveBeenCalledWith(
             'order-1',
@@ -1330,14 +1247,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             customFields: { erpContractId: 'contract-guid-1' },
         });
 
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed());
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
         expect(customFields).not.toHaveProperty('erpContractId');
@@ -1345,145 +1255,48 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
 
     // Lost update seen live (#208): the stale snapshot's PENDING erpStatus overwrote the SENT_TO_ERP
     // written concurrently by ErpOrderService.
-    it('writes only the changed fields, never a snapshot of erpStatus/erpOrderId', async () => {
+    it('writes only the changed fields, never a snapshot of erpStatus', async () => {
         orderRepo.findOne.mockResolvedValue({
             id: 'order-1',
-            customFields: { erpStatus: 'PENDING', erpOrderId: null },
+            customFields: { erpStatus: 'PENDING', erpOrderId: 'erp-order-1' },
         });
 
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: 'X',
-            reservedLines: [],
-            contractId: 'c-1',
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed({ status: 'X', contractId: 'c-1' }));
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
         expect(customFields).toEqual({ erpOrderStatus: 'X', erpContractId: 'c-1' });
     });
 
+    // The order-state event finds the order by this id, so the first order-changed fills it in.
+    it('records the ERP order id when the order has none yet', async () => {
+        await service.handleOrderChanged(ctx, changed());
+        expect(orderRepo.update.mock.calls[0][1].customFields.erpOrderId).toBe('erp-order-1');
+    });
+
     // #218: document_number rides on every order-changed; stale events are dropped by the inbox version check.
     it('writes erpRegistrationDocumentNumber when a non-empty documentNumber arrives', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: 'X',
-            reservedLines: [],
-            contractId: null,
-            documentNumber: 'DOC-0000020',
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(
+            ctx,
+            changed({ status: 'X', documentNumber: 'DOC-0000020' }),
+        );
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
         expect(customFields).toEqual({
             erpOrderStatus: 'X',
             erpRegistrationDocumentNumber: 'DOC-0000020',
+            erpOrderId: 'erp-order-1',
         });
     });
 
     it.each([[null], [undefined], ['']])(
         'never clears a known document number for documentNumber=%s',
         async documentNumber => {
-            await service.handleOrderChanged(ctx, {
-                orderUuid: null,
-                orderEntityId: 'erp-order-1',
-                status: 'X',
-                reservedLines: [],
-                contractId: null,
-                documentNumber,
-                derivedStatus: null,
-            });
+            await service.handleOrderChanged(ctx, changed({ status: 'X', documentNumber }));
 
             const [, { customFields }] = orderRepo.update.mock.calls[0];
             expect(customFields).not.toHaveProperty('erpRegistrationDocumentNumber');
         },
     );
-
-    it('releases a reservation whose quantity matches the reported reservedQuantity', async () => {
-        reservationRepo.find.mockResolvedValue([
-            {
-                id: 'res-1',
-                orderId: 'order-1',
-                productVariantId: 'v-1',
-                quantity: 5,
-                status: 'active',
-            },
-        ]);
-        reservationRepo.count.mockResolvedValue(0);
-
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: 'Проведён',
-            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
-            contractId: null,
-            derivedStatus: null,
-        });
-
-        expect(reservationRepo.save).toHaveBeenCalledTimes(1);
-        const [saved] = reservationRepo.save.mock.calls[0];
-        expect(saved[0]).toEqual(expect.objectContaining({ status: 'released' }));
-        expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ id: 'order-1' }),
-            'RELEASED',
-        );
-    });
-
-    it('releases only the covered part on a partial reserve and reports the difference', async () => {
-        reservationRepo.find.mockResolvedValue([
-            {
-                id: 'res-1',
-                orderId: 'order-1',
-                productVariantId: 'v-1',
-                quantity: 5,
-                status: 'active',
-            },
-        ]);
-
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
-            contractId: null,
-            derivedStatus: null,
-        });
-
-        const saved = reservationRepo.save.mock.calls.map(c => c[0]);
-        expect(saved).toContainEqual(expect.objectContaining({ quantity: 2, status: 'active' }));
-        expect(saved).toContainEqual(expect.objectContaining({ quantity: 3, status: 'released' }));
-        expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({
-                orderId: 'order-1',
-                productVariantId: 'v-1',
-                localQuantity: 5,
-                erpQuantity: 3,
-                orderEntityId: 'erp-order-1',
-            }),
-        );
-    });
-
-    // The stream fires repeatedly; a repeat with the same reservedQuantity must stay a no-op.
-    // Release matching only acts on status 'active' rows, which keeps repeats safe.
-    it('is idempotent: a repeat with no remaining active reservations is a no-op', async () => {
-        reservationRepo.find.mockResolvedValue([]);
-
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: 'Проведён',
-            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
-            contractId: null,
-            derivedStatus: null,
-        });
-
-        expect(reservationRepo.save).not.toHaveBeenCalled();
-        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
-    });
 
     // Same regression as handleOrderRegistrationResult's own test above — handleOrderChanged
     // loads the Order the same unhydrated way and must use `.update()`, never `.save(order)`.
@@ -1493,14 +1306,10 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         orderRepo.save.mockImplementation(async (o: unknown) => ({ ...(o as object) }));
 
         await expect(
-            service.handleOrderChanged(ctx, {
-                orderUuid: null,
-                orderEntityId: 'erp-order-1',
-                status: 'В обработке',
-                reservedLines: [],
-                contractId: 'contract-guid-1',
-                derivedStatus: null,
-            }),
+            service.handleOrderChanged(
+                ctx,
+                changed({ status: 'В обработке', contractId: 'contract-guid-1' }),
+            ),
         ).resolves.toBeUndefined();
 
         expect(orderRepo.save).not.toHaveBeenCalled();
@@ -1518,14 +1327,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
     // order_uuid is present only for orders registered through our integration; it is the
     // preferred correlation key, so findOrderIdByErpId must not run when it resolves the order.
     it('resolves the order via orderUuid when present, never touching findOrderIdByErpId', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: 'order-uuid-1',
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed({ orderUuid: 'order-uuid-1' }));
 
         expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsUuid'), [
             'order-uuid-1',
@@ -1539,34 +1341,162 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
     // orderUuid absent (an order not registered through our integration) must still fall back to
     // the existing orderEntityId path unchanged.
     it('falls back to orderEntityId when orderUuid is absent', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: null,
-        });
+        await service.handleOrderChanged(ctx, changed());
 
         expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsErporderid'), [
             'erp-order-1',
         ]);
     });
 
-    it('hands the derived status to the status service with the resolved order', async () => {
-        await service.handleOrderChanged(ctx, {
-            orderUuid: null,
-            orderEntityId: 'erp-order-1',
-            status: '',
-            reservedLines: [],
-            contractId: null,
-            derivedStatus: 'PICKING',
+    describe('handleOrderState', () => {
+        it('retries instead of skipping when no Order has this ERP id yet', async () => {
+            rawQuery.mockResolvedValue([]);
+            await expect(stateService.handleOrderState(ctx, state())).rejects.toThrow(
+                /no Order found/,
+            );
         });
-        expect(orderErpStatus.apply).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ id: 'order-1' }),
-            'PICKING',
-            null,
+
+        it('records the ERP reserve per variant with the reserve_until kept on the order', async () => {
+            const reserveUntil = new Date('2026-11-01T00:00:00Z');
+            orderRepo.findOne.mockResolvedValue({
+                id: 'order-1',
+                customFields: { erpReserveUntil: reserveUntil },
+            });
+            const reservedLines = [{ productVariantId: 'v-1', reservedQuantity: 3 }];
+            await stateService.handleOrderState(ctx, state({ reservedLines }));
+            expect(erpReserve.record).toHaveBeenCalledWith(
+                ctx,
+                'order-1',
+                reservedLines,
+                reserveUntil,
+                true,
+            );
+        });
+
+        it('does not replace the stored reserve set when the handler discarded an event line', async () => {
+            await stateService.handleOrderState(ctx, state({ linesDiscarded: true }));
+            expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, false);
+        });
+
+        it('passes a null reserve_until when the order has none', async () => {
+            await stateService.handleOrderState(ctx, state());
+            expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, true);
+        });
+
+        it.each([
+            ['PICKING', false],
+            ['APPROVED', true],
+        ])(
+            'with derived status %s a zero ERP reserve reports a mismatch and releases only by the order scheme: %s',
+            async (derivedStatus, reported) => {
+                reservationRepo.find.mockResolvedValue([heldReservation(2)]);
+
+                await stateService.handleOrderState(
+                    ctx,
+                    state({
+                        reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 0 }],
+                        derivedStatus,
+                    }),
+                );
+
+                if (reported) {
+                    expect(reservationRepo.save).not.toHaveBeenCalled();
+                } else {
+                    expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
+                        expect.objectContaining({ status: 'released' }),
+                    );
+                }
+                expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledTimes(
+                    reported ? 1 : 0,
+                );
+            },
         );
+
+        it('writes only the paid amount key when present, never when absent', async () => {
+            await stateService.handleOrderState(ctx, state({ paidAmountMinor: 5000 }));
+            await stateService.handleOrderState(ctx, state({ paidAmountMinor: null }));
+
+            expect(orderRepo.update).toHaveBeenCalledTimes(1);
+            expect(orderRepo.update.mock.calls[0][1].customFields).toEqual({ erpPaidAmount: 5000 });
+        });
+
+        it('stores the received accounting facts and never touches the order status fields', async () => {
+            await stateService.handleOrderState(
+                ctx,
+                state({ erpFacts: { erpLinkedDocuments: '[{"kind":"realization"}]' } }),
+            );
+            expect(orderRepo.update.mock.calls[0][1].customFields).toEqual({
+                erpLinkedDocuments: '[{"kind":"realization"}]',
+            });
+        });
+
+        it('releases a reservation whose quantity matches the reported reservedQuantity', async () => {
+            reservationRepo.find.mockResolvedValue([heldReservation(5)]);
+            reservationRepo.count.mockResolvedValue(0);
+
+            await stateService.handleOrderState(
+                ctx,
+                state({ reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }] }),
+            );
+
+            expect(reservationRepo.save).toHaveBeenCalledTimes(1);
+            const [saved] = reservationRepo.save.mock.calls[0];
+            expect(saved[0]).toEqual(expect.objectContaining({ status: 'released' }));
+            expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({ id: 'order-1' }),
+                'RELEASED',
+            );
+        });
+
+        it('releases only the covered part on a partial reserve and reports the difference', async () => {
+            reservationRepo.find.mockResolvedValue([heldReservation(5)]);
+
+            await stateService.handleOrderState(
+                ctx,
+                state({ reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }] }),
+            );
+
+            const saved = reservationRepo.save.mock.calls.map(c => c[0]);
+            expect(saved).toContainEqual(
+                expect.objectContaining({ quantity: 2, status: 'active' }),
+            );
+            expect(saved).toContainEqual(
+                expect.objectContaining({ quantity: 3, status: 'released' }),
+            );
+            expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    orderId: 'order-1',
+                    productVariantId: 'v-1',
+                    localQuantity: 5,
+                    erpQuantity: 3,
+                    orderEntityId: 'erp-order-1',
+                }),
+            );
+        });
+
+        // The stream fires repeatedly; a repeat with the same reservedQuantity must stay a no-op.
+        it('is idempotent: a repeat with no remaining active reservations is a no-op', async () => {
+            reservationRepo.find.mockResolvedValue([]);
+
+            await stateService.handleOrderState(
+                ctx,
+                state({ reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }] }),
+            );
+
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
+        });
+
+        it('hands the derived status to the status service with the resolved order', async () => {
+            await stateService.handleOrderState(ctx, state({ derivedStatus: 'PICKING' }));
+            expect(orderErpStatus.apply).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({ id: 'order-1' }),
+                'PICKING',
+                null,
+            );
+        });
     });
 });

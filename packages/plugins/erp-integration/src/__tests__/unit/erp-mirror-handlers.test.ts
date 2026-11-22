@@ -1,4 +1,3 @@
-import { passthroughGuard } from './contact-guard';
 import type { RequestContext } from '@vendure/core';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +10,7 @@ import { SettingStreamHandler } from '../../handlers/setting.handler';
 const ctx = {} as RequestContext;
 
 function setup<T extends { apply: (...a: never[]) => unknown }>(
-    Handler: new (c: never, p: never, k: never) => T,
+    Handler: new (c: never, p: never) => T,
     existing: Record<string, unknown> | null,
 ): { handler: T; save: ReturnType<typeof vi.fn> } {
     const save = vi.fn();
@@ -21,27 +20,17 @@ function setup<T extends { apply: (...a: never[]) => unknown }>(
         save,
     };
     const persons = { upsert: vi.fn().mockResolvedValue(1), deactivate: vi.fn() };
-    const handler = new Handler(
-        { getRepository: () => repo } as never,
-        persons as never,
-        { guarded: passthroughGuard, replaceErpPoints: vi.fn() } as never,
-    );
+    const handler = new Handler({ getRepository: () => repo } as never, persons as never);
     return { handler, save };
 }
 
 describe('CounterpartyContactStreamHandler', () => {
-    const infos = [
-        { type: 'phone', kindName: 'Work', isPrimary: true, presentation: 'x@example.com' },
-    ];
-
-    it('stores the contact as sent, contactInfos untouched, even when the counterparty is unknown', async () => {
+    it('stores the contact as sent, even when the counterparty is unknown', async () => {
         const { handler, save } = setup(CounterpartyContactStreamHandler, null);
         const outcome = await handler.apply(ctx, 'c-1', {
             counterpartyId: 'cp-never-synced',
             name: 'Contact A',
-            phone: 'x@example.com',
             isActive: true,
-            contactInfos: infos,
         });
         expect(outcome.kind).toBe('applied');
         expect(save).toHaveBeenCalledWith({
@@ -49,9 +38,6 @@ describe('CounterpartyContactStreamHandler', () => {
             counterpartyId: 'cp-never-synced',
             name: 'Contact A',
             position: null,
-            phone: 'x@example.com',
-            email: null,
-            contactInfos: JSON.stringify(infos),
             isActive: true,
             isDeleted: false,
         });
@@ -68,16 +54,17 @@ describe('CounterpartyContactStreamHandler', () => {
         expect(again.save).toHaveBeenCalledWith(stored);
     });
 
-    it('a newer named event replaces absent optionals with null', async () => {
+    it('a newer named event replaces an absent position with null and leaves the channel columns alone', async () => {
         const { handler, save } = setup(CounterpartyContactStreamHandler, {
             erpId: 'c-1',
             counterpartyId: 'cp-1',
             name: 'Contact A',
+            position: 'Buyer',
             email: 'old@example.com',
         });
         await handler.apply(ctx, 'c-1', { counterpartyId: 'cp-1', name: 'Contact A' });
         expect(save).toHaveBeenCalledWith(
-            expect.objectContaining({ email: null, contactInfos: '[]', isActive: false }),
+            expect.objectContaining({ position: null, email: 'old@example.com', isActive: false }),
         );
     });
 

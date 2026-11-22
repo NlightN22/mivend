@@ -105,6 +105,7 @@ beforeAll(async () => {
             replaceForContract: async () => undefined,
             markContractDeleted: async () => undefined,
         } as never,
+        { codeOf: async () => null } as never,
     );
 });
 

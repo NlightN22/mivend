@@ -56,6 +56,9 @@ import {
 } from 'shared';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { UnitLookupService } from './unit-lookup.service';
+import { CurrencyResolver } from './currency-resolver.service';
+import { OrganizationBankRequisitesService } from './organization-bank-requisites.service';
+import { OrderLineResolver } from './handlers/order-line-resolver';
 import { SearchResultSalesUnitResolver } from './search-result-sales-unit.resolver';
 import { SearchResultPackagingLevelsResolver } from './search-result-packaging-levels.resolver';
 import { SearchResultPackagingLevelsService } from './search-result-packaging-levels.service';
@@ -176,6 +179,9 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ProductPhotoRecoveryService,
         ResyncReplayClient,
         UnitLookupService,
+        CurrencyResolver,
+        OrganizationBankRequisitesService,
+        OrderLineResolver,
         ProductPackagingLevelsService,
         VariantSalesUnitService,
         SearchResultPackagingLevelsService,

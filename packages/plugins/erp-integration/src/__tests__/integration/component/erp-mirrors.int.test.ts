@@ -1,4 +1,3 @@
-import { passthroughGuard } from '../../unit/contact-guard';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
@@ -77,11 +76,10 @@ async function deliver(
     const handler =
         stream === 'product-group'
             ? new ProductGroupStreamHandler(connection)
-            : new CounterpartyContactStreamHandler(
-                  connection,
-                  { upsert: vi.fn().mockResolvedValue(1), deactivate: vi.fn() } as never,
-                  { guarded: passthroughGuard, replaceErpPoints: vi.fn() } as never,
-              );
+            : new CounterpartyContactStreamHandler(connection, {
+                  upsert: vi.fn().mockResolvedValue(1),
+                  deactivate: vi.fn(),
+              } as never);
     seq += 1;
     await inbox.enqueue(testRequestContext, {
         stream,

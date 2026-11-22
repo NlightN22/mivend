@@ -12,6 +12,7 @@ import {
     customerClaimGoodsLines,
     customerClaimServiceLines,
 } from './customer-claim-payload';
+import { CurrencyResolver } from '../currency-resolver.service';
 import { documentEnvelope, documentOutcome } from './erp-document-payload';
 import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -19,7 +20,10 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 // Stores `customer-claim` (#254) as received in customer_claim_erp and its line tables; links are plain ERP ids.
 @Injectable()
 export class CustomerClaimStreamHandler implements InboundStreamHandler {
-    constructor(private readonly writer: ErpDocumentWriter) {}
+    constructor(
+        private readonly writer: ErpDocumentWriter,
+        private readonly currencies: CurrencyResolver,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -32,7 +36,10 @@ export class CustomerClaimStreamHandler implements InboundStreamHandler {
             target: CustomerClaimErp,
             erpId: entityId,
             ...envelope,
-            fields: customerClaimFields(payload),
+            fields: customerClaimFields(
+                payload,
+                await this.currencies.codeOf(ctx, `customer-claim ${entityId}`, payload.currencyId),
+            ),
             lines: [
                 { target: CustomerClaimGoodsLineErp, rows: customerClaimGoodsLines(payload) },
                 { target: CustomerClaimServiceLineErp, rows: customerClaimServiceLines(payload) },

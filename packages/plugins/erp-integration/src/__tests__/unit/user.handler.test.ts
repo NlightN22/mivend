@@ -1,4 +1,3 @@
-import { passthroughGuard } from './contact-guard';
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -6,52 +5,33 @@ import { UserStreamHandler } from '../../handlers/user.handler';
 
 describe('UserStreamHandler', () => {
     const ctx = {} as RequestContext;
-
-    it('passes fullName/email/departmentId through to linkAndEnrich', async () => {
-        const userEnrichmentService = {
-            linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
+    const setup = (admin: unknown) => {
+        const userEnrichmentService = { linkAndEnrich: vi.fn().mockResolvedValue(admin) };
+        return {
+            userEnrichmentService,
+            handler: new UserStreamHandler(userEnrichmentService as never),
         };
-        const handler = new UserStreamHandler(
-            userEnrichmentService as never,
-            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
-            { setContactInfos: vi.fn() } as never,
-        );
+    };
 
-        await handler.apply(ctx, 'user-1', {
-            fullName: 'Ivan Ivanov',
-            email: 'ivan@example.com',
-            departmentId: 'dept-1',
-            positionId: 'pos-1',
-            isActive: true,
-        });
+    it('passes only fullName and activity to linkAndEnrich: e-mail, department and position are not sent', async () => {
+        const { handler, userEnrichmentService } = setup({ id: 'admin-1' });
+
+        await handler.apply(ctx, 'user-1', { fullName: 'Ivan Ivanov', isActive: true });
 
         expect(userEnrichmentService.linkAndEnrich).toHaveBeenCalledWith(ctx, {
             erpId: 'user-1',
-            email: 'ivan@example.com',
-            departmentId: 'dept-1',
-            positionErpId: 'pos-1',
             fullName: 'Ivan Ivanov',
             isActive: true,
         });
     });
 
-    it('passes undefined for email/departmentId/fullName when absent from the payload', async () => {
-        const userEnrichmentService = {
-            linkAndEnrich: vi.fn().mockResolvedValue(null),
-        };
-        const handler = new UserStreamHandler(
-            userEnrichmentService as never,
-            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
-            { setContactInfos: vi.fn() } as never,
-        );
+    it('passes an undefined fullName when absent from the payload', async () => {
+        const { handler, userEnrichmentService } = setup(null);
 
         await handler.apply(ctx, 'user-1', {});
 
         expect(userEnrichmentService.linkAndEnrich).toHaveBeenCalledWith(ctx, {
             erpId: 'user-1',
-            email: undefined,
-            departmentId: undefined,
-            positionErpId: undefined,
             fullName: undefined,
             isActive: false,
         });
@@ -60,14 +40,7 @@ describe('UserStreamHandler', () => {
     // Absent isActive means false, not true (proto3 bool zero-value omission) — same rule every
     // sibling handler (organization/counterparty/price-type) already applies.
     it('computes isActive=false when isActive is absent, even with other fields present', async () => {
-        const userEnrichmentService = {
-            linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
-        };
-        const handler = new UserStreamHandler(
-            userEnrichmentService as never,
-            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
-            { setContactInfos: vi.fn() } as never,
-        );
+        const { handler, userEnrichmentService } = setup({ id: 'admin-1' });
 
         await handler.apply(ctx, 'user-1', { fullName: 'Ivan Ivanov' });
 
@@ -78,14 +51,7 @@ describe('UserStreamHandler', () => {
     });
 
     it('computes isActive=false when isDeleted is true, even if isActive is also true', async () => {
-        const userEnrichmentService = {
-            linkAndEnrich: vi.fn().mockResolvedValue({ id: 'admin-1' }),
-        };
-        const handler = new UserStreamHandler(
-            userEnrichmentService as never,
-            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
-            { setContactInfos: vi.fn() } as never,
-        );
+        const { handler, userEnrichmentService } = setup({ id: 'admin-1' });
 
         await handler.apply(ctx, 'user-1', { isActive: true, isDeleted: true });
 
@@ -96,51 +62,11 @@ describe('UserStreamHandler', () => {
     });
 
     it('resolves without error when no Administrator is linked (skip, no fabrication)', async () => {
-        const userEnrichmentService = {
-            linkAndEnrich: vi.fn().mockResolvedValue(null),
-        };
-        const handler = new UserStreamHandler(
-            userEnrichmentService as never,
-            { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() } as never,
-            { setContactInfos: vi.fn() } as never,
-        );
+        const { handler } = setup(null);
 
         await expect(handler.apply(ctx, 'user-unknown', { fullName: 'Nobody' })).resolves.toEqual({
             kind: 'noop',
             reason: expect.any(String),
         });
-    });
-
-    it('replaces the linked administrator channels from the list, an explicit empty list included, and skips an absent one', async () => {
-        const points = { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() };
-        const handler = new UserStreamHandler(
-            { linkAndEnrich: vi.fn().mockResolvedValue({ id: 1 }) } as never,
-            points as never,
-            { setContactInfos: vi.fn() } as never,
-        );
-        await handler.apply(ctx, 'user-1', { email: 'a@example.com', contactInfos: [] });
-        expect(points.replaceErpPointsByErpId).toHaveBeenCalledWith(
-            ctx,
-            'administrator',
-            'user-1',
-            [],
-        );
-        points.replaceErpPointsByErpId.mockClear();
-        await handler.apply(ctx, 'user-1', { email: 'a@example.com' });
-        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
-    });
-
-    it('stores no channels when no administrator is linked', async () => {
-        const points = { guarded: passthroughGuard, replaceErpPointsByErpId: vi.fn() };
-        const erpUsers = { setContactInfos: vi.fn() };
-        const handler = new UserStreamHandler(
-            { linkAndEnrich: vi.fn().mockResolvedValue(null) } as never,
-            points as never,
-            erpUsers as never,
-        );
-        const outcome = await handler.apply(ctx, 'user-1', { contactInfos: [] });
-        expect(outcome.kind).toBe('noop');
-        expect(points.replaceErpPointsByErpId).not.toHaveBeenCalled();
-        expect(erpUsers.setContactInfos).toHaveBeenCalledWith(ctx, 'user-1', '[]');
     });
 });

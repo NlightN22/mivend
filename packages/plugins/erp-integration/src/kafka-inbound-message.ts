@@ -35,6 +35,30 @@ export function classifyInboundMessage(
     return classifyDecodedRecord(stream, record, message, partition);
 }
 
+// A topic whose messages wrap the entity in a oneof envelope: only the `changed` member is an entity.
+export function classifyEnvelopeMessage(
+    stream: InboundStream,
+    envelopeSchema: Parameters<typeof fromBinary>[0],
+    innerSchema: Parameters<typeof fromBinary>[0],
+    message: KafkaMessage,
+    partition: number,
+): ClassifiedKafkaMessage | { kind: 'skipped'; type: string } {
+    if (!message.value) return rejectedMessage(stream, message, partition, noValueReason(message));
+    let record: Record<string, unknown>;
+    try {
+        const envelope = fromBinary(envelopeSchema, new Uint8Array(message.value)) as unknown as {
+            event: { case?: string; value?: unknown };
+        };
+        if (envelope.event.case !== 'changed') {
+            return { kind: 'skipped', type: String(envelope.event.case ?? 'empty') };
+        }
+        record = toJson(innerSchema, envelope.event.value as never) as Record<string, unknown>;
+    } catch (err) {
+        return rejectedUndecodable(stream, message, partition, err);
+    }
+    return classifyDecodedRecord(stream, record, message, partition);
+}
+
 export function noValueReason(message: KafkaMessage): {
     reason: string;
     payload: Record<string, unknown>;

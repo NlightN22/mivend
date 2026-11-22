@@ -59,6 +59,12 @@ export class ErpOrderReserveService {
         );
     }
 
+    async setReserveUntil(ctx: RequestContext, orderId: ID, reserveUntil: Date): Promise<void> {
+        await this.connection
+            .getRepository(ctx, ErpOrderReserve)
+            .update({ orderId: String(orderId) }, { reserveUntil });
+    }
+
     findForOrder(ctx: RequestContext, orderId: ID): Promise<ErpOrderReserve[]> {
         return findBounded(this.connection.getRepository(ctx, ErpOrderReserve), {
             where: { orderId: String(orderId) },

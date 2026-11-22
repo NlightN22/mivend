@@ -6,8 +6,10 @@ import { BankStreamHandler } from '../../handlers/bank.handler';
 
 const ctx = {} as RequestContext;
 
+const refresh = vi.fn(async () => 1);
+
 function setup<T>(
-    Handler: new (c: never) => T,
+    Handler: new (c: never, b: never) => T,
     existing: Record<string, unknown> | null,
 ): { handler: T; save: Mock } {
     const save = vi.fn();
@@ -16,8 +18,30 @@ function setup<T>(
         create: vi.fn((v: unknown) => v),
         save,
     };
-    return { handler: new Handler({ getRepository: () => repo } as never), save };
+    return {
+        handler: new Handler({ getRepository: () => repo } as never, { refresh } as never),
+        save,
+    };
 }
+
+describe('bank chain', () => {
+    it('a bank event refreshes the requisites of the organizations that use it', async () => {
+        const { handler } = setup(BankStreamHandler, null);
+        await handler.apply(ctx, 'b-1', { name: 'Bank A', bik: '000000001' });
+        expect(refresh).toHaveBeenCalledWith(ctx, { bankId: 'b-1' });
+    });
+
+    it('a bank account event refreshes the organizations whose main account it is', async () => {
+        const { handler } = setup(BankAccountStreamHandler, null);
+        await handler.apply(ctx, 'a-1', {
+            accountNumber: '4070',
+            bankId: 'b-1',
+            ownerId: 'o-1',
+            ownerType: 'organization',
+        });
+        expect(refresh).toHaveBeenCalledWith(ctx, { bankAccountId: 'a-1' });
+    });
+});
 
 describe('BankStreamHandler', () => {
     it('creates a row; absent optional correspondent account is null, absent isActive is false', async () => {

@@ -10,6 +10,7 @@ const WRITERS: Record<string, 'bumps' | 'inbound' | 'local' | 'helper'> = {
     'counterparty.resolver.ts': 'bumps',
     'counterparty-version.service.ts': 'helper',
     'counterparty-stream-state.service.ts': 'inbound',
+    'counterparty-erp-mirror.service.ts': 'inbound',
     'counterparty.service.ts': 'inbound',
     'counterparty-branch-override.service.ts': 'local',
     'credit-term.service.ts': 'local',

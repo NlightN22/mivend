@@ -17,6 +17,13 @@ export interface ErpContactPersonFields {
 export class ErpContactPersonService {
     constructor(private readonly connection: TransactionalConnection) {}
 
+    async findIdByErpId(ctx: RequestContext, erpId: string): Promise<number | null> {
+        const person = await this.connection
+            .getRepository(ctx, ContactPerson)
+            .findOne({ where: { erpId }, select: { id: true } });
+        return person ? (person.id as number) : null;
+    }
+
     // A person is keyed by its ERP id; the counterparty link is added only once that counterparty exists.
     async upsert(
         ctx: RequestContext,

@@ -43,11 +43,16 @@ function mapGroup(group: ProductCharacteristicGroup, map: unknown): ProductChara
         }));
 }
 
+// Groups the product event still carries; the attribute group is not part of the event any more.
+export const EVENT_CHARACTERISTIC_GROUPS: readonly ProductCharacteristicGroup[] = [
+    'specification',
+    'technicalRequirement',
+];
+
 export function mapProductCharacteristics(
     payload: Record<string, unknown>,
 ): ProductCharacteristicRow[] {
     return [
-        ...mapGroup('attribute', payload.attributes),
         ...mapGroup('specification', payload.specifications),
         ...mapGroup('technicalRequirement', payload.technicalRequirements),
     ];

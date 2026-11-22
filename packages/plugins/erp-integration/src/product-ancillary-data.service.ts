@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { In } from 'typeorm';
 
 import { ProductVariantBarcode } from './entities/product-variant-barcode.entity';
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
+import { EVENT_CHARACTERISTIC_GROUPS } from './product-characteristics-mapper';
 import type { ProductCharacteristicRow } from './product-characteristics-mapper';
 import { withAggregateLock } from 'shared';
 import type { ManufacturerCodeRow } from './product-ancillary-fields';
@@ -37,7 +39,7 @@ export class ProductAncillaryDataService {
             `product-characteristics:${productId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, ProductCharacteristic);
-                await repo.delete({ productId });
+                await repo.delete({ productId, group: In([...EVENT_CHARACTERISTIC_GROUPS]) });
                 if (rows.length === 0) return;
                 await repo.save(rows.map(row => repo.create({ productId, ...row })));
             },

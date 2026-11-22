@@ -81,6 +81,7 @@ import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { CounterpartySuggestService } from './counterparty-suggest.service';
 import { TradingPointService } from './trading-point.service';
+import { TradingPointContactFactsService } from './trading-point-contact-facts.service';
 import { TradingPointChangeAdminResolver } from './trading-point-change.resolver';
 import { TradingPointChangeService } from './trading-point-change.service';
 import { TradingPointCustomerService } from './trading-point-customer.service';
@@ -226,6 +227,7 @@ const adminResolvers = [
         ErpContactPersonService,
         CounterpartyConsumer,
         TradingPointService,
+        TradingPointContactFactsService,
         TradingPointChangeService,
         TradingPointVersionService,
         TradingPointCustomerService,
@@ -262,6 +264,7 @@ const adminResolvers = [
         ErpContactPersonService,
         ErpIdLookupService,
         TradingPointService,
+        TradingPointContactFactsService,
         TradingPointChangeService,
         TradingPointVersionService,
         TradingPointCustomerService,

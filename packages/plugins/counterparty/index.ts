@@ -2,6 +2,7 @@ export { CounterpartyPlugin } from './src/counterparty.plugin';
 export { geoProviderHosts } from './src/geo/geo-registry';
 export { CounterpartyService } from './src/counterparty.service';
 export { TradingPointService } from './src/trading-point.service';
+export { TradingPointContactFactsService } from './src/trading-point-contact-facts.service';
 export { TradingPointLocationReportService } from './src/trading-point-location-report.service';
 export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { ErpIdLookupService } from './src/erp-id-lookup.service';

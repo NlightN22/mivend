@@ -8,15 +8,22 @@ import {
     toJsonText,
 } from './erp-flags-payload';
 
-export function orderErpFacts(
-    payload: Record<string, unknown>,
-): NonNullable<ExternalOrderInput['erpFacts']> {
-    const facts = {
-        erpAccounting: toJsonText(parseAccounting(payload.accounting)),
-        erpLinkedDocuments: linkedDocumentsAccounting(payload.linkedDocuments),
-        erpShippedInSettlements: shippedInSettlementsText(payload.lines),
-    };
-    return Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null));
+type OrderFacts = NonNullable<ExternalOrderInput['erpFacts']>;
+
+const present = (facts: Record<string, string | null>): OrderFacts =>
+    Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null));
+
+// Accounting flags of the order document itself (OrderChanged).
+export function orderAccountingFacts(payload: Record<string, unknown>): OrderFacts {
+    return present({ erpAccounting: toJsonText(parseAccounting(payload.accounting)) });
+}
+
+// Linked-document flags and shipped-in-settlements per line (OrderState).
+export function orderStateFacts(state: Record<string, unknown>): OrderFacts {
+    return present({
+        erpLinkedDocuments: linkedDocumentsAccounting(state.linkedDocuments),
+        erpShippedInSettlements: shippedInSettlementsText(state.lines),
+    });
 }
 
 export interface ResolvedOrderLine {
@@ -35,7 +42,7 @@ function optionalString(value: unknown): string | null {
     return typeof value === 'string' && value !== '' ? value : null;
 }
 
-// OrderChanged.paid_amount is a real `optional double`: null means not computed, never zero.
+// OrderState.paid_amount is a real `optional double`: null means not computed, never zero.
 // The column is int4 (a bigint would need a GraphQL scalar), so a value beyond it is ignored, not stored.
 const INT4_MAX = 2_147_483_647;
 
@@ -75,7 +82,6 @@ export function externalLine(line: ResolvedOrderLine): ExternalOrderLineInput {
 export function buildExternalOrderInput(
     entityId: string,
     payload: Record<string, unknown>,
-    derivedStatus: string | null,
     lines: ResolvedOrderLine[],
     skippedLineCount = 0,
 ): ExternalOrderInput {
@@ -84,7 +90,7 @@ export function buildExternalOrderInput(
     return {
         erpOrderId: entityId,
         counterpartyErpId: optionalString(payload.customerId),
-        erpStatus: derivedStatus,
+        erpStatus: null,
         erpStatusAt: parseTimestamp(payload.updatedAt) ?? parseTimestamp(payload.occurredAt),
         erpOrderStatus: payload.status != null ? String(payload.status) : '',
         documentNumber: optionalString(payload.documentNumber),
@@ -93,8 +99,8 @@ export function buildExternalOrderInput(
         totalWithTaxMinor: totalAmount === null ? null : toMinor(totalAmount),
         vatTotalMinor: vatTotal === null ? null : toMinor(vatTotal),
         amountIncludesVat: payload.amountIncludesVat !== false,
-        paidAmountMinor: paidAmountMinor(payload),
-        erpFacts: orderErpFacts(payload),
+        paidAmountMinor: null,
+        erpFacts: orderAccountingFacts(payload),
         lines: lines.map(externalLine),
         skippedLineCount,
     };

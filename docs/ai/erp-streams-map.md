@@ -411,3 +411,16 @@ channel of that type at all. SQL: `counterparty-chosen-contact.sql.ts`.
 Still on the legacy columns (follow-up): list filter, sort and search on phone/officialEmail
 (`counterparty-list-query.ts`, `counterparty-sort.ts`, GraphQL filter inputs) and the proforma invoice HTML builder
 (`documents/src/pdf/proforma-invoice-html.builder.ts`).
+
+## event-contracts 0.99.0 (#391)
+
+Full field-by-field map: `docs/ai/event-contracts-099-map.md`. This section overrides the older rows above where they disagree.
+
+| Stream | Topic | Consumed into | Notes |
+| --- | --- | --- | --- |
+| `order-state` | `erp.order-state.events.v1` (oneof envelope, key = order ERP id) | reserve hand-over, `erpStatus`, `erpPaidAmount`, `erpLinkedDocuments`, `erpShippedInSettlements` | Replaces the same fields of `order-changed`, which now carries only the order document's own data (status, contract, document number, `reserveUntil` kept on `Order.erpReserveUntil`, own accounting flags). Absent value = not computed = nothing written; an unknown order retries. Bulk lane. |
+| `currency` | `erp.currency.events.v1` | `currency_record` | Resolves `currencyId` of contract, customer claim and sales correction to the letter code; an id not delivered yet retries. Replayable and reconciled. |
+| `contact-info` | `erp.contact-info.events.v1` (oneof envelope, key = owner uuid) | channels of the owner, plus phone, e-mail and a sole address | Contact lane. Owner found by ERP id: counterparty, trading point, organization, ERP user (e-mail links an Administrator), contact person. Unknown owner is parked (`MissingReferenceError`). Not reconciled. |
+| `property-values`, `staff-record` | not subscribed | none | Deferred, see the map file. |
+
+Moved off the owner events: counterparty and organization address, phone, e-mail; trading point address and phone; organization bank requisites (derived from `mainBankAccountId` through `bank-account` and `bank`); user e-mail, department, position (department and position have no source now).

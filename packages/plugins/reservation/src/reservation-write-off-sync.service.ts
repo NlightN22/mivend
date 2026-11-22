@@ -19,6 +19,7 @@ import type {
 export type {
     OrderChangedInput,
     OrderRegistrationResultInput,
+    OrderStateInput,
 } from './reservation-write-off-sync.types';
 import { withAggregateLock, withOrderCancelLocks, ctxQuery, findBounded } from 'shared';
 
@@ -177,7 +178,7 @@ export class ReservationWriteOffSyncService {
                     `orderEntityId=${input.orderEntityId}`,
             );
         }
-        // The cancel locks: a cancelled derived status cancels the order inside this transaction.
+        // Same locks as the order-state path, so both write the order's ERP facts serially.
         await withOrderCancelLocks(this.connection, ctx, orderId, txCtx =>
             this.applyOrderChanged(txCtx, orderId, input),
         );
@@ -205,45 +206,26 @@ export class ReservationWriteOffSyncService {
         if (input.documentNumber) {
             customFields.erpRegistrationDocumentNumber = input.documentNumber;
         }
-        if (input.paidAmountMinor != null) {
-            customFields.erpPaidAmount = input.paidAmountMinor;
-        }
         Object.assign(customFields, input.erpFacts);
+        if (!order.customFields.erpOrderId) {
+            customFields.erpOrderId = input.orderEntityId;
+        }
+        if (input.reserveUntil) {
+            customFields.erpReserveUntil = input.reserveUntil;
+        }
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
-        order.customFields = { ...order.customFields, ...customFields };
-
-        await this.orderErpStatus.apply(
-            ctx,
-            order,
-            input.derivedStatus,
-            input.derivedStatusAt ?? null,
-        );
-
-        await this.erpReserve.record(
-            ctx,
-            orderId,
-            input.reservedLines,
-            input.reserveUntil ?? null,
-            !input.linesDiscarded,
-        );
-        await this.releaseMatchingReservations(
-            ctx,
-            orderId,
-            order,
-            input.reservedLines,
-            input.orderEntityId,
-            'order-changed',
-            (await this.statuses.dictionary(ctx)).has(input.derivedStatus, 'warehouseStarted'),
-        );
+        if (input.reserveUntil) {
+            await this.erpReserve.setReserveUntil(ctx, orderId, input.reserveUntil);
+        }
     }
 
-    private async releaseMatchingReservations(
+    async releaseMatchingReservations(
         ctx: RequestContext,
         orderId: string,
         order: Order,
         reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>,
         orderEntityId: string,
-        source: 'order-registration-result' | 'order-changed',
+        source: 'order-registration-result' | 'order-changed' | 'order-state',
         warehouseOrderExists = false,
     ): Promise<void> {
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
@@ -376,10 +358,7 @@ export class ReservationWriteOffSyncService {
     }
 
     // Raw SQL: plugin-erp-order's customField augmentation is not visible to this plugin's tsc build.
-    private async findOrderIdByErpId(
-        ctx: RequestContext,
-        orderEntityId: string,
-    ): Promise<string | null> {
+    async findOrderIdByErpId(ctx: RequestContext, orderEntityId: string): Promise<string | null> {
         const result = await ctxQuery<Array<{ id: string | number | null }>>(
             this.connection,
             ctx,

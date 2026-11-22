@@ -7,8 +7,8 @@ import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 import { KafkaConsumerStatusMirror } from './kafka-consumer-status-mirror';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { storeClassified } from './kafka-consumer-store';
-import { SCHEMA_BY_STREAM } from './kafka-consumer-schemas';
-import { classifyInboundMessage } from './kafka-inbound-message';
+import { ENVELOPE_INNER_SCHEMA, SCHEMA_BY_STREAM } from './kafka-consumer-schemas';
+import { classifyEnvelopeMessage, classifyInboundMessage } from './kafka-inbound-message';
 import { classifyOrderEventMessage, ORDER_EVENT_STREAMS } from './order-events-message';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions, InboundStream } from './types';
@@ -229,10 +229,21 @@ export class KafkaConsumerService implements OnModuleDestroy {
     ): Promise<void> {
         const schema = SCHEMA_BY_STREAM[stream as keyof typeof SCHEMA_BY_STREAM];
         if (!schema) throw new Error(`No schema registered for stream ${stream}`);
+        const inner = ENVELOPE_INNER_SCHEMA[stream as keyof typeof SCHEMA_BY_STREAM];
+        const classified = inner
+            ? classifyEnvelopeMessage(stream, schema, inner, message, partition ?? 0)
+            : classifyInboundMessage(stream, schema, message, partition ?? 0);
+        if (classified.kind === 'skipped') {
+            Logger.warn(
+                `Skipped ${stream} message type=${classified.type} (offset=${message.offset})`,
+                loggerCtx,
+            );
+            return;
+        }
         await storeClassified(
             this.inbox,
             await this.adminCtx(),
-            classifyInboundMessage(stream, schema, message, partition ?? 0),
+            classified,
             stream,
             message.offset,
         );

@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { ContactPointService, TradingPointService } from '@mivend/plugin-counterparty';
+import { TradingPointService } from '@mivend/plugin-counterparty';
 
-import { parseContactInfos } from './contact-infos';
 import { MissingReferenceError } from '../types';
 import { pointOfSaleExtra } from './point-of-sale-extra';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -14,10 +13,7 @@ const loggerCtx = 'IntegrationPointOfSaleHandler';
 // accounting: docs/ai/erp-streams-map.md's `point-of-sale` row (the fields mivend does not read go to the trading_point_erp mirror).
 @Injectable()
 export class PointOfSaleStreamHandler implements InboundStreamHandler {
-    constructor(
-        private readonly tradingPointService: TradingPointService,
-        private readonly contactPoints: ContactPointService,
-    ) {}
+    constructor(private readonly tradingPointService: TradingPointService) {}
 
     async apply(
         ctx: RequestContext,
@@ -58,35 +54,12 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
             counterpartyId: counterparty.id,
             servicingBranchId: counterparty.branchId,
             isActive,
-            // A named event is full state: absent or empty means the ERP cleared it (#259).
-            address: text(payload.address) ?? '',
             latitude: typeof payload.latitude === 'number' ? payload.latitude : null,
             longitude: typeof payload.longitude === 'number' ? payload.longitude : null,
-            contactPhone: text(payload.contactPhone),
             extra: pointOfSaleExtra(payload),
         });
 
-        const contactInfos = parseContactInfos(payload.contactInfos);
-        const failure = await this.contactPoints.guarded(
-            ctx,
-            `point-of-sale ${entityId}`,
-            async () => {
-                if (contactInfos) {
-                    await this.contactPoints.replaceErpPointsByErpId(
-                        ctx,
-                        'tradingPoint',
-                        entityId,
-                        contactInfos,
-                    );
-                }
-            },
-        );
-
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);
-        return inboundApplied(undefined, failure);
+        return inboundApplied();
     }
-}
-
-function text(value: unknown): string | null {
-    return typeof value === 'string' && value.trim() !== '' ? value : null;
 }

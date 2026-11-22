@@ -28,6 +28,7 @@ function makeHandler(
         { attachContract: vi.fn() } as never,
         { requestForContract: vi.fn(), drainSoon: vi.fn() } as never,
         { replaceForContract: vi.fn(), markContractDeleted: vi.fn() } as never,
+        { codeOf: vi.fn().mockResolvedValue('USD') } as never,
     );
     return { handler, contractService, counterpartyService };
 }
@@ -54,6 +55,23 @@ describe('ContractStreamHandler', () => {
             'contract-1',
             expect.objectContaining({ counterpartyId: 'local-cp-1', name: 'General contract' }),
         );
+    });
+
+    it('stores the currency code resolved from currencyId and keeps the stored one when the event omits it', async () => {
+        const { handler, contractService } = makeHandler();
+        const named = {
+            name: 'General contract',
+            isActive: true,
+            counterpartyId: 'erp-cp-1',
+            organizationId: 'org-1',
+            priceTypeId: 'pt-1',
+        };
+
+        await handler.apply(ctx, 'contract-1', { ...named, currencyId: 'cur-1' });
+        await handler.apply(ctx, 'contract-1', named);
+
+        expect(contractService.upsertActiveState.mock.calls[0][2].currency).toBe('USD');
+        expect(contractService.upsertActiveState.mock.calls[1][2].currency).toBeUndefined();
     });
 
     // Ordinary eventual-consistency race (Kafka gives no cross-topic ordering guarantee) —

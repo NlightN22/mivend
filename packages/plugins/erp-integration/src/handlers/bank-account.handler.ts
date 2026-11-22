@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { BankAccountRecord } from '../entities/bank-account-record.entity';
+import { OrganizationBankRequisitesService } from '../organization-bank-requisites.service';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `bank-account` stream; bankId/ownerId are stored as soft links, never resolved here.
 @Injectable()
 export class BankAccountStreamHandler implements InboundStreamHandler {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly bankRequisites: OrganizationBankRequisitesService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -35,6 +39,7 @@ export class BankAccountStreamHandler implements InboundStreamHandler {
         await repo.save(
             existing ? { ...existing, ...fields } : repo.create({ entityId, ...fields }),
         );
+        await this.bankRequisites.refresh(ctx, { bankAccountId: entityId });
         return inboundApplied();
     }
 }

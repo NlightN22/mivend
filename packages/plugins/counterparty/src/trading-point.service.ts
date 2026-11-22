@@ -61,8 +61,6 @@ export interface TradingPointStreamFields {
     address?: string;
     latitude?: number | null;
     longitude?: number | null;
-    // Never used to create a ContactPerson — see upsertFromStream's own comment.
-    contactPhone?: string | null;
     extra?: ErpPointExtra;
 }
 

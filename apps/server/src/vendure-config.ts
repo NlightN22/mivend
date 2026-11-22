@@ -893,6 +893,15 @@ export const config: VendureConfig = {
                     'order-correction':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CORRECTION ??
                         'erp.order-correction.events.v1',
+                    // #391: derived order state, currency reference and contact sets (event-contracts 0.99.0).
+                    'order-state':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATE ??
+                        'erp.order-state.events.v1',
+                    currency:
+                        process.env.INTEGRATION_KAFKA_TOPIC_CURRENCY ?? 'erp.currency.events.v1',
+                    'contact-info':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CONTACT_INFO ??
+                        'erp.contact-info.events.v1',
                 },
             },
             schemaRegistry: {

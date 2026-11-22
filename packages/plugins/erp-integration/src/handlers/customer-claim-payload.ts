@@ -23,7 +23,10 @@ import {
 } from './erp-document-payload';
 import type { Payload } from './erp-document-payload';
 
-export function customerClaimFields(p: Payload): ErpHeaderFields<CustomerClaimErp> {
+export function customerClaimFields(
+    p: Payload,
+    currency: string | null,
+): ErpHeaderFields<CustomerClaimErp> {
     return {
         number: str(p.number) ?? '',
         date: time(p.date),
@@ -36,7 +39,7 @@ export function customerClaimFields(p: Payload): ErpHeaderFields<CustomerClaimEr
         warehouseId: str(p.warehouseId),
         orderId: str(p.orderId),
         basisDocument: ref(p.basisDocument),
-        currency: str(p.currency),
+        currency,
         exchangeRate: flt(p.exchangeRate),
         exchangeMultiplicity: flt(p.exchangeMultiplicity),
         priceTypeId: str(p.priceTypeId),

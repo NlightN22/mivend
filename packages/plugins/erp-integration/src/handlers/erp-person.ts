@@ -2,14 +2,9 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome } from './inbound-stream-handler';
-import {
-    ContactPointService,
-    Counterparty,
-    ErpContactPersonService,
-} from '@mivend/plugin-counterparty';
+import { Counterparty, ErpContactPersonService } from '@mivend/plugin-counterparty';
 
 import { MissingReferenceError } from '../types';
-import { parseContactInfos } from './contact-infos';
 
 export interface ErpPersonInput {
     name: string | null;
@@ -19,19 +14,15 @@ export interface ErpPersonInput {
     counterpartyErpId: string | null;
     // true: an unknown counterparty leaves the person unlinked (linked later on its arrival); false: retry.
     linkLater: boolean;
-    contactInfos: unknown;
 }
 
 export interface ErpPersonResult {
     status: 'applied' | 'unknown' | 'nameless';
-    // A rolled-back contact step; the person itself is stored.
-    failure: string | null;
 }
 
 export interface ErpPersonDeps {
     connection: TransactionalConnection;
     persons: ErpContactPersonService;
-    contactPoints: ContactPointService;
 }
 
 export function personName(payload: Record<string, unknown>): string | null {
@@ -56,9 +47,9 @@ export async function applyErpPerson(
 ): Promise<ErpPersonResult> {
     if (input.isDeleted) {
         const known = (await deps.persons.deactivate(ctx, erpId)) !== null;
-        return { status: known ? 'applied' : 'unknown', failure: null };
+        return { status: known ? 'applied' : 'unknown' };
     }
-    if (!input.name) return { status: 'nameless', failure: null };
+    if (!input.name) return { status: 'nameless' };
     let counterpartyId: number | null = null;
     if (input.counterpartyErpId) {
         const counterparty = await deps.connection
@@ -71,18 +62,13 @@ export async function applyErpPerson(
         }
         counterpartyId = (counterparty?.id as number | undefined) ?? null;
     }
-    const personId = await deps.persons.upsert(ctx, erpId, {
+    await deps.persons.upsert(ctx, erpId, {
         name: input.name,
         position: input.position,
         isActive: input.isActive,
         counterpartyId,
     });
-    const contactInfos = parseContactInfos(input.contactInfos);
-    if (!contactInfos) return { status: 'applied', failure: null };
-    const failure = await deps.contactPoints.guarded(ctx, `person ${erpId}`, () =>
-        deps.contactPoints.replaceErpPoints(ctx, 'contactPerson', personId, contactInfos),
-    );
-    return { status: 'applied', failure };
+    return { status: 'applied' };
 }
 
 export function personOutcome(
@@ -90,7 +76,7 @@ export function personOutcome(
     stream: string,
     entityId: string,
 ): InboundOutcome {
-    if (result.status === 'applied') return inboundApplied(undefined, result.failure);
+    if (result.status === 'applied') return inboundApplied();
     const reason =
         result.status === 'unknown'
             ? 'tombstone for an unknown person'

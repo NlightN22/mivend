@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
     buildExternalOrderInput,
     externalLine,
-    orderErpFacts,
+    orderAccountingFacts,
+    orderStateFacts,
+    paidAmountMinor,
 } from '../../handlers/external-order-input';
 import { decideOrderChangedRoute } from '../../handlers/order-changed-route';
 
@@ -27,7 +29,7 @@ describe('buildExternalOrderInput', () => {
     };
 
     it('keeps a fact-less event status-less (the service decides), with the raw status kept', () => {
-        const input = buildExternalOrderInput('e1', { status: '', customerId: 'cp' }, null, []);
+        const input = buildExternalOrderInput('e1', { status: '', customerId: 'cp' }, []);
         expect(input).toMatchObject({
             erpStatus: null,
             erpOrderStatus: '',
@@ -36,7 +38,7 @@ describe('buildExternalOrderInput', () => {
     });
 
     it('keeps absent optional fields absent, never false or zero', () => {
-        const input = buildExternalOrderInput('e1', {}, null, []);
+        const input = buildExternalOrderInput('e1', {}, []);
         expect(input).toMatchObject({
             totalWithTaxMinor: null,
             vatTotalMinor: null,
@@ -49,35 +51,15 @@ describe('buildExternalOrderInput', () => {
         });
     });
 
-    it('converts paidAmount to minor units, keeping an explicit zero', () => {
-        expect(buildExternalOrderInput('e1', { paidAmount: 120.35 }, null, [])).toMatchObject({
-            paidAmountMinor: 12035,
-        });
-        expect(buildExternalOrderInput('e1', { paidAmount: 0 }, null, [])).toMatchObject({
-            paidAmountMinor: 0,
-        });
-    });
-
-    it.each([-5, Number.NaN, Number.POSITIVE_INFINITY, 1e12, 'abc'])(
-        'ignores an unusable paidAmount %s',
-        paidAmount => {
-            expect(buildExternalOrderInput('e1', { paidAmount }, null, [])).toMatchObject({
-                paidAmountMinor: null,
-            });
-        },
-    );
-
     it('reads an explicit zero total and an explicit false includes-VAT flag', () => {
         const input = buildExternalOrderInput(
             'e1',
             { totalAmount: 0, amountIncludesVat: false, orderDate: '2025-01-02T03:04:05Z' },
-            'DELIVERED',
             [],
         );
         expect(input).toMatchObject({
             totalWithTaxMinor: 0,
             amountIncludesVat: false,
-            erpStatus: 'DELIVERED',
         });
         expect(input.orderDate?.toISOString()).toBe('2025-01-02T03:04:05.000Z');
     });
@@ -103,17 +85,29 @@ describe('buildExternalOrderInput', () => {
     });
 });
 
-describe('orderErpFacts', () => {
-    it('is empty when the event carries none of the flags', () => {
-        expect(orderErpFacts({ lines: [{ productId: 'p-1', quantity: 1 }] })).toEqual({});
+describe('order-state values', () => {
+    it('reads paidAmount in minor units, keeping an explicit zero and never inventing one', () => {
+        expect(paidAmountMinor({ paidAmount: 120.35 })).toBe(12035);
+        expect(paidAmountMinor({ paidAmount: 0 })).toBe(0);
+        expect(paidAmountMinor({})).toBeNull();
     });
 
-    it('keeps explicit false flags, linked document flags and per-line shipped quantities', () => {
-        const facts = orderErpFacts({
-            accounting: { reflectedInAccounting: false },
+    it.each([-5, Number.NaN, Number.POSITIVE_INFINITY, 1e12, 'abc'])(
+        'ignores an unusable paidAmount %s',
+        paidAmount => {
+            expect(paidAmountMinor({ paidAmount })).toBeNull();
+        },
+    );
+
+    it('is empty when the state carries none of the facts', () => {
+        expect(orderStateFacts({ lines: [{ productId: 'p-1', reservedQuantity: 1 }] })).toEqual({});
+    });
+
+    it('keeps linked document flags and per-line shipped quantities, explicit zero included', () => {
+        const facts = orderStateFacts({
             linkedDocuments: [
                 { kind: 'realization', id: 'd-1', accounting: { reflectedInAccounting: true } },
-                { kind: 'payment', id: 'd-2' },
+                { kind: 'proforma_invoice', id: 'd-2' },
             ],
             lines: [
                 { productId: 'p-1', shippedQuantityInSettlements: 0 },
@@ -122,7 +116,6 @@ describe('orderErpFacts', () => {
             ],
         });
 
-        expect(JSON.parse(facts.erpAccounting ?? '')).toEqual({ reflectedInAccounting: false });
         expect(JSON.parse(facts.erpLinkedDocuments ?? '')).toEqual([
             { kind: 'realization', id: 'd-1', accounting: { reflectedInAccounting: true } },
         ]);
@@ -131,12 +124,21 @@ describe('orderErpFacts', () => {
             { productId: 'p-3', quantity: 2.5 },
         ]);
     });
+});
+
+describe('orderAccountingFacts', () => {
+    it('keeps an explicit false flag of the order document and nothing else', () => {
+        const facts = orderAccountingFacts({
+            accounting: { reflectedInAccounting: false },
+            linkedDocuments: [{ kind: 'realization', id: 'd-1' }],
+        });
+        expect(facts).toEqual({ erpAccounting: '{"reflectedInAccounting":false}' });
+    });
 
     it('rides on the external order input', () => {
         const input = buildExternalOrderInput(
             'e1',
             { accounting: { reflectedInAccounting: true } },
-            null,
             [],
         );
         expect(input.erpFacts).toEqual({ erpAccounting: '{"reflectedInAccounting":true}' });

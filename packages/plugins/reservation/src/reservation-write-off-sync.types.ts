@@ -22,20 +22,29 @@ export interface OrderRegistrationResultInput {
     rejectionReasonText: string | null;
 }
 
-// erp.order.events.v1 `changed`: the order's repeated current-state view (#110/#72). It reuses the
-// idempotent release matching of the registration result; there is no `rejected` on this stream.
+// erp.order.events.v1 `changed`: the order document's own data (#110/#72). Reserve, derived status and
+// paid amount come from erp.order-state.events.v1 (OrderStateInput).
 export interface OrderChangedInput {
     // Absent for orders not registered through our integration; preferred over orderEntityId.
     orderUuid: string | null;
     orderEntityId: string;
     // Plain proto3 string: '' means absent.
     status: string;
-    reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
-    // True when an event line was dropped before resolution; the stored reserve set is then only upserted.
-    linesDiscarded?: boolean;
     contractId: string | null;
     // Sent on every emission; null or '' never clears a known number.
     documentNumber?: string | null;
+    // The order document's accounting flags as received; an absent one never clears a stored value.
+    erpFacts?: Partial<Record<'erpAccounting', string>>;
+    // Null when not sent, never clears a known value.
+    reserveUntil?: Date | null;
+}
+
+// erp.order-state.events.v1 `changed`: values derived from the order's linked documents and register sets.
+export interface OrderStateInput {
+    orderEntityId: string;
+    reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
+    // True when an event line was dropped before resolution; the stored reserve set is then only upserted.
+    linesDiscarded?: boolean;
     // mivend's own status derived from the stream's facts; null when none could be derived.
     derivedStatus: string | null;
     // ERP time of the status change; null falls back to now.
@@ -46,6 +55,4 @@ export interface OrderChangedInput {
     erpFacts?: Partial<
         Record<'erpAccounting' | 'erpLinkedDocuments' | 'erpShippedInSettlements', string>
     >;
-    // Null when not sent, never clears a known value.
-    reserveUntil?: Date | null;
 }

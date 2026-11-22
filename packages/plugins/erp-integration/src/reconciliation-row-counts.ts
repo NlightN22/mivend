@@ -9,6 +9,7 @@ export const ROW_COUNT_RULES = {
     legalForm: { table: 'legal_form_record', condition: '"isActive" = true' },
     bank: { table: 'bank_record', condition: '"isActive" = true' },
     bankAccount: { table: 'bank_account_record', condition: '"isActive" = true' },
+    currency: { table: 'currency_record', condition: '"isDeleted" = false' },
     // A photo whose product has not arrived is parked, so it is not stored yet.
     productPhoto: { table: 'product_photo', condition: '"isDeleted" = false' },
     // Unevaluated setups are stored inactive but still count upstream; only a cancelled one does not.

@@ -1,7 +1,12 @@
 import type { fromBinary } from '@bufbuild/protobuf';
 import {
     CategoryChangedSchema,
+    ContactInfoSetEventSchema,
+    ContactInfoSetSchema,
     ContactPersonChangedSchema,
+    CurrencyChangedSchema,
+    OrderStateEventSchema,
+    OrderStateSchema,
     IndividualChangedSchema,
     PersonalContactChangedSchema,
     CounterpartyContactChangedSchema,
@@ -104,4 +109,15 @@ export const SCHEMA_BY_STREAM: Record<
     'customer-claim': CustomerClaimChangedSchema,
     'sales-correction': SalesCorrectionChangedSchema,
     'order-correction': OrderCorrectionChangedSchema,
+    currency: CurrencyChangedSchema,
+    'order-state': OrderStateEventSchema,
+    'contact-info': ContactInfoSetEventSchema,
+};
+
+// Streams whose topic carries a oneof envelope: the schema above decodes the envelope, this one its `changed` member.
+export const ENVELOPE_INNER_SCHEMA: Partial<
+    Record<keyof typeof SCHEMA_BY_STREAM, Parameters<typeof fromBinary>[0]>
+> = {
+    'order-state': OrderStateSchema,
+    'contact-info': ContactInfoSetSchema,
 };

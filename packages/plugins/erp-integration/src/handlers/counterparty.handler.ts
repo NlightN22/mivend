@@ -10,7 +10,6 @@ import {
 import type { ActiveStateFields } from '@mivend/plugin-counterparty';
 import { BranchAssignmentService, UserEnrichmentService } from '@mivend/plugin-access-control';
 
-import { parseContactInfos } from './contact-infos';
 import { resolveManagers } from './counterparty-manager-resolution';
 import { optionalErpDetails } from './counterparty-erp-details';
 import { mirrorFields } from './counterparty-mirror-fields';
@@ -47,39 +46,20 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
 
         const { assignedManagerId, managerErpId, teamAdministratorIds, unresolvedReason } =
             await resolveManagers(this.userEnrichmentService, entityId, ctx, payload);
-        const contactInfos = parseContactInfos(payload.contactInfos);
         const fields: ActiveStateFields = {
             name,
             isActive,
-            // inn/group/department: absent keeps the stored value. Contact fields below are
-            // full state on a named event: absent or empty clears (#259).
+            // Absent keeps the stored value. Address, phone, e-mail and channels come from the
+            // contact-info stream; the group label and department are no longer sent.
             inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
-            erpGroupLabel:
-                'erpGroupLabel' in payload
-                    ? ((payload.erpGroupLabel as string | null) ?? null)
-                    : undefined,
-            departmentId:
-                'departmentId' in payload
-                    ? ((payload.departmentId as string | null) ?? null)
-                    : undefined,
             assignedManagerId,
             managerErpId,
-            legalAddress: contact(name, payload.legalAddress),
-            factualAddress: contact(name, payload.factualAddress),
-            phone: contact(name, payload.phone),
-            officialEmail: contact(name, payload.officialEmail),
             ...optionalErpDetails(payload),
-            // notificationPhone: deliberately unread — no column until a consumer exists.
         };
         if (name) {
-            await this.mirror.write(
-                ctx,
-                entityId,
-                mirrorFields(fields, payload.managerIds, contactInfos),
-            );
+            await this.mirror.write(ctx, entityId, mirrorFields(fields, payload.managerIds));
         }
 
-        const contactStep: { failure: string | null } = { failure: null };
         const stored = await this.branchAssignment.assignCounterpartyIfInputsChanged(
             ctx,
             entityId,
@@ -90,28 +70,15 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                     fields,
                     async (txCtx, created) => {
                         await this.team.seedFromErp(txCtx, created.id, teamAdministratorIds);
-                        contactStep.failure = await this.contactPoints.guarded(
-                            txCtx,
-                            `counterparty ${entityId}`,
-                            async () => {
-                                if (contactInfos) {
-                                    await this.contactPoints.replaceErpPointsByErpId(
-                                        txCtx,
-                                        'counterparty',
-                                        entityId,
-                                        contactInfos,
-                                    );
-                                }
-                            },
-                        );
                     },
                 ),
         );
         const failure = name
-            ? ((await this.contactPoints.guarded(ctx, `counterparty ${entityId}`, () =>
-                  this.persons.linkWaitingContacts(ctx, entityId),
-              )) ?? contactStep.failure)
-            : contactStep.failure;
+            ? await this.contactPoints.guarded(ctx, `counterparty ${entityId}`, async () => {
+                  await this.mirror.seedContactFromMirror(ctx, entityId);
+                  await this.persons.linkWaitingContacts(ctx, entityId);
+              })
+            : null;
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +
@@ -127,9 +94,4 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
             ? inboundNoop(failure ? `${unresolvedReason}; ${failure}` : unresolvedReason)
             : inboundApplied(undefined, failure);
     }
-}
-
-function contact(name: string | null, value: unknown): string | null | undefined {
-    if (!name) return undefined;
-    return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
