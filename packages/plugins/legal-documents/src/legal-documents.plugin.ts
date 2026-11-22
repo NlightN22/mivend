@@ -12,6 +12,8 @@ import { LegalDocumentVersion } from './entities/legal-document-version.entity';
 import { LegalDocumentsResolver } from './legal-documents.resolver';
 import { LegalDocumentsService } from './legal-documents.service';
 import { LegalPublisherService } from './legal-publisher.service';
+import { StaffEmailChangeInterceptor } from './staff-email-change.interceptor';
+import { StaffEmailChangeService } from './staff-email-change.service';
 import { LEGAL_DOCUMENTS_OPTIONS } from './types';
 import type { LegalDocumentsOptions } from './types';
 
@@ -24,6 +26,8 @@ import type { LegalDocumentsOptions } from './types';
         EmailConfirmationService,
         EmailConfirmationNotifier,
         EmailConfirmationListener,
+        StaffEmailChangeService,
+        { provide: 'APP_INTERCEPTOR', useClass: StaffEmailChangeInterceptor },
         {
             provide: LEGAL_DOCUMENTS_OPTIONS,
             useFactory: (): LegalDocumentsOptions => LegalDocumentsPlugin.options,

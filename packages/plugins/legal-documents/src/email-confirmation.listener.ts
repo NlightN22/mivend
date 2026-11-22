@@ -12,9 +12,8 @@ import { subscribeAndLog } from 'shared';
 
 import { EmailConfirmationNotifier } from './email-confirmation.notifier';
 import { EmailConfirmationService } from './email-confirmation.service';
-import { EmailConfirmationRequestedEvent } from './events/email-confirmation-requested.event';
 
-// Staff changes the address: not confirmed until the customer follows the link; the customer's own flows confirm it.
+// The customer's own flows (verification, own address change, import) record the address as confirmed.
 @Injectable()
 export class EmailConfirmationListener implements OnApplicationBootstrap {
     constructor(
@@ -45,10 +44,7 @@ export class EmailConfirmationListener implements OnApplicationBootstrap {
             this.events,
             CustomerEvent,
             async e => {
-                const input = e.input as { emailAddress?: string } | undefined;
                 if (e.type === 'created') await this.confirmIfVerified(e.ctx, e.entity.id);
-                else if (e.type === 'updated' && input?.emailAddress)
-                    await this.request(e.ctx, e.entity.id);
             },
             log,
         );
@@ -64,26 +60,5 @@ export class EmailConfirmationListener implements OnApplicationBootstrap {
     private async confirmIfVerified(ctx: RequestContext, id: number | string): Promise<void> {
         const customer = await this.customers.findOne(ctx, id, ['user']);
         if (customer?.user?.verified) await this.confirm(ctx, id);
-    }
-
-    async request(ctx: RequestContext, id: number | string): Promise<void> {
-        const customer = await this.customers.findOne(ctx, id, ['user']);
-        if (!customer?.user) return;
-        const token = await this.confirmations.requestConfirmation(
-            ctx,
-            Number(id),
-            customer.emailAddress,
-        );
-        if (token) {
-            await this.notifier.notify(ctx, Number(id));
-            await this.events.publish(
-                new EmailConfirmationRequestedEvent(
-                    ctx,
-                    customer.user,
-                    customer.emailAddress,
-                    token,
-                ),
-            );
-        }
     }
 }

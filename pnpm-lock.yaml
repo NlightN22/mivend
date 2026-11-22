@@ -1342,6 +1342,9 @@ importers:
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.7(graphql@16.14.2)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
       shared:
         specifier: workspace:*
         version: link:../../shared

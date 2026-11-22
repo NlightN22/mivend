@@ -14,9 +14,10 @@ interface Row {
     customerId: number;
     confirmedEmail: string | null;
     pendingEmail?: string | null;
+    userId?: number | null;
 }
 
-// Each write is one statement, so concurrent requests need no lock (docs/concurrency.md).
+// Single statements need no lock; confirmByToken locks its row and the address (docs/concurrency.md).
 @Injectable()
 export class EmailConfirmationService {
     constructor(private connection: TransactionalConnection) {}
@@ -56,8 +57,7 @@ export class EmailConfirmationService {
         );
     }
 
-    // Null when the address is already confirmed or already has a link out; the stored token is a hash.
-    // Going back to the confirmed address drops any pending link.
+    // Null when this address is already pending; the stored token is a hash. A new request replaces the old link.
     async requestConfirmation(
         ctx: RequestContext,
         customerId: number,
@@ -71,32 +71,72 @@ export class EmailConfirmationService {
             `INSERT INTO email_confirmation (uuid, "customerId", "pendingEmail", token)
              VALUES (gen_random_uuid(), $1, $2, $3)
              ON CONFLICT ("customerId") DO UPDATE
-             SET "pendingEmail" = CASE WHEN email_confirmation."confirmedEmail" = $2 THEN NULL ELSE $2 END,
-                 token = CASE WHEN email_confirmation."confirmedEmail" = $2 THEN NULL ELSE $3 END,
-                 "updatedAt" = now()
-             WHERE (email_confirmation."confirmedEmail" IS DISTINCT FROM $2
-                    AND email_confirmation."pendingEmail" IS DISTINCT FROM $2)
-                OR (email_confirmation."confirmedEmail" = $2
-                    AND (email_confirmation."pendingEmail" IS NOT NULL OR email_confirmation.token IS NOT NULL))
+             SET "pendingEmail" = $2, token = $3, "updatedAt" = now()
+             WHERE email_confirmation."pendingEmail" IS DISTINCT FROM $2
              RETURNING "pendingEmail"`,
             [customerId, address, hashToken(token)],
         );
         return rows[0]?.pendingEmail ? token : null;
     }
 
-    // The statement that confirms also spends the token and only confirms the address the customer has now.
-    async confirmByToken(ctx: RequestContext, token: string): Promise<Row | null> {
-        if (!token) return null;
+    async clearPending(ctx: RequestContext, customerId: number): Promise<boolean> {
         const rows = await this.query(
             ctx,
-            `UPDATE email_confirmation ec
-             SET "confirmedEmail" = ec."pendingEmail", "pendingEmail" = NULL, token = NULL, "updatedAt" = now()
-             FROM customer c
-             WHERE c.id = ec."customerId" AND ec.token = $1 AND ec."pendingEmail" IS NOT NULL
-               AND lower(btrim(c."emailAddress")) = ec."pendingEmail"
-             RETURNING ec."customerId", ec."confirmedEmail"`,
-            [hashToken(token)],
+            `UPDATE email_confirmation SET "pendingEmail" = NULL, token = NULL, "updatedAt" = now()
+             WHERE "customerId" = $1 AND "pendingEmail" IS NOT NULL RETURNING "customerId"`,
+            [customerId],
         );
-        return rows[0] ?? null;
+        return rows.length > 0;
+    }
+
+    // Applies the pending address to the customer and the sign-in under the row lock; a clash with another account fails closed.
+    async confirmByToken(ctx: RequestContext, token: string): Promise<Row | null> {
+        if (!token) return null;
+        return this.connection.withTransaction(ctx, async txCtx => {
+            const [held] = await this.query(
+                txCtx,
+                `SELECT ec."customerId", ec."pendingEmail", c."userId" AS "userId"
+                 FROM email_confirmation ec JOIN customer c ON c.id = ec."customerId"
+                 WHERE ec.token = $1 AND ec."pendingEmail" IS NOT NULL FOR UPDATE OF ec`,
+                [hashToken(token)],
+            );
+            const address = held?.pendingEmail;
+            if (!held || !address) return null;
+            await this.query(txCtx, `SELECT pg_advisory_xact_lock(hashtext($1))`, [address]);
+            const clash = await this.query(
+                txCtx,
+                `SELECT 1 FROM customer WHERE id <> $1 AND "deletedAt" IS NULL
+                   AND lower(btrim("emailAddress")) = $2
+                 UNION ALL
+                 SELECT 1 FROM "user" WHERE ($3::int IS NULL OR id <> $3) AND "deletedAt" IS NULL
+                   AND lower(btrim(identifier)) = $2`,
+                [held.customerId, address, held.userId ?? null],
+            );
+            if (clash.length > 0) return null;
+            await this.query(txCtx, `UPDATE customer SET "emailAddress" = $2 WHERE id = $1`, [
+                held.customerId,
+                address,
+            ]);
+            if (held.userId) {
+                await this.query(txCtx, `UPDATE "user" SET identifier = $2 WHERE id = $1`, [
+                    held.userId,
+                    address,
+                ]);
+                await this.query(
+                    txCtx,
+                    `UPDATE authentication_method SET identifier = $2
+                     WHERE "userId" = $1 AND type = 'NativeAuthenticationMethod'`,
+                    [held.userId, address],
+                );
+            }
+            const [done] = await this.query(
+                txCtx,
+                `UPDATE email_confirmation
+                 SET "confirmedEmail" = $2, "pendingEmail" = NULL, token = NULL, "updatedAt" = now()
+                 WHERE "customerId" = $1 RETURNING "customerId", "confirmedEmail"`,
+                [held.customerId, address],
+            );
+            return done ?? null;
+        });
     }
 }
