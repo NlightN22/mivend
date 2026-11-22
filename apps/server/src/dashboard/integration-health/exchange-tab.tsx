@@ -16,6 +16,7 @@ import {
 } from '@vendure/dashboard';
 
 import { formatAgeSeconds, stateBadgeVariant, unknownReasonText } from './exchange-health-view.js';
+import { PublishSection } from './publish-section.js';
 import { RefreshIconButton } from './refresh-button.js';
 import { formatAge } from './stream-health-view.js';
 
@@ -41,6 +42,25 @@ const exchangeHealthDocument = graphql(`
                         oldestAgeSeconds
                         failedLast24h
                     }
+                }
+                publish {
+                    status
+                    aggregates {
+                        aggregateType
+                        status
+                        mappingErrorsLast24h
+                        mappingErrorCodes
+                        deadLetteredLast24h
+                        pending
+                        oldestPendingAgeSeconds
+                        lastPublishedAt
+                    }
+                }
+                mappingErrors {
+                    kind
+                    code
+                    message
+                    occurrences
                 }
                 failures {
                     status
@@ -99,7 +119,8 @@ export function ExchangeTab() {
         <div className="pt-4 pb-6">
             <p className="text-muted-foreground mb-4">
                 The ERP exchange as the Integration Service sees it: ingest (the ERP uploads), pull
-                (the ERP collects commands) and ack (the ERP confirms them). Read on a schedule.
+                (the ERP collects commands), ack (the ERP confirms them) and publish (to Kafka).
+                Read on a schedule.
             </p>
             {error && <p className="text-destructive mb-3">{error}</p>}
             <div className="flex items-center justify-between mb-3">
@@ -151,6 +172,13 @@ export function ExchangeTab() {
                             </TableBody>
                         </Table>
                     </div>
+                    {health.publish && (
+                        <PublishSection
+                            publish={health.publish}
+                            errors={health.mappingErrors}
+                            now={now}
+                        />
+                    )}
                     <p className="mt-4">
                         <span className="text-muted-foreground">Failures in the last 24 h: </span>
                         inbox {dash(health.failures.inboxFailedLast24h)}, outbox{' '}

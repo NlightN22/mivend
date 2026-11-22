@@ -43,6 +43,8 @@ const health = (status: ExchangeHealth['status']): ExchangeHealth => ({
     generatedAt: '2026-11-20T10:00:00Z',
     status,
     channels: [],
+    publish: null,
+    mappingErrors: [],
     failures: {
         status: 'OK',
         inboxFailedLast24h: 0,

@@ -5,6 +5,7 @@ import { ExchangeHealthSnapshot } from './entities/exchange-health-snapshot.enti
 import { ExchangeHealthClient } from './exchange-health.client';
 import { ExchangeHealthReadError } from './exchange-health';
 import type { ExchangeHealth, ExchangeState, ExchangeUnknownReason } from './exchange-health';
+import type { ExchangeMappingError } from './exchange-publish';
 import { loggerCtx } from './types';
 
 export const EXCHANGE_SNAPSHOT_KEY = 'exchange';
@@ -28,6 +29,9 @@ export class ExchangeHealthPollerService {
         let reason: ExchangeUnknownReason | null = null;
         try {
             health = await this.client.fetchHealth();
+            if (health.publish && health.publish.status !== 'OK') {
+                health.mappingErrors = await this.readMappingErrors();
+            }
         } catch (err) {
             reason = err instanceof ExchangeHealthReadError ? err.reason : 'UNREACHABLE';
             const log = reason === 'NOT_CONFIGURED' ? Logger.debug : Logger.warn;
@@ -44,5 +48,17 @@ export class ExchangeHealthPollerService {
                 'key',
             ]);
         return { state, reason };
+    }
+
+    private async readMappingErrors(): Promise<ExchangeMappingError[]> {
+        try {
+            return await this.client.fetchMappingErrors();
+        } catch (err) {
+            Logger.warn(
+                `Mapping errors unreadable: ${err instanceof Error ? err.name : 'error'}`,
+                loggerCtx,
+            );
+            return [];
+        }
     }
 }

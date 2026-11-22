@@ -21,6 +21,33 @@ export const healthTypes = `
         streams: [ExchangeStream!]!
     }
 
+    type ExchangePublishAggregate {
+        "The published entity (outbox aggregate type)."
+        aggregateType: String!
+        status: String!
+        mappingErrorsLast24h: Int
+        mappingErrorCodes: [String!]!
+        deadLetteredLast24h: Int
+        pending: Int
+        oldestPendingAgeSeconds: Int
+        lastPublishedAt: String
+    }
+
+    type ExchangePublishChannel {
+        status: String!
+        lastActivityAt: String
+        aggregates: [ExchangePublishAggregate!]!
+    }
+
+    type ExchangeMappingError {
+        "The stream the problem belongs to."
+        kind: String!
+        code: String!
+        message: String!
+        occurrences: Int
+        lastSeenAt: String
+    }
+
     type ExchangeFailures {
         status: String!
         inboxFailedLast24h: Int
@@ -48,6 +75,10 @@ export const healthTypes = `
         generatedAt: String!
         status: String!
         channels: [ExchangeChannel!]!
+        "Null when the Integration Service does not report the publish channel (older version)."
+        publish: ExchangePublishChannel
+        "Active mapping errors, read only while the publish channel is not OK."
+        mappingErrors: [ExchangeMappingError!]!
         failures: ExchangeFailures!
         resync: ExchangeResync!
     }

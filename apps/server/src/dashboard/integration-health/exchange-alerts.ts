@@ -51,7 +51,7 @@ export const exchangeDownAlert = exchangeAlert(
     'erp-exchange-down',
     'error',
     'The ERP exchange is down',
-    'The ERP has made no call to the Integration Service for longer than the allowed silence.',
+    'The ERP is silent for too long, or entities are not reaching Kafka (dead-lettered or long unpublished).',
 );
 
 export const exchangeDegradedAlert = exchangeAlert(
@@ -59,7 +59,7 @@ export const exchangeDegradedAlert = exchangeAlert(
     'erp-exchange-degraded',
     'warning',
     'The ERP exchange is degraded',
-    'A backlog is older than its threshold or a delivered command is still not acknowledged.',
+    'A backlog is older than its threshold, a command is not acknowledged, or an entity has mapping errors.',
 );
 
 export const exchangeUnknownAlert: DashboardAlertDefinition<boolean> = {

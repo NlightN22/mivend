@@ -6,6 +6,8 @@ import {
     reasonForHttpStatus,
 } from './exchange-health';
 import type { ExchangeHealth } from './exchange-health';
+import { MAX_MAPPING_ERRORS, parseMappingErrors } from './exchange-publish';
+import type { ExchangeMappingError } from './exchange-publish';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
@@ -18,6 +20,29 @@ export class ExchangeHealthClient {
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
+
+    async fetchMappingErrors(): Promise<ExchangeMappingError[]> {
+        const { reconciliationApiUrl: baseUrl, integrationOpsApiKey: key } = this.options;
+        if (!baseUrl || !key) return [];
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+        try {
+            const url = new URL('/api/ops/v1/mapping-errors', baseUrl);
+            url.searchParams.set('status', 'active');
+            url.searchParams.set('limit', String(MAX_MAPPING_ERRORS));
+            const response = await fetch(url, {
+                headers: { 'X-Api-Key': key },
+                signal: controller.signal,
+                redirect: 'error',
+            });
+            if (!response.ok) {
+                throw new Error(`mapping errors endpoint returned ${response.status}`);
+            }
+            return parseMappingErrors(await response.json());
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
 
     async fetchHealth(): Promise<ExchangeHealth> {
         const { reconciliationApiUrl: baseUrl, integrationOpsApiKey: key } = this.options;

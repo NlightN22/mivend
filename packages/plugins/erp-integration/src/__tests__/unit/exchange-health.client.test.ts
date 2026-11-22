@@ -228,3 +228,22 @@ describe('ExchangeHealthClient', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 });
+
+describe('ExchangeHealthClient mapping errors', () => {
+    it('asks for active errors with the key in the header only', async () => {
+        const fetchMock = respond(200, { items: [{ kind: 'item', code: 'c', message: 'm' }] });
+        vi.stubGlobal('fetch', fetchMock);
+        const errors = await client.fetchMappingErrors();
+        const [url, init] = fetchMock.mock.calls[0] as unknown as [URL, RequestInit];
+        expect(url.pathname).toBe('/api/ops/v1/mapping-errors');
+        expect(url.searchParams.get('status')).toBe('active');
+        expect(String(url)).not.toContain(OPS_KEY);
+        expect((init.headers as Record<string, string>)['X-Api-Key']).toBe(OPS_KEY);
+        expect(errors[0].code).toBe('c');
+    });
+
+    it('rejects on a non-2xx without leaking the key', async () => {
+        vi.stubGlobal('fetch', respond(500, 'x'));
+        await expect(client.fetchMappingErrors()).rejects.toThrow(/500/);
+    });
+});

@@ -1,3 +1,6 @@
+import { parsePublishChannel } from './exchange-publish';
+import type { ExchangeMappingError, ExchangePublishChannel } from './exchange-publish';
+
 export type ExchangeStatus = 'OK' | 'DEGRADED' | 'DOWN';
 export type ExchangeState = ExchangeStatus | 'UNKNOWN';
 export type ExchangeUnknownReason =
@@ -41,6 +44,8 @@ export interface ExchangeHealth {
     generatedAt: string;
     status: ExchangeStatus;
     channels: ExchangeChannel[];
+    publish: ExchangePublishChannel | null;
+    mappingErrors: ExchangeMappingError[];
     failures: {
         status: ExchangeStatus;
         inboxFailedLast24h: number | null;
@@ -137,6 +142,8 @@ export function parseExchangeHealth(raw: unknown): ExchangeHealth {
         generatedAt: text(body.generatedAt, 'generatedAt'),
         status: status(body.status, 'overall'),
         channels: CHANNELS.map(name => channel(name, channels[name])),
+        publish: parsePublishChannel(channels.publish),
+        mappingErrors: [],
         failures: {
             status: status(failures.status, 'failures24h'),
             inboxFailedLast24h: count(failures.inboxFailedLast24h),
@@ -187,6 +194,10 @@ export function viewSnapshot(
         state: stored.state,
         reason: stored.state === 'UNKNOWN' ? (stored.reason as ExchangeUnknownReason) : null,
         polledAt: stored.polledAt,
-        health: stored.health,
+        health: stored.health && {
+            ...stored.health,
+            publish: stored.health.publish ?? null,
+            mappingErrors: stored.health.mappingErrors ?? [],
+        },
     };
 }
