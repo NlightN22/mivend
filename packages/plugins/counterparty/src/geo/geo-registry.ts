@@ -3,29 +3,31 @@ import { OpenAdapter } from './open.adapter';
 import { ProviderAAdapter } from './provider-a.adapter';
 import { ProviderBAdapter } from './provider-b.adapter';
 
-const factories: Record<string, (config: GeoProviderConfig) => GeoProvider> = {
-    'provider-a': () => new ProviderAAdapter(),
-    'provider-b': () => new ProviderBAdapter(),
-    open: c => new OpenAdapter(c),
+interface GeoRegistration {
+    create: (config: GeoProviderConfig) => GeoProvider;
+    hosts: string[];
+}
+
+const registry: Record<string, GeoRegistration> = {
+    'provider-a': { create: () => new ProviderAAdapter(), hosts: ['api-maps.yandex.com'] },
+    'provider-b': { create: () => new ProviderBAdapter(), hosts: ['maps.googleapis.com'] },
+    open: {
+        create: c => new OpenAdapter(c),
+        hosts: ['nominatim.openstreetmap.org', 'tile.openstreetmap.org'],
+    },
 };
 
 export function createGeoProvider(key: string, config: GeoProviderConfig): GeoProvider {
-    const factory = factories[key];
-    if (!factory)
+    const registration = registry[key];
+    if (!registration)
         throw new Error(
-            `Unknown geo provider "${key}" in GEO_PROVIDERS, expected: ${Object.keys(factories).join(', ')}`,
+            `Unknown geo provider "${key}" in GEO_PROVIDERS, expected: ${Object.keys(registry).join(', ')}`,
         );
-    return factory(config);
+    return registration.create(config);
 }
 
-const hosts: Record<string, string[]> = {
-    'provider-a': ['api-maps.yandex.com'],
-    'provider-b': ['maps.googleapis.com'],
-    open: ['nominatim.openstreetmap.org', 'tile.openstreetmap.org'],
-};
-
 export function geoProviderHosts(keys: string[]): string[] {
-    return keys.flatMap(key => hosts[key] ?? []);
+    return keys.flatMap(key => registry[key]?.hosts ?? []);
 }
 
 export function geoEnvPrefix(key: string): string {

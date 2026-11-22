@@ -43,7 +43,7 @@ There is no automatic deletion or anonymisation of a closed customer account. It
 - The policy names the statutes and the law directly; the `LEGAL_JURISDICTION` requisite only fills the agreement and the consent.
 - Fonts are served from our own origin; no font host is contacted.
 
-The policy lists their hosts, derived from `CAPTCHA_SCRIPT_URL` and `GEO_PROVIDERS`; a new provider needs its host added to `geoProviderHosts`.
+The policy lists their hosts, derived from `CAPTCHA_SCRIPT_URL` and `GEO_PROVIDERS`; a new provider declares its hosts in the geo registry next to its factory. Only the captcha script host is listed; the widget may call other hosts of the same provider, and the map host is the default one (a host override in the browser settings is not reflected).
 
 ## Requests from a subject
 
