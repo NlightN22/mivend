@@ -44,5 +44,7 @@ describe('useLoginConsents', () => {
         expect(consents.checks.value).toHaveLength(2);
         expect(await consents.settle('1')).toBe(false);
         expect(consents.checks.value.map(c => c.kind)).toEqual(['personal-data-consent']);
+        await consents.load();
+        expect(consents.checks.value.map(c => c.kind)).toEqual(['personal-data-consent']);
     });
 });

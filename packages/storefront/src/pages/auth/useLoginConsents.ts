@@ -42,6 +42,7 @@ export function useLoginConsents(): LoginConsents {
     );
 
     async function load(): Promise<void> {
+        if (forced.value) return;
         try {
             const offers = await fetchLegalOffer();
             requiredVersions.value = Object.fromEntries(
