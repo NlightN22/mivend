@@ -1,3 +1,4 @@
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { Type } from '@vendure/core';
 import { NotificationPlugin } from '@mivend/plugin-notification';
@@ -27,7 +28,7 @@ import type { LegalDocumentsOptions } from './types';
         EmailConfirmationNotifier,
         EmailConfirmationListener,
         StaffEmailChangeService,
-        { provide: 'APP_INTERCEPTOR', useClass: StaffEmailChangeInterceptor },
+        { provide: APP_INTERCEPTOR, useClass: StaffEmailChangeInterceptor },
         {
             provide: LEGAL_DOCUMENTS_OPTIONS,
             useFactory: (): LegalDocumentsOptions => LegalDocumentsPlugin.options,

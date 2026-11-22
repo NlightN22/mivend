@@ -1,4 +1,14 @@
-import { Column, DataSource, Entity, Index, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import type { EntitySubscriberInterface, UpdateEvent } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    EventSubscriber,
+    Index,
+    PrimaryColumn,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Customer } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
@@ -104,6 +114,17 @@ class VersionRow {
     @Column({ type: 'boolean' }) requiresReacceptance!: boolean;
 }
 
+const customerUpdates: string[] = [];
+
+@EventSubscriber()
+class CustomerUpdateProbe implements EntitySubscriberInterface {
+    afterUpdate(event: UpdateEvent<{ id: number }>): void {
+        if (event.metadata.tableName === 'customer' && event.entity) {
+            customerUpdates.push(String(event.entity.id));
+        }
+    }
+}
+
 const { schema, extra } = testSchemaOptions('legal_acceptance');
 let dataSource: DataSource;
 let service: LegalDocumentsService;
@@ -122,6 +143,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         extra,
         entities: [AcceptanceRow, VersionRow, ConfirmationRow, CustomerRow, UserRow, AuthRow],
+        subscribers: [CustomerUpdateProbe],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -130,6 +152,7 @@ beforeAll(async () => {
         [LegalAcceptance, AcceptanceRow],
         [LegalDocumentVersion, VersionRow],
         [EmailConfirmation, ConfirmationRow],
+        [Customer, CustomerRow],
     ]);
     connection = {
         withTransaction: base.withTransaction.bind(base),
@@ -149,6 +172,7 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 beforeEach(async () => {
+    customerUpdates.length = 0;
     contacts = { emailAddress: 'Buyer@Example.com', phoneNumber: '+70000000000' };
     await dataSource.query(
         'TRUNCATE legal_acceptance, legal_document_version, email_confirmation, customer, "user", authentication_method RESTART IDENTITY',
@@ -320,6 +344,7 @@ describe('e-mail confirmation', () => {
             confirmedEmail: 'new@example.com',
         });
         expect(await identifiers(1)).toEqual(Array(3).fill('new@example.com'));
+        expect(customerUpdates).toEqual(['1']);
         expect(await stored(1)).toMatchObject({ pendingEmail: null, token: null });
     });
 

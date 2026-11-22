@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Customer, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { EmailConfirmation } from './entities/email-confirmation.entity';
 
@@ -89,6 +89,7 @@ export class EmailConfirmationService {
         return rows.length > 0;
     }
 
+    // The customer row goes through the repository so the change journal sees it; the rest is raw.
     // Applies the pending address to the customer and the sign-in under the row lock; a clash with another account fails closed.
     async confirmByToken(ctx: RequestContext, token: string): Promise<Row | null> {
         if (!token) return null;
@@ -113,10 +114,11 @@ export class EmailConfirmationService {
                 [held.customerId, address, held.userId ?? null],
             );
             if (clash.length > 0) return null;
-            await this.query(txCtx, `UPDATE customer SET "emailAddress" = $2 WHERE id = $1`, [
-                held.customerId,
-                address,
-            ]);
+            const customers = this.connection.getRepository(txCtx, Customer);
+            const customer = await customers.findOneBy({ id: held.customerId });
+            if (!customer) return null;
+            customer.emailAddress = address;
+            await customers.save(customer, { reload: false });
             if (held.userId) {
                 await this.query(txCtx, `UPDATE "user" SET identifier = $2 WHERE id = $1`, [
                     held.userId,
