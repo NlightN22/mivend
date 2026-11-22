@@ -7,8 +7,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 import { applyErpPerson } from './erp-person';
 import { activityFlags, optionalText, upsertErpMirror } from './erp-mirror-upsert';
 
-// `counterparty-contact` stream: stored as sent in the mirror, and applied to the ERP-backed contact person
-//. An unknown counterparty retries the event until it arrives.
+// `counterparty-contact` stream: stored as sent in the mirror and applied to the ERP-backed contact person.
+// An unknown counterparty leaves the person unlinked until it arrives.
 @Injectable()
 export class CounterpartyContactStreamHandler implements InboundStreamHandler {
     constructor(

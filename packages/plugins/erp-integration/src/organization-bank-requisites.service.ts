@@ -43,7 +43,7 @@ export class OrganizationBankRequisitesService {
                FROM organization_requisites o
                JOIN bank_account_record a ON a."entityId" = o."mainBankAccountId"
                JOIN bank_record b ON b."entityId" = a."bankId"
-              WHERE ${TRIGGER_FILTER[key]} = $1`,
+              WHERE a."isDeleted" = false AND b."isDeleted" = false AND ${TRIGGER_FILTER[key]} = $1`,
             [value],
             MAX_ORGANIZATIONS,
         );

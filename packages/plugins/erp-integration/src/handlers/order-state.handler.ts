@@ -57,12 +57,22 @@ export class OrderStateStreamHandler implements InboundStreamHandler {
             payload.lines,
             false,
         );
-        const computed = resolved.lines.filter(line => line.raw.reservedQuantity !== undefined);
+        const terminal =
+            payload.delivered === true ||
+            resolved.lines.some(line => line.raw.cancelledQuantity !== undefined) ||
+            (derivedStatus !== null &&
+                (await this.statusReference.dictionary(ctx)).has(derivedStatus, 'cancelled'));
+        // A terminal order holds no reserve: a line without a computed reserve reads as released (0).
+        const computed = terminal
+            ? resolved.lines
+            : resolved.lines.filter(line => line.raw.reservedQuantity !== undefined);
         await this.reservationOrderState.handleOrderState(ctx, {
             orderEntityId: entityId,
             reservedLines: computed.map(line => ({
                 productVariantId: line.productVariantId,
-                reservedQuantity: Math.round(Number(line.raw.reservedQuantity) * line.ratioToBase),
+                reservedQuantity: Math.round(
+                    Number(line.raw.reservedQuantity ?? 0) * line.ratioToBase,
+                ),
             })),
             // A line without a computed reserve must not make the stored set look complete.
             linesDiscarded:

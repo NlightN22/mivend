@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ContractStreamHandler } from '../../handlers/contract.handler';
-import { MissingDependencyError } from '../../types';
+import { MissingDependencyError, MissingReferenceError } from '../../types';
 
 function makeHandler(
     upsertActiveState = vi.fn().mockResolvedValue(undefined),
@@ -72,6 +72,19 @@ describe('ContractStreamHandler', () => {
 
         expect(contractService.upsertActiveState.mock.calls[0][2].currency).toBe('USD');
         expect(contractService.upsertActiveState.mock.calls[1][2].currency).toBeUndefined();
+    });
+
+    it('writes the contract without the currency while the currency is not synced yet', async () => {
+        const { handler, contractService } = makeHandler();
+        (handler as unknown as { currencies: { codeOf: unknown } }).currencies.codeOf = vi
+            .fn()
+            .mockRejectedValue(new MissingReferenceError('currency not synced'));
+        await handler.apply(ctx, 'contract-1', {
+            name: 'C',
+            counterpartyId: 'erp-cp-1',
+            currencyId: 'cur-1',
+        });
+        expect(contractService.upsertActiveState.mock.calls[0][2].currency).toBeUndefined();
     });
 
     // Ordinary eventual-consistency race (Kafka gives no cross-topic ordering guarantee) —

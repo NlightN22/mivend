@@ -32,7 +32,12 @@ function setup(
         sync as never,
         external as never,
         { resolve } as never,
-        { dictionary: async () => ({ get: () => (knownStatus ? {} : undefined) }) } as never,
+        {
+            dictionary: async () => ({
+                get: () => (knownStatus ? {} : undefined),
+                has: () => false,
+            }),
+        } as never,
     );
     return { handler, sync, external, resolve };
 }
@@ -97,6 +102,24 @@ describe('OrderStateStreamHandler', () => {
         const input = sync.handleOrderState.mock.calls[0][1];
         expect(input.reservedLines).toEqual([{ productVariantId: '7', reservedQuantity: 2 }]);
         expect(input.linesDiscarded).toBe(true);
+    });
+
+    it('reads a line without a reserve as released (0) when the order is terminal', async () => {
+        const { handler, sync } = setup(mivend, true, {
+            lines: [
+                {
+                    productVariantId: '8',
+                    ratioToBase: 1,
+                    raw: { cancelledQuantity: 2 } as Record<string, unknown>,
+                },
+            ],
+            withoutProductId: 0,
+            unknownProducts: 0,
+        });
+        await handler.apply(ctx, 'o-1', {});
+        const input = sync.handleOrderState.mock.calls[0][1];
+        expect(input.reservedLines).toEqual([{ productVariantId: '8', reservedQuantity: 0 }]);
+        expect(input.linesDiscarded).toBe(false);
     });
 
     it('derives nothing from an event without a status code or paid amount', async () => {

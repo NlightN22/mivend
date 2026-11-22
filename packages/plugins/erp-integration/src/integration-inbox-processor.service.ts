@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
-import { findBounded, lockAggregates } from 'shared';
+import { ctxQuery, findBounded, lockAggregates } from 'shared';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -77,6 +77,17 @@ import { INBOX_VERSIONS_CEILING } from './read-ceilings';
 
 // Kept apart from the BullMQ wiring so tests can call processPendingBatch directly.
 // Same split as IntegrationOutboxProcessorService (see docs/testing-strategy.md).
+const CONTACT_OWNER_STREAMS: ReadonlySet<string> = new Set([
+    'counterparty',
+    'point-of-sale',
+    'organization',
+    'user',
+    'individual',
+    'contact-person',
+    'personal-contact',
+    'counterparty-contact',
+]);
+
 @Injectable()
 export class IntegrationInboxProcessorService {
     private readonly handlers: Record<InboundStream, InboundStreamHandler>;
@@ -278,6 +289,18 @@ export class IntegrationInboxProcessorService {
         return { processed, failed, claimed: rows.length };
     }
 
+    // A contact set that arrived before its owner is parked; the owner's arrival wakes it at once.
+    private async requeueContactInfoOf(ctx: RequestContext, row: ClaimedInboxEvent): Promise<void> {
+        if (!CONTACT_OWNER_STREAMS.has(row.stream)) return;
+        await ctxQuery(
+            this.connection,
+            ctx,
+            `UPDATE integration_inbox_event SET status = 'pending', next_retry_at = now(), eligible_at = now()
+              WHERE stream = 'contact-info' AND entity_id = $1 AND status = 'dependency_missing'`,
+            [row.entityId],
+        );
+    }
+
     private async processOne(ctx: RequestContext, row: ClaimedInboxEvent): Promise<boolean> {
         try {
             // Handler writes and the processed mark commit together; a throw rolls both back.
@@ -285,6 +308,7 @@ export class IntegrationInboxProcessorService {
                 this.applyAndSettle(txCtx, row),
             );
             await this.runAfterCommit(ctx, row, afterCommit);
+            await this.requeueContactInfoOf(ctx, row);
             return true;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));

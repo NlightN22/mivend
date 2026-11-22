@@ -58,7 +58,7 @@ describe('order-state contract (0.99.0)', () => {
                     unknownProducts: 0,
                 })),
             } as never,
-            { dictionary: async () => ({ get: () => ({}) }) } as never,
+            { dictionary: async () => ({ get: () => ({}), has: () => false }) } as never,
         );
         await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
         const input = sync.handleOrderState.mock.calls[0][1];

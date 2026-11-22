@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { CurrencyRecord } from './entities/currency-record.entity';
-import { MissingDependencyError } from './types';
+import { MissingReferenceError } from './types';
 
 // Resolves a currency_id of any event to its alphabetic code through the currency stream.
 @Injectable()
@@ -16,7 +16,7 @@ export class CurrencyResolver {
             .getRepository(ctx, CurrencyRecord)
             .findOne({ where: { entityId: currencyId } });
         if (!record) {
-            throw new MissingDependencyError(`${source}: currency ${currencyId} not synced yet`);
+            throw new MissingReferenceError(`${source}: currency ${currencyId} not synced yet`);
         }
         return record.code;
     }
