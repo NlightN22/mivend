@@ -65,11 +65,15 @@ export const POLICY_EN = `# Personal Data Processing Policy
 
 4.7. Upon achievement of the purpose of processing, expiry of the relevant period or withdrawal of consent, the data is destroyed or depersonalized within the periods provided for by article 21 of Federal Law No. 152-FZ, unless there is another lawful ground for continued processing. The termination of one purpose does not mean the automatic deletion of data that is lawfully necessary for another purpose.
 
+4.8. Database backups are kept for up to two years and are overwritten when the retention cycle ends; data deleted from the working system is not used from backups and is destroyed together with the copy on that schedule.
+
 ## 5. Transfer of data
 
 5.1. The Operator does not provide users' personal data to other organizations and users of the Platform for their independent use. Information about orders and organizations is displayed in the Platform to an extent that does not involve disclosing users' personal data to other participants, except in cases expressly provided for by legislation.
 
 5.2. Authorized persons of the Operator have access to personal data to the extent necessary for the performance of their duties. If technical contractors are engaged in processing, processing on behalf of the Operator is carried out subject to the formalization and protective measures provided for by article 6 of Federal Law No. 152-FZ; such an engagement does not give the contractors the right to use the data for their own purposes.
+
+5.3. For protection against automated requests and for maps and address suggestions the Platform uses third-party services: {{serviceProviders}}. When the user's browser contacts them, it passes them the IP address, technical device data and the text entered in the address search; these services process the data under their own rules.
 
 ## 6. Rights of the data subject
 

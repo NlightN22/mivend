@@ -22,6 +22,7 @@ const requisites = {
     contactEmail: 'legal@example.com',
     portalUrl: 'https://portal.example.com',
     jurisdiction: 'Country',
+    serviceProviders: 'Service A, Service B',
 };
 const options: LegalDocumentsOptions = { requisites, fallbackLocale: 'ru' };
 const ctxOf = (userId: number | null): RequestContext =>

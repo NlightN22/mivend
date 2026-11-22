@@ -24,6 +24,7 @@ export function legalDocumentsOptionsFromEnv(env: Env): LegalDocumentsOptions {
             contactEmail: env.LEGAL_CONTACT_EMAIL,
             portalUrl: env.STOREFRONT_PUBLIC_URL,
             jurisdiction: env.LEGAL_JURISDICTION || DEFAULT_JURISDICTION,
+            serviceProviders: env.LEGAL_SERVICE_PROVIDERS,
         },
         fallbackLocale: env.LEGAL_FALLBACK_LOCALE || 'ru',
     };

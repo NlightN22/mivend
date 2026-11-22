@@ -10,6 +10,7 @@ const requisites = {
     contactEmail: 'legal@example.com',
     portalUrl: 'https://portal.example.com',
     jurisdiction: 'Country',
+    serviceProviders: 'Service A, Service B',
 };
 const values = { version: '1.0', effectiveDate: new Date('2026-11-19T10:00:00Z') };
 

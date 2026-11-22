@@ -5,6 +5,7 @@ export interface LegalRequisites {
     contactEmail: string;
     portalUrl: string;
     jurisdiction: string;
+    serviceProviders: string;
 }
 
 export const REQUISITE_KEYS = [
@@ -14,6 +15,7 @@ export const REQUISITE_KEYS = [
     'contactEmail',
     'portalUrl',
     'jurisdiction',
+    'serviceProviders',
 ] as const satisfies readonly (keyof LegalRequisites)[];
 
 export function missingRequisites(requisites: Partial<LegalRequisites>): string[] {

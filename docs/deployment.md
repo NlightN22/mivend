@@ -226,7 +226,7 @@ in repeatedly and never call the network; the throttle itself is covered against
 
 ### Legal documents
 
-Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). Two
+Requisites for the user agreement, personal data consent, marketing consent and policy (`docs/legal-documents.md`). Three
 are required: with either empty nothing is published and nobody is asked to accept. The platform name and address are the
 storefront's own domain (`STOREFRONT_PUBLIC_URL`). A published version is immutable and is what customers accept, so do
 not set them on production until the owner has approved every bundled text.
@@ -235,6 +235,7 @@ not set them on production until the owner has approved every bundled text.
 | --- | --- |
 | `LEGAL_OPERATOR_NAME` | Required. Full name of the operator of personal data. |
 | `LEGAL_CONTACT_EMAIL` | Required. Contact e-mail for requests and consent withdrawal. |
+| `LEGAL_SERVICE_PROVIDERS` | Required. Names of the third-party bot-protection and map services the policy lists as recipients of technical data. |
 | `LEGAL_OPERATOR_STATUS` | Legal status of the operator as the documents read (default: individual, in Russian). |
 | `LEGAL_JURISDICTION` | Law the documents refer to, genitive case as the Russian templates use it (default: Russian Federation). |
 | `LEGAL_FALLBACK_LOCALE` | Language served when a document has no text in the requested one (default `ru`). |

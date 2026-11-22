@@ -43,8 +43,7 @@ There is no automatic deletion or anonymisation of a closed customer account. It
 - The policy names the statutes and the law directly; the `LEGAL_JURISDICTION` requisite only fills the agreement and the consent.
 - Fonts are served from our own origin; no font host is contacted.
 
-Each of these must be named in the policy as a processor or a recipient of technical data, or be switched off, before the
-documents are enabled.
+The policy lists them (`LEGAL_SERVICE_PROVIDERS`); keep that value in step with `CAPTCHA_*` and `GEO_*`.
 
 ## Requests from a subject
 

@@ -8,6 +8,7 @@ describe('legalDocumentsOptionsFromEnv', () => {
             STOREFRONT_PUBLIC_URL: 'https://shop.example.com',
             LEGAL_OPERATOR_NAME: 'Operator',
             LEGAL_CONTACT_EMAIL: 'a@example.com',
+            LEGAL_SERVICE_PROVIDERS: 'Service A',
         });
         expect(options.requisites).toMatchObject({
             platformName: 'shop.example.com',
