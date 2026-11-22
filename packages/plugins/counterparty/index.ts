@@ -1,4 +1,5 @@
 export { CounterpartyPlugin } from './src/counterparty.plugin';
+export { geoProviderHosts } from './src/geo/geo-registry';
 export { CounterpartyService } from './src/counterparty.service';
 export { TradingPointService } from './src/trading-point.service';
 export { TradingPointLocationReportService } from './src/trading-point-location-report.service';

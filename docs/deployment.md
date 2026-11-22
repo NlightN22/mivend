@@ -235,7 +235,7 @@ not set them on production until the owner has approved every bundled text.
 | --- | --- |
 | `LEGAL_OPERATOR_NAME` | Required. Full name of the operator of personal data. |
 | `LEGAL_CONTACT_EMAIL` | Required. Contact e-mail for requests and consent withdrawal. |
-| `LEGAL_SERVICE_PROVIDERS` | Required. Names of the third-party bot-protection and map services the policy lists as recipients of technical data. |
+| (derived) | The policy lists the hosts of the captcha script (`CAPTCHA_SCRIPT_URL`) and of the map providers (`GEO_PROVIDERS`) as recipients of technical data; with neither configured nothing is published. |
 | `LEGAL_OPERATOR_STATUS` | Legal status of the operator as the documents read (default: individual, in Russian). |
 | `LEGAL_JURISDICTION` | Law the documents refer to, genitive case as the Russian templates use it (default: Russian Federation). |
 | `LEGAL_FALLBACK_LOCALE` | Language served when a document has no text in the requested one (default `ru`). |

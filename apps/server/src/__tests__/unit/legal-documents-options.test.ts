@@ -8,7 +8,6 @@ describe('legalDocumentsOptionsFromEnv', () => {
             STOREFRONT_PUBLIC_URL: 'https://shop.example.com',
             LEGAL_OPERATOR_NAME: 'Operator',
             LEGAL_CONTACT_EMAIL: 'a@example.com',
-            LEGAL_SERVICE_PROVIDERS: 'Service A',
         });
         expect(options.requisites).toMatchObject({
             platformName: 'shop.example.com',
@@ -18,6 +17,21 @@ describe('legalDocumentsOptionsFromEnv', () => {
             jurisdiction: 'Российской Федерации',
         });
         expect(options.fallbackLocale).toBe('ru');
+    });
+
+    it('lists the captcha and map hosts the settings already point at', () => {
+        const { requisites } = legalDocumentsOptionsFromEnv({
+            CAPTCHA_PROVIDER: 'widget',
+            CAPTCHA_SCRIPT_URL: 'https://captcha.example.com/api.js?render=explicit',
+            GEO_PROVIDERS: 'provider-b, open',
+        });
+        expect(requisites.serviceProviders).toBe(
+            'captcha.example.com, maps.googleapis.com, nominatim.openstreetmap.org, tile.openstreetmap.org',
+        );
+    });
+
+    it('lists nothing when neither captcha nor maps are configured', () => {
+        expect(legalDocumentsOptionsFromEnv({}).requisites.serviceProviders).toBeUndefined();
     });
 
     it('lets the environment override status and jurisdiction', () => {

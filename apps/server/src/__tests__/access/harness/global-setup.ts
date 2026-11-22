@@ -85,7 +85,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
             DOCUMENT_PDF_DIR: pdfDir,
             LEGAL_OPERATOR_NAME: 'Access Operator',
             LEGAL_CONTACT_EMAIL: 'legal@access.test',
-            LEGAL_SERVICE_PROVIDERS: 'Service A',
+            GEO_PROVIDERS: 'open',
         };
         const server = await startServer(env, resolve(LOG_DIR, 'server.log'));
         stop = server.stop;
