@@ -4,6 +4,7 @@ import {
     RequestContext,
     TransactionalConnection,
     UserInputError,
+    UserService,
 } from '@vendure/core';
 import { clientIp, SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
 import { getPageAndCount, withAggregateLock } from 'shared';
@@ -35,6 +36,7 @@ export class LegalDocumentsService {
     constructor(
         private connection: TransactionalConnection,
         private customers: CustomerService,
+        private users: UserService,
         @Inject(LEGAL_DOCUMENTS_OPTIONS) private options: LegalDocumentsOptions,
     ) {}
 
@@ -94,6 +96,36 @@ export class LegalDocumentsService {
         return customer ? Number(customer.id) : null;
     }
 
+    private async contactSnapshot(
+        ctx: RequestContext,
+    ): Promise<Pick<LegalAcceptance, 'contactEmail' | 'contactPhone' | 'emailVerified'>> {
+        const customer = ctx.activeUserId
+            ? await this.customers.findOneByUserId(ctx, ctx.activeUserId)
+            : undefined;
+        const user = ctx.activeUserId ? await this.users.getUserById(ctx, ctx.activeUserId) : null;
+        return {
+            contactEmail: customer?.emailAddress?.trim().toLowerCase() || null,
+            contactPhone: customer?.phoneNumber?.trim() || null,
+            emailVerified: user?.verified === true,
+        };
+    }
+
+    // The gate every advertising sender must pass; phones are never confirmed, so none passes (docs/personal-data.md).
+    async mayAdvertiseByEmail(ctx: RequestContext, customerId: number): Promise<boolean> {
+        const [latest] = await this.connection.getRepository(ctx, LegalAcceptance).query(
+            `SELECT accepted, "contactEmail" FROM legal_acceptance
+                 WHERE "customerId" = $1 AND kind = 'marketing-consent' ORDER BY id DESC LIMIT 1`,
+            [customerId],
+        );
+        if (!latest?.accepted || !latest.contactEmail) return false;
+        const customer = await this.customers.findOne(ctx, customerId, ['user']);
+        const user = customer?.user ?? null;
+        return (
+            user?.verified === true &&
+            customer?.emailAddress?.trim().toLowerCase() === latest.contactEmail
+        );
+    }
+
     // The newest answer per kind is all the rules read.
     private async records(ctx: RequestContext, customerId: number): Promise<AcceptanceRecord[]> {
         return this.connection.getRepository(ctx, LegalAcceptance).query(
@@ -132,7 +164,7 @@ export class LegalDocumentsService {
     ): Promise<DocumentStatus[]> {
         const customerId = await this.customerId(ctx);
         if (customerId === null) return [];
-        const technical = this.technicalData(ctx);
+        const technical = { ...this.technicalData(ctx), ...(await this.contactSnapshot(ctx)) };
         await withAggregateLock(
             this.connection,
             ctx,
@@ -158,7 +190,17 @@ export class LegalDocumentsService {
         published: PublishedVersion[],
         records: AcceptanceRecord[],
         input: AcceptanceInput,
-        row: Pick<LegalAcceptance, 'customerId' | 'locale' | 'portal' | 'ip' | 'userAgent'>,
+        row: Pick<
+            LegalAcceptance,
+            | 'customerId'
+            | 'locale'
+            | 'portal'
+            | 'ip'
+            | 'userAgent'
+            | 'contactEmail'
+            | 'contactPhone'
+            | 'emailVerified'
+        >,
     ): Promise<void> {
         if (!isLegalKind(input.kind) || !LEGAL_KIND_RULES[input.kind].acceptable) {
             throw new UserInputError(`Legal document "${input.kind}" cannot be accepted`);

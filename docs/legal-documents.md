@@ -41,3 +41,5 @@ the user saw. Changing a requisite or a text means a new template version (`vers
 - The IP is read like the sign-in throttle reads it (`SIGN_IN_TRUSTED_PROXY_HOPS`).
 
 The bundled templates exist in Russian and English; the customer gets the browser language, falling back to `ru`.
+
+What is retained, shared and checked before advertising is enabled: `docs/personal-data.md`.

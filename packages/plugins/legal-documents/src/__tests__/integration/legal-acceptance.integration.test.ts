@@ -47,6 +47,9 @@ class AcceptanceRow {
     @Column({ type: 'varchar' }) portal!: string;
     @Column({ type: 'varchar' }) ip!: string;
     @Column({ type: 'varchar' }) userAgent!: string;
+    @Column({ type: 'varchar', nullable: true }) contactEmail!: string | null;
+    @Column({ type: 'varchar', nullable: true }) contactPhone!: string | null;
+    @Column({ type: 'boolean', default: false }) emailVerified!: boolean;
 }
 
 @Entity('legal_document_version')
@@ -69,6 +72,8 @@ let dataSource: DataSource;
 let service: LegalDocumentsService;
 let publisher: LegalPublisherService;
 let connection: TransactionalConnection;
+let contacts: { emailAddress: string; phoneNumber: string | null };
+let verified: boolean;
 
 const rows = (customerId: number): Promise<AcceptanceRow[]> =>
     dataSource.getRepository(AcceptanceRow).find({ where: { customerId }, order: { id: 'ASC' } });
@@ -93,8 +98,12 @@ beforeAll(async () => {
         getRepository: (ctx: never, entity: unknown) =>
             base.getRepository(ctx, (tables.get(entity) ?? entity) as never),
     } as unknown as TransactionalConnection;
-    const customers = { findOneByUserId: async (_ctx: unknown, id: number) => ({ id }) };
-    service = new LegalDocumentsService(connection, customers as never, options);
+    const customers = {
+        findOneByUserId: async (_ctx: unknown, id: number) => ({ id, ...contacts }),
+        findOne: async (_ctx: unknown, id: number) => ({ id, ...contacts, user: { verified } }),
+    };
+    const users = { getUserById: async () => ({ verified }) };
+    service = new LegalDocumentsService(connection, customers as never, users as never, options);
     publisher = new LegalPublisherService(connection, {} as never, options);
 });
 afterAll(async () => {
@@ -102,6 +111,8 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 beforeEach(async () => {
+    contacts = { emailAddress: 'Buyer@Example.com', phoneNumber: '+70000000000' };
+    verified = true;
     await dataSource.query('TRUNCATE legal_acceptance, legal_document_version RESTART IDENTITY');
     await publisher.publishMissing(ctxOf(null));
 });
@@ -188,5 +199,39 @@ describe('acceptance log', () => {
             await service.accept(ctxOf(null), [{ kind: 'agreement', version: 1, accepted: true }]),
         ).toEqual([]);
         expect(await dataSource.getRepository(AcceptanceRow).count()).toBe(0);
+    });
+});
+
+describe('contacts of a marketing consent', () => {
+    const marketing = (
+        userId: number,
+        accepted = true,
+    ): ReturnType<LegalDocumentsService['accept']> =>
+        service.accept(ctxOf(userId), [{ kind: 'marketing-consent', version: 1, accepted }], 'ru');
+
+    it('records the e-mail, phone and its confirmation next to the answer', async () => {
+        await marketing(1);
+        expect((await rows(1))[0]).toMatchObject({
+            contactEmail: 'buyer@example.com',
+            contactPhone: '+70000000000',
+            emailVerified: true,
+        });
+    });
+
+    it('allows advertising only for the confirmed e-mail the consent was given for', async () => {
+        await marketing(1);
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(true);
+        contacts = { ...contacts, emailAddress: 'new@example.com' };
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
+        contacts = { ...contacts, emailAddress: 'BUYER@example.com' };
+        verified = false;
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
+    });
+
+    it('stops advertising after a withdrawal and with no answer at all', async () => {
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
+        await marketing(1);
+        await marketing(1, false);
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
     });
 });

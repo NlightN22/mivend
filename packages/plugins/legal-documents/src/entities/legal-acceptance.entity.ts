@@ -33,4 +33,14 @@ export class LegalAcceptance extends UuidEntity {
 
     @Column({ type: 'varchar' })
     userAgent!: string;
+
+    // The contacts the customer had when answering; a marketing consent holds only for these.
+    @Column({ type: 'varchar', nullable: true })
+    contactEmail!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    contactPhone!: string | null;
+
+    @Column({ type: 'boolean', default: false })
+    emailVerified!: boolean;
 }
