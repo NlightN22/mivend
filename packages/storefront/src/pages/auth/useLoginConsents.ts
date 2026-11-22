@@ -87,6 +87,7 @@ export function useLoginConsents(): LoginConsents {
             return false;
         }
         if (pending.some(s => s.required && !checked[s.kind])) {
+            checks.value = checks.value.filter(c => pending.some(s => s.kind === c.kind));
             forced.value = true;
             return false;
         }
