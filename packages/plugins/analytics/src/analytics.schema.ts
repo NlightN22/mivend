@@ -38,10 +38,9 @@ export const adminApiSchema: DocumentNode = gql`
         granularity: OrderAnalyticsGranularity!
         dimension: OrderAnalyticsDimension!
         timeZone: String
-        customerIds: [String!]
-        organizationIds: [String!]
-        pointOfSaleIds: [String!]
-        managerIds: [String!]
+        "A card pins its entity; the id is mivend's, the ERP id never reaches the browser."
+        counterpartyId: ID
+        administratorId: ID
     }
 
     type OrderAnalyticsRow {

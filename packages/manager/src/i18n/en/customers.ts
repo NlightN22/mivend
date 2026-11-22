@@ -285,6 +285,7 @@ export default {
             orders: 'Orders',
             proformaInvoices: 'Proforma invoices',
             settlements: 'Settlements',
+            analytics: 'Analytics',
             discounts: 'Discounts',
             documents: 'Documents',
             team: 'Team',

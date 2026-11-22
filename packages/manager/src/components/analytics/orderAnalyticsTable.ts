@@ -1,0 +1,80 @@
+import type { DataTableSortMeta } from '@mivend/ui-kit';
+import type { OrderAnalyticsRow } from '../../api/orderAnalytics';
+
+export interface OrderAnalyticsTableRow {
+    [key: string]: unknown;
+    key: string;
+    title: string;
+    period: string | null;
+    currency: string;
+    orderCount: number;
+    ordersWithoutAmount: number;
+    turnover: string;
+    turnoverExcludingVat: string;
+    vatTotal: string;
+}
+
+// Amounts are exact decimal strings; sorting compares them as numbers only for ordering.
+const amountOf = (value: string): number => Number(value);
+
+export function toTableRows(
+    rows: OrderAnalyticsRow[],
+    labelOfTotal: string,
+    formatPeriod: (iso: string) => string,
+): OrderAnalyticsTableRow[] {
+    return rows.map((row, index) => ({
+        key: `${index}:${row.periodStart ?? ''}:${row.dimensionId}:${row.currency}`,
+        title: row.label || (row.periodStart ? formatPeriod(row.periodStart) : labelOfTotal),
+        period: row.periodStart,
+        currency: row.currency,
+        orderCount: row.orderCount,
+        ordersWithoutAmount: row.ordersWithoutAmount,
+        turnover: row.turnover,
+        turnoverExcludingVat: row.turnoverExcludingVat,
+        vatTotal: row.vatTotal,
+    }));
+}
+
+export function searchRows(rows: OrderAnalyticsTableRow[], term: string): OrderAnalyticsTableRow[] {
+    const needle = term.trim().toLowerCase();
+    return needle ? rows.filter(row => row.title.toLowerCase().includes(needle)) : rows;
+}
+
+const AMOUNT_FIELDS = new Set(['turnover', 'turnoverExcludingVat', 'vatTotal']);
+
+export function sortRows(
+    rows: OrderAnalyticsTableRow[],
+    sort: DataTableSortMeta | undefined,
+): OrderAnalyticsTableRow[] {
+    if (!sort) return rows;
+    const { field, order } = sort;
+    return [...rows].sort((a, b) => {
+        const left = a[field];
+        const right = b[field];
+        const result = AMOUNT_FIELDS.has(field)
+            ? amountOf(String(left)) - amountOf(String(right))
+            : typeof left === 'number' && typeof right === 'number'
+              ? left - right
+              : String(left ?? '').localeCompare(String(right ?? ''));
+        return result * order;
+    });
+}
+
+export function pageOf<T>(rows: T[], page: number, pageSize: number): T[] {
+    return rows.slice((page - 1) * pageSize, page * pageSize);
+}
+
+// Decimal string to a localized amount; the currency is shown only when the source gave one.
+export function formatAmount(amount: string, currency: string, locale: string): string {
+    const value = Number(amount);
+    if (!Number.isFinite(value)) return amount;
+    const plain = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    try {
+        return new Intl.NumberFormat(
+            locale,
+            currency ? { ...plain, style: 'currency', currency } : plain,
+        ).format(value);
+    } catch {
+        return `${new Intl.NumberFormat(locale, plain).format(value)} ${currency}`;
+    }
+}

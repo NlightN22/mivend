@@ -24,6 +24,22 @@ export class OrderAnalyticsScopeService {
         return this.counterpartyService.visibleErpIds(ctx, MAX_VISIBLE_CUSTOMERS);
     }
 
+    // The ERP id of a customer the viewer may see; null when it is hidden, missing or has none.
+    async customerErpIdFor(ctx: RequestContext, counterpartyId: string): Promise<string | null> {
+        const counterparty = await this.counterpartyService.findOneVisible(ctx, counterpartyId);
+        return counterparty?.erpId || null;
+    }
+
+    // The ERP id of a manager; whether the viewer may see them is decided with the visible managers.
+    async managerErpIdFor(ctx: RequestContext, administratorId: string): Promise<string | null> {
+        const administrator = await this.connection
+            .getRepository(ctx, Administrator)
+            .findOne({ where: { id: administratorId } });
+        return (
+            (administrator?.customFields as AdministratorCustomFields | undefined)?.erpId || null
+        );
+    }
+
     // Same people the team directory shows: all, the viewer's own department plus grants, or only the viewer.
     async visibleManagerErpIds(ctx: RequestContext): Promise<string[] | null> {
         const scope = await this.accessScopeService.resolveTeamVisibilityScope(ctx);

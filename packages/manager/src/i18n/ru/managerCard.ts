@@ -6,7 +6,7 @@ const managerCard: typeof en = {
         notFound: 'Эта карточка вам недоступна',
         loadFailed: 'Не удалось загрузить карточку менеджера',
     },
-    tabs: { overview: 'Обзор', customers: 'Клиенты', orders: 'Заказы' },
+    tabs: { overview: 'Обзор', customers: 'Клиенты', orders: 'Заказы', analytics: 'Аналитика' },
     partial: 'Показано {visible} из {total} клиентов менеджера',
     kpi: {
         sales30: 'Продажи, последние 30 дней',

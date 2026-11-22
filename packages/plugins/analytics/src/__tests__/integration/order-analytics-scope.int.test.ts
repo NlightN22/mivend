@@ -81,6 +81,7 @@ const ctx = {} as RequestContext;
 const { schema, extra } = testSchemaOptions('analytics_order_scope');
 const resolveTeamVisibilityScope = vi.fn<() => Promise<AccessScope>>();
 const visibleErpIds = vi.fn();
+const findOneVisible = vi.fn();
 let dataSource: DataSource;
 let scopeService: OrderAnalyticsScopeService;
 let labelsService: OrderAnalyticsLabelsService;
@@ -114,7 +115,7 @@ beforeAll(async () => {
             dataSource.getRepository(byEntity.get(entity) as never),
     } as unknown as TransactionalConnection;
     scopeService = new OrderAnalyticsScopeService(
-        { visibleErpIds } as unknown as CounterpartyService,
+        { visibleErpIds, findOneVisible } as unknown as CounterpartyService,
         { resolveTeamVisibilityScope } as unknown as AccessScopeService,
         connection,
     );
@@ -218,6 +219,23 @@ describe('OrderAnalyticsScopeService.visibleManagerErpIds (real Postgres)', () =
         });
 
         expect(await scopeService.visibleManagerErpIds(ctx)).toEqual(['m-b']);
+    });
+});
+
+describe('OrderAnalyticsScopeService pinned entities', () => {
+    it("finds a manager's ERP id and none for an unlinked or missing manager", async () => {
+        const [idA, , , idD] = await seedAdministrators();
+
+        expect(await scopeService.managerErpIdFor(ctx, String(idA))).toBe('m-a');
+        expect(await scopeService.managerErpIdFor(ctx, String(idD))).toBeNull();
+        expect(await scopeService.managerErpIdFor(ctx, '999999')).toBeNull();
+    });
+
+    it("finds a visible customer's ERP id and none for a hidden one", async () => {
+        findOneVisible.mockResolvedValueOnce({ erpId: 'c1' }).mockResolvedValueOnce(null);
+
+        expect(await scopeService.customerErpIdFor(ctx, '1')).toBe('c1');
+        expect(await scopeService.customerErpIdFor(ctx, '2')).toBeNull();
     });
 });
 

@@ -17,6 +17,9 @@ const ProformaInvoicesList = defineAsyncComponent(
     () => import('../proforma-invoices/ProformaInvoicesList.vue'),
 );
 const SettlementsList = defineAsyncComponent(() => import('../settlements/SettlementsList.vue'));
+const OrderAnalyticsReport = defineAsyncComponent(
+    () => import('../analytics/OrderAnalyticsReport.vue'),
+);
 const CustomerTeamTab = defineAsyncComponent(() => import('./CustomerTeamTab.vue'));
 const CustomerPortalUsersTab = defineAsyncComponent(() => import('./CustomerPortalUsersTab.vue'));
 const EntityHistoryPanel = defineAsyncComponent(() => import('../history/EntityHistoryPanel.vue'));
@@ -77,6 +80,14 @@ const historyEntityLabels = computed(() => ({
         v-else-if="tab === 'settlements'"
         :counterparty-id="customer.id"
         url-prefix="settlements."
+    />
+    <OrderAnalyticsReport
+        v-else-if="tab === 'analytics'"
+        :fixed="{ counterpartyId: customer.id }"
+        dimension="NONE"
+        hide-dimension
+        url-prefix="analytics."
+        storage-key="order-analytics:customer"
     />
     <CustomerDiscountsTab
         v-else-if="tab === 'discounts'"

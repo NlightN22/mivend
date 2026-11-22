@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { IconChartBar, IconShoppingBag, IconUsers } from '@tabler/icons-vue';
+import { IconChartBar, IconChartLine, IconShoppingBag, IconUsers } from '@tabler/icons-vue';
 
 defineProps<{ tabs: readonly string[]; active: string }>();
 const emit = defineEmits<{ select: [tab: string] }>();
@@ -10,6 +10,7 @@ const ICONS: Record<string, typeof IconUsers> = {
     overview: IconChartBar,
     customers: IconUsers,
     orders: IconShoppingBag,
+    analytics: IconChartLine,
 };
 </script>
 

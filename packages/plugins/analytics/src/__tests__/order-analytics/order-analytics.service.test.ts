@@ -12,11 +12,13 @@ const ctx = {} as RequestContext;
 const getOrderTurnover = vi.fn();
 const visibleCustomerErpIds = vi.fn();
 const visibleManagerErpIds = vi.fn();
+const customerErpIdFor = vi.fn();
+const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
-    { visibleCustomerErpIds, visibleManagerErpIds } as never,
+    { visibleCustomerErpIds, visibleManagerErpIds, customerErpIdFor, managerErpIdFor } as never,
     { labelsFor } as never,
 );
 
@@ -44,6 +46,8 @@ beforeEach(() => {
     vi.resetAllMocks();
     visibleCustomerErpIds.mockResolvedValue(null);
     visibleManagerErpIds.mockResolvedValue(null);
+    customerErpIdFor.mockResolvedValue('c-erp');
+    managerErpIdFor.mockResolvedValue('m-erp');
     labelsFor.mockResolvedValue(new Map());
     getOrderTurnover.mockResolvedValue([row()]);
 });
@@ -131,6 +135,55 @@ describe('OrderAnalyticsService scope', () => {
         const result = await service.query(ctx, input({ dimension: 'MANAGER' }));
 
         expect(result.rows).toHaveLength(2);
+    });
+});
+
+describe('OrderAnalyticsService pinned entities', () => {
+    it('turns a pinned customer into its ERP id and keeps the viewer scope on top', async () => {
+        visibleCustomerErpIds.mockResolvedValue(['c-erp', 'other']);
+
+        await service.query(ctx, input({ counterpartyId: '42' }));
+
+        expect(customerErpIdFor).toHaveBeenCalledWith(ctx, '42');
+        expect(getOrderTurnover.mock.calls[0][0].customerIds).toEqual(['c-erp']);
+    });
+
+    it('shows nothing for a pinned customer outside the scope', async () => {
+        visibleCustomerErpIds.mockResolvedValue(['other']);
+
+        const result = await service.query(ctx, input({ counterpartyId: '42' }));
+
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+        expect(result.rows).toEqual([]);
+    });
+
+    it('never answers unfiltered when a pinned customer cannot be resolved', async () => {
+        customerErpIdFor.mockResolvedValue(null);
+
+        const result = await service.query(ctx, input({ counterpartyId: '42' }));
+
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+        expect(result).toEqual({ state: 'OK', rows: [], limitedToVisibleCustomers: true });
+    });
+
+    it('pins a manager by ERP id and hides a manager the viewer may not see', async () => {
+        visibleManagerErpIds.mockResolvedValue(['m-erp']);
+        await service.query(ctx, input({ administratorId: '7' }));
+        expect(getOrderTurnover.mock.calls[0][0].managerIds).toEqual(['m-erp']);
+
+        getOrderTurnover.mockClear();
+        visibleManagerErpIds.mockResolvedValue(['someone-else']);
+        const hidden = await service.query(ctx, input({ administratorId: '7' }));
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+        expect(hidden.rows).toEqual([]);
+    });
+
+    it('never answers unfiltered when a pinned manager has no ERP id', async () => {
+        managerErpIdFor.mockResolvedValue(null);
+
+        await service.query(ctx, input({ administratorId: '7' }));
+
+        expect(getOrderTurnover).not.toHaveBeenCalled();
     });
 });
 

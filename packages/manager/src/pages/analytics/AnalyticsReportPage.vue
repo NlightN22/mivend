@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { MvErrorState, MvNotice, MvSkeleton, MvStatusBadge } from '@mivend/ui-kit';
 import { REPORT_STATUS_VARIANT } from '../../api/analytics';
 import { useAnalyticsReports } from '../../composables/useAnalyticsReports';
+import OrderAnalyticsReport from '../../components/analytics/OrderAnalyticsReport.vue';
 
 const { t } = useI18n();
 const key = String(useRoute().params.report);
@@ -33,9 +34,16 @@ const report = computed(() => reports.value.find(r => r.key === key) ?? null);
                 {{ t(`analytics.status.${report.status}`) }}
             </MvStatusBadge>
             <p class="report-page__text">{{ report.description }}</p>
-            <MvNotice variant="info">{{ t('analytics.report.notBuilt') }}</MvNotice>
-            <h2 class="report-page__subtitle">{{ t('analytics.report.notes') }}</h2>
-            <p class="report-page__text">{{ report.note }}</p>
+            <OrderAnalyticsReport
+                v-if="report.key === 'orders'"
+                class="report-page__report"
+                storage-key="order-analytics"
+            />
+            <template v-else>
+                <MvNotice variant="info">{{ t('analytics.report.notBuilt') }}</MvNotice>
+                <h2 class="report-page__subtitle">{{ t('analytics.report.notes') }}</h2>
+                <p class="report-page__text">{{ report.note }}</p>
+            </template>
         </template>
     </div>
 </template>
@@ -50,6 +58,11 @@ const report = computed(() => reports.value.find(r => r.key === key) ?? null);
 
 .report-page > * {
     max-width: 720px;
+}
+
+.report-page > .report-page__report {
+    align-self: stretch;
+    max-width: none;
 }
 
 .report-page__back {

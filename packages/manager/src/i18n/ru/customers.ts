@@ -292,6 +292,7 @@ const customers: typeof en = {
             orders: 'Заказы',
             proformaInvoices: 'Счета на оплату',
             settlements: 'Взаиморасчёты',
+            analytics: 'Аналитика',
             discounts: 'Скидки',
             documents: 'Документы',
             team: 'Команда',

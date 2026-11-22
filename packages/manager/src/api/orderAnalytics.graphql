@@ -1,0 +1,17 @@
+query OrderAnalytics($input: OrderAnalyticsInput!) {
+    orderAnalytics(input: $input) {
+        state
+        limitedToVisibleCustomers
+        rows {
+            periodStart
+            dimensionId
+            label
+            currency
+            turnover
+            turnoverExcludingVat
+            vatTotal
+            orderCount
+            ordersWithoutAmount
+        }
+    }
+}

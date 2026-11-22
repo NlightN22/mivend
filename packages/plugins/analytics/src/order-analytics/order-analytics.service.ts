@@ -18,6 +18,9 @@ import { mergeTurnoverRows } from './order-turnover-merge';
 export type OrderAnalyticsState = 'OK' | 'NOT_CONFIGURED' | 'TOO_LARGE' | 'UNAVAILABLE';
 
 export interface OrderAnalyticsInput extends Partial<OrderMetricsFilters> {
+    // mivend ids of an embedding card; resolved to ERP ids here, inside the viewer's scope.
+    counterpartyId?: string | null;
+    administratorId?: string | null;
     from: Date;
     to: Date;
     granularity: OrderGranularity;
@@ -62,6 +65,12 @@ export class OrderAnalyticsService {
     async query(ctx: RequestContext, input: OrderAnalyticsInput): Promise<OrderAnalyticsResult> {
         const filters = this.requestedFilters(input);
         try {
+            const pinned = await this.pinnedEntities(ctx, input);
+            if (pinned === 'unresolved') {
+                return { state: 'OK', rows: [], limitedToVisibleCustomers: true };
+            }
+            filters.customerIds = [...filters.customerIds, ...pinned.customerIds];
+            filters.managerIds = [...filters.managerIds, ...pinned.managerIds];
             const [visibleCustomers, visibleManagers] = await Promise.all([
                 this.scope.visibleCustomerErpIds(ctx),
                 this.scope.visibleManagerErpIds(ctx),
@@ -117,6 +126,26 @@ export class OrderAnalyticsService {
         } catch (error) {
             return this.failure(error);
         }
+    }
+
+    // A pinned entity that is missing, hidden or without an ERP id has no orders to show, never an unfiltered answer.
+    private async pinnedEntities(
+        ctx: RequestContext,
+        input: OrderAnalyticsInput,
+    ): Promise<{ customerIds: string[]; managerIds: string[] } | 'unresolved'> {
+        const customerIds: string[] = [];
+        const managerIds: string[] = [];
+        if (input.counterpartyId) {
+            const erpId = await this.scope.customerErpIdFor(ctx, input.counterpartyId);
+            if (!erpId) return 'unresolved';
+            customerIds.push(erpId);
+        }
+        if (input.administratorId) {
+            const erpId = await this.scope.managerErpIdFor(ctx, input.administratorId);
+            if (!erpId) return 'unresolved';
+            managerIds.push(erpId);
+        }
+        return { customerIds, managerIds };
     }
 
     private requestedFilters(input: OrderAnalyticsInput): OrderMetricsFilters {

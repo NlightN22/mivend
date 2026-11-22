@@ -4,7 +4,12 @@ export default {
         notFound: 'This manager is not available to you',
         loadFailed: 'Could not load the manager card',
     },
-    tabs: { overview: 'Overview', customers: 'Customers', orders: 'Orders' },
+    tabs: {
+        overview: 'Overview',
+        customers: 'Customers',
+        orders: 'Orders',
+        analytics: 'Analytics',
+    },
     partial: 'Showing {visible} of {total} customers of this manager',
     kpi: {
         sales30: 'Sales, last 30 days',

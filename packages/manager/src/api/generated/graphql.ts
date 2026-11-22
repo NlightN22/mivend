@@ -3096,6 +3096,98 @@ export type ErrorResult = {
     message: Scalars['String']['output'];
 };
 
+export type ExchangeChannel = {
+    /** ingest | pull | ack */
+    channel: Scalars['String']['output'];
+    lastActivityAt: Maybe<Scalars['String']['output']>;
+    status: Scalars['String']['output'];
+    streams: Array<ExchangeStream>;
+};
+
+export type ExchangeFailures = {
+    inboxFailedLast24h: Maybe<Scalars['Int']['output']>;
+    outboundRejectedLast24h: Maybe<Scalars['Int']['output']>;
+    outboxFailedLast24h: Maybe<Scalars['Int']['output']>;
+    status: Scalars['String']['output'];
+};
+
+export type ExchangeHealth = {
+    channels: Array<ExchangeChannel>;
+    failures: ExchangeFailures;
+    generatedAt: Scalars['String']['output'];
+    /** Active mapping errors, read only while the publish channel is not OK. */
+    mappingErrors: Array<ExchangeMappingError>;
+    /** Null when the Integration Service does not report the publish channel (older version). */
+    publish: Maybe<ExchangePublishChannel>;
+    resync: ExchangeResync;
+    status: Scalars['String']['output'];
+};
+
+export type ExchangeHealthReport = {
+    health: Maybe<ExchangeHealth>;
+    polledAt: Maybe<Scalars['DateTime']['output']>;
+    /** Set only when state is UNKNOWN: NOT_CONFIGURED | UNAUTHORIZED | TIMEOUT | UNREACHABLE | SERVER_ERROR | BAD_RESPONSE | NEVER_POLLED | STALE */
+    reason: Maybe<Scalars['String']['output']>;
+    /** OK | DEGRADED | DOWN | UNKNOWN */
+    state: Scalars['String']['output'];
+};
+
+export type ExchangeMappingError = {
+    code: Scalars['String']['output'];
+    /** The stream the problem belongs to. */
+    kind: Scalars['String']['output'];
+    lastSeenAt: Maybe<Scalars['String']['output']>;
+    message: Scalars['String']['output'];
+    occurrences: Maybe<Scalars['Int']['output']>;
+};
+
+export type ExchangePublishAggregate = {
+    /** The published entity (outbox aggregate type). */
+    aggregateType: Scalars['String']['output'];
+    deadLetteredLast24h: Maybe<Scalars['Int']['output']>;
+    lastPublishedAt: Maybe<Scalars['String']['output']>;
+    mappingErrorCodes: Array<Scalars['String']['output']>;
+    mappingErrorsLast24h: Maybe<Scalars['Int']['output']>;
+    oldestPendingAgeSeconds: Maybe<Scalars['Int']['output']>;
+    pending: Maybe<Scalars['Int']['output']>;
+    status: Scalars['String']['output'];
+};
+
+export type ExchangePublishChannel = {
+    aggregates: Array<ExchangePublishAggregate>;
+    lastActivityAt: Maybe<Scalars['String']['output']>;
+    status: Scalars['String']['output'];
+};
+
+export type ExchangeResync = {
+    acknowledgedLast24h: Maybe<Scalars['Int']['output']>;
+    delivered: Maybe<Scalars['Int']['output']>;
+    open: Array<ExchangeResyncSignal>;
+    pending: Maybe<Scalars['Int']['output']>;
+    rejectedLast24h: Maybe<Scalars['Int']['output']>;
+};
+
+export type ExchangeResyncSignal = {
+    createdAt: Scalars['String']['output'];
+    dryRun: Scalars['Boolean']['output'];
+    id: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+    stream: Scalars['String']['output'];
+};
+
+export type ExchangeStream = {
+    entityType: Scalars['String']['output'];
+    /** Ingest: failed inbox rows. Ack: commands the ERP rejected. Pull: null. */
+    failedLast24h: Maybe<Scalars['Int']['output']>;
+    lastActivityAt: Maybe<Scalars['String']['output']>;
+    oldestAgeSeconds: Maybe<Scalars['Int']['output']>;
+    /** Ingest/pull: rows or commands pending. Ack: commands delivered and not yet acknowledged. */
+    pending: Maybe<Scalars['Int']['output']>;
+    /** OK | DEGRADED | DOWN */
+    status: Scalars['String']['output'];
+    stream: Scalars['String']['output'];
+};
+
 export type ExpiringDiscountGrantList = {
     items: Array<DiscountGrant>;
     totalItems: Scalars['Int']['output'];
@@ -6608,6 +6700,46 @@ export type OrderAddress = {
     streetLine2: Maybe<Scalars['String']['output']>;
 };
 
+export type OrderAnalytics = {
+    limitedToVisibleCustomers: Scalars['Boolean']['output'];
+    rows: Array<OrderAnalyticsRow>;
+    state: OrderAnalyticsState;
+};
+
+export type OrderAnalyticsDimension =
+    | 'CUSTOMER'
+    | 'MANAGER'
+    | 'NONE'
+    | 'ORGANIZATION'
+    | 'POINT_OF_SALE';
+
+export type OrderAnalyticsGranularity = 'DAY' | 'MONTH' | 'NONE';
+
+export type OrderAnalyticsInput = {
+    administratorId?: InputMaybe<Scalars['ID']['input']>;
+    /** A card pins its entity; the id is mivend's, the ERP id never reaches the browser. */
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    dimension: OrderAnalyticsDimension;
+    from: Scalars['DateTime']['input'];
+    granularity: OrderAnalyticsGranularity;
+    timeZone?: InputMaybe<Scalars['String']['input']>;
+    to: Scalars['DateTime']['input'];
+};
+
+export type OrderAnalyticsRow = {
+    currency: Scalars['String']['output'];
+    dimensionId: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+    orderCount: Scalars['Int']['output'];
+    ordersWithoutAmount: Scalars['Int']['output'];
+    periodStart: Maybe<Scalars['DateTime']['output']>;
+    turnover: Scalars['String']['output'];
+    turnoverExcludingVat: Scalars['String']['output'];
+    vatTotal: Scalars['String']['output'];
+};
+
+export type OrderAnalyticsState = 'NOT_CONFIGURED' | 'OK' | 'TOO_LARGE' | 'UNAVAILABLE';
+
 export type OrderCancelOutcome = 'ALREADY_CANCELLED' | 'CANCELLED' | 'CANCEL_REQUESTED';
 
 export type OrderCancelRefusalReason = 'IN_PROGRESS' | 'PAID' | 'REGISTRATION_REJECTED' | 'SHIPPED';
@@ -8804,6 +8936,8 @@ export type Query = {
     entityDuplicators: Array<EntityDuplicatorDefinition>;
     entityVersions: Array<EntityVersion>;
     entityVersionsForEntities: EntityVersionList;
+    /** ERP exchange health read from the Integration Service on a schedule (issue #386); UNKNOWN with a reason when it cannot be read. */
+    exchangeHealth: ExchangeHealthReport;
     /** Top soonest-expiring grants plus the total count, so an alert is not sized by the whole set. */
     expiringDiscountGrants: ExpiringDiscountGrantList;
     facet: Maybe<Facet>;
@@ -8862,6 +8996,7 @@ export type Query = {
     /** Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
+    orderAnalytics: OrderAnalytics;
     /** Orders with a failing ERP-requirement check, per check code and reason (issue #237). */
     orderCheckHealth: Array<OrderCheckHealthRow>;
     /** Active contracts of the order's counterparty; the one the order is registered under is marked (#205). */
@@ -9395,6 +9530,10 @@ export type QueryOpenReservationReconciliationIssuesArgs = {
 
 export type QueryOrderArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryOrderAnalyticsArgs = {
+    input: OrderAnalyticsInput;
 };
 
 export type QueryOrderContractsArgs = {
@@ -13765,6 +13904,28 @@ export type PrepareOidcSignOutMutationVariables = Exact<{ [key: string]: never }
 
 export type PrepareOidcSignOutMutation = { prepareOidcSignOut: string | null };
 
+export type OrderAnalyticsQueryVariables = Exact<{
+    input: OrderAnalyticsInput;
+}>;
+
+export type OrderAnalyticsQuery = {
+    orderAnalytics: {
+        state: OrderAnalyticsState;
+        limitedToVisibleCustomers: boolean;
+        rows: Array<{
+            periodStart: any | null;
+            dimensionId: string;
+            label: string;
+            currency: string;
+            turnover: string;
+            turnoverExcludingVat: string;
+            vatTotal: string;
+            orderCount: number;
+            ordersWithoutAmount: number;
+        }>;
+    };
+};
+
 export type CancelOrderAsStaffMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
 }>;
@@ -18126,6 +18287,25 @@ export const PrepareOidcSignOutDocument = new TypedDocumentString(`
     PrepareOidcSignOutMutation,
     PrepareOidcSignOutMutationVariables
 >;
+export const OrderAnalyticsDocument = new TypedDocumentString(`
+    query OrderAnalytics($input: OrderAnalyticsInput!) {
+  orderAnalytics(input: $input) {
+    state
+    limitedToVisibleCustomers
+    rows {
+      periodStart
+      dimensionId
+      label
+      currency
+      turnover
+      turnoverExcludingVat
+      vatTotal
+      orderCount
+      ordersWithoutAmount
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<OrderAnalyticsQuery, OrderAnalyticsQueryVariables>;
 export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     mutation CancelOrderAsStaff($orderId: ID!) {
   cancelOrderAsStaff(orderId: $orderId) {

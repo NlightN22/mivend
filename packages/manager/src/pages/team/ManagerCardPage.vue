@@ -5,17 +5,26 @@ import { useI18n } from 'vue-i18n';
 import { MvErrorState, MvNotice, MvPageHeader, MvSkeleton } from '@mivend/ui-kit';
 import { fetchManagerCard, type ManagerCard } from '../../api/managerCard';
 import CustomersList from '../../components/customers/CustomersList.vue';
+import OrderAnalyticsReport from '../../components/analytics/OrderAnalyticsReport.vue';
 import OrdersList from '../../components/orders/OrdersList.vue';
 import ManagerCardOverview from '../../components/team/ManagerCardOverview.vue';
 import ManagerCardTabs from '../../components/team/ManagerCardTabs.vue';
 import { useTabSync } from '../../composables/useTabSync';
+import { useAuthStore } from '../../stores/auth';
 
-const TABS = ['overview', 'customers', 'orders'] as const;
+const TABS = ['overview', 'customers', 'orders', 'analytics'] as const;
 type ManagerCardTab = (typeof TABS)[number];
 
 const { t } = useI18n();
 const route = useRoute();
-const { activeTab, selectTab } = useTabSync<ManagerCardTab>(TABS, 'overview');
+const authStore = useAuthStore();
+const { activeTab: requestedTab, selectTab } = useTabSync<ManagerCardTab>(TABS, 'overview');
+const tabs = computed(() =>
+    TABS.filter(tab => tab !== 'analytics' || authStore.hasPermission('ReadAnalytics')),
+);
+const activeTab = computed<ManagerCardTab>(() =>
+    tabs.value.includes(requestedTab.value) ? requestedTab.value : 'overview',
+);
 
 const administratorId = computed(() => String(route.params.id));
 const card = ref<ManagerCard | null>(null);
@@ -54,7 +63,7 @@ watch([administratorId, lostAfterDays], load, { immediate: true });
         <template v-else>
             <ManagerCardTabs
                 :active="activeTab"
-                :tabs="TABS"
+                :tabs="tabs"
                 @select="selectTab($event as ManagerCardTab)"
             />
             <ManagerCardOverview
@@ -67,7 +76,19 @@ watch([administratorId, lostAfterDays], load, { immediate: true });
                 :fixed-filter="{ assignedManagerId: { eq: administratorId } }"
                 url-prefix="customers."
             />
-            <OrdersList v-else :manager-id="administratorId" url-prefix="orders." />
+            <OrdersList
+                v-else-if="activeTab === 'orders'"
+                :manager-id="administratorId"
+                url-prefix="orders."
+            />
+            <OrderAnalyticsReport
+                v-else
+                :fixed="{ administratorId }"
+                dimension="CUSTOMER"
+                hide-dimension
+                url-prefix="analytics."
+                storage-key="order-analytics:manager"
+            />
         </template>
     </div>
 </template>
