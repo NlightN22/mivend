@@ -122,6 +122,16 @@ describe('OrderStateStreamHandler', () => {
         expect(input.linesDiscarded).toBe(false);
     });
 
+    it('does not read a partly delivered order (delivered fact only) as terminal', async () => {
+        const { handler, sync } = setup(mivend, true, {
+            lines: [{ productVariantId: '8', ratioToBase: 1, raw: {} as Record<string, unknown> }],
+            withoutProductId: 0,
+            unknownProducts: 0,
+        });
+        await handler.apply(ctx, 'o-1', { delivered: true });
+        expect(sync.handleOrderState.mock.calls[0][1].reservedLines).toEqual([]);
+    });
+
     it('derives nothing from an event without a status code or paid amount', async () => {
         const { handler, sync } = setup(mivend);
         await handler.apply(ctx, 'o-1', {});

@@ -88,12 +88,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
                     : undefined,
             currency:
                 'currencyId' in payload
-                    ? await this.currencies
-                          .codeOf(ctx, `contract ${entityId}`, payload.currencyId)
-                          .catch(err => {
-                              if (err instanceof MissingReferenceError) return undefined;
-                              throw err;
-                          })
+                    ? await this.currencies.codeOf(ctx, `contract ${entityId}`, payload.currencyId)
                     : undefined,
             controlledIndividually,
             debtDaysLimit,

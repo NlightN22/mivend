@@ -16,6 +16,7 @@ export class BankAccountRecord extends VendureEntity {
     @Column({ type: 'varchar' })
     accountNumber!: string;
 
+    @Index()
     @Column({ type: 'varchar' })
     bankId!: string;
 

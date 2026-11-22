@@ -57,11 +57,12 @@ export class OrderStateStreamHandler implements InboundStreamHandler {
             payload.lines,
             false,
         );
+        const dictionary = await this.statusReference.dictionary(ctx);
         const terminal =
-            payload.delivered === true ||
             resolved.lines.some(line => line.raw.cancelledQuantity !== undefined) ||
             (derivedStatus !== null &&
-                (await this.statusReference.dictionary(ctx)).has(derivedStatus, 'cancelled'));
+                (dictionary.has(derivedStatus, 'cancelled') ||
+                    dictionary.has(derivedStatus, 'delivered')));
         // A terminal order holds no reserve: a line without a computed reserve reads as released (0).
         const computed = terminal
             ? resolved.lines

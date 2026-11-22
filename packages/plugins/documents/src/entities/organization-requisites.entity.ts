@@ -57,6 +57,7 @@ export class OrganizationRequisites extends VendureEntity {
     phone!: string | null;
 
     // BankAccountChanged entity id of the organization's primary account; the bank columns are derived from it.
+    @Index()
     @Column({ type: 'varchar', nullable: true })
     mainBankAccountId!: string | null;
 
