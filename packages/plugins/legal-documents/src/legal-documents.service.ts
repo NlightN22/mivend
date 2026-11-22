@@ -4,12 +4,12 @@ import {
     RequestContext,
     TransactionalConnection,
     UserInputError,
-    UserService,
 } from '@vendure/core';
 import { clientIp, SignInProtectionPlugin } from '@mivend/plugin-sign-in-protection';
 import { getPageAndCount, withAggregateLock } from 'shared';
 import { LessThanOrEqual } from 'typeorm';
 
+import { EmailConfirmationService } from './email-confirmation.service';
 import { documentStatuses, requiredVersion } from './document-status';
 import type { AcceptanceRecord, DocumentStatus, PublishedVersion } from './document-status';
 import { LegalAcceptance } from './entities/legal-acceptance.entity';
@@ -36,7 +36,7 @@ export class LegalDocumentsService {
     constructor(
         private connection: TransactionalConnection,
         private customers: CustomerService,
-        private users: UserService,
+        private confirmations: EmailConfirmationService,
         @Inject(LEGAL_DOCUMENTS_OPTIONS) private options: LegalDocumentsOptions,
     ) {}
 
@@ -102,11 +102,16 @@ export class LegalDocumentsService {
         const customer = ctx.activeUserId
             ? await this.customers.findOneByUserId(ctx, ctx.activeUserId)
             : undefined;
-        const user = ctx.activeUserId ? await this.users.getUserById(ctx, ctx.activeUserId) : null;
         return {
             contactEmail: customer?.emailAddress?.trim().toLowerCase() || null,
             contactPhone: customer?.phoneNumber?.trim() || null,
-            emailVerified: user?.verified === true,
+            emailVerified:
+                !!customer &&
+                (await this.confirmations.isConfirmed(
+                    ctx,
+                    Number(customer.id),
+                    customer.emailAddress,
+                )),
         };
     }
 
@@ -118,11 +123,10 @@ export class LegalDocumentsService {
             [customerId],
         );
         if (!latest?.accepted || !latest.contactEmail) return false;
-        const customer = await this.customers.findOne(ctx, customerId, ['user']);
-        const user = customer?.user ?? null;
+        const customer = await this.customers.findOne(ctx, customerId);
         return (
-            user?.verified === true &&
-            customer?.emailAddress?.trim().toLowerCase() === latest.contactEmail
+            customer?.emailAddress?.trim().toLowerCase() === latest.contactEmail &&
+            (await this.confirmations.isConfirmed(ctx, customerId, customer?.emailAddress))
         );
     }
 

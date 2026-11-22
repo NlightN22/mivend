@@ -59,5 +59,6 @@ export const legalDocumentsSchema = gql`
             input: [LegalAcceptanceInput!]!
             locale: String
         ): [LegalDocumentStatus!]!
+        confirmEmailAddress(token: String!): Boolean!
     }
 `;

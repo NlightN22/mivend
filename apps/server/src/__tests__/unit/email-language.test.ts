@@ -57,6 +57,7 @@ type MailType =
     | 'password-reset'
     | 'email-verification'
     | 'email-address-change'
+    | 'email-confirmation'
     | 'two-factor-enabled'
     | 'two-factor-changed'
     | 'two-factor-recovery'
@@ -66,6 +67,7 @@ const MAIL_TYPES: MailType[] = [
     'password-reset',
     'email-verification',
     'email-address-change',
+    'email-confirmation',
     'two-factor-enabled',
     'two-factor-changed',
     'two-factor-recovery',
@@ -140,6 +142,7 @@ const LINKS: Record<MailType, string> = {
     'password-reset': 'https://shop.example.org/set-password?token=tok1',
     'email-verification': 'https://shop.example.org/verify?token=tok1',
     'email-address-change': 'href="?token=tok1"',
+    'email-confirmation': 'https://shop.example.org/confirm-email?token=tok1',
     'two-factor-enabled': 'Site A',
     'two-factor-changed': 'Site A',
     'two-factor-recovery': 'https://shop.example.org/two-factor-recovery?token=tok1',
@@ -155,6 +158,10 @@ const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'email-address-change': {
         en: 'Please verify your change of email address',
         ru: 'Подтвердите новый адрес электронной почты',
+    },
+    'email-confirmation': {
+        en: 'Please confirm your email address',
+        ru: 'Подтвердите адрес электронной почты',
     },
     'two-factor-enabled': {
         en: 'Two-factor authentication is on',

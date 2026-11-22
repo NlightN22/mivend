@@ -49,6 +49,7 @@ export function emailGlobalTemplateVars(
     return {
         fromAddress,
         verifyEmailAddressUrl: `${storefrontPublicUrl}/verify`,
+        confirmEmailAddressUrl: `${storefrontPublicUrl}/confirm-email`,
         siteName: siteName(env),
         logoUrl: storefrontPublicUrl ? `${storefrontPublicUrl}/email-logo.png` : '',
         footerText: emailFooterText(env),

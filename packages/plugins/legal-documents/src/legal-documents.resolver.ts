@@ -4,12 +4,18 @@ import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import type { DocumentStatus } from './document-status';
 import type { LegalAcceptance } from './entities/legal-acceptance.entity';
 import type { LegalDocumentVersion } from './entities/legal-document-version.entity';
+import { EmailConfirmationNotifier } from './email-confirmation.notifier';
+import { EmailConfirmationService } from './email-confirmation.service';
 import { LegalDocumentsService } from './legal-documents.service';
 import type { AcceptanceInput } from './legal-documents.service';
 
 @Resolver()
 export class LegalDocumentsResolver {
-    constructor(private legal: LegalDocumentsService) {}
+    constructor(
+        private legal: LegalDocumentsService,
+        private confirmations: EmailConfirmationService,
+        private notifier: EmailConfirmationNotifier,
+    ) {}
 
     // Public: the policy must be readable before anyone signs in.
     @Query()
@@ -54,5 +60,17 @@ export class LegalDocumentsResolver {
         @Args() args: { input: AcceptanceInput[]; locale?: string | null },
     ): Promise<DocumentStatus[]> {
         return this.legal.accept(ctx, args.input, args.locale);
+    }
+
+    // Public: the link is opened from a mail, possibly signed out; the token is the proof.
+    @Mutation()
+    @Allow(Permission.Public)
+    async confirmEmailAddress(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { token: string },
+    ): Promise<boolean> {
+        const confirmed = await this.confirmations.confirmByToken(ctx, args.token);
+        if (confirmed) await this.notifier.resolve(ctx, confirmed.customerId);
+        return confirmed !== null;
     }
 }

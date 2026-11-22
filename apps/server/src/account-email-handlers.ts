@@ -1,4 +1,5 @@
 import { AccountRegistrationEvent, IdentifierChangeRequestEvent } from '@vendure/core';
+import { EmailConfirmationRequestedEvent } from '@mivend/plugin-legal-documents';
 import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
 import {
@@ -21,6 +22,10 @@ export const EMAIL_SUBJECTS = {
     emailAddressChange: {
         en: 'Please verify your change of email address',
         ru: 'Подтвердите новый адрес электронной почты',
+    },
+    emailConfirmation: {
+        en: 'Please confirm your email address',
+        ru: 'Подтвердите адрес электронной почты',
     },
     twoFactorEnabled: {
         en: 'Two-factor authentication is on',
@@ -94,5 +99,31 @@ export function createEmailAddressChangeHandler(
             ...sourceTemplateVars(event.data.source),
             emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             identifierChangeToken: event.user.getNativeAuthenticationMethod().identifierChangeToken,
+        }));
+}
+
+export function createEmailConfirmationHandler(
+    fallback: EmailLanguage,
+    sources: EmailSourceConfig,
+): EmailEventHandler<
+    'email-confirmation',
+    EventWithAsyncData<EmailConfirmationRequestedEvent, SourceData>
+> {
+    return new EmailEventListener('email-confirmation')
+        .on(EmailConfirmationRequestedEvent)
+        .setRecipient(event => event.emailAddress)
+        .loadData(async ({ event, injector }) => ({
+            source: await loadEmailSource(sources, injector, event),
+        }))
+        .setFrom('{{ sourceFrom }}')
+        .setSubject(
+            event =>
+                event.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.emailConfirmation[resolveEmailLanguage(event.ctx, fallback)],
+        )
+        .setTemplateVars(event => ({
+            ...sourceTemplateVars(event.data.source),
+            emailLanguage: resolveEmailLanguage(event.ctx, fallback),
+            confirmationToken: event.token,
         }));
 }

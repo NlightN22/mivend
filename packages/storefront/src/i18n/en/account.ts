@@ -138,6 +138,11 @@ export default {
         notifications: 'Notifications',
     },
     notifications: {
+        emailConfirmation: {
+            title: 'Confirm your new e-mail address',
+            message:
+                'Your e-mail address was changed. Follow the link we sent to it to confirm it.',
+        },
         title: 'Notifications',
         subtitle: 'All your notifications, newest first.',
         search: 'Search notifications…',

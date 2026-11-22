@@ -1,0 +1,18 @@
+{{> header title="Подтвердите адрес электронной почты" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Адрес электронной почты вашей учётной записи был изменён. Нажмите кнопку ниже, чтобы подтвердить, что этот адрес принадлежит вам. Входить в учётную запись можно и до подтверждения.
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ confirmEmailAddressUrl }}?token={{ confirmationToken }}">
+            Подтвердить адрес
+        </mj-button>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="Это автоматическое сообщение, отвечать на него не нужно." sentBy="Отправлено с" }}

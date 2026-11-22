@@ -9,6 +9,8 @@ import {
 } from 'shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { EmailConfirmationService } from '../../email-confirmation.service';
+import { EmailConfirmation } from '../../entities/email-confirmation.entity';
 import { LegalAcceptance } from '../../entities/legal-acceptance.entity';
 import { LegalDocumentVersion } from '../../entities/legal-document-version.entity';
 import { LegalDocumentsService } from '../../legal-documents.service';
@@ -53,6 +55,17 @@ class AcceptanceRow {
     @Column({ type: 'boolean', default: false }) emailVerified!: boolean;
 }
 
+@Entity('email_confirmation')
+class ConfirmationRow {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'uuid' }) uuid!: string;
+    @Column({ type: 'int', unique: true }) customerId!: number;
+    @Column({ type: 'varchar', nullable: true }) confirmedEmail!: string | null;
+    @Column({ type: 'varchar', nullable: true }) pendingEmail!: string | null;
+    @Column({ type: 'varchar', nullable: true }) token!: string | null;
+    @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
+}
+
 @Entity('legal_document_version')
 @Index(['kind', 'version', 'locale'], { unique: true })
 class VersionRow {
@@ -74,7 +87,7 @@ let service: LegalDocumentsService;
 let publisher: LegalPublisherService;
 let connection: TransactionalConnection;
 let contacts: { emailAddress: string; phoneNumber: string | null };
-let verified: boolean;
+let confirmations: EmailConfirmationService;
 
 const rows = (customerId: number): Promise<AcceptanceRow[]> =>
     dataSource.getRepository(AcceptanceRow).find({ where: { customerId }, order: { id: 'ASC' } });
@@ -85,7 +98,7 @@ beforeAll(async () => {
         type: 'postgres',
         ...testDataSourceConnectionOptions(),
         extra,
-        entities: [AcceptanceRow, VersionRow],
+        entities: [AcceptanceRow, VersionRow, ConfirmationRow],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -93,6 +106,7 @@ beforeAll(async () => {
     const tables = new Map<unknown, unknown>([
         [LegalAcceptance, AcceptanceRow],
         [LegalDocumentVersion, VersionRow],
+        [EmailConfirmation, ConfirmationRow],
     ]);
     connection = {
         withTransaction: base.withTransaction.bind(base),
@@ -101,10 +115,10 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const customers = {
         findOneByUserId: async (_ctx: unknown, id: number) => ({ id, ...contacts }),
-        findOne: async (_ctx: unknown, id: number) => ({ id, ...contacts, user: { verified } }),
+        findOne: async (_ctx: unknown, id: number) => ({ id, ...contacts }),
     };
-    const users = { getUserById: async () => ({ verified }) };
-    service = new LegalDocumentsService(connection, customers as never, users as never, options);
+    confirmations = new EmailConfirmationService(connection);
+    service = new LegalDocumentsService(connection, customers as never, confirmations, options);
     publisher = new LegalPublisherService(connection, {} as never, options);
 });
 afterAll(async () => {
@@ -113,9 +127,11 @@ afterAll(async () => {
 });
 beforeEach(async () => {
     contacts = { emailAddress: 'Buyer@Example.com', phoneNumber: '+70000000000' };
-    verified = true;
-    await dataSource.query('TRUNCATE legal_acceptance, legal_document_version RESTART IDENTITY');
+    await dataSource.query(
+        'TRUNCATE legal_acceptance, legal_document_version, email_confirmation RESTART IDENTITY',
+    );
     await publisher.publishMissing(ctxOf(null));
+    await confirmations.markConfirmed(ctxOf(null), 1, 'buyer@example.com');
 });
 
 const accept = (
@@ -225,8 +241,8 @@ describe('contacts of a marketing consent', () => {
         contacts = { ...contacts, emailAddress: 'new@example.com' };
         expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
         contacts = { ...contacts, emailAddress: 'BUYER@example.com' };
-        verified = false;
-        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(true);
+        expect(await service.mayAdvertiseByEmail(ctxOf(null), 2)).toBe(false);
     });
 
     it('stops advertising after a withdrawal and with no answer at all', async () => {
@@ -234,5 +250,70 @@ describe('contacts of a marketing consent', () => {
         await marketing(1);
         await marketing(1, false);
         expect(await service.mayAdvertiseByEmail(ctxOf(null), 1)).toBe(false);
+    });
+});
+
+describe('e-mail confirmation', () => {
+    const ctx = ctxOf(null);
+    const stored = (id: number): Promise<ConfirmationRow | null> =>
+        dataSource.getRepository(ConfirmationRow).findOneBy({ customerId: id });
+
+    it('leaves an unchanged confirmed customer confirmed and sends no link', async () => {
+        expect(await confirmations.isConfirmed(ctx, 1, ' Buyer@Example.com ')).toBe(true);
+        expect(await confirmations.requestConfirmation(ctx, 1, 'buyer@example.com')).toBeNull();
+    });
+
+    it('treats a staff-changed address as unconfirmed until the link is followed', async () => {
+        const token = await confirmations.requestConfirmation(ctx, 1, 'new@example.com');
+        expect(token).toMatch(/^[0-9a-f]{64}$/);
+        expect(await confirmations.isConfirmed(ctx, 1, 'new@example.com')).toBe(false);
+        expect(await confirmations.requestConfirmation(ctx, 1, 'new@example.com')).toBeNull();
+        expect(await confirmations.confirmByToken(ctx, token as string)).toEqual({
+            customerId: 1,
+            confirmedEmail: 'new@example.com',
+        });
+        expect(await confirmations.isConfirmed(ctx, 1, 'new@example.com')).toBe(true);
+        expect(await stored(1)).toMatchObject({ pendingEmail: null, token: null });
+    });
+
+    it('spends a link once and replaces it when the address changes again', async () => {
+        const first = (await confirmations.requestConfirmation(ctx, 1, 'a@example.com')) as string;
+        const second = (await confirmations.requestConfirmation(ctx, 1, 'b@example.com')) as string;
+        expect(await confirmations.confirmByToken(ctx, first)).toBeNull();
+        expect(await confirmations.confirmByToken(ctx, second)).not.toBeNull();
+        expect(await confirmations.confirmByToken(ctx, second)).toBeNull();
+        expect(await confirmations.confirmByToken(ctx, '')).toBeNull();
+        expect(await confirmations.isConfirmed(ctx, 1, 'a@example.com')).toBe(false);
+    });
+
+    it('creates one link when the same change is requested concurrently', async () => {
+        const results = await Promise.all(
+            [1, 2, 3, 4].map(() => confirmations.requestConfirmation(ctx, 5, 'c@example.com')),
+        );
+        expect(results.filter(Boolean)).toHaveLength(1);
+        expect(await dataSource.getRepository(ConfirmationRow).countBy({ customerId: 5 })).toBe(1);
+    });
+
+    it('feeds the legal gate: a changed address needs the link and a new consent', async () => {
+        await service.accept(ctxOf(1), [{ kind: 'marketing-consent', version: 1, accepted: true }]);
+        contacts = { ...contacts, emailAddress: 'new@example.com' };
+        const token = (await confirmations.requestConfirmation(
+            ctx,
+            1,
+            'new@example.com',
+        )) as string;
+        await service.accept(ctxOf(1), [
+            { kind: 'marketing-consent', version: 1, accepted: false },
+        ]);
+        await service.accept(ctxOf(1), [{ kind: 'marketing-consent', version: 1, accepted: true }]);
+        expect((await rows(1)).at(-1)?.emailVerified).toBe(false);
+        expect(await service.mayAdvertiseByEmail(ctx, 1)).toBe(false);
+        await confirmations.confirmByToken(ctx, token);
+        await service.accept(ctxOf(1), [
+            { kind: 'marketing-consent', version: 1, accepted: false },
+        ]);
+        await service.accept(ctxOf(1), [{ kind: 'marketing-consent', version: 1, accepted: true }]);
+        expect((await rows(1)).at(-1)?.emailVerified).toBe(true);
+        expect(await service.mayAdvertiseByEmail(ctx, 1)).toBe(true);
     });
 });

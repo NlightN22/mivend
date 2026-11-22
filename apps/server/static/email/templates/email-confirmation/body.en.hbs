@@ -1,0 +1,18 @@
+{{> header title="Confirm your email address" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            The email address of your account was changed. Click the button below to confirm that this address is yours. You can keep signing in meanwhile.
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ confirmEmailAddressUrl }}?token={{ confirmationToken }}">
+            Confirm email
+        </mj-button>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="This is an automated message, please do not reply." sentBy="Sent by" }}

@@ -5,6 +5,7 @@ import type {
     NotificationPage,
     NotificationTransport,
 } from '@mivend/ui-kit';
+import { i18n } from '../i18n';
 import { shopApi } from './client';
 import { getNotificationsWsClient } from './notificationsWsClient';
 import {
@@ -21,14 +22,19 @@ import {
 
 // Codegen emits branded enums and optional fields that can be undefined; ui-kit's NotificationItem
 // is client-free and needs plain literals and null, so normalize here, not loosen its types.
+const EMAIL_CONFIRMATION_SOURCE = 'email-confirmation';
+
 function toNotificationItem(fragment: NotificationFieldsFragment): NotificationItem {
+    const localized = fragment.sourceType === EMAIL_CONFIRMATION_SOURCE;
     return {
         id: fragment.id,
         kind: fragment.kind as unknown as NotificationItem['kind'],
         sourceType: fragment.sourceType,
         sourceId: fragment.sourceId ?? null,
-        title: fragment.title,
-        message: fragment.message,
+        title: localized ? i18n.global.t('notifications.emailConfirmation.title') : fragment.title,
+        message: localized
+            ? i18n.global.t('notifications.emailConfirmation.message')
+            : fragment.message,
         status: fragment.status as unknown as NotificationItem['status'],
         readAt: fragment.readAt ?? null,
         resolvedAt: fragment.resolvedAt ?? null,
