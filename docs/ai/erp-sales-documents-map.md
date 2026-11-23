@@ -1,6 +1,6 @@
 # ERP sales documents map (#394)
 
-Scope: the nine sales-chain documents the Integration Service publishes as `erp.<kind>.events.v1` (event-contracts
+Scope: the nine sales-chain documents plus the two warehouse documents (`warehouse-order`, `tl-warehouse-work-result`) the Integration Service publishes as `erp.<kind>.events.v1` (event-contracts
 0.94.0, already in the pinned 0.99.0; no bump needed, IS is at 0.101.0 but 0.100/0.101 are catalogs only). Supersedes
 the tech debt in #383. `sales-correction`, `order-correction` and `customer-claim` are already consumed (#254) and stay
 as they are.
@@ -49,6 +49,8 @@ change (we cannot guess quantities), staff see its header only.
 |---|---|---|---|---|
 | goods-and-services-sale (realization) | no order header field. `deal_id` (+`deal_type`) and `basis_document_id` usually carry the order; each goods row has `customer_order_id`. Row id wins over header. Counterparty, contract, organization by id | header + goods rows (product, quantity, coefficient, price in attributes, amount, VAT, row order) | order card: "shipped" event per product (customer when reflected in accounting, staff always) | documents list pages; services rows (the contract message for them is empty today); set components, serial numbers, barcodes (jsonb only) |
 | customer-goods-return | `deal_id` mostly an order; goods row `customer_order_id` only in some; `deal_id` can be a customer claim (about 40%): the claim's own `orderId` is used. No link to a realization. Return by transfer has no order: unlinked | header + goods rows | order card: "return from the customer" event, negative quantity and amount | unlinked returns are not shown to customers; a manager list of unlinked returns |
+| warehouse-order (what went to picking) | no order field. `basis_document_id` (+type) is the customer order or a realization; a realization is resolved to the order through its own link (deal/basis/row order). Chain: order -> warehouse order (basis) -> work result | header + goods rows (product, quantity; no unit coefficient, read as base units) | order card, customer and staff: "sent to picking" event per product, informational | basis of another kind (transfer, stocktaking) stays unlinked; a realization that splits an order's rows across orders attributes the whole picking order to each linked order |
+| tl-warehouse-work-result (what was really picked) | `warehouse_order_id`, stored as the document's basis; its rows `warehouseWork` (actual operations: product, quantity) are the picked quantity | header + all three table parts (employees, goods by task, warehouse work) | order card: "picked" event per product, informational, so picked vs ordered is the event quantity against the line's ordered quantity. Employee ids stay in the jsonb of the stored rows and are never selected or sent to any API | which table part is the authoritative picked quantity (assumed `warehouseWork`, goods-by-task is the task content) and the unit of the quantity: verify against real documents |
 | customer-order-closing | `orders` rows carry `customer_order_id` and a closing reason id | header + rows | nothing yet | an order "closed, reason" line needs the reason catalog (`order-closing-reason`, 0.96.0, not consumed): deferred together with it |
 | customer-proforma-invoice (ERP payment request) | `customer_order_id` header and row, `sale_document_id` | header + goods/services rows | nothing: our own proforma invoices are shown, order-state already lists linked documents | showing the ERP request next to ours (needs a product decision on duplicates) |
 | issued-vat-invoice | `basis_document_id` (a realization), counterparty, contract; no order | header + rows | nothing | customer download of VAT invoices; needs the realization link only (resolved at read time through the basis) |
@@ -56,6 +58,9 @@ change (we cannot guess quantities), staff see its header only.
 | cash-receipt-order | same breakdown shape as above | header + rows | nothing, same reason | same |
 | customer-card-payment | breakdown rows with `deal_id`; `basis_document_id` | header + rows | nothing, same reason | same |
 | debt-correction | debtor/creditor counterparty, `basis_document_id`, `debt_amounts` rows with contract | header + rows | nothing | staff debt view |
+
+Other warehouse documents (product-assembly, goods stocktaking, warehouse balance forming, goods transfer): not about what was
+picked for a customer order, so they are not consumed.
 
 ## Why the customer screens stay as they are
 
@@ -67,7 +72,7 @@ usual counterparty scope with `ReadOrder`/`ReadCounterparty`.
 
 ## Operational facts
 
-- Prod IS is seeded from 2024-01-01: about 8,000 documents across the nine kinds (3,170 realizations, 2,505 card
+- Prod IS is seeded from 2024-01-01 (warehouse-order 558 and tl-warehouse-work-result 897 so far): about 8,000 documents across the nine kinds (3,170 realizations, 2,505 card
   payments, 1,047 cash receipts), a few thousand rows each for the big ones. They get their own inbox lane so the seed
   never delays the bulk lane; each document is one transactional write (header, delete, insert of its rows).
 - Replay aggregate types are the camelCase kind names (`goodsAndServicesSale`, ...), the IS `GENERATED_ENTITY_TYPES`.
