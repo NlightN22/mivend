@@ -44,42 +44,29 @@ test('portal-admin can reach /settings and see the roles list (positive) @on:man
     await expect(page.getByText('portal-admin', { exact: true })).toBeVisible();
 });
 
-test('portal-admin can edit a role permissions and it persists (positive) @on:manager-portal-admin', async ({
+// Core updateRole needs UpdateAdministrator, which portal-admin no longer holds (#395): role rights are
+// the superadmin's; portal-admin assigns roles to users instead.
+test('portal-admin cannot change the permissions of a role (negative) @on:manager-portal-admin', async ({
     page,
 }) => {
-    const before = await adminApiViaPage<{
-        roles: { items: { id: string; permissions: string[] }[] };
-    }>(
+    const read = `query { roles(options: { filter: { code: { eq: "${TARGET_ROLE}" } } }) { items { permissions } } }`;
+    const before = await adminApiViaPage<{ roles: { items: { permissions: string[] }[] } }>(
         page,
-        `query { roles(options: { filter: { code: { eq: "${TARGET_ROLE}" } } }) { items { id permissions } } }`,
+        read,
     );
-    const role = before.roles.items[0];
-    if (!role) throw new Error(`${TARGET_ROLE} role not found`);
-    // CreateOrder is never seeded for security-officer — a safe, currently-unset toggle target.
-    expect(role.permissions).not.toContain('CreateOrder');
+    expect(before.roles.items[0]?.permissions).not.toContain('CreateOrder');
 
-    try {
-        await page.goto(`/settings/roles/${TARGET_ROLE}`);
-        await page.waitForLoadState('networkidle');
-        await page.getByText('CreateOrder', { exact: true }).click();
-        await page.getByRole('button', { name: 'Save changes' }).click();
-        await expect(page.getByText('Permissions saved.')).toBeVisible({ timeout: 15000 });
+    await page.goto(`/settings/roles/${TARGET_ROLE}`);
+    await page.waitForLoadState('networkidle');
+    await page.getByText('CreateOrder', { exact: true }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText(/Permissions could not be saved/)).toBeVisible({ timeout: 15000 });
 
-        const after = await adminApiViaPage<{
-            roles: { items: { permissions: string[] }[] };
-        }>(
-            page,
-            `query { roles(options: { filter: { code: { eq: "${TARGET_ROLE}" } } }) { items { permissions } } }`,
-        );
-        expect(after.roles.items[0]?.permissions).toContain('CreateOrder');
-    } finally {
-        // portal-admin has no native updateRole; undo through the same UI path the test used.
-        await page.goto(`/settings/roles/${TARGET_ROLE}`);
-        await page.waitForLoadState('networkidle');
-        await page.getByText('CreateOrder', { exact: true }).click();
-        await page.getByRole('button', { name: 'Save changes' }).click();
-        await expect(page.getByText('Permissions saved.')).toBeVisible({ timeout: 15000 });
-    }
+    const after = await adminApiViaPage<{ roles: { items: { permissions: string[] }[] } }>(
+        page,
+        read,
+    );
+    expect(after.roles.items[0]?.permissions).not.toContain('CreateOrder');
 });
 
 test('portal-admin can edit a role access scope and it persists (positive) @on:manager-portal-admin', async ({
