@@ -69,6 +69,12 @@ async function resend(): Promise<void> {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+    min-width: 0;
+    white-space: normal;
+}
+
+.portal-email-pending > * {
+    max-width: 100%;
 }
 
 .portal-email-pending__detail {
@@ -80,10 +86,12 @@ async function resend(): Promise<void> {
 .portal-email-pending__ok {
     font-size: 12px;
     color: var(--el-color-success);
+    overflow-wrap: anywhere;
 }
 
 .portal-email-pending__error {
     font-size: 12px;
     color: var(--el-color-danger);
+    overflow-wrap: anywhere;
 }
 </style>
