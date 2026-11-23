@@ -219,7 +219,7 @@ async function handleDeactivate(): Promise<void> {
                     :customer-id="(data as Row).id"
                     :pending="(data as Row).emailConfirmationPending"
                     :sent-at="(data as Row).emailConfirmationSentAt"
-                    :can-resend="authStore.hasPermission('UpdateCustomer')"
+                    :can-resend="authStore.hasPermission('ManageCounterpartyPortalAccess')"
                     @resent="load"
                 />
             </template>

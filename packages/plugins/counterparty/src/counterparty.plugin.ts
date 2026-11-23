@@ -255,6 +255,7 @@ const adminResolvers = [
     ],
     exports: [
         CounterpartyService,
+        CounterpartyPortalAccessService,
         CounterpartyErpDriftService,
         CounterpartyErpMirrorService,
         CounterpartySnapshotService,

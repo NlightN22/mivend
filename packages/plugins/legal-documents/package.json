@@ -21,6 +21,8 @@
         "shared": "workspace:*",
         "@mivend/plugin-sign-in-protection": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
+        "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-counterparty": "workspace:*",
         "typeorm": "^0.3.0"
     },
     "devDependencies": {

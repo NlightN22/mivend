@@ -17,11 +17,12 @@ import { LegalDocumentsService } from './legal-documents.service';
 import { LegalPublisherService } from './legal-publisher.service';
 import { StaffEmailChangeInterceptor } from './staff-email-change.interceptor';
 import { StaffEmailChangeService } from './staff-email-change.service';
+import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { LEGAL_DOCUMENTS_OPTIONS } from './types';
 import type { LegalDocumentsOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, NotificationPlugin],
+    imports: [PluginCommonModule, NotificationPlugin, CounterpartyPlugin],
     entities: [LegalDocumentVersion, LegalAcceptance, EmailConfirmation],
     providers: [
         LegalDocumentsService,

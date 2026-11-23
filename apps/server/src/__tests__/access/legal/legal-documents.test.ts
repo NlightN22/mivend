@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DENIED, admin, customerToken, shop, staffToken } from '../harness/actors';
+import { DENIED, admin, customerToken, seed, shop, staffToken } from '../harness/actors';
 
 const DOCUMENT = `query($k: String!) { legalDocument(kind: $k) { kind version body } }`;
 const OFFER = `query { legalConsentOffer { kind version requiredVersion required } }`;
@@ -104,14 +104,24 @@ describe('legal documents', () => {
         expect(result.errors.join(' ')).toMatch(/Cannot query field/);
     });
 
-    it('resendEmailConfirmation: refused without UpdateCustomer, absent from the shop API', async () => {
-        for (const key of ['manager-a', 'head-a', 'director'] as const) {
-            const denied = await admin(await staffToken(key), RESEND, { id: '1' });
+    it('resendEmailConfirmation: needs ManageCounterpartyPortalAccess, absent from the shop API', async () => {
+        const id = seed().customers['customer-a'];
+        for (const key of ['manager-a', 'head-a', 'operator-a'] as const) {
+            const denied = await admin(await staffToken(key), RESEND, { id });
             expect(denied.errors.join(' ')).toMatch(DENIED);
         }
-        const allowed = await admin(await staffToken('superadmin'), RESEND, { id: '1' });
+        const unknown = await admin(await staffToken('director'), RESEND, { id: '999999' });
+        expect(unknown.errors.join(' ')).toMatch(/Customer not found/);
+        const director = await staffToken('director');
+        const portal = await admin<{ customers: { items: { id: string }[] } }>(
+            director,
+            `query($e: String!) { customers(options: { filter: { emailAddress: { eq: $e } } }) { items { id } } }`,
+            { e: 'customer-team@access.test' },
+        );
+        const allowed = await admin(director, RESEND, { id: portal.data?.customers.items[0]?.id });
         expect(allowed.errors.join(' ')).not.toMatch(DENIED);
-        const shopResult = await shop(await customerToken('customer-a'), RESEND, { id: '1' });
+        expect(allowed.errors.join(' ')).toMatch(/no e-mail address waiting/);
+        const shopResult = await shop(await customerToken('customer-a'), RESEND, { id });
         expect(shopResult.errors.join(' ')).toMatch(/Cannot query field/);
     });
 

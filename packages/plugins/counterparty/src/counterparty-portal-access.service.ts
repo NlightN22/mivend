@@ -67,6 +67,18 @@ export class CounterpartyPortalAccessService {
         return customers.filter((c): c is Customer => c != null);
     }
 
+    async assertPortalUserWritable(ctx: RequestContext, customerId: ID): Promise<void> {
+        const customer = await this.connection
+            .getRepository(ctx, Customer)
+            .findOne({ where: { id: customerId } });
+        const counterpartyId = (
+            customer?.customFields as { counterpartyId?: string | null } | undefined
+        )?.counterpartyId;
+        if (!counterpartyId) throw new UserInputError(`Customer not found: id=${customerId}`);
+        const counterparty = await this.findCounterpartyOrFail(ctx, counterpartyId);
+        await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
+    }
+
     async activate(ctx: RequestContext, counterpartyId: ID): Promise<Customer> {
         const counterparty = await this.findCounterpartyOrFail(ctx, counterpartyId);
         await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);

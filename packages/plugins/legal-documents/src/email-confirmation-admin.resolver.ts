@@ -1,15 +1,18 @@
 import { Args, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { CustomPermission } from '@mivend/plugin-access-control';
+import { CounterpartyPortalAccessService } from '@mivend/plugin-counterparty';
 import { Allow, Ctx, Customer, Permission, RequestContext, UserInputError } from '@vendure/core';
 
 import { EmailConfirmationService } from './email-confirmation.service';
 import { StaffEmailChangeService } from './staff-email-change.service';
 
-// Reads hang off the already scoped Customer parent; the resend is as scoped as core updateCustomer.
+// Reads hang off the already scoped Customer parent; the resend is scoped by the portal user's counterparty.
 @Resolver('Customer')
 export class EmailConfirmationAdminResolver {
     constructor(
         private confirmations: EmailConfirmationService,
         private changes: StaffEmailChangeService,
+        private portalAccess: CounterpartyPortalAccessService,
     ) {}
 
     @ResolveField()
@@ -33,11 +36,12 @@ export class EmailConfirmationAdminResolver {
     }
 
     @Mutation()
-    @Allow(Permission.UpdateCustomer)
+    @Allow(CustomPermission.ManageCounterpartyPortalAccess.Permission)
     async resendEmailConfirmation(
         @Ctx() ctx: RequestContext,
         @Args() args: { customerId: string },
     ): Promise<boolean> {
+        await this.portalAccess.assertPortalUserWritable(ctx, args.customerId);
         const result = await this.changes.resend(ctx, Number(args.customerId));
         if (result.status === 'none') {
             throw new UserInputError(
