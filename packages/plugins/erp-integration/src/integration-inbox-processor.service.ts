@@ -34,6 +34,7 @@ import { PersonalContactStreamHandler } from './handlers/personal-contact.handle
 import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
 import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
 import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesDocumentStreamHandler } from './handlers/sales-document.handler';
 import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { RetroBonusSetupStreamHandler } from './handlers/retro-bonus-setup.handler';
@@ -147,6 +148,7 @@ export class IntegrationInboxProcessorService {
         orderStateHandler: OrderStateStreamHandler,
         currencyHandler: CurrencyStreamHandler,
         contactInfoHandler: ContactInfoStreamHandler,
+        salesDocumentHandler: SalesDocumentStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -201,6 +203,19 @@ export class IntegrationInboxProcessorService {
             'order-state': orderStateHandler,
             currency: currencyHandler,
             'contact-info': contactInfoHandler,
+            'goods-and-services-sale': salesDocumentHandler.forStream('goods-and-services-sale'),
+            'customer-goods-return': salesDocumentHandler.forStream('customer-goods-return'),
+            'customer-order-closing': salesDocumentHandler.forStream('customer-order-closing'),
+            'customer-proforma-invoice': salesDocumentHandler.forStream(
+                'customer-proforma-invoice',
+            ),
+            'issued-vat-invoice': salesDocumentHandler.forStream('issued-vat-invoice'),
+            'incoming-payment-order': salesDocumentHandler.forStream('incoming-payment-order'),
+            'cash-receipt-order': salesDocumentHandler.forStream('cash-receipt-order'),
+            'customer-card-payment': salesDocumentHandler.forStream('customer-card-payment'),
+            'debt-correction': salesDocumentHandler.forStream('debt-correction'),
+            'warehouse-order': salesDocumentHandler.forStream('warehouse-order'),
+            'tl-warehouse-work-result': salesDocumentHandler.forStream('tl-warehouse-work-result'),
         };
     }
 

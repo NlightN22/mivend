@@ -893,6 +893,40 @@ export const config: VendureConfig = {
                     'order-correction':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CORRECTION ??
                         'erp.order-correction.events.v1',
+                    // #394: sales-chain documents, one generic mirror, see SalesDocumentStreamHandler.
+                    'goods-and-services-sale':
+                        process.env.INTEGRATION_KAFKA_TOPIC_GOODS_AND_SERVICES_SALE ??
+                        'erp.goods-and-services-sale.events.v1',
+                    'customer-goods-return':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_GOODS_RETURN ??
+                        'erp.customer-goods-return.events.v1',
+                    'customer-order-closing':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_ORDER_CLOSING ??
+                        'erp.customer-order-closing.events.v1',
+                    'customer-proforma-invoice':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_PROFORMA_INVOICE ??
+                        'erp.customer-proforma-invoice.events.v1',
+                    'issued-vat-invoice':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ISSUED_VAT_INVOICE ??
+                        'erp.issued-vat-invoice.events.v1',
+                    'incoming-payment-order':
+                        process.env.INTEGRATION_KAFKA_TOPIC_INCOMING_PAYMENT_ORDER ??
+                        'erp.incoming-payment-order.events.v1',
+                    'cash-receipt-order':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CASH_RECEIPT_ORDER ??
+                        'erp.cash-receipt-order.events.v1',
+                    'customer-card-payment':
+                        process.env.INTEGRATION_KAFKA_TOPIC_CUSTOMER_CARD_PAYMENT ??
+                        'erp.customer-card-payment.events.v1',
+                    'debt-correction':
+                        process.env.INTEGRATION_KAFKA_TOPIC_DEBT_CORRECTION ??
+                        'erp.debt-correction.events.v1',
+                    'warehouse-order':
+                        process.env.INTEGRATION_KAFKA_TOPIC_WAREHOUSE_ORDER ??
+                        'erp.warehouse-order.events.v1',
+                    'tl-warehouse-work-result':
+                        process.env.INTEGRATION_KAFKA_TOPIC_TL_WAREHOUSE_WORK_RESULT ??
+                        'erp.tl-warehouse-work-result.events.v1',
                     // #391: derived order state, currency reference and contact sets (event-contracts 0.99.0).
                     'order-state':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATE ??

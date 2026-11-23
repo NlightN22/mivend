@@ -42,6 +42,7 @@ import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.ha
 import { CustomerClaimStreamHandler } from './handlers/customer-claim.handler';
 import { OrderChangeResultStreamHandler } from './handlers/order-change-result.handler';
 import { OrderCorrectionStreamHandler } from './handlers/order-correction.handler';
+import { SalesDocumentStreamHandler } from './handlers/sales-document.handler';
 import { SalesCorrectionStreamHandler } from './handlers/sales-correction.handler';
 import { OrderStateStreamHandler } from './handlers/order-state.handler';
 import { CurrencyStreamHandler } from './handlers/currency.handler';
@@ -99,6 +100,7 @@ export const STREAM_HANDLERS = [
     OrderStatusStreamHandler,
     CustomerClaimStreamHandler,
     SalesCorrectionStreamHandler,
+    SalesDocumentStreamHandler,
     OrderCorrectionStreamHandler,
     OrderChangeResultStreamHandler,
     OrderStateStreamHandler,

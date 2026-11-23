@@ -201,6 +201,8 @@ export const JOURNALED_ENTITIES: readonly string[] = [
     'OrderCorrectionServiceLineErp',
     'OrderCorrectionContainerLineErp',
     'OrderChangeResultErp',
+    'ErpSalesDocument',
+    'ErpSalesDocumentLine',
     'StorageLocationAssignment',
     'StockOrganization',
     'ProductTaxCodeFlag',

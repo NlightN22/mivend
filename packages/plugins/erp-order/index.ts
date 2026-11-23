@@ -50,6 +50,8 @@ export {
     CustomerClaimGoodsLineErp,
     CustomerClaimServiceLineErp,
 } from './src/erp-documents/customer-claim-line-erp.entity';
+export { ErpSalesDocument } from './src/erp-documents/erp-sales-document.entity';
+export { ErpSalesDocumentLine } from './src/erp-documents/erp-sales-document-line.entity';
 export { SalesCorrectionErp } from './src/erp-documents/sales-correction-erp.entity';
 export {
     SalesCorrectionGoodsLineErp,

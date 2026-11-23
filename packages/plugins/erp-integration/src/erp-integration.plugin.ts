@@ -40,6 +40,7 @@ import {
     createIntegrationInboxReplaySweepTask,
     createIntegrationInboxRetentionTask,
     createIntegrationInboxContactTask,
+    createIntegrationInboxSalesDocumentTask,
     createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
 import { createCreditLimitRecomputeTask } from './credit-limit-recompute.scheduled-task';
@@ -275,6 +276,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxContactTask(ErpIntegrationPlugin.options),
+                createIntegrationInboxSalesDocumentTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxReplaySweepTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),

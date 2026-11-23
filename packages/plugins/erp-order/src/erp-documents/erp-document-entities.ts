@@ -3,6 +3,8 @@ import {
     CustomerClaimGoodsLineErp,
     CustomerClaimServiceLineErp,
 } from './customer-claim-line-erp.entity';
+import { ErpSalesDocument } from './erp-sales-document.entity';
+import { ErpSalesDocumentLine } from './erp-sales-document-line.entity';
 import { OrderChangeResultErp } from './order-change-result-erp.entity';
 import { OrderCorrectionErp } from './order-correction-erp.entity';
 import {
@@ -28,4 +30,6 @@ export const ERP_DOCUMENT_ENTITIES = [
     OrderCorrectionServiceLineErp,
     OrderCorrectionContainerLineErp,
     OrderChangeResultErp,
+    ErpSalesDocument,
+    ErpSalesDocumentLine,
 ];

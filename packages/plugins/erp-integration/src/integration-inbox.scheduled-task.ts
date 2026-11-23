@@ -13,6 +13,7 @@ import {
     INBOX_BULK_STREAMS,
     INBOX_BULK_TASK_TIMEOUT_MS,
     INBOX_CONTACT_STREAMS,
+    INBOX_SALES_DOCUMENT_STREAMS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
@@ -133,6 +134,34 @@ export function createIntegrationInboxContactTask(
                 return await drainBulkLane(
                     injector.get(IntegrationInboxProcessorService),
                     INBOX_CONTACT_STREAMS,
+                );
+            } finally {
+                running = false;
+            }
+        },
+    });
+}
+
+// Same drain on its own stream set: the document seed (tens of thousands of rows) never queues behind the bulk lane.
+export function createIntegrationInboxSalesDocumentTask(
+    options: ErpIntegrationPluginOptions,
+): ScheduledTask {
+    let running = false;
+    const everyMs = options.inboxPollIntervalMs ?? INBOX_POLL_INTERVAL_DEFAULT;
+    return new ScheduledTask({
+        id: 'erp-integration-inbox-sales-documents',
+        description:
+            'Processes pending ERP sales document inbox records in their own lane (central hub only).',
+        schedule: cronEveryMs(everyMs),
+        timeout: INBOX_BULK_TASK_TIMEOUT_MS,
+        execute: async ({ injector }) => {
+            if (options.instanceType !== 'central') return { skipped: true };
+            if (running) return { skipped: true };
+            running = true;
+            try {
+                return await drainBulkLane(
+                    injector.get(IntegrationInboxProcessorService),
+                    INBOX_SALES_DOCUMENT_STREAMS,
                 );
             } finally {
                 running = false;

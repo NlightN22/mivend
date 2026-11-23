@@ -167,6 +167,18 @@ export type InboundStream =
     | 'sales-correction'
     | 'order-correction'
     | 'order-change-result'
+    // #394: sales-chain documents in one generic mirror, see SalesDocumentStreamHandler.
+    | 'goods-and-services-sale'
+    | 'customer-goods-return'
+    | 'customer-order-closing'
+    | 'customer-proforma-invoice'
+    | 'issued-vat-invoice'
+    | 'incoming-payment-order'
+    | 'cash-receipt-order'
+    | 'customer-card-payment'
+    | 'debt-correction'
+    | 'warehouse-order'
+    | 'tl-warehouse-work-result'
     // Derived projection of an order (reserve, status, paid amount), keyed by the order's ERP id; see OrderStateStreamHandler.
     | 'order-state'
     // CurrencyChanged: the id space of every currency_id in other events.
@@ -277,6 +289,17 @@ const ALL_INBOUND_STREAMS_MAP = {
     'sales-correction': true,
     'order-correction': true,
     'order-change-result': true,
+    'goods-and-services-sale': true,
+    'customer-goods-return': true,
+    'customer-order-closing': true,
+    'customer-proforma-invoice': true,
+    'issued-vat-invoice': true,
+    'incoming-payment-order': true,
+    'cash-receipt-order': true,
+    'customer-card-payment': true,
+    'debt-correction': true,
+    'warehouse-order': true,
+    'tl-warehouse-work-result': true,
     'order-state': true,
     currency: true,
     'contact-info': true,
@@ -310,8 +333,25 @@ export const INBOX_CONTACT_STREAMS: readonly InboundStream[] = [
     'personal-contact',
     'contact-info',
 ];
+// The ERP seed is tens of thousands of rows: its own lane, so it never delays the bulk lane (#394).
+export const INBOX_SALES_DOCUMENT_STREAMS: readonly InboundStream[] = [
+    'goods-and-services-sale',
+    'customer-goods-return',
+    'customer-order-closing',
+    'customer-proforma-invoice',
+    'issued-vat-invoice',
+    'incoming-payment-order',
+    'cash-receipt-order',
+    'customer-card-payment',
+    'debt-correction',
+    'warehouse-order',
+    'tl-warehouse-work-result',
+];
 export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
-    stream => !INBOX_CRITICAL_STREAMS.includes(stream) && !INBOX_CONTACT_STREAMS.includes(stream),
+    stream =>
+        !INBOX_CRITICAL_STREAMS.includes(stream) &&
+        !INBOX_CONTACT_STREAMS.includes(stream) &&
+        !INBOX_SALES_DOCUMENT_STREAMS.includes(stream),
 );
 
 // Vendure marks a task failed past its 60s timeout, but execute() keeps running regardless, so an
