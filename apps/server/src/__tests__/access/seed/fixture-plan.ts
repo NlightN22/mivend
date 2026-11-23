@@ -122,7 +122,14 @@ export const PORTAL_CUSTOMERS: { email: string; counterparty: CounterpartyKey }[
     { email: 'customer-team@access.test', counterparty: 'b-team' },
     { email: 'customer-branchless@access.test', counterparty: 'none' },
 ];
-export const PORTAL_ACCESS_MANAGERS: ActorKey[] = ['director'];
+export const PORTAL_ACCESS_MANAGERS: ActorKey[] = [
+    'director',
+    'manager-a',
+    'manager-b',
+    'head-a',
+    'head-b',
+    'head-default',
+];
 
 // The union of docs/access-control.md for this seed, spelled out instead of recomputed.
 export const VISIBLE_COUNTERPARTIES: Record<ActorKey, CounterpartyKey[]> = {

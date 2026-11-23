@@ -9,7 +9,7 @@ const CATALOG = `query { bulkOperationCatalog { type } }`;
 const PREVIEW = `mutation($t: String!, $p: JSON, $s: BulkSelectionInput!) { previewBulkBatch(type: $t, parameters: $p, selection: $s) { uuid number status totalCount } }`;
 const RUN = `mutation($u: String!) { runBulkBatch(uuid: $u) { status } }`;
 const ONE = `query($u: String!) { bulkBatch(uuid: $u) { uuid } }`;
-const ITEMS = `query($u: String!) { bulkBatchItems(uuid: $u) { totalItems items { targetId previewOutcome } } }`;
+const ITEMS = `query($u: String!) { bulkBatchItems(uuid: $u) { totalItems items { targetId } } }`;
 const HISTORY = `query { bulkBatches(options: { take: 100 }) { totalItems } }`;
 
 const NOT_HOLDERS: ActorKey[] = ['operator-a'];
@@ -73,14 +73,12 @@ describe('bulk operations', () => {
             });
             expect(preview.errors).toEqual([]);
             const items = await admin<{
-                bulkBatchItems: { items: Array<{ targetId: string; previewOutcome: string }> };
+                bulkBatchItems: { items: Array<{ targetId: string }> };
             }>(token, ITEMS, { u: preview.data!.previewBulkBatch.uuid });
             const own = new Set(VISIBLE_COUNTERPARTIES[key].map(idOf));
             const rows = items.data!.bulkBatchItems.items;
-            expect(rows.some(r => r.previewOutcome !== 'skip' && own.has(r.targetId))).toBe(true);
-            for (const row of rows) {
-                if (!own.has(row.targetId)) expect(row.previewOutcome, row.targetId).toBe('skip');
-            }
+            expect(rows.length).toBeGreaterThan(0);
+            for (const row of rows) expect(own.has(row.targetId), row.targetId).toBe(true);
         },
     );
 
