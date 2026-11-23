@@ -111,4 +111,10 @@ describe('client-writable custom fields (#266)', () => {
             expect.objectContaining({ name: field?.name, readonly: true }),
         );
     });
+
+    it('lets staff edit the picking stages in the admin settings (#394)', () => {
+        expect(CLIENT_WRITABLE_CUSTOM_FIELDS.GlobalSettings).toContain('pickingWorkStages');
+        const guarded = applyCustomFieldWritePolicy(customFields).GlobalSettings;
+        expect(guarded?.find(f => f.name === 'pickingWorkStages')?.readonly).not.toBe(true);
+    });
 });
