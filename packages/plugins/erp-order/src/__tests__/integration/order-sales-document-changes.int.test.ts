@@ -168,4 +168,44 @@ describe('sales document line changes', () => {
         expect(await kinds('customer')).toEqual(['picking']);
         expect(await kinds('staff')).toHaveLength(3);
     });
+
+    it('reads only the source table part, so a huge unrelated part never trips the row ceiling', async () => {
+        await doc({ kind: 'goods-and-services-sale', erpId: 's-1', dealId: 'o-1' }, 'goods', [
+            { productId: 'prod-1', quantity: 10 },
+        ]);
+        const [{ id }] = await dataSource.query(
+            `SELECT id FROM erp_sales_document WHERE "erpId" = 's-1'`,
+        );
+        await dataSource.query(
+            `INSERT INTO erp_sales_document_line ("documentId","lineNumber",part,"productId",quantity,attributes)
+             SELECT $1, g, 'serialNumbers', 'prod-1', 1, '{"employeeId":"secret"}' FROM generate_series(1, 1500) g`,
+            [id],
+        );
+        expect(await kinds('staff')).toEqual(['realization']);
+    });
+
+    it('does not count a null-linked return row when the header names another order', async () => {
+        await doc({ kind: 'customer-goods-return', erpId: 'ret-1', dealId: 'o-9' }, 'goods', [
+            { productId: 'prod-1', quantity: 1 },
+            { productId: 'prod-1', quantity: 2, linkedId: 'o-1' },
+        ]);
+        const result = await service.forOrder(ctx, order, 'staff');
+        expect(result.lines[0].events.map(e => e.quantity)).toEqual([-2]);
+    });
+
+    it('gives no money for a return the ERP has not reflected', async () => {
+        await dataSource.query(
+            `INSERT INTO erp_sales_document (kind,"erpId","sourceVersion",number,posted,"dealId") VALUES ('customer-goods-return','ret-2','1','ret-2',false,'o-1')`,
+        );
+        const [{ id }] = await dataSource.query(
+            `SELECT id FROM erp_sales_document WHERE "erpId" = 'ret-2'`,
+        );
+        await dataSource.query(
+            `INSERT INTO erp_sales_document_line ("documentId","lineNumber",part,"productId",quantity,coefficient,"amountMinor") VALUES ($1,1,'goods','prod-1',1,1,500)`,
+            [id],
+        );
+        const result = await service.forOrder(ctx, order, 'staff');
+        expect(result.lines[0].events).toHaveLength(1);
+        expect(result.amountDeltaMinor).toBe(0);
+    });
 });

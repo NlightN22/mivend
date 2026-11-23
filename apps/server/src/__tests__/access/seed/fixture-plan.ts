@@ -293,3 +293,21 @@ export const APPROVAL_READERS: ActorKey[] = [
     'head-default',
     'director',
 ];
+
+// ERP sales documents (#394): documents of the a-own and b-own orders; a work result's employee id must never be returned.
+export const SALES_DOC_ORDER_ERP_ID: Record<'a-own' | 'b-own', string> = {
+    'a-own': 'access-erp-order-a-own',
+    'b-own': 'access-erp-order-b-own',
+};
+export const SALES_DOC_PRODUCT_ERP_ID = 'access-erp-product';
+export const SALES_DOC_EMPLOYEE_ID = 'access-employee-secret';
+export const SALES_DOC_NUMBERS = {
+    picking: '8101',
+    picked: '8102',
+    returnPosted: '8103',
+    returnUnposted: '8104',
+    returnMarked: '8105',
+    returnDeleted: '8106',
+    returnUnlinked: '8107',
+    foreignPicking: '8108',
+} as const;

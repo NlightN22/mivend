@@ -19,29 +19,37 @@ export const SOURCE_PART_BY_STREAM: Readonly<Record<string, string>> = {
 };
 
 // Customer rule: posted and neither marked for deletion nor deleted; the ERP's reflect_in_* flags are not that signal.
-export const isReflectedSalesDocument = (doc: ErpSalesDocument): boolean =>
+export type SourceDoc = Pick<
+    ErpSalesDocument,
+    'kind' | 'number' | 'date' | 'posted' | 'deletionMarked' | 'isDeleted' | 'amountIncludesVat'
+>;
+export type SourceRow = Pick<
+    ErpSalesDocumentLine,
+    'productId' | 'quantity' | 'coefficient' | 'amountMinor' | 'vatAmountMinor'
+>;
+
+export const isReflectedSalesDocument = (doc: SourceDoc): boolean =>
     doc.posted && !doc.deletionMarked && !doc.isDeleted;
 
 // Same VAT convention as corrections: Order.totalWithTax includes VAT.
-function lineMoney(doc: ErpSalesDocument, line: ErpSalesDocumentLine): number {
+function lineMoney(doc: SourceDoc, line: SourceRow): number {
     const amount = line.amountMinor ?? 0;
     return doc.amountIncludesVat === false ? amount + (line.vatAmountMinor ?? 0) : amount;
 }
 
 // Returns reduce the sold quantity and money; the other kinds are informational and carry no money.
-export function salesDocumentSource(
-    doc: ErpSalesDocument,
-    line: ErpSalesDocumentLine,
-): LineChangeSource | null {
+export function salesDocumentSource(doc: SourceDoc, line: SourceRow): LineChangeSource | null {
     const kind = SALES_DOCUMENT_KIND_BY_STREAM[doc.kind];
     if (!kind || !line.productId || line.quantity === null) return null;
+    const reflected = isReflectedSalesDocument(doc);
     const base = line.quantity * (line.coefficient || 1);
     return {
         kind,
         productErpId: line.productId,
         quantity: kind === 'return' ? -base : base,
-        amountMinor: kind === 'return' ? -lineMoney(doc, line) : 0,
-        reflectedInAccounting: isReflectedSalesDocument(doc),
+        // Money counts only once the ERP has reflected the return; until then it is an event with no money.
+        amountMinor: kind === 'return' && reflected ? -lineMoney(doc, line) : 0,
+        reflectedInAccounting: reflected,
         documentNumber: doc.number,
         documentDate: doc.date,
     };

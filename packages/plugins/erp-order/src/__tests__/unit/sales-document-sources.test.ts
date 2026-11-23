@@ -37,6 +37,13 @@ describe('salesDocumentSource', () => {
         });
     });
 
+    it('carries no money for a return that is not reflected in accounting', () => {
+        expect(salesDocumentSource(doc({ posted: false }), line({}))).toMatchObject({
+            quantity: -12,
+            amountMinor: 0,
+        });
+    });
+
     it('adds the VAT when the document states amounts without it', () => {
         expect(salesDocumentSource(doc({ amountIncludesVat: false }), line({}))?.amountMinor).toBe(
             -1100,

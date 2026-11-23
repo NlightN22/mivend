@@ -216,7 +216,7 @@ quantity and money), goods-and-services-sale, warehouse-order ("sent to picking"
 informational and carry no money. For the customer a document counts only when it is posted and neither marked for deletion
 nor deleted (the ERP's `reflect_in_*` flags are not used); staff also see unposted and marked documents. Links are exact id
 matches only (order, realization, claim of the order, warehouse order); a document that names another order is never counted
-and an unlinked one is not shown to anyone. Employee ids of a work result are never selected. Customer claims are not a source: a claim moves no register in the ERP; when it changes a sale the ERP re-posts the
+and an unlinked one is not shown to anyone; a return row without its own order counts only when the header or the order's claim links it. A return that is not yet reflected in accounting shows as an event with no money. Only the source table part and explicit columns are read, so employee data of a work result is never selected. Customer claims are not a source: a claim moves no register in the ERP; when it changes a sale the ERP re-posts the
 realization, which arrives as the realization's own change. ERP amounts are read as VAT-inclusive like `Order.totalWithTax`;
 when the document says `amountIncludesVat = false` the line's VAT amount is added (a correction uses the VAT before the
 change for its old amount). Both Admin fields are detail-only (about 5 queries per order, computed once per request), so
