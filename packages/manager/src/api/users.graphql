@@ -23,6 +23,20 @@ mutation SetAdministratorActive($id: ID!, $isActive: Boolean!) {
     setAdministratorActive(administratorId: $id, isActive: $isActive)
 }
 
+query AssignableAdministratorRoles {
+    assignableAdministratorRoles {
+        id
+        code
+        description
+    }
+}
+
+mutation SetAdministratorRoles($id: ID!, $roleIds: [ID!]!) {
+    setAdministratorRoles(administratorId: $id, roleIds: $roleIds) {
+        id
+    }
+}
+
 mutation ResendAdministratorPasswordReset($id: ID!) {
     resendAdministratorPasswordReset(administratorId: $id)
 }

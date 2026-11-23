@@ -110,10 +110,34 @@ test("portal-admin can reassign a user's role and it persists (positive) @on:man
     } finally {
         await adminApiViaPage(
             page,
-            `mutation($id: ID!, $roleIds: [ID!]!) { updateAdministrator(input: { id: $id, roleIds: $roleIds }) { id } }`,
+            `mutation($id: ID!, $roleIds: [ID!]!) { setAdministratorRoles(administratorId: $id, roleIds: $roleIds) { id } }`,
             { id: target.id, roleIds: [originalRoleId] },
         );
     }
+});
+
+test('portal-admin is refused the native administrator update and the superadmin role (negative) @on:manager-portal-admin', async ({
+    page,
+}) => {
+    const admins = await adminApiViaPage<{
+        administrators: { items: { id: string; emailAddress: string }[] };
+    }>(page, `query { administrators(options: { take: 200 }) { items { id emailAddress } } }`);
+    const target = admins.administrators.items.find(a => a.emailAddress === TARGET_EMAIL);
+    if (!target) throw new Error(`${TARGET_EMAIL} not found`);
+    await expect(
+        adminApiViaPage(
+            page,
+            `mutation($id: ID!) { updateAdministrator(input: { id: $id, password: "Changed-by-1-Test" }) { id } }`,
+            { id: target.id },
+        ),
+    ).rejects.toThrow(/not currently authorized/i);
+    const offered = await adminApiViaPage<{ assignableAdministratorRoles: { code: string }[] }>(
+        page,
+        `query { assignableAdministratorRoles { code } }`,
+    );
+    const codes = offered.assignableAdministratorRoles.map(r => r.code);
+    expect(codes).toContain('manager');
+    expect(codes).not.toContain('__super_admin_role__');
 });
 
 test('non-portal-admin roles cannot reach /settings/users (negative) @on:manager-operator @on:manager-manager @on:manager-department-head', async ({

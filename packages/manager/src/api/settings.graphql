@@ -64,12 +64,6 @@ query SecurityAdministrators {
     }
 }
 
-mutation UpdateAdministratorRole($id: ID!, $roleIds: [ID!]!) {
-    updateAdministrator(input: { id: $id, roleIds: $roleIds }) {
-        id
-    }
-}
-
 query PermissionCatalog {
     globalSettings {
         serverConfig {

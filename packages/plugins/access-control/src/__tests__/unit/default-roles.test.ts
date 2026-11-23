@@ -103,3 +103,12 @@ describe('default roles: deleted-contract powers of attorney (#333)', () => {
         ]);
     });
 });
+
+describe('default roles: user administration (#395)', () => {
+    it('the portal admin manages staff accounts without the native administrator update right', () => {
+        const rights = byCode('portal-admin');
+        expect(rights).toContain('ManageAdministratorLifecycle');
+        expect(rights).toContain('ReadAdministrator');
+        expect(rights).not.toContain('UpdateAdministrator');
+    });
+});

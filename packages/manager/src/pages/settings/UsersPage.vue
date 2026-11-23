@@ -7,15 +7,17 @@ import UsersDataTable from '../../components/settings/UsersDataTable.vue';
 import DiscountLimitsDialog from '../../components/settings/DiscountLimitsDialog.vue';
 import PendingErpUsersDataTable from '../../components/settings/PendingErpUsersDataTable.vue';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
-import { fetchRoles, updateAdministratorRole, type RoleSummary } from '../../api/settings';
 import { fetchDepartments, fetchPositions, type DepartmentOption } from '../../api/team';
 import {
+    fetchAssignableRoles,
     fetchPortalUsers,
     fetchPendingErpUsers,
     fetchPortalUserCounts,
     setAdministratorActive,
+    setAdministratorRoles,
     resendAdministratorPasswordReset,
     createAdministratorFromErpUser,
+    type AssignableRole,
     type PortalUser,
     type PendingErpUserRow,
 } from '../../api/users';
@@ -42,7 +44,7 @@ function departmentName(departmentId: string | null): string {
     return departments.value.find(d => d.erpId === departmentId)?.name ?? departmentId;
 }
 
-const roles = ref<RoleSummary[]>([]);
+const roles = ref<AssignableRole[]>([]);
 const savingRoleId = ref<string | null>(null);
 const actionError = ref('');
 const actionNotice = ref('');
@@ -207,7 +209,7 @@ async function onChangeRole(user: PortalUser, roleId: string): Promise<void> {
     actionError.value = '';
     savingRoleId.value = user.id;
     try {
-        await updateAdministratorRole(user.id, roleId);
+        await setAdministratorRoles(user.id, [roleId]);
         await loadUsers();
     } catch (e) {
         actionError.value = e instanceof Error ? e.message : t('settingsAccess.users.roleFailed');
@@ -235,7 +237,7 @@ onMounted(async () => {
         fetchPositions().then(
             p => (positionOptions.value = p.map(x => ({ value: x.erpId, label: x.name }))),
         ),
-        fetchRoles().then(r => (roles.value = r)),
+        fetchAssignableRoles().then(r => (roles.value = r)),
         loadCounts(),
     ]);
     if (view.value === 'pending') {

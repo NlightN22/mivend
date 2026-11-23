@@ -3505,6 +3505,7 @@ export type GlobalSettingsCustomFields = {
     defaultLanguage: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
+    pickingWorkStages: Maybe<Array<Scalars['String']['output']>>;
     settlementRetentionMonths: Maybe<Scalars['Int']['output']>;
     stockTierLowMax: Maybe<Scalars['Int']['output']>;
     stockTierMediumMax: Maybe<Scalars['Int']['output']>;
@@ -5021,6 +5022,7 @@ export type Mutation = {
     runScheduledTask: Success;
     saveTableView: SavedTableView;
     setAdministratorActive: Scalars['Boolean']['output'];
+    setAdministratorRoles: Administrator;
     setBranchSettings: BranchSettings;
     /** Manual branch pick that the automatic department rule never overwrites; null clears it. */
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
@@ -6020,6 +6022,11 @@ export type MutationSaveTableViewArgs = {
 export type MutationSetAdministratorActiveArgs = {
     administratorId: Scalars['ID']['input'];
     isActive: Scalars['Boolean']['input'];
+};
+
+export type MutationSetAdministratorRolesArgs = {
+    administratorId: Scalars['ID']['input'];
+    roleIds: Array<Scalars['ID']['input']>;
 };
 
 export type MutationSetBranchSettingsArgs = {
@@ -8879,6 +8886,7 @@ export type Query = {
     asset: Maybe<Asset>;
     /** Get a list of Assets */
     assets: AssetList;
+    assignableAdministratorRoles: Array<Role>;
     availableStock: Scalars['Int']['output'];
     branchList: BranchList;
     branchSettings: Maybe<BranchSettings>;
@@ -15095,13 +15103,6 @@ export type SecurityAdministratorsQuery = {
     };
 };
 
-export type UpdateAdministratorRoleMutationVariables = Exact<{
-    id: Scalars['ID']['input'];
-    roleIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-}>;
-
-export type UpdateAdministratorRoleMutation = { updateAdministrator: { id: string } };
-
 export type PermissionCatalogQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PermissionCatalogQuery = {
@@ -15434,6 +15435,19 @@ export type SetAdministratorActiveMutationVariables = Exact<{
 }>;
 
 export type SetAdministratorActiveMutation = { setAdministratorActive: boolean };
+
+export type AssignableAdministratorRolesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type AssignableAdministratorRolesQuery = {
+    assignableAdministratorRoles: Array<{ id: string; code: string; description: string }>;
+};
+
+export type SetAdministratorRolesMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    roleIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+export type SetAdministratorRolesMutation = { setAdministratorRoles: { id: string } };
 
 export type ResendAdministratorPasswordResetMutationVariables = Exact<{
     id: Scalars['ID']['input'];
@@ -19540,16 +19554,6 @@ export const SecurityAdministratorsDocument = new TypedDocumentString(`
     SecurityAdministratorsQuery,
     SecurityAdministratorsQueryVariables
 >;
-export const UpdateAdministratorRoleDocument = new TypedDocumentString(`
-    mutation UpdateAdministratorRole($id: ID!, $roleIds: [ID!]!) {
-  updateAdministrator(input: {id: $id, roleIds: $roleIds}) {
-    id
-  }
-}
-    `) as unknown as TypedDocumentString<
-    UpdateAdministratorRoleMutation,
-    UpdateAdministratorRoleMutationVariables
->;
 export const PermissionCatalogDocument = new TypedDocumentString(`
     query PermissionCatalog {
   globalSettings {
@@ -19929,6 +19933,28 @@ export const SetAdministratorActiveDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SetAdministratorActiveMutation,
     SetAdministratorActiveMutationVariables
+>;
+export const AssignableAdministratorRolesDocument = new TypedDocumentString(`
+    query AssignableAdministratorRoles {
+  assignableAdministratorRoles {
+    id
+    code
+    description
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AssignableAdministratorRolesQuery,
+    AssignableAdministratorRolesQueryVariables
+>;
+export const SetAdministratorRolesDocument = new TypedDocumentString(`
+    mutation SetAdministratorRoles($id: ID!, $roleIds: [ID!]!) {
+  setAdministratorRoles(administratorId: $id, roleIds: $roleIds) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetAdministratorRolesMutation,
+    SetAdministratorRolesMutationVariables
 >;
 export const ResendAdministratorPasswordResetDocument = new TypedDocumentString(`
     mutation ResendAdministratorPasswordReset($id: ID!) {

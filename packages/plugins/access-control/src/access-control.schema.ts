@@ -186,6 +186,8 @@ export const adminApiSchema: DocumentNode = gql`
         # Issue #119 Phase 2: lets /set-password show whose account it's about to change — public,
         # same reasoning as resetAdministratorPassword's own schema comment below.
         administratorForPasswordResetToken(token: String!): PasswordResetIdentity
+        # Issue #395: the default roles a user administrator may assign (never the superadmin role).
+        assignableAdministratorRoles: [Role!]!
     }
 
     extend type Mutation {
@@ -219,5 +221,6 @@ export const adminApiSchema: DocumentNode = gql`
         createAdministratorFromErpUser(erpId: String!): Administrator!
         resendAdministratorPasswordReset(administratorId: ID!): Boolean!
         setAdministratorActive(administratorId: ID!, isActive: Boolean!): Boolean!
+        setAdministratorRoles(administratorId: ID!, roleIds: [ID!]!): Administrator!
     }
 `;

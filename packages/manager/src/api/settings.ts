@@ -8,7 +8,6 @@ import {
     SecurityAdministratorsDocument,
     SetCreditTermLimitDocument,
     SetRoleAccessScopeConfigDocument,
-    UpdateAdministratorRoleDocument,
     UpdateRolePermissionsDocument,
     type Permission,
 } from './generated/graphql';
@@ -168,13 +167,6 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
             roleCode: a.user.roles[0]?.code ?? null,
         }))
         .filter(m => m.roleCode && known.has(m.roleCode));
-}
-
-export async function updateAdministratorRole(
-    administratorId: string,
-    roleId: string,
-): Promise<void> {
-    await adminApi(UpdateAdministratorRoleDocument, { id: administratorId, roleIds: [roleId] });
 }
 
 // Filtered to PERMISSION_CATEGORIES because Vendure ships ~40 native CRUD permissions irrelevant to this app.

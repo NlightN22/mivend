@@ -211,7 +211,6 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadEntityHistory',
             'ReadChangeJournal',
             'ReadAdministrator',
-            'UpdateAdministrator',
             'CreateOrder',
             'UpdateOrder',
             'ConfirmOrder',

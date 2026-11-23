@@ -36,6 +36,8 @@ import { TeamDirectoryResolver } from './team-directory.resolver';
 import { TeamDirectoryService } from './team-directory.service';
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
+import { AdministratorRolesResolver } from './administrator-roles.resolver';
+import { AdministratorRolesService } from './administrator-roles.service';
 import { BranchService } from './branch.service';
 import { DefaultBranchBootstrapService } from './default-branch-bootstrap.service';
 import { DefaultChannelCurrencyBootstrapService } from './default-channel-currency-bootstrap.service';
@@ -100,6 +102,7 @@ import { WarehouseService } from './warehouse.service';
         ErpUserService,
         AdministratorActivationService,
         AdministratorProvisioningService,
+        AdministratorRolesService,
         SystemHealthService,
         RoleProvisioningService,
         DefaultBranchBootstrapService,
@@ -138,6 +141,7 @@ import { WarehouseService } from './warehouse.service';
             AdministratorStatusResolver,
             BranchFieldResolver,
             ErpUserResolver,
+            AdministratorRolesResolver,
             PriceTypeAdminResolver,
             SystemHealthResolver,
             ...departmentBranchBundle.resolvers,

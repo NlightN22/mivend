@@ -1,6 +1,7 @@
 import { adminApi } from './client';
 import {
     AdministratorForPasswordResetTokenDocument,
+    AssignableAdministratorRolesDocument,
     CreateAdministratorFromErpUserDocument,
     PendingErpUsersPageDocument,
     PortalUserCountsDocument,
@@ -8,6 +9,7 @@ import {
     ResendAdministratorPasswordResetDocument,
     ResetAdministratorPasswordDocument,
     SetAdministratorActiveDocument,
+    SetAdministratorRolesDocument,
     type AdministratorListOptions,
     type ErpUserListOptions,
     type PortalUserStatus,
@@ -54,6 +56,21 @@ export async function setAdministratorActive(id: string, isActive: boolean): Pro
 // first place — this reuses the same token/event mechanism for an account that already exists.
 export async function resendAdministratorPasswordReset(id: string): Promise<void> {
     await adminApi(ResendAdministratorPasswordResetDocument, { id });
+}
+
+export interface AssignableRole {
+    id: string;
+    code: string;
+    description: string;
+}
+
+export async function fetchAssignableRoles(): Promise<AssignableRole[]> {
+    const result = await adminApi(AssignableAdministratorRolesDocument);
+    return result.assignableAdministratorRoles;
+}
+
+export async function setAdministratorRoles(id: string, roleIds: string[]): Promise<void> {
+    await adminApi(SetAdministratorRolesDocument, { id, roleIds });
 }
 
 export interface PendingErpUserRow {
