@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DENIED, admin, customerToken, seed, shop, staffToken } from '../harness/actors';
+import { HIDDEN_WRITE } from '../customer/portal-customer-queries';
 
 const DOCUMENT = `query($k: String!) { legalDocument(kind: $k) { kind version body } }`;
 const OFFER = `query { legalConsentOffer { kind version requiredVersion required } }`;
@@ -114,8 +115,7 @@ describe('legal documents', () => {
             const foreign = await admin(await staffToken(key), RESEND, {
                 id: seed().customers['customer-b'],
             });
-            expect(foreign.errors.length).toBeGreaterThan(0);
-            expect(foreign.errors.join(' ')).not.toMatch(/no e-mail address waiting/);
+            expect(foreign.errors.join(' ')).toMatch(HIDDEN_WRITE);
         }
         const unknown = await admin(await staffToken('director'), RESEND, { id: '999999' });
         expect(unknown.errors.join(' ')).toMatch(/Customer not found/);

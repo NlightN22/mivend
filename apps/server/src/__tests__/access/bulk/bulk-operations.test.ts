@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DENIED, admin, staffToken } from '../harness/actors';
-import type { ActorKey } from '../seed/fixture-plan';
+import { VISIBLE_COUNTERPARTIES, type ActorKey } from '../seed/fixture-plan';
 import { ALL_KEYS, idOf } from '../counterparty/counterparty-queries';
 
 const OPERATION = 'counterparty-portal-access';
@@ -9,14 +9,24 @@ const CATALOG = `query { bulkOperationCatalog { type } }`;
 const PREVIEW = `mutation($t: String!, $p: JSON, $s: BulkSelectionInput!) { previewBulkBatch(type: $t, parameters: $p, selection: $s) { uuid number status totalCount } }`;
 const RUN = `mutation($u: String!) { runBulkBatch(uuid: $u) { status } }`;
 const ONE = `query($u: String!) { bulkBatch(uuid: $u) { uuid } }`;
-const ITEMS = `query($u: String!) { bulkBatchItems(uuid: $u) { totalItems items { targetId } } }`;
+const ITEMS = `query($u: String!) { bulkBatchItems(uuid: $u) { totalItems items { targetId previewOutcome } } }`;
 const HISTORY = `query { bulkBatches(options: { take: 100 }) { totalItems } }`;
 
-const NOT_HOLDERS: ActorKey[] = ['manager-a', 'manager-b', 'head-a', 'head-b', 'operator-a'];
+const NOT_HOLDERS: ActorKey[] = ['operator-a'];
+const SCOPED_HOLDERS: ActorKey[] = ['manager-a', 'manager-b', 'head-a', 'head-b'];
 const allIds = (): string[] => ALL_KEYS.map(idOf);
-// Heads hold the manager change (ReassignCounterpartyManager), nothing else.
-const HEAD_OPERATIONS = ['counterparty-manager-reassign'];
-const catalogOf = (key: ActorKey): string[] => (key.startsWith('head-') ? HEAD_OPERATIONS : []);
+// Managers and heads hold the portal-access right; heads also the manager change.
+const PORTAL_OPERATIONS = ['counterparty-portal-access', 'counterparty-password-reset'];
+const HEAD_OPERATIONS = ['counterparty-manager-reassign', ...PORTAL_OPERATIONS];
+const catalogOf = (key: ActorKey): string[] =>
+    (key.startsWith('head-')
+        ? HEAD_OPERATIONS
+        : key.startsWith('manager-')
+          ? PORTAL_OPERATIONS
+          : []
+    )
+        .slice()
+        .sort();
 
 describe('bulk operations', () => {
     it.each(NOT_HOLDERS)(
@@ -28,7 +38,9 @@ describe('bulk operations', () => {
                 CATALOG,
             );
             expect(catalog.errors).toEqual([]);
-            expect(catalog.data?.bulkOperationCatalog.map(o => o.type)).toEqual(catalogOf(key));
+            expect(catalog.data?.bulkOperationCatalog.map(o => o.type).sort()).toEqual(
+                catalogOf(key),
+            );
 
             const attempt = await admin(token, PREVIEW, {
                 t: OPERATION,
@@ -40,6 +52,35 @@ describe('bulk operations', () => {
 
             const history = await admin<{ bulkBatches: { totalItems: number } }>(token, HISTORY);
             expect(history.data?.bulkBatches.totalItems).toBe(0);
+        },
+    );
+
+    it.each(SCOPED_HOLDERS)(
+        '%s holds the operations: the catalog lists them and the review covers only clients in scope',
+        async key => {
+            const token = await staffToken(key);
+            const catalog = await admin<{ bulkOperationCatalog: Array<{ type: string }> }>(
+                token,
+                CATALOG,
+            );
+            expect(catalog.data?.bulkOperationCatalog.map(o => o.type).sort()).toEqual(
+                catalogOf(key),
+            );
+            const preview = await admin<{ previewBulkBatch: { uuid: string } }>(token, PREVIEW, {
+                t: OPERATION,
+                p: { action: 'activate' },
+                s: { ids: allIds() },
+            });
+            expect(preview.errors).toEqual([]);
+            const items = await admin<{
+                bulkBatchItems: { items: Array<{ targetId: string; previewOutcome: string }> };
+            }>(token, ITEMS, { u: preview.data!.previewBulkBatch.uuid });
+            const own = new Set(VISIBLE_COUNTERPARTIES[key].map(idOf));
+            const rows = items.data!.bulkBatchItems.items;
+            expect(rows.some(r => r.previewOutcome !== 'skip' && own.has(r.targetId))).toBe(true);
+            for (const row of rows) {
+                if (!own.has(row.targetId)) expect(row.previewOutcome, row.targetId).toBe('skip');
+            }
         },
     );
 

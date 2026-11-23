@@ -32,7 +32,7 @@ export const PERMISSIONS_ADDED_BY_RELEASE: ReleasePermissionGrant[] = [
         permission: 'ReadAnalytics',
     })),
     ...['manager', 'department-head'].map(roleCode => ({
-        release: '1.1.38',
+        release: '1.1.39',
         roleCode,
         permission: 'ManageCounterpartyPortalAccess',
     })),
