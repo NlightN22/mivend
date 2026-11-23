@@ -47,20 +47,40 @@ describe('release grant entries', () => {
 });
 
 describe('manager card grant', () => {
-    it('delivers ReadManagerCard to manager, department-head and general-director once', () => {
-        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === 'ReadManagerCard');
+    it('delivers ReadManagerCard to manager, department-head and general-director in 1.1.19', () => {
+        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(
+            g => g.permission === 'ReadManagerCard' && g.release === '1.1.19',
+        );
         expect(roles.map(g => g.roleCode).sort()).toEqual([
             'department-head',
             'general-director',
             'manager',
         ]);
-        expect(new Set(roles.map(g => g.release))).toEqual(new Set(['1.1.19']));
+    });
+});
+
+describe('portal-admin role visibility grant', () => {
+    it('gives portal-admin every right the other roles hold, so core lists those roles for it', () => {
+        const rights = PERMISSIONS_ADDED_BY_RELEASE.filter(
+            g => g.roleCode === 'portal-admin' && g.release === '1.1.39',
+        ).map(g => g.permission);
+        expect(rights.sort()).toEqual([
+            'ReadAnalytics',
+            'ReadManagerCard',
+            'RemoveCounterpartyManager',
+        ]);
+        const portalAdmin = DEFAULT_ROLES.find(r => r.code === 'portal-admin')!.permissions;
+        for (const role of DEFAULT_ROLES) {
+            for (const right of role.permissions) expect(portalAdmin, role.code).toContain(right);
+        }
     });
 });
 
 describe('analytics grant', () => {
     it('delivers ReadAnalytics to manager, department-head and general-director, not the operator', () => {
-        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.permission === 'ReadAnalytics');
+        const roles = PERMISSIONS_ADDED_BY_RELEASE.filter(
+            g => g.permission === 'ReadAnalytics' && g.release === '1.1.22',
+        );
         expect(roles.map(g => g.roleCode).sort()).toEqual([
             'department-head',
             'general-director',
