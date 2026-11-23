@@ -90,5 +90,4 @@ stage strings are data, never code. A result with `taskCompleted = false` is sho
 (`subtitleKey = pickedInProgress`) instead of the final one. Only the two attribute keys are read, with `->>` and explicit
 columns, so employee data stays unselected. Chosen over a new entity because Global Settings custom fields are the repo's
 existing admin-editable settings mechanism (`defaultLanguage`); migration `1791602000000-picking-work-stages`. Owner step on
-every environment: set `pickingWorkStages` to the stage that starts the chain, exactly as it appears in the data (the picking
-stage, in the Russian ERP "Сборка на складе"). Quantities are read as base units; the unit question stays open.
+every environment: set `pickingWorkStages` to the picking stage value exactly as it appears in the data. Quantities are read as base units; the unit question stays open.
