@@ -49,7 +49,7 @@ export function buildOrderChanges(
             return {
                 kind: s.kind,
                 titleKey: s.kind,
-                subtitleKey: SUBTITLES[s.kind](s.quantity),
+                subtitleKey: s.inProgress ? 'pickedInProgress' : SUBTITLES[s.kind](s.quantity),
                 quantity: s.quantity,
                 remainder,
                 documentNumber: s.documentNumber,

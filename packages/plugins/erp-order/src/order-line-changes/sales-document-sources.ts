@@ -22,11 +22,27 @@ export const SOURCE_PART_BY_STREAM: Readonly<Record<string, string>> = {
 export type SourceDoc = Pick<
     ErpSalesDocument,
     'kind' | 'number' | 'date' | 'posted' | 'deletionMarked' | 'isDeleted' | 'amountIncludesVat'
->;
+> & { taskCompleted?: boolean | null };
 export type SourceRow = Pick<
     ErpSalesDocumentLine,
     'productId' | 'quantity' | 'coefficient' | 'amountMinor' | 'vatAmountMinor'
 >;
+
+// Work results of other stages (unloading, put-away, ...) and of other documents never count as picked.
+export const parsePickingStages = (raw: string | null): ReadonlySet<string> => {
+    if (!raw) return new Set();
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        return new Set(
+            Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [],
+        );
+    } catch {
+        return new Set();
+    }
+};
+
+export const isPickingWorkResult = (stage: string | null, stages: ReadonlySet<string>): boolean =>
+    stage !== null && stages.has(stage);
 
 export const isReflectedSalesDocument = (doc: SourceDoc): boolean =>
     doc.posted && !doc.deletionMarked && !doc.isDeleted;
@@ -52,5 +68,6 @@ export function salesDocumentSource(doc: SourceDoc, line: SourceRow): LineChange
         reflectedInAccounting: reflected,
         documentNumber: doc.number,
         documentDate: doc.date,
+        ...(kind === 'picked' && doc.taskCompleted === false ? { inProgress: true } : {}),
     };
 }

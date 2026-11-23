@@ -98,6 +98,7 @@ export default {
                     fromCustomer: 'Return from the customer',
                     sentToPicking: 'Sent to picking',
                     picked: 'Picked from the warehouse',
+                    pickedInProgress: 'Picking in progress',
                     other: 'Quantity changed',
                 },
             },

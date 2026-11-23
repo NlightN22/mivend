@@ -36,6 +36,9 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE order_line (id serial primary key, "orderId" int, "productVariantId" int, quantity int)`,
     );
+    await dataSource.query(
+        `CREATE TABLE global_settings (id serial primary key, "customFieldsPickingworkstages" text)`,
+    );
     const connection = {
         getRepository: (_ctx: unknown, target: unknown) =>
             typeof target === 'string'
@@ -56,6 +59,7 @@ interface DocInput {
     dealId?: string;
     basis?: string;
     posted?: boolean;
+    attributes?: Record<string, unknown>;
     deletionMarked?: boolean;
     isDeleted?: boolean;
 }
@@ -66,8 +70,8 @@ async function doc(
     rows: { productId: string; quantity: number; linkedId?: string }[],
 ): Promise<void> {
     const [{ id }] = await dataSource.query(
-        `INSERT INTO erp_sales_document (kind,"erpId","sourceVersion",number,date,posted,"deletionMarked","isDeleted","dealId","basisDocumentId")
-         VALUES ($1,$2,'1',$2,'2026-01-02',$3,$4,$5,$6,$7) RETURNING id`,
+        `INSERT INTO erp_sales_document (kind,"erpId","sourceVersion",number,date,posted,"deletionMarked","isDeleted","dealId","basisDocumentId",attributes)
+         VALUES ($1,$2,'1',$2,'2026-01-02',$3,$4,$5,$6,$7,$8) RETURNING id`,
         [
             input.kind,
             input.erpId,
@@ -76,6 +80,7 @@ async function doc(
             input.isDeleted ?? false,
             input.dealId ?? null,
             input.basis ?? null,
+            JSON.stringify(input.attributes ?? {}),
         ],
     );
     for (const [i, r] of rows.entries()) {
@@ -89,7 +94,10 @@ async function doc(
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE erp_sales_document, erp_sales_document_line, customer_claim_erp, product, product_variant, order_line RESTART IDENTITY CASCADE',
+        'TRUNCATE global_settings, erp_sales_document, erp_sales_document_line, customer_claim_erp, product, product_variant, order_line RESTART IDENTITY CASCADE',
+    );
+    await dataSource.query(
+        `INSERT INTO global_settings ("customFieldsPickingworkstages") VALUES ('["stage-a"]')`,
     );
     await dataSource.query(`INSERT INTO product ("customFieldsExternalid") VALUES ('prod-1')`);
     await dataSource.query(`INSERT INTO product_variant ("productId") VALUES (1)`);
@@ -126,6 +134,31 @@ describe('sales document line changes', () => {
             ]),
         );
         expect(result.lines[0].actual).toBe(8);
+    });
+
+    it('counts only work results of a configured stage and flags an unfinished task', async () => {
+        await doc({ kind: 'warehouse-order', erpId: 'w-1', basis: 'o-1' }, 'goods', [
+            { productId: 'prod-1', quantity: 10 },
+        ]);
+        const work = (
+            erpId: string,
+            attributes: Record<string, unknown>,
+            quantity: number,
+        ): Promise<void> =>
+            doc(
+                { kind: 'tl-warehouse-work-result', erpId, basis: 'w-1', attributes },
+                'warehouseWork',
+                [{ productId: 'prod-1', quantity }],
+            );
+        await work('r-1', { stage: 'stage-a', taskCompleted: false }, 3);
+        await work('r-2', { stage: 'stage-b', taskCompleted: true }, 7);
+        await work('r-3', {}, 5);
+        const events = (await service.forOrder(ctx, order, 'staff')).lines[0].events.filter(
+            e => e.kind === 'picked',
+        );
+        expect(events.map(e => [e.quantity, e.subtitleKey])).toEqual([[3, 'pickedInProgress']]);
+        await dataSource.query(`UPDATE global_settings SET "customFieldsPickingworkstages" = NULL`);
+        expect(await kinds('staff')).not.toContain('picked');
     });
 
     it('resolves a warehouse order through the realization of the order', async () => {

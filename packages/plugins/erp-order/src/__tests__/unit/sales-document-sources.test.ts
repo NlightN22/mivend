@@ -4,7 +4,11 @@ import type { ErpSalesDocument } from '../../erp-documents/erp-sales-document.en
 import type { ErpSalesDocumentLine } from '../../erp-documents/erp-sales-document-line.entity';
 import type { LineChangeSource } from '../../order-line-changes/line-change.types';
 import { buildOrderChanges } from '../../order-line-changes/line-change-events';
-import { salesDocumentSource } from '../../order-line-changes/sales-document-sources';
+import {
+    isPickingWorkResult,
+    parsePickingStages,
+    salesDocumentSource,
+} from '../../order-line-changes/sales-document-sources';
 
 const doc = (over: Partial<ErpSalesDocument>): ErpSalesDocument =>
     ({
@@ -72,6 +76,48 @@ describe('salesDocumentSource', () => {
         expect(salesDocumentSource(doc({ kind: 'cash-receipt-order' }), line({}))).toBeNull();
         expect(salesDocumentSource(doc({}), line({ productId: null }))).toBeNull();
         expect(salesDocumentSource(doc({}), line({ quantity: null }))).toBeNull();
+    });
+});
+
+const baseSource: LineChangeSource = {
+    kind: 'picked',
+    productErpId: 'p1',
+    quantity: 4,
+    amountMinor: 0,
+    reflectedInAccounting: true,
+    documentNumber: '1',
+    documentDate: null,
+};
+
+describe('picking stage filter', () => {
+    it('counts only configured stages and nothing when the setting is empty', () => {
+        const stages = parsePickingStages('["stage-a"]');
+        expect(isPickingWorkResult('stage-a', stages)).toBe(true);
+        expect(isPickingWorkResult('stage-b', stages)).toBe(false);
+        expect(isPickingWorkResult(null, stages)).toBe(false);
+        for (const raw of [null, '', '[]', 'not json', '{"a":1}']) {
+            expect(isPickingWorkResult('stage-a', parsePickingStages(raw))).toBe(false);
+        }
+    });
+
+    it('marks a picked quantity of an unfinished task as in progress', () => {
+        const work = (taskCompleted: boolean | null): Partial<ErpSalesDocument> =>
+            ({
+                kind: 'tl-warehouse-work-result',
+                taskCompleted,
+            }) as never;
+        expect(salesDocumentSource(doc(work(false)), line({}))?.inProgress).toBe(true);
+        expect(salesDocumentSource(doc(work(true)), line({}))?.inProgress).toBeUndefined();
+        expect(salesDocumentSource(doc(work(null)), line({}))?.inProgress).toBeUndefined();
+    });
+
+    it('gives an in-progress event its own subtitle', () => {
+        const result = buildOrderChanges(
+            [{ id: 1, productErpId: 'p1', quantity: 10 }],
+            [{ ...baseSource, inProgress: true }],
+            'staff',
+        );
+        expect(result.lines[0].events[0].subtitleKey).toBe('pickedInProgress');
     });
 });
 

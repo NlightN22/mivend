@@ -136,6 +136,7 @@ const orderDetail: typeof en = {
             fromCustomer: 'Возврат от покупателя',
             sentToPicking: 'Передано в сборку',
             picked: 'Собрано на складе',
+            pickedInProgress: 'Идёт сборка',
             other: 'Изменение количества',
         },
     },

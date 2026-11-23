@@ -23,6 +23,8 @@ export interface LineChangeSource {
     reflectedInAccounting: boolean;
     documentNumber: string;
     documentDate: Date | null;
+    // A picked quantity of a task that is not finished yet.
+    inProgress?: boolean;
 }
 
 export interface LineChangeEvent {

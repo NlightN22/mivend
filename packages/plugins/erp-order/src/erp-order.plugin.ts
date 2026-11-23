@@ -22,6 +22,7 @@ import { ErpOrderResolver } from './erp-order.resolver';
 import { AdminOrderVisibilityResolver } from './admin-order-visibility.resolver';
 import { DraftOrderDeliveryResolver } from './draft-order-delivery.resolver';
 import { DraftOrderDeliveryService } from './draft-order-delivery.service';
+import { addPickingWorkStagesField } from './picking-stages-custom-field';
 import { ErpOrderService } from './erp-order.service';
 import { ExternalOrderAccessStrategy } from './external-order-access.strategy';
 import { ExternalOrderReconcileService } from './external-order-reconcile.service';
@@ -221,6 +222,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
                 label: [{ languageCode: LanguageCode.en, value }],
             })),
         ];
+        addPickingWorkStagesField(config);
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             externalOrderProcess,

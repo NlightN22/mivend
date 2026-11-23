@@ -4,6 +4,8 @@ import { ctxQueryBounded } from 'shared';
 
 import {
     SOURCE_PART_BY_STREAM,
+    isPickingWorkResult,
+    parsePickingStages,
     salesDocumentSource,
     type SourceDoc,
     type SourceRow,
@@ -21,6 +23,7 @@ interface Header extends SourceDoc {
     dealId: string | null;
     basisDocumentId: string | null;
     customerOrderId: string | null;
+    stage: string | null;
 }
 
 interface Row extends SourceRow {
@@ -30,7 +33,8 @@ interface Row extends SourceRow {
 
 // Explicit columns only: header attributes and row attributes (employee data of a work result) are never selected.
 const HEADER_COLUMNS = `d.id, d."erpId", d.kind, d.number, d.date, d.posted, d."deletionMarked", d."isDeleted",
-    d."amountIncludesVat", d."dealId", d."basisDocumentId", d."customerOrderId"`;
+    d."amountIncludesVat", d."dealId", d."basisDocumentId", d."customerOrderId",
+    d.attributes->>'stage' AS stage, d.attributes->>'taskCompleted' AS "taskCompleted"`;
 
 // Links are exact id matches only: order -> realization/return (deal, basis or row order), realization or order ->
 // warehouse order (basis), warehouse order -> work result (basis). Nothing else is guessed.
@@ -43,11 +47,13 @@ export class SalesDocumentSourcesService {
         const direct = await this.directDocuments(ctx, erpOrderId, viaClaim);
         const realizationIds = direct.filter(d => d.kind === STREAM_REALIZATION).map(d => d.erpId);
         const picking = await this.byBasis(ctx, STREAM_PICKING, [erpOrderId, ...realizationIds]);
-        const picked = await this.byBasis(
+        const workResults = await this.byBasis(
             ctx,
             STREAM_PICKED,
             picking.map(d => d.erpId),
         );
+        const stages = workResults.length > 0 ? await this.pickingStages(ctx) : new Set<string>();
+        const picked = workResults.filter(d => isPickingWorkResult(d.stage, stages));
         const docs = [...direct, ...picking, ...picked];
         const rows = await this.rows(ctx, docs, erpOrderId);
         const byId = new Map(docs.map(d => [d.id, d]));
@@ -59,6 +65,16 @@ export class SalesDocumentSourcesService {
                     : null;
             })
             .filter((s): s is LineChangeSource => s !== null);
+    }
+
+    private async pickingStages(ctx: RequestContext): Promise<ReadonlySet<string>> {
+        const [row] = await ctxQueryBounded<{ stages: string | null }>(
+            this.connection,
+            ctx,
+            `SELECT "customFieldsPickingworkstages" AS stages FROM global_settings LIMIT 1`,
+            [],
+        );
+        return parsePickingStages(row?.stages ?? null);
     }
 
     private linkedByHeader(doc: Header, erpOrderId: string): boolean {
@@ -135,6 +151,7 @@ export class SalesDocumentSourcesService {
             ...r,
             id: Number(r.id),
             date: r.date === null ? null : new Date(r.date),
+            taskCompleted: r.taskCompleted === null ? null : String(r.taskCompleted) === 'true',
         }));
     }
 
