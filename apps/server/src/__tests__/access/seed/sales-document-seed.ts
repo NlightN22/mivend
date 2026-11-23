@@ -30,9 +30,7 @@ export async function seedSalesDocuments(
     const client = new Client({ ...testDbConnection(), database });
     await client.connect();
     try {
-        await client.query(`UPDATE product SET "customFieldsExternalid" = $1`, [
-            SALES_DOC_PRODUCT_ERP_ID,
-        ]);
+        const productErpId = await orderProductErpId(client, orders['a-own'].id);
         for (const key of ['a-own', 'b-own'] as const) {
             await client.query(`UPDATE "order" SET "customFieldsErporderid" = $1 WHERE id = $2`, [
                 SALES_DOC_ORDER_ERP_ID[key],
@@ -95,13 +93,13 @@ export async function seedSalesDocuments(
                 basis: SALES_DOC_ORDER_ERP_ID['b-own'],
             },
         ];
-        for (const d of docs) await insert(client, d);
+        for (const d of docs) await insert(client, d, productErpId);
     } finally {
         await client.end();
     }
 }
 
-async function insert(client: Client, d: Doc): Promise<void> {
+async function insert(client: Client, d: Doc, productErpId: string): Promise<void> {
     const {
         rows: [{ id }],
     } = await client.query(
@@ -121,6 +119,24 @@ async function insert(client: Client, d: Doc): Promise<void> {
     await client.query(
         `INSERT INTO erp_sales_document_line ("documentId", "lineNumber", part, "productId", quantity, coefficient, attributes)
          VALUES ($1, 1, $2, $3, 1, 1, $4)`,
-        [id, d.part, SALES_DOC_PRODUCT_ERP_ID, JSON.stringify(d.attributes ?? {})],
+        [id, d.part, productErpId, JSON.stringify(d.attributes ?? {})],
     );
+}
+
+// The one product the seeded order lines use keeps its ERP id when it has one, else gets ours (the key is unique).
+async function orderProductErpId(client: Client, orderId: string): Promise<string> {
+    const {
+        rows: [row],
+    } = await client.query(
+        `SELECT p.id, p."customFieldsExternalid" AS erp FROM order_line ol
+         JOIN product_variant v ON v.id = ol."productVariantId"
+         JOIN product p ON p.id = v."productId" WHERE ol."orderId" = $1 LIMIT 1`,
+        [orderId],
+    );
+    if (row.erp) return row.erp as string;
+    await client.query(`UPDATE product SET "customFieldsExternalid" = $1 WHERE id = $2`, [
+        SALES_DOC_PRODUCT_ERP_ID,
+        row.id,
+    ]);
+    return SALES_DOC_PRODUCT_ERP_ID;
 }

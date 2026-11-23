@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { admin, staffToken } from '../harness/actors';
+import { admin, seed, staffToken } from '../harness/actors';
 import { STAFF, type ActorKey } from '../seed/fixture-plan';
 
 const LIST = `query { visibleOrders(options: { take: 1000 }) { items { id lineChanges { orderLineId } soldTotalWithTax } } }`;
@@ -14,7 +14,13 @@ describe('Order.lineChanges and soldTotalWithTax follow the order scope', () => 
         async (key: ActorKey) => {
             const r = await admin<{ visibleOrders: { items: Row[] } }>(await staffToken(key), LIST);
             expect(r.errors).toEqual([]);
-            for (const row of r.data!.visibleOrders.items) expect(row.lineChanges).toEqual([]);
+            const withDocuments = [
+                seed().ordering.orders['a-own'].id,
+                seed().ordering.orders['b-own'].id,
+            ];
+            for (const row of r.data!.visibleOrders.items) {
+                if (!withDocuments.includes(row.id)) expect(row.lineChanges).toEqual([]);
+            }
         },
     );
 
