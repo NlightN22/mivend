@@ -73,11 +73,12 @@ test('portal-admin can edit a role permissions and it persists (positive) @on:ma
         );
         expect(after.roles.items[0]?.permissions).toContain('CreateOrder');
     } finally {
-        await adminApiViaPage(
-            page,
-            `mutation($id: ID!, $p: [Permission!]!) { updateRole(input: { id: $id, permissions: $p }) { id } }`,
-            { id: role.id, p: role.permissions.filter(p => p !== 'Authenticated') },
-        );
+        // portal-admin has no native updateRole; undo through the same UI path the test used.
+        await page.goto(`/settings/roles/${TARGET_ROLE}`);
+        await page.waitForLoadState('networkidle');
+        await page.getByText('CreateOrder', { exact: true }).click();
+        await page.getByRole('button', { name: 'Save changes' }).click();
+        await expect(page.getByText('Permissions saved.')).toBeVisible({ timeout: 15000 });
     }
 });
 
