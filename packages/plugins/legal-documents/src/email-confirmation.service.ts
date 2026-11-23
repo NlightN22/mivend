@@ -3,6 +3,8 @@ import { createHash, randomBytes } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { Customer, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { lockAggregates } from 'shared';
+
 import { EmailConfirmation } from './entities/email-confirmation.entity';
 
 export const normalizeEmail = (email: string | null | undefined): string | null =>
@@ -103,7 +105,7 @@ export class EmailConfirmationService {
             );
             const address = held?.pendingEmail;
             if (!held || !address) return null;
-            await this.query(txCtx, `SELECT pg_advisory_xact_lock(hashtext($1))`, [address]);
+            await lockAggregates(this.connection, txCtx, [`email-address:${address}`]);
             const clash = await this.query(
                 txCtx,
                 `SELECT 1 FROM customer WHERE id <> $1 AND "deletedAt" IS NULL
