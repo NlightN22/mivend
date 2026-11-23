@@ -147,3 +147,73 @@ test('non-portal-admin roles cannot reach /settings/users (negative) @on:manager
     await expect(page.getByText('Not authorized')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(TARGET_NAME, { exact: true })).toHaveCount(0);
 });
+
+async function accountStatus(
+    page: import('@playwright/test').Page,
+): Promise<{ id: string; isActive: boolean }> {
+    const data = await adminApiViaPage<{
+        portalUsers: { items: { id: string; emailAddress: string; isActive: boolean }[] };
+    }>(
+        page,
+        `query { portalUsers(options: { take: 100, filter: { emailAddress: { eq: "${TARGET_EMAIL}" } } }) { items { id emailAddress isActive } } }`,
+    );
+    const row = data.portalUsers.items.find(a => a.emailAddress === TARGET_EMAIL);
+    if (!row) throw new Error(`${TARGET_EMAIL} not found`);
+    return row;
+}
+
+test('portal-admin deactivates and reactivates a user from the Users page (positive) @on:manager-portal-admin', async ({
+    page,
+}) => {
+    // The Active switch column is dropped by the table at narrower widths.
+    await page.setViewportSize({ width: 1800, height: 900 });
+    await page.goto('/settings/users');
+    await page.waitForLoadState('networkidle');
+    const row = userRow(page, TARGET_NAME);
+    await expect(row.getByText('Active', { exact: true })).toBeVisible({ timeout: 15000 });
+    try {
+        await row.locator('.mv-switch__track').click();
+        await page.getByRole('dialog').waitFor();
+        await page.getByRole('dialog').getByRole('button', { name: 'Deactivate' }).click();
+        await expect(row.getByText('Inactive', { exact: true })).toBeVisible({ timeout: 15000 });
+        expect((await accountStatus(page)).isActive).toBe(false);
+
+        await row.locator('.mv-switch__track').click();
+        await expect(row.getByText('Active', { exact: true })).toBeVisible({ timeout: 15000 });
+        expect((await accountStatus(page)).isActive).toBe(true);
+    } finally {
+        const { id } = await accountStatus(page);
+        await adminApiViaPage(
+            page,
+            `mutation($id: ID!) { setAdministratorActive(administratorId: $id, isActive: true) }`,
+            { id },
+        );
+    }
+});
+
+test('portal-admin cannot deactivate the superadmin (negative) @on:manager-portal-admin', async ({
+    page,
+}) => {
+    const admins = await adminApiViaPage<{
+        portalUsers: { items: { id: string; user: { identifier: string } }[] };
+    }>(page, `query { portalUsers(options: { take: 100 }) { items { id user { identifier } } } }`);
+    for (const email of ['superadmin']) {
+        const target = admins.portalUsers.items.find(a => a.user.identifier === email);
+        if (!target) throw new Error(`${email} not found`);
+        await adminApiViaPage(
+            page,
+            `mutation($id: ID!) { setAdministratorActive(administratorId: $id, isActive: false) }`,
+            { id: target.id },
+        ).then(
+            async () => {
+                await adminApiViaPage(
+                    page,
+                    `mutation($id: ID!) { setAdministratorActive(administratorId: $id, isActive: true) }`,
+                    { id: target.id },
+                ).catch(() => undefined);
+                throw new Error(`${email} was deactivated`);
+            },
+            () => undefined,
+        );
+    }
+});
