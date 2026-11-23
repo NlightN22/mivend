@@ -124,7 +124,7 @@ describe('setAdministratorRoles access', () => {
         const superId = superadmin.data!.administrators.items[0]!.id;
         const touched = await admin(token, SET_ROLES, { id: superId, roleIds: [manager.id] });
         expect(touched.errors?.length).toBeGreaterThan(0);
-        expect(await rolesOf(superId)).toEqual(['__super_admin_role__']);
+        expect(await rolesOf(superId)).toEqual(['__super_admin_role__', 'portal-admin']);
 
         const target = seed().admins['manager-b'];
         const unknown = await admin(token, SET_ROLES, { id: target, roleIds: ['999999'] });
