@@ -55,4 +55,3 @@ export { CounterpartyErpMirrorService } from './src/counterparty-erp-mirror.serv
 export type { CounterpartyMirrorFields } from './src/counterparty-erp-mirror.service';
 export { CounterpartyStreamStateService } from './src/counterparty-stream-state.service';
 export type { ActiveStateFields } from './src/counterparty-active-state';
-export { CounterpartyPortalAccessService } from './src/counterparty-portal-access.service';
