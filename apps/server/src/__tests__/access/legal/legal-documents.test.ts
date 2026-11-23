@@ -104,11 +104,18 @@ describe('legal documents', () => {
         expect(result.errors.join(' ')).toMatch(/Cannot query field/);
     });
 
-    it('resendEmailConfirmation: needs ManageCounterpartyPortalAccess, absent from the shop API', async () => {
+    it('resendEmailConfirmation: needs ManageCounterpartyPortalAccess within scope, absent from the shop API', async () => {
         const id = seed().customers['customer-a'];
-        for (const key of ['manager-a', 'head-a', 'operator-a'] as const) {
-            const denied = await admin(await staffToken(key), RESEND, { id });
-            expect(denied.errors.join(' ')).toMatch(DENIED);
+        const denied = await admin(await staffToken('operator-a'), RESEND, { id });
+        expect(denied.errors.join(' ')).toMatch(DENIED);
+        for (const key of ['manager-a', 'head-a'] as const) {
+            const inScope = await admin(await staffToken(key), RESEND, { id });
+            expect(inScope.errors.join(' ')).toMatch(/no e-mail address waiting/);
+            const foreign = await admin(await staffToken(key), RESEND, {
+                id: seed().customers['customer-b'],
+            });
+            expect(foreign.errors.length).toBeGreaterThan(0);
+            expect(foreign.errors.join(' ')).not.toMatch(/no e-mail address waiting/);
         }
         const unknown = await admin(await staffToken('director'), RESEND, { id: '999999' });
         expect(unknown.errors.join(' ')).toMatch(/Customer not found/);

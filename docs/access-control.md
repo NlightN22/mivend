@@ -247,7 +247,7 @@ Saved views are capped (name 80, pageKey 64 of `[A-Za-z0-9._-]`, filters 16 KB J
 One permission per operation type, never one for the whole menu item; the executor declares it and the catalog,
 `previewBulkBatch`, `runBulkBatch`, `undoBulkBatch`, `bulkBatch`, `bulkBatchItems` and `bulkBatches` all check it
 through `BulkExecutorRegistry` (the resolvers carry only `@Allow(Authenticated)`). Activation uses
-`ManageCounterpartyPortalAccess`. Scope is checked per record, never per batch: at review and again at run time under
+`ManageCounterpartyPortalAccess` (default roles: manager, department-head, general-director, portal-admin; the first two since 1.1.38, within their counterparty scope). Scope is checked per record, never per batch: at review and again at run time under
 the row lock, a record outside the actor's scope is skipped with `out_of_scope` and never changed. A draft belongs to
 its creator (only the creator reads or runs it); the history shows the batches of the operation types the viewer holds,
 and counters and per-record rows are recounted over the records the viewer's scope covers. The portal readiness status (`inn-duplicate`) can reveal that another, possibly out-of-scope, counterparty with a live portal customer shares the INN; this is accepted. Tests: the access matrix
