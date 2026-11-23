@@ -19,6 +19,7 @@ interface Doc {
     posted?: boolean;
     marked?: boolean;
     deleted?: boolean;
+    headerAttributes?: Record<string, unknown>;
     attributes?: Record<string, unknown>;
 }
 
@@ -37,6 +38,9 @@ export async function seedSalesDocuments(
                 orders[key].id,
             ]);
         }
+        await client.query(`UPDATE global_settings SET "customFieldsPickingworkstages" = $1`, [
+            JSON.stringify(['stage-a']),
+        ]);
         const a = SALES_DOC_ORDER_ERP_ID['a-own'];
         const docs: Doc[] = [
             { kind: 'warehouse-order', erpId: 'sd-wo', number: N.picking, part: 'goods', basis: a },
@@ -46,6 +50,7 @@ export async function seedSalesDocuments(
                 number: N.picked,
                 part: 'warehouseWork',
                 basis: 'sd-wo',
+                headerAttributes: { stage: 'stage-a', taskCompleted: true },
                 attributes: { employeeId: SALES_DOC_EMPLOYEE_ID },
             },
             {
@@ -103,8 +108,8 @@ async function insert(client: Client, d: Doc, productErpId: string): Promise<voi
     const {
         rows: [{ id }],
     } = await client.query(
-        `INSERT INTO erp_sales_document (kind, "erpId", "sourceVersion", number, date, posted, "deletionMarked", "isDeleted", "dealId", "basisDocumentId")
-         VALUES ($1, $2, '1', $3, '2026-01-02', $4, $5, $6, $7, $8) RETURNING id`,
+        `INSERT INTO erp_sales_document (kind, "erpId", "sourceVersion", number, date, posted, "deletionMarked", "isDeleted", "dealId", "basisDocumentId", attributes)
+         VALUES ($1, $2, '1', $3, '2026-01-02', $4, $5, $6, $7, $8, $9) RETURNING id`,
         [
             d.kind,
             d.erpId,
@@ -114,6 +119,7 @@ async function insert(client: Client, d: Doc, productErpId: string): Promise<voi
             d.deleted ?? false,
             d.dealId ?? null,
             d.basis ?? null,
+            JSON.stringify(d.headerAttributes ?? {}),
         ],
     );
     await client.query(
