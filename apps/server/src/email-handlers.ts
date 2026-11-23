@@ -1,6 +1,7 @@
 import { EmailPluginOptions } from '@vendure/email-plugin';
 import {
     createEmailAddressChangeHandler,
+    createEmailChangeNoticeHandler,
     createEmailConfirmationHandler,
     createEmailVerificationHandler,
 } from './account-email-handlers';
@@ -22,6 +23,7 @@ export function createEmailHandlers(
         createPasswordResetHandler(urls, fallback, sources),
         createEmailAddressChangeHandler(fallback, sources),
         createEmailConfirmationHandler(fallback, sources),
+        createEmailChangeNoticeHandler(fallback, sources),
         ...createTwoFactorEmailHandlers(recoveryUrls, fallback, sources),
         createNewDeviceSignInHandler(fallback, sources),
     ];

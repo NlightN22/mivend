@@ -73,6 +73,7 @@ class ConfirmationRow {
     @Column({ type: 'varchar', nullable: true }) confirmedEmail!: string | null;
     @Column({ type: 'varchar', nullable: true }) pendingEmail!: string | null;
     @Column({ type: 'varchar', nullable: true }) token!: string | null;
+    @Column({ type: 'timestamptz', nullable: true }) linkSentAt!: Date | null;
     @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
 }
 
@@ -410,5 +411,63 @@ describe('e-mail confirmation', () => {
         await service.accept(ctxOf(1), [{ kind: 'marketing-consent', version: 1, accepted: true }]);
         expect((await rows(1)).at(-1)?.emailVerified).toBe(true);
         expect(await service.mayAdvertiseByEmail(ctx, 1)).toBe(true);
+    });
+
+    const age = (id: number, interval: string): Promise<unknown> =>
+        dataSource.query(
+            `UPDATE email_confirmation SET "linkSentAt" = now() - $2::interval WHERE "customerId" = $1`,
+            [id, interval],
+        );
+
+    it('refuses a link older than 7 days and accepts one just inside the window', async () => {
+        const old = (await request(1, 'b@example.com')) as string;
+        await age(1, '7 days 1 minute');
+        expect(await confirmations.confirmByToken(ctx, old)).toBeNull();
+        expect(await identifiers(1)).toEqual(Array(3).fill('buyer@example.com'));
+        await age(1, '6 days 23 hours');
+        expect(await confirmations.confirmByToken(ctx, old)).not.toBeNull();
+    });
+
+    it('resends a fresh link only after the cooldown and invalidates the previous one', async () => {
+        const first = (await request(1, 'b@example.com')) as string;
+        expect(await confirmations.resend(ctx, 1)).toEqual({ status: 'too-soon' });
+        await age(1, '6 minutes');
+        const sent = await confirmations.resend(ctx, 1);
+        expect(sent).toMatchObject({ status: 'sent', address: 'b@example.com' });
+        expect(await confirmations.confirmByToken(ctx, first)).toBeNull();
+        expect(await confirmations.resend(ctx, 1)).toEqual({ status: 'too-soon' });
+        const token = (sent as { token: string }).token;
+        expect(await confirmations.confirmByToken(ctx, token)).not.toBeNull();
+    });
+
+    it('resends nothing without a pending address and reads the pending state', async () => {
+        expect(await confirmations.resend(ctx, 1)).toEqual({ status: 'none' });
+        expect(await confirmations.getPending(ctx, 1)).toBeNull();
+        await request(1, 'b@example.com');
+        expect(await confirmations.getPending(ctx, 1)).toMatchObject({
+            pendingEmail: 'b@example.com',
+        });
+    });
+
+    it('sends exactly one link when resends race', async () => {
+        await request(1, 'b@example.com');
+        await age(1, '10 minutes');
+        const results = await Promise.all([1, 2, 3, 4].map(() => confirmations.resend(ctx, 1)));
+        expect(results.filter(r => r.status === 'sent')).toHaveLength(1);
+        expect(results.filter(r => r.status === 'too-soon')).toHaveLength(3);
+    });
+
+    it('lets a resend and a confirmation race without a lost or double effect', async () => {
+        const token = (await request(1, 'b@example.com')) as string;
+        await age(1, '10 minutes');
+        const [confirmed, resent] = await Promise.all([
+            confirmations.confirmByToken(ctx, token),
+            confirmations.resend(ctx, 1),
+        ]);
+        expect(await identifiers(1)).toEqual(
+            Array(3).fill(confirmed ? 'b@example.com' : 'buyer@example.com'),
+        );
+        expect(resent.status).toBe(confirmed ? 'none' : 'sent');
+        expect((await stored(1))?.pendingEmail === null).toBe(confirmed !== null);
     });
 });

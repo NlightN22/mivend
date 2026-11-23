@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { EmailChangeRequestedEvent } from '../../events/email-change-requested.event';
 import { EmailConfirmationRequestedEvent } from '../../events/email-confirmation-requested.event';
 import { StaffEmailChangeService } from '../../staff-email-change.service';
 
@@ -11,6 +12,7 @@ interface Options {
     otherUser?: { id: number } | null;
     token?: string | null;
     cleared?: boolean;
+    resend?: { status: string; token?: string; address?: string };
 }
 
 function setup(o: Options = {}) {
@@ -26,6 +28,9 @@ function setup(o: Options = {}) {
     const connection = { getRepository: () => ({ createQueryBuilder: () => query }) };
     const confirmations = {
         requestConfirmation: vi.fn(async () => (o.token === undefined ? 'tok' : o.token)),
+        resend: vi.fn(
+            async () => o.resend ?? { status: 'sent', token: 'tok2', address: 'new@example.com' },
+        ),
         clearPending: vi.fn(async () => o.cleared ?? true),
     };
     const notifier = {
@@ -80,6 +85,16 @@ describe('StaffEmailChangeService.stage and cancel', () => {
         expect(t.published[0]).toMatchObject({ emailAddress: 'new@example.com', token: 'tok' });
     });
 
+    it('tells the old address about the request with the new one masked', async () => {
+        const t = setup();
+        await t.service.stage(ctx, 4, 'New@Example.com');
+        expect(t.published[1]).toBeInstanceOf(EmailChangeRequestedEvent);
+        expect(t.published[1]).toMatchObject({
+            oldEmailAddress: 'Old@Example.com',
+            maskedNewEmailAddress: 'n***@e***.com',
+        });
+    });
+
     it('sends nothing again for an already pending address', async () => {
         const t = setup({ token: null });
         await t.service.stage(ctx, 4, 'new@example.com');
@@ -94,5 +109,34 @@ describe('StaffEmailChangeService.stage and cancel', () => {
         const u = setup();
         await u.service.cancel(ctx, 4);
         expect(u.notifier.resolve).toHaveBeenCalledWith(ctx, 4);
+    });
+});
+
+describe('StaffEmailChangeService.resend', () => {
+    it('mails the fresh link to the pending address and refreshes the notification', async () => {
+        const t = setup();
+        expect(await t.service.resend(ctx, 4)).toMatchObject({ status: 'sent' });
+        expect(t.notifier.notify).toHaveBeenCalledWith(ctx, 4);
+        expect(t.published).toHaveLength(1);
+        expect(t.published[0]).toMatchObject({ emailAddress: 'new@example.com', token: 'tok2' });
+    });
+
+    it('sends nothing inside the cooldown, without a pending address or without a sign-in', async () => {
+        for (const o of [
+            { resend: { status: 'too-soon' } },
+            { resend: { status: 'none' } },
+            { user: null },
+        ]) {
+            const t = setup(o);
+            await t.service.resend(ctx, 4);
+            expect(t.notifier.notify).not.toHaveBeenCalled();
+            expect(t.published).toHaveLength(0);
+        }
+    });
+
+    it('never sends the notice to the old address', async () => {
+        const t = setup();
+        await t.service.resend(ctx, 4);
+        expect(t.published.some(e => e instanceof EmailChangeRequestedEvent)).toBe(false);
     });
 });

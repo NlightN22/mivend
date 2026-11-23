@@ -3,7 +3,9 @@ import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 import type { Type } from '@vendure/core';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 
+import { legalDocumentsAdminSchema } from './api/admin-schema';
 import { legalDocumentsSchema } from './api/schema';
+import { EmailConfirmationAdminResolver } from './email-confirmation-admin.resolver';
 import { EmailConfirmationListener } from './email-confirmation.listener';
 import { EmailConfirmationNotifier } from './email-confirmation.notifier';
 import { EmailConfirmationService } from './email-confirmation.service';
@@ -36,6 +38,10 @@ import type { LegalDocumentsOptions } from './types';
     ],
     exports: [LegalDocumentsService],
     shopApiExtensions: { schema: legalDocumentsSchema, resolvers: [LegalDocumentsResolver] },
+    adminApiExtensions: {
+        schema: legalDocumentsAdminSchema,
+        resolvers: [EmailConfirmationAdminResolver],
+    },
     compatibility: '>0.0.0',
 })
 export class LegalDocumentsPlugin {

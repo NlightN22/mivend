@@ -9,3 +9,4 @@ export type { LegalKind } from './src/legal-kinds';
 export type { DocumentStatus } from './src/document-status';
 export type { LegalDocumentsOptions } from './src/types';
 export { EmailConfirmationRequestedEvent } from './src/events/email-confirmation-requested.event';
+export { EmailChangeRequestedEvent } from './src/events/email-change-requested.event';

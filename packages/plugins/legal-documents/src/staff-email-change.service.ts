@@ -8,8 +8,11 @@ import {
     UserService,
 } from '@vendure/core';
 
+import { maskEmail } from './mask-email';
 import { EmailConfirmationNotifier } from './email-confirmation.notifier';
 import { EmailConfirmationService, normalizeEmail } from './email-confirmation.service';
+import type { ResendResult } from './email-confirmation.service';
+import { EmailChangeRequestedEvent } from './events/email-change-requested.event';
 import { EmailConfirmationRequestedEvent } from './events/email-confirmation-requested.event';
 
 export type StagedChange = 'apply' | 'staged' | 'unchanged';
@@ -54,6 +57,26 @@ export class StaffEmailChangeService {
         await this.events.publish(
             new EmailConfirmationRequestedEvent(ctx, customer.user, address, token),
         );
+        await this.events.publish(
+            new EmailChangeRequestedEvent(
+                ctx,
+                customer.user,
+                customer.emailAddress,
+                maskEmail(address),
+            ),
+        );
+    }
+
+    async resend(ctx: RequestContext, id: number): Promise<ResendResult> {
+        const customer = await this.customers.findOne(ctx, id, ['user']);
+        if (!customer?.user) return { status: 'none' };
+        const result = await this.confirmations.resend(ctx, id);
+        if (result.status !== 'sent') return result;
+        await this.notifier.notify(ctx, id);
+        await this.events.publish(
+            new EmailConfirmationRequestedEvent(ctx, customer.user, result.address, result.token),
+        );
+        return result;
     }
 
     async cancel(ctx: RequestContext, id: number): Promise<void> {

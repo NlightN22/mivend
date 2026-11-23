@@ -1,5 +1,8 @@
 import { AccountRegistrationEvent, IdentifierChangeRequestEvent } from '@vendure/core';
-import { EmailConfirmationRequestedEvent } from '@mivend/plugin-legal-documents';
+import {
+    EmailChangeRequestedEvent,
+    EmailConfirmationRequestedEvent,
+} from '@mivend/plugin-legal-documents';
 import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 import { EmailLanguage, resolveEmailLanguage } from './email-language';
 import {
@@ -26,6 +29,10 @@ export const EMAIL_SUBJECTS = {
     emailConfirmation: {
         en: 'Please confirm your email address',
         ru: 'Подтвердите адрес электронной почты',
+    },
+    emailChangeNotice: {
+        en: 'A change of your email address was requested',
+        ru: 'Запрошена смена адреса электронной почты',
     },
     twoFactorEnabled: {
         en: 'Two-factor authentication is on',
@@ -125,5 +132,31 @@ export function createEmailConfirmationHandler(
             ...sourceTemplateVars(event.data.source),
             emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             confirmationToken: event.token,
+        }));
+}
+
+export function createEmailChangeNoticeHandler(
+    fallback: EmailLanguage,
+    sources: EmailSourceConfig,
+): EmailEventHandler<
+    'email-change-notice',
+    EventWithAsyncData<EmailChangeRequestedEvent, SourceData>
+> {
+    return new EmailEventListener('email-change-notice')
+        .on(EmailChangeRequestedEvent)
+        .setRecipient(event => event.oldEmailAddress)
+        .loadData(async ({ event, injector }) => ({
+            source: await loadEmailSource(sources, injector, event),
+        }))
+        .setFrom('{{ sourceFrom }}')
+        .setSubject(
+            event =>
+                event.data.source.subjectPrefix +
+                EMAIL_SUBJECTS.emailChangeNotice[resolveEmailLanguage(event.ctx, fallback)],
+        )
+        .setTemplateVars(event => ({
+            ...sourceTemplateVars(event.data.source),
+            emailLanguage: resolveEmailLanguage(event.ctx, fallback),
+            maskedNewEmailAddress: event.maskedNewEmailAddress,
         }));
 }

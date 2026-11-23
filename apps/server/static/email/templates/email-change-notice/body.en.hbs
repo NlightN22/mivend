@@ -1,0 +1,11 @@
+{{> header title="Email address change requested" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            A change of the email address of your account to {{ maskedNewEmailAddress }} was requested. Nothing changes until the link sent to that address is followed: you keep signing in and receiving mail here. If you did not expect this, contact support.
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="This is an automated message, please do not reply." sentBy="Sent by" }}

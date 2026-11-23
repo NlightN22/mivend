@@ -19,6 +19,9 @@ export class EmailConfirmation extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     pendingEmail!: string | null;
 
+    @Column({ type: 'timestamptz', nullable: true })
+    linkSentAt!: Date | null;
+
     @Index()
     @Column({ type: 'varchar', nullable: true })
     token!: string | null;
