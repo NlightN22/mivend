@@ -94,6 +94,17 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 'customer-claim': 'x-customer-claim',
                 'sales-correction': 'x-sales-correction',
                 'order-correction': 'x-order-correction',
+                'goods-and-services-sale': 'x-goods-and-services-sale',
+                'customer-goods-return': 'x-customer-goods-return',
+                'customer-order-closing': 'x-customer-order-closing',
+                'customer-proforma-invoice': 'x-customer-proforma-invoice',
+                'issued-vat-invoice': 'x-issued-vat-invoice',
+                'incoming-payment-order': 'x-incoming-payment-order',
+                'cash-receipt-order': 'x-cash-receipt-order',
+                'customer-card-payment': 'x-customer-card-payment',
+                'debt-correction': 'x-debt-correction',
+                'warehouse-order': 'x-warehouse-order',
+                'tl-warehouse-work-result': 'x-tl-warehouse-work-result',
                 'order-change-result': 'erp.order.events.v1',
                 'order-state': 'erp.order-state.events.v1',
                 currency: 'erp.currency.events.v1',
@@ -121,7 +132,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(60);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -136,7 +147,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(60);
         expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
             expect.objectContaining({ topic: 'orphan-topic' }),
         );
@@ -163,7 +174,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(49);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(60);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });

@@ -10,12 +10,13 @@ export function makeInboxProcessor(
     inboxService: IntegrationInboxService,
     apply: ReturnType<typeof vi.fn>,
 ): IntegrationInboxProcessorService {
-    const stubHandler = { apply };
+    const stubHandler = { apply, forStream: () => ({ apply }) };
     const requestContextService = { create: vi.fn().mockResolvedValue({}) };
     return new IntegrationInboxProcessorService(
         createTestConnection(dataSource),
         inboxService,
         requestContextService as never,
+        stubHandler as never,
         stubHandler as never,
         stubHandler as never,
         stubHandler as never,

@@ -5,12 +5,14 @@ import {
     createIntegrationInboxCriticalTask,
     createIntegrationInboxRetentionTask,
     createIntegrationInboxContactTask,
+    createIntegrationInboxSalesDocumentTask,
     createIntegrationInboxUserTask,
 } from '../../integration-inbox.scheduled-task';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
     INBOX_CONTACT_STREAMS,
+    INBOX_SALES_DOCUMENT_STREAMS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
@@ -75,6 +77,17 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'customer-claim': 'x-customer-claim',
                 'sales-correction': 'x-sales-correction',
                 'order-correction': 'x-order-correction',
+                'goods-and-services-sale': 'x-goods-and-services-sale',
+                'customer-goods-return': 'x-customer-goods-return',
+                'customer-order-closing': 'x-customer-order-closing',
+                'customer-proforma-invoice': 'x-customer-proforma-invoice',
+                'issued-vat-invoice': 'x-issued-vat-invoice',
+                'incoming-payment-order': 'x-incoming-payment-order',
+                'cash-receipt-order': 'x-cash-receipt-order',
+                'customer-card-payment': 'x-customer-card-payment',
+                'debt-correction': 'x-debt-correction',
+                'warehouse-order': 'x-warehouse-order',
+                'tl-warehouse-work-result': 'x-tl-warehouse-work-result',
                 'order-change-result': 'erp.order.events.v1',
                 'order-state': 'erp.order-state.events.v1',
                 currency: 'erp.currency.events.v1',
@@ -395,5 +408,24 @@ describe('createIntegrationInboxContactTask', () => {
         expect(processPendingBatch).not.toHaveBeenCalled();
         await run('central');
         expect(processPendingBatch.mock.calls[0][0]).toEqual([...INBOX_CONTACT_STREAMS]);
+    });
+});
+
+describe('createIntegrationInboxSalesDocumentTask', () => {
+    it('claims only the sales document streams, and is skipped on a branch', async () => {
+        const processPendingBatch = vi
+            .fn()
+            .mockResolvedValue({ processed: 1, failed: 0, claimed: 1 });
+        const injector = { get: () => ({ processPendingBatch }) } as never;
+        const run = (type: 'central' | 'branch'): Promise<unknown> =>
+            createIntegrationInboxSalesDocumentTask(makeOptions(type)).options.execute({
+                injector,
+                scheduledContext: {} as never,
+                params: {},
+            });
+        expect(await run('branch')).toEqual({ skipped: true });
+        expect(processPendingBatch).not.toHaveBeenCalled();
+        await run('central');
+        expect(processPendingBatch.mock.calls[0][0]).toEqual([...INBOX_SALES_DOCUMENT_STREAMS]);
     });
 });

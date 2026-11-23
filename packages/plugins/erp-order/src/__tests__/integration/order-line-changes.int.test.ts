@@ -9,6 +9,7 @@ import {
 } from 'shared';
 
 import { ERP_DOCUMENT_ENTITIES } from '../../erp-documents/erp-document-entities';
+import { SalesDocumentSourcesService } from '../../order-line-changes/sales-document-sources.service';
 import { OrderLineChangesService } from '../../order-line-changes/order-line-changes.service';
 
 const { schema, extra } = testSchemaOptions('order_line_changes');
@@ -42,7 +43,7 @@ beforeAll(async () => {
                 ? { query: (sql: string, params?: unknown[]) => dataSource.query(sql, params) }
                 : dataSource.getRepository(target as never),
     } as unknown as TransactionalConnection;
-    service = new OrderLineChangesService(connection);
+    service = new OrderLineChangesService(connection, new SalesDocumentSourcesService(connection));
 });
 
 afterAll(async () => {

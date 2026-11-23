@@ -4,6 +4,7 @@ import {
     ALL_INBOUND_STREAMS,
     INBOX_BULK_STREAMS,
     INBOX_CONTACT_STREAMS,
+    INBOX_SALES_DOCUMENT_STREAMS,
     INBOX_CRITICAL_STREAMS,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_USER_STREAMS,
@@ -41,7 +42,12 @@ describe('inbox lane stream membership', () => {
     });
 
     it('every inbound stream is claimed by exactly one lane', () => {
-        const lanes = [...INBOX_CRITICAL_STREAMS, ...INBOX_CONTACT_STREAMS, ...INBOX_BULK_STREAMS];
+        const lanes = [
+            ...INBOX_CRITICAL_STREAMS,
+            ...INBOX_CONTACT_STREAMS,
+            ...INBOX_SALES_DOCUMENT_STREAMS,
+            ...INBOX_BULK_STREAMS,
+        ];
         expect([...lanes].sort()).toEqual([...ALL_INBOUND_STREAMS].sort());
     });
 });
