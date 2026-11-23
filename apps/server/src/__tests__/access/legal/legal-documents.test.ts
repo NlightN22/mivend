@@ -9,6 +9,7 @@ const HISTORY = `query { legalAcceptanceHistory { totalItems items { kind versio
 const ACCEPT = `mutation($input: [LegalAcceptanceInput!]!) {
     acceptLegalDocuments(input: $input) { kind accepted pending } }`;
 const CONFIRM = `mutation($t: String!) { confirmEmailAddress(token: $t) }`;
+const RESEND = `mutation($id: ID!) { resendEmailConfirmation(customerId: $id) }`;
 
 interface Status {
     kind: string;
@@ -100,6 +101,25 @@ describe('legal documents', () => {
     it('confirmEmailAddress: does not exist in the admin API, staff included', async () => {
         const token = await staffToken('superadmin');
         const result = await admin(token, CONFIRM, { t: 'f'.repeat(64) });
+        expect(result.errors.join(' ')).toMatch(/Cannot query field/);
+    });
+
+    it('resendEmailConfirmation: refused without UpdateCustomer, absent from the shop API', async () => {
+        for (const key of ['manager-a', 'head-a', 'director'] as const) {
+            const denied = await admin(await staffToken(key), RESEND, { id: '1' });
+            expect(denied.errors.join(' ')).toMatch(DENIED);
+        }
+        const allowed = await admin(await staffToken('superadmin'), RESEND, { id: '1' });
+        expect(allowed.errors.join(' ')).not.toMatch(DENIED);
+        const shopResult = await shop(await customerToken('customer-a'), RESEND, { id: '1' });
+        expect(shopResult.errors.join(' ')).toMatch(/Cannot query field/);
+    });
+
+    it('pending e-mail fields are not on the shop Customer type', async () => {
+        const result = await shop(
+            await customerToken('customer-a'),
+            `query { activeCustomer { emailConfirmationPending emailConfirmationSentAt } }`,
+        );
         expect(result.errors.join(' ')).toMatch(/Cannot query field/);
     });
 });
