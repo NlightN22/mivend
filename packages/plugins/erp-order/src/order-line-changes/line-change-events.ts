@@ -1,3 +1,4 @@
+import { INFORMATIONAL_KINDS } from './line-change.types';
 import type {
     LineChangeAudience,
     LineChangeEvent,
@@ -14,6 +15,8 @@ export interface OrderLineRef {
 }
 
 const SUBTITLES: Record<LineChangeKind, (quantity: number) => string> = {
+    picking: () => 'sentToPicking',
+    picked: () => 'picked',
     realization: () => 'shipped',
     'realization-correction': q => (q < 0 ? 'decreased' : 'increased'),
     return: () => 'fromCustomer',
@@ -42,7 +45,7 @@ export function buildOrderChanges(
         if (own.length === 0) continue;
         let remainder = line.quantity;
         const events: LineChangeEvent[] = own.map(s => {
-            remainder += s.quantity;
+            if (!INFORMATIONAL_KINDS.includes(s.kind)) remainder += s.quantity;
             return {
                 kind: s.kind,
                 titleKey: s.kind,

@@ -211,7 +211,12 @@ also need `ReadOrder`. The Shop field returns only quantity events from document
 `reflectedInAccounting = true`; a document with no flags or with the flag
 false or absent is never shown, which is stricter than the settlement list (hidden only when explicitly false). It carries no
 money and the customer's order total is never reduced. Staff get every event and `soldTotalWithTax` (order total plus the
-money effect of the corrections, floored at zero; null when the order has no changes). Customer claims are not a source: a claim moves no register in the ERP; when it changes a sale the ERP re-posts the
+money effect of the corrections, floored at zero; null when the order has no changes). Sales documents (#394) feed the same field from the generic mirror `erp_sales_document`: customer-goods-return (negative
+quantity and money), goods-and-services-sale, warehouse-order ("sent to picking") and tl-warehouse-work-result ("picked") are
+informational and carry no money. For the customer a document counts only when it is posted and neither marked for deletion
+nor deleted (the ERP's `reflect_in_*` flags are not used); staff also see unposted and marked documents. Links are exact id
+matches only (order, realization, claim of the order, warehouse order); a document that names another order is never counted
+and an unlinked one is not shown to anyone. Employee ids of a work result are never selected. Customer claims are not a source: a claim moves no register in the ERP; when it changes a sale the ERP re-posts the
 realization, which arrives as the realization's own change. ERP amounts are read as VAT-inclusive like `Order.totalWithTax`;
 when the document says `amountIncludesVat = false` the line's VAT amount is added (a correction uses the VAT before the
 change for its old amount). Both Admin fields are detail-only (about 5 queries per order, computed once per request), so

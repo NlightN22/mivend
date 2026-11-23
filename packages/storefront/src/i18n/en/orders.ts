@@ -84,6 +84,8 @@ export default {
                 footer: 'Line total: actually received {actual} of {ordered}',
                 document: 'Document {number}',
                 kinds: {
+                    picking: 'Sent to picking',
+                    picked: 'Picked',
                     realization: 'Realization',
                     'realization-correction': 'Realization correction',
                     return: 'Return',
@@ -94,6 +96,8 @@ export default {
                     decreased: 'Quantity decreased',
                     increased: 'Quantity increased',
                     fromCustomer: 'Return from the customer',
+                    sentToPicking: 'Sent to picking',
+                    picked: 'Picked from the warehouse',
                     other: 'Quantity changed',
                 },
             },

@@ -1,5 +1,14 @@
-// A realization stream adds its kind here and a source in order-line-changes.service; the UI renders by kind.
-export const LINE_CHANGE_KINDS = ['realization', 'realization-correction', 'return'] as const;
+// A document stream adds its kind here and a source in order-line-changes.service; the UI renders by kind.
+export const LINE_CHANGE_KINDS = [
+    'picking',
+    'picked',
+    'realization',
+    'realization-correction',
+    'return',
+] as const;
+
+// Informational kinds show a quantity but never move the line's remainder.
+export const INFORMATIONAL_KINDS: readonly LineChangeKind[] = ['picking', 'picked', 'realization'];
 
 export type LineChangeKind = (typeof LINE_CHANGE_KINDS)[number];
 

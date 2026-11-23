@@ -8,6 +8,7 @@ import {
     SalesCorrectionGoodsLineErp,
     SalesCorrectionServiceLineErp,
 } from '../erp-documents/sales-correction-line-erp.entity';
+import { SalesDocumentSourcesService } from './sales-document-sources.service';
 import { buildOrderChanges, type OrderLineRef } from './line-change-events';
 import { correctionGoodsSource, correctionServiceSource } from './line-change-sources';
 import type { LineChangeAudience, LineChangeSource, OrderChanges } from './line-change.types';
@@ -17,7 +18,10 @@ const EMPTY: OrderChanges = { lines: [], amountDeltaMinor: 0 };
 // The caller reaches this only through an Order it already may read (field resolver on Order).
 @Injectable()
 export class OrderLineChangesService {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly salesDocuments: SalesDocumentSourcesService,
+    ) {}
 
     async forOrder(
         ctx: RequestContext,
@@ -82,6 +86,7 @@ export class OrderLineChangesService {
                 );
             }
         }
+        sources.push(...(await this.salesDocuments.forOrder(ctx, erpOrderId)));
         return sources;
     }
 

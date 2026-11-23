@@ -122,6 +122,8 @@ const orderDetail: typeof en = {
         document: 'Документ {number}',
         soldTotal: 'Итого продано',
         kinds: {
+            picking: 'Отправлено на сборку',
+            picked: 'Собрано',
             realization: 'Реализация',
             'realization-correction': 'Корректировка реализации',
             return: 'Возврат',
@@ -132,6 +134,8 @@ const orderDetail: typeof en = {
             decreased: 'Количество уменьшено',
             increased: 'Количество увеличено',
             fromCustomer: 'Возврат от покупателя',
+            sentToPicking: 'Передано в сборку',
+            picked: 'Собрано на складе',
             other: 'Изменение количества',
         },
     },

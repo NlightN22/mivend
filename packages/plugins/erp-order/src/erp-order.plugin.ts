@@ -73,6 +73,7 @@ import {
     ShopOrderLineChangesResolver,
 } from './order-line-changes/order-line-changes.resolver';
 import { OrderLineChangesService } from './order-line-changes/order-line-changes.service';
+import { SalesDocumentSourcesService } from './order-line-changes/sales-document-sources.service';
 import { orderListSchema } from './api/order-list.schema';
 import { OrderListService } from './order-list.service';
 import { erpDocumentListSchema } from './erp-document-list/erp-document-list.schema';
@@ -95,6 +96,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         ErpOrderService,
         OrderStatusHistoryService,
         OrderLineChangesService,
+        SalesDocumentSourcesService,
         OrderStatusReferenceService,
         OrderStatusProvisioningService,
         OrderVisibilityService,

@@ -86,6 +86,8 @@ const ru: typeof en = {
                 footer: 'Итого по позиции: фактически получено {actual} из {ordered}',
                 document: 'Документ {number}',
                 kinds: {
+                    picking: 'Отправлено на сборку',
+                    picked: 'Собрано',
                     realization: 'Реализация',
                     'realization-correction': 'Корректировка реализации',
                     return: 'Возврат',
@@ -96,6 +98,8 @@ const ru: typeof en = {
                     decreased: 'Количество уменьшено',
                     increased: 'Количество увеличено',
                     fromCustomer: 'Возврат от покупателя',
+                    sentToPicking: 'Передано в сборку',
+                    picked: 'Собрано на складе',
                     other: 'Изменение количества',
                 },
             },
