@@ -1053,3 +1053,5 @@ staff on the Admin API see all of them. A hidden category hides its whole subtre
 ## Staff user administration (#395)
 
 `setAdministratorRoles` (right `ManageAdministratorLifecycle`) replaces a staff user's roles with default roles only, without the actor holding their rights. It refuses the superadmin role, the actor's own account, a superadmin account, unknown roles, an empty list and a user who holds a non-default (custom) role. It runs under a row lock and publishes the same events as the native update, so other instances receive the change. A changed role reaches the user's already open session after the core session cache expires.
+
+`setAdministratorActive` (same right) refuses to deactivate the caller's own account, so nobody can lock themselves out; reactivation and other accounts are unaffected.

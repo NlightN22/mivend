@@ -191,13 +191,13 @@ test('portal-admin deactivates and reactivates a user from the Users page (posit
     }
 });
 
-test('portal-admin cannot deactivate the superadmin (negative) @on:manager-portal-admin', async ({
+test('portal-admin cannot deactivate the superadmin or its own account (negative) @on:manager-portal-admin', async ({
     page,
 }) => {
     const admins = await adminApiViaPage<{
         portalUsers: { items: { id: string; user: { identifier: string } }[] };
     }>(page, `query { portalUsers(options: { take: 100 }) { items { id user { identifier } } } }`);
-    for (const email of ['superadmin']) {
+    for (const email of ['superadmin', 'anna.portaladmin@mivend.dev']) {
         const target = admins.portalUsers.items.find(a => a.user.identifier === email);
         if (!target) throw new Error(`${email} not found`);
         await adminApiViaPage(

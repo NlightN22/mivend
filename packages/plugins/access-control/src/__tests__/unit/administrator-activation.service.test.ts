@@ -101,6 +101,23 @@ describe('AdministratorActivationService', () => {
             expect(administratorService.softDelete).toHaveBeenCalledWith(ctx, 'admin-1');
         });
 
+        it("refuses to deactivate the caller's own account", async () => {
+            repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null, user: { id: 7 } });
+            const own = { activeUserId: 7 } as unknown as RequestContext;
+
+            await expect(service.setActive(own, 'admin-1', false)).rejects.toThrow();
+            expect(administratorService.softDelete).not.toHaveBeenCalled();
+        });
+
+        it('lets another user deactivate the account', async () => {
+            repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null, user: { id: 7 } });
+            const other = { activeUserId: 8 } as unknown as RequestContext;
+
+            await service.setActive(other, 'admin-1', false);
+
+            expect(administratorService.softDelete).toHaveBeenCalledWith(other, 'admin-1');
+        });
+
         it('reactivates a deactivated Administrator when isActive=true', async () => {
             repo.findOne
                 .mockResolvedValueOnce({ id: 'admin-1', deletedAt: new Date() })

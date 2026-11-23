@@ -5,6 +5,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
     AdministratorService,
+    ForbiddenError,
     ListQueryBuilder,
     Logger,
     PaginatedList,
@@ -81,9 +82,20 @@ export class AdministratorActivationService {
     // or a deliberate business exception.
     async setActive(ctx: RequestContext, administratorId: ID, isActive: boolean): Promise<void> {
         const repo = this.connection.getRepository(ctx, Administrator);
-        const admin = await repo.findOne({ where: { id: administratorId }, withDeleted: true });
+        const admin = await repo.findOne({
+            where: { id: administratorId },
+            relations: ['user'],
+            withDeleted: true,
+        });
         if (!admin) {
             throw new Error(`No Administrator found with id=${administratorId}`);
+        }
+        if (
+            !isActive &&
+            ctx.activeUserId != null &&
+            String(admin.user?.id) === String(ctx.activeUserId)
+        ) {
+            throw new ForbiddenError();
         }
         const isSoftDeleted = admin.deletedAt != null;
         if (!isActive && !isSoftDeleted) {
