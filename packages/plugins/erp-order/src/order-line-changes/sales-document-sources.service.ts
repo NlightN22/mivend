@@ -71,7 +71,7 @@ export class SalesDocumentSourcesService {
         const [row] = await ctxQueryBounded<{ stages: string | null }>(
             this.connection,
             ctx,
-            `SELECT "customFieldsPickingworkstages" AS stages FROM global_settings LIMIT 1`,
+            `SELECT "customFieldsPickingworkstages" AS stages FROM global_settings`,
             [],
         );
         return parsePickingStages(row?.stages ?? null);
