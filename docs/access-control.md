@@ -296,7 +296,7 @@ that customer, since core attaches the existing one. The schema test covers core
 order fields added by mivend plugins are scoped by their own services (`OrderVisibilityService`). Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
-Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so `portal-admin` holds the union of all default roles' rights (a unit test pins it; since 1.1.39 it includes `ReadManagerCard`, `ReadAnalytics` and `RemoveCounterpartyManager`).
+Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so `portal-admin` holds the union of all default roles' rights (a unit test pins it; since 1.1.39 it includes `ReadManagerCard`, `ReadAnalytics` and `RemoveCounterpartyManager`), except `UpdateAdministrator` by owner decision: it manages roles through `setAdministratorRoles`, so core hides the general-director role and its holders from it and no screen may rely on seeing them.
 
 ## Bootstrap only creates (#374)
 

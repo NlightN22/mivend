@@ -15,8 +15,10 @@ async function adminApiViaPage<T>(
 
 // No e2e Playwright project logs in as this user (only operator/manager/department-head/
 // portal-admin do), so reassigning its role breaks no other spec's session or permissions.
-const TARGET_NAME = 'Nikolai Director';
-const TARGET_EMAIL = 'nikolai.director@mivend.dev';
+// Not the general director: core hides that role and its holder from portal-admin.
+const TARGET_NAME = 'Svetlana Security';
+const TARGET_EMAIL = 'svetlana.security@mivend.dev';
+const NEW_ROLE = 'operator';
 
 function userRow(
     page: import('@playwright/test').Page,
@@ -78,15 +80,15 @@ test("portal-admin can reassign a user's role and it persists (positive) @on:man
 
     const rolesResult = await adminApiViaPage<{ roles: { items: { id: string; code: string }[] } }>(
         page,
-        `query { roles(options: { filter: { code: { eq: "security-officer" } } }) { items { id code } } }`,
+        `query { roles(options: { filter: { code: { eq: "${NEW_ROLE}" } } }) { items { id code } } }`,
     );
-    const securityOfficerRoleId = rolesResult.roles.items[0]?.id;
-    if (!securityOfficerRoleId) throw new Error('security-officer role not found');
+    const newRoleId = rolesResult.roles.items[0]?.id;
+    if (!newRoleId) throw new Error(`${NEW_ROLE} role not found`);
 
     try {
         await page.goto('/settings/users');
         await page.waitForLoadState('networkidle');
-        await userRow(page, TARGET_NAME).locator('select').selectOption(securityOfficerRoleId);
+        await userRow(page, TARGET_NAME).locator('select').selectOption(newRoleId);
 
         await expect
             .poll(
@@ -104,7 +106,7 @@ test("portal-admin can reassign a user's role and it persists (positive) @on:man
                 },
                 { timeout: 15000 },
             )
-            .toBe('security-officer');
+            .toBe(NEW_ROLE);
     } finally {
         await adminApiViaPage(
             page,

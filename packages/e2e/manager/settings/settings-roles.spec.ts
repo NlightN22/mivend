@@ -36,10 +36,10 @@ test('portal-admin can reach /settings and see the roles list (positive) @on:man
 }) => {
     await page.goto('/settings');
     await expect(page).toHaveURL(/\/settings\/roles$/);
+    // general-director is not asserted: core hides a role from a user lacking one of its rights.
     await expect(page.getByText('operator', { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('manager', { exact: true })).toBeVisible();
     await expect(page.getByText('department-head', { exact: true })).toBeVisible();
-    await expect(page.getByText('general-director', { exact: true })).toBeVisible();
     await expect(page.getByText('security-officer', { exact: true })).toBeVisible();
     await expect(page.getByText('portal-admin', { exact: true })).toBeVisible();
 });

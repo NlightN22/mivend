@@ -59,6 +59,9 @@ describe('manager card grant', () => {
     });
 });
 
+// Owner decision: portal-admin edits roles through setAdministratorRoles, never UpdateAdministrator.
+const NOT_FOR_PORTAL_ADMIN = ['UpdateAdministrator'];
+
 describe('portal-admin role visibility grant', () => {
     it('gives portal-admin every right the other roles hold, so core lists those roles for it', () => {
         const rights = PERMISSIONS_ADDED_BY_RELEASE.filter(
@@ -71,7 +74,10 @@ describe('portal-admin role visibility grant', () => {
         ]);
         const portalAdmin = DEFAULT_ROLES.find(r => r.code === 'portal-admin')!.permissions;
         for (const role of DEFAULT_ROLES) {
-            for (const right of role.permissions) expect(portalAdmin, role.code).toContain(right);
+            for (const right of role.permissions) {
+                if (NOT_FOR_PORTAL_ADMIN.includes(right)) continue;
+                expect(portalAdmin, role.code).toContain(right);
+            }
         }
     });
 });
