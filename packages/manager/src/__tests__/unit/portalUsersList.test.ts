@@ -12,6 +12,8 @@ const row = (over: Partial<PortalUserRow>): PortalUserRow => ({
     portalRole: 'buyer',
     active: true,
     createdAt: '2026-03-10T12:00:00.000Z',
+    emailConfirmationPending: null,
+    emailConfirmationSentAt: null,
     ...over,
 });
 
