@@ -115,7 +115,12 @@ describe('sales document line changes', () => {
             { productId: 'prod-1', quantity: 10 },
         ]);
         await doc(
-            { kind: 'tl-warehouse-work-result', erpId: 'r-1', basis: 'w-1' },
+            {
+                kind: 'tl-warehouse-work-result',
+                erpId: 'r-1',
+                basis: 'w-1',
+                attributes: { stage: 'stage-a', taskCompleted: true },
+            },
             'warehouseWork',
             [{ productId: 'prod-1', quantity: 9 }],
         );
