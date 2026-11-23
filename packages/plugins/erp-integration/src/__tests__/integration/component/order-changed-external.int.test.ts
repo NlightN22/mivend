@@ -28,6 +28,7 @@ import {
 } from 'shared';
 
 import { OrderLineResolver } from '../../../handlers/order-line-resolver';
+import { OrderStateStreamHandler } from '../../../handlers/order-state.handler';
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
 
 // Real handler + real ExternalOrderService on real Postgres; hand-rolled tables use the production
@@ -113,7 +114,13 @@ class TestCounterparty {
 const { schema, extra } = testSchemaOptions('order_changed_external');
 const ERP_ORDER = 'erp-order-1';
 let dataSource: DataSource;
-let handler: OrderChangedStreamHandler;
+let handler: {
+    apply: (
+        c: RequestContext,
+        id: string,
+        p: Record<string, unknown>,
+    ) => ReturnType<OrderChangedStreamHandler['apply']>;
+};
 let externalOrders: ExternalOrderService;
 let ctx: RequestContext;
 
@@ -179,12 +186,37 @@ beforeAll(async () => {
         { record: async () => undefined } as never,
         statusReference,
     );
-    handler = new OrderChangedStreamHandler(
+    const resolver = new OrderLineResolver(
+        connection as never,
+        { findByEntityId: vi.fn() } as never,
+    );
+    const changedHandler = new OrderChangedStreamHandler(
         { handleOrderChanged: vi.fn() } as never,
-        new OrderLineResolver(connection as never, { findByEntityId: vi.fn() } as never),
+        resolver,
         externalOrders,
         { attachOrder: vi.fn() } as never,
     );
+    const stateHandler = new OrderStateStreamHandler(
+        { handleOrderState: vi.fn() } as never,
+        externalOrders,
+        resolver,
+        statusReference,
+    );
+    // The ERP sends the derived status and paid amount on order-state, the rest on order-changed.
+    handler = {
+        apply: async (c, id, p) => {
+            const { statusCode, paidAmount, ...own } = p;
+            const outcome = await changedHandler.apply(c, id, own);
+            if (statusCode !== undefined || paidAmount !== undefined) {
+                await stateHandler.apply(c, id, {
+                    ...(statusCode === undefined ? {} : { statusCode }),
+                    ...(paidAmount === undefined ? {} : { paidAmount }),
+                    ...(p.updatedAt === undefined ? {} : { updatedAt: p.updatedAt }),
+                });
+            }
+            return outcome;
+        },
+    };
     ctx = { channel: { defaultCurrencyCode: 'RUB' } } as unknown as RequestContext;
 });
 

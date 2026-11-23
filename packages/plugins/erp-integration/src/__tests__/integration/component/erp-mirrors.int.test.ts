@@ -113,7 +113,7 @@ describe('ERP mirrors through the inbox (real Postgres)', () => {
                 erpId: 'e-1',
                 counterpartyId: 'cp-missing',
                 name: 'Contact A',
-                contactInfos: '[]',
+                contactInfos: null,
                 isActive: true,
                 isDeleted: false,
             },

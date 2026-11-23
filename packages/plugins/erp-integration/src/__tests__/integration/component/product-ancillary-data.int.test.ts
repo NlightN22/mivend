@@ -197,7 +197,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
 
         await service.replaceCharacteristics(ctx, 'product-1', [
             {
-                group: 'attribute',
+                group: 'specification',
                 key: 'A',
                 rawValue: 'x',
                 normalizedValue: null,
@@ -206,7 +206,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
         ]);
         await service.replaceCharacteristics(ctx, 'product-1', [
             {
-                group: 'attribute',
+                group: 'specification',
                 key: 'B',
                 rawValue: 'y',
                 normalizedValue: null,
@@ -223,7 +223,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     it('replaceCharacteristics for one product run concurrently never hits the unique constraint', async () => {
         const service = ancillaryService(TestCharacteristic);
         const rows = ['A', 'B', 'C'].map(key => ({
-            group: 'attribute' as const,
+            group: 'specification' as const,
             key,
             rawValue: 'x',
             normalizedValue: null,
@@ -238,6 +238,31 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
             .getRepository(TestCharacteristic)
             .find({ where: { productId: 'product-1' } });
         expect(stored.map(r => r.key).sort()).toEqual(['A', 'B', 'C']);
+    });
+
+    it('replaceCharacteristics leaves the attribute group alone: it is not part of the product event', async () => {
+        const service = ancillaryService(TestCharacteristic);
+        const row = (group: 'attribute' | 'specification', key: string) => ({
+            group,
+            key,
+            rawValue: 'x',
+            normalizedValue: null,
+            structuredJson: null,
+        });
+        await service.replaceCharacteristics(ctx, 'product-1', [row('specification', 'S1')]);
+        await dataSource
+            .getRepository(TestCharacteristic)
+            .save({ productId: 'product-1', ...row('attribute', 'A1') });
+
+        await service.replaceCharacteristics(ctx, 'product-1', [row('specification', 'S2')]);
+
+        const stored = await dataSource
+            .getRepository(TestCharacteristic)
+            .find({ where: { productId: 'product-1' } });
+        expect(stored.map(r => `${r.group}:${r.key}`).sort()).toEqual([
+            'attribute:A1',
+            'specification:S2',
+        ]);
     });
 
     it('replaceManufacturerCodes fully replaces the prior set for the product', async () => {

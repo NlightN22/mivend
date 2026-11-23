@@ -74,13 +74,14 @@ const handler = new CounterpartyStreamHandler(
                 return `contact step failed: ${(err as Error).message} (${label})`;
             }
         },
-        replaceErpPointsByErpId: vi.fn(async () => {
-            if (failContacts) throw new Error('boom');
-            return true;
-        }),
     } as never,
     { linkWaitingContacts: vi.fn() } as never,
-    { write: vi.fn() } as never,
+    {
+        write: vi.fn(),
+        seedContactFromMirror: vi.fn(async () => {
+            if (failContacts) throw new Error('boom');
+        }),
+    } as never,
     { seedFromErp: vi.fn() } as never,
 );
 
@@ -91,7 +92,7 @@ async function deliver(version: string): Promise<void> {
         entityId: 'cp-1',
         version,
         sourceEventId: `evt-${seq}`,
-        payload: { name: 'Acme', isActive: true, contactInfos: [] },
+        payload: { name: 'Acme', isActive: true },
     });
     await makeInboxProcessor(
         dataSource,

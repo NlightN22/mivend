@@ -8,6 +8,7 @@ import type { CancelSubmission } from '../../order-cancellation.decision';
 import type { CancelRequestSubject, OrderCancellationPort } from '../../order-cancellation.port';
 import { OrderErpStatusService } from '../../order-erp-status.service';
 import { OrderCancellationService } from '../../order-cancellation.service';
+import { ReservationOrderStateSyncService } from '../../reservation-order-state-sync.service';
 import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync.service';
 import { TestOrder, TestPayment, TestReservation } from './reserve-order.harness';
 import type { ReserveOrderHarness } from './reserve-order.harness';
@@ -49,6 +50,7 @@ export interface CancellationFixture {
     service: OrderCancellationService;
     results: OrderCancelResultService;
     writeOff: ReservationWriteOffSyncService;
+    orderState: ReservationOrderStateSyncService;
     cancelOrderCalls: string[];
     cancelledPayments: string[];
     notifications: Array<Record<string, unknown>>;
@@ -119,6 +121,13 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
             { record: async () => undefined } as never,
             statuses,
         ),
+        statuses,
+        { record: async () => undefined } as never,
+    );
+    fixture.orderState = new ReservationOrderStateSyncService(
+        h.connection,
+        fixture.writeOff,
+        (fixture.writeOff as unknown as { orderErpStatus: OrderErpStatusService }).orderErpStatus,
         statuses,
         { record: async () => undefined } as never,
     );

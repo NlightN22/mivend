@@ -30,7 +30,7 @@ import {
 import { resolve } from 'node:path';
 import type { MigrationInterface } from 'typeorm';
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
-import { CounterpartyStreamHandler } from '../../../handlers/counterparty.handler';
+import { ContactInfoStreamHandler } from '../../../handlers/contact-info.handler';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 
@@ -184,22 +184,21 @@ async function enqueueWave(version: string): Promise<void> {
         for (let i = from; i < Math.min(from + 1000, ROWS + 1); i++) {
             seq += 1;
             rows.push({
-                stream: 'counterparty' as const,
+                stream: 'contact-info' as const,
                 entityId: `cp-${i}`,
                 version,
                 sourceEventId: `bench-${seq}`,
                 status: 'pending' as const,
                 attempts: 0,
                 payload: {
-                    name: `Counterparty ${i}`,
-                    isActive: true,
-                    contactInfos: Array.from({ length: CHANNELS }, (_, c) => ({
-                        type: c === 1 ? 'АдресЭлектроннойПочты' : 'Телефон',
+                    rows: Array.from({ length: CHANNELS }, (_, c) => ({
+                        lineNumber: c + 1,
+                        type: { name: c === 1 ? 'АдресЭлектроннойПочты' : 'Телефон' },
                         presentation:
                             c === 1
                                 ? `c${i}@example.com`
                                 : `+7912${String(i * 10 + c).padStart(7, '0')}`,
-                        isPrimary: c === 0,
+                        isDefault: c === 0,
                     })),
                 },
             });
@@ -211,42 +210,24 @@ async function enqueueWave(version: string): Promise<void> {
 async function drain(processor: ReturnType<typeof makeInboxProcessor>): Promise<number> {
     const started = performance.now();
     for (;;) {
-        const { claimed } = await processor.processPendingBatch(['counterparty'], 500);
+        const { claimed } = await processor.processPendingBatch(['contact-info'], 500);
         if (claimed === 0) break;
     }
     return ROWS / ((performance.now() - started) / 1000);
 }
 
-// Real path on the migrated schema: inbox row -> processor -> counterparty handler -> channel replace -> late contact link.
+// Real path on the migrated schema: inbox row -> processor -> contact-info handler -> channel replace.
 describe('contact path throughput (real Postgres, migrated schema)', () => {
-    it('applies counterparty events with contact lists fast enough for a burst, and replay is idempotent', async () => {
+    it('applies contact sets fast enough for a burst, and replay is idempotent', async () => {
         const connection = mapped(createTestConnection(dataSource));
-        const handler = new CounterpartyStreamHandler(
-            {
-                upsertActiveState: vi.fn(
-                    async (
-                        c: unknown,
-                        _e: string,
-                        _f: unknown,
-                        onFirst?: (c: unknown, cp: unknown) => Promise<void>,
-                    ) => {
-                        await onFirst?.(c, { id: 1 });
-                        return true;
-                    },
-                ),
-            } as never,
-            {} as never,
-            {
-                assignCounterpartyIfInputsChanged: async (
-                    _c: unknown,
-                    _e: string,
-                    write: () => unknown,
-                ) => write(),
-            } as never,
+        const handler = new ContactInfoStreamHandler(
             new ContactPointService(connection),
+            { write: vi.fn(), seedContactFromMirror: vi.fn() } as never,
+            {} as never,
+            {} as never,
+            {} as never,
+            {} as never,
             new ErpContactPersonService(connection),
-            { write: vi.fn() } as never,
-            { seedFromErp: vi.fn() } as never,
         );
         const inbox = new IntegrationInboxService(createTestConnection(dataSource));
         const processor = makeInboxProcessor(

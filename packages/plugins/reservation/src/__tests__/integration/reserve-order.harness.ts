@@ -34,6 +34,7 @@ export class TestOrderCustomFields {
     @Column({ type: 'varchar', nullable: true }) erpStatus!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpOrderId!: string | null;
     @Column({ type: 'timestamp', nullable: true }) erpStatusAt!: Date | null;
+    @Column({ type: 'timestamp', nullable: true }) erpReserveUntil!: Date | null;
     @Column({ type: 'varchar', nullable: true }) erpOrderStatus!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpContractId!: string | null;
     @Column({ type: 'varchar', nullable: true }) latestFulfillmentState!: string | null;
@@ -225,7 +226,12 @@ export function useReserveOrderHarness(
                         `SELECT id FROM reservation_test_order WHERE "customFieldsUuid" = $1`,
                         params,
                     )
-                  : (manager ?? h.dataSource.manager).query(sql, params);
+                  : sql.includes('"customFieldsErporderid"')
+                    ? h.dataSource.query(
+                          `SELECT id FROM reservation_test_order WHERE "customFieldsErporderid" = $1 LIMIT 1`,
+                          params,
+                      )
+                    : (manager ?? h.dataSource.manager).query(sql, params);
         h.connection = {
             getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
                 const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
