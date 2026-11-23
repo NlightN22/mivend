@@ -2261,6 +2261,8 @@ export type Customer = Node & {
     createdAt: Scalars['DateTime']['output'];
     customFields: Maybe<CustomerCustomFields>;
     emailAddress: Scalars['String']['output'];
+    emailConfirmationPending: Maybe<Scalars['String']['output']>;
+    emailConfirmationSentAt: Maybe<Scalars['DateTime']['output']>;
     firstName: Scalars['String']['output'];
     groups: Array<CustomerGroup>;
     history: HistoryEntryList;
@@ -2268,8 +2270,6 @@ export type Customer = Node & {
     lastName: Scalars['String']['output'];
     orders: OrderList;
     phoneNumber: Maybe<Scalars['String']['output']>;
-    emailConfirmationPending: Maybe<Scalars['String']['output']>;
-    emailConfirmationSentAt: Maybe<Scalars['DateTime']['output']>;
     preferredTradingPoint: Maybe<TradingPoint>;
     priceType: Maybe<PriceType>;
     title: Maybe<Scalars['String']['output']>;
@@ -2299,6 +2299,8 @@ export type CustomerFilterParameter = {
     counterpartyId?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     emailAddress?: InputMaybe<StringOperators>;
+    emailConfirmationPending?: InputMaybe<StringOperators>;
+    emailConfirmationSentAt?: InputMaybe<DateOperators>;
     firstName?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     lastName?: InputMaybe<StringOperators>;
@@ -2306,8 +2308,6 @@ export type CustomerFilterParameter = {
     portalRole?: InputMaybe<StringOperators>;
     postalCode?: InputMaybe<StringOperators>;
     preferredTradingPointId?: InputMaybe<StringOperators>;
-    emailConfirmationPending?: InputMaybe<StringOperators>;
-    emailConfirmationSentAt?: InputMaybe<DateOperators>;
     title?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
 };
@@ -2381,6 +2381,8 @@ export type CustomerSortParameter = {
     counterpartyId?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     emailAddress?: InputMaybe<SortOrder>;
+    emailConfirmationPending?: InputMaybe<SortOrder>;
+    emailConfirmationSentAt?: InputMaybe<SortOrder>;
     firstName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     lastName?: InputMaybe<SortOrder>;
@@ -2388,8 +2390,6 @@ export type CustomerSortParameter = {
     portalRole?: InputMaybe<SortOrder>;
     preferredTradingPointId?: InputMaybe<SortOrder>;
     title?: InputMaybe<SortOrder>;
-    emailConfirmationPending?: InputMaybe<SortOrder>;
-    emailConfirmationSentAt?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
 };
 
@@ -4999,6 +4999,7 @@ export type Mutation = {
     /** Returns outbox rows that gave up publishing (status failed) to pending so the next sweep retries them. Returns how many moved (issue #200). */
     requeueFailedIntegrationOutbox: Scalars['Int']['output'];
     resendAdministratorPasswordReset: Scalars['Boolean']['output'];
+    resendEmailConfirmation: Scalars['Boolean']['output'];
     resetAdministratorPassword: ResetAdministratorPasswordResult;
     resetCheckPolicyOverride: Scalars['Boolean']['output'];
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
@@ -5006,7 +5007,6 @@ export type Mutation = {
     resolveNotification: Notification;
     /** Drop the manual price and return the line to automatic discounting. Always allowed. */
     revertOrderLineDiscount: Scalars['Boolean']['output'];
-    resendEmailConfirmation: Scalars['Boolean']['output'];
     revokeVisibilityGrant: VisibilityGrant;
     /**
      * Replaces the old with a new API-Key.
@@ -6805,6 +6805,7 @@ export type OrderCustomFields = {
     erpRegistrationStatus: Maybe<Scalars['String']['output']>;
     erpRejectionReasonCode: Maybe<Scalars['String']['output']>;
     erpRejectionReasonText: Maybe<Scalars['String']['output']>;
+    erpReserveUntil: Maybe<Scalars['DateTime']['output']>;
     erpShippedInSettlements: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
@@ -6861,6 +6862,7 @@ export type OrderFilterParameter = {
     erpRegistrationStatus?: InputMaybe<StringOperators>;
     erpRejectionReasonCode?: InputMaybe<StringOperators>;
     erpRejectionReasonText?: InputMaybe<StringOperators>;
+    erpReserveUntil?: InputMaybe<DateOperators>;
     erpShippedInSettlements?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
@@ -7246,6 +7248,7 @@ export type OrderSortParameter = {
     erpRegistrationStatus?: InputMaybe<SortOrder>;
     erpRejectionReasonCode?: InputMaybe<SortOrder>;
     erpRejectionReasonText?: InputMaybe<SortOrder>;
+    erpReserveUntil?: InputMaybe<SortOrder>;
     erpShippedInSettlements?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
@@ -12739,11 +12742,7 @@ export type CounterpartyOverdueQueryVariables = Exact<{
 }>;
 
 export type CounterpartyOverdueQuery = {
-    counterpartyOverdue: {
-        amount: any;
-        currency: string;
-        oldestDays: number | null;
-    } | null;
+    counterpartyOverdue: { amount: any; currency: string; oldestDays: number | null } | null;
 };
 
 export type CounterpartyPortalUsersQueryVariables = Exact<{
@@ -12771,9 +12770,7 @@ export type ResendEmailConfirmationMutationVariables = Exact<{
     customerId: Scalars['ID']['input'];
 }>;
 
-export type ResendEmailConfirmationMutation = {
-    resendEmailConfirmation: boolean;
-};
+export type ResendEmailConfirmationMutation = { resendEmailConfirmation: boolean };
 
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
