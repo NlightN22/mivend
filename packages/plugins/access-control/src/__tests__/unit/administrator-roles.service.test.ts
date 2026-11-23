@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { ForbiddenError, UserInputError } from '@vendure/core';
-import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import { AdministratorEvent, ForbiddenError, UserInputError } from '@vendure/core';
+import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { AdministratorRolesService } from '../../administrator-roles.service';
 
@@ -15,6 +15,7 @@ describe('AdministratorRolesService.setRoles', () => {
     let adminRepo: { findOne: ReturnType<typeof vi.fn>; findOneOrFail: ReturnType<typeof vi.fn> };
     let userRepo: { save: Mock };
     let roleRepo: { find: ReturnType<typeof vi.fn> };
+    let eventBus: { publish: Mock };
     let service: AdministratorRolesService;
 
     function target(userId: string, roleCodes: string[]): void {
@@ -35,7 +36,11 @@ describe('AdministratorRolesService.setRoles', () => {
             getRepository: (_c: RequestContext, entity: { name: string }) =>
                 ({ Administrator: adminRepo, User: userRepo, Role: roleRepo })[entity.name],
         };
-        service = new AdministratorRolesService(connection as unknown as TransactionalConnection);
+        eventBus = { publish: vi.fn() };
+        service = new AdministratorRolesService(
+            connection as unknown as TransactionalConnection,
+            eventBus as unknown as EventBus,
+        );
     });
 
     it('replaces the roles of another staff user with the chosen default role', async () => {
@@ -48,6 +53,19 @@ describe('AdministratorRolesService.setRoles', () => {
         );
         const saved = userRepo.save.mock.calls[0][0] as { roles: Array<{ code: string }> };
         expect(saved.roles.map(r => r.code)).toEqual(['manager']);
+        const events = eventBus.publish.mock.calls.map(c => c[0]);
+        expect(events.filter(e => e instanceof AdministratorEvent)).toHaveLength(1);
+        expect((events.find(e => e instanceof AdministratorEvent) as AdministratorEvent).type).toBe(
+            'updated',
+        );
+    });
+
+    it('refuses a user holding a custom role instead of silently dropping it', async () => {
+        target('user-2', ['operator', 'custom-audit']);
+
+        await expect(service.setRoles(ctx, 'admin-1', ['4'])).rejects.toThrow(UserInputError);
+        expect(userRepo.save).not.toHaveBeenCalled();
+        expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('refuses a role outside the assignable default roles, including the superadmin role', async () => {
@@ -83,5 +101,6 @@ describe('AdministratorRolesService.setRoles', () => {
 
         await expect(service.setRoles(ctx, 'admin-1', ['4'])).rejects.toThrow(UserInputError);
         expect(userRepo.save).not.toHaveBeenCalled();
+        expect(eventBus.publish).not.toHaveBeenCalled();
     });
 });

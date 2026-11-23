@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { admin, DENIED, seed, staffToken } from '../harness/actors';
+import { login } from '../harness/graphql';
+import { inject } from 'vitest';
 import type { ActorKey } from '../seed/fixture-plan';
 
 const ASSIGNABLE = `query { assignableAdministratorRoles { id code } }`;
@@ -9,6 +11,39 @@ const SET_ROLES = `mutation($id: ID!, $roleIds: [ID!]!) {
 }`;
 const ROLES_OF = `query($id: ID!) { administrator(id: $id) { user { roles { code } } } }`;
 const SUPERADMIN_ID = `query { administrators(options: { filter: { emailAddress: { contains: "superadmin" } } }) { items { id user { roles { code } } } } }`;
+
+const PORTAL_ADMIN = { email: 'portal-admin-395@access.test', password: 'Access-395-pass' };
+let portalAdminToken = '';
+let portalAdminId = '';
+
+beforeAll(async () => {
+    const superToken = await staffToken('superadmin');
+    const roles = await admin<{ roles: { items: Role[] } }>(
+        superToken,
+        `query { roles(options: { filter: { code: { eq: "portal-admin" } } }) { items { id code } } }`,
+    );
+    const created = await admin<{ createAdministrator: { id: string } }>(
+        superToken,
+        `mutation($input: CreateAdministratorInput!) { createAdministrator(input: $input) { id } }`,
+        {
+            input: {
+                emailAddress: PORTAL_ADMIN.email,
+                firstName: 'Portal',
+                lastName: 'Admin',
+                password: PORTAL_ADMIN.password,
+                roleIds: [roles.data!.roles.items[0]!.id],
+            },
+        },
+    );
+    expect(created.errors ?? []).toEqual([]);
+    portalAdminId = created.data!.createAdministrator.id;
+    portalAdminToken = await login(
+        inject('accessBaseUrl'),
+        'admin-api',
+        PORTAL_ADMIN.email,
+        PORTAL_ADMIN.password,
+    );
+});
 
 interface Role {
     id: string;
@@ -39,12 +74,12 @@ describe('setAdministratorRoles access', () => {
         async actor => {
             const token = await staffToken(actor);
             const list = await admin(token, ASSIGNABLE);
-            expect(list.errors?.[0]?.message).toMatch(DENIED);
+            expect(list.errors?.[0]).toMatch(DENIED);
             const set = await admin(token, SET_ROLES, {
                 id: seed().admins['manager-b'],
                 roleIds: ['1'],
             });
-            expect(set.errors?.[0]?.message).toMatch(DENIED);
+            expect(set.errors?.[0]).toMatch(DENIED);
         },
     );
 
@@ -117,5 +152,40 @@ describe('setAdministratorRoles access', () => {
         } finally {
             await admin(token, SET_ROLES, { id: target, roleIds: [manager.id] });
         }
+    });
+});
+
+describe('portal-admin as the user administrator', () => {
+    it('assigns manager and department-head, and cannot use the native update or its own roles', async () => {
+        const list = await admin<{ assignableAdministratorRoles: Role[] }>(
+            portalAdminToken,
+            ASSIGNABLE,
+        );
+        expect(list.errors ?? []).toEqual([]);
+        const roles = list.data!.assignableAdministratorRoles;
+        const head = roles.find(r => r.code === 'department-head')!;
+        const manager = roles.find(r => r.code === 'manager')!;
+        const target = seed().admins['manager-b'];
+        try {
+            const set = await admin(portalAdminToken, SET_ROLES, {
+                id: target,
+                roleIds: [head.id],
+            });
+            expect(set.errors ?? []).toEqual([]);
+            expect(await rolesOf(target)).toEqual(['department-head']);
+        } finally {
+            await admin(portalAdminToken, SET_ROLES, { id: target, roleIds: [manager.id] });
+        }
+        const own = await admin(portalAdminToken, SET_ROLES, {
+            id: portalAdminId,
+            roleIds: [manager.id],
+        });
+        expect(own.errors?.length).toBeGreaterThan(0);
+        const native = await admin(
+            portalAdminToken,
+            `mutation($id: ID!) { updateAdministrator(input: { id: $id, password: "Changed-395-pass" }) { id } }`,
+            { id: target },
+        );
+        expect(native.errors?.[0]).toMatch(DENIED);
     });
 });

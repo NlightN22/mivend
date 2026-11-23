@@ -1049,3 +1049,7 @@ staff on the Admin API see all of them. A hidden category hides its whole subtre
   (a token saved less than 2 minutes ago is kept) or the hourly orphan sweep removes it; acceptable for a logout hint. The
   end-session URL is returned only for an `https` endpoint (`http` only on `localhost`/`127.0.0.1`). The anonymous
   `oidcSignIn` query exposes the provider host and its favicon URL, intentionally.
+
+## Staff user administration (#395)
+
+`setAdministratorRoles` (right `ManageAdministratorLifecycle`) replaces a staff user's roles with default roles only, without the actor holding their rights. It refuses the superadmin role, the actor's own account, a superadmin account, unknown roles, an empty list and a user who holds a non-default (custom) role. It runs under a row lock and publishes the same events as the native update, so other instances receive the change. A changed role reaches the user's already open session after the core session cache expires.
