@@ -2268,6 +2268,8 @@ export type Customer = Node & {
     lastName: Scalars['String']['output'];
     orders: OrderList;
     phoneNumber: Maybe<Scalars['String']['output']>;
+    emailConfirmationPending: Maybe<Scalars['String']['output']>;
+    emailConfirmationSentAt: Maybe<Scalars['DateTime']['output']>;
     preferredTradingPoint: Maybe<TradingPoint>;
     priceType: Maybe<PriceType>;
     title: Maybe<Scalars['String']['output']>;
@@ -2304,6 +2306,8 @@ export type CustomerFilterParameter = {
     portalRole?: InputMaybe<StringOperators>;
     postalCode?: InputMaybe<StringOperators>;
     preferredTradingPointId?: InputMaybe<StringOperators>;
+    emailConfirmationPending?: InputMaybe<StringOperators>;
+    emailConfirmationSentAt?: InputMaybe<DateOperators>;
     title?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
 };
@@ -2384,6 +2388,8 @@ export type CustomerSortParameter = {
     portalRole?: InputMaybe<SortOrder>;
     preferredTradingPointId?: InputMaybe<SortOrder>;
     title?: InputMaybe<SortOrder>;
+    emailConfirmationPending?: InputMaybe<SortOrder>;
+    emailConfirmationSentAt?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
 };
 
@@ -5000,6 +5006,7 @@ export type Mutation = {
     resolveNotification: Notification;
     /** Drop the manual price and return the line to automatic discounting. Always allowed. */
     revertOrderLineDiscount: Scalars['Boolean']['output'];
+    resendEmailConfirmation: Scalars['Boolean']['output'];
     revokeVisibilityGrant: VisibilityGrant;
     /**
      * Replaces the old with a new API-Key.
@@ -5953,6 +5960,10 @@ export type MutationRequeueFailedIntegrationOutboxArgs = {
 
 export type MutationResendAdministratorPasswordResetArgs = {
     administratorId: Scalars['ID']['input'];
+};
+
+export type MutationResendEmailConfirmationArgs = {
+    customerId: Scalars['ID']['input'];
 };
 
 export type MutationResetAdministratorPasswordArgs = {
@@ -12728,7 +12739,40 @@ export type CounterpartyOverdueQueryVariables = Exact<{
 }>;
 
 export type CounterpartyOverdueQuery = {
-    counterpartyOverdue: { amount: any; currency: string; oldestDays: number | null } | null;
+    counterpartyOverdue: {
+        amount: any;
+        currency: string;
+        oldestDays: number | null;
+    } | null;
+};
+
+export type CounterpartyPortalUsersQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type CounterpartyPortalUsersQuery = {
+    counterparty: {
+        id: string;
+        portalUsers: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            emailAddress: string;
+            active: boolean;
+            createdAt: any;
+            emailConfirmationPending: string | null;
+            emailConfirmationSentAt: any | null;
+            customFields: { portalRole: string | null } | null;
+        }>;
+    } | null;
+};
+
+export type ResendEmailConfirmationMutationVariables = Exact<{
+    customerId: Scalars['ID']['input'];
+}>;
+
+export type ResendEmailConfirmationMutation = {
+    resendEmailConfirmation: boolean;
 };
 
 export type CounterpartyTeamMemberFieldsFragment = {
@@ -17088,6 +17132,37 @@ export const CounterpartyOverdueDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CounterpartyOverdueQuery,
     CounterpartyOverdueQueryVariables
+>;
+export const CounterpartyPortalUsersDocument = new TypedDocumentString(`
+    query CounterpartyPortalUsers($counterpartyId: ID!) {
+  counterparty(id: $counterpartyId) {
+    id
+    portalUsers {
+      id
+      firstName
+      lastName
+      emailAddress
+      active
+      createdAt
+      emailConfirmationPending
+      emailConfirmationSentAt
+      customFields {
+        portalRole
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyPortalUsersQuery,
+    CounterpartyPortalUsersQueryVariables
+>;
+export const ResendEmailConfirmationDocument = new TypedDocumentString(`
+    mutation ResendEmailConfirmation($customerId: ID!) {
+  resendEmailConfirmation(customerId: $customerId)
+}
+    `) as unknown as TypedDocumentString<
+    ResendEmailConfirmationMutation,
+    ResendEmailConfirmationMutationVariables
 >;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {

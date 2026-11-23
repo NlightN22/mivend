@@ -10,6 +10,8 @@ export interface PortalUserRow {
     portalRole: string | null;
     active: boolean;
     createdAt: string;
+    emailConfirmationPending: string | null;
+    emailConfirmationSentAt: string | null;
 }
 
 export const PORTAL_USER_STATUSES = ['active', 'deactivated'] as const;

@@ -242,6 +242,18 @@ export default {
             '{name} will be soft-deleted and lose access to the portal. The record stays in history.',
         loadFailed: 'Could not load portal users',
         deactivateFailed: 'Could not deactivate this portal user',
+        emailPending: {
+            badge: 'E-mail not confirmed',
+            sentAt: 'Sent {at}',
+            resend: 'Resend confirmation',
+            resent: 'Confirmation e-mail sent',
+            errors: {
+                cooldown:
+                    'A confirmation e-mail was sent less than 5 minutes ago. Try again later.',
+                nothingPending: 'This user has no e-mail address waiting for confirmation.',
+                generic: 'Could not resend the confirmation e-mail',
+            },
+        },
     },
     documents: {
         columns: { number: 'Document #', issueDate: 'Issue date', type: 'Type', status: 'Status' },

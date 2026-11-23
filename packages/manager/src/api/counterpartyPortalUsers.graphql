@@ -1,0 +1,22 @@
+query CounterpartyPortalUsers($counterpartyId: ID!) {
+    counterparty(id: $counterpartyId) {
+        id
+        portalUsers {
+            id
+            firstName
+            lastName
+            emailAddress
+            active
+            createdAt
+            emailConfirmationPending
+            emailConfirmationSentAt
+            customFields {
+                portalRole
+            }
+        }
+    }
+}
+
+mutation ResendEmailConfirmation($customerId: ID!) {
+    resendEmailConfirmation(customerId: $customerId)
+}

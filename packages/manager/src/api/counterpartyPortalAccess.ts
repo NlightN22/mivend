@@ -1,6 +1,8 @@
 import { adminApi } from './client';
 import {
     CounterpartyActivationCandidatesDocument,
+    CounterpartyPortalUsersDocument,
+    ResendEmailConfirmationDocument,
     type CounterpartyFilterParameter,
 } from './generated/graphql';
 
@@ -166,43 +168,14 @@ export interface CounterpartyPortalUser {
     portalRole: string | null;
     active: boolean;
     createdAt: string;
+    emailConfirmationPending: string | null;
+    emailConfirmationSentAt: string | null;
 }
-
-const PORTAL_USERS_QUERY = /* GraphQL */ `
-    query CounterpartyPortalUsers($counterpartyId: ID!) {
-        counterparty(id: $counterpartyId) {
-            id
-            portalUsers {
-                id
-                firstName
-                lastName
-                emailAddress
-                active
-                createdAt
-                customFields {
-                    portalRole
-                }
-            }
-        }
-    }
-`;
 
 export async function fetchCounterpartyPortalUsers(
     counterpartyId: string,
 ): Promise<CounterpartyPortalUser[]> {
-    const result = await adminApi<{
-        counterparty: {
-            portalUsers: Array<{
-                id: string;
-                firstName: string;
-                lastName: string;
-                emailAddress: string;
-                active: boolean;
-                createdAt: string;
-                customFields: { portalRole: string | null } | null;
-            }>;
-        } | null;
-    }>(PORTAL_USERS_QUERY, { counterpartyId });
+    const result = await adminApi(CounterpartyPortalUsersDocument, { counterpartyId });
     return (result.counterparty?.portalUsers ?? []).map(u => ({
         id: u.id,
         firstName: u.firstName,
@@ -211,7 +184,13 @@ export async function fetchCounterpartyPortalUsers(
         portalRole: u.customFields?.portalRole ?? null,
         active: u.active,
         createdAt: u.createdAt,
+        emailConfirmationPending: u.emailConfirmationPending,
+        emailConfirmationSentAt: u.emailConfirmationSentAt,
     }));
+}
+
+export async function resendEmailConfirmation(customerId: string): Promise<void> {
+    await adminApi(ResendEmailConfirmationDocument, { customerId });
 }
 
 const DEACTIVATE_PORTAL_ACCESS_MUTATION = /* GraphQL */ `

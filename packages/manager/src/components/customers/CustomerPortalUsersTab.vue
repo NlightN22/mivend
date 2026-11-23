@@ -29,6 +29,7 @@ import {
     sortPortalUsers,
     type PortalUserRow,
 } from '../../utils/portalUsersList';
+import PortalUserEmailPending from './PortalUserEmailPending.vue';
 import TableViewsMenu from '../TableViewsMenu.vue';
 
 // Read-only list of the customer logins linked to this Counterparty, plus Deactivate (native Customer
@@ -106,6 +107,8 @@ const allRows = computed<PortalUserRow[]>(() =>
         portalRole: u.portalRole,
         active: u.active,
         createdAt: u.createdAt,
+        emailConfirmationPending: u.emailConfirmationPending,
+        emailConfirmationSentAt: u.emailConfirmationSentAt,
     })),
 );
 const matching = computed(() =>
@@ -211,6 +214,14 @@ async function handleDeactivate(): Promise<void> {
                             : t('customers.portalUsers.deactivated')
                     }}
                 </MvStatusBadge>
+                <PortalUserEmailPending
+                    v-if="(data as Row).active"
+                    :customer-id="(data as Row).id"
+                    :pending="(data as Row).emailConfirmationPending"
+                    :sent-at="(data as Row).emailConfirmationSentAt"
+                    :can-resend="authStore.hasPermission('UpdateCustomer')"
+                    @resent="load"
+                />
             </template>
             <template #cell-actions="{ data }">
                 <MvButton
