@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import type {
     AdministratorService,
+    EventBus,
     ListQueryBuilder,
     RequestContext,
     TransactionalConnection,
+    UserService,
 } from '@vendure/core';
 
 import { AdministratorActivationService } from '../../administrator-activation.service';
@@ -20,6 +22,8 @@ describe('AdministratorActivationService', () => {
     let repo: ReturnType<typeof createMockRepo>;
     let administratorService: { softDelete: ReturnType<typeof vi.fn> };
     let listQueryBuilder: { build: ReturnType<typeof vi.fn> };
+    let userService: { softDelete: ReturnType<typeof vi.fn> };
+    let eventBus: { publish: ReturnType<typeof vi.fn> };
     let service: AdministratorActivationService;
     const ctx = {} as unknown as RequestContext;
 
@@ -28,10 +32,14 @@ describe('AdministratorActivationService', () => {
         const connection = { getRepository: () => repo };
         administratorService = { softDelete: vi.fn() };
         listQueryBuilder = { build: vi.fn() };
+        userService = { softDelete: vi.fn() };
+        eventBus = { publish: vi.fn() };
         service = new AdministratorActivationService(
             connection as unknown as TransactionalConnection,
             administratorService as unknown as AdministratorService,
             listQueryBuilder as unknown as ListQueryBuilder,
+            userService as unknown as UserService,
+            eventBus as unknown as EventBus,
         );
     });
 
@@ -93,29 +101,57 @@ describe('AdministratorActivationService', () => {
             await expect(service.setActive(ctx, 'admin-missing', false)).rejects.toThrow();
         });
 
-        it('soft-deletes an active Administrator when isActive=false', async () => {
-            repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null });
+        it('soft-deletes the administrator and its user without core visibility checks, and publishes the event', async () => {
+            const admin = { id: 'admin-1', deletedAt: null, user: { id: 7, roles: [] } };
+            repo.findOne.mockResolvedValue(admin);
 
             await service.setActive(ctx, 'admin-1', false);
 
-            expect(administratorService.softDelete).toHaveBeenCalledWith(ctx, 'admin-1');
-        });
-
-        it("refuses to deactivate the caller's own account", async () => {
-            repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null, user: { id: 7 } });
-            const own = { activeUserId: 7 } as unknown as RequestContext;
-
-            await expect(service.setActive(own, 'admin-1', false)).rejects.toThrow();
+            expect(repo.update).toHaveBeenCalledWith(
+                { id: 'admin-1' },
+                { deletedAt: expect.any(Date) },
+            );
+            expect(userService.softDelete).toHaveBeenCalledWith(ctx, 7);
+            expect(eventBus.publish).toHaveBeenCalledTimes(1);
             expect(administratorService.softDelete).not.toHaveBeenCalled();
         });
 
+        it("refuses to deactivate the caller's own account", async () => {
+            repo.findOne.mockResolvedValue({
+                id: 'admin-1',
+                deletedAt: null,
+                user: { id: 7, roles: [] },
+            });
+            const own = { activeUserId: 7 } as unknown as RequestContext;
+
+            await expect(service.setActive(own, 'admin-1', false)).rejects.toThrow();
+            expect(userService.softDelete).not.toHaveBeenCalled();
+        });
+
+        it('refuses to deactivate a superadmin account', async () => {
+            repo.findOne.mockResolvedValue({
+                id: 'admin-1',
+                deletedAt: null,
+                user: { id: 7, roles: [{ code: '__super_admin_role__' }] },
+            });
+            const other = { activeUserId: 8 } as unknown as RequestContext;
+
+            await expect(service.setActive(other, 'admin-1', false)).rejects.toThrow();
+            expect(userService.softDelete).not.toHaveBeenCalled();
+            expect(repo.update).not.toHaveBeenCalled();
+        });
+
         it('lets another user deactivate the account', async () => {
-            repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null, user: { id: 7 } });
+            repo.findOne.mockResolvedValue({
+                id: 'admin-1',
+                deletedAt: null,
+                user: { id: 7, roles: [] },
+            });
             const other = { activeUserId: 8 } as unknown as RequestContext;
 
             await service.setActive(other, 'admin-1', false);
 
-            expect(administratorService.softDelete).toHaveBeenCalledWith(other, 'admin-1');
+            expect(userService.softDelete).toHaveBeenCalledWith(other, 7);
         });
 
         it('reactivates a deactivated Administrator when isActive=true', async () => {

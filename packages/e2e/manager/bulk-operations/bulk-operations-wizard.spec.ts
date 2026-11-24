@@ -3,7 +3,7 @@ import { adminGql, postBatch, waitForRun } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
 
 // Activate customers on the shared wizard; only reviews and skipped rows are asserted, so nothing is granted.
-test.describe('bulk operations wizard (#337) @on:manager-portal-admin', () => {
+test.describe('bulk operations wizard (#337) @on:manager-general-director', () => {
     test('the catalog lists the operation and the History tab opens', async ({ page }) => {
         await page.goto('/bulk-operations');
         await expect(page.getByRole('link', { name: /Activate customers/ })).toBeVisible();
@@ -207,7 +207,7 @@ async function activateAllMatching(page: Page, search: string, total: number): P
     await expect(counter(0, 'Failed')).toBeVisible();
 }
 
-test.describe('select all matching the filter (#337) @on:manager-portal-admin', () => {
+test.describe('select all matching the filter (#337) @on:manager-general-director', () => {
     test.describe.configure({ mode: 'serial', timeout: 420000 });
 
     for (const [pages, total] of [

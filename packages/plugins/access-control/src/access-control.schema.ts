@@ -150,8 +150,11 @@ export const adminApiSchema: DocumentNode = gql`
     # internally but never exposes it on the GraphQL type. Resolved by AdministratorStatusResolver
     # in access-control.resolver.ts from the same entity instance already loaded by whichever
     # query returned this Administrator.
+    # roleCodes: core hides roles the caller does not hold every right of, so the user's roles field is empty
+    # for the staff-account administrator; this one is gated by ManageAdministratorLifecycle instead.
     extend type Administrator {
         isActive: Boolean!
+        roleCodes: [String!]!
     }
 
     type ResetAdministratorPasswordResult {

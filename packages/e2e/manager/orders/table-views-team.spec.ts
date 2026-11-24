@@ -9,7 +9,7 @@ async function deleteTeamView(page: Page, name: string): Promise<void> {
     if (await item.count()) await item.getByTitle('Delete').click();
 }
 
-test('a portal admin shares a view with the team and makes it the team default @on:manager-portal-admin', async ({
+test('a portal admin shares a view with the team and makes it the team default @on:manager-general-director', async ({
     page,
 }) => {
     const name = `e2e team view ${Date.now()}`;

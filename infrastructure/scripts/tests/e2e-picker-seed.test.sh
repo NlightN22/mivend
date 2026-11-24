@@ -17,6 +17,6 @@ expect 0 --project=storefront storefront/cart
 expect 0 --project=storefront-noauth
 expect 0 --project=manager-noauth
 expect 0 --project=visibility-manager
-expect 0 --project=manager-operator --project=manager-portal-admin manager/catalog
+expect 0 --project=manager-operator --project=manager-portal-admin --project=manager-general-director manager/catalog
 expect 0 --grep @smoke --project=storefront-noauth --project=storefront
 echo "e2e-picker-seed: ok"

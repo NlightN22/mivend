@@ -20,14 +20,13 @@ const CARDS_BY_ROLE: Record<string, { visible: string[]; hidden: string[] }> = {
         visible: ['Awaiting my decision', 'Department orders', 'Department clients'],
         hidden: ['My pending approval requests', 'My clients'],
     },
-    // portal-admin is an approver role in dashboard-config.ts, so it gets the approver cards.
-    'manager-portal-admin': {
+    'manager-general-director': {
         visible: ['Awaiting my decision', 'Department orders', 'Department clients'],
         hidden: ['My pending approval requests', 'My clients'],
     },
 };
 
-test('dashboard shows the KPI cards for the current role @read-only', async ({
+test('dashboard shows the KPI cards for the current role @on:manager-operator @on:manager-manager @on:manager-department-head @on:manager-general-director @read-only', async ({
     page,
 }, testInfo) => {
     const expected = CARDS_BY_ROLE[testInfo.project.name];

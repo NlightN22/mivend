@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Typing must not lose focus or characters while the table reloads after the first keystroke.
-test.describe('bulk activation select step typing @on:manager-portal-admin', () => {
+test.describe('bulk activation select step typing @on:manager-general-director', () => {
     test('a multi-character search can be typed into the toolbar search box', async ({ page }) => {
         await page.goto('/bulk-operations/counterparty-portal-access');
         const input = page.getByPlaceholder('Search company, legal name or INN…');

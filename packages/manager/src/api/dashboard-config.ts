@@ -149,12 +149,7 @@ const APPROVER_CARDS: KpiCardConfig[] = [
 
 // UI-only keys (not domain data), mirroring existing roleCode checks; role codes stay DB-driven.
 // Keep in sync with seed-access-roles.mjs when ApproveDiscountRequest holders change.
-const APPROVER_ROLE_CODES = new Set([
-    'department-head',
-    'general-director',
-    'security-officer',
-    'portal-admin',
-]);
+const APPROVER_ROLE_CODES = new Set(['department-head', 'general-director', 'security-officer']);
 
 export function getDashboardKpiCards(roleCode: string | null): KpiCardConfig[] {
     if (roleCode === null || roleCode === 'manager') return MANAGER_CARDS;

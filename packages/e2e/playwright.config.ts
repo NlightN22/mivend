@@ -136,5 +136,29 @@ export default defineConfig({
                 storageState: '.auth/manager-portalAdmin.json',
             },
         },
+        {
+            name: 'manager-general-director',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-general-director'),
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-generalDirector.json',
+            },
+        },
+        {
+            name: 'manager-superadmin',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-superadmin'),
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-superadmin.json',
+            },
+        },
     ]),
 });

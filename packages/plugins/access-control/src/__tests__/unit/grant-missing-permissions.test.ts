@@ -59,26 +59,15 @@ describe('manager card grant', () => {
     });
 });
 
-// Owner decision: portal-admin edits roles through setAdministratorRoles, never UpdateAdministrator.
-const NOT_FOR_PORTAL_ADMIN = ['UpdateAdministrator'];
-
-describe('portal-admin role visibility grant', () => {
-    it('gives portal-admin every right the other roles hold, so core lists those roles for it', () => {
-        const rights = PERMISSIONS_ADDED_BY_RELEASE.filter(
-            g => g.roleCode === 'portal-admin' && g.release === '1.1.39',
-        ).map(g => g.permission);
-        expect(rights.sort()).toEqual([
-            'ReadAnalytics',
-            'ReadManagerCard',
-            'RemoveCounterpartyManager',
-        ]);
+describe('portal-admin is a staff-accounts role, not a sales role', () => {
+    it('holds only the staff account rights and receives nothing through the release grants', () => {
         const portalAdmin = DEFAULT_ROLES.find(r => r.code === 'portal-admin')!.permissions;
-        for (const role of DEFAULT_ROLES) {
-            for (const right of role.permissions) {
-                if (NOT_FOR_PORTAL_ADMIN.includes(right)) continue;
-                expect(portalAdmin, role.code).toContain(right);
-            }
-        }
+        expect([...portalAdmin].sort()).toEqual([
+            'ManageAdministratorLifecycle',
+            'ReadAdministrator',
+            'ReadSettings',
+        ]);
+        expect(PERMISSIONS_ADDED_BY_RELEASE.some(g => g.roleCode === 'portal-admin')).toBe(false);
     });
 });
 

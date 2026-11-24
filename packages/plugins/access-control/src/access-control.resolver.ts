@@ -340,6 +340,12 @@ export class AdministratorStatusResolver {
     isActive(@Parent() administrator: Administrator): boolean {
         return administrator.deletedAt == null;
     }
+
+    @ResolveField()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    roleCodes(@Parent() administrator: Administrator): string[] {
+        return administrator.user?.roles?.map(r => r.code) ?? [];
+    }
 }
 
 @Resolver('Branch')

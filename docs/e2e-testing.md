@@ -143,17 +143,17 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `storefront-theme` | dev | storefront theme: system default before mount, live follow, menu choice persisted (#313) | `--project=storefront storefront/theme` |
 | `manager-acting` | dev | acting-as-customer sessions: attribution, isolation from the customer's own cart and sessions, single-use ticket, finish, credit check (#322) | `--project=manager-operator manager/acting` |
 | `manager-auth` | dev | manager login, password reset, sign-in through the corporate account against the local mock OIDC provider (no stored session) | `--project=manager-noauth` |
-| `manager-bulk-operations` | dev | bulk operations wizard: select all, parameters, review, run and result | `--project=manager-portal-admin manager/bulk-operations` |
-| `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin manager/catalog` |
-| `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/customers` |
-| `manager-dashboard` | dev | dashboard KPIs per role | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/dashboard` |
+| `manager-bulk-operations` | dev | bulk operations wizard: select all, parameters, review, run and result | `--project=manager-portal-admin --project=manager-general-director manager/bulk-operations` |
+| `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin --project=manager-general-director manager/catalog` |
+| `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin --project=manager-general-director manager/customers` |
+| `manager-dashboard` | dev | dashboard KPIs per role | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin --project=manager-general-director manager/dashboard` |
 | `manager-discounts` | dev | discounts page: ERP discounts list (columns, counted chips, search, markup, source switch, customer card tab, phone cards) and the portal requests list (search, chips, Filter builder, row opens the request) | `--project=manager-operator manager/discounts` |
 | `manager-erp-documents` | dev | ERP document lists (customer claims, sales corrections, order corrections, #333): rows, currency, search, cross-links, related-documents links on the order card and customer page, scope per actor, phone card; rows are inserted by SQL into the throwaway DB (`fixtures/erp-documents`) because the streams are Kafka-only | `--project=visibility-manager erp-documents` |
-| `manager-layout` | dev | mobile nav, pagination scroll, no nested vertical scrollbar | `--project=manager-operator --project=manager-portal-admin manager/layout` |
-| `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
+| `manager-layout` | dev | mobile nav, pagination scroll, no nested vertical scrollbar | `--project=manager-operator --project=manager-portal-admin --project=manager-general-director manager/layout` |
+| `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin --project=manager-general-director manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
-| `manager-settlements` | dev | settlements list: type chips, filter, sort, menu entry, phone card | `--project=manager-portal-admin manager/settlements` |
-| `manager-settings` | dev | roles, users, profile and security | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings manager/profile` |
+| `manager-settlements` | dev | settlements list: type chips, filter, sort, menu entry, phone card | `--project=manager-portal-admin --project=manager-general-director manager/settlements` |
+| `manager-settings` | dev | roles, users, profile and security | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin --project=manager-general-director --project=manager-superadmin manager/settings manager/profile` |
 | `manager-team` | dev | Team directory: search, department filter, status chips, deactivated administrators (#311) | `--project=manager-operator manager/team` |
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
 | `visibility-storefront` | dev | own-data, price-type, category visibility incl. hidden-category URL empty catalog (storefront) | `--project=visibility-storefront` |
@@ -231,7 +231,7 @@ tests and in their hooks and fixtures, the 12 slowest spec files and the 12 slow
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test (`manager-operator`, `manager-manager`,
-`manager-department-head`, `manager-portal-admin`), each pre-authenticated as the corresponding seeded account from
+`manager-department-head`, `manager-portal-admin`, `manager-general-director`), each pre-authenticated as the corresponding seeded account from
 `.tests/accounts.md`, all over `packages/e2e/manager/`. A role changes the result only for scope, permission and
 visibility, so a scenario runs under every role only when it tests one of those (`docs/testing-patterns.md`:
 authorization, data isolation).
@@ -242,7 +242,7 @@ project's list is not collected and is not a skip. Do not write `test.skip` on t
 `testInfo.project.name` to assert role-specific UI (the dashboard KPI cards) is a role-dependent test and carries no tag.
 Add `@read-only` as well for a test that changes no shared data (see "E2E parallelism" in `docs/testing-strategy.md`).
 
-Decision per spec (R = all four roles; O = operator, M = manager, D = department head, P = portal admin):
+Decision per spec (R = the operator, manager and department-head projects (the portal admin and general director only run specs that name them); O = operator, M = manager, D = department head, P = portal admin, G = general director; the portal admin holds settings rights only, so every spec that acts on sales data runs as G):
 
 | Spec | Runs under | Why |
 | --- | --- | --- |

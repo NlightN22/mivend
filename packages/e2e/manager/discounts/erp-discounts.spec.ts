@@ -21,8 +21,8 @@ interface Counts {
 
 async function apiCounts(): Promise<Counts> {
     const token = await adminTokenFor(
-        MANAGER_ACCOUNTS.portalAdmin.username,
-        MANAGER_ACCOUNTS.portalAdmin.password,
+        MANAGER_ACCOUNTS.generalDirector.username,
+        MANAGER_ACCOUNTS.generalDirector.password,
     );
     const { data } = await adminGql<{ discountSetupCounts: Counts }>(
         '{ discountSetupCounts { all running expiringSoon upcoming expired inactive } }',
@@ -32,7 +32,7 @@ async function apiCounts(): Promise<Counts> {
     return data.discountSetupCounts;
 }
 
-test('the ERP discounts list opens first with number, valid from, then the other columns @on:manager-portal-admin @read-only', async ({
+test('the ERP discounts list opens first with number, valid from, then the other columns @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -55,7 +55,7 @@ test('the ERP discounts list opens first with number, valid from, then the other
     );
 });
 
-test('the status chips carry the API counts and filter through the URL @on:manager-portal-admin @read-only', async ({
+test('the status chips carry the API counts and filter through the URL @on:manager-general-director @read-only', async ({
     page,
 }) => {
     const counts = await apiCounts();
@@ -86,7 +86,7 @@ test('the status chips carry the API counts and filter through the URL @on:manag
         await expect(r.locator('.mv-status-badge').last()).toHaveText('Running');
 });
 
-test('searching a seeded document number narrows the list and lives in the URL @on:manager-portal-admin @read-only', async ({
+test('searching a seeded document number narrows the list and lives in the URL @on:manager-general-director @read-only', async ({
     page,
 }) => {
     const number = setupNumber('own-b-expiring');
@@ -103,7 +103,7 @@ test('searching a seeded document number narrows the list and lives in the URL @
     });
 });
 
-test('a markup is shown with a plus sign and the company-wide setup says All customers @on:manager-portal-admin @read-only', async ({
+test('a markup is shown with a plus sign and the company-wide setup says All customers @on:manager-general-director @read-only', async ({
     page,
 }) => {
     const markup = setupNumber('everyone-empty');
@@ -121,7 +121,7 @@ test('a markup is shown with a plus sign and the company-wide setup says All cus
     await expect(row(page, wide)).toContainText('-7%');
 });
 
-test('the source switch moves between ERP discounts and Requests @on:manager-portal-admin @read-only', async ({
+test('the source switch moves between ERP discounts and Requests @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');
@@ -143,7 +143,7 @@ test('the source switch moves between ERP discounts and Requests @on:manager-por
     });
 });
 
-test('on a phone each ERP discount is a card without horizontal scroll @on:manager-portal-admin @read-only', async ({
+test('on a phone each ERP discount is a card without horizontal scroll @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -155,7 +155,7 @@ test('on a phone each ERP discount is a card without horizontal scroll @on:manag
     );
 });
 
-test('the customer card tab lists that customer setups and the company-wide ones only @on:manager-portal-admin @read-only', async ({
+test('the customer card tab lists that customer setups and the company-wide ones only @on:manager-general-director @read-only', async ({
     page,
 }) => {
     const name = clientName('a-own');

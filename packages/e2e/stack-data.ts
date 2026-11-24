@@ -167,8 +167,8 @@ export async function seedStackData(): Promise<unknown> {
     // Portal-admin reassigns without scope limits; a department head no longer sees other admins
     // since Vendure 3.7.3 restricts administrator reads, which would block the whole suite here.
     const reassignerToken = await adminTokenFor(
-        MANAGER_ACCOUNTS.portalAdmin.username,
-        MANAGER_ACCOUNTS.portalAdmin.password,
+        MANAGER_ACCOUNTS.generalDirector.username,
+        MANAGER_ACCOUNTS.generalDirector.password,
     );
 
     // counterparties returns { items, totalItems }; take:200 is a bound matching the stopgap used

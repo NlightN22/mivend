@@ -112,6 +112,7 @@ export type Administrator = Node & {
     id: Scalars['ID']['output'];
     isActive: Scalars['Boolean']['output'];
     lastName: Scalars['String']['output'];
+    roleCodes: Array<Scalars['String']['output']>;
     updatedAt: Scalars['DateTime']['output'];
     user: User;
 };
@@ -11514,6 +11515,7 @@ export type UpdateGlobalSettingsCustomFieldsInput = {
     defaultLanguage?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+    pickingWorkStages?: InputMaybe<Array<Scalars['String']['input']>>;
     settlementRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
     stockTierLowMax?: InputMaybe<Scalars['Int']['input']>;
     stockTierMediumMax?: InputMaybe<Scalars['Int']['input']>;
@@ -15423,8 +15425,8 @@ export type PortalUsersQuery = {
             lastName: string;
             emailAddress: string;
             isActive: boolean;
+            roleCodes: Array<string>;
             customFields: { departmentId: string | null } | null;
-            user: { roles: Array<{ code: string }> };
         }>;
     };
 };
@@ -19916,11 +19918,7 @@ export const PortalUsersDocument = new TypedDocumentString(`
       customFields {
         departmentId
       }
-      user {
-        roles {
-          code
-        }
-      }
+      roleCodes
     }
     totalItems
   }

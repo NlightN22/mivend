@@ -9,11 +9,7 @@ query PortalUsers($options: AdministratorListOptions, $status: PortalUserStatus)
             customFields {
                 departmentId
             }
-            user {
-                roles {
-                    code
-                }
-            }
+            roleCodes
         }
         totalItems
     }

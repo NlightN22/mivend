@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('the inbox shows the three view chips with counts, Awaiting me first @on:manager-portal-admin @read-only', async ({
+test('the inbox shows the three view chips with counts, Awaiting me first @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/approvals');
@@ -11,7 +11,7 @@ test('the inbox shows the three view chips with counts, Awaiting me first @on:ma
     await expect(page.getByRole('button', { name: /^All \d+$/ })).toBeVisible();
 });
 
-test('a chosen view and sort live in the link @on:manager-portal-admin @read-only', async ({
+test('a chosen view and sort live in the link @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/approvals');
@@ -21,7 +21,7 @@ test('a chosen view and sort live in the link @on:manager-portal-admin @read-onl
     await expect(page).toHaveURL(/sortField=id/);
 });
 
-test('a status filter from the link narrows the list and the counts @on:manager-portal-admin @read-only', async ({
+test('a status filter from the link narrows the list and the counts @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/approvals?view=all&search=zzzz-none');
@@ -31,7 +31,7 @@ test('a status filter from the link narrows the list and the counts @on:manager-
     await expect(page.getByText('No requests match your filters')).toBeVisible();
 });
 
-test('paging to the last page does not snap the window back to the top @on:manager-portal-admin @read-only', async ({
+test('paging to the last page does not snap the window back to the top @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 300 });
@@ -45,7 +45,7 @@ test('paging to the last page does not snap the window back to the top @on:manag
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
-test('a row opens the decision page @on:manager-portal-admin @read-only', async ({ page }) => {
+test('a row opens the decision page @on:manager-general-director @read-only', async ({ page }) => {
     await page.goto('/approvals?view=all');
     const firstId = page.locator('.mv-advanced-data-table__grid tbody tr a').first();
     await expect(firstId).toBeVisible({ timeout: 15000 });

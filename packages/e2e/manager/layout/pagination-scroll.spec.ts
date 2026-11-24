@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 const PAGES = ['/customers'];
 
 for (const path of PAGES) {
-    test(`clicking Next on ${path} does not snap the page back to the top @on:manager-portal-admin @read-only`, async ({
+    test(`clicking Next on ${path} does not snap the page back to the top @on:manager-general-director @read-only`, async ({
         page,
     }) => {
         await page.setViewportSize({ width: 1280, height: 500 });

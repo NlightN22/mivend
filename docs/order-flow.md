@@ -19,7 +19,7 @@ single concurrency-safe (`StockLevel` row locking), idempotent, full-order-only 
 `confirmOrder()` is now a thin wrapper over it.
 
 Stage 3 is also done — `ConfirmOrder` permission (covers confirm + release, granted to
-operator/manager/general-director/portal-admin), an `OrderPlacedEvent` subscriber sets
+operator/manager/general-director), an `OrderPlacedEvent` subscriber sets
 `reservationState = AWAITING_CONFIRMATION` for non-prepaid orders (via the new
 `PaymentMethod.customFields.paymentClassification`, pulled forward from stage 4 since it was
 needed for correct eligibility), `expireDueReservations()` now also returns an order to

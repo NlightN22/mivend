@@ -247,7 +247,7 @@ Saved views are capped (name 80, pageKey 64 of `[A-Za-z0-9._-]`, filters 16 KB J
 One permission per operation type, never one for the whole menu item; the executor declares it and the catalog,
 `previewBulkBatch`, `runBulkBatch`, `undoBulkBatch`, `bulkBatch`, `bulkBatchItems` and `bulkBatches` all check it
 through `BulkExecutorRegistry` (the resolvers carry only `@Allow(Authenticated)`). Activation and the set-password mail (`counterparty-password-reset`, no undo) use
-`ManageCounterpartyPortalAccess` (default roles: manager, department-head, general-director, portal-admin; the first two since 1.1.39, within their counterparty scope). Scope is checked per record, never per batch: at review and again at run time under
+`ManageCounterpartyPortalAccess` (default roles: manager, department-head, general-director; the first two since 1.1.39, within their counterparty scope). Scope is checked per record, never per batch: at review and again at run time under
 the row lock, a record outside the actor's scope is skipped with `out_of_scope` and never changed. A draft belongs to
 its creator (only the creator reads or runs it); the history shows the batches of the operation types the viewer holds,
 and counters and per-record rows are recounted over the records the viewer's scope covers. The portal readiness status (`inn-duplicate`) can reveal that another, possibly out-of-scope, counterparty with a live portal customer shares the INN; this is accepted. Tests: the access matrix
@@ -296,7 +296,7 @@ that customer, since core attaches the existing one. The schema test covers core
 order fields added by mivend plugins are scoped by their own services (`OrderVisibilityService`). Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
-Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so `portal-admin` holds the union of all default roles' rights (a unit test pins it; since 1.1.39 it includes `ReadManagerCard`, `ReadAnalytics` and `RemoveCounterpartyManager`), except `UpdateAdministrator` by owner decision: it manages roles through `setAdministratorRoles`, so core hides the general-director role and its holders from it and no screen may rely on seeing them.
+Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so a role-assigning user would need the union of all rights. `portal-admin` no longer does (owner decision, migration 1791604000000): it holds only `ManageAdministratorLifecycle`, `ReadAdministrator` and `ReadSettings`, enough to activate and deactivate staff accounts and assign any default role through `setAdministratorRoles`. It cannot open Roles & access (core would hide the other roles from it anyway) or act on sales data, and has no `UpdateAdministrator`. Core hides the general-director role and its holders from it, so no screen may rely on seeing them. A unit test pins the exact set. The manager shows default role names and descriptions translated by role code (`i18n/<locale>/roleLabels.ts`); a custom role keeps its own code and description, and the Vendure admin shows the English description.
 
 ## Bootstrap only creates (#374)
 
@@ -1054,4 +1054,4 @@ staff on the Admin API see all of them. A hidden category hides its whole subtre
 
 `setAdministratorRoles` (right `ManageAdministratorLifecycle`) replaces a staff user's roles with default roles only, without the actor holding their rights. It refuses the superadmin role, the actor's own account, a superadmin account, unknown roles, an empty list and a user who holds a non-default (custom) role. It runs under a row lock and publishes the same events as the native update, so other instances receive the change. A changed role reaches the user's already open session after the core session cache expires.
 
-`setAdministratorActive` (same right) refuses to deactivate the caller's own account, so nobody can lock themselves out; reactivation and other accounts are unaffected.
+`setAdministratorActive` (same right) refuses to deactivate the caller's own account (nobody can lock themselves out) and any superadmin account; reactivation and other accounts are unaffected. It does not go through core `softDelete`, whose role-visibility check would hide every user whose roles the narrow `portal-admin` does not hold; it writes `deletedAt` itself and publishes the same `AdministratorEvent`. The users list reads roles from `Administrator.roleCodes` (same right) for the same reason.

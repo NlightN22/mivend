@@ -31,45 +31,28 @@ function fieldInput(
     return page.locator('.mv-field', { hasText: label }).locator('input');
 }
 
-test('portal-admin can reach /settings and see the roles list (positive) @on:manager-portal-admin', async ({
+test('superadmin can reach /settings and see the roles list (positive) @on:manager-superadmin', async ({
     page,
 }) => {
     await page.goto('/settings');
     await expect(page).toHaveURL(/\/settings\/roles$/);
-    // general-director is not asserted: core hides a role from a user lacking one of its rights.
-    await expect(page.getByText('operator', { exact: true })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('manager', { exact: true })).toBeVisible();
-    await expect(page.getByText('department-head', { exact: true })).toBeVisible();
-    await expect(page.getByText('security-officer', { exact: true })).toBeVisible();
-    await expect(page.getByText('portal-admin', { exact: true })).toBeVisible();
+    const main = page.getByRole('main');
+    await expect(main.getByText('Operator', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(main.getByText('Manager', { exact: true })).toBeVisible();
+    await expect(main.getByText('Department head', { exact: true })).toBeVisible();
+    await expect(main.getByText('Security officer', { exact: true })).toBeVisible();
+    await expect(main.getByText('Portal administrator', { exact: true })).toBeVisible();
 });
 
-// Core updateRole needs UpdateAdministrator, which portal-admin no longer holds (#395): role rights are
-// the superadmin's; portal-admin assigns roles to users instead.
-test('portal-admin cannot change the permissions of a role (negative) @on:manager-portal-admin', async ({
+// The portal admin only activates users and assigns their roles; roles and their rights are not its business.
+test('portal-admin cannot open Roles & access (negative) @on:manager-portal-admin', async ({
     page,
 }) => {
-    const read = `query { roles(options: { filter: { code: { eq: "${TARGET_ROLE}" } } }) { items { permissions } } }`;
-    const before = await adminApiViaPage<{ roles: { items: { permissions: string[] }[] } }>(
-        page,
-        read,
-    );
-    expect(before.roles.items[0]?.permissions).not.toContain('CreateOrder');
-
     await page.goto(`/settings/roles/${TARGET_ROLE}`);
-    await page.waitForLoadState('networkidle');
-    await page.getByText('CreateOrder', { exact: true }).click();
-    await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByText(/Permissions could not be saved/)).toBeVisible({ timeout: 15000 });
-
-    const after = await adminApiViaPage<{ roles: { items: { permissions: string[] }[] } }>(
-        page,
-        read,
-    );
-    expect(after.roles.items[0]?.permissions).not.toContain('CreateOrder');
+    await expect(page.getByText('Not authorized')).toBeVisible({ timeout: 15000 });
 });
 
-test('portal-admin can edit a role access scope and it persists (positive) @on:manager-portal-admin', async ({
+test('superadmin can edit a role access scope and it persists (positive) @on:manager-superadmin', async ({
     page,
 }) => {
     const before = await adminApiViaPage<{ roleAccessScopeConfig: string | null }>(
@@ -106,7 +89,7 @@ test('portal-admin can edit a role access scope and it persists (positive) @on:m
     }
 });
 
-test('portal-admin can edit a role credit term limit and it persists (positive) @on:manager-portal-admin', async ({
+test('superadmin can edit a role credit term limit and it persists (positive) @on:manager-superadmin', async ({
     page,
 }) => {
     const newMaxExtraDays = 17;

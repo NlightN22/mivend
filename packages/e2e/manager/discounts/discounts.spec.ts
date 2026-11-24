@@ -94,7 +94,7 @@ test('on a phone each discount is a card @on:manager-operator @read-only', async
     );
 });
 
-test('the list paginates on the server and keeps the page in the URL @on:manager-portal-admin @read-only', async ({
+test('the list paginates on the server and keeps the page in the URL @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 500 });

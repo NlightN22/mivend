@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('mivend.locale', 'ru'));
 });
 
-test('the ERP discounts list reads in Russian: headers, singular row status, day-first dates @on:manager-portal-admin @read-only', async ({
+test('the ERP discounts list reads in Russian: headers, singular row status, day-first dates @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -19,7 +19,7 @@ test('the ERP discounts list reads in Russian: headers, singular row status, day
     await expect(page.locator(ROWS).first()).toContainText(/\d{2}\.\d{2}\.\d{4}/);
 });
 
-test('the requests side of the discounts page reads in Russian @on:manager-portal-admin @read-only', async ({
+test('the requests side of the discounts page reads in Russian @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');

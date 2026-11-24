@@ -8,7 +8,7 @@ async function openFirstPending(page: import('@playwright/test').Page): Promise<
     await expect(page.getByRole('heading', { name: 'Decision' })).toBeVisible();
 }
 
-test('a pending request offers Approve and Reject to someone who may decide @on:manager-portal-admin @read-only', async ({
+test('a pending request offers Approve and Reject to someone who may decide @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await openFirstPending(page);
@@ -16,7 +16,7 @@ test('a pending request offers Approve and Reject to someone who may decide @on:
     await expect(page.getByRole('button', { name: 'Reject' })).toBeEnabled();
 });
 
-test('rejecting without a comment is refused in the form @on:manager-portal-admin @read-only', async ({
+test('rejecting without a comment is refused in the form @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await openFirstPending(page);

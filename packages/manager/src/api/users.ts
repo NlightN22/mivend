@@ -40,7 +40,7 @@ export async function fetchPortalUsers(
             emailAddress: a.emailAddress,
             isActive: a.isActive,
             departmentId: a.customFields?.departmentId ?? null,
-            roleCodes: a.user?.roles?.map(r => r.code) ?? [],
+            roleCodes: a.roleCodes,
         })),
         totalItems: result.portalUsers.totalItems,
     };

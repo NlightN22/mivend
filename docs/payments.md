@@ -935,7 +935,7 @@ is exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefro
   (meaning "obligation accepted"); `Settled` is the payment fact. The previous `paymentClassification` /
   `reservationTtlDays` PaymentMethod fields are removed (columns dropped by the migration).
 - "Payment received": Admin mutation `confirmPaymentReceived(orderId)`, permission `ConfirmPaymentReceived` (operator,
-  manager, general-director, portal-admin), settles the order's Authorized cash/bank-transfer payment under
+  manager, general-director), settles the order's Authorized cash/bank-transfer payment under
   `payment-received:<orderId>`; a repeat is a no-op. Manager order page shows "Cash received" / "Bank transfer received".
   A manager may still confirm an order without payment through `ConfirmOrder`; it keeps occupying the limit.
 - Shop API `deferredCreditPreview` (additive) now also returns `limitControlled`, `allowExceedingCreditLimit`,

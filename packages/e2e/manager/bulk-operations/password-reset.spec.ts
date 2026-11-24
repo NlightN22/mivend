@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { INN_TWIN_A, INN_UNIQUE } from '../../fixtures/seed-inn';
 
 // Twin A has a seeded login and Unique has none (fixtures/seed-inn.ts); mails are covered server-side.
-test.describe('bulk password reset (#375) @on:manager-portal-admin', () => {
+test.describe('bulk password reset (#375) @on:manager-general-director', () => {
     test('a counterparty without a login is skipped with the reason and one with a login is applied', async ({
         page,
     }) => {

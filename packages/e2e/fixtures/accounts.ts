@@ -10,4 +10,6 @@ export const MANAGER_ACCOUNTS = {
     manager: { username: 'petr.manager@mivend.dev', password: 'Password123!' },
     departmentHead: { username: 'olga.depthead@mivend.dev', password: 'Password123!' },
     portalAdmin: { username: 'anna.portaladmin@mivend.dev', password: 'Password123!' },
+    superadmin: { username: SUPERADMIN.identifier, password: SUPERADMIN.password },
+    generalDirector: { username: 'nikolai.director@mivend.dev', password: 'Password123!' },
 } as const;

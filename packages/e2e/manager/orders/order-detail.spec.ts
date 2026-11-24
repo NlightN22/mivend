@@ -64,14 +64,14 @@ test('the customer summary shows the credit figures to every role that sees the 
     await expect(summary).toContainText('Available credit');
 });
 
-test.describe('a flagged cell of the shared e2e order @on:manager-portal-admin', () => {
+test.describe('a flagged cell of the shared e2e order @on:manager-general-director', () => {
     let token: string;
     let requestId: string | null = null;
 
     test.beforeEach(async () => {
         token = await adminTokenFor(
-            MANAGER_ACCOUNTS.portalAdmin.username,
-            MANAGER_ACCOUNTS.portalAdmin.password,
+            MANAGER_ACCOUNTS.generalDirector.username,
+            MANAGER_ACCOUNTS.generalDirector.password,
         );
         const order = readE2eOrder();
         const found = await adminGql<{ order: { lines: { id: string }[] } }>(

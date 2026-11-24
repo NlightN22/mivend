@@ -13,7 +13,7 @@ test.describe('Manager category tree (#59)', () => {
             await restoreCategoryTree(token);
         });
 
-        test('shows the hidden reason per category, then restores the tree @on:manager-portal-admin', async ({
+        test('shows the hidden reason per category, then restores the tree @on:manager-general-director', async ({
             page,
         }) => {
             await setOverride(token, SLUG.oils, 'hidden');

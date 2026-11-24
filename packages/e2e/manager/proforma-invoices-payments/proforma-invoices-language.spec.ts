@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('mivend.locale', 'ru'));
 });
 
-test('the proforma invoices list reads in Russian: breadcrumb, headers, status, day-first dates @on:manager-portal-admin @read-only', async ({
+test('the proforma invoices list reads in Russian: breadcrumb, headers, status, day-first dates @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

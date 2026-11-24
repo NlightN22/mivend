@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Customers list (#344): name suggestions inside the Filter builder, and the credit filter.
-test.describe('customers list filters @on:manager-portal-admin @read-only', () => {
+test.describe('customers list filters @on:manager-general-director @read-only', () => {
     test('the name filter suggests values from the caller scope and applies one as a chip', async ({
         page,
     }) => {

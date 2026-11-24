@@ -37,7 +37,7 @@ for (const path of LIST_PAGES) {
     });
 }
 
-test('/bulk-operations/history has no nested vertical scrollbar @read-only @on:manager-portal-admin', async ({
+test('/bulk-operations/history has no nested vertical scrollbar @read-only @on:manager-general-director', async ({
     page,
 }) => {
     await page.goto('/bulk-operations/history');

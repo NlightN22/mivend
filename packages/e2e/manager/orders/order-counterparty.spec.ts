@@ -117,7 +117,7 @@ async function customerIdByEmail(token: string, email: string): Promise<string> 
 test.describe('order counterparty comes from the order itself @on:manager-operator', () => {
     let operatorToken: string;
     let superadminToken: string;
-    let portalAdminToken: string;
+    let directorToken: string;
     let own: Placed;
     let fallback: Fallback;
     const created: string[] = [];
@@ -128,9 +128,9 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
             MANAGER_ACCOUNTS.operator.username,
             MANAGER_ACCOUNTS.operator.password,
         );
-        portalAdminToken = await adminTokenFor(
-            MANAGER_ACCOUNTS.portalAdmin.username,
-            MANAGER_ACCOUNTS.portalAdmin.password,
+        directorToken = await adminTokenFor(
+            MANAGER_ACCOUNTS.generalDirector.username,
+            MANAGER_ACCOUNTS.generalDirector.password,
         );
         superadminToken = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
         await importRecords('create', [
@@ -164,7 +164,7 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
         }>(
             `query($s: String) { counterparties(options: { search: $s, take: 20 }) { items { id erpId priceType } } }`,
             { s: ORDER_CP.shortName },
-            portalAdminToken,
+            directorToken,
         );
         const counterparty = counterparties.data.counterparties.items.find(
             c => c.erpId === ORDER_CP.counterpartyErpId,
@@ -180,11 +180,11 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
                 'E2E seed data is missing; seed-erp.mjs or global-setup must provide it',
             );
         }
-        await prepareCustomer(portalAdminToken, counterparty.id);
+        await prepareCustomer(directorToken, counterparty.id);
         await adminGql(
             `mutation($c: ID!, $a: ID!) { reassignCounterpartyManager(counterpartyId: $c, administratorId: $a) { id } }`,
             { c: counterparty.id, a: managerId },
-            portalAdminToken,
+            directorToken,
         );
 
         const customerId = await customerIdByEmail(operatorToken, ORDER_CP.customerEmail);
@@ -194,7 +194,7 @@ test.describe('order counterparty comes from the order itself @on:manager-operat
         await adminGql(
             `mutation($id: ID!) { deactivateCounterpartyPortalAccess(customerId: $id) { id } }`,
             { id: customerId },
-            portalAdminToken,
+            directorToken,
         );
         const check = await adminGql<{ order: { counterparty: { id: string } | null } }>(
             `query($id: ID!) { order(id: $id) { counterparty { id } } }`,

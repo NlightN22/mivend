@@ -3,7 +3,7 @@ import { isSorted, readAmounts } from '../../helpers/amount-column';
 
 const ROWS = '.mv-advanced-data-table__grid tbody tr';
 
-test('type chips come from the data, carry counts and All comes first @on:manager-portal-admin @read-only', async ({
+test('type chips come from the data, carry counts and All comes first @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/settlements');
@@ -13,7 +13,7 @@ test('type chips come from the data, carry counts and All comes first @on:manage
     await expect(chips.nth(1)).toContainText(/\d+$/);
 });
 
-test('a type chip lives in the URL and narrows the list on the server @on:manager-portal-admin @read-only', async ({
+test('a type chip lives in the URL and narrows the list on the server @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/settlements');
@@ -23,7 +23,7 @@ test('a type chip lives in the URL and narrows the list on the server @on:manage
     await expect(page.locator(ROWS).first()).toBeVisible();
 });
 
-test('the Filter builder and a sortable header narrow and order the list on the server @on:manager-portal-admin @read-only', async ({
+test('the Filter builder and a sortable header narrow and order the list on the server @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/settlements?sortField=amount&sortDir=ASC');
@@ -52,13 +52,13 @@ test('the Filter builder and a sortable header narrow and order the list on the 
     if (new Set(ascAmounts).size > 1) expect(descAmounts[0]).toBeGreaterThan(ascAmounts[0]);
 });
 
-test('a row links to its customer @on:manager-portal-admin @read-only', async ({ page }) => {
+test('a row links to its customer @on:manager-general-director @read-only', async ({ page }) => {
     await page.goto('/settlements');
     const first = page.locator(ROWS).first();
     await expect(first.locator('a[href^="/customers/"]')).toBeVisible({ timeout: 15000 });
 });
 
-test('the menu offers Settlements to a settlement reader @on:manager-portal-admin @read-only', async ({
+test('the menu offers Settlements to a settlement reader @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/');
@@ -67,7 +67,9 @@ test('the menu offers Settlements to a settlement reader @on:manager-portal-admi
     });
 });
 
-test('on a phone each document is a card @on:manager-portal-admin @read-only', async ({ page }) => {
+test('on a phone each document is a card @on:manager-general-director @read-only', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/settlements');
     await expect(page.getByRole('columnheader').first()).toBeHidden({ timeout: 15000 });
@@ -76,7 +78,7 @@ test('on a phone each document is a card @on:manager-portal-admin @read-only', a
     );
 });
 
-test('the Online payments link opens the payment attempt list @on:manager-portal-admin @read-only', async ({
+test('the Online payments link opens the payment attempt list @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/settlements');
@@ -85,7 +87,7 @@ test('the Online payments link opens the payment attempt list @on:manager-portal
     await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
 });
 
-test('the sidebar has no Payments entry while /payments stays reachable by address @on:manager-portal-admin @read-only', async ({
+test('the sidebar has no Payments entry while /payments stays reachable by address @on:manager-general-director @read-only', async ({
     page,
 }) => {
     await page.goto('/customers');

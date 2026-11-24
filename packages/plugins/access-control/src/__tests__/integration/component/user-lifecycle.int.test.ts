@@ -5,6 +5,8 @@ import {
     DeleteDateColumn,
     Entity,
     JoinColumn,
+    JoinTable,
+    ManyToMany,
     OneToOne,
     PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -28,7 +30,7 @@ import type { BranchAssignmentService } from '../../../branch-assignment.service
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
 // Vendure's real Administrator/User need bootstrap()'s EntityIdStrategy; use mirror tables.
-// AdministratorService.softDelete is stubbed (heavy DI graph); the stub does the same DB write.
+// UserService.softDelete is stubbed (heavy DI graph); the stub does the same DB write.
 
 // Must be a real TypeORM embedded column, not a getter/setter: the query builder needs
 // its metadata to resolve `where: { customFields: { erpId } }`.
@@ -63,6 +65,14 @@ class TestAdministrator {
     user?: TestUser;
 }
 
+@Entity('role')
+class TestRole {
+    @PrimaryGeneratedColumn()
+    id!: number;
+
+    @Column({ type: 'varchar' }) code!: string;
+}
+
 @Entity('user')
 class TestUser {
     @PrimaryGeneratedColumn()
@@ -72,6 +82,10 @@ class TestUser {
 
     @DeleteDateColumn({ type: 'timestamp', nullable: true })
     deletedAt!: Date | null;
+
+    @ManyToMany(() => TestRole)
+    @JoinTable()
+    roles?: TestRole[];
 }
 
 @Entity('erp_user')
@@ -113,7 +127,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestAdministrator, TestUser, TestErpUser],
+        entities: [TestAdministrator, TestUser, TestRole, TestErpUser],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -280,23 +294,17 @@ describe('AdministratorActivationService.setActive (real DB)', () => {
 
     beforeAll(() => {
         const connection = makeConnectionShim();
-        // Stub for AdministratorService.softDelete: performs the same real DB write,
+        // Stub for UserService.softDelete: performs the same real DB write,
         // so reads through the shimmed connection observe genuine state.
-        softDelete = vi.fn(async (_ctx: unknown, id: number) => {
-            const admin = await dataSource
-                .getRepository(TestAdministrator)
-                .findOne({ where: { id } });
-            await dataSource.getRepository(TestAdministrator).update(id, { deletedAt: new Date() });
-            if (admin?.userId) {
-                await dataSource
-                    .getRepository(TestUser)
-                    .update(admin.userId, { deletedAt: new Date() });
-            }
+        softDelete = vi.fn(async (_ctx: unknown, userId: number) => {
+            await dataSource.getRepository(TestUser).update(userId, { deletedAt: new Date() });
         });
         service = new AdministratorActivationService(
             connection,
-            { softDelete } as unknown as import('@vendure/core').AdministratorService,
+            {} as unknown as import('@vendure/core').AdministratorService,
             {} as unknown as ListQueryBuilder, // only findDeactivated needs this; unused here
+            { softDelete } as unknown as import('@vendure/core').UserService,
+            { publish: vi.fn() } as unknown as EventBus,
         );
     });
 

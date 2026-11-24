@@ -42,48 +42,33 @@ test('portal-admin can reach /settings/users and see the seeded administrators (
     await expect(main.getByText('Anna PortalAdmin', { exact: true })).toBeVisible();
 });
 
-test('the Settings sub-nav links Roles & access and Users correctly (positive) @on:manager-portal-admin', async ({
+test('Settings opens on Users for the portal admin, which has no Roles & access (positive) @on:manager-portal-admin', async ({
     page,
 }) => {
-    await page.goto('/settings/roles');
-    // The sidebar also has an unrelated top-level "Team" link (/team, a ComingSoon placeholder)
-    // — scope to the in-page sub-nav specifically.
-    const mainContent = page.getByRole('main');
-    await mainContent.getByRole('link', { name: 'Users' }).click();
+    await page.goto('/settings');
     await expect(page).toHaveURL(/\/settings\/users$/);
     await expect(page.getByText(TARGET_NAME, { exact: true })).toBeVisible({ timeout: 15000 });
-
-    await mainContent.getByRole('link', { name: 'Roles & access' }).click();
-    await expect(page).toHaveURL(/\/settings\/roles$/);
-    await expect(page.getByText('operator', { exact: true })).toBeVisible({ timeout: 15000 });
 });
 
 test("portal-admin can reassign a user's role and it persists (positive) @on:manager-portal-admin", async ({
     page,
 }) => {
     const before = await adminApiViaPage<{
-        administrators: {
-            items: {
-                id: string;
-                emailAddress: string;
-                user: { roles: { id: string; code: string }[] };
-            }[];
-        };
+        portalUsers: { items: { id: string; emailAddress: string; roleCodes: string[] }[] };
+        assignableAdministratorRoles: { id: string; code: string }[];
     }>(
         page,
-        `query { administrators(options: { take: 200 }) { items { id emailAddress user { roles { id code } } } } }`,
+        `query { portalUsers(options: { take: 100 }) { items { id emailAddress roleCodes } } assignableAdministratorRoles { id code } }`,
     );
-    const target = before.administrators.items.find(a => a.emailAddress === TARGET_EMAIL);
+    const target = before.portalUsers.items.find(a => a.emailAddress === TARGET_EMAIL);
     if (!target) throw new Error(`${TARGET_EMAIL} not found`);
-    const originalRoleId = target.user.roles[0]?.id;
-    if (!originalRoleId) throw new Error(`${TARGET_EMAIL} has no role`);
-
-    const rolesResult = await adminApiViaPage<{ roles: { items: { id: string; code: string }[] } }>(
-        page,
-        `query { roles(options: { filter: { code: { eq: "${NEW_ROLE}" } } }) { items { id code } } }`,
-    );
-    const newRoleId = rolesResult.roles.items[0]?.id;
-    if (!newRoleId) throw new Error(`${NEW_ROLE} role not found`);
+    const roleId = (code: string): string => {
+        const role = before.assignableAdministratorRoles.find(r => r.code === code);
+        if (!role) throw new Error(`${code} role not found`);
+        return role.id;
+    };
+    const originalRoleId = roleId(target.roleCodes[0] ?? '');
+    const newRoleId = roleId(NEW_ROLE);
 
     try {
         await page.goto('/settings/users');
@@ -94,15 +79,13 @@ test("portal-admin can reassign a user's role and it persists (positive) @on:man
             .poll(
                 async () => {
                     const after = await adminApiViaPage<{
-                        administrators: {
-                            items: { emailAddress: string; user: { roles: { code: string }[] } }[];
-                        };
+                        portalUsers: { items: { emailAddress: string; roleCodes: string[] }[] };
                     }>(
                         page,
-                        `query { administrators(options: { take: 200 }) { items { emailAddress user { roles { code } } } } }`,
+                        `query { portalUsers(options: { take: 100 }) { items { emailAddress roleCodes } } }`,
                     );
-                    return after.administrators.items.find(a => a.emailAddress === TARGET_EMAIL)
-                        ?.user.roles[0]?.code;
+                    return after.portalUsers.items.find(a => a.emailAddress === TARGET_EMAIL)
+                        ?.roleCodes[0];
                 },
                 { timeout: 15000 },
             )
@@ -120,9 +103,9 @@ test('portal-admin is refused the native administrator update and the superadmin
     page,
 }) => {
     const admins = await adminApiViaPage<{
-        administrators: { items: { id: string; emailAddress: string }[] };
-    }>(page, `query { administrators(options: { take: 200 }) { items { id emailAddress } } }`);
-    const target = admins.administrators.items.find(a => a.emailAddress === TARGET_EMAIL);
+        portalUsers: { items: { id: string; emailAddress: string }[] };
+    }>(page, `query { portalUsers(options: { take: 100 }) { items { id emailAddress } } }`);
+    const target = admins.portalUsers.items.find(a => a.emailAddress === TARGET_EMAIL);
     if (!target) throw new Error(`${TARGET_EMAIL} not found`);
     await expect(
         adminApiViaPage(

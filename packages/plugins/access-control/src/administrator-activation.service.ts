@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { getPageAndCount } from 'shared';
 import type { AdministratorListOptions } from '@vendure/common/lib/generated-types';
+import { SUPER_ADMIN_ROLE_CODE } from '@vendure/common/lib/shared-constants';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
+    AdministratorEvent,
     AdministratorService,
+    EventBus,
     ForbiddenError,
     ListQueryBuilder,
     Logger,
@@ -12,6 +15,7 @@ import {
     RequestContext,
     TransactionalConnection,
     User,
+    UserService,
 } from '@vendure/core';
 
 import { loggerCtx } from './types';
@@ -24,6 +28,8 @@ export class AdministratorActivationService {
         private connection: TransactionalConnection,
         private administratorService: AdministratorService,
         private listQueryBuilder: ListQueryBuilder,
+        private userService: UserService,
+        private eventBus: EventBus,
     ) {}
 
     // AdministratorService.findAll/findOne hide soft-deleted rows, so this needs its own query.
@@ -84,11 +90,14 @@ export class AdministratorActivationService {
         const repo = this.connection.getRepository(ctx, Administrator);
         const admin = await repo.findOne({
             where: { id: administratorId },
-            relations: ['user'],
+            relations: ['user', 'user.roles'],
             withDeleted: true,
         });
         if (!admin) {
             throw new Error(`No Administrator found with id=${administratorId}`);
+        }
+        if (!isActive && admin.user?.roles?.some(r => r.code === SUPER_ADMIN_ROLE_CODE)) {
+            throw new ForbiddenError();
         }
         if (
             !isActive &&
@@ -99,10 +108,20 @@ export class AdministratorActivationService {
         }
         const isSoftDeleted = admin.deletedAt != null;
         if (!isActive && !isSoftDeleted) {
-            await this.administratorService.softDelete(ctx, administratorId);
+            await this.deactivate(ctx, admin);
         } else if (isActive && isSoftDeleted) {
             await this.reactivate(ctx, administratorId);
         }
+    }
+
+    // Core softDelete reads the administrator through a role-visibility check, which hides every user whose roles the
+    // caller does not hold; this duty must not depend on that, so the same steps run without it.
+    private async deactivate(ctx: RequestContext, admin: Administrator): Promise<void> {
+        await this.connection
+            .getRepository(ctx, Administrator)
+            .update({ id: admin.id }, { deletedAt: new Date() });
+        await this.userService.softDelete(ctx, admin.user.id);
+        await this.eventBus.publish(new AdministratorEvent(ctx, admin, 'deleted', admin.id));
     }
 
     // No public Vendure API clears deletedAt (only an internal superadmin-recovery path exists),

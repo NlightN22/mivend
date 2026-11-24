@@ -35,7 +35,7 @@ function row(page: Page, shortName: string): ReturnType<Page['locator']> {
     return page.locator('tr', { hasText: shortName });
 }
 
-test.describe('customers list portal state (#375) @on:manager-portal-admin @read-only', () => {
+test.describe('customers list portal state (#375) @on:manager-general-director @read-only', () => {
     test('the list shows Portal and Status in ERP headers and no Portal access header', async ({
         page,
     }) => {

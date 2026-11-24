@@ -37,7 +37,7 @@ async function openE2eCustomerDetail(page: Page): Promise<void> {
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
-test('a trading point edit shows up in its Change journal and in the journal page @on:manager-portal-admin', async ({
+test('a trading point edit shows up in its Change journal and in the journal page @on:manager-general-director', async ({
     page,
 }) => {
     await page.goto('/');

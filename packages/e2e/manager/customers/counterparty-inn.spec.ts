@@ -3,7 +3,7 @@ import { INN_MISSING, INN_TWIN_A, INN_TWIN_B, INN_UNIQUE } from '../../fixtures/
 
 // #225: a counterparty needs a unique inn before portal binding. Twin A is seeded already bound,
 // so the refusals below create nothing and the specs are idempotent.
-test.describe('counterparty INN guard (#225) @on:manager-portal-admin', () => {
+test.describe('counterparty INN guard (#225) @on:manager-general-director', () => {
     function row(page: Page, shortName: string): ReturnType<Page['locator']> {
         return page.locator('tr', { hasText: shortName });
     }

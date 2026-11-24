@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // The History tab filters through the shared Filter builder (#344); the header funnels are gone.
-test.describe('customer History tab — Filter builder @on:manager-portal-admin @read-only', () => {
+test.describe('customer History tab — Filter builder @on:manager-general-director @read-only', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
         await page.goto('/customers?search=E2E%20Co');
         const row = page.getByRole('row').filter({ hasText: 'E2E Co' }).first();

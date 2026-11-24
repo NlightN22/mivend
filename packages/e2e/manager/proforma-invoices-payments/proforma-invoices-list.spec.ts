@@ -157,7 +157,9 @@ test('the order cell link opens the order card @on:manager-operator @read-only',
     await expect(page).toHaveURL(/\/orders\/\d+/);
 });
 
-test('the list paginates on the server @on:manager-portal-admin @read-only', async ({ page }) => {
+test('the list paginates on the server @on:manager-general-director @read-only', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 1280, height: 500 });
     await page.goto('/proforma-invoices');
     const nextButton = page.getByRole('button', { name: 'Next Page' });
