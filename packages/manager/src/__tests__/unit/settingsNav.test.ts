@@ -14,7 +14,11 @@ describe('buildSettingsNav', () => {
 
     it('hides permission-gated sections and drops groups left empty', () => {
         expect(labels(() => false)).not.toContain('System health');
-        expect(buildSettingsNav(() => false).map(g => g.label)).toEqual(['Access', 'Organization']);
+        expect(buildSettingsNav(() => false)).toEqual([]);
+    });
+
+    it('shows only Users to a holder of ManageAdministratorLifecycle alone', () => {
+        expect(labels(p => p === 'ManageAdministratorLifecycle')).toEqual(['Users']);
     });
 
     it('shows System health to ManageAccessControl and to ManageErpIntegration alone', () => {

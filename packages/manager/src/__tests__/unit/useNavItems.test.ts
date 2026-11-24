@@ -42,4 +42,21 @@ describe('useNavItems', () => {
         expect(flatLabels().sidebar).toContain('Analytics');
         expect(flatLabels().sheet).toContain('Analytics');
     });
+
+    it('shows a staff-accounts-only user the dashboard and System settings, nothing about sales', () => {
+        granted.clear();
+        granted.add('ManageAdministratorLifecycle');
+        const { sidebar, sheet } = flatLabels();
+        expect(sidebar).toEqual(['Dashboard', 'System settings']);
+        expect(sheet).toEqual(['System settings']);
+    });
+
+    it('lists sales entries with the order and customer rights', () => {
+        granted.clear();
+        granted.add('ReadOrder');
+        granted.add('ReadCustomer');
+        const { sidebar } = flatLabels();
+        for (const label of ['Customers', 'Orders', 'Approvals', 'Team', 'Discounts'])
+            expect(sidebar).toContain(label);
+    });
 });

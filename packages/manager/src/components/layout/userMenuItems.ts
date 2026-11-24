@@ -26,5 +26,6 @@ export const THEME_CHOICES: { value: ThemePreference; labelKey: string; icon: Co
 export function systemSettingsPath(hasPermission: (name: string) => boolean): string | null {
     if (hasPermission('ManageAccessControl')) return '/settings';
     if (hasPermission('ManageVisibilityGrants')) return '/settings/visibility-grants';
+    if (hasPermission('ManageAdministratorLifecycle')) return '/settings/users';
     return null;
 }

@@ -22,6 +22,10 @@ describe('systemSettingsPath', () => {
         );
     });
 
+    it('opens Users with only ManageAdministratorLifecycle', () => {
+        expect(systemSettingsPath(granted('ManageAdministratorLifecycle'))).toBe('/settings/users');
+    });
+
     it('returns null with neither permission', () => {
         expect(systemSettingsPath(granted('ReadOrder'))).toBeNull();
     });

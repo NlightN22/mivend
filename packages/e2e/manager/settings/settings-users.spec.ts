@@ -42,10 +42,14 @@ test('portal-admin can reach /settings/users and see the seeded administrators (
     await expect(main.getByText('Anna PortalAdmin', { exact: true })).toBeVisible();
 });
 
-test('Settings opens on Users for the portal admin, which has no Roles & access (positive) @on:manager-portal-admin', async ({
+test('the portal admin menu offers System settings and no sales entries, and Settings opens on Users (positive) @on:manager-portal-admin', async ({
     page,
 }) => {
-    await page.goto('/settings');
+    await page.goto('/');
+    const nav = page.getByRole('navigation');
+    await expect(nav.getByRole('link', { name: 'Customers' })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Approvals' })).toHaveCount(0);
+    await nav.getByRole('link', { name: 'System settings' }).click();
     await expect(page).toHaveURL(/\/settings\/users$/);
     await expect(page.getByText(TARGET_NAME, { exact: true })).toBeVisible({ timeout: 15000 });
 });

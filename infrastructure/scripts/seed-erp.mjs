@@ -258,8 +258,7 @@ async function ensureOrgStructureAdmins() {
             lastName: 'Director',
             roleCode: 'general-director',
         },
-        // ManageAccessControl — needed to exercise the manager portal's Settings > Roles &
-        // Access page (see default-roles.ts's portal-admin permissions).
+        // Staff accounts only: exercises Settings > Users (activation, role assignment).
         {
             email: 'anna.portaladmin@mivend.dev',
             firstName: 'Anna',

@@ -22,12 +22,11 @@ describe('release grant entries', () => {
         }
     });
 
-    it('deliver the 1.1.8 power-of-attorney right to its four roles', () => {
+    it('deliver the 1.1.8 power-of-attorney right to its three roles', () => {
         const grants = PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.release === '1.1.8');
         expect(grants.map(g => g.roleCode).sort()).toEqual([
             'department-head',
             'general-director',
-            'portal-admin',
             'security-officer',
         ]);
     });

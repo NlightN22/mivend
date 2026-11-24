@@ -19,8 +19,12 @@ const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
     {
         label: 'access',
         entries: [
-            { label: 'roles', to: '/settings/roles' },
-            { label: 'users', to: '/settings/users' },
+            { label: 'roles', to: '/settings/roles', visible: has => has('ManageAccessControl') },
+            {
+                label: 'users',
+                to: '/settings/users',
+                visible: has => has('ManageAdministratorLifecycle'),
+            },
             {
                 label: 'unsorted',
                 to: '/settings/unsorted',
@@ -36,14 +40,26 @@ const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
     {
         label: 'organization',
         entries: [
-            { label: 'branches', to: '/settings/branches' },
+            {
+                label: 'branches',
+                to: '/settings/branches',
+                visible: has => has('ManageAccessControl'),
+            },
             {
                 label: 'departmentBranch',
                 to: '/settings/department-branch',
                 visible: has => has('ManageAccessControl'),
             },
-            { label: 'organizations', to: '/settings/organizations' },
-            { label: 'categoryVisibility', to: '/settings/category-visibility' },
+            {
+                label: 'organizations',
+                to: '/settings/organizations',
+                visible: has => has('ManageAccessControl'),
+            },
+            {
+                label: 'categoryVisibility',
+                to: '/settings/category-visibility',
+                visible: has => has('UpdateCatalog'),
+            },
             {
                 label: 'priceTypeGaps',
                 to: '/settings/price-type-gaps',

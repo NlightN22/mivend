@@ -25,10 +25,13 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
     // Order per docs/manager-portal-ui-concept.md.
     const menuItems = computed<AppSidebarItem[]>(() => {
         // Proforma invoices are gated on the same permissions as their visible* queries.
-        const documents: AppSidebarItem[] = [{ label: t('shell.nav.orders'), path: '/orders' }];
+        const sales = authStore.hasPermission('ReadOrder');
+        const documents: AppSidebarItem[] = sales
+            ? [{ label: t('shell.nav.orders'), path: '/orders' }]
+            : [];
         if (authStore.hasPermission('ReadProformaInvoice'))
             documents.push({ label: t('shell.nav.proformaInvoices'), path: '/proforma-invoices' });
-        documents.push({ label: t('shell.nav.discounts'), path: '/discounts' });
+        if (sales) documents.push({ label: t('shell.nav.discounts'), path: '/discounts' });
         // The ERP document lists are gated like their visible* queries (the order right).
         if (authStore.hasPermission('ReadOrder'))
             for (const kind of ERP_DOCUMENT_KINDS)
@@ -47,15 +50,21 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
             : [];
         const items: AppSidebarItem[] = [
             { label: t('shell.nav.dashboard'), path: '/' },
-            { label: t('shell.nav.customers'), path: '/customers' },
-            { label: t('shell.nav.documents'), children: documents },
+            ...(authStore.hasPermission('ReadCustomer')
+                ? [{ label: t('shell.nav.customers'), path: '/customers' }]
+                : []),
+            ...(documents.length ? [{ label: t('shell.nav.documents'), children: documents }] : []),
             ...settlements,
-            {
-                label: t('shell.nav.approvals'),
-                path: '/approvals',
-                badgeCount: approvalsBadgeCount.value,
-            },
-            { label: t('shell.nav.team'), path: '/team' },
+            ...(sales
+                ? [
+                      {
+                          label: t('shell.nav.approvals'),
+                          path: '/approvals',
+                          badgeCount: approvalsBadgeCount.value,
+                      },
+                      { label: t('shell.nav.team'), path: '/team' },
+                  ]
+                : []),
         ];
         if (canOpenBulkOperations(authStore.hasPermission)) {
             items.push({ label: t('shell.nav.bulkOperations'), path: '/bulk-operations' });
@@ -73,24 +82,32 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
 
     // Must be computed, not a plain array: the async onMounted badge update would never reach
     // the rendered badge (a literal freezes badgeCount at first script setup).
-    const mobileNavItems = computed<AppMobileNavItem[]>(() => [
-        { key: 'dashboard', label: t('shell.nav.dashboard'), path: '/', icon: 'home' },
-        {
-            key: 'customers',
-            label: t('shell.nav.customers'),
-            path: '/customers',
-            icon: 'customers',
-        },
-        { key: 'orders', label: t('shell.nav.orders'), path: '/orders', icon: 'orders' },
-        {
-            key: 'approvals',
-            label: t('shell.nav.approvals'),
-            path: '/approvals',
-            icon: 'approvals',
-            badgeCount: approvalsBadgeCount.value,
-        },
-        { key: 'more', label: t('shell.nav.more'), icon: 'more' },
-    ]);
+    const mobileNavItems = computed<AppMobileNavItem[]>(() => {
+        const sales = authStore.hasPermission('ReadOrder');
+        const items: AppMobileNavItem[] = [
+            { key: 'dashboard', label: t('shell.nav.dashboard'), path: '/', icon: 'home' },
+        ];
+        if (authStore.hasPermission('ReadCustomer'))
+            items.push({
+                key: 'customers',
+                label: t('shell.nav.customers'),
+                path: '/customers',
+                icon: 'customers',
+            });
+        if (sales)
+            items.push(
+                { key: 'orders', label: t('shell.nav.orders'), path: '/orders', icon: 'orders' },
+                {
+                    key: 'approvals',
+                    label: t('shell.nav.approvals'),
+                    path: '/approvals',
+                    icon: 'approvals',
+                    badgeCount: approvalsBadgeCount.value,
+                },
+            );
+        items.push({ key: 'more', label: t('shell.nav.more'), icon: 'more' });
+        return items;
+    });
 
     // Same permission gates as the desktop sidebar (menuItems) — the sheet must never offer a
     // route the current admin's permissions would just have the underlying query/mutation reject.
@@ -102,7 +119,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
                 label: t('shell.nav.proformaInvoices'),
                 path: '/proforma-invoices',
             });
-        items.push({ key: 'discounts', label: t('shell.nav.discounts'), path: '/discounts' });
+        if (authStore.hasPermission('ReadOrder'))
+            items.push({ key: 'discounts', label: t('shell.nav.discounts'), path: '/discounts' });
         if (authStore.hasPermission('ReadOrder'))
             for (const kind of ERP_DOCUMENT_KINDS)
                 items.push({
@@ -122,7 +140,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>): UseNavItems {
                 label: t('shell.nav.settlements'),
                 path: '/settlements',
             });
-        items.push({ key: 'team', label: t('shell.nav.team'), path: '/team' });
+        if (authStore.hasPermission('ReadOrder'))
+            items.push({ key: 'team', label: t('shell.nav.team'), path: '/team' });
         if (authStore.hasPermission('ReadAnalytics'))
             items.push({ key: 'analytics', label: t('shell.nav.analytics'), path: '/analytics' });
         if (authStore.hasPermission('ReadChangeJournal'))
