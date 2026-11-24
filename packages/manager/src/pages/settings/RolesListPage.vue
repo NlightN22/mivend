@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useRoleLabels } from '../../composables/useRoleLabels';
 import { fetchRoles, type RoleSummary } from '../../api/settings';
 
 const { t } = useI18n();
+const { roleName, roleDescription } = useRoleLabels();
 const authStore = useAuthStore();
+const router = useRouter();
+
+// Settings opens here; a user who only manages staff accounts goes straight to Users.
+watch(
+    () => authStore.permissions,
+    () => {
+        if (
+            !authStore.hasPermission('ManageAccessControl') &&
+            authStore.hasPermission('ManageAdministratorLifecycle')
+        )
+            void router.replace('/settings/users');
+    },
+    { immediate: true },
+);
 const roles = ref<RoleSummary[]>([]);
 const loading = ref(true);
 const error = ref('');
@@ -47,8 +64,10 @@ onMounted(load);
             <ul v-if="roles.length" class="roles-list__items">
                 <li v-for="role in roles" :key="role.id">
                     <RouterLink :to="`/settings/roles/${role.code}`" class="roles-list__row">
-                        <strong>{{ role.code }}</strong>
-                        <span class="roles-list__description">{{ role.description }}</span>
+                        <strong>{{ roleName(role.code) }}</strong>
+                        <span class="roles-list__description">{{
+                            roleDescription(role.code, role.description)
+                        }}</span>
                     </RouterLink>
                 </li>
             </ul>

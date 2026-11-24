@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useRoleLabels } from '../../composables/useRoleLabels';
 import {
     MvButton,
     MvCheckbox,
@@ -30,6 +31,7 @@ import {
 } from '../../api/settings';
 
 const { t } = useI18n();
+const { roleName, roleDescription } = useRoleLabels();
 const route = useRoute();
 const authStore = useAuthStore();
 
@@ -167,10 +169,10 @@ async function save(): Promise<void> {
     <div v-else-if="!loading && role" class="role-detail">
         <div class="role-detail__breadcrumb">
             <RouterLink to="/settings/roles">{{ t('settingsAccess.roleDetail.crumb') }}</RouterLink>
-            / {{ role.code }}
+            / {{ roleName(role.code) }}
         </div>
-        <h1 class="role-detail__title">{{ role.code }}</h1>
-        <p class="role-detail__description">{{ role.description }}</p>
+        <h1 class="role-detail__title">{{ roleName(role.code) }}</h1>
+        <p class="role-detail__description">{{ roleDescription(role.code, role.description) }}</p>
 
         <MvPanel :title="t('settingsAccess.roleDetail.scope')">
             <div class="role-detail__scope-grid">

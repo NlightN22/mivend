@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoleLabels } from '../../composables/useRoleLabels';
 import {
     MvButton,
     MvModal,
@@ -17,6 +18,7 @@ import { useAuthStore } from '../../stores/auth';
 
 // Email is the identifying/searched column: unique per administrator, unlike the name.
 const { t } = useI18n();
+const { roleName } = useRoleLabels();
 const props = defineProps<{
     users: PortalUser[];
     loading: boolean;
@@ -241,7 +243,7 @@ function confirmDeactivate(): void {
         <template #cell-role="{ data }">
             <MvSelect
                 :model-value="(data as UserRow).roleId"
-                :options="roles.map(r => ({ value: r.id, label: r.code }))"
+                :options="roles.map(r => ({ value: r.id, label: roleName(r.code) }))"
                 :disabled="savingRoleId === (data as UserRow).id"
                 @update:model-value="emit('change-role', (data as UserRow).user, $event)"
             />
