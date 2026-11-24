@@ -52,7 +52,7 @@ export function buildOrderAnalyticsColumns(
             filterConfig: NOT_FILTERED,
         });
     }
-    columns.push(numberColumn('orderCount', 110, 7, 90));
+    columns.push(numberColumn('orderCount', 130, 7, 120));
     columns.push(
         ...(productMode
             ? [

@@ -141,6 +141,23 @@ describe('period helpers', () => {
     });
 });
 
+describe('rows without an entity id', () => {
+    it('names the group "not specified" when broken down by an entity, else titles by period or total', () => {
+        const noManager = row({ label: '', dimensionId: '', periodStart: '2026-03-01T00:00:00Z' });
+        expect(toTableRows([noManager], 'Total', format, 'Not specified')[0]!.title).toBe(
+            'Not specified',
+        );
+        expect(toTableRows([noManager], 'Total', format)[0]!.title).toBe('period:2026-03');
+        expect(
+            toTableRows(
+                [row({ label: '', dimensionId: '', periodStart: null })],
+                'Total',
+                format,
+            )[0]!.title,
+        ).toBe('Total');
+    });
+});
+
 describe('product line totals', () => {
     it('carries the quantity and line amount into the table row and sorts them as numbers', () => {
         const rows = toTableRows(

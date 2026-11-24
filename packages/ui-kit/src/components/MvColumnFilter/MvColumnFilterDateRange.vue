@@ -5,7 +5,7 @@ import { useUiLocale } from '../../utils/uiLocale';
 import { datePeriodError } from '../../utils/fieldValidation';
 import MvButton from '../MvButton/MvButton.vue';
 import MvDateRangeField from '../MvDateRangeField/MvDateRangeField.vue';
-import { DATE_RANGE_PRESETS, resolveDateRangePreset } from './dateRangePresets';
+import { DATE_RANGE_PRESETS, presetLabel, resolveDateRangePreset } from './dateRangePresets';
 import type { DateRangeFilterConfig, DateRangeFilterValue } from './columnFilterTypes';
 const uiLabel = useUiLabels();
 
@@ -73,7 +73,7 @@ function onClear(): void {
             @change="onPresetChange"
         >
             <option v-for="preset in presets" :key="preset.key" :value="preset.key">
-                {{ preset.label }}
+                {{ presetLabel(uiLabel, preset) }}
             </option>
         </select>
 

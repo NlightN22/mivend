@@ -92,7 +92,12 @@ const formatPeriod = (iso: string): string =>
         : formatDate(iso);
 
 const allRows = computed(() =>
-    toTableRows(report.rows.value, t('analytics.orders.total'), formatPeriod),
+    toTableRows(
+        report.rows.value,
+        t('analytics.orders.total'),
+        formatPeriod,
+        filters.value.dimension === 'NONE' ? undefined : t('analytics.orders.notSpecified'),
+    ),
 );
 const matching = computed(() =>
     sortRows(

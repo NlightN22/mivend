@@ -3,7 +3,11 @@ import { computed } from 'vue';
 import { useUiLabels } from '../../utils/uiLabels';
 import { datePeriodError } from '../../utils/fieldValidation';
 import MvDateField from '../MvDateField/MvDateField.vue';
-import { DATE_RANGE_PRESETS, resolveDateRangePreset } from '../MvColumnFilter/dateRangePresets';
+import {
+    DATE_RANGE_PRESETS,
+    presetLabel,
+    resolveDateRangePreset,
+} from '../MvColumnFilter/dateRangePresets';
 
 const uiLabel = useUiLabels();
 const from = defineModel<string>('from', { required: true });
@@ -45,7 +49,7 @@ const error = computed(() =>
                 class="mv-date-range__preset"
                 @click="applyPreset(preset.key)"
             >
-                {{ preset.label }}
+                {{ presetLabel(uiLabel, preset) }}
             </button>
         </div>
         <p v-if="error" class="mv-date-range__error">{{ error }}</p>

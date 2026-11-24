@@ -24,10 +24,15 @@ export function toTableRows(
     rows: OrderAnalyticsRow[],
     labelOfTotal: string,
     formatPeriod: (iso: string) => string,
+    // Set when the report is broken down by an entity: its rows without an id are the "not specified" group.
+    labelOfNoEntity?: string,
 ): OrderAnalyticsTableRow[] {
     return rows.map((row, index) => ({
         key: `${index}:${row.periodStart ?? ''}:${row.dimensionId}:${row.currency}`,
-        title: row.label || (row.periodStart ? formatPeriod(row.periodStart) : labelOfTotal),
+        title:
+            row.label ||
+            (labelOfNoEntity && !row.dimensionId ? labelOfNoEntity : null) ||
+            (row.periodStart ? formatPeriod(row.periodStart) : labelOfTotal),
         period: row.periodStart,
         currency: row.currency,
         orderCount: row.orderCount,

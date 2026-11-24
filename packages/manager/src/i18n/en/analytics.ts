@@ -25,6 +25,7 @@ export default {
     },
     orders: {
         searchPlaceholder: 'Search by name…',
+        notSpecified: 'Not specified',
         total: 'Total',
         period: 'Period',
         granularity: 'Group by period',

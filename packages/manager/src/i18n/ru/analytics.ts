@@ -27,6 +27,7 @@ const analytics: typeof en = {
     },
     orders: {
         searchPlaceholder: 'Поиск по названию…',
+        notSpecified: 'Не указано',
         total: 'Итого',
         period: 'Период',
         granularity: 'Группировать по периоду',

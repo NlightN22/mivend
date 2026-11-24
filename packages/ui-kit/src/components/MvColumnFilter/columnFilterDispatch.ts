@@ -4,7 +4,7 @@ import type {
     ColumnFilterConfig,
     DateRangeFilterValue,
 } from './columnFilterTypes';
-import { DATE_RANGE_PRESETS } from './dateRangePresets';
+import { DATE_RANGE_PRESETS, presetLabel } from './dateRangePresets';
 
 // PrimeVue's ColumnFilter exposes no close handle; a body click reuses its outside-click listener.
 // Guarded for non-DOM test environments. Keep this limited to filter-overlay interaction.
@@ -96,7 +96,8 @@ export function describeValue(
             const v = value as DateRangeFilterValue;
             if (v.preset && v.preset !== 'custom') {
                 const presets = config.presets ?? DATE_RANGE_PRESETS;
-                return presets.find(p => p.key === v.preset)?.label ?? v.preset;
+                const found = presets.find(p => p.key === v.preset);
+                return found ? presetLabel(uiLabel, found) : v.preset;
             }
             return v.from && v.to ? `${v.from} – ${v.to}` : v.from || v.to;
         }

@@ -6,7 +6,7 @@ export interface AnalyticsPluginOptions {
     orderMetricsKeyFile?: string;
     // TLS by default; a test passes insecure credentials for its in-process server.
     orderMetricsCredentials?: ChannelCredentials;
-    // Plain-text channel for the access-test double; the server config enables it only under NODE_ENV=test.
+    // Plain-text channel for the access-test double; the server config never enables it in production.
     orderMetricsInsecure?: boolean;
 }
 

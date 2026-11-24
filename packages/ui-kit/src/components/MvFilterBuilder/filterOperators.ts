@@ -61,14 +61,28 @@ export function operatorsFor(column: FilterColumn): FilterOperator[] {
     return column.operators ? all.filter(op => column.operators?.includes(op)) : all;
 }
 
-export function operatorLabel(column: FilterColumn, operator: FilterOperator): string {
-    return (column.type === 'select' && SELECT_LABEL[operator]) || OPERATOR_LABEL[operator];
+export type OperatorUiLabel = (key: string, fallback: string) => string;
+
+// An app translates through `operator_<op>` (and `operatorSelect_<op>` for a select column); English is the fallback.
+export function operatorLabel(
+    column: FilterColumn,
+    operator: FilterOperator,
+    uiLabel: OperatorUiLabel = (_key, fallback) => fallback,
+): string {
+    const select = column.type === 'select' ? SELECT_LABEL[operator] : undefined;
+    return select
+        ? uiLabel(`operatorSelect_${operator}`, select)
+        : uiLabel(`operator_${operator}`, OPERATOR_LABEL[operator]);
 }
 
 // Short form for chips: numbers read as `Total > 1000`, the rest as words.
-export function operatorChipLabel(column: FilterColumn, operator: FilterOperator): string {
+export function operatorChipLabel(
+    column: FilterColumn,
+    operator: FilterOperator,
+    uiLabel?: OperatorUiLabel,
+): string {
     if (column.type === 'number' && SYMBOL[operator]) return SYMBOL[operator]!;
-    return operatorLabel(column, operator);
+    return operatorLabel(column, operator, uiLabel);
 }
 
 export function operatorValueKind(operator: FilterOperator): OperatorValueKind {

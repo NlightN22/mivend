@@ -965,7 +965,8 @@ export const config: VendureConfig = {
             orderMetricsAddress: process.env.ANALYTICS_GRPC_ADDRESS || undefined,
             orderMetricsKeyFile: process.env.ANALYTICS_GRPC_KEY_FILE || undefined,
             orderMetricsInsecure:
-                process.env.NODE_ENV === 'test' && process.env.ANALYTICS_GRPC_INSECURE === 'true',
+                process.env.NODE_ENV !== 'production' &&
+                process.env.ANALYTICS_GRPC_INSECURE === 'true',
         }),
         // After every plugin that registers a scheduled task: it labels their writes in the journal.
         ChangeJournalPlugin.init({}),

@@ -43,10 +43,10 @@ const value = ref<FilterValue>(props.initial?.value ?? emptyValueFor(operator.va
 const kind = computed(() => operatorValueKind(operator.value));
 const canApply = computed(() => isValueComplete(operator.value, value.value));
 const operatorOptions = computed(() =>
-    operators.value.map(op => ({ value: op, label: operatorLabel(props.column, op) })),
+    operators.value.map(op => ({ value: op, label: operatorLabel(props.column, op, uiLabel) })),
 );
 const selectOptions = computed(() => [
-    { value: '', label: 'Select…' },
+    { value: '', label: uiLabel('selectOption', 'Select…') },
     ...(props.column.options ?? []),
 ]);
 const inputType = computed(() => (props.column.type === 'number' ? 'number' : 'text'));
@@ -83,7 +83,7 @@ function apply(): void {
             >
                 ‹
             </button>
-            Filter by {{ column.label }}
+            {{ uiLabel('filterBy', 'Filter by') }} {{ column.label }}
         </div>
         <MvSelect
             :model-value="operator"
@@ -164,8 +164,15 @@ function apply(): void {
             data-testid="filter-value"
             @update:model-value="value = $event"
         />
-        <MvButton size="sm" variant="primary" native-type="submit" :disabled="!canApply">
-            Apply filter
+        <!-- mousedown must not blur a suggest input: its list closes and the click would miss the button -->
+        <MvButton
+            size="sm"
+            variant="primary"
+            native-type="submit"
+            :disabled="!canApply"
+            @mousedown.prevent
+        >
+            {{ uiLabel('applyFilter', 'Apply filter') }}
         </MvButton>
     </form>
 </template>

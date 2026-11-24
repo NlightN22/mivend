@@ -13,6 +13,17 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
     { key: 'custom', label: 'Custom range' },
 ];
 
+// A default preset takes the app's translation (`datePreset_<key>`); a consumer's own label stays as given.
+export function presetLabel(
+    uiLabel: (key: string, fallback: string) => string,
+    preset: DateRangePreset,
+): string {
+    const isDefault = DATE_RANGE_PRESETS.some(
+        d => d.key === preset.key && d.label === preset.label,
+    );
+    return isDefault ? uiLabel(`datePreset_${preset.key}`, preset.label) : preset.label;
+}
+
 function toIso(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }

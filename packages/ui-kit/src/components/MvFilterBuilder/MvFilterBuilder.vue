@@ -35,7 +35,9 @@ const { style: panelStyle, place } = useAnchoredPanel({
 const chips = computed(() =>
     conditions.value.flatMap((condition, index) => {
         const column = props.columns.find(c => c.key === condition.columnKey);
-        return column ? [{ index, column, label: describeCondition(condition, column) }] : [];
+        return column
+            ? [{ index, column, label: describeCondition(condition, column, label) }]
+            : [];
     }),
 );
 
