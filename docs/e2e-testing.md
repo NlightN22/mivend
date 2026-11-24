@@ -142,6 +142,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `storefront-session` | dev | session-ended bar | `--project=storefront storefront/session` |
 | `storefront-theme` | dev | storefront theme: system default before mount, live follow, menu choice persisted (#313) | `--project=storefront storefront/theme` |
 | `manager-acting` | dev | acting-as-customer sessions: attribution, isolation from the customer's own cart and sessions, single-use ticket, finish, credit check (#322) | `--project=manager-operator manager/acting` |
+| `manager-analytics` | dev | orders analytics report on the analytics test double: name filters resolved to ERP ids, customer manager dimension, product line totals, ru/en (#396) | `--project=manager-general-director manager/analytics` |
 | `manager-auth` | dev | manager login, password reset, sign-in through the corporate account against the local mock OIDC provider (no stored session) | `--project=manager-noauth` |
 | `manager-bulk-operations` | dev | bulk operations wizard: select all, parameters, review, run and result | `--project=manager-portal-admin --project=manager-general-director manager/bulk-operations` |
 | `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin --project=manager-general-director manager/catalog` |

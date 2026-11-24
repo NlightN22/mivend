@@ -29,6 +29,7 @@ export function serverEnv(
     base: Record<string, string>,
     name: string,
     rabbitUrl: string,
+    analytics?: { address: string; keyFile: string },
 ): Record<string, string> {
     return {
         ...base,
@@ -47,6 +48,14 @@ export function serverEnv(
         RABBITMQ_URL: rabbitUrl,
         ELASTICSEARCH_INDEX_PREFIX: `${name}-`,
         DOCUMENT_PDF_DIR: resolve(STACK_DIR, `pdfs-${name}`),
+        // The analytics service is a test double that echoes what the server asked for.
+        ...(analytics
+            ? {
+                  ANALYTICS_GRPC_ADDRESS: analytics.address,
+                  ANALYTICS_GRPC_KEY_FILE: analytics.keyFile,
+                  ANALYTICS_GRPC_INSECURE: 'true',
+              }
+            : {}),
     };
 }
 

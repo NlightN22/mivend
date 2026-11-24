@@ -1,7 +1,8 @@
 import { spawnSync, type ChildProcess } from 'child_process';
-import { mkdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { startEchoOrderMetricsServer, type EchoOrderMetricsServer } from '@mivend/plugin-analytics';
 import { createVhost, deleteVhost } from '../access/harness/rabbit-vhost';
 import { stopGroup } from '../access/harness/server-process';
 import { cloneDatabase, createDatabase, dropDatabase } from '../access/harness/test-database';
@@ -39,6 +40,7 @@ const children: ChildProcess[] = [];
 // E2E_TEMPLATE=0 seeds every stack from scratch instead of copying the seeded template database.
 const useTemplate = process.env.E2E_TEMPLATE !== '0';
 let seededOrder: string | undefined;
+let analyticsDouble: EchoOrderMetricsServer | undefined;
 let foreground: ChildProcess | undefined;
 const elapsed = (since: number): string => `${((Date.now() - since) / 1000).toFixed(0)}s`;
 
@@ -61,10 +63,12 @@ async function stopAndDrop(): Promise<void> {
     const steps = [
         () => (foreground ? stopGroup(foreground) : Promise.resolve()),
         () => Promise.all(children.map(stopGroup)),
+        () => analyticsDouble?.stop() ?? Promise.resolve(),
         () => deleteVhost(name),
         () => dropDatabase(name),
         () => deleteIndices(base, `${name}-`),
         async () => rmSync(resolve(STACK_DIR, `pdfs-${name}`), { recursive: true, force: true }),
+        async () => rmSync(resolve(STACK_DIR, `analytics-${name}.key`), { force: true }),
         async () => rmSync(E2E_AUTH_DIR, { recursive: true, force: true }),
     ];
     for (const step of steps) await step().catch(error => console.error('e2e teardown:', error));
@@ -92,7 +96,14 @@ async function bootAndSeed(): Promise<void> {
     const started = Date.now();
     await assertPortsFree();
     await createSeededDatabase();
-    const env = serverEnv(base, name, await createVhost(name));
+    const analyticsKey = `e2e-${name}`;
+    const analyticsKeyFile = resolve(STACK_DIR, `analytics-${name}.key`);
+    writeFileSync(analyticsKeyFile, analyticsKey);
+    analyticsDouble = await startEchoOrderMetricsServer(analyticsKey);
+    const env = serverEnv(base, name, await createVhost(name), {
+        address: analyticsDouble.address,
+        keyFile: analyticsKeyFile,
+    });
     const mockOidc = spawnMockOidcProvider();
     const backend = spawnBackend(env);
     const portals = [
