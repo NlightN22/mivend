@@ -169,3 +169,6 @@ storefront route at 360px; run it after any storefront layout change.
       `storefront-layout` shows no horizontal overflow.
 - [ ] Took the screenshots myself and looked at them; `toBeVisible` does not prove an element is not
       covered — use `document.elementFromPoint` when overlap matters.
+- [ ] Every user-visible string exists in ru and en (no hardcoded text, server labels translated by code in the
+      client); the changed page was screenshot in both languages and both color modes, and no text stays in the
+      other language (`frontend-page-design` Step 6, both portals).

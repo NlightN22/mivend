@@ -109,7 +109,7 @@ One behaviour per field type in both portals; never a bare `MvInput` for these:
 
 Forms show an error only after the field was touched (blur) or a submit was tried, and an ERP value that
 was not edited is not re-validated. Each portal maps the shared error keys to its own messages
-(storefront: i18n keys, manager: English text). The manager fetches suggestions through the admin
+(both portals: i18n keys, ru and en). The manager fetches suggestions through the admin
 `suggestAddress` query.
 
 ## Home widgets

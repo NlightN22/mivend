@@ -29,11 +29,11 @@ partial view must say so (visible against total), as the manager card does.
 ## Orders report (#389)
 
 The first report, `orders`, reads order amounts from the analytics service over gRPC
-(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.2.0). The data is order turnover taken from the
+(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.3.2, additive over v0.2.0). The data is order turnover taken from the
 integration service: the sum of order amounts, not sales documents; cancelled and deleted orders are not counted.
 
-- **One report, many places.** The table is one shared component with filters and a dimension (customer, manager, point
-  of sale, organization, or none) and a granularity (none, day, month). The customer and manager cards embed the same
+- **One report, many places.** The table is one shared component with filters and a dimension (customer, order
+  manager, customer manager, point of sale, organization, or none) and a granularity (none, day, month). The customer and manager cards embed the same
   component with the entity as a fixed filter. This is the pattern for every later analytical table.
 - **Server side only.** `packages/plugins/analytics` holds the client; the browser calls the admin API query
   `orderAnalytics`, never the analytics service. The consumer's copy of the `.proto` is `order-metrics.proto.ts`; keep
@@ -48,6 +48,21 @@ integration service: the sum of order amounts, not sales documents; cancelled an
   manager dimension and manager filter keep only the managers the viewer's team visibility allows. A restricted
   viewer is told the numbers cover the visible customers only. The "visible against total" comparison from the
   scope rule above is not shown yet: it would need a second, unfiltered request.
+- **Free-form filters (#396).** The Filters button is the standard filter builder. Its seven fields (customer,
+  organization, point of sale, order manager, customer manager, product, manufacturer) take a name with a typeahead
+  (`orderAnalyticsSuggest`, at least two characters, ten names, inside the viewer's scope). The browser sends the
+  names; the server resolves them to ERP ids (a name matches by case-insensitive "contains", at most 200 entities per
+  typed value and 1000 per filter) and applies the viewer's scope on top, so ERP ids never reach the browser. A name
+  that matches nothing returns no rows, never the unfiltered answer. The contract's filter lists are sent only when
+  not empty. The "customer manager" dimension and filter follow the "main manager only" switch.
+- **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
+  different managers must not be added together; orders of a customer without a manager fall into an empty id. For a
+  restricted viewer the rows keep only the managers the team visibility allows, like the order manager dimension.
+- **Product and manufacturer filters.** With either set, the service counts order lines, not orders: `order_count` is
+  the orders with at least one matching line, the table shows the line quantity and line amount instead of the order
+  amounts (the amount basis follows the order, so it is not comparable with the with-VAT turnover). The manufacturer
+  filter matches the product's direct manufacturer only and returns nothing until the analytics platform has seeded
+  the catalogs of that environment.
 - **Failure.** The report returns a state (`OK`, `NOT_CONFIGURED`, `TOO_LARGE`, `UNAVAILABLE`), never partial rows.
   A bad request is a user input error. The key never appears in logs or messages.
 
@@ -82,6 +97,15 @@ are database entities, never a hardcoded list.
 - **Brand per sale.** Brand lives on the product; line-level sales data from the ERP must carry the product to attach it.
 - **Cost of the store.** Storage and refresh load of the analytical store, and where it runs.
 
+The catalog texts (title, description, note, area) are server strings in English; the manager translates them by
+report code (`i18n/<locale>/analyticsReports.ts`) and shows the server text only for a code it does not know yet.
+
+## Charts (later, not in #396)
+
+Charts will be widgets inside entity cards, on the same contract: the customer card (dynamics of one customer, month or
+day, up to 5 years, one line per currency, optionally per manager), the manager card (turnover of the manager's
+customers), a manufacturer card and product sales when a product card exists in the manager.
+
 ## Not implemented yet
 
 - Every report in the catalog (all are `planned`).
@@ -90,4 +114,3 @@ are database entities, never a hardcoded list.
 - Brand chips and the brand source for the brand reports.
 - Scoping of report rows by counterparty scope and manager visibility.
 - The assortment churn data (no source yet).
-- Russian titles and descriptions of the reports: they are server strings in English, like bulk operation titles.

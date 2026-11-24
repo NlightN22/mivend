@@ -73,3 +73,10 @@ Before finishing, report:
 - checks passed
 - checks failed
 - checks skipped with reason
+
+## UI changes: two languages and two color modes
+
+A change to a page, component or text of either frontend is not complete without screenshots of the changed page in
+both languages (ru and en) and both color modes, taken by the author and sent to the user. Switch the language in the
+header and check that no text stays in the other language (a registry label, a column, a hint, a toast, an empty
+state). A page that shows text in one language only is a finding for the audit; see `frontend-page-design` Step 6.

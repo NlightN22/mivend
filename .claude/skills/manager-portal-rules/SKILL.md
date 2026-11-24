@@ -78,3 +78,12 @@ over anything below that overlaps with it.
    request itself (this project's `adminApi` client has no `AbortSignal` support to cancel
    through yet); adding that would be the more complete fix if wasted stale requests become a
    real cost, not just a correctness bug.
+
+5. **Every manager screen is bilingual (ru and en); no hardcoded UI text.** All text goes through
+   `src/i18n/{en,ru}/*.ts` (keys in both, the en file is the source of key types, the parity tests
+   stay green), dates, numbers and money through `src/i18n/format.ts`. Text that the server sends as
+   a plain English label (a report catalog, a role, a status, an operation title) is translated in the
+   client by its code, with the server text only as the fallback for a code the client does not know
+   yet (`localizeReport` for the analytics catalog, the default role labels). A page that shows text in
+   one language only is a defect: switch the language and screenshot the changed page in ru and en (both
+   color modes) before calling it done; see Step 6 of `frontend-page-design`.

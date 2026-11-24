@@ -36,7 +36,11 @@ Everything is in **English** — code, comments, variable names, configs, docs, 
 
 The only exception: individual files explicitly requested to be in Russian by the developer.
 
-Temporary exception: the manager portal sign-in, two-factor, password and security screens have Russian text; the rest of the manager is English until the manager gets vue-i18n (ru/en) with the #320 redesign.
+**Both frontends are bilingual (ru and en).** All user-visible text in the storefront, the manager portal and the
+ui-kit exists in both languages through vue-i18n: no hardcoded strings (template, script, toasts, aria-labels,
+placeholders, option labels), and a label that comes from the server (a registry, a role, a status, a report) is
+translated in the client by its code. Data from the database (product, brand, counterparty names) is shown as is.
+A UI change is not done without screenshots of the changed page in both languages and both color modes.
 
 ---
 

@@ -132,21 +132,22 @@ check every changed file:
   question in `frontend-rules` and is listed in `docs/ui-standards.md` "Exceptions"; otherwise remove it.
   Report every exception in the final message.
 
-## Step 6 — two-language audit (mandatory, storefront and ui-kit)
+## Step 6 — two-language audit (mandatory, storefront, manager and ui-kit)
 
 The lint rule `no-raw-text` sees only template text, so check every changed file by hand:
 
-- every user-visible string has a key in both `src/i18n/en/*.ts` and `src/i18n/ru/*.ts` — template
+- every user-visible string has a key in both `src/i18n/en/*.ts` and `src/i18n/ru/*.ts` (storefront and manager) — template
   text, but also strings in `<script>`, stores, composables, utils, toasts, aria-labels,
   placeholders, `title`/`alt`, option labels, status/role labels mapped from codes, and demo data;
 - counts use plural keys (`'{n} item | {n} items'`, three ru forms), never string concatenation;
 - dates, numbers and money go through `src/i18n/format.ts`, never `toLocale*`/`Intl` with a fixed locale;
 - server errors are shown by `errorCode` (`utils/shopErrorMessage.ts`), never the raw message;
-- a new ui-kit text is a prop with an English default; storefront passes the translation, and
-  manager (no vue-i18n, Russian UI) passes its Russian text explicitly so its screens don't change;
+- a new ui-kit text is a prop with an English default; storefront and manager pass the translation;
+- labels the server sends as plain English (registry titles, descriptions, notes, role and status names) are
+  translated in the client by their code; the server text is only the fallback for an unknown code;
 - DB data (product, brand, category, trading point names) is shown as is, never translated;
-- switch the language in the header and screenshot the changed screens in EN and RU: no text
-  stays in the other language.
+- switch the language in the header and screenshot the changed screens in EN and RU (each in both color
+  modes): no text stays in the other language. A page with text in one language only is a finding.
 
 ## What this skill does not cover
 
