@@ -30,6 +30,9 @@ interface WireRow {
     ordersWithoutAmount: string | number;
     turnoverExcludingVat: string;
     vatTotal: string;
+    productQuantity: string;
+    productAmount: string;
+    productLinesWithoutAmount: string | number;
 }
 
 type TurnoverCall = (
@@ -98,6 +101,10 @@ export class OrderMetricsClient {
                     organizationIds: request.organizationIds,
                     pointOfSaleIds: request.pointOfSaleIds,
                     managerIds: request.managerIds,
+                    counterpartyManagerIds: request.counterpartyManagerIds,
+                    mainManagerOnly: request.mainManagerOnly,
+                    productIds: request.productIds,
+                    manufacturerIds: request.manufacturerIds,
                 },
                 metadata,
                 { deadline: Date.now() + CALL_TIMEOUT_MS },
@@ -121,6 +128,9 @@ export class OrderMetricsClient {
             vatTotal: row.vatTotal,
             orderCount: Number(row.orderCount),
             ordersWithoutAmount: Number(row.ordersWithoutAmount),
+            productQuantity: row.productQuantity,
+            productAmount: row.productAmount,
+            productLinesWithoutAmount: Number(row.productLinesWithoutAmount),
         }));
     }
 

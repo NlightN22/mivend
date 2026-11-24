@@ -22,6 +22,10 @@ const request: OrderMetricsRequest = {
     organizationIds: [],
     pointOfSaleIds: [],
     managerIds: [],
+    counterpartyManagerIds: [],
+    mainManagerOnly: false,
+    productIds: [],
+    manufacturerIds: [],
 };
 
 interface Seen {
@@ -129,6 +133,47 @@ describe('OrderMetricsClient over a real gRPC transport', () => {
             vatTotal: '205.75',
             orderCount: 3,
             ordersWithoutAmount: 1,
+            productQuantity: '',
+            productAmount: '',
+            productLinesWithoutAmount: 0,
+        });
+    });
+
+    it('sends the contract 0.3.2 filters and maps the product fields', async () => {
+        respond = (_call, cb) =>
+            cb(null, {
+                rows: [
+                    {
+                        dimensionId: 'm1',
+                        currency: 'RUB',
+                        orderCount: '2',
+                        productQuantity: '12.500',
+                        productAmount: '300.00',
+                        productLinesWithoutAmount: '1',
+                    },
+                ],
+            });
+
+        const [row] = await clientFor().getOrderTurnover({
+            ...request,
+            dimension: 'COUNTERPARTY_MANAGER',
+            counterpartyManagerIds: ['m1'],
+            mainManagerOnly: true,
+            productIds: ['p1'],
+            manufacturerIds: ['f1'],
+        });
+
+        expect(seen?.request).toMatchObject({
+            dimension: 'DIMENSION_COUNTERPARTY_MANAGER',
+            counterpartyManagerIds: ['m1'],
+            mainManagerOnly: true,
+            productIds: ['p1'],
+            manufacturerIds: ['f1'],
+        });
+        expect(row).toMatchObject({
+            productQuantity: '12.500',
+            productAmount: '300.00',
+            productLinesWithoutAmount: 1,
         });
     });
 

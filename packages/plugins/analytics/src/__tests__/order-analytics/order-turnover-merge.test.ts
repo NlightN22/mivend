@@ -12,6 +12,9 @@ const row = (over: Partial<OrderTurnoverRow>): OrderTurnoverRow => ({
     vatTotal: '1.67',
     orderCount: 1,
     ordersWithoutAmount: 0,
+    productQuantity: '',
+    productAmount: '',
+    productLinesWithoutAmount: 0,
     ...over,
 });
 
@@ -24,6 +27,19 @@ describe('mergeTurnoverRows', () => {
         expect(merged.turnover).toBe('0.30');
         expect(merged.turnoverExcludingVat).toBe('0.25');
         expect(merged.vatTotal).toBe('0.05');
+    });
+
+    it('adds product quantities with three digits and keeps unfilled values empty', () => {
+        const [filled] = mergeTurnoverRows([
+            row({ turnover: '', productQuantity: '1.250', productAmount: '10.00' }),
+            row({ turnover: '', productQuantity: '2.755', productAmount: '5.50' }),
+        ]);
+        expect(filled.productQuantity).toBe('4.005');
+        expect(filled.productAmount).toBe('15.50');
+        expect(filled.turnover).toBe('');
+
+        const [plain] = mergeTurnoverRows([row({}), row({})]);
+        expect(plain.productQuantity).toBe('');
     });
 
     it('adds the counts of rows from separate requests', () => {

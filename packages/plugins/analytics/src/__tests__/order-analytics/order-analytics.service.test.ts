@@ -15,11 +15,13 @@ const visibleManagerErpIds = vi.fn();
 const customerErpIdFor = vi.fn();
 const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
+const findNamed = vi.fn();
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
     { visibleCustomerErpIds, visibleManagerErpIds, customerErpIdFor, managerErpIdFor } as never,
     { labelsFor } as never,
+    { find: findNamed } as never,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({
@@ -39,6 +41,9 @@ const row = (over: Partial<OrderTurnoverRow> = {}): OrderTurnoverRow => ({
     vatTotal: '1.67',
     orderCount: 1,
     ordersWithoutAmount: 0,
+    productQuantity: '',
+    productAmount: '',
+    productLinesWithoutAmount: 0,
     ...over,
 });
 
@@ -50,6 +55,7 @@ beforeEach(() => {
     managerErpIdFor.mockResolvedValue('m-erp');
     labelsFor.mockResolvedValue(new Map());
     getOrderTurnover.mockResolvedValue([row()]);
+    findNamed.mockResolvedValue([]);
 });
 
 describe('OrderAnalyticsService scope', () => {

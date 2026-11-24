@@ -23,6 +23,7 @@ export const adminApiSchema: DocumentNode = gql`
         ORGANIZATION
         POINT_OF_SALE
         MANAGER
+        COUNTERPARTY_MANAGER
     }
 
     enum OrderAnalyticsState {
@@ -41,6 +42,25 @@ export const adminApiSchema: DocumentNode = gql`
         "A card pins its entity; the id is mivend's, the ERP id never reaches the browser."
         counterpartyId: ID
         administratorId: ID
+        "Names typed in the filter builder; the server resolves them to ids inside the viewer's scope."
+        entityFilters: [OrderAnalyticsEntityFilterInput!]
+        "Limits counterparty-manager filter and dimension to the main manager of a counterparty."
+        mainManagerOnly: Boolean
+    }
+
+    enum OrderAnalyticsFilterKind {
+        CUSTOMER
+        ORGANIZATION
+        POINT_OF_SALE
+        MANAGER
+        COUNTERPARTY_MANAGER
+        PRODUCT
+        MANUFACTURER
+    }
+
+    input OrderAnalyticsEntityFilterInput {
+        kind: OrderAnalyticsFilterKind!
+        values: [String!]!
     }
 
     type OrderAnalyticsRow {
@@ -53,6 +73,10 @@ export const adminApiSchema: DocumentNode = gql`
         vatTotal: String!
         orderCount: Int!
         ordersWithoutAmount: Int!
+        "Filled only when a product or manufacturer filter is set; the amounts above are then empty."
+        productQuantity: String!
+        productAmount: String!
+        productLinesWithoutAmount: Int!
     }
 
     type OrderAnalytics {
@@ -64,5 +88,6 @@ export const adminApiSchema: DocumentNode = gql`
     extend type Query {
         analyticsReports: [AnalyticsReport!]!
         orderAnalytics(input: OrderAnalyticsInput!): OrderAnalytics!
+        orderAnalyticsSuggest(kind: OrderAnalyticsFilterKind!, prefix: String!): [String!]!
     }
 `;

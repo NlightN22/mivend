@@ -1,0 +1,81 @@
+import type { RequestContext } from '@vendure/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+    resolveEntityFilters,
+    suggestEntityNames,
+} from '../../order-analytics/order-analytics-entity-filters';
+import type { OrderAnalyticsEntityNamesService } from '../../order-analytics/order-analytics-entity-names.service';
+
+const ctx = {} as RequestContext;
+const find = vi.fn();
+const names = { find } as unknown as OrderAnalyticsEntityNamesService;
+
+beforeEach(() => vi.resetAllMocks());
+
+describe('resolveEntityFilters', () => {
+    it('collects the ids of every typed name per kind without duplicates', async () => {
+        find.mockImplementation(async (_c, _k, text: string) =>
+            text === 'a'
+                ? [{ erpId: 'p1', name: 'A' }]
+                : [
+                      { erpId: 'p1', name: 'A2' },
+                      { erpId: 'p2', name: 'B' },
+                  ],
+        );
+
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'PRODUCT', values: ['a', 'b'] },
+        ]);
+
+        expect(result.productIds).toEqual(['p1', 'p2']);
+        expect(result.unmatched).toBe(false);
+    });
+
+    it('flags a filter whose names match nothing, so the caller returns no rows', async () => {
+        find.mockResolvedValue([]);
+
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'MANUFACTURER', values: ['ghost'] },
+        ]);
+
+        expect(result.unmatched).toBe(true);
+    });
+
+    it('skips blank values and kinds without values', async () => {
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'CUSTOMER', values: [' ', ''] },
+            { kind: 'MANAGER', values: [] },
+        ]);
+
+        expect(find).not.toHaveBeenCalled();
+        expect(result.unmatched).toBe(false);
+    });
+
+    it('routes each kind to its own id list', async () => {
+        find.mockResolvedValue([{ erpId: 'x', name: 'X' }]);
+
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'COUNTERPARTY_MANAGER', values: ['x'] },
+            { kind: 'POINT_OF_SALE', values: ['x'] },
+        ]);
+
+        expect(result.counterpartyManagerIds).toEqual(['x']);
+        expect(result.pointOfSaleIds).toEqual(['x']);
+        expect(result.managerIds).toEqual([]);
+    });
+});
+
+describe('suggestEntityNames', () => {
+    it('needs two characters and returns at most ten distinct names', async () => {
+        expect(await suggestEntityNames(ctx, names, 'PRODUCT', 'a')).toEqual([]);
+        expect(find).not.toHaveBeenCalled();
+
+        find.mockResolvedValue(
+            Array.from({ length: 30 }, (_, i) => ({ erpId: `e${i}`, name: `N${i % 15}` })),
+        );
+        const found = await suggestEntityNames(ctx, names, 'PRODUCT', 'ab');
+        expect(found).toHaveLength(10);
+        expect(new Set(found).size).toBe(10);
+    });
+});

@@ -14,6 +14,7 @@ const SOURCES: Partial<Record<OrderDimension, LabelSource>> = {
     CUSTOMER: { entity: Counterparty, label: r => r.shortName || r.legalName },
     POINT_OF_SALE: { entity: TradingPoint, label: r => r.name },
     MANAGER: { entity: 'ErpUser', label: r => r.fullName },
+    COUNTERPARTY_MANAGER: { entity: 'ErpUser', label: r => r.fullName },
     ORGANIZATION: { entity: 'OrganizationRequisites', label: r => r.legalName },
 };
 

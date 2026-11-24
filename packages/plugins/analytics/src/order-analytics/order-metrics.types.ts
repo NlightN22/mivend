@@ -1,14 +1,24 @@
 export type OrderGranularity = 'NONE' | 'DAY' | 'MONTH';
-export type OrderDimension = 'NONE' | 'CUSTOMER' | 'ORGANIZATION' | 'POINT_OF_SALE' | 'MANAGER';
+export type OrderDimension =
+    | 'NONE'
+    | 'CUSTOMER'
+    | 'ORGANIZATION'
+    | 'POINT_OF_SALE'
+    | 'MANAGER'
+    | 'COUNTERPARTY_MANAGER';
 
 export interface OrderMetricsFilters {
     customerIds: string[];
     organizationIds: string[];
     pointOfSaleIds: string[];
     managerIds: string[];
+    counterpartyManagerIds: string[];
+    productIds: string[];
+    manufacturerIds: string[];
 }
 
 export interface OrderMetricsRequest extends OrderMetricsFilters {
+    mainManagerOnly: boolean;
     from: Date;
     to: Date;
     granularity: OrderGranularity;
@@ -25,6 +35,10 @@ export interface OrderTurnoverRow {
     vatTotal: string;
     orderCount: number;
     ordersWithoutAmount: number;
+    // Set only when a product or manufacturer filter was sent; the amounts are then empty.
+    productQuantity: string;
+    productAmount: string;
+    productLinesWithoutAmount: number;
 }
 
 export type OrderMetricsErrorKind =

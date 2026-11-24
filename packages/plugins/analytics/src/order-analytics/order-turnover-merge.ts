@@ -1,17 +1,23 @@
 import type { OrderTurnoverRow } from './order-metrics.types';
 
-const toCents = (amount: string): bigint => BigInt(amount.replace('.', ''));
+const toUnits = (amount: string): bigint => BigInt(amount.replace('.', '') || '0');
 
-function fromCents(cents: bigint): string {
-    const negative = cents < 0n;
-    const digits = (negative ? -cents : cents).toString().padStart(3, '0');
-    return `${negative ? '-' : ''}${digits.slice(0, -2)}.${digits.slice(-2)}`;
+function fromUnits(units: bigint, fraction: number): string {
+    const negative = units < 0n;
+    const digits = (negative ? -units : units).toString().padStart(fraction + 1, '0');
+    return `${negative ? '-' : ''}${digits.slice(0, -fraction)}.${digits.slice(-fraction)}`;
+}
+
+// An empty string means "not filled" (the amounts of a product-filtered row); it stays empty unless a side has a value.
+function sumDecimals(a: string, b: string, fraction: number): string {
+    if (!a && !b) return '';
+    return fromUnits(toUnits(a) + toUnits(b), fraction);
 }
 
 const keyOf = (row: OrderTurnoverRow): string =>
     `${row.periodStart?.getTime() ?? ''}|${row.dimensionId}|${row.currency}`;
 
-// Sums rows of the same bucket coming from separate requests; amounts are exact two-digit decimals.
+// Sums rows of the same bucket coming from separate requests; amounts are exact decimals.
 export function mergeTurnoverRows(rows: OrderTurnoverRow[]): OrderTurnoverRow[] {
     const merged = new Map<string, OrderTurnoverRow>();
     for (const row of rows) {
@@ -22,14 +28,23 @@ export function mergeTurnoverRows(rows: OrderTurnoverRow[]): OrderTurnoverRow[] 
             existing
                 ? {
                       ...existing,
-                      turnover: fromCents(toCents(existing.turnover) + toCents(row.turnover)),
-                      turnoverExcludingVat: fromCents(
-                          toCents(existing.turnoverExcludingVat) +
-                              toCents(row.turnoverExcludingVat),
+                      turnover: sumDecimals(existing.turnover, row.turnover, 2),
+                      turnoverExcludingVat: sumDecimals(
+                          existing.turnoverExcludingVat,
+                          row.turnoverExcludingVat,
+                          2,
                       ),
-                      vatTotal: fromCents(toCents(existing.vatTotal) + toCents(row.vatTotal)),
+                      vatTotal: sumDecimals(existing.vatTotal, row.vatTotal, 2),
                       orderCount: existing.orderCount + row.orderCount,
                       ordersWithoutAmount: existing.ordersWithoutAmount + row.ordersWithoutAmount,
+                      productQuantity: sumDecimals(
+                          existing.productQuantity,
+                          row.productQuantity,
+                          3,
+                      ),
+                      productAmount: sumDecimals(existing.productAmount, row.productAmount, 2),
+                      productLinesWithoutAmount:
+                          existing.productLinesWithoutAmount + row.productLinesWithoutAmount,
                   }
                 : row,
         );
