@@ -2,3 +2,5 @@ export { AnalyticsPlugin } from './src/analytics.plugin';
 export { ANALYTICS_REPORTS } from './src/definitions';
 export type { AnalyticsReport, ReportStatus } from './src/analytics-report';
 export type { AnalyticsPluginOptions } from './src/types';
+export { startEchoOrderMetricsServer } from './src/testing/echo-order-metrics-server';
+export type { EchoOrderMetricsServer } from './src/testing/echo-order-metrics-server';

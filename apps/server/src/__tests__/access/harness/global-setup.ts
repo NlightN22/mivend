@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
-import { mkdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
+import { startEchoOrderMetricsServer } from '@mivend/plugin-analytics';
 import type { TestProject } from 'vitest/node';
 
 import { runAccessSeed, SUPERADMIN } from '../seed/run-seed';
@@ -32,9 +33,11 @@ export default async function setup(project: TestProject): Promise<() => Promise
     const pdfDir = resolve(LOG_DIR, `pdfs-${name}`);
     let stop = async (): Promise<void> => {};
     let stopWorker = async (): Promise<void> => {};
+    let stopAnalytics = async (): Promise<void> => {};
     const teardown = async (): Promise<void> => {
         const errors: unknown[] = [];
         const steps = [
+            stopAnalytics,
             stopWorker,
             stop,
             () => deleteVhost(name),
@@ -51,6 +54,14 @@ export default async function setup(project: TestProject): Promise<() => Promise
         if (errors.length > 0) throw errors[0];
     };
     try {
+        const analyticsKey = randomBytes(12).toString('hex');
+        const analyticsKeyFile = resolve(LOG_DIR, `analytics-${name}.key`);
+        writeFileSync(analyticsKeyFile, analyticsKey);
+        const analytics = await startEchoOrderMetricsServer(analyticsKey);
+        stopAnalytics = async () => {
+            await analytics.stop();
+            rmSync(analyticsKeyFile, { force: true });
+        };
         const env = {
             NODE_ENV: 'test',
             VENDURE_DISABLE_TELEMETRY: 'true',
@@ -86,6 +97,10 @@ export default async function setup(project: TestProject): Promise<() => Promise
             LEGAL_OPERATOR_NAME: 'Access Operator',
             LEGAL_CONTACT_EMAIL: 'legal@access.test',
             GEO_PROVIDERS: 'open',
+            // The analytics service is a test double that echoes what the server asked for.
+            ANALYTICS_GRPC_ADDRESS: analytics.address,
+            ANALYTICS_GRPC_KEY_FILE: analyticsKeyFile,
+            ANALYTICS_GRPC_INSECURE: 'true',
         };
         const server = await startServer(env, resolve(LOG_DIR, 'server.log'));
         stop = server.stop;

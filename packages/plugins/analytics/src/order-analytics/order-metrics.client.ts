@@ -154,7 +154,10 @@ export class OrderMetricsClient {
             const Service = loadServiceConstructor();
             this.client = new Service(
                 this.options.orderMetricsAddress as string,
-                this.options.orderMetricsCredentials ?? grpc.credentials.createSsl(),
+                this.options.orderMetricsCredentials ??
+                    (this.options.orderMetricsInsecure
+                        ? grpc.credentials.createInsecure()
+                        : grpc.credentials.createSsl()),
             ) as unknown as TurnoverClient;
         }
         return this.client;
