@@ -4,8 +4,30 @@ import { i18n } from '../../i18n';
 const NOT_FILTERED = { type: 'none' } as const;
 const t = (key: string): string => i18n.global.t(`analytics.orders.columns.${key}`);
 
+function numberColumn(
+    field: string,
+    width: number,
+    priority: number,
+    minWidth = width - 20,
+): AdvancedDataTableColumn {
+    return {
+        field,
+        header: t(field),
+        sortField: field,
+        align: 'end',
+        width,
+        minWidth,
+        priority,
+        filterConfig: NOT_FILTERED,
+    };
+}
+
 // The title column is the identifying one: the entity, else the period, else "Total".
-export function buildOrderAnalyticsColumns(showPeriod: boolean): AdvancedDataTableColumn[] {
+// A product or manufacturer filter counts order lines, so the order amounts give way to the line totals.
+export function buildOrderAnalyticsColumns(
+    showPeriod: boolean,
+    productMode = false,
+): AdvancedDataTableColumn[] {
     const columns: AdvancedDataTableColumn[] = [
         {
             field: 'title',
@@ -30,60 +52,25 @@ export function buildOrderAnalyticsColumns(showPeriod: boolean): AdvancedDataTab
             filterConfig: NOT_FILTERED,
         });
     }
+    columns.push(numberColumn('orderCount', 110, 7, 90));
     columns.push(
-        {
-            field: 'orderCount',
-            header: t('orderCount'),
-            sortField: 'orderCount',
-            align: 'end',
-            width: 110,
-            minWidth: 90,
-            priority: 7,
-            filterConfig: NOT_FILTERED,
-        },
-        {
-            field: 'turnover',
-            header: t('turnover'),
-            sortField: 'turnover',
-            align: 'end',
-            width: 170,
-            minWidth: 150,
-            priority: 9,
-            filterConfig: NOT_FILTERED,
-        },
-        {
-            field: 'turnoverExcludingVat',
-            header: t('turnoverExcludingVat'),
-            sortField: 'turnoverExcludingVat',
-            align: 'end',
-            width: 170,
-            minWidth: 150,
-            priority: 6,
-            filterConfig: NOT_FILTERED,
-        },
-        {
-            field: 'vatTotal',
-            header: t('vatTotal'),
-            sortField: 'vatTotal',
-            align: 'end',
-            width: 140,
-            minWidth: 120,
-            priority: 5,
-            filterConfig: NOT_FILTERED,
-        },
-        {
-            field: 'ordersWithoutAmount',
-            header: t('ordersWithoutAmount'),
-            sortField: 'ordersWithoutAmount',
-            align: 'end',
-            width: 150,
-            minWidth: 130,
-            priority: 4,
-            filterConfig: NOT_FILTERED,
-            mobile: { hidden: true },
-        },
+        ...(productMode
+            ? [
+                  numberColumn('productQuantity', 140, 9, 120),
+                  numberColumn('productAmount', 170, 8, 150),
+                  {
+                      ...numberColumn('productLinesWithoutAmount', 160, 4, 140),
+                      mobile: { hidden: true },
+                  },
+              ]
+            : [
+                  numberColumn('turnover', 170, 9, 150),
+                  numberColumn('turnoverExcludingVat', 170, 6, 150),
+                  numberColumn('vatTotal', 140, 5, 120),
+                  { ...numberColumn('ordersWithoutAmount', 150, 4, 130), mobile: { hidden: true } },
+              ]),
     );
     return columns;
 }
 
-export const HIDDEN_BY_DEFAULT = ['ordersWithoutAmount'];
+export const HIDDEN_BY_DEFAULT = ['ordersWithoutAmount', 'productLinesWithoutAmount'];

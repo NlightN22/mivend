@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     formatAmount,
+    formatQuantity,
     pageOf,
     searchRows,
     sortRows,
@@ -19,6 +20,9 @@ const row = (over: Partial<OrderAnalyticsRow> = {}): OrderAnalyticsRow => ({
     vatTotal: '1.67',
     orderCount: 2,
     ordersWithoutAmount: 0,
+    productQuantity: '',
+    productAmount: '',
+    productLinesWithoutAmount: 0,
     ...over,
 });
 
@@ -134,5 +138,29 @@ describe('period helpers', () => {
         expect(isValidPeriod({ from: '2026-03-05', to: '2026-03-05' })).toBe(true);
         expect(isValidPeriod({ from: '2026-03-06', to: '2026-03-05' })).toBe(false);
         expect(isValidPeriod({ from: '', to: '2026-03-05' })).toBe(false);
+    });
+});
+
+describe('product line totals', () => {
+    it('carries the quantity and line amount into the table row and sorts them as numbers', () => {
+        const rows = toTableRows(
+            [
+                row({ label: 'A', productQuantity: '9.000', productAmount: '100.00' }),
+                row({ label: 'B', productQuantity: '12.500', productAmount: '20.00' }),
+            ],
+            'Total',
+            format,
+        );
+        expect(rows[0]).toMatchObject({ productQuantity: '9.000', productAmount: '100.00' });
+        expect(sortRows(rows, { field: 'productQuantity', order: -1 }).map(r => r.title)).toEqual([
+            'B',
+            'A',
+        ]);
+    });
+
+    it('formats a quantity with up to three digits and leaves unreadable text as it is', () => {
+        expect(formatQuantity('12.500', 'en')).toBe('12.5');
+        expect(formatQuantity('1234.250', 'en')).toBe('1,234.25');
+        expect(formatQuantity('', 'en')).toBe('0');
     });
 });

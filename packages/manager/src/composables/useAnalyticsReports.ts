@@ -1,5 +1,5 @@
-import { onMounted, ref, type Ref } from 'vue';
-import { fetchAnalyticsReports, type AnalyticsReportInfo } from '../api/analytics';
+import { computed, onMounted, ref, type Ref } from 'vue';
+import { fetchAnalyticsReports, localizeReport, type AnalyticsReportInfo } from '../api/analytics';
 
 export interface UseAnalyticsReports {
     reports: Ref<AnalyticsReportInfo[]>;
@@ -9,7 +9,9 @@ export interface UseAnalyticsReports {
 }
 
 export function useAnalyticsReports(): UseAnalyticsReports {
-    const reports = ref<AnalyticsReportInfo[]>([]);
+    const loaded = ref<AnalyticsReportInfo[]>([]);
+    // Translated on read, so the catalog follows a language switch without a reload.
+    const reports = computed(() => loaded.value.map(localizeReport));
     const loading = ref(true);
     const failed = ref(false);
 
@@ -17,7 +19,7 @@ export function useAnalyticsReports(): UseAnalyticsReports {
         loading.value = true;
         failed.value = false;
         try {
-            reports.value = await fetchAnalyticsReports();
+            loaded.value = await fetchAnalyticsReports();
         } catch {
             failed.value = true;
         } finally {

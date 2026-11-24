@@ -6,7 +6,10 @@ import { groupOperations, searchable } from '../../components/catalog/catalogGro
 import { useAnalyticsReports } from '../../composables/useAnalyticsReports';
 
 const fetchAnalyticsReports = vi.hoisted(() => vi.fn());
-vi.mock('../../api/analytics', () => ({ fetchAnalyticsReports }));
+vi.mock('../../api/analytics', () => ({
+    fetchAnalyticsReports,
+    localizeReport: (r: unknown) => r,
+}));
 
 const report = (i: number, area: string): AnalyticsReportInfo => ({
     key: `r-${i}`,

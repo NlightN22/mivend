@@ -1,4 +1,13 @@
+import reports from './analyticsReports';
+
 export default {
+    reports,
+    areas: {
+        sales: 'Sales',
+        customers: 'Customers',
+        receivables: 'Receivables',
+        managers: 'Managers',
+    },
     title: 'Analytics',
     status: { planned: 'Planned', available: 'Available' },
     catalog: {
@@ -24,9 +33,10 @@ export default {
         dimensions: {
             NONE: 'Nothing (one total)',
             CUSTOMER: 'Customer',
-            MANAGER: 'Manager',
+            MANAGER: 'Order manager',
             POINT_OF_SALE: 'Point of sale',
             ORGANIZATION: 'Organization',
+            COUNTERPARTY_MANAGER: 'Customer manager',
         },
         columns: {
             title: 'Name',
@@ -36,7 +46,24 @@ export default {
             turnoverExcludingVat: 'Without VAT',
             vatTotal: 'VAT',
             ordersWithoutAmount: 'Orders without amount',
+            productQuantity: 'Quantity',
+            productAmount: 'Amount of the lines',
+            productLinesWithoutAmount: 'Lines without amount',
         },
+        filters: {
+            customer: 'Customer',
+            organization: 'Organization',
+            pointOfSale: 'Point of sale',
+            manager: 'Order manager',
+            counterpartyManager: 'Customer manager',
+            product: 'Product',
+            manufacturer: 'Manufacturer',
+        },
+        mainManagerOnly: 'Main manager only',
+        productBasis:
+            'A product or manufacturer filter counts the matching order lines: orders are those with at least one such line, and the amount is the sum of those lines, not of the whole order.',
+        counterpartyManagerBasis:
+            'A customer with several managers is counted under each of them, so the rows must not be added together.',
         basis: 'Order amounts as reported by the integration service. Cancelled and deleted orders are not counted; this is not sales.',
         limited: 'Only the customers you can see are included.',
         empty: 'No orders in this period.',

@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit';
+import type { FilterCondition } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 import { resolveDateRangePreset } from '@mivend/ui-kit/src/components/MvColumnFilter/dateRangePresets';
 import {
     fetchOrderAnalytics,
@@ -9,6 +10,7 @@ import {
     type OrderDimension,
     type OrderGranularity,
 } from '../api/orderAnalytics';
+import { conditionsToEntityFilters } from '../api/orderAnalyticsFilter';
 import { isValidPeriod } from '../api/orderAnalyticsPeriod';
 import { useUrlSyncedState } from './useUrlSyncedState';
 
@@ -22,6 +24,8 @@ export interface OrderAnalyticsFilters {
 
 export interface UseOrderAnalytics {
     filters: Ref<OrderAnalyticsFilters>;
+    conditions: Ref<FilterCondition[]>;
+    mainManagerOnly: Ref<boolean>;
     rows: Ref<OrderAnalyticsRow[]>;
     state: Ref<OrderAnalyticsState>;
     limited: Ref<boolean>;
@@ -46,6 +50,8 @@ export function useOrderAnalytics(options: {
 }): UseOrderAnalytics {
     const defaults = defaultOrderAnalyticsFilters(options.dimension);
     const filters = ref<OrderAnalyticsFilters>({ ...defaults });
+    const conditions = ref<FilterCondition[]>([]);
+    const mainManagerOnly = ref(false);
     const rows = ref<OrderAnalyticsRow[]>([]);
     const state = ref<OrderAnalyticsState>('OK');
     const limited = ref(false);
@@ -56,7 +62,11 @@ export function useOrderAnalytics(options: {
 
     const periodValid = computed(() => isValidPeriod(filters.value));
     const { loading, run } = useLatestRequest(
-        () => fetchOrderAnalytics(filters.value, options.fixed),
+        () =>
+            fetchOrderAnalytics(filters.value, options.fixed, {
+                entityFilters: conditionsToEntityFilters(conditions.value),
+                mainManagerOnly: mainManagerOnly.value,
+            }),
         result => {
             rows.value = result.rows;
             state.value = result.state;
@@ -83,7 +93,19 @@ export function useOrderAnalytics(options: {
         },
         { deep: true },
     );
+    watch([conditions, mainManagerOnly], () => void reload(), { deep: true });
     onMounted(() => void reload());
 
-    return { filters, rows, state, limited, loading, failed, periodValid, reload };
+    return {
+        filters,
+        conditions,
+        mainManagerOnly,
+        rows,
+        state,
+        limited,
+        loading,
+        failed,
+        periodValid,
+        reload,
+    };
 }

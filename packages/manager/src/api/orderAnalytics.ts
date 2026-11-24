@@ -1,9 +1,16 @@
 import { adminApi } from './client';
-import { OrderAnalyticsDocument } from './generated/graphql';
+import { OrderAnalyticsDocument, OrderAnalyticsSuggestDocument } from './generated/graphql';
+import type { OrderAnalyticsFilterKind } from './generated/graphql';
 import { periodInstants } from './orderAnalyticsPeriod';
 
 export type OrderGranularity = 'NONE' | 'DAY' | 'MONTH';
-export type OrderDimension = 'NONE' | 'CUSTOMER' | 'ORGANIZATION' | 'POINT_OF_SALE' | 'MANAGER';
+export type OrderDimension =
+    | 'NONE'
+    | 'CUSTOMER'
+    | 'ORGANIZATION'
+    | 'POINT_OF_SALE'
+    | 'MANAGER'
+    | 'COUNTERPARTY_MANAGER';
 export type OrderAnalyticsState = 'OK' | 'NOT_CONFIGURED' | 'TOO_LARGE' | 'UNAVAILABLE';
 
 // An embedded report pins one entity by its mivend id; the server resolves the ERP id and the scope.
@@ -19,6 +26,17 @@ export interface OrderAnalyticsParams {
     dimension: OrderDimension;
 }
 
+// Names picked in the filter builder; the server turns them into ids inside the viewer's scope.
+export interface OrderAnalyticsEntityFilter {
+    kind: OrderAnalyticsFilterKind;
+    values: string[];
+}
+
+export interface OrderAnalyticsExtras {
+    entityFilters?: OrderAnalyticsEntityFilter[];
+    mainManagerOnly?: boolean;
+}
+
 export interface OrderAnalyticsRow {
     periodStart: string | null;
     dimensionId: string;
@@ -29,6 +47,9 @@ export interface OrderAnalyticsRow {
     vatTotal: string;
     orderCount: number;
     ordersWithoutAmount: number;
+    productQuantity: string;
+    productAmount: string;
+    productLinesWithoutAmount: number;
 }
 
 export interface OrderAnalyticsResult {
@@ -42,6 +63,7 @@ export const DIMENSIONS: OrderDimension[] = [
     'NONE',
     'CUSTOMER',
     'MANAGER',
+    'COUNTERPARTY_MANAGER',
     'POINT_OF_SALE',
     'ORGANIZATION',
 ];
@@ -49,6 +71,7 @@ export const DIMENSIONS: OrderDimension[] = [
 export function fetchOrderAnalytics(
     params: OrderAnalyticsParams,
     fixed: OrderAnalyticsFixedFilter = {},
+    extras: OrderAnalyticsExtras = {},
 ): Promise<OrderAnalyticsResult> {
     const { from, to } = periodInstants(params);
     return adminApi(OrderAnalyticsDocument, {
@@ -59,6 +82,17 @@ export function fetchOrderAnalytics(
             dimension: params.dimension,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             ...fixed,
+            entityFilters: extras.entityFilters?.length ? extras.entityFilters : null,
+            mainManagerOnly: extras.mainManagerOnly ?? false,
         },
     }).then(r => r.orderAnalytics as OrderAnalyticsResult);
+}
+
+export function suggestOrderAnalytics(
+    kind: OrderAnalyticsFilterKind,
+    prefix: string,
+): Promise<string[]> {
+    return adminApi(OrderAnalyticsSuggestDocument, { kind, prefix }).then(
+        r => r.orderAnalyticsSuggest,
+    );
 }

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import {
     MvAdvancedDataTable,
     MvDateRangeField,
+    MvCheckbox,
     MvErrorState,
     MvNotice,
     MvSelect,
@@ -15,11 +16,17 @@ import {
     type OrderAnalyticsFixedFilter,
     type OrderDimension,
 } from '../../api/orderAnalytics';
+import {
+    buildEntityFilterColumns,
+    usesCounterpartyManager,
+    usesProductFilter,
+} from '../../api/orderAnalyticsFilter';
 import { useOrderAnalytics } from '../../composables/useOrderAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
 import { buildOrderAnalyticsColumns, HIDDEN_BY_DEFAULT } from './orderAnalyticsColumns';
 import {
     formatAmount,
+    formatQuantity,
     pageOf,
     searchRows,
     sortRows,
@@ -45,12 +52,23 @@ const report = useOrderAnalytics({
 });
 const { filters } = report;
 
-const baseColumns = buildOrderAnalyticsColumns(true);
+const baseColumns = [
+    ...buildOrderAnalyticsColumns(true),
+    ...buildOrderAnalyticsColumns(true, true).filter(c => c.field.startsWith('product')),
+];
+const productMode = computed(() => usesProductFilter(report.conditions.value));
 // Without a dimension the period is the row's title, so a separate period column would repeat it.
 const columns = computed(() =>
     buildOrderAnalyticsColumns(
         filters.value.granularity !== 'NONE' && filters.value.dimension !== 'NONE',
+        productMode.value,
     ),
+);
+const entityFilterColumns = computed(() => buildEntityFilterColumns());
+const showMainManager = computed(
+    () =>
+        filters.value.dimension === 'COUNTERPARTY_MANAGER' ||
+        usesCounterpartyManager(report.conditions.value),
 );
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; title: string }>(
     props.storageKey,
@@ -91,6 +109,8 @@ const rows = computed(
             turnover: formatAmount(row.turnover, row.currency, activeTag()),
             turnoverExcludingVat: formatAmount(row.turnoverExcludingVat, row.currency, activeTag()),
             vatTotal: formatAmount(row.vatTotal, row.currency, activeTag()),
+            productQuantity: formatQuantity(row.productQuantity, activeTag()),
+            productAmount: formatAmount(row.productAmount, row.currency, activeTag()),
         })) as Array<OrderAnalyticsTableRow>,
 );
 
@@ -124,6 +144,11 @@ const dimensionOptions = DIMENSIONS.map(value => ({
                 <span>{{ t('analytics.orders.dimension') }}</span>
                 <MvSelect v-model="filters.dimension" :options="dimensionOptions" />
             </label>
+            <MvCheckbox
+                v-if="showMainManager"
+                v-model="report.mainManagerOnly.value"
+                :label="t('analytics.orders.mainManagerOnly')"
+            />
         </div>
 
         <MvNotice v-if="!report.periodValid.value" variant="warning">
@@ -136,9 +161,17 @@ const dimensionOptions = DIMENSIONS.map(value => ({
             {{ t('analytics.orders.limited') }}
         </MvNotice>
         <p class="order-analytics__basis">{{ t('analytics.orders.basis') }}</p>
+        <p v-if="productMode" class="order-analytics__basis">
+            {{ t('analytics.orders.productBasis') }}
+        </p>
+        <p v-if="filters.dimension === 'COUNTERPARTY_MANAGER'" class="order-analytics__basis">
+            {{ t('analytics.orders.counterpartyManagerBasis') }}
+        </p>
 
         <MvAdvancedDataTable
             v-model:table-state="tableState"
+            v-model:conditions="report.conditions.value"
+            :extra-filter-columns="entityFilterColumns"
             :columns="columns"
             :rows="rows"
             :loading="report.loading.value"

@@ -12,6 +12,9 @@ export interface OrderAnalyticsTableRow {
     turnover: string;
     turnoverExcludingVat: string;
     vatTotal: string;
+    productQuantity: string;
+    productAmount: string;
+    productLinesWithoutAmount: number;
 }
 
 // Amounts are exact decimal strings; sorting compares them as numbers only for ordering.
@@ -32,6 +35,9 @@ export function toTableRows(
         turnover: row.turnover,
         turnoverExcludingVat: row.turnoverExcludingVat,
         vatTotal: row.vatTotal,
+        productQuantity: row.productQuantity,
+        productAmount: row.productAmount,
+        productLinesWithoutAmount: row.productLinesWithoutAmount,
     }));
 }
 
@@ -40,7 +46,13 @@ export function searchRows(rows: OrderAnalyticsTableRow[], term: string): OrderA
     return needle ? rows.filter(row => row.title.toLowerCase().includes(needle)) : rows;
 }
 
-const AMOUNT_FIELDS = new Set(['turnover', 'turnoverExcludingVat', 'vatTotal']);
+const AMOUNT_FIELDS = new Set([
+    'turnover',
+    'turnoverExcludingVat',
+    'vatTotal',
+    'productQuantity',
+    'productAmount',
+]);
 
 export function sortRows(
     rows: OrderAnalyticsTableRow[],
@@ -77,4 +89,12 @@ export function formatAmount(amount: string, currency: string, locale: string): 
     } catch {
         return `${new Intl.NumberFormat(locale, plain).format(value)} ${currency}`;
     }
+}
+
+// Quantity is a decimal string with three digits in the lines' own units; no currency.
+export function formatQuantity(quantity: string, locale: string): string {
+    const value = Number(quantity);
+    return Number.isFinite(value)
+        ? new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(value)
+        : quantity;
 }

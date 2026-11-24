@@ -12,6 +12,13 @@ query OrderAnalytics($input: OrderAnalyticsInput!) {
             vatTotal
             orderCount
             ordersWithoutAmount
+            productQuantity
+            productAmount
+            productLinesWithoutAmount
         }
     }
+}
+
+query OrderAnalyticsSuggest($kind: OrderAnalyticsFilterKind!, $prefix: String!) {
+    orderAnalyticsSuggest(kind: $kind, prefix: $prefix)
 }

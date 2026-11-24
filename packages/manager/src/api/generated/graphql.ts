@@ -6726,11 +6726,26 @@ export type OrderAnalytics = {
 };
 
 export type OrderAnalyticsDimension =
+    | 'COUNTERPARTY_MANAGER'
     | 'CUSTOMER'
     | 'MANAGER'
     | 'NONE'
     | 'ORGANIZATION'
     | 'POINT_OF_SALE';
+
+export type OrderAnalyticsEntityFilterInput = {
+    kind: OrderAnalyticsFilterKind;
+    values: Array<Scalars['String']['input']>;
+};
+
+export type OrderAnalyticsFilterKind =
+    | 'COUNTERPARTY_MANAGER'
+    | 'CUSTOMER'
+    | 'MANAGER'
+    | 'MANUFACTURER'
+    | 'ORGANIZATION'
+    | 'POINT_OF_SALE'
+    | 'PRODUCT';
 
 export type OrderAnalyticsGranularity = 'DAY' | 'MONTH' | 'NONE';
 
@@ -6739,8 +6754,12 @@ export type OrderAnalyticsInput = {
     /** A card pins its entity; the id is mivend's, the ERP id never reaches the browser. */
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     dimension: OrderAnalyticsDimension;
+    /** Names typed in the filter builder; the server resolves them to ids inside the viewer's scope. */
+    entityFilters?: InputMaybe<Array<OrderAnalyticsEntityFilterInput>>;
     from: Scalars['DateTime']['input'];
     granularity: OrderAnalyticsGranularity;
+    /** Limits counterparty-manager filter and dimension to the main manager of a counterparty. */
+    mainManagerOnly?: InputMaybe<Scalars['Boolean']['input']>;
     timeZone?: InputMaybe<Scalars['String']['input']>;
     to: Scalars['DateTime']['input'];
 };
@@ -6752,6 +6771,10 @@ export type OrderAnalyticsRow = {
     orderCount: Scalars['Int']['output'];
     ordersWithoutAmount: Scalars['Int']['output'];
     periodStart: Maybe<Scalars['DateTime']['output']>;
+    productAmount: Scalars['String']['output'];
+    productLinesWithoutAmount: Scalars['Int']['output'];
+    /** Filled only when a product or manufacturer filter is set; the amounts above are then empty. */
+    productQuantity: Scalars['String']['output'];
     turnover: Scalars['String']['output'];
     turnoverExcludingVat: Scalars['String']['output'];
     vatTotal: Scalars['String']['output'];
@@ -9020,6 +9043,7 @@ export type Query = {
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
     orderAnalytics: OrderAnalytics;
+    orderAnalyticsSuggest: Array<Scalars['String']['output']>;
     /** Orders with a failing ERP-requirement check, per check code and reason (issue #237). */
     orderCheckHealth: Array<OrderCheckHealthRow>;
     /** Active contracts of the order's counterparty; the one the order is registered under is marked (#205). */
@@ -9557,6 +9581,11 @@ export type QueryOrderArgs = {
 
 export type QueryOrderAnalyticsArgs = {
     input: OrderAnalyticsInput;
+};
+
+export type QueryOrderAnalyticsSuggestArgs = {
+    kind: OrderAnalyticsFilterKind;
+    prefix: Scalars['String']['input'];
 };
 
 export type QueryOrderContractsArgs = {
@@ -13973,9 +14002,19 @@ export type OrderAnalyticsQuery = {
             vatTotal: string;
             orderCount: number;
             ordersWithoutAmount: number;
+            productQuantity: string;
+            productAmount: string;
+            productLinesWithoutAmount: number;
         }>;
     };
 };
+
+export type OrderAnalyticsSuggestQueryVariables = Exact<{
+    kind: OrderAnalyticsFilterKind;
+    prefix: Scalars['String']['input'];
+}>;
+
+export type OrderAnalyticsSuggestQuery = { orderAnalyticsSuggest: Array<string> };
 
 export type CancelOrderAsStaffMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
@@ -18390,10 +18429,21 @@ export const OrderAnalyticsDocument = new TypedDocumentString(`
       vatTotal
       orderCount
       ordersWithoutAmount
+      productQuantity
+      productAmount
+      productLinesWithoutAmount
     }
   }
 }
     `) as unknown as TypedDocumentString<OrderAnalyticsQuery, OrderAnalyticsQueryVariables>;
+export const OrderAnalyticsSuggestDocument = new TypedDocumentString(`
+    query OrderAnalyticsSuggest($kind: OrderAnalyticsFilterKind!, $prefix: String!) {
+  orderAnalyticsSuggest(kind: $kind, prefix: $prefix)
+}
+    `) as unknown as TypedDocumentString<
+    OrderAnalyticsSuggestQuery,
+    OrderAnalyticsSuggestQueryVariables
+>;
 export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     mutation CancelOrderAsStaff($orderId: ID!) {
   cancelOrderAsStaff(orderId: $orderId) {

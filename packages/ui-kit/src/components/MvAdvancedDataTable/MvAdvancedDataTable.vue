@@ -4,7 +4,7 @@ import { computed, ref, useSlots } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
 import MvActiveFilterChips from '../MvActiveFilterChips/MvActiveFilterChips.vue';
-import type { FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
+import type { FilterColumn, FilterCondition } from '../MvFilterBuilder/filterBuilderTypes';
 import MvAdvancedMobileCardList from './MvAdvancedMobileCardList.vue';
 import AdvancedDataTableToolbar from './AdvancedDataTableToolbar.vue';
 import AdvancedDataTableGrid from './AdvancedDataTableGrid.vue';
@@ -54,6 +54,8 @@ const props = withDefaults(
         rowSelectable?: (row: TRow) => boolean;
         // Replaces the default "N selected" text, e.g. when the selection is not the loaded rows.
         selectionLabel?: string;
+        // Filter-builder fields with no table column of their own (a field the rows do not show).
+        extraFilterColumns?: FilterColumn[];
     }>(),
     {
         rowsPerPageOptions: () => [10, 20, 50],
@@ -63,6 +65,7 @@ const props = withDefaults(
         selectedIds: () => new Set(),
         rowSelectable: () => true,
         selectionLabel: undefined,
+        extraFilterColumns: () => [],
     },
 );
 
@@ -78,7 +81,10 @@ const emit = defineEmits<{
 const tableState = defineModel<DataTableState>('tableState', { required: true });
 // Conditions of the toolbar Filter builder, for columns that declare `filterType`.
 const conditions = defineModel<FilterCondition[]>('conditions', { default: () => [] });
-const filterColumns = computed(() => toFilterColumns(props.columns));
+const filterColumns = computed(() => [
+    ...toFilterColumns(props.columns),
+    ...props.extraFilterColumns,
+]);
 const defaultCellText = createDefaultCellText();
 
 const containerWidth = ref(0);
