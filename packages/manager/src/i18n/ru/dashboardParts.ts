@@ -14,6 +14,10 @@ const dashboardParts: typeof en = {
         paymentReconciliation: 'Сверка оплат',
         quickActions: 'Быстрые действия',
         activityFeed: 'Лента активности',
+        staffOnlyTitle: 'Учётные записи сотрудников',
+        staffOnlyHint:
+            'Эта учётная запись активирует сотрудников и назначает им роли. Данных по продажам здесь нет.',
+        staffOnlyLink: 'Открыть «Пользователи»',
         sectionFailed: '{section}: {reason}',
     },
     section: {

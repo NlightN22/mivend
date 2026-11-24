@@ -41,6 +41,8 @@ const {
     load,
 } = useDashboard();
 
+const canSeeSales = computed(() => authStore.hasPermission('ReadOrder'));
+const canManageStaff = computed(() => authStore.hasPermission('ManageAdministratorLifecycle'));
 const failedSectionKeys = computed(() => Object.keys(failedSections.value) as DashboardSection[]);
 const filterChips = computed<FilterChip[]>(() => [
     { key: 'all', label: t('dashboardParts.chips.all') },
@@ -143,6 +145,12 @@ onMounted(load);
                 @retry="load"
             />
         </div>
+        <MvPanel v-if="!canSeeSales && !loading" :title="t('dashboardParts.page.staffOnlyTitle')">
+            <p>{{ t('dashboardParts.page.staffOnlyHint') }}</p>
+            <RouterLink v-if="canManageStaff" to="/settings/users">{{
+                t('dashboardParts.page.staffOnlyLink')
+            }}</RouterLink>
+        </MvPanel>
         <ExpiringDiscountsBanner v-if="!grantsError" :discounts="expiringDiscounts" />
 
         <MvKpiCarousel v-if="data && kpiCards.length" class="dashboard__kpis">

@@ -88,6 +88,10 @@ export function useDashboard(): UseDashboard {
     async function load(): Promise<void> {
         loading.value = true;
         try {
+            if (!authStore.hasPermission('ReadOrder')) {
+                await optional('department name', loadDepartmentName, undefined);
+                return;
+            }
             const wantsReconciliationPanels =
                 authStore.hasPermission('ReadOrder') || authStore.hasPermission('ReadPayment');
             const [dashboard] = await Promise.all([

@@ -46,6 +46,8 @@ test('the portal admin menu offers System settings and no sales entries, and Set
     page,
 }) => {
     await page.goto('/');
+    await expect(page.getByRole('link', { name: 'Open Users' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('not currently authorized')).toHaveCount(0);
     const nav = page.getByRole('navigation');
     await expect(nav.getByRole('link', { name: 'Customers' })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Approvals' })).toHaveCount(0);

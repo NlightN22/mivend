@@ -6,6 +6,13 @@ vi.mock('../../api/client', async () => {
     const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
     return { ...actual, adminApi: (...args: unknown[]) => adminApiMock(...args) };
 });
+const granted = new Set<string>();
+vi.mock('../../stores/auth', () => ({
+    useAuthStore: () => ({
+        hasPermission: (name: string) => granted.has(name),
+        administrator: null,
+    }),
+}));
 vi.mock('../../api/discounts', () => ({ fetchExpiringDiscountGrants: vi.fn() }));
 vi.mock('../../api/team', () => ({ fetchDepartments: vi.fn().mockResolvedValue([]) }));
 vi.mock('../../api/notifications', () => ({ fetchNotifications: vi.fn() }));
@@ -87,6 +94,8 @@ describe('fetchDashboardData', () => {
 describe('useDashboard', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
+        granted.clear();
+        granted.add('ReadOrder');
         adminApiMock.mockReset();
         vi.mocked(fetchExpiringDiscountGrants).mockReset();
         vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -107,5 +116,16 @@ describe('useDashboard', () => {
         vi.mocked(fetchExpiringDiscountGrants).mockResolvedValue({ items: [], totalItems: 0 });
         await dashboard.load();
         expect(dashboard.failedSections.value).toEqual({});
+    });
+
+    it('loads no sales data for a user without the order right', async () => {
+        granted.clear();
+        const dashboard = useDashboard();
+        await dashboard.load();
+        expect(adminApiMock).not.toHaveBeenCalled();
+        expect(fetchExpiringDiscountGrants).not.toHaveBeenCalled();
+        expect(dashboard.data.value).toBeNull();
+        expect(dashboard.failedSections.value).toEqual({});
+        expect(dashboard.loading.value).toBe(false);
     });
 });

@@ -12,6 +12,10 @@ export default {
         paymentReconciliation: 'Payment reconciliation',
         quickActions: 'Quick actions',
         activityFeed: 'Activity feed',
+        staffOnlyTitle: 'Staff accounts',
+        staffOnlyHint:
+            'This account activates staff and assigns their roles. Sales figures are not part of it.',
+        staffOnlyLink: 'Open Users',
         sectionFailed: '{section}: {reason}',
     },
     section: {
