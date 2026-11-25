@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Product } from '@vendure/core';
-import { Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
+import { Contract, Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
 import type { CounterpartyService } from '@mivend/plugin-counterparty';
 import {
     createTestSchema,
@@ -36,6 +36,14 @@ class TestTradingPoint {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar' }) erpId!: string;
     @Column({ type: 'varchar' }) name!: string;
+    @Column({ type: 'varchar' }) counterpartyId!: string;
+}
+
+@Entity('contract')
+class TestContract {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) erpId!: string;
+    @Column({ type: 'varchar', nullable: true }) name!: string | null;
     @Column({ type: 'varchar' }) counterpartyId!: string;
 }
 
@@ -98,6 +106,7 @@ beforeAll(async () => {
         entities: [
             TestCounterparty,
             TestTradingPoint,
+            TestContract,
             TestErpUser,
             TestOrganization,
             TestManufacturer,
@@ -110,6 +119,7 @@ beforeAll(async () => {
     const byEntity = new Map<unknown, unknown>([
         [Counterparty, TestCounterparty],
         [TradingPoint, TestTradingPoint],
+        [Contract, TestContract],
         [Product, TestProduct],
         ['ErpUser', TestErpUser],
         ['OrganizationRequisites', TestOrganization],
@@ -143,6 +153,7 @@ beforeEach(async () => {
         TestProduct,
         TestCounterparty,
         TestTradingPoint,
+        TestContract,
         TestErpUser,
         TestOrganization,
         TestManufacturer,
@@ -210,6 +221,24 @@ describe('OrderAnalyticsEntityNamesService (real Postgres)', () => {
 
         expect(names(await service.find(ctx, 'POINT_OF_SALE', 'north', 10))).toEqual([
             'North shop',
+        ]);
+    });
+
+    it('limits contracts to the visible counterparties and skips unnamed ones', async () => {
+        await dataSource.getRepository(TestContract).save([
+            { erpId: 'k1', name: 'Supply main', counterpartyId: '1' },
+            { erpId: 'k2', name: 'Supply other', counterpartyId: '2' },
+            { erpId: 'k3', name: null, counterpartyId: '1' },
+        ]);
+        visibleIdsSql.mockResolvedValue({ sql: "SELECT '1'", params: {} });
+        expect(await service.find(ctx, 'CONTRACT', 'supply', 10)).toEqual([
+            { erpId: 'k1', name: 'Supply main' },
+        ]);
+
+        visibleIdsSql.mockResolvedValue(null);
+        expect(names(await service.find(ctx, 'CONTRACT', 'supply', 10))).toEqual([
+            'Supply main',
+            'Supply other',
         ]);
     });
 

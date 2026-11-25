@@ -78,6 +78,9 @@ export class OrderAnalyticsService {
             if (pinned === 'unresolved') {
                 return { state: 'OK', rows: [], limitedToVisibleCustomers: true };
             }
+            if (input.entityFilters?.some(f => f.kind === 'CONTRACT')) {
+                throw new UserInputError('Orders cannot be filtered by contract');
+            }
             const named = await resolveEntityFilters(
                 ctx,
                 this.entityNames,

@@ -9,7 +9,7 @@ function fromUnits(units: bigint, fraction: number): string {
 }
 
 // An empty string means "not filled" (the amounts of a product-filtered row); it stays empty unless a side has a value.
-function sumDecimals(a: string, b: string, fraction: number): string {
+export function sumDecimals(a: string, b: string, fraction: number): string {
     if (!a && !b) return '';
     return fromUnits(toUnits(a) + toUnits(b), fraction);
 }

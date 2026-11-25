@@ -51,6 +51,7 @@ export const adminApiSchema: DocumentNode = gql`
     enum OrderAnalyticsFilterKind {
         CUSTOMER
         ORGANIZATION
+        CONTRACT
         POINT_OF_SALE
         MANAGER
         COUNTERPARTY_MANAGER
@@ -85,7 +86,53 @@ export const adminApiSchema: DocumentNode = gql`
         limitedToVisibleCustomers: Boolean!
     }
 
+    enum SalesAnalyticsDimension {
+        NONE
+        COUNTERPARTY
+        ORGANIZATION
+        CONTRACT
+        COUNTERPARTY_MANAGER
+    }
+
+    input SalesAnalyticsInput {
+        from: DateTime!
+        to: DateTime!
+        granularity: OrderAnalyticsGranularity!
+        dimension: SalesAnalyticsDimension!
+        timeZone: String
+        "Names typed in the filter builder; the server resolves them to ids inside the viewer's scope."
+        entityFilters: [OrderAnalyticsEntityFilterInput!]
+        mainManagerOnly: Boolean
+    }
+
+    type SalesAnalyticsAmount {
+        amount: String!
+        amountExcludingVatBasis: String!
+        documentCount: Int!
+        documentsWithoutAmount: Int!
+    }
+
+    type SalesAnalyticsRow {
+        periodStart: DateTime
+        dimensionId: String!
+        label: String!
+        currency: String!
+        sales: SalesAnalyticsAmount!
+        returns: SalesAnalyticsAmount!
+        corrections: SalesAnalyticsAmount!
+        netSales: SalesAnalyticsAmount!
+    }
+
+    type SalesAnalytics {
+        state: OrderAnalyticsState!
+        rows: [SalesAnalyticsRow!]!
+        correctionsWithoutEffect: Int!
+        unresolvedCurrencies: [String!]!
+        limitedToVisibleCustomers: Boolean!
+    }
+
     extend type Query {
+        salesAnalytics(input: SalesAnalyticsInput!): SalesAnalytics!
         analyticsReports: [AnalyticsReport!]!
         orderAnalytics(input: OrderAnalyticsInput!): OrderAnalytics!
         orderAnalyticsSuggest(kind: OrderAnalyticsFilterKind!, prefix: String!): [String!]!

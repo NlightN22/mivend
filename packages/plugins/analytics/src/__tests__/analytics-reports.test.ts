@@ -9,12 +9,14 @@ describe('analytics report registry', () => {
         expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('describes every report completely and keeps only the orders report available', () => {
+    it('describes every report completely and keeps only the orders and sales reports available', () => {
         for (const r of ANALYTICS_REPORTS) {
             for (const field of [r.key, r.title, r.description, r.area, r.permission, r.note]) {
                 expect(field.trim(), r.key).not.toBe('');
             }
-            expect(r.status, r.key).toBe(r.key === 'orders' ? 'available' : 'planned');
+            expect(r.status, r.key).toBe(
+                ['orders', 'sales'].includes(r.key) ? 'available' : 'planned',
+            );
         }
     });
 

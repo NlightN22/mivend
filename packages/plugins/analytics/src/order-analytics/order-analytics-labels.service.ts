@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
+import { Contract, Counterparty, TradingPoint } from '@mivend/plugin-counterparty';
 import { In } from 'typeorm';
-
-import type { OrderDimension } from './order-metrics.types';
 
 interface LabelSource {
     entity: string | (new () => object);
     label: (row: Record<string, string | null>) => string | null;
 }
 
-const SOURCES: Partial<Record<OrderDimension, LabelSource>> = {
+const SOURCES: Record<string, LabelSource> = {
     CUSTOMER: { entity: Counterparty, label: r => r.shortName || r.legalName },
+    COUNTERPARTY: { entity: Counterparty, label: r => r.shortName || r.legalName },
+    CONTRACT: { entity: Contract, label: r => r.name },
     POINT_OF_SALE: { entity: TradingPoint, label: r => r.name },
     MANAGER: { entity: 'ErpUser', label: r => r.fullName },
     COUNTERPARTY_MANAGER: { entity: 'ErpUser', label: r => r.fullName },
@@ -25,7 +25,7 @@ export class OrderAnalyticsLabelsService {
 
     async labelsFor(
         ctx: RequestContext,
-        dimension: OrderDimension,
+        dimension: string,
         ids: string[],
     ): Promise<Map<string, string>> {
         const source = SOURCES[dimension];

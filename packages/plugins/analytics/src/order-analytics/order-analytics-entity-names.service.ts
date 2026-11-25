@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Product, RequestContext, TransactionalConnection } from '@vendure/core';
-import { CounterpartyService, TradingPoint } from '@mivend/plugin-counterparty';
+import { Contract, CounterpartyService, TradingPoint } from '@mivend/plugin-counterparty';
 import { In } from 'typeorm';
 
 import { OrderAnalyticsScopeService } from './order-analytics-scope.service';
@@ -8,6 +8,7 @@ import { OrderAnalyticsScopeService } from './order-analytics-scope.service';
 export const ENTITY_FILTER_KINDS = [
     'CUSTOMER',
     'ORGANIZATION',
+    'CONTRACT',
     'POINT_OF_SALE',
     'MANAGER',
     'COUNTERPARTY_MANAGER',
@@ -42,6 +43,8 @@ export class OrderAnalyticsEntityNamesService {
         switch (kind) {
             case 'CUSTOMER':
                 return this.customers(ctx, like, limit);
+            case 'CONTRACT':
+                return this.contracts(ctx, like, limit);
             case 'POINT_OF_SALE':
                 return this.pointsOfSale(ctx, like, limit);
             case 'MANAGER':
@@ -94,6 +97,21 @@ export class OrderAnalyticsEntityNamesService {
         if (visible) qb.andWhere(`t.counterpartyId IN (${visible.sql})`, visible.params);
         const rows = await qb.orderBy('t.name', 'ASC').take(limit).getMany();
         return rows.map(t => ({ erpId: t.erpId, name: t.name }));
+    }
+
+    private async contracts(
+        ctx: RequestContext,
+        like: string,
+        limit: number,
+    ): Promise<NamedEntity[]> {
+        const qb = this.connection
+            .getRepository(ctx, Contract)
+            .createQueryBuilder('k')
+            .where("k.name ILIKE :like ESCAPE '\\'", { like });
+        const visible = await this.counterparties.visibleIdsSql(ctx);
+        if (visible) qb.andWhere(`k.counterpartyId IN (${visible.sql})`, visible.params);
+        const rows = await qb.orderBy('k.name', 'ASC').take(limit).getMany();
+        return rows.map(k => ({ erpId: k.erpId, name: k.name as string }));
     }
 
     private async managers(

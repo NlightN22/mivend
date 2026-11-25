@@ -14,6 +14,16 @@ export const SALES_REPORTS: AnalyticsReport[] = [
         note: 'Read from the analytics service, which holds order turnover from the integration service (the amounts of orders, not sales documents). Rows stay inside the viewer scope; the same table is embedded in the customer and manager cards with the entity as a fixed filter.',
     },
     {
+        key: 'sales',
+        title: 'Sales',
+        description:
+            'Posted sales, returns and corrections per period, by customer, organization, contract or manager.',
+        area: 'sales',
+        permission,
+        status: 'available',
+        note: 'Read from the analytics service, which holds posted realization documents, customer returns and sales corrections. The amounts are preliminary until the ERP side confirms the signs; different currencies are never added, each is its own row.',
+    },
+    {
         key: 'sales-dynamics',
         title: 'Sales dynamics',
         description:

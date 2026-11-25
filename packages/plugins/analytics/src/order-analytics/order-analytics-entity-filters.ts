@@ -17,6 +17,7 @@ export const SUGGEST_LIMIT = 10;
 export interface ResolvedEntityFilters {
     customerIds: string[];
     organizationIds: string[];
+    contractIds: string[];
     pointOfSaleIds: string[];
     managerIds: string[];
     counterpartyManagerIds: string[];
@@ -29,6 +30,7 @@ export interface ResolvedEntityFilters {
 const FIELD_BY_KIND: Record<EntityFilterKind, keyof Omit<ResolvedEntityFilters, 'unmatched'>> = {
     CUSTOMER: 'customerIds',
     ORGANIZATION: 'organizationIds',
+    CONTRACT: 'contractIds',
     POINT_OF_SALE: 'pointOfSaleIds',
     MANAGER: 'managerIds',
     COUNTERPARTY_MANAGER: 'counterpartyManagerIds',
@@ -44,6 +46,7 @@ export async function resolveEntityFilters(
     const resolved: ResolvedEntityFilters = {
         customerIds: [],
         organizationIds: [],
+        contractIds: [],
         pointOfSaleIds: [],
         managerIds: [],
         counterpartyManagerIds: [],

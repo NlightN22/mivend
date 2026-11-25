@@ -10,6 +10,9 @@ import { OrderAnalyticsResolver } from './order-analytics/order-analytics.resolv
 import { OrderAnalyticsScopeService } from './order-analytics/order-analytics-scope.service';
 import { OrderAnalyticsService } from './order-analytics/order-analytics.service';
 import { OrderMetricsClient } from './order-analytics/order-metrics.client';
+import { SalesAnalyticsResolver } from './sales-analytics/sales-analytics.resolver';
+import { SalesAnalyticsService } from './sales-analytics/sales-analytics.service';
+import { SalesMetricsClient } from './sales-analytics/sales-metrics.client';
 import { ANALYTICS_PLUGIN_OPTIONS } from './types';
 import type { AnalyticsPluginOptions } from './types';
 
@@ -22,10 +25,12 @@ import type { AnalyticsPluginOptions } from './types';
         OrderAnalyticsLabelsService,
         OrderAnalyticsEntityNamesService,
         OrderAnalyticsService,
+        SalesMetricsClient,
+        SalesAnalyticsService,
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AnalyticsResolver, OrderAnalyticsResolver],
+        resolvers: [AnalyticsResolver, OrderAnalyticsResolver, SalesAnalyticsResolver],
     },
     compatibility: '>0.0.0',
 })
