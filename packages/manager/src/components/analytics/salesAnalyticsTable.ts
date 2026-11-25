@@ -53,7 +53,7 @@ export function toSalesTableRows(
     }));
 }
 
-// The currency is its own column, so amounts are shown plain: the source value may be a code, a number or an id.
+// The currency is its own column, so amounts are shown plain: the server resolves ids and numeric codes through the currency catalog.
 export function formatSalesRow(
     row: SalesAnalyticsTableRow,
     locale: string,

@@ -10,6 +10,7 @@ import { OrderAnalyticsScopeService } from '../order-analytics/order-analytics-s
 import { MAX_FILTER_VALUES, OrderMetricsError } from '../order-analytics/order-metrics.types';
 import type { OrderGranularity } from '../order-analytics/order-metrics.types';
 import { loggerCtx } from '../types';
+import { SalesCurrencyResolverService } from './sales-currency-resolver.service';
 import { SalesMetricsClient } from './sales-metrics.client';
 import type { SalesDimension, SalesTurnover, SalesTurnoverRow } from './sales-metrics.types';
 import { mergeSalesRows } from './sales-turnover-merge';
@@ -70,6 +71,7 @@ export class SalesAnalyticsService {
         private readonly scope: OrderAnalyticsScopeService,
         private readonly labels: OrderAnalyticsLabelsService,
         private readonly entityNames: OrderAnalyticsEntityNamesService,
+        private readonly currencies: SalesCurrencyResolverService,
     ) {}
 
     async query(ctx: RequestContext, input: SalesAnalyticsInput): Promise<SalesAnalyticsResult> {
@@ -113,7 +115,13 @@ export class SalesAnalyticsService {
                 input.dimension === 'COUNTERPARTY_MANAGER' && visibleManagers !== null
                     ? fetched.rows.filter(r => visibleManagers.includes(r.dimensionId))
                     : fetched.rows;
-            const rows = mergeSalesRows(visibleRows);
+            const toCode = await this.currencies.resolver(ctx, [
+                ...visibleRows.map(r => r.currency),
+                ...fetched.unresolvedCurrencies,
+            ]);
+            const rows = mergeSalesRows(
+                visibleRows.map(r => ({ ...r, currency: toCode(r.currency) })),
+            );
             const names = await this.labels.labelsFor(ctx, input.dimension, [
                 ...new Set(rows.map(r => r.dimensionId).filter(Boolean)),
             ]);
@@ -121,7 +129,7 @@ export class SalesAnalyticsService {
                 state: 'OK',
                 rows: rows.map(r => ({ ...r, label: names.get(r.dimensionId) ?? r.dimensionId })),
                 correctionsWithoutEffect: fetched.correctionsWithoutEffect,
-                unresolvedCurrencies: fetched.unresolvedCurrencies,
+                unresolvedCurrencies: fetched.unresolvedCurrencies.filter(c => toCode(c) === c),
                 limitedToVisibleCustomers: limited,
             };
         } catch (error) {

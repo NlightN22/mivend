@@ -14,12 +14,14 @@ const visibleCustomerErpIds = vi.fn();
 const visibleManagerErpIds = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
+const resolver = vi.fn();
 
 const service = new SalesAnalyticsService(
     { getSalesTurnover } as never,
     { visibleCustomerErpIds, visibleManagerErpIds } as never,
     { labelsFor } as never,
     { find: findNamed } as never,
+    { resolver } as never,
 );
 
 const input = (over: Partial<SalesAnalyticsInput> = {}): SalesAnalyticsInput => ({
@@ -62,6 +64,7 @@ beforeEach(() => {
     labelsFor.mockResolvedValue(new Map());
     getSalesTurnover.mockResolvedValue(response());
     findNamed.mockResolvedValue([]);
+    resolver.mockResolvedValue((v: string) => v);
 });
 
 describe('SalesAnalyticsService scope and filters', () => {
@@ -192,5 +195,33 @@ describe('SalesAnalyticsService failures', () => {
     it('turns a bad request into a user error', async () => {
         getSalesTurnover.mockRejectedValue(new OrderMetricsError('INVALID_ARGUMENT', 'period'));
         await expect(service.query(ctx, input())).rejects.toBeInstanceOf(UserInputError);
+    });
+});
+
+describe('SalesAnalyticsService currency resolution', () => {
+    it('shows catalog codes for ids and numeric codes and merges them into one currency row', async () => {
+        const known: Record<string, string> = { 'cur-1': 'RUB', '643': 'RUB' };
+        resolver.mockResolvedValue((v: string) => known[v] ?? v);
+        getSalesTurnover.mockResolvedValue(
+            response({
+                rows: [
+                    row({ currency: 'cur-1' }),
+                    row({ currency: '643', sales: amount('5.00'), netSales: amount('5.00') }),
+                    row({ currency: 'cur-9' }),
+                    row({ currency: '' }),
+                ],
+                unresolvedCurrencies: ['cur-1', 'cur-9'],
+            }),
+        );
+
+        const result = await service.query(ctx, input());
+
+        expect(resolver).toHaveBeenCalledWith(ctx, ['cur-1', '643', 'cur-9', '', 'cur-1', 'cur-9']);
+        expect(result.rows.map(r => [r.currency, r.netSales.amount])).toEqual([
+            ['', '10.00'],
+            ['cur-9', '10.00'],
+            ['RUB', '15.00'],
+        ]);
+        expect(result.unresolvedCurrencies).toEqual(['cur-9']);
     });
 });
