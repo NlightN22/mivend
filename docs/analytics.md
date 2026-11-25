@@ -51,9 +51,9 @@ integration service: the sum of order amounts, not sales documents; cancelled an
 - **Free-form filters (#396).** The Filters button is the standard filter builder. Its seven fields (customer,
   organization, point of sale, order manager, customer manager, product, manufacturer) take a name with a typeahead
   (`orderAnalyticsSuggest`, at least two characters, ten names, inside the viewer's scope). The browser sends the
-  names; the server resolves them to ERP ids (a name matches by case-insensitive "contains", at most 200 entities per
-  typed value and 1000 per filter) and applies the viewer's scope on top, so ERP ids never reach the browser. A name
-  that matches nothing returns no rows, never the unfiltered answer. The contract's filter lists are sent only when
+  names; the server resolves them to ERP ids (a name matches by case-insensitive "contains") and applies the viewer's scope on top, so ERP ids never reach the browser. A name
+  that matches nothing returns no rows, never the unfiltered answer, and a name that is too broad (more than 200 matches
+  for one value, more than 20 values or 1000 ids for one filter) answers the explicit "too large" state instead of totalling a partial set. The contract's filter lists are sent only when
   not empty. The "customer manager" dimension and filter follow the "main manager only" switch.
 - **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
   different managers must not be added together; orders of a customer without a manager fall into an empty id. For a

@@ -1,4 +1,5 @@
 import { RequestContext } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 
 import type { EntityFilterKind } from './order-analytics-entity-names.service';
 import { OrderAnalyticsEntityNamesService } from './order-analytics-entity-names.service';
@@ -53,15 +54,17 @@ export async function resolveEntityFilters(
     for (const { kind, values } of filters) {
         const wanted = values.map(v => v.trim()).filter(Boolean);
         if (wanted.length === 0) continue;
+        // A cap is never a silent cut: a broad name fails closed instead of totalling a partial set.
+        if (wanted.length > MAX_VALUES_PER_KIND) throw new QueryTooLargeError(MAX_VALUES_PER_KIND);
         const ids = new Set<string>();
-        for (const value of wanted.slice(0, MAX_VALUES_PER_KIND)) {
-            for (const found of await names.find(ctx, kind, value, PER_VALUE_LIMIT)) {
-                ids.add(found.erpId);
-            }
+        for (const value of wanted) {
+            const found = await names.find(ctx, kind, value, PER_VALUE_LIMIT + 1);
+            if (found.length > PER_VALUE_LIMIT) throw new QueryTooLargeError(PER_VALUE_LIMIT);
+            for (const entity of found) ids.add(entity.erpId);
         }
+        if (ids.size > MAX_FILTER_VALUES) throw new QueryTooLargeError(MAX_FILTER_VALUES);
         if (ids.size === 0) resolved.unmatched = true;
-        const target = resolved[FIELD_BY_KIND[kind]];
-        for (const id of ids) if (target.length < MAX_FILTER_VALUES) target.push(id);
+        resolved[FIELD_BY_KIND[kind]].push(...ids);
     }
     return resolved;
 }

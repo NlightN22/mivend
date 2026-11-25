@@ -1,4 +1,5 @@
 import type { RequestContext } from '@vendure/core';
+import { QueryTooLargeError } from 'shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -63,6 +64,51 @@ describe('resolveEntityFilters', () => {
         expect(result.counterpartyManagerIds).toEqual(['x']);
         expect(result.pointOfSaleIds).toEqual(['x']);
         expect(result.managerIds).toEqual([]);
+    });
+});
+
+describe('resolveEntityFilters caps fail closed', () => {
+    const many = (n: number): Array<{ erpId: string; name: string }> =>
+        Array.from({ length: n }, (_, i) => ({ erpId: `e${i}`, name: `N${i}` }));
+
+    it('refuses a value that matches more than 200 entities instead of truncating it', async () => {
+        find.mockResolvedValue(many(201));
+
+        await expect(
+            resolveEntityFilters(ctx, names, [{ kind: 'CUSTOMER', values: ['ivan'] }]),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
+        expect(find).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'ivan', 201);
+    });
+
+    it('accepts a value that matches exactly 200 entities', async () => {
+        find.mockResolvedValue(many(200));
+
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'CUSTOMER', values: ['ivan'] },
+        ]);
+
+        expect(result.customerIds).toHaveLength(200);
+    });
+
+    it('refuses more than 20 typed values of one kind', async () => {
+        find.mockResolvedValue(many(1));
+        const values = Array.from({ length: 21 }, (_, i) => `name ${i}`);
+
+        await expect(
+            resolveEntityFilters(ctx, names, [{ kind: 'PRODUCT', values }]),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
+    });
+
+    it('refuses more than 1000 resolved ids of one kind', async () => {
+        let next = 0;
+        find.mockImplementation(async () =>
+            Array.from({ length: 200 }, () => ({ erpId: `e${next++}`, name: 'x' })),
+        );
+        const values = Array.from({ length: 6 }, (_, i) => `name ${i}`);
+
+        await expect(
+            resolveEntityFilters(ctx, names, [{ kind: 'PRODUCT', values }]),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 });
 

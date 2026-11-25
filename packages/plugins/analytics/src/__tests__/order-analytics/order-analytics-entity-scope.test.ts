@@ -126,6 +126,20 @@ describe('OrderAnalyticsService counterparty managers and entity filters', () =>
         expect(result.rows).toEqual([]);
     });
 
+    it('answers TOO_LARGE, not a partial total, when a typed name is too broad', async () => {
+        findNamed.mockResolvedValue(
+            Array.from({ length: 201 }, (_, i) => ({ erpId: `c${i}`, name: 'Ivan' })),
+        );
+
+        const result = await service.query(
+            ctx,
+            input({ entityFilters: [{ kind: 'CUSTOMER', values: ['ivan'] }] }),
+        );
+
+        expect(result).toMatchObject({ state: 'TOO_LARGE', rows: [] });
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+    });
+
     it('ignores a filter without values', async () => {
         await service.query(ctx, input({ entityFilters: [{ kind: 'PRODUCT', values: ['  '] }] }));
 

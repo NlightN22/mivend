@@ -74,7 +74,7 @@ export default {
         states: {
             NOT_CONFIGURED: 'The analytics service is not configured on this server.',
             TOO_LARGE:
-                'There are too many customers in your view to calculate this. Narrow it down to one customer or manager.',
+                'There are too many customers or matches to calculate this. Use a more specific name, or narrow it down to one customer or manager.',
             UNAVAILABLE: 'The analytics service is not available right now. Try again later.',
         },
     },
