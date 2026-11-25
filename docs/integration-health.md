@@ -111,6 +111,9 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   after every listed level. With no table yet (never fetched) the order is the old FIFO by eligibility time.
 - A quarter of every batch (`PARKED_SHARE_DENOMINATOR`) is reserved for due `dependency_missing` rows, also taken in
   level order, so a parked row does not wait for the whole pending backlog. Slots one side does not use go to the other.
+- A quarter of every batch (`AGED_SHARE_DENOMINATOR`) is taken oldest-first across all levels and unlisted streams, for
+  pending rows eligible for more than `AGED_AFTER_MS` (10 min), so a refilled lower level cannot starve a higher one.
+- Callers pass a stream list; the unfiltered claim (no list) scans the table and exists for tests only.
 - A parked row is not released early when its parent arrives: it waits for its own retry timer (at most 30 min
   after the first 24 h), now with a guaranteed share of each batch.
 

@@ -6,6 +6,10 @@ import type { InboundStream } from './types';
 // One quarter of every batch is reserved for due parked rows so they do not wait for the pending backlog.
 export const PARKED_SHARE_DENOMINATOR = 4;
 
+// A quarter of the batch goes to the oldest rows past this eligibility age, whatever their level, so no stream waits forever.
+export const AGED_SHARE_DENOMINATOR = 4;
+export const AGED_AFTER_MS = 10 * 60 * 1000;
+
 const UNLISTED_LEVEL = 2147483647;
 
 export function parkedReserve(limit: number): number {
@@ -13,6 +17,13 @@ export function parkedReserve(limit: number): number {
 }
 
 // Pending/stale take the batch minus the parked rows that fit the reserve; spare slots flow either way.
+export function mergeAged(aged: string[], leveled: string[], limit: number): string[] {
+    const reserve = limit > 1 ? Math.ceil(limit / AGED_SHARE_DENOMINATOR) : 0;
+    const head = aged.slice(0, reserve);
+    const taken = new Set(head);
+    return [...head, ...leveled.filter(id => !taken.has(id))].slice(0, limit);
+}
+
 export function mergeCandidates(pending: string[], parked: string[], limit: number): string[] {
     const pendingTake = Math.min(
         pending.length,
@@ -59,6 +70,7 @@ export async function findClaimCandidateIds(
     const filtered = streams !== undefined && streams.length > 0;
     const names = [...levels.keys()];
     const streamValues: string[] = filtered ? streams : names;
+    // The unfiltered mode scans (indexes lead with stream); production callers always pass streams.
     const unlisted = !filtered;
     const base: unknown[] = [limit, names, [...levels.values()], staleMs, ...streamValues];
     const order = 'ORDER BY lvl ASC, eligible_at ASC, id ASC LIMIT $1';
@@ -78,6 +90,18 @@ export async function findClaimCandidateIds(
         staleParams,
     );
 
+    const agedSql = statusBranches(
+        'pending',
+        streamValues,
+        unlisted,
+        `AND eligible_at < now() - interval '${AGED_AFTER_MS} milliseconds' AND $4::bigint >= 0`,
+    );
+    const aged = await ctxQuery<IdRows>(
+        connection,
+        ctx,
+        `SELECT id FROM (${agedSql}) combined ORDER BY eligible_at ASC, id ASC LIMIT $1`,
+        base,
+    );
     // Postgres rejects an unreferenced bound parameter, so the parked branches reference $4 harmlessly.
     const parkedSql = statusBranches(
         'dependency_missing',
@@ -92,7 +116,11 @@ export async function findClaimCandidateIds(
         base,
     );
     return mergeCandidates(
-        pending.map(r => r.id),
+        mergeAged(
+            aged.map(r => r.id),
+            pending.map(r => r.id),
+            limit,
+        ),
         parked.map(r => r.id),
         limit,
     );

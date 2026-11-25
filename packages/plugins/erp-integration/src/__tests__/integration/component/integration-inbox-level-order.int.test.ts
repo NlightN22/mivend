@@ -133,4 +133,20 @@ describe('claimBatch level order (real Postgres)', () => {
         }
         expect(seen).toEqual(all);
     });
+
+    it('claims an old higher-level and an old unlisted row while a lower level is refilled', async () => {
+        levels = new Map([
+            ['currency', 0],
+            ['price', 3],
+        ]);
+        const oldPrice = await seed('price', 3600);
+        const oldUnlisted = await seed('category', 3500);
+        const seen = new Set<string>();
+        for (let round = 0; round < 3; round++) {
+            for (let i = 0; i < 8; i++) await seed('currency', 5);
+            for (const id of await claim(4)) seen.add(id);
+        }
+        expect(seen.has(oldPrice)).toBe(true);
+        expect(seen.has(oldUnlisted)).toBe(true);
+    });
 });
