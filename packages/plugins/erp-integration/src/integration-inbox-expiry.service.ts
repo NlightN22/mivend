@@ -10,8 +10,8 @@ import {
 
 const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
-// Ids grow with created_at, so one id-ordered slice is bounded and `reached_horizon` ends the pass.
-// Keeps the newest processed version per entity (ties by id), emptied or not; MATERIALIZED stops the planner re-running the lookup per row.
+// Keeps the newest version per entity; SQL order matches isVersionNewer only when one entity's versions are
+// all numeric (up to 30 digits) or all strings. Id-ordered slices end at `reached_horizon`.
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
        SELECT id, stream, entity_id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
