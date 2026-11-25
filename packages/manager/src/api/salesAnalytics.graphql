@@ -1,0 +1,33 @@
+fragment SalesAmountFields on SalesAnalyticsAmount {
+    amount
+    amountExcludingVatBasis
+    documentCount
+    documentsWithoutAmount
+}
+
+query SalesAnalytics($input: SalesAnalyticsInput!) {
+    salesAnalytics(input: $input) {
+        state
+        limitedToVisibleCustomers
+        correctionsWithoutEffect
+        unresolvedCurrencies
+        rows {
+            periodStart
+            dimensionId
+            label
+            currency
+            sales {
+                ...SalesAmountFields
+            }
+            returns {
+                ...SalesAmountFields
+            }
+            corrections {
+                ...SalesAmountFields
+            }
+            netSales {
+                ...SalesAmountFields
+            }
+        }
+    }
+}

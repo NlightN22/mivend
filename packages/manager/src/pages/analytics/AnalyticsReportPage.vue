@@ -6,6 +6,7 @@ import { MvErrorState, MvNotice, MvSkeleton, MvStatusBadge } from '@mivend/ui-ki
 import { REPORT_STATUS_VARIANT } from '../../api/analytics';
 import { useAnalyticsReports } from '../../composables/useAnalyticsReports';
 import OrderAnalyticsReport from '../../components/analytics/OrderAnalyticsReport.vue';
+import SalesAnalyticsReport from '../../components/analytics/SalesAnalyticsReport.vue';
 
 const { t } = useI18n();
 const key = String(useRoute().params.report);
@@ -38,6 +39,11 @@ const report = computed(() => reports.value.find(r => r.key === key) ?? null);
                 v-if="report.key === 'orders'"
                 class="report-page__report"
                 storage-key="order-analytics"
+            />
+            <SalesAnalyticsReport
+                v-else-if="report.key === 'sales'"
+                class="report-page__report"
+                storage-key="sales-analytics"
             />
             <template v-else>
                 <MvNotice variant="info">{{ t('analytics.report.notBuilt') }}</MvNotice>

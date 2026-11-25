@@ -19,10 +19,13 @@ export const ENTITY_FILTER_KEYS: Record<string, OrderAnalyticsFilterKind> = {
 
 export const PRODUCT_FILTER_KEYS = ['product', 'manufacturer'];
 
-export function buildEntityFilterColumns(): FilterColumn[] {
-    return Object.entries(ENTITY_FILTER_KEYS).map(([key, kind]) => ({
+export function buildEntityFilterColumns(
+    keys: Record<string, OrderAnalyticsFilterKind> = ENTITY_FILTER_KEYS,
+    report = 'orders',
+): FilterColumn[] {
+    return Object.entries(keys).map(([key, kind]) => ({
         key,
-        label: i18n.global.t(`analytics.orders.filters.${key}`),
+        label: i18n.global.t(`analytics.${report}.filters.${key}`),
         type: 'string',
         operators: ['contains'],
         suggest: prefix => suggestOrderAnalytics(kind, prefix),
@@ -31,10 +34,11 @@ export function buildEntityFilterColumns(): FilterColumn[] {
 
 export function conditionsToEntityFilters(
     conditions: FilterCondition[],
+    keys: Record<string, OrderAnalyticsFilterKind> = ENTITY_FILTER_KEYS,
 ): OrderAnalyticsEntityFilter[] {
     const byKind = new Map<OrderAnalyticsFilterKind, string[]>();
     for (const c of conditions) {
-        const kind = ENTITY_FILTER_KEYS[c.columnKey];
+        const kind = keys[c.columnKey];
         const value = typeof c.value === 'string' ? c.value.trim() : '';
         if (!kind || !value) continue;
         byKind.set(kind, [...(byKind.get(kind) ?? []), value]);

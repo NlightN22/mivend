@@ -78,4 +78,60 @@ export default {
             UNAVAILABLE: 'The analytics service is not available right now. Try again later.',
         },
     },
+    sales: {
+        searchPlaceholder: 'Search by name…',
+        notSpecified: 'Not specified',
+        total: 'Total',
+        granularity: 'Group by period',
+        dimension: 'Break down by',
+        granularities: { NONE: 'No grouping', DAY: 'Day', MONTH: 'Month' },
+        dimensions: {
+            NONE: 'Nothing (one total)',
+            COUNTERPARTY: 'Customer',
+            ORGANIZATION: 'Organization',
+            CONTRACT: 'Contract',
+            COUNTERPARTY_MANAGER: 'Customer manager',
+        },
+        columns: {
+            title: 'Name',
+            period: 'Period',
+            currency: 'Currency',
+            sales: 'Sales',
+            returns: 'Returns',
+            corrections: 'Corrections',
+            netSales: 'Net sales',
+            netSalesExcludingVatBasis: 'Net sales, total without VAT',
+            documentCount: 'Sale documents',
+            documentsWithoutAmount: 'Documents without amount',
+        },
+        filters: {
+            customer: 'Customer',
+            organization: 'Organization',
+            contract: 'Contract',
+            counterpartyManager: 'Customer manager',
+        },
+        mainManagerOnly: 'Main manager only',
+        preliminary:
+            'Preliminary data: how the amounts of returns and corrections are signed is not yet confirmed by the accounting side, so treat the figures as indicative.',
+        basis: 'Posted sales documents, customer returns and sales corrections by document date. Net sales = sales - returns + corrections. Different currencies are never added together: each currency is its own row.',
+        excludingVatBasis:
+            'A document whose total excludes VAT is not converted, so the amounts mix both bases; the "total without VAT" column shows how much of the net sales comes from such documents.',
+        counterpartyManagerBasis:
+            'A customer with several managers is counted under each of them, so the rows must not be added together.',
+        correctionsWithoutEffect:
+            '{count} posted correction documents of this period have no effect on the settlements yet, so they are missing from the corrections and net sales.',
+        unresolvedCurrencies:
+            'The currency of some rows could not be matched to a currency code ({values}). The same currency can appear in several rows; they are not merged.',
+        limited: 'Only the customers you can see are included.',
+        empty: 'No sales in this period.',
+        invalidPeriod: 'The end date is before the start date.',
+        loadFailedTitle: 'Could not load the sales',
+        loadFailedMessage: 'Check the connection and try again.',
+        states: {
+            NOT_CONFIGURED: 'The analytics service is not configured on this server.',
+            TOO_LARGE:
+                'There are too many customers, matches or rows to calculate this. Use a more specific name, a shorter period or fewer groups.',
+            UNAVAILABLE: 'The analytics service is not available right now. Try again later.',
+        },
+    },
 };

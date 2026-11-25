@@ -6739,6 +6739,7 @@ export type OrderAnalyticsEntityFilterInput = {
 };
 
 export type OrderAnalyticsFilterKind =
+    | 'CONTRACT'
     | 'COUNTERPARTY_MANAGER'
     | 'CUSTOMER'
     | 'MANAGER'
@@ -9129,6 +9130,7 @@ export type Query = {
     roleAccessScopeConfig: Maybe<Scalars['String']['output']>;
     roleAccessScopeProvisioningStatus: Array<RoleAccessScopeProvisioningStatusItem>;
     roles: RoleList;
+    salesAnalytics: SalesAnalytics;
     scheduledTasks: Array<ScheduledTask>;
     search: SearchResponse;
     searchAddress: Array<AddressSuggestion>;
@@ -9791,6 +9793,10 @@ export type QueryRolesArgs = {
     options?: InputMaybe<RoleListOptions>;
 };
 
+export type QuerySalesAnalyticsArgs = {
+    input: SalesAnalyticsInput;
+};
+
 export type QuerySearchArgs = {
     input: SearchInput;
 };
@@ -10323,6 +10329,50 @@ export type Sale = Node &
         type: StockMovementType;
         updatedAt: Scalars['DateTime']['output'];
     };
+
+export type SalesAnalytics = {
+    correctionsWithoutEffect: Scalars['Int']['output'];
+    limitedToVisibleCustomers: Scalars['Boolean']['output'];
+    rows: Array<SalesAnalyticsRow>;
+    state: OrderAnalyticsState;
+    unresolvedCurrencies: Array<Scalars['String']['output']>;
+};
+
+export type SalesAnalyticsAmount = {
+    amount: Scalars['String']['output'];
+    amountExcludingVatBasis: Scalars['String']['output'];
+    documentCount: Scalars['Int']['output'];
+    documentsWithoutAmount: Scalars['Int']['output'];
+};
+
+export type SalesAnalyticsDimension =
+    | 'CONTRACT'
+    | 'COUNTERPARTY'
+    | 'COUNTERPARTY_MANAGER'
+    | 'NONE'
+    | 'ORGANIZATION';
+
+export type SalesAnalyticsInput = {
+    dimension: SalesAnalyticsDimension;
+    /** Names typed in the filter builder; the server resolves them to ids inside the viewer's scope. */
+    entityFilters?: InputMaybe<Array<OrderAnalyticsEntityFilterInput>>;
+    from: Scalars['DateTime']['input'];
+    granularity: OrderAnalyticsGranularity;
+    mainManagerOnly?: InputMaybe<Scalars['Boolean']['input']>;
+    timeZone?: InputMaybe<Scalars['String']['input']>;
+    to: Scalars['DateTime']['input'];
+};
+
+export type SalesAnalyticsRow = {
+    corrections: SalesAnalyticsAmount;
+    currency: Scalars['String']['output'];
+    dimensionId: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+    netSales: SalesAnalyticsAmount;
+    periodStart: Maybe<Scalars['DateTime']['output']>;
+    returns: SalesAnalyticsAmount;
+    sales: SalesAnalyticsAmount;
+};
 
 export type SavedTableView = {
     createdAt: Scalars['DateTime']['output'];
@@ -15038,6 +15088,56 @@ export type OrderReservationDetailsQuery = {
     }>;
 };
 
+export type SalesAmountFieldsFragment = {
+    amount: string;
+    amountExcludingVatBasis: string;
+    documentCount: number;
+    documentsWithoutAmount: number;
+};
+
+export type SalesAnalyticsQueryVariables = Exact<{
+    input: SalesAnalyticsInput;
+}>;
+
+export type SalesAnalyticsQuery = {
+    salesAnalytics: {
+        state: OrderAnalyticsState;
+        limitedToVisibleCustomers: boolean;
+        correctionsWithoutEffect: number;
+        unresolvedCurrencies: Array<string>;
+        rows: Array<{
+            periodStart: any | null;
+            dimensionId: string;
+            label: string;
+            currency: string;
+            sales: {
+                amount: string;
+                amountExcludingVatBasis: string;
+                documentCount: number;
+                documentsWithoutAmount: number;
+            };
+            returns: {
+                amount: string;
+                amountExcludingVatBasis: string;
+                documentCount: number;
+                documentsWithoutAmount: number;
+            };
+            corrections: {
+                amount: string;
+                amountExcludingVatBasis: string;
+                documentCount: number;
+                documentsWithoutAmount: number;
+            };
+            netSales: {
+                amount: string;
+                amountExcludingVatBasis: string;
+                documentCount: number;
+                documentsWithoutAmount: number;
+            };
+        }>;
+    };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -16330,6 +16430,17 @@ export const OrderContractOptionFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderContractOptionFields' },
 ) as unknown as TypedDocumentString<OrderContractOptionFieldsFragment, unknown>;
+export const SalesAmountFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment SalesAmountFields on SalesAnalyticsAmount {
+  amount
+  amountExcludingVatBasis
+  documentCount
+  documentsWithoutAmount
+}
+    `,
+    { fragmentName: 'SalesAmountFields' },
+) as unknown as TypedDocumentString<SalesAmountFieldsFragment, unknown>;
 export const SettlementListItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment SettlementListItemFields on SettlementListItem {
@@ -19475,6 +19586,39 @@ export const OrderReservationDetailsDocument = new TypedDocumentString(`
     OrderReservationDetailsQuery,
     OrderReservationDetailsQueryVariables
 >;
+export const SalesAnalyticsDocument = new TypedDocumentString(`
+    query SalesAnalytics($input: SalesAnalyticsInput!) {
+  salesAnalytics(input: $input) {
+    state
+    limitedToVisibleCustomers
+    correctionsWithoutEffect
+    unresolvedCurrencies
+    rows {
+      periodStart
+      dimensionId
+      label
+      currency
+      sales {
+        ...SalesAmountFields
+      }
+      returns {
+        ...SalesAmountFields
+      }
+      corrections {
+        ...SalesAmountFields
+      }
+      netSales {
+        ...SalesAmountFields
+      }
+    }
+  }
+}
+    fragment SalesAmountFields on SalesAnalyticsAmount {
+  amount
+  amountExcludingVatBasis
+  documentCount
+  documentsWithoutAmount
+}`) as unknown as TypedDocumentString<SalesAnalyticsQuery, SalesAnalyticsQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

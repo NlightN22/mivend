@@ -51,7 +51,7 @@ export function searchRows(rows: OrderAnalyticsTableRow[], term: string): OrderA
     return needle ? rows.filter(row => row.title.toLowerCase().includes(needle)) : rows;
 }
 
-const AMOUNT_FIELDS = new Set([
+export const AMOUNT_FIELDS = new Set([
     'turnover',
     'turnoverExcludingVat',
     'vatTotal',
@@ -59,16 +59,17 @@ const AMOUNT_FIELDS = new Set([
     'productAmount',
 ]);
 
-export function sortRows(
-    rows: OrderAnalyticsTableRow[],
+export function sortRows<T extends { [key: string]: unknown }>(
+    rows: T[],
     sort: DataTableSortMeta | undefined,
-): OrderAnalyticsTableRow[] {
+    amountFields: Set<string> = AMOUNT_FIELDS,
+): T[] {
     if (!sort) return rows;
     const { field, order } = sort;
     return [...rows].sort((a, b) => {
         const left = a[field];
         const right = b[field];
-        const result = AMOUNT_FIELDS.has(field)
+        const result = amountFields.has(field)
             ? amountOf(String(left)) - amountOf(String(right))
             : typeof left === 'number' && typeof right === 'number'
               ? left - right
