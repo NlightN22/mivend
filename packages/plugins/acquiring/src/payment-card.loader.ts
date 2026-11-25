@@ -134,7 +134,7 @@ export class PaymentCardLoader {
             return {
                 code: row.code,
                 state: row.state,
-                orderTotal: row.orderTotal,
+                orderTotal: Number(row.orderTotal),
                 currencyCode: row.currencyCode,
             };
         });

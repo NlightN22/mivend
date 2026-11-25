@@ -10,7 +10,7 @@ import {
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { EntityManager } from 'typeorm';
-import { Order, OrderLine } from '@vendure/core';
+import { BigIntMoneyStrategy, Order, OrderLine } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 import {
     EXTERNAL_ORDER_OWNER_CLAUSE,
@@ -30,6 +30,8 @@ import {
 import { OrderLineResolver } from '../../../handlers/order-line-resolver';
 import { OrderStateStreamHandler } from '../../../handlers/order-state.handler';
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
+
+const moneyColumn = new BigIntMoneyStrategy().moneyColumnOptions;
 
 // Real handler + real ExternalOrderService on real Postgres; hand-rolled tables use the production
 // column names so the services' raw SQL runs unchanged.
@@ -67,8 +69,8 @@ class TestOrder {
     @Column({ type: 'varchar' }) code!: string;
     @Column({ type: 'varchar' }) state!: string;
     @Column({ type: 'varchar' }) currencyCode!: string;
-    @Column({ type: 'int', default: 0 }) subTotal!: number;
-    @Column({ type: 'int', default: 0 }) subTotalWithTax!: number;
+    @Column({ ...moneyColumn, default: 0 }) subTotal!: number;
+    @Column({ ...moneyColumn, default: 0 }) subTotalWithTax!: number;
     @Column({ type: 'timestamp', nullable: true }) orderPlacedAt!: Date | null;
     @Column({ type: 'int', nullable: true }) customerId!: number | null;
     @Column(() => TestOrderCustomFields, { prefix: false }) customFields!: TestOrderCustomFields;
@@ -80,7 +82,7 @@ class TestOrderLine {
     @Column({ type: 'int' }) productVariantId!: number;
     @Column({ type: 'int' }) taxCategoryId!: number;
     @Column({ type: 'int' }) quantity!: number;
-    @Column({ type: 'int' }) listPrice!: number;
+    @Column({ ...moneyColumn }) listPrice!: number;
     @Column({ type: 'int', nullable: true }) orderId!: number;
     @ManyToOne(() => TestOrder, { createForeignKeyConstraints: false, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'orderId' })
@@ -282,6 +284,29 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         const lines = await dataSource.getRepository(TestOrderLine).find();
         expect(lines).toHaveLength(1);
         expect(lines[0]).toMatchObject({ quantity: 2, listPrice: 12525 });
+    });
+
+    it('stores totals above 2^31 minor units and reads them back as numbers (#400)', async () => {
+        await addCounterparty('cp-1');
+
+        const outcome = await handler.apply(
+            ctx,
+            ERP_ORDER,
+            payload({
+                totalAmount: 248442620.39,
+                vatTotal: 39067022.59,
+                lines: [
+                    { productId: 'prod-1', quantity: 1, price: 248442620.39, amount: 248442620.39 },
+                ],
+            }),
+        );
+
+        expect(outcome).toEqual({ kind: 'applied' });
+        const [order] = await orders();
+        expect(order.subTotalWithTax).toBe(24844262039);
+        expect(order.subTotal).toBe(24844262039 - 3906702259);
+        const [line] = await dataSource.getRepository(TestOrderLine).find();
+        expect(line.listPrice).toBe(24844262039);
     });
 
     it('maps the CANCELLED status_code directly to the Cancelled state', async () => {

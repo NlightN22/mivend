@@ -1,6 +1,7 @@
 import path from 'path';
 import { readFileSync } from 'fs';
 import {
+    BigIntMoneyStrategy,
     DefaultJobQueuePlugin,
     DefaultPasswordValidationStrategy,
     DefaultSchedulerPlugin,
@@ -223,6 +224,8 @@ export const config: VendureConfig = {
             connectionTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT_MS ?? '15000'),
         },
     },
+    // ERP order totals exceed the 2^31 minor units of Vendure's default integer money columns (#400).
+    entityOptions: { moneyStrategy: new BigIntMoneyStrategy() },
     customFields: {
         TaxCategory: [
             {

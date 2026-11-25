@@ -61,6 +61,17 @@ describe('computeExternalTotals', () => {
         expect(computeExternalTotals(absent).subTotalWithTax).toBe(2000);
         expect(computeExternalTotals({ ...absent, totalWithTaxMinor: 0 }).subTotalWithTax).toBe(0);
     });
+
+    it('keeps totals above 2^31 minor units exact (#400)', () => {
+        expect(
+            computeExternalTotals({
+                ...base,
+                totalWithTaxMinor: 24844262039,
+                vatTotalMinor: 3906702259,
+                amountIncludesVat: true,
+            }),
+        ).toEqual({ subTotal: 20937559780, subTotalWithTax: 24844262039 });
+    });
 });
 
 describe('nextExternalErpStatus', () => {
