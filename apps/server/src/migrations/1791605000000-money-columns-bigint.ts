@@ -21,29 +21,33 @@ const MONEY_COLUMNS: Array<[string, string]> = [
     ['search_index_item', 'priceWithTax'],
 ];
 
-const retype = (from: string, to: string): string => `
-DO $$
-DECLARE c record;
-BEGIN
-  FOR c IN
-    SELECT t.table_name, t.column_name
-    FROM information_schema.columns t
-    JOIN (VALUES ${MONEY_COLUMNS.map(([table, column]) => `('${table}', '${column}')`).join(', ')}) AS m(tbl, col)
-      ON m.tbl = t.table_name AND m.col = t.column_name
-    WHERE t.table_schema = current_schema() AND t.data_type = '${from}'
-  LOOP
-    EXECUTE format('ALTER TABLE %I ALTER COLUMN %I TYPE ${to}', c.table_name, c.column_name);
-  END LOOP;
-END $$`;
+// One ALTER per table: each statement rewrites the table once, not once per column.
+async function retype(queryRunner: QueryRunner, from: string, to: string): Promise<void> {
+    const rows: Array<{ table_name: string; column_name: string }> = await queryRunner.query(
+        `SELECT table_name, column_name FROM information_schema.columns
+         WHERE table_schema = current_schema() AND data_type = $1`,
+        [from],
+    );
+    const wanted = new Set(MONEY_COLUMNS.map(([table, column]) => `${table}.${column}`));
+    const byTable = new Map<string, string[]>();
+    for (const r of rows) {
+        if (!wanted.has(`${r.table_name}.${r.column_name}`)) continue;
+        byTable.set(r.table_name, [...(byTable.get(r.table_name) ?? []), r.column_name]);
+    }
+    for (const [table, columns] of byTable) {
+        const alters = columns.map(c => `ALTER COLUMN "${c}" TYPE ${to}`).join(', ');
+        await queryRunner.query(`ALTER TABLE "${table}" ${alters}`);
+    }
+}
 
 export class MoneyColumnsBigint1791605000000 implements MigrationInterface {
     name = 'MoneyColumnsBigint1791605000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(retype('integer', 'bigint'));
+        await retype(queryRunner, 'integer', 'bigint');
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(retype('bigint', 'integer'));
+        await retype(queryRunner, 'bigint', 'integer');
     }
 }
