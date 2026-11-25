@@ -99,6 +99,21 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
 `docs/order-contracts.md` "ERP-mandated order controls". Orders are listed with the order list filter
 `hasCheckFindings` (custom field on `Order`).
 
+### Inbox claim order (#398)
+
+- The Integration Service publishes the dependency level of every stream at `GET /api/ops/v1/exchange-priorities`
+  (ops key; `?hash=<url-encoded hash>` returns 304 when unchanged). `ExchangePrioritiesService` caches the table in
+  memory and re-reads it on the exchange-health poll interval; a failed or malformed read keeps the last good table
+  and logs a warning. Items without an `eventStream` are ignored. An inbox stream takes the level of the item whose
+  `eventStream` has its name; the one alias (`order-changed` takes the level of `order`) is declared next to the
+  routes in `order-events-message.ts`.
+- `claimBatch` takes pending and stale rows by (level, eligibility time). A stream absent from the table is claimed
+  after every listed level. With no table yet (never fetched) the order is the old FIFO by eligibility time.
+- A quarter of every batch (`PARKED_SHARE_DENOMINATOR`) is reserved for due `dependency_missing` rows, also taken in
+  level order, so a parked row does not wait for the whole pending backlog. Slots one side does not use go to the other.
+- A parked row is not released early when its parent arrives: it waits for its own retry timer (at most 30 min
+  after the first 24 h), now with a guaranteed share of each batch.
+
 ## Failed rows: what they are and what to do
 
 ### Inbound (`integration_inbox_event`, status `failed`)

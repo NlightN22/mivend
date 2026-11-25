@@ -22,16 +22,24 @@ export type ClassifiedOrderEvent = ClassifiedKafkaMessage | { kind: 'skipped'; t
 
 type OneofCase = 'registrationResult' | 'cancelResult' | 'changed' | 'changeResult';
 
-const ROUTES: Partial<Record<ErpOrderEventType, { stream: InboundStream; oneofCase: OneofCase }>> =
-    {
-        'registration-result': {
-            stream: 'order-registration-result',
-            oneofCase: 'registrationResult',
-        },
-        'cancel-result': { stream: 'order-cancel-result', oneofCase: 'cancelResult' },
-        changed: { stream: 'order-changed', oneofCase: 'changed' },
-        'change-result': { stream: 'order-change-result', oneofCase: 'changeResult' },
-    };
+const ROUTES: Partial<
+    Record<ErpOrderEventType, { stream: InboundStream; oneofCase: OneofCase; isStream?: string }>
+> = {
+    'registration-result': {
+        stream: 'order-registration-result',
+        oneofCase: 'registrationResult',
+    },
+    'cancel-result': { stream: 'order-cancel-result', oneofCase: 'cancelResult' },
+    changed: { stream: 'order-changed', oneofCase: 'changed', isStream: 'order' },
+    'change-result': { stream: 'order-change-result', oneofCase: 'changeResult' },
+};
+
+// Inbox stream -> the Integration Service stream whose priority level it takes (changed is a oneof of IS `order`).
+export const INBOX_TO_IS_STREAM: ReadonlyMap<string, string> = new Map(
+    Object.values(ROUTES).flatMap(route =>
+        route.isStream ? [[route.stream, route.isStream]] : [],
+    ),
+);
 
 export const ORDER_EVENT_STREAMS: readonly InboundStream[] = Object.values(ROUTES).map(
     route => route.stream,

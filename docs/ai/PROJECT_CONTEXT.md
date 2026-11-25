@@ -2,6 +2,9 @@
 
 Updated: 2026-11-14
 
+## #398 inbox level order (in progress)
+- `claimBatch` orders by Integration Service dependency level (`/api/ops/v1/exchange-priorities`, cached by hash, empty table = FIFO), unlisted streams last, a quarter of each batch reserved for parked rows; see `docs/integration-health.md`. Parked rows are not released early when a parent arrives.
+
 ## State at the end of the 320 session (2026-11-14, prod on 1.0.0)
 - Versioning now: 1.0.0 shipped; minor per release package (1.1.0 next), patch only for an emergency hotfix. The release owner is session `mivend.issue.321`; audits go to `mivend.audit`; agents only edit/commit, I run builds and tests; e2e belongs to 321.
 - CI had been red since 0.0.74 on `pnpm format:check` (make lint does not run it): run `pnpm prettier --check <files>` before handing a sha over.

@@ -110,6 +110,8 @@ import { KafkaLagPollerService } from './kafka-lag-poller.service';
 import { createKafkaLagPollTask } from './kafka-lag-poll.scheduled-task';
 import { KafkaLagResolver } from './kafka-lag.resolver';
 import { ExchangeHealthClient } from './exchange-health.client';
+import { ExchangePrioritiesClient } from './exchange-priorities.client';
+import { ExchangePrioritiesService } from './exchange-priorities.service';
 import { ExchangeHealthPollerService } from './exchange-health-poller.service';
 import { createExchangeHealthPollTask } from './exchange-health-poll.scheduled-task';
 import { ExchangeHealthResolver } from './exchange-health.resolver';
@@ -234,6 +236,8 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ConsistencyPollerService,
         KafkaLagPollerService,
         ExchangeHealthClient,
+        ExchangePrioritiesClient,
+        ExchangePrioritiesService,
         ExchangeHealthPollerService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,

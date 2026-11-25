@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { PaginatedList, RequestContext } from '@vendure/core';
 import { Logger, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'crypto';
-import { ctxQuery, getManyBounded, getPageAndCount } from 'shared';
+import { getManyBounded, getPageAndCount } from 'shared';
 import { In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
+import { findClaimCandidateIds } from './integration-inbox-claim-candidates';
+import { ExchangePrioritiesService } from './exchange-priorities.service';
+import type { StreamLevelSource } from './exchange-priorities.service';
 import { settleFailed, settleProcessed } from './integration-inbox-settle';
 import type { BudgetExhaustedNoop, InboxOutcome } from './integration-inbox-settle';
 import type { InboundStream } from './types';
@@ -41,7 +44,12 @@ export type ClaimedInboxEvent = IntegrationInboxEvent & { claimToken: string };
 
 @Injectable()
 export class IntegrationInboxService {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        @Optional()
+        @Inject(ExchangePrioritiesService)
+        private readonly levelSource?: StreamLevelSource,
+    ) {}
 
     // Dedup on (stream, sourceEventId), not version: versions can collide across distinct events.
     // Duplicates return the existing row, so the consumer can ack unconditionally.
@@ -116,7 +124,14 @@ export class IntegrationInboxService {
     ): Promise<ClaimedInboxEvent[]> {
         return this.connection.withTransaction(ctx, async txCtx => {
             const repo = this.connection.getRepository(txCtx, IntegrationInboxEvent);
-            const ids = await this.findClaimCandidateIds(txCtx, limit, streams);
+            const ids = await findClaimCandidateIds(
+                this.connection,
+                txCtx,
+                limit,
+                STUCK_PROCESSING_THRESHOLD_MS,
+                this.levelSource?.getLevels() ?? new Map(),
+                streams,
+            );
             if (ids.length === 0) return [];
 
             const rows = await getManyBounded(
@@ -135,6 +150,7 @@ export class IntegrationInboxService {
                 ids.length,
             );
             if (rows.length === 0) return [];
+            rows.sort((a, b) => ids.indexOf(String(a.id)) - ids.indexOf(String(b.id)));
             const claimToken = randomUUID();
             for (const row of rows) {
                 row.status = 'processing';
@@ -143,56 +159,6 @@ export class IntegrationInboxService {
             await repo.save(rows);
             return rows as ClaimedInboxEvent[];
         });
-    }
-
-    // One equality lookup per stream, not an IN-list; the reason is in docs/environments.md.
-    // claimBatch rechecks and locks, so this set only needs ids.
-    private async findClaimCandidateIds(
-        ctx: RequestContext,
-        limit: number,
-        streams?: InboundStream[],
-    ): Promise<string[]> {
-        const params: unknown[] = [limit, STUCK_PROCESSING_THRESHOLD_MS];
-        const pendingBranches =
-            streams && streams.length > 0
-                ? streams.map(stream => {
-                      params.push(stream);
-                      return `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
-                          WHERE status = 'pending' AND stream = $${params.length} AND eligible_at <= now()
-                          ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
-                  })
-                : [
-                      `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
-                          WHERE status = 'pending' AND eligible_at <= now()
-                          ORDER BY eligible_at ASC, id ASC LIMIT $1)`,
-                  ];
-
-        // eligible_at <= now() is the #96 backoff guard — see markFailed/the entity's own comment.
-        let streamFilter = '';
-        if (streams && streams.length > 0) {
-            params.push(streams);
-            streamFilter = `AND stream = ANY($${params.length})`;
-        }
-        const staleProcessingBranch = `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
-            WHERE status = 'processing' AND eligible_at <= now()
-              AND updated_at < now() - ($2 || ' milliseconds')::interval
-              ${streamFilter}
-            ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
-
-        const parkedBranch = `(SELECT id, eligible_at, 1 AS prio FROM integration_inbox_event
-            WHERE status = 'dependency_missing' AND eligible_at <= now() ${streamFilter}
-            ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
-
-        // Parked rows fill only the batch slots left after fresh and stale rows.
-        // FIFO by eligibility time, not enqueue time, so retries can't starve earlier rows.
-        const rows = await ctxQuery<Array<{ id: string }>>(
-            this.connection,
-            ctx,
-            `SELECT id FROM (${[...pendingBranches, staleProcessingBranch, parkedBranch].join(' UNION ALL ')}) combined
-             ORDER BY prio ASC, eligible_at ASC, id ASC LIMIT $1`,
-            params,
-        );
-        return rows.map(row => row.id);
     }
 
     // Worker path: the claim token restricts the write to the worker that still holds the claim,
