@@ -66,6 +66,23 @@ integration service: the sum of order amounts, not sales documents; cancelled an
 - **Failure.** The report returns a state (`OK`, `NOT_CONFIGURED`, `TOO_LARGE`, `UNAVAILABLE`), never partial rows.
   A bad request is a user input error. The key never appears in logs or messages.
 
+## Sales report (#397)
+
+`analytics.v1.SalesMetricsService/GetSalesTurnover`, contract v0.5.0 (v0.4.0 and v0.4.1 are retracted; do not use them). Sales are
+posted realization documents; net sales = sales - returns + corrections; returns and corrections are also shown separately.
+Same client, key and scope rules as the orders report.
+
+- Dimensions: none, customer, organization, contract, customer manager (a customer with several managers is counted under each,
+  so rows are not added across managers). Filters are the same four entities, typed as names and resolved server side inside the
+  viewer scope; a name that matches nothing gives no rows, a too broad name answers `TOO_LARGE`.
+- The UI always says the figures are preliminary: the signs and meaning of the amounts per document kind are not yet confirmed by
+  the ERP side.
+- Currency is a column and a grouping. The same currency can arrive as an id, a numeric code or empty until the platform issue is
+  resolved; those groups are never merged or summed in mivend. The response lists `unresolved_currencies`; the UI shows them.
+- Other signals shown: documents without amount, posted corrections without register effect yet, and the part of the amount whose
+  documents state the total without VAT (not converted by the service).
+- Test double: the in-process echo server answers both services (`startEchoOrderMetricsServer`).
+
 ## Report catalog
 
 | Key | Area | Idea | Parameters | Data source candidates |
