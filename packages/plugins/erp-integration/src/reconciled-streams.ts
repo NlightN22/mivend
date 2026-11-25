@@ -34,6 +34,15 @@ export const RECONCILED_STREAMS: Readonly<Partial<Record<InboundStream, Compared
     'promo-rule': 'promoRule',
 };
 
+// Streams whose newest processed payload is still read: standing-count queries (reconciliation-local-counts)
+// and warehouse-tombstone.query. Retention never empties these; every other stream's payload goes after the horizon.
+export const LATEST_PAYLOAD_STREAMS: ReadonlySet<InboundStream> = new Set<InboundStream>([
+    'point-of-sale',
+    'bank',
+    'bank-account',
+    'warehouse',
+]);
+
 const NO_SUMMARY = 'ERP-owned mirror; the upstream reconciliation summary does not cover it yet';
 const STORED_AS_RECEIVED = 'Stored as received (#254); no upstream summary is compared yet';
 const EVENT_STREAM = 'Event or command result, not an entity with a standing count';

@@ -30,6 +30,9 @@ Updated: 2026-11-14
 - Frozen audit-signed packages cherry-picked onto origin/main; 0.0.60 `take: 0` hang fix (`getPageAndCount`), 0.0.65 contacts + TOTP, 0.0.66 orders list on the shared list engine, 0.0.67 journal UI, 0.0.69 inbox expiry (#343, prod DB 12 GB -> 3.5 GB) + nightly pg-maintenance, 0.0.76 bounded-queries lint rule, 0.0.77/0.0.78 balance and turnover rules.
 - Regenerate `packages/manager/src/api/generated/graphql.ts` with real codegen whenever a `.graphql` document changes; prod-copy migrate check restores a `backups/pre-*.sql.gz` into a throwaway postgres container.
 
+## #401 inbox retention (two days)
+- Processed inbox rows keep payload at most `INBOX_DEDUP_HORIZON_DAYS` (2), except the newest row of `LATEST_PAYLOAD_STREAMS` (point-of-sale, bank, bank-account, warehouse: read by count/tombstone queries); expiry keeps the newest version per entity by version compare. A new query reading inbox payloads must add its stream there.
+
 ## Payment QR for long seller names (DONE, prod 0.0.74; full text: `.backup/PROJECT_CONTEXT-2026-11-14-qr-348-342-full.md`)
 - ST00012 payload cap 300 chars: `LegalNameAbbreviation` rows shorten only the QR `Name` (admin API + Dashboard page under Settings); still over 300 after shortening means no QR and a warning.
 

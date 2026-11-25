@@ -10,7 +10,7 @@ import {
     type RetentionCursor,
     type RetentionRow,
 } from './integration-inbox-retention-slice';
-import { INBOX_RETENTION_STATEMENT_TIMEOUT_MS, loggerCtx } from './types';
+import { INBOX_DEDUP_HORIZON_DAYS, INBOX_RETENTION_STATEMENT_TIMEOUT_MS, loggerCtx } from './types';
 
 const RETENTION_LOCK_KEY = 'inbox-retention';
 const QUERY_CANCELED = '57014';
@@ -75,7 +75,12 @@ export class IntegrationInboxRetentionService {
                 this.connection,
                 txCtx,
                 RETENTION_SLICE_SQL,
-                [this.cursor?.stream ?? null, this.cursor?.entityId ?? null, this.sliceSize],
+                [
+                    this.cursor?.stream ?? null,
+                    this.cursor?.entityId ?? null,
+                    this.sliceSize,
+                    INBOX_DEDUP_HORIZON_DAYS,
+                ],
             );
             const plan = planRetentionSlice(rows, this.sliceSize);
             if (plan.tombstoneIds.length > 0) {

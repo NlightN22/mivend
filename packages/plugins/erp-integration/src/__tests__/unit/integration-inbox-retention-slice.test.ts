@@ -2,11 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import { planRetentionSlice, type RetentionRow } from '../../integration-inbox-retention-slice';
 
-const row = (id: string, entity: string, version: string, stream = 'price'): RetentionRow => ({
+const row = (
+    id: string,
+    entity: string,
+    version: string,
+    stream = 'price',
+    aged = false,
+): RetentionRow => ({
     id,
     stream,
     entity_id: entity,
     version,
+    aged,
 });
 
 describe('planRetentionSlice', () => {
@@ -53,5 +60,18 @@ describe('planRetentionSlice', () => {
         );
         expect(plan.tombstoneIds).toEqual(['1', '2']);
         expect(plan.nextCursor).toEqual({ stream: 'price', entityId: 'a' });
+    });
+
+    it('empties the newest row too once it is aged, unless the stream payload is still read', () => {
+        const plan = planRetentionSlice(
+            [
+                row('1', 'a', '1', 'price', true),
+                row('2', 'a', '2', 'price', true),
+                row('3', 'b', '1', 'price', false),
+                row('4', 'w', '1', 'warehouse', true),
+            ],
+            10,
+        );
+        expect(plan.tombstoneIds).toEqual(['1', '2']);
     });
 });

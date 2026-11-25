@@ -1,3 +1,5 @@
+import { LATEST_PAYLOAD_STREAMS } from './reconciled-streams';
+import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
 
 export const RETENTION_SLICE_SIZE = 2000;
@@ -13,6 +15,7 @@ export interface RetentionRow {
     stream: string;
     entity_id: string;
     version: string;
+    aged: boolean;
 }
 
 export interface RetentionSlicePlan {
@@ -22,7 +25,8 @@ export interface RetentionSlicePlan {
 }
 
 // Keyset range over the partial index (stream, entity_id): bounded rows per call, resumable by cursor.
-export const RETENTION_SLICE_SQL = `SELECT id, stream, entity_id, version FROM integration_inbox_event
+export const RETENTION_SLICE_SQL = `SELECT id, stream, entity_id, version,
+            created_at < now() - make_interval(days => $4::int) AS aged FROM integration_inbox_event
      WHERE status = 'processed' AND payload <> '{}'::jsonb
        AND ($1::varchar IS NULL OR (stream, entity_id) > ($1::varchar, $2::varchar))
      ORDER BY stream, entity_id LIMIT $3`;
@@ -49,7 +53,12 @@ export function planRetentionSlice(
         const seen = newest.get(key);
         if (!seen || isVersionNewer(row.version, seen.version)) newest.set(key, row);
     }
-    const keep = new Set([...newest.values()].map(row => row.id));
+    // The newest row of a stream nobody reads loses its payload too once aged; the row (version reference) stays.
+    const keep = new Set(
+        [...newest.values()]
+            .filter(row => !row.aged || LATEST_PAYLOAD_STREAMS.has(row.stream as InboundStream))
+            .map(row => row.id),
+    );
     const last = usable[usable.length - 1];
     return {
         tombstoneIds: usable.filter(row => !keep.has(row.id)).map(row => row.id),

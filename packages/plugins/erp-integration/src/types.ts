@@ -419,9 +419,9 @@ export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 50_000;
 // The DB cancels a retention slice itself; the Node task timeout cannot cancel a running query.
 export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 30_000;
-// Tombstoned processed rows older than this are deleted; a redelivery later than this is caught by the
-// version check against the newest processed row, not by dedup (docs/integration-health.md).
-export const INBOX_DEDUP_HORIZON_DAYS = 7;
+// Processed rows older than this lose their payload (all but the readers in reconciled-streams.ts) and
+// emptied rows with a newer processed version are deleted (docs/integration-health.md).
+export const INBOX_DEDUP_HORIZON_DAYS = 2;
 export const INBOX_EXPIRY_SLICE_SIZE = 5000;
 // A full pass reads every row older than the horizon (~80 s on 4.4M rows), so it runs hourly, not every tick.
 export const INBOX_EXPIRY_PASS_INTERVAL_MS = 60 * 60_000;

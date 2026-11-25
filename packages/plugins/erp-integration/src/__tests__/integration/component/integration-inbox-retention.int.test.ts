@@ -14,6 +14,7 @@ import {
     RETENTION_SLICE_SIZE,
     RETENTION_SLICE_SQL,
 } from '../../../integration-inbox-retention-slice';
+import { INBOX_DEDUP_HORIZON_DAYS } from '../../../types';
 import { testRequestContextService } from '../../test-request-context-service';
 
 // Real Postgres: the statement timeout, advisory try-lock and index range scan exist only at the DB level.
@@ -127,7 +128,7 @@ describe('IntegrationInboxRetentionService sweep (integration, real Postgres)', 
             await runner.query('SET enable_seqscan = off');
             const [{ 'QUERY PLAN': plan }] = await runner.query(
                 `EXPLAIN (ANALYZE, FORMAT JSON) ${RETENTION_SLICE_SQL}`,
-                ['price', 'e000100', RETENTION_SLICE_SIZE],
+                ['price', 'e000100', RETENTION_SLICE_SIZE, INBOX_DEDUP_HORIZON_DAYS],
             );
             const text = JSON.stringify(plan);
             expect(text).not.toContain('Seq Scan');

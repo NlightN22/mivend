@@ -129,12 +129,18 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   Inbound tab shows its count per stream as a muted badge under Failed, and **Inbox issues** lists it with the
   status filter `dependency missing`. Replay and the issue resolver work only for `failed` rows; a parked row waits for its timer. Only references to other synced entities are parked; config problems and the order streams (plain `MissingDependencyError`) still fail and alert. Upstream counts these as unresolved rows, which reconciliation subtracts.
 - A `failed` row is never retried automatically and is never purged: it stays until someone acts.
-  Only superseded `processed` rows are tombstoned by retention (payload `{}`), and a tombstone older than the dedup
-  horizon (`INBOX_DEDUP_HORIZON_DAYS`, 7) is then deleted by the same task (`IntegrationInboxExpiryService`, #343).
-  The newest processed row per entity is never tombstoned, so it stays as the dedup key and a redelivered older
-  event is enqueued again but ends `superseded` by the version check. Table size stays bounded by
-  entities + 7 days of events. The delete also requires a full-payload processed row of the same entity, so a
-  tombstone that lost its version reference is never removed. A full pass reads every row older than the horizon
+  Retention tombstones (payload `{}`) superseded `processed` rows and, once a row is older than the horizon
+  (`INBOX_DEDUP_HORIZON_DAYS`, 2; #401), also the newest processed row of every stream whose payload nobody reads. The
+  row itself (stream, entity id, version, status, outcome, dedup keys) stays, so it is still the dedup key and the
+  version reference: a redelivered older event is enqueued again but ends `superseded` by the version check, which
+  reads only stream, entity id, version and status. Streams listed in `LATEST_PAYLOAD_STREAMS`
+  (`reconciled-streams.ts`: `point-of-sale`, `bank`, `bank-account`, `warehouse`) keep the payload of their newest row,
+  because the standing-count queries (`reconciliation-local-counts.service.ts`) and `warehouse-tombstone.query.ts`
+  read it; add a stream there when a new query reads inbox payloads. Replay asks the ERP to re-publish and never
+  reads a stored payload, so an emptied row is harmless. Tombstoned rows older than the horizon are deleted by the
+  same task (`IntegrationInboxExpiryService`, #343) when another processed row of the entity has a newer version
+  (equal versions: the higher id), so the newest version is never deleted, emptied or not. Table size stays bounded by
+  entities + 2 days of events. A full pass reads every row older than the horizon
   (about 80 s on 4.4M rows), so the pass runs at most once an hour per process (decision, #343); a part-way pass
   resumes on the next tick. A partial index on tombstones would make it proportional to the tombstones; not added.
 - One-time reclaim after the first purge (#343): the file keeps its size until rewritten. Let the nightly job do it: after a fresh `make prod-backup` and a `df` check (new table file plus WAL needs about

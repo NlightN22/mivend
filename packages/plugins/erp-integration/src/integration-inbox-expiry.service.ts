@@ -11,7 +11,7 @@ import {
 const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
 // Ids grow with created_at, so one id-ordered slice is bounded and `reached_horizon` ends the pass.
-// The EXISTS guard keeps a row whose entity has no full-payload processed row (the version reference).
+// The guard keeps the newest processed version per entity (ties by id), emptied or not; compares like isVersionNewer.
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
        SELECT id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
@@ -22,7 +22,12 @@ export const EXPIRY_SLICE_SQL = `WITH slice AS (
                         AND s.created_at < now() - make_interval(days => $3::int)
                         AND EXISTS (SELECT 1 FROM integration_inbox_event n
                                      WHERE n.stream = t.stream AND n.entity_id = t.entity_id
-                                       AND n.status = 'processed' AND n.payload <> '{}'::jsonb))
+                                       AND n.id <> t.id AND n.status = 'processed'
+                                       AND CASE WHEN n.version ~ '^[0-9]{1,30}$' AND t.version ~ '^[0-9]{1,30}$'
+                                                THEN n.version::numeric > t.version::numeric
+                                                       OR (n.version::numeric = t.version::numeric AND n.id > t.id)
+                                                ELSE n.version COLLATE "C" > t.version COLLATE "C"
+                                                       OR (n.version = t.version AND n.id > t.id) END))
        RETURNING id
      )
      SELECT (SELECT count(*) FROM del)::int AS deleted,
@@ -44,7 +49,7 @@ interface ExpirySliceRow {
 }
 
 // Deletes tombstoned processed rows past the dedup horizon (docs/integration-health.md). The newest
-// processed row per entity is never tombstoned, so a redelivered old event is still caught as superseded.
+// processed version per entity is never deleted, so a redelivered old event is still caught as superseded.
 @Injectable()
 export class IntegrationInboxExpiryService {
     private cursor = '0';
