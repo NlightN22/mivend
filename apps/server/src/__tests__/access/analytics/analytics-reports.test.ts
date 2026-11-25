@@ -27,8 +27,15 @@ describe('analyticsReports access', () => {
     ])('%s sees the catalog', async actor => {
         const list = await reports(actor);
         expect(list.length).toBeGreaterThan(0);
-        expect(list.filter(r => r.status === 'available').map(r => r.key)).toEqual(['orders']);
-        expect(list.filter(r => r.key !== 'orders').every(r => r.status === 'planned')).toBe(true);
+        expect(list.filter(r => r.status === 'available').map(r => r.key)).toEqual([
+            'orders',
+            'sales',
+        ]);
+        expect(
+            list
+                .filter(r => !['orders', 'sales'].includes(r.key))
+                .every(r => r.status === 'planned'),
+        ).toBe(true);
     });
 
     it.each<ActorKey>(['operator-a'])('%s sees an empty catalog', async actor => {
