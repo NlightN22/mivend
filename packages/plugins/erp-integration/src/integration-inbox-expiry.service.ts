@@ -11,23 +11,26 @@ import {
 const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
 // Ids grow with created_at, so one id-ordered slice is bounded and `reached_horizon` ends the pass.
-// The guard keeps the newest processed version per entity (ties by id), emptied or not; compares like isVersionNewer.
+// Keeps the newest processed version per entity (ties by id), emptied or not; MATERIALIZED stops the planner re-running the lookup per row.
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
-       SELECT id, status, payload, created_at FROM integration_inbox_event
+       SELECT id, stream, entity_id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
+     ), cand AS (
+       SELECT id, stream, entity_id FROM slice
+        WHERE status = 'processed' AND payload = '{}'::jsonb
+          AND created_at < now() - make_interval(days => $3::int)
+     ), newest AS MATERIALIZED (
+       SELECT k.stream, k.entity_id, x.id AS keep_id
+         FROM (SELECT DISTINCT stream, entity_id FROM cand) k
+         CROSS JOIN LATERAL (
+           SELECT n.id FROM integration_inbox_event n
+            WHERE n.stream = k.stream AND n.entity_id = k.entity_id AND n.status = 'processed'
+            ORDER BY CASE WHEN n.version ~ '^[0-9]{1,30}$' THEN n.version::numeric END DESC NULLS LAST,
+                     n.version COLLATE "C" DESC, n.id DESC LIMIT 1) x
      ), del AS (
        DELETE FROM integration_inbox_event
-        WHERE id IN (SELECT s.id FROM slice s JOIN integration_inbox_event t ON t.id = s.id
-                      WHERE s.status = 'processed' AND s.payload = '{}'::jsonb
-                        AND s.created_at < now() - make_interval(days => $3::int)
-                        AND EXISTS (SELECT 1 FROM integration_inbox_event n
-                                     WHERE n.stream = t.stream AND n.entity_id = t.entity_id
-                                       AND n.id <> t.id AND n.status = 'processed'
-                                       AND CASE WHEN n.version ~ '^[0-9]{1,30}$' AND t.version ~ '^[0-9]{1,30}$'
-                                                THEN n.version::numeric > t.version::numeric
-                                                       OR (n.version::numeric = t.version::numeric AND n.id > t.id)
-                                                ELSE n.version COLLATE "C" > t.version COLLATE "C"
-                                                       OR (n.version = t.version AND n.id > t.id) END))
+        WHERE id IN (SELECT c.id FROM cand c JOIN newest w ON w.stream = c.stream AND w.entity_id = c.entity_id
+                      WHERE c.id <> w.keep_id)
        RETURNING id
      )
      SELECT (SELECT count(*) FROM del)::int AS deleted,
