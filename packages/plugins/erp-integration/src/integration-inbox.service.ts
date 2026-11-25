@@ -8,7 +8,7 @@ import { In } from 'typeorm';
 const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { findClaimCandidateIds } from './integration-inbox-claim-candidates';
+import { findClaimCandidateIds as findClaimCandidates } from './integration-inbox-claim-candidates';
 import { ExchangePrioritiesService } from './exchange-priorities.service';
 import type { StreamLevelSource } from './exchange-priorities.service';
 import { settleFailed, settleProcessed } from './integration-inbox-settle';
@@ -124,14 +124,7 @@ export class IntegrationInboxService {
     ): Promise<ClaimedInboxEvent[]> {
         return this.connection.withTransaction(ctx, async txCtx => {
             const repo = this.connection.getRepository(txCtx, IntegrationInboxEvent);
-            const ids = await findClaimCandidateIds(
-                this.connection,
-                txCtx,
-                limit,
-                STUCK_PROCESSING_THRESHOLD_MS,
-                this.levelSource?.getLevels() ?? new Map(),
-                streams,
-            );
+            const ids = await this.findClaimCandidateIds(txCtx, limit, streams);
             if (ids.length === 0) return [];
 
             const rows = await getManyBounded(
@@ -159,6 +152,23 @@ export class IntegrationInboxService {
             await repo.save(rows);
             return rows as ClaimedInboxEvent[];
         });
+    }
+
+    // claimBatch rechecks and locks, so this set only needs ids.
+    private findClaimCandidateIds(
+        ctx: RequestContext,
+        limit: number,
+        streams?: InboundStream[],
+    ): Promise<string[]> {
+        const levels = this.levelSource?.getLevels() ?? new Map<string, number>();
+        return findClaimCandidates(
+            this.connection,
+            ctx,
+            limit,
+            STUCK_PROCESSING_THRESHOLD_MS,
+            levels,
+            streams,
+        );
     }
 
     // Worker path: the claim token restricts the write to the worker that still holds the claim,

@@ -41,7 +41,7 @@ function statusBranches(
     );
     if (unlisted) {
         branches.push(`(SELECT id, eligible_at, ${UNLISTED_LEVEL} AS lvl FROM integration_inbox_event
-            WHERE status = '${status}' AND stream <> ALL($2::text[]) AND eligible_at <= now() ${extra}
+            WHERE status = '${status}' AND stream <> ALL($2::text[]) AND $3::int[] IS NOT NULL AND eligible_at <= now() ${extra}
             ORDER BY eligible_at ASC, id ASC LIMIT $1)`);
     }
     return branches.join(' UNION ALL ');
