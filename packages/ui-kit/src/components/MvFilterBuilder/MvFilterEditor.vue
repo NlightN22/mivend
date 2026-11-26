@@ -6,6 +6,7 @@ import MvDateField from '../MvDateField/MvDateField.vue';
 import MvInput from '../MvInput/MvInput.vue';
 import MvMultiSelect from '../MvMultiSelect/MvMultiSelect.vue';
 import MvSuggestInput from './MvSuggestInput.vue';
+import MvSuggestMultiInput from './MvSuggestMultiInput.vue';
 import MvSelect from '../MvSelect/MvSelect.vue';
 import type {
     FilterColumn,
@@ -157,6 +158,13 @@ function apply(): void {
                 />
             </label>
         </template>
+        <MvSuggestMultiInput
+            v-else-if="kind === 'multi' && column.type === 'reference'"
+            :model-value="value as string[]"
+            :suggest="column.suggest"
+            testid="filter-value"
+            @update:model-value="value = $event"
+        />
         <MvMultiSelect
             v-else-if="kind === 'multi'"
             :model-value="value as string[]"

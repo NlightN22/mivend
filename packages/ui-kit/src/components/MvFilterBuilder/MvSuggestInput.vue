@@ -12,7 +12,7 @@ const props = defineProps<{
     placeholder?: string;
     testid?: string;
 }>();
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [value: string] }>();
 
 const { items, active, query, close, onKey } = useSuggestions(toRef(props, 'suggest'));
 const listId = `mv-suggest-${Math.random().toString(36).slice(2, 9)}`;
@@ -38,7 +38,12 @@ function onInput(text: string): void {
             :aria-controls="listId"
             :aria-activedescendant="active >= 0 ? `${listId}-${active}` : undefined"
             @update:model-value="onInput"
-            @keydown="onKey($event, v => emit('update:modelValue', v))"
+            @keydown="
+                onKey($event, v => {
+                    emit('update:modelValue', v);
+                    emit('pick', v);
+                })
+            "
             @blur="close"
         />
         <ul
@@ -62,6 +67,7 @@ function onInput(text: string): void {
                 data-testid="filter-suggestion"
                 @mousedown.prevent="
                     emit('update:modelValue', item);
+                    emit('pick', item);
                     close();
                 "
             >

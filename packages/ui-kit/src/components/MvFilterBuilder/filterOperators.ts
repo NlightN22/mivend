@@ -18,6 +18,7 @@ export const OPERATORS_BY_TYPE: Record<FilterType, FilterOperator[]> = {
     boolean: ['isTrue', 'isFalse'],
     select: ['eq', 'notEq', 'in', 'notIn'],
     id: ['eq', 'notEq', 'isNull', 'notNull'],
+    reference: ['contains', 'in', 'notIn'],
 };
 
 export const OPERATOR_LABEL: Record<FilterOperator, string> = {
@@ -47,6 +48,11 @@ const SELECT_LABEL: Partial<Record<FilterOperator, string>> = {
     notEq: 'is not',
 };
 
+const REFERENCE_LABEL: Partial<Record<FilterOperator, string>> = {
+    in: 'is one of',
+    notIn: 'is not one of',
+};
+
 const SYMBOL: Partial<Record<FilterOperator, string>> = {
     gt: '>',
     gte: '≥',
@@ -69,6 +75,9 @@ export function operatorLabel(
     operator: FilterOperator,
     uiLabel: OperatorUiLabel = (_key, fallback) => fallback,
 ): string {
+    if (column.type === 'reference' && REFERENCE_LABEL[operator]) {
+        return uiLabel(`operatorReference_${operator}`, REFERENCE_LABEL[operator]!);
+    }
     const select = column.type === 'select' ? SELECT_LABEL[operator] : undefined;
     return select
         ? uiLabel(`operatorSelect_${operator}`, select)

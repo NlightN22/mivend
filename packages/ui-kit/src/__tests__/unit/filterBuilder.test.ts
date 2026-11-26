@@ -4,6 +4,7 @@ import {
     conditionsFromQuery,
     conditionsToQuery,
     describeCondition,
+    referenceColumn,
     isValueComplete,
     operatorsFor,
     sanitizeConditions,
@@ -188,5 +189,39 @@ describe('chip text', () => {
             'Date is before 05.03.2026',
         );
         expect(describeCondition(c('code', 'isNull'), COLUMNS[0]!)).toBe('Order # is empty');
+    });
+});
+
+describe('reference columns', () => {
+    const lookup = async (): Promise<string[]> => [];
+    const customer = referenceColumn({ key: 'customer', label: 'Customer', lookup });
+
+    it('offers contains and is-one-of, and is-not-one-of only when the table can exclude', () => {
+        expect(operatorsFor(customer)).toEqual(['contains', 'in']);
+        expect(
+            operatorsFor(referenceColumn({ key: 'c', label: 'C', lookup, exclude: true })),
+        ).toEqual(['contains', 'in', 'notIn']);
+    });
+
+    it('round-trips picked names through the URL, dropping a not-offered operator', () => {
+        const picked: FilterCondition = {
+            columnKey: 'customer',
+            operator: 'in',
+            value: ['Alpha, Inc', 'Beta;Co'],
+        };
+        const query = conditionsToQuery([picked]);
+        expect(conditionsFromQuery(query, [customer])).toEqual([picked]);
+        expect(conditionsFromQuery('customer:notIn:A', [customer])).toEqual([]);
+        expect(conditionsFromQuery('customer:in:', [customer])).toEqual([]);
+    });
+
+    it('sends the picked names as a server in-list and reads them in the chip', () => {
+        const picked: FilterCondition = {
+            columnKey: 'customer',
+            operator: 'in',
+            value: ['A', 'B'],
+        };
+        expect(toVendureFilter([picked], [customer])).toEqual({ customer: { in: ['A', 'B'] } });
+        expect(describeCondition(picked, customer)).toBe('Customer is one of A, B');
     });
 });

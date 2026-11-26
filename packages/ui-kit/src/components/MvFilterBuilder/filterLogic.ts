@@ -10,3 +10,4 @@ export {
 export { toVendureFilter } from './filterToVendure';
 export { conditionsToQuery, conditionsFromQuery, sanitizeConditions } from './filterQuery';
 export { describeCondition } from './filterDescribe';
+export { referenceColumn } from './filterReference';

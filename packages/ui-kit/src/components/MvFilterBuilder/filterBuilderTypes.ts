@@ -1,4 +1,4 @@
-export type FilterType = 'string' | 'number' | 'date' | 'boolean' | 'select' | 'id';
+export type FilterType = 'string' | 'number' | 'date' | 'boolean' | 'select' | 'id' | 'reference';
 
 export type FilterOperator =
     | 'contains'
