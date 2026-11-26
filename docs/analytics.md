@@ -58,7 +58,8 @@ integration service: the sum of order amounts, not sales documents; cancelled an
 - **Pick objects (#404).** Each of the seven fields also offers "is one of": names picked from the same
   scoped typeahead (`MvSuggestMultiInput`). The filter is sent with `exact: true` and the server matches whole names
   (case-insensitive) inside the viewer's scope, with the same caps and fail-closed answer; two objects with the same name
-  are both matched. "Is not one of" and "in group" are not offered. The contract has include id lists only
+  are both matched. Several conditions on one field (contains and is one of) are OR-ed, and a condition that matches
+  nothing makes the whole result empty. "Is not one of" and "in group" are not offered. The contract has include id lists only
   (no `exclude_*_ids`, no group filters), and our data has group trees (`ProductGroupErp`, `CounterpartyGroupErp`)
   but no link from a product or counterparty to its group and no manufacturer groups, so a group has no members to expand.
   Needed from the analytics owners: `exclude_customer_ids`, `exclude_organization_ids`, `exclude_point_of_sale_ids`,
