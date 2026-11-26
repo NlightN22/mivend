@@ -107,20 +107,17 @@ describe('pageOf', () => {
 });
 
 describe('formatAmount', () => {
-    it('shows two fraction digits with the currency when the source gave one', () => {
-        expect(formatAmount('1234.5', 'RUB', 'en-US')).toContain('1,234.50');
+    it('shows a plain number with two fraction digits and no currency', () => {
+        expect(formatAmount('1234.5', 'en-US')).toBe('1,234.50');
     });
 
-    it('shows a plain number when the currency is unknown', () => {
-        expect(formatAmount('1234.50', '', 'en-US')).toBe('1,234.50');
-    });
-
-    it('does not throw on a currency code the browser does not know', () => {
-        expect(formatAmount('5.00', 'ZZ', 'en-US')).toContain('5.00');
+    it('never appends anything to the number', () => {
+        expect(formatAmount('5.00', 'en-US')).toBe('5.00');
     });
 
     it('returns the original text for something that is not a number', () => {
-        expect(formatAmount('n/a', 'RUB', 'en-US')).toBe('n/a');
+        expect(formatAmount('n/a', 'en-US')).toBe('n/a');
+        expect(formatAmount('', 'en-US')).toBe('');
     });
 });
 

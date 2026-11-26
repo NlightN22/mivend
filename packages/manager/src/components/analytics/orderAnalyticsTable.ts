@@ -82,19 +82,15 @@ export function pageOf<T>(rows: T[], page: number, pageSize: number): T[] {
     return rows.slice((page - 1) * pageSize, page * pageSize);
 }
 
-// Decimal string to a localized amount; the currency is shown only when the source gave one.
-export function formatAmount(amount: string, currency: string, locale: string): string {
+// Decimal string to a localized plain number; the currency is its own column and never glued to an amount.
+export function formatAmount(amount: string, locale: string): string {
     const value = Number(amount);
-    if (!Number.isFinite(value)) return amount;
-    const plain = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
-    try {
-        return new Intl.NumberFormat(
-            locale,
-            currency ? { ...plain, style: 'currency', currency } : plain,
-        ).format(value);
-    } catch {
-        return `${new Intl.NumberFormat(locale, plain).format(value)} ${currency}`;
-    }
+    return Number.isFinite(value) && amount.trim() !== ''
+        ? new Intl.NumberFormat(locale, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+          }).format(value)
+        : amount;
 }
 
 // Quantity is a decimal string with three digits in the lines' own units; no currency.

@@ -16,12 +16,14 @@ const customerErpIdFor = vi.fn();
 const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
+const resolver = vi.fn();
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
     { visibleCustomerErpIds, visibleManagerErpIds, customerErpIdFor, managerErpIdFor } as never,
     { labelsFor } as never,
     { find: findNamed } as never,
+    { resolver } as never,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({
@@ -56,6 +58,7 @@ beforeEach(() => {
     labelsFor.mockResolvedValue(new Map());
     getOrderTurnover.mockResolvedValue([row()]);
     findNamed.mockResolvedValue([]);
+    resolver.mockResolvedValue((v: string) => v);
 });
 
 describe('OrderAnalyticsService scope', () => {
@@ -272,5 +275,19 @@ describe('OrderAnalyticsService failures', () => {
         getOrderTurnover.mockRejectedValue(new Error('boom'));
 
         await expect(service.query(ctx, input())).rejects.toThrow('boom');
+    });
+
+    it('resolves currency ids to alphabetic codes before merging, so one currency is one row', async () => {
+        resolver.mockResolvedValue((v: string) => ({ 'cur-1': 'RUB', '643': 'RUB' })[v] ?? v);
+        getOrderTurnover.mockResolvedValue([
+            row({ currency: 'cur-1', turnover: '10.00', orderCount: 1 }),
+            row({ currency: '643', turnover: '5.50', orderCount: 2 }),
+        ]);
+
+        const result = await service.query(ctx, input());
+
+        expect(result.rows).toHaveLength(1);
+        expect(result.rows[0]).toMatchObject({ currency: 'RUB', turnover: '15.50', orderCount: 3 });
+        expect(resolver).toHaveBeenCalledWith(ctx, ['cur-1', '643']);
     });
 });

@@ -58,7 +58,7 @@ export function formatSalesRow(
     row: SalesAnalyticsTableRow,
     locale: string,
 ): SalesAnalyticsTableRow {
-    const plain = (amount: unknown): string => formatAmount(String(amount), '', locale);
+    const plain = (amount: unknown): string => formatAmount(String(amount), locale);
     return {
         ...row,
         sales: plain(row.sales),

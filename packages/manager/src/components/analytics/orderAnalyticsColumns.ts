@@ -52,6 +52,15 @@ export function buildOrderAnalyticsColumns(
             filterConfig: NOT_FILTERED,
         });
     }
+    columns.push({
+        field: 'currency',
+        header: t('currency'),
+        sortField: 'currency',
+        width: 110,
+        minWidth: 90,
+        priority: 9,
+        filterConfig: NOT_FILTERED,
+    });
     columns.push(numberColumn('orderCount', 130, 7, 120));
     columns.push(
         ...(productMode

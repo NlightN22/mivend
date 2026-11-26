@@ -13,12 +13,14 @@ const customerErpIdFor = vi.fn();
 const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
+const resolver = vi.fn();
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
     { visibleCustomerErpIds, visibleManagerErpIds, customerErpIdFor, managerErpIdFor } as never,
     { labelsFor } as never,
     { find: findNamed } as never,
+    { resolver } as never,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({
@@ -46,6 +48,7 @@ const row = (over: Partial<OrderTurnoverRow> = {}): OrderTurnoverRow => ({
 
 beforeEach(() => {
     vi.resetAllMocks();
+    resolver.mockResolvedValue((v: string) => v);
     visibleCustomerErpIds.mockResolvedValue(null);
     visibleManagerErpIds.mockResolvedValue(null);
     customerErpIdFor.mockResolvedValue('c-erp');

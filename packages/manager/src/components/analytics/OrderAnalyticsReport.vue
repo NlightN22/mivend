@@ -111,11 +111,11 @@ const rows = computed(
         visible.value.map(row => ({
             ...row,
             period: row.period ? formatPeriod(row.period) : '',
-            turnover: formatAmount(row.turnover, row.currency, activeTag()),
-            turnoverExcludingVat: formatAmount(row.turnoverExcludingVat, row.currency, activeTag()),
-            vatTotal: formatAmount(row.vatTotal, row.currency, activeTag()),
+            turnover: formatAmount(row.turnover, activeTag()),
+            turnoverExcludingVat: formatAmount(row.turnoverExcludingVat, activeTag()),
+            vatTotal: formatAmount(row.vatTotal, activeTag()),
             productQuantity: formatQuantity(row.productQuantity, activeTag()),
-            productAmount: formatAmount(row.productAmount, row.currency, activeTag()),
+            productAmount: formatAmount(row.productAmount, activeTag()),
         })) as Array<OrderAnalyticsTableRow>,
 );
 

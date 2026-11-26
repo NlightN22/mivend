@@ -42,6 +42,7 @@ export default {
         columns: {
             title: 'Name',
             period: 'Period',
+            currency: 'Currency',
             orderCount: 'Orders',
             turnover: 'With VAT',
             turnoverExcludingVat: 'Without VAT',

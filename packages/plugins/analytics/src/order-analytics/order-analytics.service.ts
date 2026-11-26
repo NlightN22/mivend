@@ -8,6 +8,7 @@ import type { EntityNameFilter } from './order-analytics-entity-filters';
 import { OrderAnalyticsEntityNamesService } from './order-analytics-entity-names.service';
 import { OrderAnalyticsLabelsService } from './order-analytics-labels.service';
 import { OrderAnalyticsScopeService } from './order-analytics-scope.service';
+import { SalesCurrencyResolverService } from '../sales-analytics/sales-currency-resolver.service';
 import { OrderMetricsClient } from './order-metrics.client';
 import { MAX_FILTER_VALUES, OrderMetricsError } from './order-metrics.types';
 import type {
@@ -69,6 +70,7 @@ export class OrderAnalyticsService {
         private readonly scope: OrderAnalyticsScopeService,
         private readonly labels: OrderAnalyticsLabelsService,
         private readonly entityNames: OrderAnalyticsEntityNamesService,
+        private readonly currencies: SalesCurrencyResolverService,
     ) {}
 
     async query(ctx: RequestContext, input: OrderAnalyticsInput): Promise<OrderAnalyticsResult> {
@@ -142,7 +144,13 @@ export class OrderAnalyticsService {
                 MANAGER_DIMENSIONS.includes(input.dimension) && visibleManagers !== null
                     ? fetched.filter(r => visibleManagers.includes(r.dimensionId))
                     : fetched;
-            const rows = mergeTurnoverRows(visibleRows);
+            const toCode = await this.currencies.resolver(
+                ctx,
+                visibleRows.map(r => r.currency),
+            );
+            const rows = mergeTurnoverRows(
+                visibleRows.map(r => ({ ...r, currency: toCode(r.currency) })),
+            );
             const names = await this.labels.labelsFor(ctx, input.dimension, [
                 ...new Set(rows.map(r => r.dimensionId).filter(Boolean)),
             ]);

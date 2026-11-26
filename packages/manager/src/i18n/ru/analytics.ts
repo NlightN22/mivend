@@ -44,6 +44,7 @@ const analytics: typeof en = {
         columns: {
             title: 'Название',
             period: 'Период',
+            currency: 'Валюта',
             orderCount: 'Заказов',
             turnover: 'С НДС',
             turnoverExcludingVat: 'Без НДС',
