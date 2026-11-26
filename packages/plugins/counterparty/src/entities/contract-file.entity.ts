@@ -2,6 +2,7 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
+// The file itself lives in ContractFileStorageService under this row's uuid.
 @Entity()
 export class ContractFile extends VendureEntity {
     constructor(input?: DeepPartial<ContractFile>) {
@@ -19,11 +20,14 @@ export class ContractFile extends VendureEntity {
     @Column({ type: 'varchar' })
     kind!: string;
 
-    @Column({ type: 'int' })
-    assetId!: number;
-
     @Column({ type: 'varchar' })
     fileName!: string;
+
+    @Column({ type: 'varchar' })
+    mimeType!: string;
+
+    @Column({ type: 'int' })
+    sizeBytes!: number;
 
     @Column({ type: 'varchar', nullable: true })
     uploadedByAdministratorId!: string | null;

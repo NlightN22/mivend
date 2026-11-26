@@ -115,6 +115,13 @@ import { ContractFile } from './entities/contract-file.entity';
 import { ContractFileController } from './contract-file/contract-file.controller';
 import { ContractFileReadService } from './contract-file/contract-file-read.service';
 import { ContractFileService } from './contract-file/contract-file.service';
+import { ContractFileStorageService } from './contract-file/contract-file-storage.service';
+import {
+    CONTRACT_FILE_OPTIONS,
+    type CounterpartyPluginOptions,
+    type ResolvedContractFileOptions,
+} from './contract-file/contract-file.constants';
+import path from 'path';
 import {
     ContractFileAdminResolver,
     ContractFileShopResolver,
@@ -266,6 +273,15 @@ const adminResolvers = [
         CounterpartyPortalAccessService,
         CounterpartyPortalRestoreService,
         ContractService,
+        {
+            provide: CONTRACT_FILE_OPTIONS,
+            useFactory: (): ResolvedContractFileOptions => ({
+                dir:
+                    CounterpartyPlugin.options.contractFileDir ??
+                    path.join(process.cwd(), 'static/contract-files'),
+            }),
+        },
+        ContractFileStorageService,
         ContractFileService,
         ContractFileReadService,
         PowerOfAttorneyErpService,
@@ -326,4 +342,11 @@ const adminResolvers = [
     },
     compatibility: '>0.0.0',
 })
-export class CounterpartyPlugin {}
+export class CounterpartyPlugin {
+    static options: CounterpartyPluginOptions = {};
+
+    static init(options: CounterpartyPluginOptions): typeof CounterpartyPlugin {
+        this.options = options;
+        return CounterpartyPlugin;
+    }
+}

@@ -91,6 +91,20 @@ describe('contract files', () => {
         expect(result.data?.counterpartyContracts.items).toEqual([]);
     });
 
+    it('keeps the file out of the Vendure assets and the public asset route', async () => {
+        const superadmin = await staffToken('superadmin');
+        const assets = await admin<{ assets: { items: { name: string; source: string }[] } }>(
+            superadmin,
+            `{ assets(options: { take: 100 }) { items { name source } } }`,
+        );
+        expect(assets.errors).toEqual([]);
+        expect(JSON.stringify(assets.data)).not.toContain(uuid);
+        const base = inject('accessBaseUrl');
+        for (const name of [`${uuid}.pdf`, uuid]) {
+            expect((await fetch(`${base}/assets/${name}`)).status).toBe(404);
+        }
+    });
+
     it('serves the file to its customer only', async () => {
         const own = await shop<{ myContractFiles: { items: { uuid: string }[] } }>(
             await customerToken('customer-a'),

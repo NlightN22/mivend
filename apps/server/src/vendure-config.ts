@@ -670,7 +670,10 @@ export const config: VendureConfig = {
         OidcSignInPlugin.init(oidcOptionsFromEnv(process.env)),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
-        CounterpartyPlugin,
+        CounterpartyPlugin.init({
+            contractFileDir:
+                process.env.CONTRACT_FILE_DIR ?? path.join(__dirname, '../static/contract-files'),
+        }),
         PriceEntryPlugin,
         NumberingPlugin.init({ instanceNumberCode }),
         OrderIdentityPlugin,

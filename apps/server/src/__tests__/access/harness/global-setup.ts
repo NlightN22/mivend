@@ -95,6 +95,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
             // Only builds the acting hand-off link; no storefront is contacted.
             STOREFRONT_PUBLIC_URL: 'http://127.0.0.1:9',
             DOCUMENT_PDF_DIR: pdfDir,
+            CONTRACT_FILE_DIR: `${pdfDir}/contract-files`,
             LEGAL_OPERATOR_NAME: 'Access Operator',
             LEGAL_CONTACT_EMAIL: 'legal@access.test',
             GEO_PROVIDERS: 'open',

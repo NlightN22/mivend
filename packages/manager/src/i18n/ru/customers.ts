@@ -56,7 +56,7 @@ const customers: typeof en = {
             isActive: 'Статус в ERP',
             contractScan: 'Скан договора',
         },
-        noContractScan: 'Действующий договор без скана',
+        noContractScan: 'Нет скана',
         unassigned: 'Не назначен',
         status: { active: 'Активен в ERP', inactive: 'Неактивен в ERP' },
         innStatus: { ok: 'В порядке', missing: 'Не указан', duplicate: 'Дубль' },

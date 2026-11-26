@@ -53,7 +53,7 @@ export default {
             isActive: 'Status in ERP',
             contractScan: 'Contract scan',
         },
-        noContractScan: 'Active contract without a scan',
+        noContractScan: 'No scan',
         unassigned: 'Unassigned',
         status: { active: 'Active in ERP', inactive: 'Inactive in ERP' },
         innStatus: { ok: 'OK', missing: 'Missing', duplicate: 'Duplicate' },

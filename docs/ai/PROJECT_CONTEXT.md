@@ -2,11 +2,11 @@
 
 Updated: 2026-11-14
 
-## #405 contract files (implemented on a branch, awaiting audit; release 1.1.49)
-- `ContractFile` (counterparty plugin, table `contract_file`): uuid, contract id, kind scan | power-of-attorney-scan | other, Vendure Asset id (stored under the file uuid), uploader. Never sent to the ERP. One scan per contract (a new scan replaces it under `withAggregateLock`), other kinds accumulate.
-- Admin: `counterpartyContracts`, `uploadContractFile`/`deleteContractFile` (right `ManageContractFiles`, release grant 1.1.49). Shop: `myContractFiles`. Download only via `GET /contract-file/:uuid` (session + scope, else 404).
+## #405 contract files (implemented on a branch, awaiting audit; release 1.1.50)
+- `ContractFile` (counterparty plugin, table `contract_file`): uuid, contract id, kind scan | power-of-attorney-scan | other, mime, size, uploader (file on disk under the uuid). Never sent to the ERP. One scan per contract (a new scan replaces it under `withAggregateLock`), other kinds accumulate.
+- Admin: `counterpartyContracts`, `uploadContractFile`/`deleteContractFile` (right `ManageContractFiles`, release grant 1.1.50). Shop: `myContractFiles`. Download only via `GET /contract-file/:uuid` (session + scope, else 404).
 - A scan is required only for an active customer contract; customers list filter/field `hasUnscannedActiveContract`. Storefront: menu "Contracts" (`/contracts`) and "Documents" without proforma invoices; manager: "Contracts" tab in the customer card, proforma documents hidden from its "Documents" tab.
-- Known limit: the asset sits in the public asset dir (unguessable name only); a private store is an owner decision.
+- The file is stored privately (`CONTRACT_FILE_DIR`, volume `contract-files`), not as a Vendure Asset; migration `1791606000000-contract-file`.
 
 ## #398 inbox level order (in progress)
 - `claimBatch` orders by Integration Service dependency level (`/api/ops/v1/exchange-priorities`, cached by hash, empty table = FIFO), unlisted streams last, a quarter of each batch reserved for parked rows; see `docs/integration-health.md`. Parked rows are not released early when a parent arrives.

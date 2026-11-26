@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-    AssetService,
-    ConfigService,
-    RequestContext,
-    TransactionalConnection,
-} from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { clampSkip, clampTake, ctxQuery, getPageAndCount, likeTerm } from 'shared';
 
@@ -13,6 +8,7 @@ import { Contract } from '../entities/contract.entity';
 import { ContractFile } from '../entities/contract-file.entity';
 import { TradingPointService } from '../trading-point.service';
 import { SCAN_KIND } from './contract-file-sql';
+import { ContractFileStorageService } from './contract-file-storage.service';
 
 export interface ContractFileRow {
     id: string;
@@ -54,8 +50,7 @@ export class ContractFileReadService {
         private readonly connection: TransactionalConnection,
         private readonly counterparties: CounterpartyService,
         private readonly tradingPoints: TradingPointService,
-        private readonly assets: AssetService,
-        private readonly config: ConfigService,
+        private readonly storage: ContractFileStorageService,
     ) {}
 
     // Customer contracts of one visible counterparty, active first, with their files.
@@ -161,12 +156,9 @@ export class ContractFileReadService {
             .getRepository(ctx, Contract)
             .findOne({ where: { id: file.contractId } });
         if (!contract || !(await this.canSee(ctx, contract.counterpartyId))) return null;
-        const asset = await this.assets.findOne(ctx, file.assetId);
-        if (!asset) return null;
-        const data = await this.config.assetOptions.assetStorageStrategy.readFileToBuffer(
-            asset.source,
-        );
-        return { fileName: file.fileName, mimeType: asset.mimeType, data };
+        const data = await this.storage.read(file.uuid);
+        if (!data) return null;
+        return { fileName: file.fileName, mimeType: file.mimeType, data };
     }
 
     private async canSee(ctx: RequestContext, counterpartyId: string): Promise<boolean> {

@@ -21,6 +21,7 @@ docs/ai/.backup/
 # any depth (apps/server/static/assets/, etc.), not just repo-root static/assets/
 **/static/assets/**
 **/static/document-pdfs/**
+**/static/contract-files/**
 storybook-static/
 
 # devMode EmailPlugin output (issue #121) — real generated emails, never source

@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn, type EntityManager } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import {
     createTestSchema,
     dropTestSchema,
@@ -9,6 +13,7 @@ import {
 } from 'shared';
 
 import { ContractFileService } from '../../contract-file/contract-file.service';
+import { ContractFileStorageService } from '../../contract-file/contract-file-storage.service';
 import { UNSCANNED_ACTIVE_CONTRACT_SQL } from '../../contract-file/contract-file-sql';
 import type { CounterpartyService } from '../../counterparty.service';
 
@@ -33,8 +38,9 @@ class ContractFile {
     @Column({ type: 'uuid' }) uuid!: string;
     @Column({ type: 'int' }) contractId!: number;
     @Column({ type: 'varchar' }) kind!: string;
-    @Column({ type: 'int' }) assetId!: number;
     @Column({ type: 'varchar' }) fileName!: string;
+    @Column({ type: 'varchar' }) mimeType!: string;
+    @Column({ type: 'int' }) sizeBytes!: number;
     @Column({ type: 'varchar', nullable: true }) uploadedByAdministratorId!: string | null;
 }
 
@@ -48,21 +54,11 @@ class TestCounterparty {
 
 let dataSource: DataSource;
 let service: ContractFileService;
-let nextAssetId = 100;
-const deletedAssets: number[] = [];
+let dir: string;
 const visible = vi.fn(async (): Promise<unknown> => ({}));
-const assets = {
-    create: vi.fn(async (_ctx: unknown, input: { file: Promise<{ filename: string }> }) => ({
-        id: nextAssetId++,
-        name: (await input.file).filename,
-    })),
-    delete: vi.fn(async (_ctx: unknown, ids: number[]) => {
-        deletedAssets.push(...ids);
-        return { result: 'DELETED' };
-    }),
-};
 const ctx = {} as RequestContext;
 const TABLES: Record<string, unknown> = { Contract, ContractFile };
+const { schema, extra } = testSchemaOptions('contract_file');
 
 // Maps the production entity classes the service asks for onto the hand-rolled ones.
 function connectionOver(source: DataSource): TransactionalConnection {
@@ -76,15 +72,22 @@ function connectionOver(source: DataSource): TransactionalConnection {
                 : { query: (sql: string, params?: unknown[]) => manager(c).query(sql, params) },
     } as unknown as TransactionalConnection;
 }
-const { schema, extra } = testSchemaOptions('contract_file');
 
 function upload(
     kind: string,
     contractId: string,
     filename = 'scan.pdf',
+    mimetype = 'application/pdf',
 ): ReturnType<ContractFileService['upload']> {
-    return service.upload(ctx, { contractId, kind, file: Promise.resolve({ filename }) });
+    const file = {
+        filename,
+        mimetype,
+        createReadStream: () => Readable.from([Buffer.from(`%PDF ${filename}`)]),
+    };
+    return service.upload(ctx, { contractId, kind, file: Promise.resolve(file) });
 }
+
+const filesOnDisk = (): string[] => (existsSync(dir) ? readdirSync(dir) : []);
 
 async function seedContract(
     counterpartyId: number,
@@ -106,6 +109,11 @@ async function seedContract(
     );
 }
 
+async function oneContract(): Promise<Contract> {
+    const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
+    return seedContract(cp.id);
+}
+
 async function unscannedCounterparties(): Promise<number[]> {
     const rows: Array<{ id: number }> = await dataSource.query(
         `SELECT c.id FROM counterparty c WHERE ${UNSCANNED_ACTIVE_CONTRACT_SQL} ORDER BY c.id`,
@@ -114,6 +122,7 @@ async function unscannedCounterparties(): Promise<number[]> {
 }
 
 beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'contract-files-'));
     await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
@@ -127,18 +136,19 @@ beforeAll(async () => {
     service = new ContractFileService(
         connectionOver(dataSource),
         { findOneVisible: visible } as unknown as CounterpartyService,
-        assets as never,
+        new ContractFileStorageService({ dir }),
     );
 });
 
 afterAll(async () => {
     await dataSource.destroy();
     await dropTestSchema(schema);
+    rmSync(dir, { recursive: true, force: true });
 });
 
 beforeEach(async () => {
     visible.mockResolvedValue({});
-    deletedAssets.length = 0;
+    rmSync(dir, { recursive: true, force: true });
     await dataSource.query('TRUNCATE contract_file, contract, counterparty RESTART IDENTITY');
 });
 
@@ -159,50 +169,67 @@ describe('contract scan requirement filter', () => {
 });
 
 describe('ContractFileService', () => {
-    it('keeps one scan per contract when scans are uploaded concurrently', async () => {
-        const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
-        const contract = await seedContract(cp.id);
+    it('keeps one scan row and one file per contract when scans are uploaded concurrently', async () => {
+        const contract = await oneContract();
         await Promise.all(
             Array.from({ length: 5 }, (_, i) => upload('scan', String(contract.id), `s${i}.pdf`)),
         );
         const rows = await dataSource.getRepository(ContractFile).find();
-        expect(rows.filter(r => r.kind === 'scan')).toHaveLength(1);
-        expect(deletedAssets).toHaveLength(4);
-        expect(rows[0].assetId).not.toBe(deletedAssets[0]);
+        expect(rows).toHaveLength(1);
+        expect(filesOnDisk()).toEqual([rows[0].uuid]);
     });
 
     it('accumulates files of other kinds and keeps the original file name', async () => {
-        const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
-        const contract = await seedContract(cp.id);
+        const contract = await oneContract();
         await upload('other', String(contract.id), 'a.pdf');
         await upload('other', String(contract.id), 'b.pdf');
         const rows = await dataSource.getRepository(ContractFile).find({ order: { id: 'ASC' } });
         expect(rows.map(r => r.fileName)).toEqual(['a.pdf', 'b.pdf']);
-        expect(deletedAssets).toEqual([]);
+        expect(filesOnDisk()).toHaveLength(2);
+    });
+
+    it('replacing the scan removes the previous file from disk', async () => {
+        const contract = await oneContract();
+        const first = await upload('scan', String(contract.id), 'first.pdf');
+        const second = await upload('scan', String(contract.id), 'second.pdf');
+        expect(filesOnDisk()).toEqual([second.uuid]);
+        expect(filesOnDisk()).not.toContain(first.uuid);
     });
 
     it('refuses a contract of a counterparty the caller does not see, writing nothing', async () => {
-        const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
-        const contract = await seedContract(cp.id);
+        const contract = await oneContract();
         visible.mockResolvedValue(null);
-        assets.create.mockClear();
         await expect(upload('scan', String(contract.id))).rejects.toThrow('Contract not found');
         expect(await dataSource.getRepository(ContractFile).count()).toBe(0);
-        expect(assets.create).not.toHaveBeenCalled();
+        expect(filesOnDisk()).toEqual([]);
     });
 
-    it('rejects an unknown kind', async () => {
-        const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
-        const contract = await seedContract(cp.id);
+    it('rejects an unknown kind and a non-PDF, non-image file without writing', async () => {
+        const contract = await oneContract();
         await expect(upload('passport', String(contract.id))).rejects.toThrow('Unknown');
+        await expect(upload('other', String(contract.id), 'x.html', 'text/html')).rejects.toThrow(
+            'PDF',
+        );
+        expect(filesOnDisk()).toEqual([]);
     });
 
-    it('removes the file and its asset once, a repeat answers false', async () => {
-        const [cp] = await dataSource.getRepository(TestCounterparty).save([{ shortName: 'A' }]);
-        const contract = await seedContract(cp.id);
+    it('removes the row and the file once, a repeat answers false', async () => {
+        const contract = await oneContract();
         const saved = await upload('scan', String(contract.id));
         expect(await service.remove(ctx, saved.uuid)).toBe(true);
         expect(await service.remove(ctx, saved.uuid)).toBe(false);
-        expect(deletedAssets).toEqual([saved.assetId]);
+        expect(filesOnDisk()).toEqual([]);
+        expect(await dataSource.getRepository(ContractFile).count()).toBe(0);
+    });
+
+    it('leaves no orphan file when the database write fails', async () => {
+        const contract = await oneContract();
+        await dataSource.query('ALTER TABLE contract_file RENAME TO contract_file_off');
+        try {
+            await expect(upload('scan', String(contract.id))).rejects.toThrow();
+        } finally {
+            await dataSource.query('ALTER TABLE contract_file_off RENAME TO contract_file');
+        }
+        expect(filesOnDisk()).toEqual([]);
     });
 });

@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ContractFile1791605000000 implements MigrationInterface {
-    name = 'ContractFile1791605000000';
+export class ContractFile1791606000000 implements MigrationInterface {
+    name = 'ContractFile1791606000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `CREATE TABLE "contract_file" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "uuid" uuid NOT NULL, "contractId" integer NOT NULL, "kind" character varying NOT NULL, "assetId" integer NOT NULL, "fileName" character varying NOT NULL, "uploadedByAdministratorId" character varying, CONSTRAINT "PK_eba10480b6eee563cf350bb6c6b" PRIMARY KEY ("id"))`,
+            `CREATE TABLE "contract_file" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "uuid" uuid NOT NULL, "contractId" integer NOT NULL, "kind" character varying NOT NULL, "fileName" character varying NOT NULL, "mimeType" character varying NOT NULL, "sizeBytes" integer NOT NULL, "uploadedByAdministratorId" character varying, CONSTRAINT "PK_eba10480b6eee563cf350bb6c6b" PRIMARY KEY ("id"))`,
         );
         await queryRunner.query(
             `CREATE UNIQUE INDEX "IDX_80403f3992288246ea46340c55" ON "contract_file" ("uuid") `,

@@ -245,12 +245,15 @@ security-officer and portal-admin, never to operator or manager; such rows are r
 
 ### Contract files (#405)
 
-A `ContractFile` (scan, power of attorney scan, other; a Vendure Asset stored under the file uuid) belongs to an ERP contract and is never sent to the ERP.
+A `ContractFile` (scan, power of attorney scan, other) belongs to an ERP contract and is never sent to the ERP. The file is not a Vendure Asset:
+it lives in a private directory (`CONTRACT_FILE_DIR`, a persistent volume in deployments) under its uuid, so it is absent from the admin `assets`
+query and `/assets`, and leaves only through the controller below. The row is committed first under the contract lock and the file is written before it
+(removed again if the commit fails); a replaced or deleted file is removed from disk after the commit.
 Admin `counterpartyContracts(counterpartyId)` needs `ReadCounterparty` and returns rows only for a counterparty the caller sees
 (`CounterpartyService.findOneVisible`); `uploadContractFile`/`deleteContractFile` need `ManageContractFiles` (manager, department-head,
-general-director; delivered to existing roles by the 1.1.49 release grant) and the contract's counterparty must be visible, a hidden or
-missing contract answers the same error. Shop `myContractFiles` returns files of the caller's own counterparty only. Download is
-`GET /contract-file/:uuid` (session, not the public asset URL): staff with `ReadCounterparty` for a visible counterparty, anyone else
+general-director; delivered to existing roles by the 1.1.50 release grant) and the contract's counterparty must be visible, a hidden or
+missing contract answers the same error. Only PDF and image files up to 20 MB are accepted. Shop `myContractFiles` returns files of the caller's own
+counterparty only. Download is `GET /contract-file/:uuid` (session): staff with `ReadCounterparty` for a visible counterparty, anyone else
 for their own counterparty only, everything else a plain 404. A scan is required only for an active customer contract; the customers
 list filter `hasUnscannedActiveContract` finds the counterparties lacking one.
 

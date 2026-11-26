@@ -36,7 +36,7 @@ export const PERMISSIONS_ADDED_BY_RELEASE: ReleasePermissionGrant[] = [
     })),
     { release: '1.1.52', roleCode: 'portal-admin', permission: 'ReadExchangeHealth' },
     ...['manager', 'department-head', 'general-director'].map(roleCode => ({
-        release: '1.1.49',
+        release: '1.1.50',
         roleCode,
         permission: 'ManageContractFiles',
     })),
