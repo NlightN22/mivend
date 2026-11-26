@@ -1,0 +1,14 @@
+query MyContractFiles($skip: Int, $take: Int) {
+    myContractFiles(skip: $skip, take: $take) {
+        items {
+            uuid
+            contractId
+            contractName
+            kind
+            fileName
+            createdAt
+            downloadUrl
+        }
+        totalItems
+    }
+}

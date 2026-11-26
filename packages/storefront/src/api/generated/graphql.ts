@@ -3179,6 +3179,8 @@ export enum Permission {
     ManageApprovalWorkflows = 'ManageApprovalWorkflows',
     /** Read and change the consequence policy of each check (docs/checks-and-policies.md) */
     ManageCheckPolicies = 'ManageCheckPolicies',
+    /** Upload, replace and delete the scan files of a visible counterparty's contracts (#405); reading them needs ReadCounterparty */
+    ManageContractFiles = 'ManageContractFiles',
     /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
     ManageCounterpartyPortalAccess = 'ManageCounterpartyPortalAccess',
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
@@ -3798,6 +3800,7 @@ export type Query = {
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
     myAdvanceBalance: Array<MoneyAmount>;
+    myContractFiles: ShopContractFilePage;
     myContracts: Array<ShopContract>;
     myDocuments: DocumentList;
     myHiddenTradingPoints: Array<TradingPoint>;
@@ -3876,6 +3879,11 @@ export type QueryLegalAcceptanceHistoryArgs = {
 export type QueryLegalDocumentArgs = {
     kind: Scalars['String']['input'];
     locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryMyContractFilesArgs = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMyDocumentsArgs = {
@@ -4354,6 +4362,21 @@ export type ShopContract = {
     id: Scalars['ID']['output'];
     name?: Maybe<Scalars['String']['output']>;
     paymentDelayDays?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ShopContractFile = {
+    contractId: Scalars['ID']['output'];
+    contractName?: Maybe<Scalars['String']['output']>;
+    createdAt: Scalars['DateTime']['output'];
+    downloadUrl: Scalars['String']['output'];
+    fileName: Scalars['String']['output'];
+    kind: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type ShopContractFilePage = {
+    items: Array<ShopContractFile>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type SignInCaptchaRequirement = {
@@ -5719,6 +5742,26 @@ export type PaymentResultOrderQuery = {
             createdAt: any;
         }> | null;
     } | null;
+};
+
+export type MyContractFilesQueryVariables = Exact<{
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type MyContractFilesQuery = {
+    myContractFiles: {
+        totalItems: number;
+        items: Array<{
+            uuid: string;
+            contractId: string;
+            contractName?: string | null;
+            kind: string;
+            fileName: string;
+            createdAt: any;
+            downloadUrl: string;
+        }>;
+    };
 };
 
 export type MyDocumentsQueryVariables = Exact<{
@@ -7450,6 +7493,22 @@ export const PaymentResultOrderDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PaymentResultOrderQuery, PaymentResultOrderQueryVariables>;
+export const MyContractFilesDocument = new TypedDocumentString(`
+    query MyContractFiles($skip: Int, $take: Int) {
+  myContractFiles(skip: $skip, take: $take) {
+    items {
+      uuid
+      contractId
+      contractName
+      kind
+      fileName
+      createdAt
+      downloadUrl
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<MyContractFilesQuery, MyContractFilesQueryVariables>;
 export const MyDocumentsDocument = new TypedDocumentString(`
     query MyDocuments($options: DocumentListOptions) {
   myDocuments(options: $options) {

@@ -127,6 +127,11 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'contracts',
+                    component: () => import('../pages/contracts/ContractsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settlements',
                     component: () => import('../pages/settlements/SettlementDocumentsPage.vue'),
                     meta: { requiresAuth: true },

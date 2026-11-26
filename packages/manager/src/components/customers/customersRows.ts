@@ -20,6 +20,7 @@ export type CustomerRow = {
     discounts: number;
     lastOrder: string;
     isActive: boolean;
+    contractScanMissing: boolean;
 };
 
 export interface CustomerRowSources {
@@ -53,6 +54,7 @@ export function toCustomerRows(items: CustomerListItem[], src: CustomerRowSource
             discounts: src.discountCounts.get(c.id) ?? 0,
             lastOrder: c.lastOrderAt ? formatDate(c.lastOrderAt) : '—',
             isActive: c.isActive,
+            contractScanMissing: c.hasUnscannedActiveContract ?? false,
         };
     });
 }

@@ -1,0 +1,45 @@
+query CounterpartyContracts(
+    $counterpartyId: ID!
+    $search: String
+    $withoutScan: Boolean
+    $skip: Int
+    $take: Int
+) {
+    counterpartyContracts(
+        counterpartyId: $counterpartyId
+        search: $search
+        withoutScan: $withoutScan
+        skip: $skip
+        take: $take
+    ) {
+        items {
+            id
+            erpId
+            name
+            isActive
+            currency
+            hasScan
+            files {
+                id
+                uuid
+                kind
+                fileName
+                uploadedBy
+                createdAt
+                downloadUrl
+            }
+        }
+        totalItems
+    }
+}
+
+mutation UploadContractFile($contractId: ID!, $kind: String!, $file: Upload!) {
+    uploadContractFile(contractId: $contractId, kind: $kind, file: $file) {
+        id
+        uuid
+    }
+}
+
+mutation DeleteContractFile($uuid: String!) {
+    deleteContractFile(uuid: $uuid)
+}

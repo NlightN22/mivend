@@ -18,7 +18,7 @@ function downloadUrlOf(doc: DocumentSummary): string | null {
     return doc.fileUrl ?? (doc.pdfUrl ? `${doc.pdfUrl}?download=1` : null);
 }
 
-export const DOCUMENT_TYPES = ['proforma-invoice', 'contract', 'return', 'reconciliation'];
+export const DOCUMENT_TYPES = ['contract', 'return', 'reconciliation'];
 
 function labelOr(key: string, fallback: string): string {
     return i18n.global.te(key) ? i18n.global.t(key) : fallback;

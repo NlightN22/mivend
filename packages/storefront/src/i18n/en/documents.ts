@@ -2,7 +2,7 @@ export default {
     documents: {
         title: 'Documents',
         subtitle:
-            'Proforma invoices, contracts, returns and reconciliation reports linked to your account.',
+            'Contract documents, returns and reconciliation reports linked to your account. Proforma invoices are in their own section.',
         total: 'Total documents',
         allTypes: 'All types',
         all: 'All documents',

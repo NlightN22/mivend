@@ -3,6 +3,7 @@ import acting from './acting';
 import balance from './balance';
 import cart from './cart';
 import catalog from './catalog';
+import contracts from './contracts';
 import documents from './documents';
 import company from './company';
 import checkout from './checkout';
@@ -25,6 +26,7 @@ export default {
     ...company,
     ...finance,
     ...balance,
+    ...contracts,
     ...documents,
     ...requests,
     ...demo,

@@ -200,7 +200,19 @@ export function buildCustomersColumns(
             filterType: 'boolean',
             mobile: { badge: true },
         },
+        {
+            field: 'contractScan',
+            header: col('contractScan'),
+            width: 150,
+            minWidth: 130,
+            priority: 1,
+            filterConfig: NOT_FILTERED,
+            filterType: 'boolean',
+            filterField: 'hasUnscannedActiveContract',
+            filterOperators: ['eq'],
+            mobile: { hidden: true },
+        },
     ];
 }
 
-export const CUSTOMERS_DEFAULT_HIDDEN = ['group', 'innStatus'];
+export const CUSTOMERS_DEFAULT_HIDDEN = ['group', 'innStatus', 'contractScan'];

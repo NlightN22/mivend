@@ -12,6 +12,7 @@ import CustomerOverviewTab from './CustomerOverviewTab.vue';
 // Only the open tab is loaded; the card shell and the not-found state stay light.
 const OrdersList = defineAsyncComponent(() => import('../orders/OrdersList.vue'));
 const CustomerDiscountsTab = defineAsyncComponent(() => import('./CustomerDiscountsTab.vue'));
+const CustomerContractsTab = defineAsyncComponent(() => import('./CustomerContractsTab.vue'));
 const CustomerDocumentsTab = defineAsyncComponent(() => import('./CustomerDocumentsTab.vue'));
 const ProformaInvoicesList = defineAsyncComponent(
     () => import('../proforma-invoices/ProformaInvoicesList.vue'),
@@ -94,6 +95,7 @@ const historyEntityLabels = computed(() => ({
         :counterparty-id="customer.id"
         :counterparty-name="customer.shortName || customer.inn || customer.id"
     />
+    <CustomerContractsTab v-else-if="tab === 'contracts'" :counterparty-id="customer.id" />
     <CustomerDocumentsTab v-else-if="tab === 'documents'" :counterparty-id="customer.id" />
     <CustomerTeamTab
         v-else-if="tab === 'team'"

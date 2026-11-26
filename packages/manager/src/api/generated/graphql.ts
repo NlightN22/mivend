@@ -1171,6 +1171,19 @@ export type ContactPersonInput = {
     phone?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** A scan or other file attached to an ERP contract; never sent to the ERP (#405). */
+export type ContractFile = {
+    contractId: Scalars['ID']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    downloadUrl: Scalars['String']['output'];
+    fileName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    /** scan | power-of-attorney-scan | other */
+    kind: Scalars['String']['output'];
+    uploadedBy: Maybe<Scalars['String']['output']>;
+    uuid: Scalars['String']['output'];
+};
+
 export type ContractVersionDrift = {
     installed: Scalars['String']['output'];
     latest: Maybe<Scalars['String']['output']>;
@@ -1202,6 +1215,8 @@ export type Counterparty = Node & {
     erpId: Scalars['String']['output'];
     /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress: Maybe<Scalars['String']['output']>;
+    /** An active customer contract has no scan file (#405); false when the counterparty is hidden from the viewer */
+    hasUnscannedActiveContract: Scalars['Boolean']['output'];
     id: Scalars['ID']['output'];
     inn: Maybe<Scalars['String']['output']>;
     /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
@@ -1235,6 +1250,17 @@ export type Counterparty = Node & {
     tradingPoints: Array<TradingPoint>;
 };
 
+/** A customer contract of a counterparty with its files; hasScan is the control flag for an active contract. */
+export type CounterpartyContract = {
+    currency: Maybe<Scalars['String']['output']>;
+    erpId: Scalars['String']['output'];
+    files: Array<ContractFile>;
+    hasScan: Scalars['Boolean']['output'];
+    id: Scalars['ID']['output'];
+    isActive: Scalars['Boolean']['output'];
+    name: Maybe<Scalars['String']['output']>;
+};
+
 /** One settlement balance row of a counterparty; contractName is null when the contract is not imported. */
 export type CounterpartyContractBalance = {
     closingBalanceMinor: Scalars['Money']['output'];
@@ -1244,6 +1270,11 @@ export type CounterpartyContractBalance = {
     currency: Scalars['String']['output'];
     openingDate: Maybe<Scalars['DateTime']['output']>;
     organizationName: Maybe<Scalars['String']['output']>;
+};
+
+export type CounterpartyContractPage = {
+    items: Array<CounterpartyContract>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type CounterpartyDiscountCount = {
@@ -1266,6 +1297,8 @@ export type CounterpartyFilterParameter = {
     erpId?: InputMaybe<StringOperators>;
     /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress?: InputMaybe<StringOperators>;
+    /** An active customer contract of the counterparty has no scan file (#405) */
+    hasUnscannedActiveContract?: InputMaybe<BooleanOperators>;
     id?: InputMaybe<IdOperators>;
     inn?: InputMaybe<StringOperators>;
     /** ok | missing | duplicate, the same value as Counterparty.innStatus */
@@ -4823,6 +4856,7 @@ export type Mutation = {
     deleteCollection: DeletionResponse;
     /** Delete multiple Collections and all of their descendants */
     deleteCollections: Array<DeletionResponse>;
+    deleteContractFile: Scalars['Boolean']['output'];
     /** Delete multiple Countries */
     deleteCountries: Array<DeletionResponse>;
     /** Delete a Country */
@@ -5147,6 +5181,8 @@ export type Mutation = {
     updateWarehouseBranchAssignment: Warehouse;
     /** Update an existing Zone */
     updateZone: Zone;
+    /** A new scan replaces the contract's previous scan. */
+    uploadContractFile: ContractFile;
     upsertCounterparty: Counterparty;
     upsertDiscountRule: DiscountRule;
     /** Prices the variant's whole product: the entry is keyed by the product ERP id, so every variant of that product gets the price. */
@@ -5536,6 +5572,10 @@ export type MutationDeleteCollectionArgs = {
 
 export type MutationDeleteCollectionsArgs = {
     ids: Array<Scalars['ID']['input']>;
+};
+
+export type MutationDeleteContractFileArgs = {
+    uuid: Scalars['String']['input'];
 };
 
 export type MutationDeleteCountriesArgs = {
@@ -6385,6 +6425,12 @@ export type MutationUpdateWarehouseBranchAssignmentArgs = {
 
 export type MutationUpdateZoneArgs = {
     input: UpdateZoneInput;
+};
+
+export type MutationUploadContractFileArgs = {
+    contractId: Scalars['ID']['input'];
+    file: Scalars['Upload']['input'];
+    kind: Scalars['String']['input'];
 };
 
 export type MutationUpsertCounterpartyArgs = {
@@ -7840,6 +7886,8 @@ export type Permission =
     | 'ManageApprovalWorkflows'
     /** Read and change the consequence policy of each check (docs/checks-and-policies.md) */
     | 'ManageCheckPolicies'
+    /** Upload, replace and delete the scan files of a visible counterparty's contracts (#405); reading them needs ReadCounterparty */
+    | 'ManageContractFiles'
     /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
     | 'ManageCounterpartyPortalAccess'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
@@ -8948,6 +8996,8 @@ export type Query = {
     /** Counterparties with an owner or team member whose Administrator has no ERP user link; that manager is left out of what is sent to the ERP (issue #368). */
     counterpartiesWithUnlinkedManagers: CounterpartyList;
     counterparty: Maybe<Counterparty>;
+    /** search matches the contract name or ERP id; withoutScan keeps active contracts lacking a scan. */
+    counterpartyContracts: CounterpartyContractPage;
     /** Typeahead for the list filter: shortName | inn values among the counterparties the caller may list */
     counterpartyFilterSuggestions: Array<Scalars['String']['output']>;
     /** Balance, turnover and open orders of one counterparty; null when it is outside the caller's scope; needs the credit right. */
@@ -9346,6 +9396,14 @@ export type QueryCounterpartiesWithUnlinkedManagersArgs = {
 
 export type QueryCounterpartyArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryCounterpartyContractsArgs = {
+    counterpartyId: Scalars['ID']['input'];
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+    withoutScan?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type QueryCounterpartyFilterSuggestionsArgs = {
@@ -12760,6 +12818,51 @@ export type ResetCheckPolicyOverrideMutationVariables = Exact<{
 
 export type ResetCheckPolicyOverrideMutation = { resetCheckPolicyOverride: boolean };
 
+export type CounterpartyContractsQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    search?: InputMaybe<Scalars['String']['input']>;
+    withoutScan?: InputMaybe<Scalars['Boolean']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type CounterpartyContractsQuery = {
+    counterpartyContracts: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            erpId: string;
+            name: string | null;
+            isActive: boolean;
+            currency: string | null;
+            hasScan: boolean;
+            files: Array<{
+                id: string;
+                uuid: string;
+                kind: string;
+                fileName: string;
+                uploadedBy: string | null;
+                createdAt: any;
+                downloadUrl: string;
+            }>;
+        }>;
+    };
+};
+
+export type UploadContractFileMutationVariables = Exact<{
+    contractId: Scalars['ID']['input'];
+    kind: Scalars['String']['input'];
+    file: Scalars['Upload']['input'];
+}>;
+
+export type UploadContractFileMutation = { uploadContractFile: { id: string; uuid: string } };
+
+export type DeleteContractFileMutationVariables = Exact<{
+    uuid: Scalars['String']['input'];
+}>;
+
+export type DeleteContractFileMutation = { deleteContractFile: boolean };
+
 export type CounterpartyActivationCandidatesQueryVariables = Exact<{
     options?: InputMaybe<CounterpartyListOptions>;
 }>;
@@ -12954,6 +13057,7 @@ export type CustomersPageQuery = {
         items: Array<{
             portalState: string | null;
             lastOrderAt: any | null;
+            hasUnscannedActiveContract: boolean;
             id: string;
             shortName: string;
             legalName: string;
@@ -17413,6 +17517,58 @@ export const ResetCheckPolicyOverrideDocument = new TypedDocumentString(`
     ResetCheckPolicyOverrideMutation,
     ResetCheckPolicyOverrideMutationVariables
 >;
+export const CounterpartyContractsDocument = new TypedDocumentString(`
+    query CounterpartyContracts($counterpartyId: ID!, $search: String, $withoutScan: Boolean, $skip: Int, $take: Int) {
+  counterpartyContracts(
+    counterpartyId: $counterpartyId
+    search: $search
+    withoutScan: $withoutScan
+    skip: $skip
+    take: $take
+  ) {
+    items {
+      id
+      erpId
+      name
+      isActive
+      currency
+      hasScan
+      files {
+        id
+        uuid
+        kind
+        fileName
+        uploadedBy
+        createdAt
+        downloadUrl
+      }
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyContractsQuery,
+    CounterpartyContractsQueryVariables
+>;
+export const UploadContractFileDocument = new TypedDocumentString(`
+    mutation UploadContractFile($contractId: ID!, $kind: String!, $file: Upload!) {
+  uploadContractFile(contractId: $contractId, kind: $kind, file: $file) {
+    id
+    uuid
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UploadContractFileMutation,
+    UploadContractFileMutationVariables
+>;
+export const DeleteContractFileDocument = new TypedDocumentString(`
+    mutation DeleteContractFile($uuid: String!) {
+  deleteContractFile(uuid: $uuid)
+}
+    `) as unknown as TypedDocumentString<
+    DeleteContractFileMutation,
+    DeleteContractFileMutationVariables
+>;
 export const CounterpartyActivationCandidatesDocument = new TypedDocumentString(`
     query CounterpartyActivationCandidates($options: CounterpartyListOptions) {
   counterparties(options: $options) {
@@ -17589,6 +17745,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
       ...CustomerListItemFields
       portalState
       lastOrderAt
+      hasUnscannedActiveContract
     }
     totalItems
   }

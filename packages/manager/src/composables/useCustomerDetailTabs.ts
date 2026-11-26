@@ -9,6 +9,7 @@ export type CustomerDetailTab =
     | 'settlements'
     | 'analytics'
     | 'discounts'
+    | 'contracts'
     | 'documents'
     | 'team'
     | 'portalUsers'
@@ -22,6 +23,7 @@ export const CUSTOMER_DETAIL_TABS: CustomerDetailTab[] = [
     'settlements',
     'analytics',
     'discounts',
+    'contracts',
     'documents',
     'team',
     'portalUsers',
@@ -61,6 +63,7 @@ export function useCustomerDetailTabs(): CustomerDetailTabs {
         )
             .filter(t => t !== 'changeJournal' || authStore.hasPermission('ReadChangeJournal'))
             .filter(t => t !== 'settlements' || authStore.hasPermission('ReadSettlementDocument'))
+            .filter(t => t !== 'contracts' || authStore.hasPermission('ReadCounterparty'))
             .filter(t => t !== 'analytics' || authStore.hasPermission('ReadAnalytics'))
             .filter(
                 t =>

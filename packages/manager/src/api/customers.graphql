@@ -36,6 +36,7 @@ query CustomersPage($options: CounterpartyListOptions) {
             ...CustomerListItemFields
             portalState
             lastOrderAt
+            hasUnscannedActiveContract
         }
         totalItems
     }

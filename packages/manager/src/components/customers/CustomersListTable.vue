@@ -246,6 +246,13 @@ function applyView(state: TableViewState): void {
             <span v-else class="mv-cell-meta">—</span>
         </template>
 
+        <template #cell-contractScan="{ data }">
+            <MvStatusBadge v-if="(data as CustomerRow).contractScanMissing" variant="warning">{{
+                t('customers.list.noContractScan')
+            }}</MvStatusBadge>
+            <span v-else class="mv-cell-meta">—</span>
+        </template>
+
         <template #cell-contact="{ data }">
             <span class="mv-cell-meta" :title="(data as CustomerRow).contact">{{
                 (data as CustomerRow).contact

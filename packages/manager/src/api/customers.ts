@@ -36,12 +36,14 @@ export type CustomerListItem = CustomerListItemFieldsFragment & {
     contacts: ContactPersonInfo[];
     portalState?: string | null;
     lastOrderAt?: string | null;
+    hasUnscannedActiveContract?: boolean;
 };
 
 function toCustomerListItem(
     c: CustomerListItemFieldsFragment & {
         portalState?: string | null;
         lastOrderAt?: string | null;
+        hasUnscannedActiveContract?: boolean;
     },
 ): CustomerListItem {
     return { ...c, contacts: c.tradingPoints.flatMap(tp => tp.contacts) };
@@ -281,12 +283,14 @@ export async function fetchDocumentsPageForCounterparty(
     pageSize: number,
     filters: CustomerDocumentFilters = DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
 ): Promise<{ items: CustomerDocument[]; totalItems: number }> {
+    const types = filters.types.length ? filters.types : await fetchDocumentTypes(counterpartyId);
+    if (!types.length) return { items: [], totalItems: 0 };
     const result = await adminApi(CustomerDocumentsPageDocument, {
         counterpartyId,
         options: {
             skip: (page - 1) * pageSize,
             take: pageSize,
-            types: filters.types.length ? filters.types : undefined,
+            types,
             status: filters.status || undefined,
             search: filters.search || undefined,
         },
@@ -294,10 +298,11 @@ export async function fetchDocumentsPageForCounterparty(
     return result.documents;
 }
 
-// Distinct types come from the backend, since Document.type is ERP-sourced and not hardcoded
+// Distinct types come from the backend, since Document.type is ERP-sourced and not hardcoded;
+// proforma invoices have their own tab and list (#405).
 export async function fetchDocumentTypes(counterpartyId: string): Promise<string[]> {
     const result = await adminApi(CustomerDocumentTypesDocument, { counterpartyId });
-    return result.documentTypes;
+    return result.documentTypes.filter(type => type !== 'proforma-invoice');
 }
 
 export interface CustomerCredit {
