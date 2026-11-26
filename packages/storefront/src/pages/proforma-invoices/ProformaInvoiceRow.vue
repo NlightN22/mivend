@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatMoney } from './formatMoney';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
@@ -7,6 +8,7 @@ import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
 import ProformaInvoiceKindBadge from './ProformaInvoiceKindBadge.vue';
 import { isContractKind } from './proformaKind';
 import { formatDate } from './formatDate';
+import { usePaymentStubAvailable } from './usePaymentStubAvailable';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
     proformaInvoiceStatusLabel,
@@ -17,6 +19,7 @@ import {
 const props = defineProps<{ proformaInvoice: ProformaInvoiceSummary }>();
 const router = useRouter();
 const { t } = useI18n();
+const { available: stubAvailable } = usePaymentStubAvailable();
 
 const formatAmount = formatMoney;
 
@@ -34,9 +37,12 @@ function payProformaInvoice(): void {
     void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
 
-const isPayable =
-    props.proformaInvoice.displayStatus !== 'cancelled' &&
-    !isContractKind(props.proformaInvoice.kind);
+const isPayable = computed(
+    () =>
+        stubAvailable.value &&
+        props.proformaInvoice.displayStatus !== 'cancelled' &&
+        !isContractKind(props.proformaInvoice.kind),
+);
 </script>
 
 <template>

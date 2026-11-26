@@ -10,16 +10,10 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { onlineStubEnabled } from '@mivend/plugin-acquiring';
+
 import { ONLINE_STUB_METHOD_CODE } from './online-stub-handler';
 import { loggerCtx } from './constants';
-
-// The stub accepts any card payment, so a production server never enables it, whatever the flag says.
-export function onlineStubEnabled(): boolean {
-    if (process.env.ONLINE_PAYMENT_STUB_ENABLED !== 'true') return false;
-    if (process.env.NODE_ENV !== 'production') return true;
-    Logger.error('ONLINE_PAYMENT_STUB_ENABLED=true is refused when NODE_ENV=production', loggerCtx);
-    return false;
-}
 
 // Create-only (env sets `enabled` at creation); the one exception: a production server disables an enabled stub; runs on every instance type, so no ERP/Kafka.
 // Branch instances run it locally without ERP/Kafka, so no remote dependency is allowed.

@@ -179,6 +179,8 @@ export const shopApiExtensions: DocumentNode = gql`
         # application") — a captured payment whose amount exceeded what was owed on its target
         # proforma invoice, with no other open proforma invoice to absorb the remainder. One entry per currency.
         myAdvanceBalance: [MoneyAmount!]!
+        "True only where the demo payment stub is enabled (never in production); gates payProformaInvoice."
+        paymentStubAvailable: Boolean!
         myPayments(options: PaymentListOptions): PaymentAttemptList!
         payment(id: ID!): PaymentAttempt
     }

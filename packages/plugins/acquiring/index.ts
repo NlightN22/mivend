@@ -38,6 +38,7 @@ export {
     type BeforeContractProformaDelete,
 } from './src/contract-proforma-purge.service';
 export { ProformaInvoiceService } from './src/proforma-invoice.service';
+export { onlineStubEnabled } from './src/online-stub-enabled';
 export { ProformaInvoiceIssuingService } from './src/proforma-invoice-issuing.service';
 export { extractVat } from './src/proforma-invoice-tax';
 export { lineDiscountTotal, lineNetAmount } from './src/proforma-invoice-content';

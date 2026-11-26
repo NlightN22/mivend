@@ -12,6 +12,7 @@ import { isContractKind } from './proformaKind';
 import ProformaInvoiceVersionNotice from './ProformaInvoiceVersionNotice.vue';
 import { formatMoney } from './formatMoney';
 import { formatDate } from './formatDate';
+import { usePaymentStubAvailable } from './usePaymentStubAvailable';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
 import { proformaInvoiceStatusLabel, PROFORMA_INVOICE_STATUS_VARIANT } from './useProformaInvoices';
 
@@ -36,6 +37,7 @@ const formatAmount = formatMoney;
 function openPdf(url: string): void {
     window.open(url, '_blank', 'noopener');
 }
+const { available: stubAvailable } = usePaymentStubAvailable();
 const contractKind = computed(() => isContractKind(proformaInvoice.value?.kind));
 </script>
 
@@ -216,7 +218,10 @@ const contractKind = computed(() => isContractKind(proformaInvoice.value?.kind))
                             >
                                 {{ t('proformaInvoices.detail.pay') }}
                             </MvButton>
-                            <RouterLink v-else :to="`/proforma-invoices/${proformaInvoice.id}/pay`">
+                            <RouterLink
+                                v-else-if="stubAvailable"
+                                :to="`/proforma-invoices/${proformaInvoice.id}/pay`"
+                            >
                                 <MvButton variant="primary" size="md">{{
                                     t('proformaInvoices.detail.pay')
                                 }}</MvButton>

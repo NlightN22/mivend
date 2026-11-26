@@ -24,6 +24,7 @@ import {
     VersionRef,
 } from './proforma-invoice-ref-loader.service';
 import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
+import { onlineStubEnabled } from './online-stub-enabled';
 import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-attempt.service';
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
@@ -145,6 +146,7 @@ export class ProformaInvoiceShopResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { proformaInvoiceId: string; status: string; channel?: string },
     ): Promise<ProformaInvoice> {
+        if (!onlineStubEnabled()) throw new ForbiddenError();
         const counterparty = await this.getOwnCounterparty(ctx);
         const proformaInvoice = counterparty
             ? await this.proformaInvoiceService.findOne(ctx, Number(args.proformaInvoiceId))
@@ -158,6 +160,12 @@ export class ProformaInvoiceShopResolver {
             args.status as PayProformaInvoiceOutcome,
             args.channel ? (args.channel as PaymentChannel) : undefined,
         );
+    }
+
+    @Query()
+    @Allow(Permission.Owner)
+    paymentStubAvailable(): boolean {
+        return onlineStubEnabled();
     }
 
     @Query()

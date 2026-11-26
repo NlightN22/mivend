@@ -4,6 +4,7 @@ import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
+import { usePaymentStubAvailable } from './usePaymentStubAvailable';
 import { usePayProformaInvoice, type PayProformaInvoiceOutcome } from './usePayProformaInvoice';
 
 const { t } = useI18n();
@@ -14,7 +15,14 @@ const proformaInvoiceId = route.params.id as string;
 const { proformaInvoice, loading: loadingProformaInvoice, load } = useProformaInvoiceDetail();
 const { loading: paying, payProformaInvoice } = usePayProformaInvoice();
 
-onMounted(() => {
+const { available: stubAvailable, ready } = usePaymentStubAvailable();
+
+onMounted(async () => {
+    await ready;
+    if (!stubAvailable.value) {
+        void router.replace(`/proforma-invoices/${proformaInvoiceId}`);
+        return;
+    }
     void load(proformaInvoiceId);
 });
 

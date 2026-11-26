@@ -830,6 +830,10 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
   it unset, so it is disabled there). Under `NODE_ENV=production` the flag is refused (logged error, method
   disabled), so the stub never accepts payments in production.
+- The shop `payProformaInvoice` mutation (client-chosen outcome) obeys the same rule (`onlineStubEnabled()`): it is
+  refused with Forbidden unless the stub is enabled and `NODE_ENV` is not production (#407). The storefront reads
+  `paymentStubAvailable` and hides Pay buttons and the stub page otherwise. Real paid facts arrive only through
+  the payment inbox, which calls the service directly.
 
 ### Target model: form of payment vs terms (issue #222, decided 2026-10-12, backend built in stages 1-2a)
 

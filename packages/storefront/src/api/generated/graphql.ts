@@ -3827,6 +3827,7 @@ export type Query = {
     orderStatuses: Array<OrderStatusInfo>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
+    paymentStubAvailable: Scalars['Boolean']['output'];
     popularProductIds: Array<Scalars['ID']['output']>;
     /** Get a Product either by id or slug. If neither 'id' nor 'slug' is specified, an error will result. */
     product?: Maybe<Product>;
@@ -5934,6 +5935,10 @@ export type PayProformaInvoiceMutationVariables = Exact<{
 
 export type PayProformaInvoiceMutation = { payProformaInvoice: { id: string; status: string } };
 
+export type PaymentStubAvailableQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PaymentStubAvailableQuery = { paymentStubAvailable: boolean };
+
 export type ProformaInvoiceDetailQueryVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
@@ -7681,6 +7686,14 @@ export const PayProformaInvoiceDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     PayProformaInvoiceMutation,
     PayProformaInvoiceMutationVariables
+>;
+export const PaymentStubAvailableDocument = new TypedDocumentString(`
+    query PaymentStubAvailable {
+  paymentStubAvailable
+}
+    `) as unknown as TypedDocumentString<
+    PaymentStubAvailableQuery,
+    PaymentStubAvailableQueryVariables
 >;
 export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
     query ProformaInvoiceDetail($id: ID!) {
