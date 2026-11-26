@@ -169,7 +169,15 @@ const driftShown = computed(() => ['BEHIND', 'AHEAD', 'UNKNOWN'].includes(driftS
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    max-width: 100%;
     overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.inbound__stream > * {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-all;
 }
 
 .inbound__drift,

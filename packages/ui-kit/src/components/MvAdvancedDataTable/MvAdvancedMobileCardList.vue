@@ -181,7 +181,7 @@ function rowKey(row: TRow): unknown {
 .mv-advanced-mobile-card__title {
     font-weight: 800;
     font-size: 14px;
-    flex-shrink: 0;
+    min-width: 0;
     overflow-wrap: anywhere;
 }
 

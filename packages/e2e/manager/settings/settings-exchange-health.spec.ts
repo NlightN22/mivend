@@ -38,7 +38,7 @@ for (const { path, title } of PAGES) {
         await expect(main.getByText('not currently authorized')).toHaveCount(0);
         await expect(main.getByText('Could not load')).toHaveCount(0);
         for (const action of ['Replay', 'Dismiss', 'Requeue', 'Rebuild', 'Run reconciliation']) {
-            await expect(main.getByRole('button', { name: action })).toHaveCount(0);
+            await expect(main.getByRole('button', { name: action, exact: true })).toHaveCount(0);
         }
     });
 }

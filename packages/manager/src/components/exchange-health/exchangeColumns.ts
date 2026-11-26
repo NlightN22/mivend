@@ -73,7 +73,7 @@ export function inboxDefinition(): ExchangeListDefinition {
                 filterOperators: ['eq', 'notEq'],
                 mobile: { badge: true },
             }),
-            col(l, 'attempts', 90, { sortField: 'attempts', align: 'end', priority: 6 }),
+            col(l, 'attempts', 110, { sortField: 'attempts', align: 'end', priority: 6 }),
             col(l, 'lastError', 320, {
                 priority: 5,
                 filterType: 'string',
@@ -115,7 +115,7 @@ export function outboxDefinition(): ExchangeListDefinition {
                 mobile: { badge: true },
             }),
             col(l, 'subjectId', 220, { priority: 4 }),
-            col(l, 'retryCount', 90, { sortField: 'retryCount', align: 'end', priority: 6 }),
+            col(l, 'retryCount', 110, { sortField: 'retryCount', align: 'end', priority: 6 }),
             col(l, 'lastError', 320, {
                 priority: 5,
                 filterType: 'string',

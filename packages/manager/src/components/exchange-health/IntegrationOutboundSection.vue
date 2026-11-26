@@ -33,15 +33,15 @@ const col = (
     ...extra,
 });
 const columns: AdvancedDataTableColumn[] = [
-    col('eventType', 220, { required: true, priority: 10, mobile: { primary: true } }),
+    col('eventType', 200, { required: true, priority: 10, mobile: { primary: true } }),
     col('schemaSource', 120, { priority: 3 }),
     col('pending', 90, { align: 'end', priority: 7 }),
     col('failed', 90, { align: 'end', priority: 9 }),
     col('skipped', 100, { align: 'end', priority: 9 }),
     col('held', 80, { align: 'end', priority: 4 }),
     col('oldest', 90, { align: 'end', priority: 6 }),
-    col('lastPublished', 130, { priority: 5 }),
-    col('lastProblem', 300, { priority: 4 }),
+    col('lastPublished', 120, { priority: 5 }),
+    col('lastProblem', 240, { priority: 4 }),
 ];
 
 const now = Date.now();
