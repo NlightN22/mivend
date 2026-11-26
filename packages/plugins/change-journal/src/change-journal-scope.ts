@@ -9,6 +9,8 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     LegalAcceptance: 'append-only acceptance log, itself the audit record',
     EmailConfirmation:
         'single-use confirmation token state; the confirmed address is read by the legal gate',
+    ContractFile:
+        'uploaded file record; it carries its own uploader and time, a replacement is a new row',
     RoleDefaultGrant: 'config table written only by migrate and the CLI, never by a user action',
     Session: AUTH,
     AnonymousSession: AUTH,

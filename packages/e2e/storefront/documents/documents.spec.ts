@@ -103,7 +103,7 @@ test.describe('Documents page — all document types', () => {
         await popup.close();
     });
 
-    test('a bank-transfer checkout generates a real, downloadable proforma invoice document', async ({
+    test('a bank-transfer checkout leaves proforma invoices out of the documents list (#405)', async ({
         page,
     }) => {
         await clearCart(page);
@@ -116,34 +116,22 @@ test.describe('Documents page — all document types', () => {
             `mutation($id: [ID!]!) { setOrderShippingMethod(shippingMethodId: $id) { __typename } }`,
             { id: [methodId] },
         );
-        const transitioned = await gql(
+        await gql(
             page,
-            `mutation { transitionOrderToState(state: "ArrangingPayment") { __typename ... on Order { code } } }`,
+            `mutation { transitionOrderToState(state: "ArrangingPayment") { __typename } }`,
         );
-        const orderCode = (transitioned.transitionOrderToState as { code: string }).code;
         await gql(
             page,
             `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
         );
 
-        const proformaInvoice = await waitForDocumentReady(
-            page,
-            // Proforma numbers are versioned per order: <order>-<NN>-<version> (#206).
-            d => d.type === 'proforma-invoice' && d.number.startsWith(`${orderCode}-`),
+        expect((await myDocuments(page)).filter(d => d.type === 'proforma-invoice')).toHaveLength(
+            0,
         );
-        expect(proformaInvoice.status).toBe('ready');
 
         await page.goto('/documents');
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByText(proformaInvoice.number)).toBeVisible({ timeout: 10000 });
-
-        // Generated PDFs are sent as an attachment, so they trigger a native browser download.
-        const proformaInvoiceRow = page.locator('.doc-row', { hasText: proformaInvoice.number });
-        const [download] = await Promise.all([
-            page.waitForEvent('download'),
-            proformaInvoiceRow.getByRole('link', { name: 'Download' }).click(),
-        ]);
-        expect(download.url()).toContain('/document-pdf/');
+        await expect(page.getByRole('button', { name: /Proforma invoice/i })).toHaveCount(0);
     });
 
     test('the Admin generateContract mutation produces a real, downloadable contract document', async ({

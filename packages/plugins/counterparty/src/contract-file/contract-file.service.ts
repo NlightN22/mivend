@@ -65,9 +65,9 @@ export class ContractFileService {
             const repo = this.connection.getRepository(tx, ContractFile);
             const replaced =
                 input.kind === SCAN_KIND
-                    ? // unbounded-ok: at most one scan per contract, enforced under this lock
-                      await repo.find({
+                    ? await repo.find({
                           where: { contractId: Number(contract.id), kind: SCAN_KIND },
+                          take: 50,
                       })
                     : [];
             const saved = await repo.save(
