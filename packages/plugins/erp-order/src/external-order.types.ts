@@ -12,6 +12,8 @@ export interface ExternalOrderInput {
     erpOrderId: string;
     counterpartyErpId: string | null;
     erpStatus: string | null;
+    // OrderChanged is_posted=false: a draft in the ERP, shown as cancelled. Absent or true changes nothing.
+    notPosted?: boolean;
     erpStatusAt: Date | null;
     erpOrderStatus: string;
     documentNumber: string | null;

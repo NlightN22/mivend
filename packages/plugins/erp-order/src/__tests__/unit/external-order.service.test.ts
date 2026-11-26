@@ -7,7 +7,7 @@ const ctx = {} as RequestContext;
 
 function makeService(update: ReturnType<typeof vi.fn>): ExternalOrderService {
     const dictionary = {
-        codeWith: () => 'NEW',
+        codeWith: (flag: string) => (flag === 'cancelled' ? 'CANCELLED' : 'NEW'),
         vendureState: () => 'Shipped',
         has: () => false,
         canAdvance: () => true,
@@ -57,5 +57,32 @@ describe('ExternalOrderService status time', () => {
         await apply(ctx, input);
         const customFields = update.mock.calls[0][1].customFields;
         expect(customFields.erpStatusAt).toEqual(input.erpStatusAt);
+    });
+
+    it('stores a not-posted order as cancelled and repeats the same effect on a second delivery', async () => {
+        const update = vi.fn();
+        const service = makeService(update);
+        const apply = (
+            service as unknown as {
+                apply: (c: RequestContext, i: ExternalOrderInput) => Promise<unknown>;
+            }
+        ).apply.bind(service);
+        const draft = { ...input, erpStatus: null, notPosted: true };
+        await apply(ctx, draft);
+        await apply(ctx, draft);
+        expect(update.mock.calls[0][1].customFields.erpStatus).toBe('CANCELLED');
+        expect(update.mock.calls[1][1]).toEqual(update.mock.calls[0][1]);
+    });
+
+    it('leaves the status alone when is_posted is absent or true', async () => {
+        const update = vi.fn();
+        const service = makeService(update);
+        const apply = (
+            service as unknown as {
+                apply: (c: RequestContext, i: ExternalOrderInput) => Promise<unknown>;
+            }
+        ).apply.bind(service);
+        await apply(ctx, { ...input, erpStatus: null, notPosted: false });
+        expect(update.mock.calls[0][1].customFields).not.toHaveProperty('erpStatus');
     });
 });

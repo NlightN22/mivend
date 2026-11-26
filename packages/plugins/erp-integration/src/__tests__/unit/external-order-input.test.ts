@@ -37,6 +37,14 @@ describe('buildExternalOrderInput', () => {
         });
     });
 
+    it('flags only an explicit is_posted=false, and keeps an empty customerId as no counterparty', () => {
+        const draft = buildExternalOrderInput('e1', { isPosted: false, customerId: '' }, []);
+        expect(draft.notPosted).toBe(true);
+        expect(draft.counterpartyErpId).toBeNull();
+        expect(buildExternalOrderInput('e1', { isPosted: true }, []).notPosted).toBe(false);
+        expect(buildExternalOrderInput('e1', {}, []).notPosted).toBe(false);
+    });
+
     it('keeps absent optional fields absent, never false or zero', () => {
         const input = buildExternalOrderInput('e1', {}, []);
         expect(input).toMatchObject({

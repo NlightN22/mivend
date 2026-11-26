@@ -95,6 +95,20 @@ describe('OrderChangedStreamHandler', () => {
         );
     });
 
+    it('accepts a not-posted order with an empty customerId as an external order without counterparty', async () => {
+        const { handler, upsert } = setup(null);
+        const outcome = await handler.apply(ctx, 'draft-1', {
+            isPosted: false,
+            customerId: '',
+            status: 'Draft',
+        });
+        expect(outcome).toEqual({ kind: 'applied' });
+        expect(upsert).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ counterpartyErpId: null, notPosted: true }),
+        );
+    });
+
     it('keeps updating an order stored as external even when the event carries an orderUuid', async () => {
         const { handler, sync, upsert } = setup({ id: '1', isExternal: true });
         await handler.apply(ctx, 'legacy-1', { orderUuid: 'u-1' });

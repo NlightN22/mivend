@@ -29,6 +29,10 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
 - `documentNumber` (15) refreshes `erpRegistrationDocumentNumber`; stale events are dropped upstream by the inbox
   version check.
 
+- `is_posted` (41): an explicit `false` on an external order stores the dictionary's `cancelled` status (a draft in
+  the ERP is shown as cancelled; order-state sends the same). Absent or true changes nothing; a mivend order is not
+  affected here. An empty `customerId` means no counterparty.
+
 ## Deliberately not consumed
 
 - Per-line `appliedDiscountAmount` / `priceTypeId` and `comment`: no feature reads them yet (#101/#108).

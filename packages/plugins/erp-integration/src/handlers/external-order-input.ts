@@ -91,6 +91,7 @@ export function buildExternalOrderInput(
         erpOrderId: entityId,
         counterpartyErpId: optionalString(payload.customerId),
         erpStatus: null,
+        notPosted: payload.isPosted === false,
         erpStatusAt: parseTimestamp(payload.updatedAt) ?? parseTimestamp(payload.occurredAt),
         erpOrderStatus: payload.status != null ? String(payload.status) : '',
         documentNumber: optionalString(payload.documentNumber),

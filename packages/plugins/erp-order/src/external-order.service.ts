@@ -193,9 +193,10 @@ export class ExternalOrderService {
             );
         }
         const dictionary = await this.statusReference.dictionary(ctx);
+        const incomingStatus = input.notPosted ? dictionary.codeWith('cancelled') : input.erpStatus;
         const nextStatus = existing
-            ? nextExternalErpStatus(existing.erpStatus, input.erpStatus, dictionary)
-            : (input.erpStatus ?? dictionary.codeWith('externalDefault'));
+            ? nextExternalErpStatus(existing.erpStatus, incomingStatus, dictionary)
+            : (incomingStatus ?? dictionary.codeWith('externalDefault'));
         const counterpartyFields = input.counterpartyErpId
             ? {
                   counterpartyId: counterparty ? String(counterparty.id) : null,
