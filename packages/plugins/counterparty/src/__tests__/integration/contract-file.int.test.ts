@@ -1,20 +1,42 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import type { RequestContext } from '@vendure/core';
+import { Column, DataSource, Entity, PrimaryGeneratedColumn, type EntityManager } from 'typeorm';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
-    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
-    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
 import { ContractFileService } from '../../contract-file/contract-file.service';
 import { UNSCANNED_ACTIVE_CONTRACT_SQL } from '../../contract-file/contract-file-sql';
-import { Contract } from '../../entities/contract.entity';
-import { ContractFile } from '../../entities/contract-file.entity';
 import type { CounterpartyService } from '../../counterparty.service';
+
+// VendureEntity's primary column needs a bootstrapped EntityIdStrategy, so hand-rolled tables stand in.
+@Entity('contract')
+class Contract {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) erpId!: string;
+    @Column({ type: 'varchar' }) counterpartyId!: string;
+    @Column({ type: 'varchar' }) organizationId!: string;
+    @Column({ type: 'varchar' }) priceTypeId!: string;
+    @Column({ type: 'boolean', default: true }) isActive!: boolean;
+    @Column({ type: 'boolean', nullable: true }) isCustomerContract!: boolean | null;
+    @Column({ type: 'varchar', nullable: true }) name!: string | null;
+    @Column({ type: 'varchar' }) contractKind!: string;
+    @Column({ type: 'varchar' }) contractType!: string;
+}
+
+@Entity('contract_file')
+class ContractFile {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'uuid' }) uuid!: string;
+    @Column({ type: 'int' }) contractId!: number;
+    @Column({ type: 'varchar' }) kind!: string;
+    @Column({ type: 'int' }) assetId!: number;
+    @Column({ type: 'varchar' }) fileName!: string;
+    @Column({ type: 'varchar', nullable: true }) uploadedByAdministratorId!: string | null;
+}
 
 @Entity('counterparty')
 class TestCounterparty {
@@ -39,10 +61,28 @@ const assets = {
         return { result: 'DELETED' };
     }),
 };
-const ctx = testRequestContext as RequestContext;
+const ctx = {} as RequestContext;
+const TABLES: Record<string, unknown> = { Contract, ContractFile };
+
+// Maps the production entity classes the service asks for onto the hand-rolled ones.
+function connectionOver(source: DataSource): TransactionalConnection {
+    const manager = (c: { em?: EntityManager }): EntityManager => c.em ?? source.manager;
+    return {
+        withTransaction: (c: { em?: EntityManager }, work: (c: unknown) => Promise<unknown>) =>
+            c.em ? work({ em: c.em }) : source.transaction(em => work({ em })),
+        getRepository: (c: { em?: EntityManager }, entity: { name: string }) =>
+            TABLES[entity.name]
+                ? manager(c).getRepository(TABLES[entity.name] as never)
+                : { query: (sql: string, params?: unknown[]) => manager(c).query(sql, params) },
+    } as unknown as TransactionalConnection;
+}
 const { schema, extra } = testSchemaOptions('contract_file');
 
-function upload(kind: string, contractId: string, filename = 'scan.pdf'): Promise<ContractFile> {
+function upload(
+    kind: string,
+    contractId: string,
+    filename = 'scan.pdf',
+): ReturnType<ContractFileService['upload']> {
     return service.upload(ctx, { contractId, kind, file: Promise.resolve({ filename }) });
 }
 
@@ -85,7 +125,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     service = new ContractFileService(
-        createTestConnection(dataSource),
+        connectionOver(dataSource),
         { findOneVisible: visible } as unknown as CounterpartyService,
         assets as never,
     );
