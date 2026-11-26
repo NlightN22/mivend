@@ -357,11 +357,12 @@ prod-init-storage:
 	GARAGE_CONTAINER=$$($(COMPOSE_PROD) ps -q garage) \
 	infrastructure/scripts/garage-init.sh "$$S3_BUCKET" "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY"
 
-# Nightly dump to ./backups (copy it off the host); restore-check loads the latest dump into a scratch database.
+# Nightly dump and a contract-files volume archive (scans exist only there) to ./backups (copy them off the host); restore-check loads the latest dump into a scratch database.
 prod-backup:
 	mkdir -p backups
 	set -a; . infrastructure/docker/.env.production; set +a; \
 	$(COMPOSE_PROD) exec -T postgres pg_dump -U "$$POSTGRES_USER" -Fc "$$POSTGRES_DB" > backups/mivend-$$(date +%Y%m%d-%H%M%S).dump
+	infrastructure/scripts/backup-contract-files.sh "$$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' $$($(COMPOSE_PROD) ps -q postgres))" backups
 
 prod-restore-check:
 	set -a; . infrastructure/docker/.env.production; set +a; \

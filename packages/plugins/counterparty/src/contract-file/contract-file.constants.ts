@@ -10,4 +10,3 @@ export interface ResolvedContractFileOptions {
 }
 
 export const MAX_CONTRACT_FILE_BYTES = 20 * 1024 * 1024;
-export const ALLOWED_MIME = /^(application\/pdf|image\/(png|jpeg|webp|tiff))$/;

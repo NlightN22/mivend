@@ -78,11 +78,12 @@ function upload(
     contractId: string,
     filename = 'scan.pdf',
     mimetype = 'application/pdf',
+    content: Buffer = Buffer.from(`%PDF-1.4 ${filename}`),
 ): ReturnType<ContractFileService['upload']> {
     const file = {
         filename,
         mimetype,
-        createReadStream: () => Readable.from([Buffer.from(`%PDF ${filename}`)]),
+        createReadStream: () => Readable.from([content]),
     };
     return service.upload(ctx, { contractId, kind, file: Promise.resolve(file) });
 }
@@ -207,10 +208,18 @@ describe('ContractFileService', () => {
     it('rejects an unknown kind and a non-PDF, non-image file without writing', async () => {
         const contract = await oneContract();
         await expect(upload('passport', String(contract.id))).rejects.toThrow('Unknown');
-        await expect(upload('other', String(contract.id), 'x.html', 'text/html')).rejects.toThrow(
-            'PDF',
-        );
+        await expect(
+            upload('other', String(contract.id), 'x.pdf', 'application/pdf', Buffer.from('<html>')),
+        ).rejects.toThrow('PDF');
         expect(filesOnDisk()).toEqual([]);
+    });
+
+    it('stores the type found in the content, not the declared one', async () => {
+        const contract = await oneContract();
+        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
+        await upload('other', String(contract.id), 'pic.pdf', 'application/pdf', png);
+        const [row] = await dataSource.getRepository(ContractFile).find();
+        expect(row.mimeType).toBe('image/png');
     });
 
     it('removes the row and the file once, a repeat answers false', async () => {

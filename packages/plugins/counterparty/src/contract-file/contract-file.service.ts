@@ -7,7 +7,8 @@ import { loggerCtx } from '../types';
 import { CounterpartyService } from '../counterparty.service';
 import { Contract } from '../entities/contract.entity';
 import { ContractFile } from '../entities/contract-file.entity';
-import { ALLOWED_MIME, MAX_CONTRACT_FILE_BYTES } from './contract-file.constants';
+import { MAX_CONTRACT_FILE_BYTES } from './contract-file.constants';
+import { detectMime } from './contract-file-signature';
 import { CONTRACT_FILE_KINDS, SCAN_KIND, type ContractFileKind } from './contract-file-sql';
 import { ContractFileStorageService } from './contract-file-storage.service';
 
@@ -68,10 +69,9 @@ export class ContractFileService {
         assertKind(input.kind);
         const contract = await this.findWritableContract(ctx, input.contractId);
         const upload = await input.file;
-        if (!upload.mimetype || !ALLOWED_MIME.test(upload.mimetype)) {
-            throw new UserInputError('Only PDF and image files are accepted');
-        }
         const data = await readBounded(upload);
+        const mimeType = detectMime(data);
+        if (!mimeType) throw new UserInputError('Only PDF, PNG and JPEG files are accepted');
         const uuid = randomUUID();
         await this.storage.write(uuid, data);
         let replaced: ContractFile[] = [];
@@ -97,7 +97,7 @@ export class ContractFileService {
                             contractId: Number(contract.id),
                             kind: input.kind,
                             fileName: upload.filename || uuid,
-                            mimeType: upload.mimetype,
+                            mimeType,
                             sizeBytes: data.length,
                             uploadedByAdministratorId: administratorId,
                         }),
