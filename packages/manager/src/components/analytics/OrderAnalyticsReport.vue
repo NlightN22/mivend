@@ -21,6 +21,7 @@ import {
     usesCounterpartyManager,
     usesProductFilter,
 } from '../../api/orderAnalyticsFilter';
+import { useAnalyticsGroupKinds } from '../../composables/useAnalyticsGroupKinds';
 import { useOrderAnalytics } from '../../composables/useOrderAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
 import AnalyticsExportButton from './AnalyticsExportButton.vue';
@@ -67,7 +68,10 @@ const columns = computed(() =>
         productMode.value,
     ),
 );
-const entityFilterColumns = computed(() => buildEntityFilterColumns());
+const groupKinds = useAnalyticsGroupKinds();
+const entityFilterColumns = computed(() =>
+    buildEntityFilterColumns(undefined, 'orders', groupKinds.value),
+);
 const showMainManager = computed(
     () =>
         filters.value.dimension === 'COUNTERPARTY_MANAGER' ||

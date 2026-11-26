@@ -29,7 +29,7 @@ partial view must say so (visible against total), as the manager card does.
 ## Orders report (#389)
 
 The first report, `orders`, reads order amounts from the analytics service over gRPC
-(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.3.2, additive over v0.2.0). The data is order turnover taken from the
+(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.8.1, additive over v0.2.0). The data is order turnover taken from the
 integration service: the sum of order amounts, not sales documents; cancelled and deleted orders are not counted.
 
 - **One report, many places.** The table is one shared component with filters and a dimension (customer, order
@@ -59,13 +59,29 @@ integration service: the sum of order amounts, not sales documents; cancelled an
   scoped typeahead (`MvSuggestMultiInput`). The filter is sent with `exact: true` and the server matches whole names
   (case-insensitive) inside the viewer's scope, with the same caps and fail-closed answer; two objects with the same name
   are both matched. Several conditions on one field (contains and is one of) are OR-ed, and a condition that matches
-  nothing makes the whole result empty. "Is not one of" and "in group" are not offered. The contract has include id lists only
-  (no `exclude_*_ids`, no group filters), and our data has group trees (`ProductGroupErp`, `CounterpartyGroupErp`)
-  but no link from a product or counterparty to its group and no manufacturer groups, so a group has no members to expand.
-  Needed from the analytics owners: `exclude_customer_ids`, `exclude_organization_ids`, `exclude_point_of_sale_ids`,
-  `exclude_manager_ids`, `exclude_counterparty_manager_ids`, `exclude_contract_ids`, `exclude_product_ids`,
-  `exclude_manufacturer_ids`, and group filters with sub-group expansion (product group, counterparty group,
-  manufacturer group) once the members are mirrored.
+  nothing makes the whole result empty.
+- **Leave out and groups (#404, contract v0.8.1).** Every reference field also offers "is not one of", and the fields
+  with a hierarchical catalog offer "in group" and "not in group": product (category tree), manufacturer (manufacturer
+  groups) and customer (customer groups); sales offers customer groups. An exclusion matches whole names exactly like
+  "is one of", resolved server side inside the viewer's scope with the same caps; names that match nothing exclude
+  nothing (never an empty result). An exclude list is combined with the include list of the same field by AND and never
+  widens the viewer scope. Groups are never expanded in mivend: the browser picks groups in a server-backed tree
+  lookup (`orderAnalyticsGroupSuggest`, search by name, ten results shown as `Parent / Child`), sends our own group ids,
+  the server translates them to ERP ids and the analytics service expands the sub-groups. A group that no longer exists
+  selects no rows when included and excludes nothing when excluded. More than 1000 values in any list (names or groups,
+  summed over the conditions of a field) answers the "too large" state, and so does a group list the service expands to more than 20000 members (gRPC `RESOURCE_EXHAUSTED`, v0.8.1: pick narrower groups). Product, manufacturer and category conditions of
+  any kind, including exclusions, switch the table to line totals.
+  Group trees come from data mivend already holds: manufacturer groups from `Manufacturer.parentExternalId` (set by the
+  manufacturer stream; rows stay without a parent until the stream is re-sent), product categories from the category
+  collections built by the category stream (`cat-<erp id>` slugs, not the product group mirror), customer groups from
+  `CounterpartyGroupErp`. Group names are catalog data, not customer data; scope still applies to every result.
+- **Group filters behind a switch.** Manufacturer groups and all exclusions are live. Product categories and customer
+  groups (orders `product_category_ids`, `exclude_product_category_ids`, `customer_group_ids`,
+  `exclude_customer_group_ids`; sales `counterparty_group_ids`, `exclude_counterparty_group_ids`) are built but off: the
+  analytics service has not deployed them. `ANALYTICS_CATEGORY_CUSTOMER_GROUP_FILTERS=true` (default `false`, plugin
+  option `productCategoryAndCustomerGroupFilters`) turns them on. While off the client never puts these fields on the wire,
+  the query `analyticsFilterCapabilities` does not list the group kinds, the lookup answers empty and a request that
+  names them is refused, so the builder does not offer "in group" for products and customers.
 - **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
   different managers must not be added together; orders of a customer without a manager fall into an empty id. For a
   restricted viewer the rows keep only the managers the team visibility allows, like the order manager dimension.
@@ -85,7 +101,9 @@ Same client, key and scope rules as the orders report.
 
 - Dimensions: none, customer, organization, contract, customer manager (a customer with several managers is counted under each,
   so rows are not added across managers). Filters are the same four entities, typed as names and resolved server side inside the
-  viewer scope; a name that matches nothing gives no rows, a too broad name answers `TOO_LARGE`.
+  viewer scope; a name that matches nothing gives no rows, a too broad name answers `TOO_LARGE`. Contract v0.8.0 adds the exclude
+  lists (customer, organization, contract, customer manager; live) and customer groups (behind the switch above). Sales rows
+  of the customer manager dimension drop only the excluded managers' rows.
 - The UI always says the figures are preliminary: the signs and meaning of the amounts per document kind are not yet confirmed by
   the ERP side.
 - Currency is a column and a grouping. The same currency can arrive as an id, a numeric code or empty until the platform issue is

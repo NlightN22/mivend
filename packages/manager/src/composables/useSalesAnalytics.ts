@@ -3,7 +3,11 @@ import { useLatestRequest } from '@mivend/ui-kit';
 import type { FilterCondition } from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
 import { resolveDateRangePreset } from '@mivend/ui-kit/src/components/MvColumnFilter/dateRangePresets';
 import type { OrderAnalyticsState, OrderGranularity } from '../api/orderAnalytics';
-import { conditionsToEntityFilters } from '../api/orderAnalyticsFilter';
+import {
+    SALES_GROUP_KEYS,
+    conditionsToEntityFilters,
+    conditionsToGroupFilters,
+} from '../api/orderAnalyticsFilter';
 import { isValidPeriod } from '../api/orderAnalyticsPeriod';
 import {
     fetchSalesAnalytics,
@@ -62,6 +66,7 @@ export function useSalesAnalytics(urlPrefix = ''): UseSalesAnalytics {
         () =>
             fetchSalesAnalytics(filters.value, {
                 entityFilters: conditionsToEntityFilters(conditions.value, SALES_FILTER_KEYS),
+                groupFilters: conditionsToGroupFilters(conditions.value, SALES_GROUP_KEYS),
                 mainManagerOnly: mainManagerOnly.value,
             }),
         result => {

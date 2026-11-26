@@ -7,6 +7,7 @@ import type {
     OrderAnalyticsState,
     OrderGranularity,
 } from './orderAnalytics';
+import type { OrderAnalyticsGroupFilter } from './analyticsGroups';
 import { periodInstants } from './orderAnalyticsPeriod';
 
 export type SalesDimension =
@@ -49,6 +50,7 @@ export interface SalesAnalyticsResult {
 
 export interface SalesAnalyticsExtras {
     entityFilters?: OrderAnalyticsEntityFilter[];
+    groupFilters?: OrderAnalyticsGroupFilter[];
     mainManagerOnly?: boolean;
 }
 
@@ -81,6 +83,7 @@ export function fetchSalesAnalytics(
             dimension: params.dimension,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             entityFilters: extras.entityFilters?.length ? extras.entityFilters : null,
+            groupFilters: extras.groupFilters?.length ? extras.groupFilters : null,
             mainManagerOnly: extras.mainManagerOnly ?? false,
         },
     }).then(r => r.salesAnalytics as SalesAnalyticsResult);

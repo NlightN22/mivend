@@ -1,6 +1,7 @@
 import { adminApi } from './client';
 import { OrderAnalyticsDocument, OrderAnalyticsSuggestDocument } from './generated/graphql';
 import type { OrderAnalyticsFilterKind } from './generated/graphql';
+import type { OrderAnalyticsGroupFilter } from './analyticsGroups';
 import { periodInstants } from './orderAnalyticsPeriod';
 
 export type OrderGranularity = 'NONE' | 'DAY' | 'MONTH';
@@ -31,10 +32,12 @@ export interface OrderAnalyticsEntityFilter {
     kind: OrderAnalyticsFilterKind;
     values: string[];
     exact?: boolean;
+    exclude?: boolean;
 }
 
 export interface OrderAnalyticsExtras {
     entityFilters?: OrderAnalyticsEntityFilter[];
+    groupFilters?: OrderAnalyticsGroupFilter[];
     mainManagerOnly?: boolean;
 }
 
@@ -84,6 +87,7 @@ export function fetchOrderAnalytics(
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             ...fixed,
             entityFilters: extras.entityFilters?.length ? extras.entityFilters : null,
+            groupFilters: extras.groupFilters?.length ? extras.groupFilters : null,
             mainManagerOnly: extras.mainManagerOnly ?? false,
         },
     }).then(r => r.orderAnalytics as OrderAnalyticsResult);

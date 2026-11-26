@@ -10,7 +10,7 @@ import {
     type OrderDimension,
     type OrderGranularity,
 } from '../api/orderAnalytics';
-import { conditionsToEntityFilters } from '../api/orderAnalyticsFilter';
+import { conditionsToEntityFilters, conditionsToGroupFilters } from '../api/orderAnalyticsFilter';
 import { isValidPeriod } from '../api/orderAnalyticsPeriod';
 import { useUrlSyncedState } from './useUrlSyncedState';
 
@@ -65,6 +65,7 @@ export function useOrderAnalytics(options: {
         () =>
             fetchOrderAnalytics(filters.value, options.fixed, {
                 entityFilters: conditionsToEntityFilters(conditions.value),
+                groupFilters: conditionsToGroupFilters(conditions.value),
                 mainManagerOnly: mainManagerOnly.value,
             }),
         result => {

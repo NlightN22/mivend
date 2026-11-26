@@ -11,7 +11,8 @@ import {
     useDataTableState,
 } from '@mivend/ui-kit';
 import { GRANULARITIES } from '../../api/orderAnalytics';
-import { buildEntityFilterColumns } from '../../api/orderAnalyticsFilter';
+import { SALES_GROUP_KEYS, buildEntityFilterColumns } from '../../api/orderAnalyticsFilter';
+import { useAnalyticsGroupKinds } from '../../composables/useAnalyticsGroupKinds';
 import { SALES_DIMENSIONS, SALES_FILTER_KEYS } from '../../api/salesAnalytics';
 import { useSalesAnalytics } from '../../composables/useSalesAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
@@ -39,7 +40,10 @@ const columns = computed(() =>
         filters.value.granularity !== 'NONE' && filters.value.dimension !== 'NONE',
     ),
 );
-const entityFilterColumns = computed(() => buildEntityFilterColumns(SALES_FILTER_KEYS, 'sales'));
+const groupKinds = useAnalyticsGroupKinds();
+const entityFilterColumns = computed(() =>
+    buildEntityFilterColumns(SALES_FILTER_KEYS, 'sales', groupKinds.value, SALES_GROUP_KEYS),
+);
 const showMainManager = computed(
     () =>
         filters.value.dimension === 'COUNTERPARTY_MANAGER' ||

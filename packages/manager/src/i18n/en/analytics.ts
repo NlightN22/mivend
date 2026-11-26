@@ -64,7 +64,7 @@ export default {
         },
         mainManagerOnly: 'Main manager only',
         productBasis:
-            'A product or manufacturer filter counts the matching order lines: orders are those with at least one such line, and the amount is the sum of those lines, not of the whole order.',
+            'A product, manufacturer or category filter, including leaving some out, counts the matching order lines: orders are those with at least one such line, and the amount is the sum of those lines, not of the whole order.',
         counterpartyManagerBasis:
             'A customer with several managers is counted under each of them, so the rows must not be added together.',
         basis: 'Order amounts as reported by the integration service. Cancelled and deleted orders are not counted; this is not sales.',

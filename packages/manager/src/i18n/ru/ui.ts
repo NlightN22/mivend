@@ -89,6 +89,8 @@ const ui: typeof en = {
     operator_notIn: 'ни одно из',
     operatorReference_in: 'одно из',
     operatorReference_notIn: 'не одно из',
+    operatorReference_inGroup: 'в группе',
+    operatorReference_notInGroup: 'не в группе',
     searchToAdd: 'Найти и добавить',
     remove: 'Убрать',
     operatorSelect_eq: 'это',

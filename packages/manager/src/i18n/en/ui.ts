@@ -87,6 +87,8 @@ export default {
     operator_notIn: 'is none of',
     operatorReference_in: 'is one of',
     operatorReference_notIn: 'is not one of',
+    operatorReference_inGroup: 'in group',
+    operatorReference_notInGroup: 'not in group',
     searchToAdd: 'Search to add',
     remove: 'Remove',
     operatorSelect_eq: 'is',

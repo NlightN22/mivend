@@ -206,6 +206,11 @@ export type AlreadyRefundedError = ErrorResult & {
     refundId: Scalars['ID']['output'];
 };
 
+export type AnalyticsFilterCapabilities = {
+    /** The group filters the analytics service currently supports. */
+    groupKinds: Array<OrderAnalyticsGroupKind>;
+};
+
 export type AnalyticsReport = {
     area: Scalars['String']['output'];
     description: Scalars['String']['output'];
@@ -6781,6 +6786,8 @@ export type OrderAnalyticsDimension =
 
 export type OrderAnalyticsEntityFilterInput = {
     exact?: InputMaybe<Scalars['Boolean']['input']>;
+    /** Leaves the matching objects out; the names are whole names. */
+    exclude?: InputMaybe<Scalars['Boolean']['input']>;
     kind: OrderAnalyticsFilterKind;
     values: Array<Scalars['String']['input']>;
 };
@@ -6797,6 +6804,20 @@ export type OrderAnalyticsFilterKind =
 
 export type OrderAnalyticsGranularity = 'DAY' | 'MONTH' | 'NONE';
 
+export type OrderAnalyticsGroupFilterInput = {
+    exclude?: InputMaybe<Scalars['Boolean']['input']>;
+    ids: Array<Scalars['ID']['input']>;
+    kind: OrderAnalyticsGroupKind;
+};
+
+export type OrderAnalyticsGroupKind = 'CUSTOMER_GROUP' | 'MANUFACTURER_GROUP' | 'PRODUCT_CATEGORY';
+
+export type OrderAnalyticsGroupOption = {
+    id: Scalars['ID']['output'];
+    /** The group's name with its parents. */
+    name: Scalars['String']['output'];
+};
+
 export type OrderAnalyticsInput = {
     administratorId?: InputMaybe<Scalars['ID']['input']>;
     /** A card pins its entity; the id is mivend's, the ERP id never reaches the browser. */
@@ -6806,6 +6827,8 @@ export type OrderAnalyticsInput = {
     entityFilters?: InputMaybe<Array<OrderAnalyticsEntityFilterInput>>;
     from: Scalars['DateTime']['input'];
     granularity: OrderAnalyticsGranularity;
+    /** Groups picked in the filter builder (mivend ids); the analytics service expands them. */
+    groupFilters?: InputMaybe<Array<OrderAnalyticsGroupFilterInput>>;
     /** Limits counterparty-manager filter and dimension to the main manager of a counterparty. */
     mainManagerOnly?: InputMaybe<Scalars['Boolean']['input']>;
     timeZone?: InputMaybe<Scalars['String']['input']>;
@@ -8953,6 +8976,7 @@ export type Query = {
     administrator: Maybe<Administrator>;
     administratorForPasswordResetToken: Maybe<PasswordResetIdentity>;
     administrators: AdministratorList;
+    analyticsFilterCapabilities: AnalyticsFilterCapabilities;
     analyticsReports: Array<AnalyticsReport>;
     apiKey: Maybe<ApiKey>;
     apiKeys: ApiKeyList;
@@ -9097,6 +9121,7 @@ export type Query = {
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
     orderAnalytics: OrderAnalytics;
+    orderAnalyticsGroupSuggest: Array<OrderAnalyticsGroupOption>;
     orderAnalyticsSuggest: Array<Scalars['String']['output']>;
     /** Orders with a failing ERP-requirement check, per check code and reason (issue #237). */
     orderCheckHealth: Array<OrderCheckHealthRow>;
@@ -9644,6 +9669,11 @@ export type QueryOrderArgs = {
 
 export type QueryOrderAnalyticsArgs = {
     input: OrderAnalyticsInput;
+};
+
+export type QueryOrderAnalyticsGroupSuggestArgs = {
+    kind: OrderAnalyticsGroupKind;
+    prefix: Scalars['String']['input'];
 };
 
 export type QueryOrderAnalyticsSuggestArgs = {
@@ -10419,6 +10449,7 @@ export type SalesAnalyticsInput = {
     entityFilters?: InputMaybe<Array<OrderAnalyticsEntityFilterInput>>;
     from: Scalars['DateTime']['input'];
     granularity: OrderAnalyticsGranularity;
+    groupFilters?: InputMaybe<Array<OrderAnalyticsGroupFilterInput>>;
     mainManagerOnly?: InputMaybe<Scalars['Boolean']['input']>;
     timeZone?: InputMaybe<Scalars['String']['input']>;
     to: Scalars['DateTime']['input'];
@@ -14377,6 +14408,21 @@ export type OrderAnalyticsSuggestQueryVariables = Exact<{
 }>;
 
 export type OrderAnalyticsSuggestQuery = { orderAnalyticsSuggest: Array<string> };
+
+export type OrderAnalyticsGroupSuggestQueryVariables = Exact<{
+    kind: OrderAnalyticsGroupKind;
+    prefix: Scalars['String']['input'];
+}>;
+
+export type OrderAnalyticsGroupSuggestQuery = {
+    orderAnalyticsGroupSuggest: Array<{ id: string; name: string }>;
+};
+
+export type AnalyticsFilterCapabilitiesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type AnalyticsFilterCapabilitiesQuery = {
+    analyticsFilterCapabilities: { groupKinds: Array<OrderAnalyticsGroupKind> };
+};
 
 export type CancelOrderAsStaffMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
@@ -19148,6 +19194,27 @@ export const OrderAnalyticsSuggestDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     OrderAnalyticsSuggestQuery,
     OrderAnalyticsSuggestQueryVariables
+>;
+export const OrderAnalyticsGroupSuggestDocument = new TypedDocumentString(`
+    query OrderAnalyticsGroupSuggest($kind: OrderAnalyticsGroupKind!, $prefix: String!) {
+  orderAnalyticsGroupSuggest(kind: $kind, prefix: $prefix) {
+    id
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderAnalyticsGroupSuggestQuery,
+    OrderAnalyticsGroupSuggestQueryVariables
+>;
+export const AnalyticsFilterCapabilitiesDocument = new TypedDocumentString(`
+    query AnalyticsFilterCapabilities {
+  analyticsFilterCapabilities {
+    groupKinds
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AnalyticsFilterCapabilitiesQuery,
+    AnalyticsFilterCapabilitiesQueryVariables
 >;
 export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     mutation CancelOrderAsStaff($orderId: ID!) {

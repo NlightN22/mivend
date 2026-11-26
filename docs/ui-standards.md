@@ -129,9 +129,11 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   header funnels are not used on a list that has the builder. **Reference-data columns** (customer, organization,
   manager, product, ...) use `filterType: 'reference'` (or `referenceColumn()` for a column outside a table):
   operators contains (typed name), is one of (names picked from a server-backed, viewer-scoped lookup in
-  `MvSuggestMultiInput`) and, only where the server can exclude, is not one of. Declare the lookup once per
-  column; the URL, chips and saved views need nothing else. "In group" is not offered: no member link from
-  products, customers or manufacturers to the group catalogs exists in the data yet.
+  `MvSuggestMultiInput`), is not one of (`exclude: true`, only where the server can leave objects out) and, for a
+  hierarchical catalog, in group / not in group (`groups: { lookup }`: a server-backed tree lookup whose picks are
+  `id:path` tokens, `groupToken`; the id goes to the server, which expands the group). Declare the lookups once per
+  column; the URL, chips and saved views need nothing else, and a column without `exclude` or `groups` never offers
+  the operator.
   header funnels are not used on a list that has the builder. Operators: string (contains, does not
   contain, is equal to, is not equal to, starts with, ends with, is empty, is not empty; starts/ends with
   go to the server as an escaped `regex`), number (equal, greater, greater or equal, less, less or equal,

@@ -22,3 +22,16 @@ query OrderAnalytics($input: OrderAnalyticsInput!) {
 query OrderAnalyticsSuggest($kind: OrderAnalyticsFilterKind!, $prefix: String!) {
     orderAnalyticsSuggest(kind: $kind, prefix: $prefix)
 }
+
+query OrderAnalyticsGroupSuggest($kind: OrderAnalyticsGroupKind!, $prefix: String!) {
+    orderAnalyticsGroupSuggest(kind: $kind, prefix: $prefix) {
+        id
+        name
+    }
+}
+
+query AnalyticsFilterCapabilities {
+    analyticsFilterCapabilities {
+        groupKinds
+    }
+}
