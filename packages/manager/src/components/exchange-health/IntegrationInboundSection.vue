@@ -33,15 +33,15 @@ const col = (
     ...extra,
 });
 const columns: AdvancedDataTableColumn[] = [
-    col('stream', 260, { required: true, priority: 10, mobile: { primary: true } }),
-    col('contract', 100, { priority: 5 }),
-    col('consumed', 110, { priority: 5 }),
-    col('lag', 120, { align: 'end', priority: 8 }),
-    col('pending', 90, { align: 'end', priority: 7 }),
+    col('stream', 200, { required: true, priority: 10, mobile: { primary: true } }),
+    col('contract', 70, { priority: 5 }),
+    col('consumed', 80, { priority: 5 }),
+    col('lag', 90, { align: 'end', priority: 8 }),
+    col('pending', 70, { align: 'end', priority: 7 }),
     col('processing', 110, { align: 'end', priority: 4 }),
-    col('failed', 90, { align: 'end', priority: 9 }),
+    col('failed', 70, { align: 'end', priority: 9 }),
     col('noop24h', 110, { align: 'end', priority: 3 }),
-    col('oldest', 90, { align: 'end', priority: 6 }),
+    col('oldest', 70, { align: 'end', priority: 6 }),
 ];
 
 const now = Date.now();
@@ -100,6 +100,7 @@ const driftShown = computed(() => ['BEHIND', 'AHEAD', 'UNKNOWN'].includes(driftS
             :rows="rows"
             data-key="id"
             storage-key="exchange-streams"
+            :hidden="['processing', 'noop24h']"
             :empty-message="t('exchangeHealth.integration.noStreams')"
             :row-height-px="64"
         >

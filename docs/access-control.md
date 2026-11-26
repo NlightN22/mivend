@@ -172,7 +172,7 @@ behind them accept it or `ManageErpIntegration`: `consistencyReports`, `consiste
 `rejectedOrderCount`, `kafkaConsumerLag`, `openErpReconciliationIssues`, `integrationInboxIssues`,
 `integrationOutboxProblems`. Every mutation (replay, dismiss, requeue, rebuild, run or resolve reconciliation) stays on
 `ManageErpIntegration` or `RecoverIntegrationEvents`; the manager pages offer no action. `portal-admin` holds it by
-default (delivered to existing environments by the 1.1.51 release grant); no new role. Pinned by
+default (delivered to existing environments by the 1.1.52 release grant); no new role. Pinned by
 `exchange-health-read-gating.test.ts` and the `erp-integration/exchange-health-read` access test.
 
 ### Settlement documents (#320)

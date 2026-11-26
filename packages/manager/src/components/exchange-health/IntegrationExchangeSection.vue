@@ -39,15 +39,15 @@ const col = (
     ...extra,
 });
 const channelColumns = [
-    col('channels', 'name', 220, { required: true, priority: 10, mobile: { primary: true } }),
+    col('channels', 'name', 180, { required: true, priority: 10, mobile: { primary: true } }),
     col('channels', 'status', 120, { priority: 9, mobile: { badge: true } }),
-    col('channels', 'lastActivity', 130, { priority: 6 }),
+    col('channels', 'lastActivity', 110, { priority: 6 }),
     col('channels', 'pending', 100, { align: 'end', priority: 7 }),
     col('channels', 'oldest', 100, { align: 'end', priority: 6 }),
     col('channels', 'failed24h', 110, { align: 'end', priority: 8 }),
 ];
 const publishColumns = [
-    col('publish', 'aggregateType', 200, {
+    col('publish', 'aggregateType', 140, {
         required: true,
         priority: 10,
         mobile: { primary: true },
@@ -55,8 +55,8 @@ const publishColumns = [
     col('publish', 'status', 120, { priority: 9, mobile: { badge: true } }),
     col('publish', 'pending', 100, { align: 'end', priority: 7 }),
     col('publish', 'oldest', 100, { align: 'end', priority: 6 }),
-    col('publish', 'deadLettered24h', 150, { align: 'end', priority: 8 }),
-    col('publish', 'mappingErrors24h', 220, { priority: 5 }),
+    col('publish', 'deadLettered24h', 120, { align: 'end', priority: 8 }),
+    col('publish', 'mappingErrors24h', 150, { priority: 5 }),
     col('publish', 'lastPublished', 130, { priority: 4 }),
 ];
 
@@ -161,6 +161,7 @@ type Row = { [key: string]: unknown; status: string; isChannel?: boolean };
                     :rows="publishRows"
                     data-key="id"
                     storage-key="exchange-publish"
+                    :hidden="['lastPublished']"
                     :empty-message="t('exchangeHealth.integration.noChannels')"
                 >
                     <template #cell-status="{ data }">

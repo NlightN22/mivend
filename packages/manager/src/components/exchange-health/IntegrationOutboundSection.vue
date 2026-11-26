@@ -33,15 +33,15 @@ const col = (
     ...extra,
 });
 const columns: AdvancedDataTableColumn[] = [
-    col('eventType', 200, { required: true, priority: 10, mobile: { primary: true } }),
-    col('schemaSource', 120, { priority: 3 }),
-    col('pending', 90, { align: 'end', priority: 7 }),
-    col('failed', 90, { align: 'end', priority: 9 }),
-    col('skipped', 100, { align: 'end', priority: 9 }),
-    col('held', 80, { align: 'end', priority: 4 }),
-    col('oldest', 90, { align: 'end', priority: 6 }),
-    col('lastPublished', 120, { priority: 5 }),
-    col('lastProblem', 240, { priority: 4 }),
+    col('eventType', 170, { required: true, priority: 10, mobile: { primary: true } }),
+    col('schemaSource', 100, { priority: 3 }),
+    col('pending', 70, { align: 'end', priority: 7 }),
+    col('failed', 70, { align: 'end', priority: 9 }),
+    col('skipped', 80, { align: 'end', priority: 9 }),
+    col('held', 70, { align: 'end', priority: 4 }),
+    col('oldest', 70, { align: 'end', priority: 6 }),
+    col('lastPublished', 90, { priority: 5 }),
+    col('lastProblem', 150, { priority: 4 }),
 ];
 
 const now = Date.now();
@@ -71,6 +71,7 @@ const heldTotal = computed(() => rows.value.reduce((sum, r) => sum + r.held, 0))
             :rows="rows"
             data-key="id"
             storage-key="exchange-outbox-health"
+            :hidden="['schemaSource', 'held']"
             :empty-message="t('exchangeHealth.integration.noOutbound')"
             :row-height-px="64"
         >

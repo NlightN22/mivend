@@ -48,20 +48,20 @@ export function inboxDefinition(): ExchangeListDefinition {
     const l = 'inbox';
     return {
         columns: [
-            col(l, 'entityId', 240, {
+            col(l, 'entityId', 160, {
                 required: true,
                 priority: 10,
                 sortField: 'entityId',
                 mobile: { primary: true },
             }),
-            col(l, 'updatedAt', 160, { priority: 8, sortField: 'updatedAt' }),
-            col(l, 'stream', 190, {
+            col(l, 'updatedAt', 110, { priority: 8, sortField: 'updatedAt' }),
+            col(l, 'stream', 120, {
                 priority: 9,
                 sortField: 'stream',
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
             }),
-            col(l, 'status', 150, {
+            col(l, 'status', 100, {
                 priority: 9,
                 sortField: 'status',
                 filterType: 'select',
@@ -74,7 +74,7 @@ export function inboxDefinition(): ExchangeListDefinition {
                 mobile: { badge: true },
             }),
             col(l, 'attempts', 110, { sortField: 'attempts', align: 'end', priority: 6 }),
-            col(l, 'lastError', 320, {
+            col(l, 'lastError', 210, {
                 priority: 5,
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
@@ -90,7 +90,7 @@ export function inboxDefinition(): ExchangeListDefinition {
             outcomeReason: { kind: 'wrap' },
             status: { kind: 'badge', variant: v => INBOX_STATUS_VARIANT[v] ?? 'neutral' },
         },
-        hidden: ['outcomeReason', 'firstFailedAt'],
+        hidden: ['attempts', 'outcomeReason', 'firstFailedAt'],
     };
 }
 
@@ -98,15 +98,15 @@ export function outboxDefinition(): ExchangeListDefinition {
     const l = 'outbox';
     return {
         columns: [
-            col(l, 'eventId', 240, { required: true, priority: 10, mobile: { primary: true } }),
-            col(l, 'createdAt', 160, { priority: 8, sortField: 'createdAt' }),
-            col(l, 'eventType', 190, {
+            col(l, 'eventId', 160, { required: true, priority: 10, mobile: { primary: true } }),
+            col(l, 'createdAt', 110, { priority: 8, sortField: 'createdAt' }),
+            col(l, 'eventType', 130, {
                 priority: 9,
                 sortField: 'eventType',
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
             }),
-            col(l, 'status', 120, {
+            col(l, 'status', 90, {
                 priority: 9,
                 sortField: 'status',
                 filterType: 'select',
@@ -116,7 +116,7 @@ export function outboxDefinition(): ExchangeListDefinition {
             }),
             col(l, 'subjectId', 220, { priority: 4 }),
             col(l, 'retryCount', 110, { sortField: 'retryCount', align: 'end', priority: 6 }),
-            col(l, 'lastError', 320, {
+            col(l, 'lastError', 210, {
                 priority: 5,
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
@@ -131,7 +131,7 @@ export function outboxDefinition(): ExchangeListDefinition {
             lastError: { kind: 'wrap' },
             status: { kind: 'badge', variant: v => OUTBOX_STATUS_VARIANT[v] ?? 'neutral' },
         },
-        hidden: ['subjectId', 'lastErrorAt'],
+        hidden: ['subjectId', 'retryCount', 'lastErrorAt'],
     };
 }
 
@@ -139,25 +139,25 @@ export function reportsDefinition(): ExchangeListDefinition {
     const l = 'reports';
     return {
         columns: [
-            col(l, 'number', 90, {
+            col(l, 'number', 80, {
                 required: true,
                 priority: 10,
-                minWidth: 90,
+                minWidth: 80,
                 mobile: { primary: true },
             }),
-            col(l, 'lastDetectedAt', 160, { priority: 8 }),
-            col(l, 'status', 110, { priority: 9, minWidth: 100, mobile: { badge: true } }),
-            col(l, 'severity', 110, {
+            col(l, 'lastDetectedAt', 110, { priority: 8 }),
+            col(l, 'status', 80, { priority: 9, minWidth: 80, mobile: { badge: true } }),
+            col(l, 'severity', 80, {
                 priority: 9,
-                minWidth: 100,
+                minWidth: 80,
                 filterType: 'select',
                 filterOptions: statusOptions(l, ['critical', 'warning']),
                 filterOperators: ['eq'],
             }),
-            col(l, 'type', 200, { priority: 7, filterType: 'string', filterOperators: ['eq'] }),
+            col(l, 'type', 140, { priority: 7, filterType: 'string', filterOperators: ['eq'] }),
             col(l, 'entity', 230, { priority: 6 }),
             col(l, 'figures', 150, { priority: 5 }),
-            col(l, 'details', 320, { priority: 4 }),
+            col(l, 'details', 210, { priority: 4 }),
             col(l, 'source', 140, { priority: 2, filterType: 'string', filterOperators: ['eq'] }),
             col(l, 'occurrences', 100, { priority: 2, align: 'end' }),
         ],
@@ -168,7 +168,7 @@ export function reportsDefinition(): ExchangeListDefinition {
             status: { kind: 'badge', variant: v => REPORT_STATUS_VARIANT[v] ?? 'neutral' },
             severity: { kind: 'badge', variant: severityVariant },
         },
-        hidden: ['source', 'occurrences'],
+        hidden: ['entity', 'figures', 'source', 'occurrences'],
     };
 }
 
@@ -176,18 +176,18 @@ export function reconciliationDefinition(): ExchangeListDefinition {
     const l = 'reconciliation';
     return {
         columns: [
-            col(l, 'aggregateType', 180, {
+            col(l, 'aggregateType', 120, {
                 required: true,
                 priority: 10,
                 mobile: { primary: true },
             }),
-            col(l, 'detectedAt', 160, { priority: 8 }),
-            col(l, 'issue', 360, { priority: 9 }),
-            col(l, 'ourCount', 130, { align: 'end', priority: 7 }),
-            col(l, 'theirActiveCount', 170, { align: 'end', priority: 7 }),
-            col(l, 'triggeredBy', 130, { priority: 3, mobile: { hidden: true } }),
+            col(l, 'detectedAt', 110, { priority: 8 }),
+            col(l, 'issue', 250, { priority: 9 }),
+            col(l, 'ourCount', 100, { align: 'end', priority: 7 }),
+            col(l, 'theirActiveCount', 120, { align: 'end', priority: 7 }),
+            col(l, 'triggeredBy', 130, { priority: 3 }),
         ],
         cells: { detectedAt: { kind: 'date' }, issue: { kind: 'wrap' } },
-        hidden: [],
+        hidden: ['triggeredBy'],
     };
 }

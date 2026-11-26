@@ -68,7 +68,7 @@ describe('portal-admin is a staff-accounts role, not a sales role', () => {
             'ReadSettings',
         ]);
         expect(PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.roleCode === 'portal-admin')).toEqual([
-            { release: '1.1.51', roleCode: 'portal-admin', permission: 'ReadExchangeHealth' },
+            { release: '1.1.52', roleCode: 'portal-admin', permission: 'ReadExchangeHealth' },
         ]);
     });
 });

@@ -18,6 +18,7 @@ const props = defineProps<{
     emptyMessage: string;
     loading?: boolean;
     rowHeightPx?: number;
+    hidden?: string[];
 }>();
 
 const { state } = useDataTableState<{ [key: string]: unknown }>(
@@ -25,7 +26,7 @@ const { state } = useDataTableState<{ [key: string]: unknown }>(
     {
         columnOrder: props.columns.map(c => c.field),
         columnWidths: Object.fromEntries(props.columns.map(c => [c.field, c.width])),
-        hiddenColumns: [],
+        hiddenColumns: props.hidden ?? [],
         sort: [],
         filters: {},
         pageSize: 20,
