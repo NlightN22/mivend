@@ -46,8 +46,8 @@ export function buildOrderAnalyticsColumns(
             field: 'period',
             header: t('period'),
             sortField: 'period',
-            width: 130,
-            minWidth: 110,
+            width: 160,
+            minWidth: 160,
             priority: 8,
             filterConfig: NOT_FILTERED,
         });
@@ -56,8 +56,8 @@ export function buildOrderAnalyticsColumns(
         field: 'currency',
         header: t('currency'),
         sortField: 'currency',
-        width: 110,
-        minWidth: 90,
+        width: 150,
+        minWidth: 150,
         priority: 9,
         filterConfig: NOT_FILTERED,
     });

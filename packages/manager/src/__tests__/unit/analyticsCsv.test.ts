@@ -40,22 +40,24 @@ describe('exportCsv', () => {
         { field: 'orderCount', header: 'Orders' },
     ];
 
-    it('exports exact decimals with a dot, ISO periods, alphabetic currency and numeric counts', () => {
+    it('exports exact decimals with a dot, the period as a calendar day in the report zone, alphabetic currency and numeric counts', () => {
         const csv = exportCsv(
             columns,
             [
                 {
                     title: 'Customer One',
-                    period: '2026-03-01T00:00:00.000Z',
+                    period: '2026-02-28T21:00:00.000Z',
                     currency: 'RUB',
                     turnover: '1234.56',
                     orderCount: 3,
                 },
             ],
             new Set(['turnover']),
+            [],
+            'Europe/Moscow',
         );
         expect(csv).toBe(
-            `${BOM}Name;Period;Currency;With VAT;Orders\r\nCustomer One;2026-03-01T00:00:00.000Z;RUB;1234.56;3\r\n`,
+            `${BOM}Name;Period;Currency;With VAT;Orders\r\nCustomer One;2026-03-01;RUB;1234.56;3\r\n`,
         );
     });
 

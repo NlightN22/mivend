@@ -5,17 +5,26 @@ export interface ExportColumn {
     header: string;
 }
 
-// Amounts stay exact decimal strings with a dot; the period is the ISO instant, counts are numbers.
+// A bucket start is an instant at local midnight; the file carries its calendar day in the report's zone.
+export function periodDay(iso: string, timeZone: string): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(iso));
+}
+
+// Amounts stay exact decimal strings with a dot, the period is a calendar day, counts are numbers.
 export function exportCsv(
     columns: ExportColumn[],
     rows: Array<{ [key: string]: unknown }>,
     decimalFields: Set<string>,
     notes: string[] = [],
+    timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): string {
     const cellOf = (row: { [key: string]: unknown }, field: string): CsvCell => {
         const value = row[field];
         if (value === null || value === undefined) return null;
         if (decimalFields.has(field)) return value === '' ? null : csvRaw(String(value));
+        if (field === 'period' && typeof value === 'string' && value !== '') {
+            return periodDay(value, timeZone);
+        }
         return typeof value === 'number' ? value : String(value);
     };
     const body = rows.map(row => columns.map(c => cellOf(row, c.field)));
