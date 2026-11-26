@@ -76,8 +76,6 @@ export function inboxDefinition(): ExchangeListDefinition {
             col(l, 'attempts', 110, { sortField: 'attempts', align: 'end', priority: 6 }),
             col(l, 'lastError', 200, {
                 priority: 5,
-                filterType: 'string',
-                filterOperators: [...TEXT_OPERATORS],
             }),
             col(l, 'outcomeReason', 220, { priority: 3 }),
             col(l, 'firstFailedAt', 160, { priority: 4, sortField: 'firstFailedAt' }),
@@ -118,8 +116,6 @@ export function outboxDefinition(): ExchangeListDefinition {
             col(l, 'retryCount', 110, { sortField: 'retryCount', align: 'end', priority: 6 }),
             col(l, 'lastError', 190, {
                 priority: 5,
-                filterType: 'string',
-                filterOperators: [...TEXT_OPERATORS],
             }),
             col(l, 'lastErrorAt', 160, { priority: 3, sortField: 'lastErrorAt' }),
         ],

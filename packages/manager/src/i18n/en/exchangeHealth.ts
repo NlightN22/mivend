@@ -132,14 +132,14 @@ export default {
         inbox: {
             title: 'Inbox issues',
             intro: 'Inbound rows from Integration Service that failed, wait for a missing entity or await a replay. Read only: replaying and dismissing rows is done in the admin dashboard.',
-            search: 'Search entity or error…',
+            search: 'Search entity…',
             empty: 'No inbox issues.',
             noMatch: 'No inbox issues match the filters.',
         },
         outbox: {
             title: 'Outbound problems',
             intro: 'Outbound events that gave up publishing or could not be built. Read only: requeueing and rebuilding is done in the admin dashboard.',
-            search: 'Search event or error…',
+            search: 'Search event…',
             empty: 'No outbound problems.',
             noMatch: 'No outbound problems match the filters.',
         },

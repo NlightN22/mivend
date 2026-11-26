@@ -28,8 +28,6 @@ export const problemTypes = `
         entityId: StringOperators
         status: StringOperators
         outcome: StringOperators
-        lastError: StringOperators
-        outcomeReason: StringOperators
         _and: [IntegrationInboxIssueFilterParameter!]
         _or: [IntegrationInboxIssueFilterParameter!]
     }
@@ -76,7 +74,6 @@ export const problemTypes = `
         eventType: StringOperators
         eventId: StringOperators
         status: StringOperators
-        lastError: StringOperators
         _and: [IntegrationOutboxProblemFilterParameter!]
         _or: [IntegrationOutboxProblemFilterParameter!]
     }

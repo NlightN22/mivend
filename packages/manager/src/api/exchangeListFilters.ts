@@ -52,7 +52,7 @@ export function toInboxOptions(
     const fixed = req.view === 'all' ? {} : { status: { eq: req.view } };
     return {
         ...paging(req),
-        ...toServerFilter(req.conditions, columns, fixed, req.search, ['entityId', 'lastError']),
+        ...toServerFilter(req.conditions, columns, fixed, req.search, ['entityId']),
         sort: { [req.sort.field]: req.sort.dir },
     } as IntegrationInboxIssueListOptions;
 }
@@ -64,7 +64,7 @@ export function toOutboxOptions(
     const fixed = req.view === 'all' ? {} : { status: { eq: req.view } };
     return {
         ...paging(req),
-        ...toServerFilter(req.conditions, columns, fixed, req.search, ['eventId', 'lastError']),
+        ...toServerFilter(req.conditions, columns, fixed, req.search, ['eventId']),
         sort: { [req.sort.field]: req.sort.dir },
     } as IntegrationOutboxProblemListOptions;
 }

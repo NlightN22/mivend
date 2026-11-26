@@ -32,7 +32,7 @@ describe('exchange list server options', () => {
         });
     });
 
-    it('ANDs the chip and builder conditions and ORs the search fields on top of them', () => {
+    it('ANDs the chip and builder conditions and adds the search term on top of them', () => {
         const options = toInboxOptions(
             request({
                 view: 'failed',
@@ -45,15 +45,13 @@ describe('exchange list server options', () => {
         expect(options.filter).toEqual({
             _and: [{ stream: { eq: 'orders' } }, { status: { eq: 'failed' } }],
             entityId: { contains: 'abc' },
-            lastError: { contains: 'abc' },
         });
     });
 
-    it('searches the outbox by event id and error', () => {
+    it('searches the outbox by event id', () => {
         const options = toOutboxOptions(request({ search: 'x' }), COLUMNS);
         expect(options.filter).toEqual({
             eventId: { contains: 'x' },
-            lastError: { contains: 'x' },
         });
     });
 

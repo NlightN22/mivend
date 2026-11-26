@@ -30,13 +30,12 @@ export interface OutboxProblemRow {
     createdAt: Date;
     subjectId: string | null;
 }
+
 const INBOX_FILTER_FIELDS = {
     stream: 'e.stream',
     entityId: 'e.entityId',
     status: 'e.status',
     outcome: 'e.outcome',
-    lastError: 'e.lastError',
-    outcomeReason: 'e.outcomeReason',
 };
 const INBOX_SORT_FIELDS = {
     stream: 'e.stream',
@@ -50,7 +49,6 @@ const OUTBOX_FILTER_FIELDS = {
     eventType: 'e.eventType',
     eventId: 'e.eventId',
     status: 'e.status',
-    lastError: 'e.lastError',
 };
 const OUTBOX_SORT_FIELDS = {
     eventType: 'e.eventType',
