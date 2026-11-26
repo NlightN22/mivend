@@ -52,6 +52,11 @@ export default defineConfig(() => {
                     target: apiTarget,
                     changeOrigin: true,
                 },
+                // Authorized contract scans (#405).
+                '/contract-file': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                },
                 // Assets use a root-relative assetUrlPrefix so they resolve against the browser's origin.
                 // This proxy makes that origin the storefront's own in dev.
                 '/assets': {

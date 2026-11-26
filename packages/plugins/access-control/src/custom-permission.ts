@@ -174,4 +174,9 @@ export const CustomPermission = {
         description:
             'See powers of attorney whose contract the ERP deleted (marked as such); without it those rows are hidden from the list (#333)',
     }),
+    ManageContractFiles: new PermissionDefinition({
+        name: 'ManageContractFiles',
+        description:
+            "Upload, replace and delete the scan files of a visible counterparty's contracts (#405); reading them needs ReadCounterparty",
+    }),
 } as const;

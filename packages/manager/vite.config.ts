@@ -54,6 +54,11 @@ export default defineConfig(() => {
                     target: apiTarget,
                     changeOrigin: true,
                 },
+                // Authorized contract scans (#405).
+                '/contract-file': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                },
                 // See packages/storefront/vite.config.ts for why this needs to be proxied
                 // through the app's own dev origin rather than hit directly.
                 '/assets': {

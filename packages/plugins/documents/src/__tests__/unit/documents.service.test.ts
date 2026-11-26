@@ -155,6 +155,23 @@ describe('DocumentsService', () => {
         });
     });
 
+    describe('findForCounterparty excluded types', () => {
+        it('drops the excluded types and adds no clause when none are given', async () => {
+            mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+            mockQb.andWhere.mockClear();
+            await service.findForCounterparty(mockCtx, '1', undefined, ['proforma-invoice']);
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'document.type NOT IN (:...excludeTypes)',
+                {
+                    excludeTypes: ['proforma-invoice'],
+                },
+            );
+            mockQb.andWhere.mockClear();
+            await service.findForCounterparty(mockCtx, '1');
+            expect(mockQb.andWhere).not.toHaveBeenCalled();
+        });
+    });
+
     describe('status transitions', () => {
         it('markGenerating sets status to generating', async () => {
             await service.markGenerating(mockCtx, '1');

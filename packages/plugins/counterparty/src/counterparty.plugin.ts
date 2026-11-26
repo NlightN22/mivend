@@ -111,6 +111,18 @@ import { visibilitySchema } from './visibility/visibility.schema';
 import { shopApiSchema } from './trading-point.schema';
 import { myContractsSchema } from './my-contracts.schema';
 import { MyContractsResolver } from './my-contracts.resolver';
+import { ContractFile } from './entities/contract-file.entity';
+import { ContractFileController } from './contract-file/contract-file.controller';
+import { ContractFileReadService } from './contract-file/contract-file-read.service';
+import { ContractFileService } from './contract-file/contract-file.service';
+import {
+    ContractFileAdminResolver,
+    ContractFileShopResolver,
+} from './contract-file/contract-file.resolver';
+import {
+    contractFileAdminSchema,
+    contractFileShopSchema,
+} from './contract-file/contract-file.schema';
 import { AddressSuggestResolver } from './address-suggest.resolver';
 import { AdminGeoResolver } from './geo/admin-geo.resolver';
 import { GeoResolver } from './geo/geo.resolver';
@@ -120,6 +132,7 @@ import { AddressSuggestService } from './address-suggest.service';
 import { ScopedCustomerResolver } from './scoped-customer.resolver';
 
 const shopResolvers = [
+    ContractFileShopResolver,
     MyContractsResolver,
     CustomerCounterpartyResolver,
     CustomerTradingPointResolver,
@@ -132,6 +145,7 @@ const shopResolvers = [
 ];
 
 const adminResolvers = [
+    ContractFileAdminResolver,
     CustomerPortalActiveResolver,
     CounterpartyBranchOverrideResolver,
     CounterpartyPriceTypeResolver,
@@ -189,12 +203,15 @@ const adminResolvers = [
         CounterpartyContactPerson,
         CounterpartyTeamMember,
         Contract,
+        ContractFile,
         ContractPowerOfAttorneyErp,
     ],
+    controllers: [ContractFileController],
     shopApiExtensions: {
         schema: gql`
             ${shopApiSchema}
             ${myContractsSchema}
+            ${contractFileShopSchema}
             ${geoSchema}
         `,
         resolvers: shopResolvers,
@@ -204,6 +221,7 @@ const adminResolvers = [
             ${adminApiSchema}
             ${visibilitySchema}
             ${powerOfAttorneyListSchema}
+            ${contractFileAdminSchema}
             ${geoSchema}
         `,
         resolvers: adminResolvers,
@@ -248,6 +266,8 @@ const adminResolvers = [
         CounterpartyPortalAccessService,
         CounterpartyPortalRestoreService,
         ContractService,
+        ContractFileService,
+        ContractFileReadService,
         PowerOfAttorneyErpService,
         PowerOfAttorneyListService,
         CreditLimitCheckService,

@@ -49,6 +49,7 @@ export class DocumentsService {
         ctx: RequestContext,
         counterpartyId: ID,
         options?: DocumentListOptions,
+        excludeTypes: string[] = [],
     ): Promise<PaginatedList<Document>> {
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
@@ -62,6 +63,9 @@ export class DocumentsService {
             .orderBy('document.issueDate', 'DESC')
             .addOrderBy('document.id', 'DESC');
 
+        if (excludeTypes.length) {
+            qb.andWhere('document.type NOT IN (:...excludeTypes)', { excludeTypes });
+        }
         if (options?.type) {
             qb.andWhere('document.type = :type', { type: options.type });
         }

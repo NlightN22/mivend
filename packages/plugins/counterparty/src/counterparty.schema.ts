@@ -34,6 +34,8 @@ export const adminApiSchema = gql`
         portalReadiness: String!
         "none | invited | verified | active, the state of the portal account (#375); null when the counterparty is hidden from the viewer"
         portalState: String
+        "An active customer contract has no scan file (#405); false when the counterparty is hidden from the viewer"
+        hasUnscannedActiveContract: Boolean!
         departmentId: String
         branchId: String
         creditTermOverrideExtraDays: Int
@@ -137,6 +139,8 @@ export const adminApiSchema = gql`
         "Latest placed order of the counterparty, whoever may see the order; isNull means never ordered"
         lastOrderAt: DateOperators
         isActive: BooleanOperators
+        "An active customer contract of the counterparty has no scan file (#405)"
+        hasUnscannedActiveContract: BooleanOperators
         _and: [CounterpartyFilterParameter!]
     }
 

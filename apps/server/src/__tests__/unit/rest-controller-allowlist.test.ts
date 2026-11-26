@@ -11,6 +11,10 @@ const ALLOW_LIST: Record<string, { reason: string; session?: true }> = {
         reason: 'Vendure session + DocumentPdfAccessService scope check; 404 for guest/hidden/missing',
         session: true,
     },
+    'packages/plugins/counterparty/src/contract-file/contract-file.controller.ts': {
+        reason: 'Vendure session + ContractFileReadService scope check; 404 for guest/hidden/missing',
+        session: true,
+    },
     'packages/plugins/sync/src/erp-callback.controller.ts': {
         reason: 'ErpCallbackApiKeyGuard + ERP_CALLBACK_ENABLED gate in sync.plugin.ts',
     },

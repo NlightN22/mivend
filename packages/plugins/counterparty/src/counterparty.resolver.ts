@@ -113,6 +113,15 @@ export class CounterpartyCustomerLinkResolver {
     }
 
     @ResolveField()
+    async hasUnscannedActiveContract(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<boolean> {
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return false;
+        return this.loaders.hasUnscannedActiveContract(ctx, counterparty.id);
+    }
+
+    @ResolveField()
     async portalState(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,

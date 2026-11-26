@@ -42,7 +42,10 @@ export class DocumentsResolver {
         if (!counterparty) {
             return { items: [], totalItems: 0 };
         }
-        return this.documentsService.findForCounterparty(ctx, counterparty.id, args.options);
+        // Proforma invoices have their own storefront page; this list is files only (#405).
+        return this.documentsService.findForCounterparty(ctx, counterparty.id, args.options, [
+            'proforma-invoice',
+        ]);
     }
 }
 

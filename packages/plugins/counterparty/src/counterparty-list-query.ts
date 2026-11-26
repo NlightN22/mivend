@@ -15,6 +15,7 @@ import {
     ensureLastOrderJoin,
     filterUsesLastOrder,
 } from './counterparty-last-order.sql';
+import { UNSCANNED_ACTIVE_CONTRACT_SQL } from './contract-file/contract-file-sql';
 import { PORTAL_STATE_CASE_SQL } from './counterparty-portal-state.sql';
 import { READINESS_CASE_SQL } from './counterparty-readiness-filter';
 import type { Counterparty } from './entities/counterparty.entity';
@@ -83,6 +84,11 @@ const FIELDS: Record<string, FieldSpec> = {
         operators: ['before', 'after', 'between'],
     },
     isActive: { kind: 'boolean', sql: 'c."isActive"', operators: ['eq'] },
+    hasUnscannedActiveContract: {
+        kind: 'boolean',
+        sql: UNSCANNED_ACTIVE_CONTRACT_SQL,
+        operators: ['eq'],
+    },
 };
 
 const CONFIG: ListQueryConfig = {

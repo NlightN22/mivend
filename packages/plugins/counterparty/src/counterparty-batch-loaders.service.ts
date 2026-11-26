@@ -4,6 +4,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CtxLoader, ctxQuery, findBounded, getManyBounded } from 'shared';
 import { In, Not } from 'typeorm';
 
+import { loadUnscannedFlags } from './contract-file/contract-file-flag';
 import { loadLastOrderDates } from './counterparty-last-order.sql';
 import { loadPortalReadiness, type PortalReadiness } from './counterparty-readiness-filter';
 import { loadPortalStates, type PortalState } from './counterparty-portal-state.sql';
@@ -41,6 +42,11 @@ export class CounterpartyBatchLoaders {
         return keys.map(key => found.get(key) ?? null);
     });
 
+    private unscanned = new CtxLoader<boolean>(async (ctx, keys) => {
+        const found = await loadUnscannedFlags(this.connection, ctx, keys.filter(isRowId));
+        return keys.map(key => found.get(key) ?? false);
+    });
+
     private chosen = new CtxLoader<ChosenContact>(async (ctx, keys) => {
         const found = await this.contactPoints.chosenContacts(ctx, keys.filter(isRowId));
         return keys.map(key => found.get(key) ?? { email: null, phone: null });
@@ -66,6 +72,13 @@ export class CounterpartyBatchLoaders {
         counterpartyId: string | number,
     ): Promise<PortalReadiness> {
         return this.readiness.load(ctx, counterpartyId);
+    }
+
+    hasUnscannedActiveContract(
+        ctx: RequestContext,
+        counterpartyId: string | number,
+    ): Promise<boolean> {
+        return this.unscanned.load(ctx, counterpartyId);
     }
 
     portalState(ctx: RequestContext, counterpartyId: string | number): Promise<PortalState> {

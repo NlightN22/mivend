@@ -243,6 +243,17 @@ caller holds `ReadDeletedContractPowerOfAttorney`, granted in `default-roles.ts`
 security-officer and portal-admin, never to operator or manager; such rows are returned marked `contractDeleted`. Pinned by
 `access/document/power-of-attorney-visibility.test.ts`.
 
+### Contract files (#405)
+
+A `ContractFile` (scan, power of attorney scan, other; a Vendure Asset stored under the file uuid) belongs to an ERP contract and is never sent to the ERP.
+Admin `counterpartyContracts(counterpartyId)` needs `ReadCounterparty` and returns rows only for a counterparty the caller sees
+(`CounterpartyService.findOneVisible`); `uploadContractFile`/`deleteContractFile` need `ManageContractFiles` (manager, department-head,
+general-director; delivered to existing roles by the 1.1.49 release grant) and the contract's counterparty must be visible, a hidden or
+missing contract answers the same error. Shop `myContractFiles` returns files of the caller's own counterparty only. Download is
+`GET /contract-file/:uuid` (session, not the public asset URL): staff with `ReadCounterparty` for a visible counterparty, anyone else
+for their own counterparty only, everything else a plain 404. A scan is required only for an active customer contract; the customers
+list filter `hasUnscannedActiveContract` finds the counterparties lacking one.
+
 ### Team table views (#320)
 
 `ManageSharedTableViews` (department-head, general-director, portal-admin) creates, edits, deletes team-wide
