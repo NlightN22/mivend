@@ -62,6 +62,7 @@ export const adminApiSchema: DocumentNode = gql`
     input OrderAnalyticsEntityFilterInput {
         kind: OrderAnalyticsFilterKind!
         values: [String!]!
+        exact: Boolean
     }
 
     type OrderAnalyticsRow {

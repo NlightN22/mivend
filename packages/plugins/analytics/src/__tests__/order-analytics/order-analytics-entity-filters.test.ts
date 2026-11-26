@@ -15,6 +15,17 @@ const names = { find } as unknown as OrderAnalyticsEntityNamesService;
 beforeEach(() => vi.resetAllMocks());
 
 describe('resolveEntityFilters', () => {
+    it('passes the exact flag of picked objects to the lookup and fails closed above the cap', async () => {
+        find.mockResolvedValue([{ erpId: 'c1', name: 'A' }]);
+        await resolveEntityFilters(ctx, names, [{ kind: 'CUSTOMER', values: ['A'], exact: true }]);
+        expect(find).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'A', 201, true);
+
+        const many = Array.from({ length: 21 }, (_, i) => `n${i}`);
+        await expect(
+            resolveEntityFilters(ctx, names, [{ kind: 'CUSTOMER', values: many, exact: true }]),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
+    });
+
     it('collects the ids of every typed name per kind without duplicates', async () => {
         find.mockImplementation(async (_c, _k, text: string) =>
             text === 'a'
@@ -77,7 +88,7 @@ describe('resolveEntityFilters caps fail closed', () => {
         await expect(
             resolveEntityFilters(ctx, names, [{ kind: 'CUSTOMER', values: ['ivan'] }]),
         ).rejects.toBeInstanceOf(QueryTooLargeError);
-        expect(find).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'ivan', 201);
+        expect(find).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'ivan', 201, false);
     });
 
     it('accepts a value that matches exactly 200 entities', async () => {

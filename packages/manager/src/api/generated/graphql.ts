@@ -6734,6 +6734,7 @@ export type OrderAnalyticsDimension =
     | 'POINT_OF_SALE';
 
 export type OrderAnalyticsEntityFilterInput = {
+    exact?: InputMaybe<Scalars['Boolean']['input']>;
     kind: OrderAnalyticsFilterKind;
     values: Array<Scalars['String']['input']>;
 };

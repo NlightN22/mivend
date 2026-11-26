@@ -8,6 +8,8 @@ import { MAX_FILTER_VALUES } from './order-metrics.types';
 export interface EntityNameFilter {
     kind: EntityFilterKind;
     values: string[];
+    // Picked objects: each value is a whole name (case-insensitive), not a part of one.
+    exact?: boolean;
 }
 
 const PER_VALUE_LIMIT = 200;
@@ -54,14 +56,14 @@ export async function resolveEntityFilters(
         manufacturerIds: [],
         unmatched: false,
     };
-    for (const { kind, values } of filters) {
+    for (const { kind, values, exact } of filters) {
         const wanted = values.map(v => v.trim()).filter(Boolean);
         if (wanted.length === 0) continue;
         // A cap is never a silent cut: a broad name fails closed instead of totalling a partial set.
         if (wanted.length > MAX_VALUES_PER_KIND) throw new QueryTooLargeError(MAX_VALUES_PER_KIND);
         const ids = new Set<string>();
         for (const value of wanted) {
-            const found = await names.find(ctx, kind, value, PER_VALUE_LIMIT + 1);
+            const found = await names.find(ctx, kind, value, PER_VALUE_LIMIT + 1, exact === true);
             if (found.length > PER_VALUE_LIMIT) throw new QueryTooLargeError(PER_VALUE_LIMIT);
             for (const entity of found) ids.add(entity.erpId);
         }

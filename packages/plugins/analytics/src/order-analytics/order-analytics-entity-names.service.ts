@@ -38,8 +38,10 @@ export class OrderAnalyticsEntityNamesService {
         kind: EntityFilterKind,
         text: string,
         limit: number,
+        exact = false,
     ): Promise<NamedEntity[]> {
-        const like = `%${escapeLike(text.trim())}%`;
+        const escaped = escapeLike(text.trim());
+        const like = exact ? escaped : `%${escaped}%`;
         switch (kind) {
             case 'CUSTOMER':
                 return this.customers(ctx, like, limit);

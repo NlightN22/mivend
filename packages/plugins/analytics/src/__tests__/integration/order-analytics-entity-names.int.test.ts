@@ -185,6 +185,24 @@ describe('OrderAnalyticsEntityNamesService (real Postgres)', () => {
         expect(await service.find(ctx, 'CUSTOMER', 'noid', 10)).toEqual([]);
     });
 
+    it('exact mode matches whole names without case and never leaves the visible scope', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'c1', legalName: 'Alpha LLC', shortName: 'Alpha' },
+            { erpId: 'c2', legalName: 'Alpha Hidden LLC', shortName: 'Alpha Hidden' },
+            { erpId: 'c3', legalName: 'Other LLC', shortName: 'alpha' },
+        ]);
+        visibleCustomerIds.mockReturnValue(['c1', 'c2']);
+
+        expect(await service.find(ctx, 'CUSTOMER', 'ALPHA', 10, true)).toEqual([
+            { erpId: 'c1', name: 'Alpha' },
+        ]);
+        expect(await service.find(ctx, 'CUSTOMER', 'alph', 10, true)).toEqual([]);
+        expect(names(await service.find(ctx, 'CUSTOMER', 'alph', 10))).toEqual([
+            'Alpha',
+            'Alpha Hidden',
+        ]);
+    });
+
     it('treats percent and underscore in the typed text literally', async () => {
         await dataSource.getRepository(TestOrganization).save([
             { erpId: 'o1', legalName: 'Plain Org' },
