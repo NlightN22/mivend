@@ -8,6 +8,7 @@ export default {
         receivables: 'Receivables',
         managers: 'Managers',
     },
+    export: 'Export',
     title: 'Analytics',
     status: { planned: 'Planned', available: 'Available' },
     catalog: {

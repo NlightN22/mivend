@@ -15,6 +15,8 @@ import { buildEntityFilterColumns } from '../../api/orderAnalyticsFilter';
 import { SALES_DIMENSIONS, SALES_FILTER_KEYS } from '../../api/salesAnalytics';
 import { useSalesAnalytics } from '../../composables/useSalesAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
+import AnalyticsExportButton from './AnalyticsExportButton.vue';
+import { exportCsv, exportFileName } from './analyticsExport';
 import { pageOf, searchRows, sortRows } from './orderAnalyticsTable';
 import { buildSalesAnalyticsColumns, SALES_HIDDEN_BY_DEFAULT } from './salesAnalyticsColumns';
 import {
@@ -85,6 +87,17 @@ const rows = computed(() =>
     ),
 );
 
+const buildExport = (): string =>
+    exportCsv(
+        columns.value.map(c => ({ field: c.field, header: c.header })),
+        matching.value.map(row => ({ ...row, period: row.periodIso })),
+        SALES_AMOUNT_FIELDS,
+        [
+            t('analytics.sales.preliminary'),
+            ...(report.limited.value ? [t('analytics.sales.limited')] : []),
+        ],
+    );
+
 watch([() => tableState.value.filters.title, () => tableState.value.pageSize, report.rows], () => {
     page.value = 1;
 });
@@ -119,6 +132,11 @@ const dimensionOptions = SALES_DIMENSIONS.map(value => ({
                 v-if="showMainManager"
                 v-model="report.mainManagerOnly.value"
                 :label="t('analytics.sales.mainManagerOnly')"
+            />
+            <AnalyticsExportButton
+                :disabled="matching.length === 0"
+                :filename="exportFileName('sales-analytics', filters.from, filters.to)"
+                :build="buildExport"
             />
         </div>
 

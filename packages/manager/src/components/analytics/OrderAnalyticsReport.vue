@@ -23,8 +23,11 @@ import {
 } from '../../api/orderAnalyticsFilter';
 import { useOrderAnalytics } from '../../composables/useOrderAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
+import AnalyticsExportButton from './AnalyticsExportButton.vue';
+import { exportCsv, exportFileName } from './analyticsExport';
 import { buildOrderAnalyticsColumns, HIDDEN_BY_DEFAULT } from './orderAnalyticsColumns';
 import {
+    AMOUNT_FIELDS,
     formatAmount,
     formatQuantity,
     pageOf,
@@ -119,6 +122,17 @@ const rows = computed(
         })) as Array<OrderAnalyticsTableRow>,
 );
 
+const exportNotes = computed(() => [
+    ...(report.limited.value ? [t('analytics.orders.limited')] : []),
+]);
+const buildExport = (): string =>
+    exportCsv(
+        columns.value.map(c => ({ field: c.field, header: c.header })),
+        matching.value,
+        AMOUNT_FIELDS,
+        exportNotes.value,
+    );
+
 watch([() => tableState.value.filters.title, () => tableState.value.pageSize, report.rows], () => {
     page.value = 1;
 });
@@ -153,6 +167,11 @@ const dimensionOptions = DIMENSIONS.map(value => ({
                 v-if="showMainManager"
                 v-model="report.mainManagerOnly.value"
                 :label="t('analytics.orders.mainManagerOnly')"
+            />
+            <AnalyticsExportButton
+                :disabled="matching.length === 0"
+                :filename="exportFileName('orders-analytics', filters.from, filters.to)"
+                :build="buildExport"
             />
         </div>
 

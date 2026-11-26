@@ -83,6 +83,18 @@ Same client, key and scope rules as the orders report.
   documents state the total without VAT (not converted by the service).
 - Test double: the in-process echo server answers both services (`startEchoOrderMetricsServer`).
 
+## Amounts, currency and export (#402, #403)
+
+- Amount cells are plain localized numbers; the currency is its own column and is never glued to an amount. Both reports resolve
+  the currency id or numeric code to its alphabetic code on the server (`SalesCurrencyResolverService`, then `toAlphaCurrency`;
+  an unknown value stays as received) before merging rows, so one currency is one row.
+- Every report has an Export button (`AnalyticsExportButton`) that builds a CSV from the report's row model in the browser: the
+  whole current result (period, grouping, dimension, filters and title search, all pages), no new server path, so the viewer
+  scope and limits are the report's own. UTF-8 with BOM, `;` separator, CRLF, headers in the current language; amounts are exact
+  decimal strings with a dot, periods ISO, counts numbers, currency alphabetic. Text cells starting with `=`, `+`, `-` or `@` are
+  prefixed with `'`. Notes (preliminary data, limited to visible customers) are appended as a trailing row. A new report reuses
+  `api/csv.ts` and `analyticsExport.ts`.
+
 ## Report catalog
 
 | Key | Area | Idea | Parameters | Data source candidates |

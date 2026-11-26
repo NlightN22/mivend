@@ -6,6 +6,7 @@ export interface SalesAnalyticsTableRow {
     key: string;
     title: string;
     period: string | null;
+    periodIso: string | null;
     currency: string;
     sales: string;
     returns: string;
@@ -39,6 +40,7 @@ export function toSalesTableRows(
             (labelOfNoEntity && !row.dimensionId ? labelOfNoEntity : null) ||
             (row.periodStart ? formatPeriod(row.periodStart) : labelOfTotal),
         period: row.periodStart ? formatPeriod(row.periodStart) : null,
+        periodIso: row.periodStart,
         currency: row.currency,
         sales: row.sales.amount,
         returns: row.returns.amount,

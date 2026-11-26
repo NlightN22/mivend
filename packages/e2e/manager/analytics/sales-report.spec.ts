@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 // The analytics service is a test double that answers with one row whose name is the JSON of what the
@@ -83,5 +84,26 @@ test.describe('Sales analytics report @on:manager-general-director @read-only', 
         await expect(page.getByTestId('filter-column-contract')).toHaveText('Договор');
         await page.getByTestId('filter-column-contract').click();
         await expect(page.getByTestId('filter-panel')).toContainText('Применить фильтр');
+    });
+
+    test('the Export button downloads the table as a semicolon CSV with a BOM and a dot decimal', async ({
+        page,
+    }) => {
+        await openReport(page);
+        await expect(page.getByRole('main').getByTestId('analytics-export')).toBeEnabled();
+
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            page.getByTestId('analytics-export').click(),
+        ]);
+        expect(download.suggestedFilename()).toMatch(
+            /^sales-analytics-\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.csv$/,
+        );
+        const content = fs.readFileSync(await download.path(), 'utf8');
+
+        expect(content.charCodeAt(0)).toBe(0xfeff);
+        const lines = content.slice(1).split('\r\n');
+        expect(lines[0].split(';')).toContain('Currency');
+        expect(lines[1]).toMatch(/^"\{/);
     });
 });

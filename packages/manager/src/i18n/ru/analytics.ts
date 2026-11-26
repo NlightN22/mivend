@@ -10,6 +10,7 @@ const analytics: typeof en = {
         receivables: 'Дебиторка',
         managers: 'Менеджеры',
     },
+    export: 'Экспорт',
     title: 'Аналитика',
     status: { planned: 'Запланирован', available: 'Доступен' },
     catalog: {
