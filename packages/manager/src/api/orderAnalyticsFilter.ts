@@ -1,7 +1,8 @@
-import type {
-    FilterColumn,
-    FilterCondition,
-} from '@mivend/ui-kit/src/components/MvFilterBuilder/filterBuilderTypes';
+import {
+    referenceColumn,
+    type FilterColumn,
+    type FilterCondition,
+} from '@mivend/ui-kit/src/components/MvFilterBuilder/filterLogic';
 import { i18n } from '../i18n';
 import type { OrderAnalyticsFilterKind } from './generated/graphql';
 import { suggestOrderAnalytics, type OrderAnalyticsEntityFilter } from './orderAnalytics';
@@ -23,27 +24,33 @@ export function buildEntityFilterColumns(
     keys: Record<string, OrderAnalyticsFilterKind> = ENTITY_FILTER_KEYS,
     report = 'orders',
 ): FilterColumn[] {
-    return Object.entries(keys).map(([key, kind]) => ({
-        key,
-        label: i18n.global.t(`analytics.${report}.filters.${key}`),
-        type: 'string',
-        operators: ['contains'],
-        suggest: prefix => suggestOrderAnalytics(kind, prefix),
-    }));
+    return Object.entries(keys).map(([key, kind]) =>
+        referenceColumn({
+            key,
+            label: i18n.global.t(`analytics.${report}.filters.${key}`),
+            lookup: prefix => suggestOrderAnalytics(kind, prefix),
+        }),
+    );
 }
 
 export function conditionsToEntityFilters(
     conditions: FilterCondition[],
     keys: Record<string, OrderAnalyticsFilterKind> = ENTITY_FILTER_KEYS,
 ): OrderAnalyticsEntityFilter[] {
-    const byKind = new Map<OrderAnalyticsFilterKind, string[]>();
+    const groups = new Map<string, OrderAnalyticsEntityFilter>();
     for (const c of conditions) {
         const kind = keys[c.columnKey];
-        const value = typeof c.value === 'string' ? c.value.trim() : '';
-        if (!kind || !value) continue;
-        byKind.set(kind, [...(byKind.get(kind) ?? []), value]);
+        const exact = c.operator === 'in';
+        const values = (Array.isArray(c.value) ? c.value : [c.value])
+            .map(v => v.trim())
+            .filter(Boolean);
+        if (!kind || values.length === 0 || (c.operator !== 'contains' && !exact)) continue;
+        const id = `${kind}:${exact}`;
+        const group = groups.get(id) ?? { kind, values: [], exact };
+        group.values.push(...values);
+        groups.set(id, group);
     }
-    return [...byKind].map(([kind, values]) => ({ kind, values }));
+    return [...groups.values()];
 }
 
 export const usesProductFilter = (conditions: FilterCondition[]): boolean =>

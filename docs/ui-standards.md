@@ -126,6 +126,12 @@ Every manager list (orders, proforma invoices, payments, discounts, customers, a
   turns it into Vendure `StringOperators`/`NumberOperators`/`DateOperators`/`BooleanOperators`/
   `IDOperators`, `conditionsToQuery`/`conditionsFromQuery` carry it in the URL, and a saved view stores the
   same list. Offer only operators the server accepts and no column the server cannot filter. Per-column
+  header funnels are not used on a list that has the builder. **Reference-data columns** (customer, organization,
+  manager, product, ...) use `filterType: 'reference'` (or `referenceColumn()` for a column outside a table):
+  operators contains (typed name), is one of (names picked from a server-backed, viewer-scoped lookup in
+  `MvSuggestMultiInput`) and, only where the server can exclude, is not one of. Declare the lookup once per
+  column; the URL, chips and saved views need nothing else. "In group" is not offered: no member link from
+  products, customers or manufacturers to the group catalogs exists in the data yet.
   header funnels are not used on a list that has the builder. Operators: string (contains, does not
   contain, is equal to, is not equal to, starts with, ends with, is empty, is not empty; starts/ends with
   go to the server as an escaped `regex`), number (equal, greater, greater or equal, less, less or equal,

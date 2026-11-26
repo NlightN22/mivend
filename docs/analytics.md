@@ -55,6 +55,16 @@ integration service: the sum of order amounts, not sales documents; cancelled an
   that matches nothing returns no rows, never the unfiltered answer, and a name that is too broad (more than 200 matches
   for one value, more than 20 values or 1000 ids for one filter) answers the explicit "too large" state instead of totalling a partial set. The contract's filter lists are sent only when
   not empty. The "customer manager" dimension and filter follow the "main manager only" switch.
+- **Pick objects (#404).** Each of the seven fields also offers "is one of": names picked from the same
+  scoped typeahead (`MvSuggestMultiInput`). The filter is sent with `exact: true` and the server matches whole names
+  (case-insensitive) inside the viewer's scope, with the same caps and fail-closed answer; two objects with the same name
+  are both matched. "Is not one of" and "in group" are not offered. The contract has include id lists only
+  (no `exclude_*_ids`, no group filters), and our data has group trees (`ProductGroupErp`, `CounterpartyGroupErp`)
+  but no link from a product or counterparty to its group and no manufacturer groups, so a group has no members to expand.
+  Needed from the analytics owners: `exclude_customer_ids`, `exclude_organization_ids`, `exclude_point_of_sale_ids`,
+  `exclude_manager_ids`, `exclude_counterparty_manager_ids`, `exclude_contract_ids`, `exclude_product_ids`,
+  `exclude_manufacturer_ids`, and group filters with sub-group expansion (product group, counterparty group,
+  manufacturer group) once the members are mirrored.
 - **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
   different managers must not be added together; orders of a customer without a manager fall into an empty id. For a
   restricted viewer the rows keep only the managers the team visibility allows, like the order manager dimension.

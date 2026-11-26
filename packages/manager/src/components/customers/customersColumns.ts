@@ -56,9 +56,9 @@ export function buildCustomersColumns(
             priority: 10,
             required: true,
             filterConfig: NOT_FILTERED,
-            filterType: 'string',
+            filterType: 'reference',
             filterSuggest: customerSuggest('shortName'),
-            filterOperators: [...TEXT_OPERATORS],
+            filterOperators: ['contains', 'in', 'notIn'],
             mobile: { primary: true },
         },
         {

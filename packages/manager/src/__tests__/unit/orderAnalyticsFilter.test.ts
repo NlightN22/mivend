@@ -23,13 +23,29 @@ describe('conditionsToEntityFilters', () => {
                 cond('manufacturer', 'Acme'),
             ]),
         ).toEqual([
-            { kind: 'PRODUCT', values: ['bolt', 'nut'] },
-            { kind: 'MANUFACTURER', values: ['Acme'] },
+            { kind: 'PRODUCT', values: ['bolt', 'nut'], exact: false },
+            { kind: 'MANUFACTURER', values: ['Acme'], exact: false },
         ]);
     });
 
     it('sends nothing for blank values and for keys that are not entity filters', () => {
         expect(conditionsToEntityFilters([cond('customer', '  '), cond('other', 'x')])).toEqual([]);
+    });
+});
+
+describe('picked objects', () => {
+    it('sends "is one of" as exact values apart from typed contains names', () => {
+        expect(
+            conditionsToEntityFilters([
+                cond('customer', 'alp'),
+                { columnKey: 'customer', operator: 'in', value: ['Alpha', ' Beta '] },
+                { columnKey: 'customer', operator: 'notIn', value: ['Gamma'] },
+                { columnKey: 'customer', operator: 'in', value: [] },
+            ]),
+        ).toEqual([
+            { kind: 'CUSTOMER', values: ['alp'], exact: false },
+            { kind: 'CUSTOMER', values: ['Alpha', 'Beta'], exact: true },
+        ]);
     });
 });
 
@@ -58,7 +74,11 @@ describe('builder columns and table columns', () => {
             'product',
             'manufacturer',
         ]);
-        expect(columns.every(c => c.operators?.join() === 'contains' && c.suggest)).toBe(true);
+        expect(
+            columns.every(
+                c => c.type === 'reference' && c.operators?.join() === 'contains,in' && c.suggest,
+            ),
+        ).toBe(true);
     });
 
     it('replaces the order amounts by the line totals in product mode', () => {

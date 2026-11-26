@@ -30,6 +30,7 @@ export interface OrderAnalyticsParams {
 export interface OrderAnalyticsEntityFilter {
     kind: OrderAnalyticsFilterKind;
     values: string[];
+    exact?: boolean;
 }
 
 export interface OrderAnalyticsExtras {

@@ -48,8 +48,8 @@ describe('sales filters', () => {
                 SALES_FILTER_KEYS,
             ),
         ).toEqual([
-            { kind: 'CONTRACT', values: ['Main'] },
-            { kind: 'CUSTOMER', values: ['Acme'] },
+            { kind: 'CONTRACT', values: ['Main'], exact: false },
+            { kind: 'CUSTOMER', values: ['Acme'], exact: false },
         ]);
         expect(buildEntityFilterColumns(SALES_FILTER_KEYS, 'sales').map(c => c.key)).toEqual([
             'customer',
