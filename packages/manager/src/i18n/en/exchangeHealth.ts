@@ -10,13 +10,15 @@ export default {
         ago: 'ago',
         refresh: 'Refresh',
     },
+    units: { s: 's', min: 'min', h: 'h', d: 'd' },
+    states: { OK: 'OK', DEGRADED: 'DEGRADED', DOWN: 'DOWN', UNKNOWN: 'UNKNOWN' },
     columns: {
         inbox: {
             entityId: 'Entity',
             updatedAt: 'Updated',
             stream: 'Stream',
             status: 'Status',
-            attempts: 'Attempts',
+            attempts: 'Tries',
             lastError: 'Last error',
             outcomeReason: 'Outcome',
             firstFailedAt: 'First failed',

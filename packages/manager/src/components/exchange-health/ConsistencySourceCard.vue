@@ -13,6 +13,7 @@ import {
     streamLags,
     totalOpen,
 } from '../../api/exchangeHealthView';
+import { ageUnits } from '../../api/exchangeHealthLabels';
 import ExchangeStaticTable from './ExchangeStaticTable.vue';
 
 const props = defineProps<{ source: ConsistencySourceRow }>();
@@ -61,7 +62,7 @@ const counts = computed(() => {
         mirror: r.mirror ?? '—',
         expected: r.expected ?? '—',
         difference: differenceText(r.mirror, r.expected),
-        lag: lags.has(r.stream) ? formatLag(lags.get(r.stream) as number) : '—',
+        lag: lags.has(r.stream) ? formatLag(lags.get(r.stream) as number, ageUnits()) : '—',
         status: r.status,
         differs: r.differs,
     }));

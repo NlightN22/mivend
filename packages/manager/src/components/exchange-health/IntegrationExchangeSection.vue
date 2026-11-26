@@ -10,6 +10,7 @@ import {
     formatAgeSeconds,
     unknownReasonKey,
 } from '../../api/exchangeHealthView';
+import { ageUnits, stateLabel } from '../../api/exchangeHealthLabels';
 import ExchangeStaticTable from './ExchangeStaticTable.vue';
 
 const { t } = useI18n();
@@ -62,7 +63,7 @@ const publishColumns = [
 
 const now = Date.now();
 const ago = (iso: string | null | undefined): string =>
-    iso ? `${formatAge(iso, now)} ${t('exchangeHealth.common.ago')}` : '—';
+    iso ? `${formatAge(iso, now, ageUnits())} ${t('exchangeHealth.common.ago')}` : '—';
 
 const health = computed(() => report.value?.health ?? null);
 const channelRows = computed(() =>
@@ -83,7 +84,7 @@ const channelRows = computed(() =>
             status: s.status,
             lastActivity: ago(s.lastActivityAt),
             pending: dash(s.pending),
-            oldest: formatAgeSeconds(s.oldestAgeSeconds),
+            oldest: formatAgeSeconds(s.oldestAgeSeconds, ageUnits()),
             failed24h: dash(s.failedLast24h),
             isChannel: false,
         })),
@@ -95,7 +96,7 @@ const publishRows = computed(() =>
         aggregateType: a.aggregateType,
         status: a.status,
         pending: dash(a.pending),
-        oldest: formatAgeSeconds(a.oldestPendingAgeSeconds),
+        oldest: formatAgeSeconds(a.oldestPendingAgeSeconds, ageUnits()),
         deadLettered24h: dash(a.deadLetteredLast24h),
         mappingErrors24h:
             dash(a.mappingErrorsLast24h) +
@@ -116,10 +117,12 @@ type Row = { [key: string]: unknown; status: string; isChannel?: boolean };
         </p>
         <p class="exchange__line">
             <MvStatusBadge :variant="exchangeStateVariant(report.state)">{{
-                report.state
+                stateLabel(report.state)
             }}</MvStatusBadge>
             <span v-if="report.polledAt" class="exchange__muted">{{
-                t('exchangeHealth.integration.readAgo', { age: formatAge(report.polledAt, now) })
+                t('exchangeHealth.integration.readAgo', {
+                    age: formatAge(report.polledAt, now, ageUnits()),
+                })
             }}</span>
         </p>
         <MvNotice v-if="report.state === 'UNKNOWN'" variant="error">
@@ -142,7 +145,7 @@ type Row = { [key: string]: unknown; status: string; isChannel?: boolean };
                 </template>
                 <template #cell-status="{ data }">
                     <MvStatusBadge :variant="exchangeStateVariant(String((data as Row).status))">{{
-                        (data as Row).status
+                        stateLabel(String((data as Row).status))
                     }}</MvStatusBadge>
                 </template>
             </ExchangeStaticTable>
@@ -152,7 +155,7 @@ type Row = { [key: string]: unknown; status: string; isChannel?: boolean };
                         t('exchangeHealth.integration.publishTitle')
                     }}</span>
                     <MvStatusBadge :variant="exchangeStateVariant(health.publish.status)">{{
-                        health.publish.status
+                        stateLabel(health.publish.status)
                     }}</MvStatusBadge>
                 </p>
                 <ExchangeStaticTable
@@ -167,7 +170,7 @@ type Row = { [key: string]: unknown; status: string; isChannel?: boolean };
                     <template #cell-status="{ data }">
                         <MvStatusBadge
                             :variant="exchangeStateVariant(String((data as Row).status))"
-                            >{{ (data as Row).status }}</MvStatusBadge
+                            >{{ stateLabel(String((data as Row).status)) }}</MvStatusBadge
                         >
                     </template>
                 </ExchangeStaticTable>

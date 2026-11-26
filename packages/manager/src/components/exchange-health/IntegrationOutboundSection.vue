@@ -5,6 +5,7 @@ import { MvNotice, MvStatusBadge, type AdvancedDataTableColumn } from '@mivend/u
 import { fetchOutboxHealth, type OutboxHealthReport } from '../../api/exchangeHealth';
 import { formatAge } from '../../api/exchangeHealthView';
 import { REJECTED_ORDERS_LINK, outboundProblemsLink } from '../../api/exchangeLinks';
+import { ageUnits } from '../../api/exchangeHealthLabels';
 import ExchangeStaticTable from './ExchangeStaticTable.vue';
 
 const { t } = useI18n();
@@ -49,9 +50,9 @@ const rows = computed(() =>
     (report.value?.integrationOutboxHealth ?? []).map(r => ({
         ...r,
         id: r.eventType,
-        oldest: formatAge(r.oldestPendingAt, now),
+        oldest: formatAge(r.oldestPendingAt, now, ageUnits()),
         lastPublished: r.lastPublishedAt
-            ? `${formatAge(r.lastPublishedAt, now)} ${t('exchangeHealth.common.ago')}`
+            ? `${formatAge(r.lastPublishedAt, now, ageUnits())} ${t('exchangeHealth.common.ago')}`
             : '—',
         lastProblem: r.lastError ?? r.lastSkipReason ?? '—',
     })),

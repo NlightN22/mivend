@@ -6,6 +6,7 @@ import { Brackets, ObjectLiteral, SelectQueryBuilder, WhereExpressionBuilder } f
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { getPageAndCount } from 'shared';
+import { sanitizeErrorText } from './error-text';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import { escapeLike, parseFilter, parsePaging, parseSort } from './list-options';
@@ -29,7 +30,6 @@ export interface OutboxProblemRow {
     createdAt: Date;
     subjectId: string | null;
 }
-
 const INBOX_FILTER_FIELDS = {
     stream: 'e.stream',
     entityId: 'e.entityId',
@@ -154,7 +154,12 @@ export class IntegrationEventListService {
             direction: 'DESC',
         });
         const { skip, take } = parsePaging(options);
-        return getPageAndCount(qb, take, skip);
+        const { items, totalItems } = await getPageAndCount(qb, take, skip);
+        for (const item of items) {
+            item.lastError = sanitizeErrorText(item.lastError);
+            item.outcomeReason = sanitizeErrorText(item.outcomeReason);
+        }
+        return { items, totalItems };
     }
 
     async listOutboxProblems(
@@ -184,7 +189,7 @@ function toOutboxProblemRow(entry: IntegrationOutboxEntry): OutboxProblemRow {
         eventType: entry.eventType,
         status: entry.status,
         retryCount: entry.retryCount,
-        lastError: entry.lastError,
+        lastError: sanitizeErrorText(entry.lastError),
         lastErrorAt: entry.lastErrorAt,
         firstFailedAt: entry.firstFailedAt,
         nextRetryAt: entry.nextRetryAt,

@@ -6,26 +6,42 @@ export function isLagOverThreshold(lag: string | null | undefined): boolean {
     return lag !== null && lag !== undefined && BigInt(lag) > LAG_THRESHOLD;
 }
 
-export function formatAge(from: string | null | undefined, now: number): string {
+export interface AgeUnits {
+    s: string;
+    min: string;
+    h: string;
+    d: string;
+}
+
+export const EN_UNITS: AgeUnits = { s: 's', min: 'min', h: 'h', d: 'd' };
+
+export function formatAge(
+    from: string | null | undefined,
+    now: number,
+    u: AgeUnits = EN_UNITS,
+): string {
     if (!from) return '—';
     const minutes = Math.max(0, Math.round((now - new Date(from).getTime()) / 60000));
-    if (minutes < 60) return `${minutes} min`;
-    if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
-    return `${Math.round(minutes / 1440)} d`;
+    if (minutes < 60) return `${minutes} ${u.min}`;
+    if (minutes < 1440) return `${Math.round(minutes / 60)} ${u.h}`;
+    return `${Math.round(minutes / 1440)} ${u.d}`;
 }
 
-export function formatAgeSeconds(seconds: number | null | undefined): string {
+export function formatAgeSeconds(
+    seconds: number | null | undefined,
+    u: AgeUnits = EN_UNITS,
+): string {
     if (seconds === null || seconds === undefined) return '—';
-    if (seconds < 60) return `${seconds} s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-    if (seconds < 86400) return `${Math.round(seconds / 3600)} h`;
-    return `${Math.round(seconds / 86400)} d`;
+    if (seconds < 60) return `${seconds} ${u.s}`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)} ${u.min}`;
+    if (seconds < 86400) return `${Math.round(seconds / 3600)} ${u.h}`;
+    return `${Math.round(seconds / 86400)} ${u.d}`;
 }
 
-export function formatLag(seconds: number): string {
-    if (seconds < 90) return `${Math.round(seconds)} s`;
-    if (seconds < 5400) return `${Math.round(seconds / 60)} min`;
-    return `${(seconds / 3600).toFixed(1)} h`;
+export function formatLag(seconds: number, u: AgeUnits = EN_UNITS): string {
+    if (seconds < 90) return `${Math.round(seconds)} ${u.s}`;
+    if (seconds < 5400) return `${Math.round(seconds / 60)} ${u.min}`;
+    return `${(seconds / 3600).toFixed(1)} ${u.h}`;
 }
 
 export function dash(n: number | null | undefined): string {

@@ -61,7 +61,7 @@ export function inboxDefinition(): ExchangeListDefinition {
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
             }),
-            col(l, 'status', 100, {
+            col(l, 'status', 110, {
                 priority: 9,
                 sortField: 'status',
                 filterType: 'select',
@@ -74,7 +74,7 @@ export function inboxDefinition(): ExchangeListDefinition {
                 mobile: { badge: true },
             }),
             col(l, 'attempts', 110, { sortField: 'attempts', align: 'end', priority: 6 }),
-            col(l, 'lastError', 210, {
+            col(l, 'lastError', 200, {
                 priority: 5,
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
@@ -106,7 +106,7 @@ export function outboxDefinition(): ExchangeListDefinition {
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
             }),
-            col(l, 'status', 90, {
+            col(l, 'status', 110, {
                 priority: 9,
                 sortField: 'status',
                 filterType: 'select',
@@ -116,7 +116,7 @@ export function outboxDefinition(): ExchangeListDefinition {
             }),
             col(l, 'subjectId', 220, { priority: 4 }),
             col(l, 'retryCount', 110, { sortField: 'retryCount', align: 'end', priority: 6 }),
-            col(l, 'lastError', 210, {
+            col(l, 'lastError', 190, {
                 priority: 5,
                 filterType: 'string',
                 filterOperators: [...TEXT_OPERATORS],
@@ -146,8 +146,8 @@ export function reportsDefinition(): ExchangeListDefinition {
                 mobile: { primary: true },
             }),
             col(l, 'lastDetectedAt', 110, { priority: 8 }),
-            col(l, 'status', 80, { priority: 9, minWidth: 80, mobile: { badge: true } }),
-            col(l, 'severity', 80, {
+            col(l, 'status', 90, { priority: 9, minWidth: 80, mobile: { badge: true } }),
+            col(l, 'severity', 100, {
                 priority: 9,
                 minWidth: 80,
                 filterType: 'select',
@@ -157,7 +157,7 @@ export function reportsDefinition(): ExchangeListDefinition {
             col(l, 'type', 140, { priority: 7, filterType: 'string', filterOperators: ['eq'] }),
             col(l, 'entity', 230, { priority: 6 }),
             col(l, 'figures', 150, { priority: 5 }),
-            col(l, 'details', 210, { priority: 4 }),
+            col(l, 'details', 180, { priority: 4 }),
             col(l, 'source', 140, { priority: 2, filterType: 'string', filterOperators: ['eq'] }),
             col(l, 'occurrences', 100, { priority: 2, align: 'end' }),
         ],
@@ -182,9 +182,9 @@ export function reconciliationDefinition(): ExchangeListDefinition {
                 mobile: { primary: true },
             }),
             col(l, 'detectedAt', 110, { priority: 8 }),
-            col(l, 'issue', 250, { priority: 9 }),
+            col(l, 'issue', 210, { priority: 9 }),
             col(l, 'ourCount', 100, { align: 'end', priority: 7 }),
-            col(l, 'theirActiveCount', 120, { align: 'end', priority: 7 }),
+            col(l, 'theirActiveCount', 160, { align: 'end', priority: 7 }),
             col(l, 'triggeredBy', 130, { priority: 3 }),
         ],
         cells: { detectedAt: { kind: 'date' }, issue: { kind: 'wrap' } },

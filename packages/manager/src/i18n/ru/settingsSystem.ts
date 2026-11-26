@@ -15,7 +15,7 @@ const settingsSystem: typeof en = {
         priceTypeGaps: 'Пробелы типов цен',
         checkPolicies: 'Контроли и политики',
         systemHealth: 'Состояние системы',
-        dataDrift: 'Отчёты о расхождении данных',
+        dataDrift: 'Расхождения данных',
         erpReconciliation: 'Сверка с ERP',
         inboxIssues: 'Проблемы входящих',
         integrationHealth: 'Состояние интеграции',

@@ -4,6 +4,7 @@ import type { RequestContext } from '@vendure/core';
 import { ctxQueryBounded } from 'shared';
 
 import { HELD_SKIP_REASON } from './order-checks/order-send-hold.service';
+import { sanitizeErrorText } from './error-text';
 import { mergeOutboxHealth } from './outbox-health';
 import type { OutboxHealthByEventType } from './outbox-health';
 
@@ -39,6 +40,12 @@ export class IntegrationOutboxHealthService {
         `,
             [HELD_SKIP_REASON],
         );
-        return mergeOutboxHealth(rows);
+        return mergeOutboxHealth(
+            rows.map(r => ({
+                ...r,
+                lastError: sanitizeErrorText(r.lastError),
+                lastSkipReason: sanitizeErrorText(r.lastSkipReason),
+            })),
+        );
     }
 }
