@@ -105,6 +105,16 @@ export class OrderMetricsClient {
                     mainManagerOnly: request.mainManagerOnly,
                     productIds: request.productIds,
                     manufacturerIds: request.manufacturerIds,
+                    excludeCustomerIds: request.excludeCustomerIds,
+                    excludeOrganizationIds: request.excludeOrganizationIds,
+                    excludePointOfSaleIds: request.excludePointOfSaleIds,
+                    excludeManagerIds: request.excludeManagerIds,
+                    excludeCounterpartyManagerIds: request.excludeCounterpartyManagerIds,
+                    excludeProductIds: request.excludeProductIds,
+                    excludeManufacturerIds: request.excludeManufacturerIds,
+                    manufacturerGroupIds: request.manufacturerGroupIds,
+                    excludeManufacturerGroupIds: request.excludeManufacturerGroupIds,
+                    ...this.deferredGroupFields(request),
                 },
                 metadata,
                 { deadline: Date.now() + CALL_TIMEOUT_MS },
@@ -132,6 +142,16 @@ export class OrderMetricsClient {
             productAmount: row.productAmount,
             productLinesWithoutAmount: Number(row.productLinesWithoutAmount),
         }));
+    }
+
+    private deferredGroupFields(request: OrderMetricsRequest): Partial<OrderMetricsRequest> {
+        if (!this.options.productCategoryAndCustomerGroupFilters) return {};
+        return {
+            productCategoryIds: request.productCategoryIds,
+            excludeProductCategoryIds: request.excludeProductCategoryIds,
+            customerGroupIds: request.customerGroupIds,
+            excludeCustomerGroupIds: request.excludeCustomerGroupIds,
+        };
     }
 
     private async readKey(): Promise<string> {

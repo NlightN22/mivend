@@ -26,6 +26,34 @@ describe('resolveEntityFilters', () => {
         ).rejects.toBeInstanceOf(QueryTooLargeError);
     });
 
+    it('resolves excluded names whole-name into the exclude list and never flags them unmatched', async () => {
+        find.mockResolvedValueOnce([{ erpId: 'c1', name: 'A' }]).mockResolvedValueOnce([]);
+
+        const result = await resolveEntityFilters(ctx, names, [
+            { kind: 'CUSTOMER', values: ['A'], exclude: true },
+            { kind: 'MANAGER', values: ['nobody'], exclude: true },
+        ]);
+
+        expect(find).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'A', 201, true);
+        expect(result.excludeCustomerIds).toEqual(['c1']);
+        expect(result.customerIds).toEqual([]);
+        expect(result.excludeManagerIds).toEqual([]);
+        expect(result.unmatched).toBe(false);
+    });
+
+    it('fails closed when excluded names add up above the cap', async () => {
+        let call = 0;
+        find.mockImplementation(async () => {
+            call += 1;
+            return Array.from({ length: 200 }, (_, i) => ({ erpId: `e${call}-${i}`, name: 'x' }));
+        });
+        const six = Array.from({ length: 6 }, (_, i) => `n${i}`);
+
+        await expect(
+            resolveEntityFilters(ctx, names, [{ kind: 'PRODUCT', values: six, exclude: true }]),
+        ).rejects.toBeInstanceOf(QueryTooLargeError);
+    });
+
     it('collects the ids of every typed name per kind without duplicates', async () => {
         find.mockImplementation(async (_c, _k, text: string) =>
             text === 'a'

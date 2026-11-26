@@ -26,6 +26,19 @@ const request: OrderMetricsRequest = {
     mainManagerOnly: false,
     productIds: [],
     manufacturerIds: [],
+    excludeCustomerIds: [],
+    excludeOrganizationIds: [],
+    excludePointOfSaleIds: [],
+    excludeManagerIds: [],
+    excludeCounterpartyManagerIds: [],
+    excludeProductIds: [],
+    excludeManufacturerIds: [],
+    manufacturerGroupIds: [],
+    excludeManufacturerGroupIds: [],
+    productCategoryIds: [],
+    excludeProductCategoryIds: [],
+    customerGroupIds: [],
+    excludeCustomerGroupIds: [],
 };
 
 interface Seen {
@@ -174,6 +187,48 @@ describe('OrderMetricsClient over a real gRPC transport', () => {
             productQuantity: '12.500',
             productAmount: '300.00',
             productLinesWithoutAmount: 1,
+        });
+    });
+
+    it('sends the exclude lists and manufacturer groups, but holds category and customer groups back by default', async () => {
+        respond = (_call, cb) => cb(null, { rows: [] });
+        const wanted = {
+            ...request,
+            excludeCustomerIds: ['c9'],
+            excludeProductIds: ['p9'],
+            manufacturerGroupIds: ['g1'],
+            excludeManufacturerGroupIds: ['g2'],
+            productCategoryIds: ['k1'],
+            excludeProductCategoryIds: ['k2'],
+            customerGroupIds: ['u1'],
+            excludeCustomerGroupIds: ['u2'],
+        };
+
+        await clientFor().getOrderTurnover(wanted);
+
+        expect(seen?.request).toMatchObject({
+            excludeCustomerIds: ['c9'],
+            excludeProductIds: ['p9'],
+            manufacturerGroupIds: ['g1'],
+            excludeManufacturerGroupIds: ['g2'],
+            productCategoryIds: [],
+            excludeProductCategoryIds: [],
+            customerGroupIds: [],
+            excludeCustomerGroupIds: [],
+        });
+
+        await new OrderMetricsClient({
+            orderMetricsAddress: address,
+            orderMetricsKeyFile: keyFile,
+            orderMetricsCredentials: grpc.credentials.createInsecure(),
+            productCategoryAndCustomerGroupFilters: true,
+        }).getOrderTurnover(wanted);
+
+        expect(seen?.request).toMatchObject({
+            productCategoryIds: ['k1'],
+            excludeProductCategoryIds: ['k2'],
+            customerGroupIds: ['u1'],
+            excludeCustomerGroupIds: ['u2'],
         });
     });
 

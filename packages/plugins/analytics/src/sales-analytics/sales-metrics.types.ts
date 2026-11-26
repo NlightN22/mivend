@@ -12,6 +12,13 @@ export interface SalesMetricsFilters {
     organizationIds: string[];
     contractIds: string[];
     counterpartyManagerIds: string[];
+    excludeCounterpartyIds: string[];
+    excludeOrganizationIds: string[];
+    excludeContractIds: string[];
+    excludeCounterpartyManagerIds: string[];
+    // Held back from the wire unless the customer group filters are switched on.
+    counterpartyGroupIds: string[];
+    excludeCounterpartyGroupIds: string[];
 }
 
 export interface SalesMetricsRequest extends SalesMetricsFilters {

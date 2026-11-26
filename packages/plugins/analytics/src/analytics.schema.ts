@@ -46,6 +46,8 @@ export const adminApiSchema: DocumentNode = gql`
         entityFilters: [OrderAnalyticsEntityFilterInput!]
         "Limits counterparty-manager filter and dimension to the main manager of a counterparty."
         mainManagerOnly: Boolean
+        "Groups picked in the filter builder (mivend ids); the analytics service expands them."
+        groupFilters: [OrderAnalyticsGroupFilterInput!]
     }
 
     enum OrderAnalyticsFilterKind {
@@ -63,6 +65,31 @@ export const adminApiSchema: DocumentNode = gql`
         kind: OrderAnalyticsFilterKind!
         values: [String!]!
         exact: Boolean
+        "Leaves the matching objects out; the names are whole names."
+        exclude: Boolean
+    }
+
+    enum OrderAnalyticsGroupKind {
+        MANUFACTURER_GROUP
+        PRODUCT_CATEGORY
+        CUSTOMER_GROUP
+    }
+
+    input OrderAnalyticsGroupFilterInput {
+        kind: OrderAnalyticsGroupKind!
+        ids: [ID!]!
+        exclude: Boolean
+    }
+
+    type OrderAnalyticsGroupOption {
+        id: ID!
+        "The group's name with its parents."
+        name: String!
+    }
+
+    type AnalyticsFilterCapabilities {
+        "The group filters the analytics service currently supports."
+        groupKinds: [OrderAnalyticsGroupKind!]!
     }
 
     type OrderAnalyticsRow {
@@ -103,6 +130,7 @@ export const adminApiSchema: DocumentNode = gql`
         timeZone: String
         "Names typed in the filter builder; the server resolves them to ids inside the viewer's scope."
         entityFilters: [OrderAnalyticsEntityFilterInput!]
+        groupFilters: [OrderAnalyticsGroupFilterInput!]
         mainManagerOnly: Boolean
     }
 
@@ -137,5 +165,10 @@ export const adminApiSchema: DocumentNode = gql`
         analyticsReports: [AnalyticsReport!]!
         orderAnalytics(input: OrderAnalyticsInput!): OrderAnalytics!
         orderAnalyticsSuggest(kind: OrderAnalyticsFilterKind!, prefix: String!): [String!]!
+        orderAnalyticsGroupSuggest(
+            kind: OrderAnalyticsGroupKind!
+            prefix: String!
+        ): [OrderAnalyticsGroupOption!]!
+        analyticsFilterCapabilities: AnalyticsFilterCapabilities!
     }
 `;

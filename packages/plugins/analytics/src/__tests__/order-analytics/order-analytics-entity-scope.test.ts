@@ -1,9 +1,13 @@
+import { OrderMetricsError } from '../../order-analytics/order-metrics.types';
 import type { RequestContext } from '@vendure/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UserInputError } from '@vendure/core';
 import { OrderAnalyticsService } from '../../order-analytics/order-analytics.service';
 import type { OrderAnalyticsInput } from '../../order-analytics/order-analytics.service';
 import type { OrderTurnoverRow } from '../../order-analytics/order-metrics.types';
+
+import type { AnalyticsPluginOptions } from '../../types';
 
 const ctx = {} as RequestContext;
 const getOrderTurnover = vi.fn();
@@ -14,6 +18,8 @@ const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
+const erpIds = vi.fn();
+const options: AnalyticsPluginOptions = {};
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
@@ -21,6 +27,8 @@ const service = new OrderAnalyticsService(
     { labelsFor } as never,
     { find: findNamed } as never,
     { resolver } as never,
+    { erpIds } as never,
+    options,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({
@@ -148,5 +156,126 @@ describe('OrderAnalyticsService counterparty managers and entity filters', () =>
 
         expect(findNamed).not.toHaveBeenCalled();
         expect(getOrderTurnover).toHaveBeenCalledOnce();
+    });
+});
+
+describe('OrderAnalyticsService exclusions and groups', () => {
+    it('sends excluded objects by whole name and never widens a scoped viewer', async () => {
+        visibleCustomerErpIds.mockResolvedValue(['c1', 'c2']);
+        findNamed.mockResolvedValue([{ erpId: 'c2', name: 'B' }]);
+
+        await service.query(
+            ctx,
+            input({ entityFilters: [{ kind: 'CUSTOMER', values: ['B'], exclude: true }] }),
+        );
+
+        expect(findNamed).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'B', 201, true);
+        expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({
+            customerIds: ['c1', 'c2'],
+            excludeCustomerIds: ['c2'],
+        });
+    });
+
+    it('excludes nothing, and still answers, when the excluded names match nothing', async () => {
+        const result = await service.query(
+            ctx,
+            input({ entityFilters: [{ kind: 'PRODUCT', values: ['nothing'], exclude: true }] }),
+        );
+
+        expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({ excludeProductIds: [] });
+        expect(result.state).toBe('OK');
+    });
+
+    it('keeps include and exclude of one field side by side for the analytics service', async () => {
+        findNamed.mockImplementation(async (_c, _k, text: string) => [
+            { erpId: `erp-${text}`, name: text },
+        ]);
+
+        await service.query(
+            ctx,
+            input({
+                entityFilters: [
+                    { kind: 'MANAGER', values: ['in'], exact: true },
+                    { kind: 'MANAGER', values: ['out'], exclude: true },
+                ],
+            }),
+        );
+
+        expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({
+            managerIds: ['erp-in'],
+            excludeManagerIds: ['erp-out'],
+        });
+    });
+
+    it('sends manufacturer groups as ERP ids translated server side, include and exclude', async () => {
+        erpIds.mockImplementation(async (_c, _k, ids: string[]) => ids.map(id => `erp-${id}`));
+
+        await service.query(
+            ctx,
+            input({
+                groupFilters: [
+                    { kind: 'MANUFACTURER_GROUP', ids: ['1'] },
+                    { kind: 'MANUFACTURER_GROUP', ids: ['2'], exclude: true },
+                ],
+            }),
+        );
+
+        expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({
+            manufacturerGroupIds: ['erp-1'],
+            excludeManufacturerGroupIds: ['erp-2'],
+        });
+    });
+
+    it('answers no rows for an include group that is unknown, never the unfiltered answer', async () => {
+        erpIds.mockResolvedValue([]);
+
+        const result = await service.query(
+            ctx,
+            input({ groupFilters: [{ kind: 'MANUFACTURER_GROUP', ids: ['404'] }] }),
+        );
+
+        expect(result.rows).toEqual([]);
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+    });
+
+    it('rejects category and customer groups while the switch is off, accepts them when on', async () => {
+        const wanted = input({ groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }] });
+        await expect(service.query(ctx, wanted)).rejects.toBeInstanceOf(UserInputError);
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+
+        options.productCategoryAndCustomerGroupFilters = true;
+        erpIds.mockResolvedValue(['cat-erp']);
+        try {
+            await service.query(ctx, wanted);
+        } finally {
+            options.productCategoryAndCustomerGroupFilters = undefined;
+        }
+        expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({
+            productCategoryIds: ['cat-erp'],
+        });
+    });
+
+    it('answers TOO_LARGE when more than 1000 groups are excluded', async () => {
+        const ids = Array.from({ length: 1001 }, (_, i) => String(i + 1));
+
+        const result = await service.query(
+            ctx,
+            input({ groupFilters: [{ kind: 'MANUFACTURER_GROUP', ids, exclude: true }] }),
+        );
+
+        expect(result.state).toBe('TOO_LARGE');
+        expect(getOrderTurnover).not.toHaveBeenCalled();
+    });
+
+    it('answers TOO_LARGE, not an error, when the service finds a group expanding to too many members', async () => {
+        erpIds.mockResolvedValue(['g-erp']);
+        getOrderTurnover.mockRejectedValue(new OrderMetricsError('TOO_LARGE', 'narrower groups'));
+
+        const result = await service.query(
+            ctx,
+            input({ groupFilters: [{ kind: 'MANUFACTURER_GROUP', ids: ['1'] }] }),
+        );
+
+        expect(result).toMatchObject({ state: 'TOO_LARGE', rows: [] });
     });
 });

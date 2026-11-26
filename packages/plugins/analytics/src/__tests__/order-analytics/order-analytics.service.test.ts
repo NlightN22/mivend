@@ -8,6 +8,8 @@ import type { OrderAnalyticsInput } from '../../order-analytics/order-analytics.
 import { OrderMetricsError } from '../../order-analytics/order-metrics.types';
 import type { OrderTurnoverRow } from '../../order-analytics/order-metrics.types';
 
+import type { AnalyticsPluginOptions } from '../../types';
+
 const ctx = {} as RequestContext;
 const getOrderTurnover = vi.fn();
 const visibleCustomerErpIds = vi.fn();
@@ -17,6 +19,8 @@ const managerErpIdFor = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
+const erpIds = vi.fn();
+const options: AnalyticsPluginOptions = {};
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
@@ -24,6 +28,8 @@ const service = new OrderAnalyticsService(
     { labelsFor } as never,
     { find: findNamed } as never,
     { resolver } as never,
+    { erpIds } as never,
+    options,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({

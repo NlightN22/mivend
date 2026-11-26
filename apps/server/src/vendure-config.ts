@@ -973,6 +973,8 @@ export const config: VendureConfig = {
             orderMetricsInsecure:
                 process.env.NODE_ENV !== 'production' &&
                 process.env.ANALYTICS_GRPC_INSECURE === 'true',
+            productCategoryAndCustomerGroupFilters:
+                process.env.ANALYTICS_CATEGORY_CUSTOMER_GROUP_FILTERS === 'true',
         }),
         // After every plugin that registers a scheduled task: it labels their writes in the journal.
         ChangeJournalPlugin.init({}),

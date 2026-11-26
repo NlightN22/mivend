@@ -22,17 +22,24 @@ const request: SalesMetricsRequest = {
     contractIds: ['k1'],
     counterpartyManagerIds: ['m1'],
     mainManagerOnly: true,
+    excludeCounterpartyIds: [],
+    excludeOrganizationIds: [],
+    excludeContractIds: [],
+    excludeCounterpartyManagerIds: [],
+    counterpartyGroupIds: [],
+    excludeCounterpartyGroupIds: [],
 };
 
 let echo: EchoOrderMetricsServer;
 let dir: string;
 let keyFile: string;
 
-const clientFor = (file = keyFile): SalesMetricsClient =>
+const clientFor = (file = keyFile, groups = false): SalesMetricsClient =>
     new SalesMetricsClient({
         orderMetricsAddress: echo.address,
         orderMetricsKeyFile: file,
         orderMetricsCredentials: grpc.credentials.createInsecure(),
+        productCategoryAndCustomerGroupFilters: groups,
     });
 
 beforeAll(async () => {
@@ -69,6 +76,34 @@ describe('SalesMetricsClient', () => {
         });
         expect(result.correctionsWithoutEffect).toBe(0);
         expect(result.unresolvedCurrencies).toEqual([]);
+    });
+
+    it('sends the exclude lists, and counterparty groups only while the switch is on', async () => {
+        const wanted = {
+            ...request,
+            excludeCounterpartyIds: ['c9'],
+            excludeOrganizationIds: ['o9'],
+            excludeContractIds: ['k9'],
+            excludeCounterpartyManagerIds: ['m9'],
+            counterpartyGroupIds: ['g1'],
+            excludeCounterpartyGroupIds: ['g2'],
+        };
+
+        const off = await clientFor().getSalesTurnover(wanted);
+        expect(JSON.parse(off.rows[0].dimensionId)).toMatchObject({
+            excludeCounterpartyIds: ['c9'],
+            excludeOrganizationIds: ['o9'],
+            excludeContractIds: ['k9'],
+            excludeCounterpartyManagerIds: ['m9'],
+            counterpartyGroupIds: [],
+            excludeCounterpartyGroupIds: [],
+        });
+
+        const on = await clientFor(keyFile, true).getSalesTurnover(wanted);
+        expect(JSON.parse(on.rows[0].dimensionId)).toMatchObject({
+            counterpartyGroupIds: ['g1'],
+            excludeCounterpartyGroupIds: ['g2'],
+        });
     });
 
     it('reports a wrong key as UNAUTHENTICATED and a missing one as NOT_CONFIGURED', async () => {

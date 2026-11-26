@@ -15,6 +15,20 @@ export interface OrderMetricsFilters {
     counterpartyManagerIds: string[];
     productIds: string[];
     manufacturerIds: string[];
+    excludeCustomerIds: string[];
+    excludeOrganizationIds: string[];
+    excludePointOfSaleIds: string[];
+    excludeManagerIds: string[];
+    excludeCounterpartyManagerIds: string[];
+    excludeProductIds: string[];
+    excludeManufacturerIds: string[];
+    manufacturerGroupIds: string[];
+    excludeManufacturerGroupIds: string[];
+    // Held back from the wire unless the category and customer group filters are switched on.
+    productCategoryIds: string[];
+    excludeProductCategoryIds: string[];
+    customerGroupIds: string[];
+    excludeCustomerGroupIds: string[];
 }
 
 export interface OrderMetricsRequest extends OrderMetricsFilters {

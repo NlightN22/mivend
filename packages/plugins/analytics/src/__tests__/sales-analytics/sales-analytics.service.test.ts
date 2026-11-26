@@ -8,6 +8,8 @@ import { SalesAnalyticsService } from '../../sales-analytics/sales-analytics.ser
 import type { SalesAnalyticsInput } from '../../sales-analytics/sales-analytics.service';
 import type { SalesAmount, SalesTurnoverRow } from '../../sales-analytics/sales-metrics.types';
 
+import type { AnalyticsPluginOptions } from '../../types';
+
 const ctx = {} as RequestContext;
 const getSalesTurnover = vi.fn();
 const visibleCustomerErpIds = vi.fn();
@@ -15,6 +17,8 @@ const visibleManagerErpIds = vi.fn();
 const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
+const erpIds = vi.fn();
+const options: AnalyticsPluginOptions = {};
 
 const service = new SalesAnalyticsService(
     { getSalesTurnover } as never,
@@ -22,6 +26,8 @@ const service = new SalesAnalyticsService(
     { labelsFor } as never,
     { find: findNamed } as never,
     { resolver } as never,
+    { erpIds } as never,
+    options,
 );
 
 const input = (over: Partial<SalesAnalyticsInput> = {}): SalesAnalyticsInput => ({
@@ -223,5 +229,86 @@ describe('SalesAnalyticsService currency resolution', () => {
             ['RUB', '15.00'],
         ]);
         expect(result.unresolvedCurrencies).toEqual(['cur-9']);
+    });
+});
+
+describe('SalesAnalyticsService exclusions and groups', () => {
+    it('sends excluded customers, organizations and contracts by whole name', async () => {
+        findNamed.mockImplementation((_c, kind) =>
+            Promise.resolve([{ erpId: `${kind}-erp`, name: 'x' }]),
+        );
+
+        await service.query(
+            ctx,
+            input({
+                entityFilters: [
+                    { kind: 'CUSTOMER', values: ['Acme'], exclude: true },
+                    { kind: 'ORGANIZATION', values: ['Org'], exclude: true },
+                    { kind: 'CONTRACT', values: ['Main'], exclude: true },
+                    { kind: 'COUNTERPARTY_MANAGER', values: ['Ann'], exclude: true },
+                ],
+            }),
+        );
+
+        expect(findNamed).toHaveBeenCalledWith(ctx, 'CUSTOMER', 'Acme', 201, true);
+        expect(getSalesTurnover.mock.calls[0][0]).toMatchObject({
+            counterpartyIds: [],
+            excludeCounterpartyIds: ['CUSTOMER-erp'],
+            excludeOrganizationIds: ['ORGANIZATION-erp'],
+            excludeContractIds: ['CONTRACT-erp'],
+            excludeCounterpartyManagerIds: ['COUNTERPARTY_MANAGER-erp'],
+        });
+    });
+
+    it('does not widen a scoped viewer when counterparties are excluded', async () => {
+        visibleCustomerErpIds.mockResolvedValue(['c1', 'c2']);
+        findNamed.mockResolvedValue([{ erpId: 'c2', name: 'B' }]);
+
+        await service.query(
+            ctx,
+            input({ entityFilters: [{ kind: 'CUSTOMER', values: ['B'], exclude: true }] }),
+        );
+
+        expect(getSalesTurnover.mock.calls[0][0]).toMatchObject({
+            counterpartyIds: ['c1', 'c2'],
+            excludeCounterpartyIds: ['c2'],
+        });
+    });
+
+    it('offers only counterparty groups, and only while the switch is on', async () => {
+        const wanted = input({ groupFilters: [{ kind: 'CUSTOMER_GROUP', ids: ['1'] }] });
+        await expect(service.query(ctx, wanted)).rejects.toBeInstanceOf(UserInputError);
+
+        options.productCategoryAndCustomerGroupFilters = true;
+        erpIds.mockResolvedValue(['g-erp']);
+        try {
+            await service.query(ctx, wanted);
+            await expect(
+                service.query(
+                    ctx,
+                    input({ groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }] }),
+                ),
+            ).rejects.toBeInstanceOf(UserInputError);
+        } finally {
+            options.productCategoryAndCustomerGroupFilters = undefined;
+        }
+        expect(getSalesTurnover.mock.calls[0][0]).toMatchObject({
+            counterpartyGroupIds: ['g-erp'],
+        });
+    });
+
+    it('answers no rows for an unknown include group', async () => {
+        options.productCategoryAndCustomerGroupFilters = true;
+        erpIds.mockResolvedValue([]);
+        try {
+            const result = await service.query(
+                ctx,
+                input({ groupFilters: [{ kind: 'CUSTOMER_GROUP', ids: ['404'] }] }),
+            );
+            expect(result.rows).toEqual([]);
+        } finally {
+            options.productCategoryAndCustomerGroupFilters = undefined;
+        }
+        expect(getSalesTurnover).not.toHaveBeenCalled();
     });
 });

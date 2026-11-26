@@ -4,6 +4,8 @@ import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import { AnalyticsResolver } from './analytics.resolver';
 import { adminApiSchema } from './analytics.schema';
+import { OrderAnalyticsGroupsResolver } from './order-analytics/order-analytics-groups.resolver';
+import { OrderAnalyticsGroupsService } from './order-analytics/order-analytics-groups.service';
 import { OrderAnalyticsEntityNamesService } from './order-analytics/order-analytics-entity-names.service';
 import { SalesCurrencyResolverService } from './sales-analytics/sales-currency-resolver.service';
 import { OrderAnalyticsLabelsService } from './order-analytics/order-analytics-labels.service';
@@ -26,13 +28,19 @@ import type { AnalyticsPluginOptions } from './types';
         OrderAnalyticsLabelsService,
         SalesCurrencyResolverService,
         OrderAnalyticsEntityNamesService,
+        OrderAnalyticsGroupsService,
         OrderAnalyticsService,
         SalesMetricsClient,
         SalesAnalyticsService,
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AnalyticsResolver, OrderAnalyticsResolver, SalesAnalyticsResolver],
+        resolvers: [
+            AnalyticsResolver,
+            OrderAnalyticsResolver,
+            OrderAnalyticsGroupsResolver,
+            SalesAnalyticsResolver,
+        ],
     },
     compatibility: '>0.0.0',
 })

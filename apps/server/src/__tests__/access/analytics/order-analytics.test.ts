@@ -11,8 +11,14 @@ const SUGGEST = `query($kind: OrderAnalyticsFilterKind!, $prefix: String!) {
 }`;
 const LIST = `query { counterparties(options: { take: 100 }) { items { erpId } } }`;
 
+const GROUP_SUGGEST = `query($kind: OrderAnalyticsGroupKind!, $prefix: String!) {
+  orderAnalyticsGroupSuggest(kind: $kind, prefix: $prefix) { id name }
+}`;
+const CAPABILITIES = `query { analyticsFilterCapabilities { groupKinds } }`;
+
 interface Asked {
     customerIds: string[];
+    excludeCustomerIds: string[];
     productIds: string[];
     manufacturerIds: string[];
     mainManagerOnly: boolean;
@@ -153,6 +159,76 @@ describe('orderAnalyticsSuggest scope', () => {
         const result = await admin(await staffToken('operator-a'), SUGGEST, {
             kind: 'CUSTOMER',
             prefix: 'Access client',
+        });
+
+        expect(result.errors?.length ?? 0).toBeGreaterThan(0);
+    });
+});
+
+describe('exclusions and group filters scope', () => {
+    it('keeps a scoped viewer inside the visible customers and sends the excluded one aside', async () => {
+        const { request } = await asked('manager-a', {
+            entityFilters: [
+                {
+                    kind: 'CUSTOMER',
+                    values: [counterpartyName('a-own')],
+                    exact: true,
+                    exclude: true,
+                },
+            ],
+        });
+
+        expect([...request!.customerIds].sort()).toEqual(await visibleErpIds('manager-a'));
+        expect(request!.excludeCustomerIds).toEqual([counterpartyErpId('a-own')]);
+    });
+
+    it('never resolves an excluded name outside the viewer scope', async () => {
+        const { request } = await asked('manager-a', {
+            entityFilters: [
+                {
+                    kind: 'CUSTOMER',
+                    values: [counterpartyName('b-own')],
+                    exact: true,
+                    exclude: true,
+                },
+            ],
+        });
+
+        expect(request!.excludeCustomerIds).toEqual([]);
+    });
+
+    it('offers only manufacturer groups while the category and customer group switch is off', async () => {
+        const result = await admin<{ analyticsFilterCapabilities: { groupKinds: string[] } }>(
+            await staffToken('manager-a'),
+            CAPABILITIES,
+        );
+        expect(result.data!.analyticsFilterCapabilities.groupKinds).toEqual(['MANUFACTURER_GROUP']);
+    });
+
+    it.each(['analyticsFilterCapabilities', 'orderAnalyticsGroupSuggest'])(
+        'denies %s to a role without the analytics right',
+        async name => {
+            const result = await admin(
+                await staffToken('operator-a'),
+                name === 'analyticsFilterCapabilities' ? CAPABILITIES : GROUP_SUGGEST,
+                name === 'analyticsFilterCapabilities'
+                    ? {}
+                    : { kind: 'MANUFACTURER_GROUP', prefix: 'ab' },
+            );
+
+            expect(result.errors?.length ?? 0).toBeGreaterThan(0);
+        },
+    );
+
+    it('refuses a category group while the switch is off', async () => {
+        const result = await admin(await staffToken('manager-a'), QUERY, {
+            input: {
+                from: '2026-01-01T00:00:00Z',
+                to: '2026-02-01T00:00:00Z',
+                granularity: 'NONE',
+                dimension: 'CUSTOMER',
+                groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }],
+            },
         });
 
         expect(result.errors?.length ?? 0).toBeGreaterThan(0);

@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Logger, RequestContext, UserInputError } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
-import { loggerCtx } from '../types';
+import { ANALYTICS_PLUGIN_OPTIONS, loggerCtx } from '../types';
+import type { AnalyticsPluginOptions } from '../types';
 import { resolveEntityFilters } from './order-analytics-entity-filters';
 import type { EntityNameFilter } from './order-analytics-entity-filters';
+import { GROUP_KINDS, resolveGroupFilters } from './order-analytics-group-filters';
+import type { GroupFilter } from './order-analytics-group-filters';
 import { OrderAnalyticsEntityNamesService } from './order-analytics-entity-names.service';
+import { OrderAnalyticsGroupsService } from './order-analytics-groups.service';
 import { OrderAnalyticsLabelsService } from './order-analytics-labels.service';
 import { OrderAnalyticsScopeService } from './order-analytics-scope.service';
 import { SalesCurrencyResolverService } from '../sales-analytics/sales-currency-resolver.service';
@@ -25,6 +29,8 @@ export interface OrderAnalyticsInput extends Partial<OrderMetricsFilters> {
     mainManagerOnly?: boolean | null;
     // Names typed in the filter builder; resolved to ERP ids here, inside the viewer's scope.
     entityFilters?: EntityNameFilter[] | null;
+    // Groups picked in the filter builder (our own ids); the analytics service expands them.
+    groupFilters?: GroupFilter[] | null;
     // mivend ids of an embedding card; resolved to ERP ids here, inside the viewer's scope.
     counterpartyId?: string | null;
     administratorId?: string | null;
@@ -71,6 +77,8 @@ export class OrderAnalyticsService {
         private readonly labels: OrderAnalyticsLabelsService,
         private readonly entityNames: OrderAnalyticsEntityNamesService,
         private readonly currencies: SalesCurrencyResolverService,
+        private readonly groups: OrderAnalyticsGroupsService,
+        @Inject(ANALYTICS_PLUGIN_OPTIONS) private readonly options: AnalyticsPluginOptions,
     ) {}
 
     async query(ctx: RequestContext, input: OrderAnalyticsInput): Promise<OrderAnalyticsResult> {
@@ -88,9 +96,19 @@ export class OrderAnalyticsService {
                 this.entityNames,
                 input.entityFilters ?? [],
             );
-            if (named.unmatched) return { state: 'OK', rows: [], limitedToVisibleCustomers: true };
+            const grouped = await resolveGroupFilters(
+                ctx,
+                this.groups,
+                input.groupFilters ?? [],
+                this.options.productCategoryAndCustomerGroupFilters === true,
+                [...GROUP_KINDS],
+            );
+            if (named.unmatched || grouped.unmatched) {
+                return { state: 'OK', rows: [], limitedToVisibleCustomers: true };
+            }
+            const resolved = { ...named, ...grouped };
             for (const key of Object.keys(filters) as Array<keyof OrderMetricsFilters>) {
-                filters[key] = [...filters[key], ...named[key]];
+                filters[key] = [...filters[key], ...resolved[key]];
             }
             filters.customerIds = [...filters.customerIds, ...pinned.customerIds];
             filters.managerIds = [...filters.managerIds, ...pinned.managerIds];
@@ -193,6 +211,19 @@ export class OrderAnalyticsService {
             counterpartyManagerIds: input.counterpartyManagerIds ?? [],
             productIds: input.productIds ?? [],
             manufacturerIds: input.manufacturerIds ?? [],
+            excludeCustomerIds: input.excludeCustomerIds ?? [],
+            excludeOrganizationIds: input.excludeOrganizationIds ?? [],
+            excludePointOfSaleIds: input.excludePointOfSaleIds ?? [],
+            excludeManagerIds: input.excludeManagerIds ?? [],
+            excludeCounterpartyManagerIds: input.excludeCounterpartyManagerIds ?? [],
+            excludeProductIds: input.excludeProductIds ?? [],
+            excludeManufacturerIds: input.excludeManufacturerIds ?? [],
+            manufacturerGroupIds: [],
+            excludeManufacturerGroupIds: [],
+            productCategoryIds: [],
+            excludeProductCategoryIds: [],
+            customerGroupIds: [],
+            excludeCustomerGroupIds: [],
         };
         for (const [name, ids] of Object.entries(filters)) {
             if (ids.length > MAX_FILTER_VALUES) {

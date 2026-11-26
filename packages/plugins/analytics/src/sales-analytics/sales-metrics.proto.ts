@@ -1,4 +1,4 @@
-// The consumer's copy of analytics.v1 sales_metrics.proto (contract v0.5.0, go_package option dropped).
+// The consumer's copy of analytics.v1 sales_metrics.proto (contract v0.8.1, go_package option dropped).
 // Keep it identical to the contract; update it together with the version note in docs/analytics.md.
 export const SALES_METRICS_PROTO = `
 syntax = "proto3";
@@ -8,7 +8,6 @@ package analytics.v1;
 import "analytics/v1/order_metrics.proto";
 import "google/protobuf/timestamp.proto";
 
-
 service SalesMetricsService {
   // Real sales: realization documents (goods and services sales), customer
   // returns and sales corrections as posted in the accounting system, not order
@@ -17,7 +16,8 @@ service SalesMetricsService {
   //
   // Errors: UNAUTHENTICATED, INVALID_ARGUMENT (bad request), PERMISSION_DENIED
   // (an organization outside the caller's scope), RESOURCE_EXHAUSTED (more than
-  // 5000 result rows or a query too heavy: narrow the period or the filters),
+  // 5000 result rows or a query too heavy: narrow the period or the filters; also
+  // a counterparty group list that expands to more than 20000 members),
   // DEADLINE_EXCEEDED, CANCELLED, INTERNAL.
   rpc GetSalesTurnover(GetSalesTurnoverRequest) returns (GetSalesTurnoverResponse);
 }
@@ -54,6 +54,35 @@ message GetSalesTurnoverRequest {
   repeated string counterparty_manager_ids = 9;
   // Same meaning as in GetOrderTurnoverRequest.
   bool main_manager_only = 10;
+  // Exclude lists (at most 1000 values each, more is INVALID_ARGUMENT, empty
+  // means no exclusion; combined with the include list of the same field by
+  // AND). A document, return or correction entry whose counterparty,
+  // organization or contract is listed is left out. exclude_counterparty_manager_ids
+  // follows GetOrderTurnoverRequest: without SALES_DIMENSION_COUNTERPARTY_MANAGER
+  // a document is dropped when any of its counterparty's managers is listed
+  // (main_manager_only applies); with it only the listed managers' rows are
+  // dropped. Documents of counterparties without a known manager are never
+  // dropped. Sales documents have no product lines, so product, manufacturer
+  // and product category filters are not offered here.
+  repeated string exclude_counterparty_ids = 11;
+  repeated string exclude_organization_ids = 12;
+  repeated string exclude_contract_ids = 13;
+  repeated string exclude_counterparty_manager_ids = 14;
+
+  // Counterparty groups expanded at query time (the group hierarchy of the
+  // source, parent links up to 32 levels, deleted groups are neither members nor
+  // traversed): a group id selects the documents of the counterparties whose
+  // group is that group or any group below it. A counterparty has the group the
+  // source reported with its latest version; one not re-sent since the group link
+  // appeared has no group yet. An unknown or deleted group id matches nothing:
+  // when counterparty_group_ids is set and none of its values is a live group
+  // the result has no rows. Combined with counterparty_ids and the other include
+  // filters by AND; at most 1000 values.
+  repeated string counterparty_group_ids = 15;
+  // Documents of counterparties in these groups are left out. An unknown or
+  // deleted group excludes nothing, and a counterparty without a known group is
+  // never excluded by it. At most 1000 values.
+  repeated string exclude_counterparty_group_ids = 16;
 }
 
 // One measure of a bucket. Document totals are summed as the source reports
@@ -107,11 +136,12 @@ message GetSalesTurnoverResponse {
   // NOT applied) for which the register effect has not arrived yet, so they are
   // missing from corrections and the net figures.
   int64 corrections_without_effect = 2;
-  // Currency values of the rows that could not be turned into a catalog code
-  // (an id the currency catalog does not know). The same currency can then
-  // appear under an id and under a code in separate rows, and net_sales of such
-  // a row mixes only the documents that carry the same value. An empty
-  // currency (the source gave none) is not listed.
+  // Currency values of the rows that the currency catalog cannot confirm: a
+  // value that is neither a catalog currency id (mapped to its code) nor a code
+  // present in the catalog. The same currency can then appear under an id and
+  // under a code in separate rows, and net_sales of such a row mixes only the
+  // documents that carry the same value. An empty currency (the source gave
+  // none) is not listed.
   repeated string unresolved_currencies = 3;
 }
 `;

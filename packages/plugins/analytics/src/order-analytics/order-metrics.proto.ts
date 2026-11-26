@@ -1,4 +1,4 @@
-// The consumer's copy of analytics.v1 order_metrics.proto (contract v0.3.2, go_package option dropped).
+// The consumer's copy of analytics.v1 order_metrics.proto (contract v0.8.1, go_package option dropped).
 // Keep it identical to the contract; update it together with the version note in docs/analytics.md.
 export const ORDER_METRICS_PROTO = `
 syntax = "proto3";
@@ -7,17 +7,22 @@ package analytics.v1;
 
 import "google/protobuf/timestamp.proto";
 
-
 service OrderMetricsService {
   // Order turnover: the sum of order amounts as reported by the source system.
   // It is not sales (realization) turnover. Deleted and cancelled orders are
-  // not counted; orders without an order date are not returned.
+  // not counted, and neither are orders whose latest version says they are
+  // not posted (is_posted = false). An order whose latest version carries no
+  // posting flag (not yet republished by the source) is still counted, and
+  // orders the source cannot publish without a customer are not delivered at
+  // all. Orders without an order date are not returned.
   //
   // Errors: UNAUTHENTICATED (missing or invalid credentials), INVALID_ARGUMENT
   // (bad request), PERMISSION_DENIED (an organization outside the caller's
   // scope), RESOURCE_EXHAUSTED (more than 5000 result rows, or a query too
-  // heavy for the server: narrow the period or the filters), DEADLINE_EXCEEDED,
-  // CANCELLED (the caller gave up), INTERNAL (a server fault, retry later).
+  // heavy for the server: narrow the period or the filters; also a manufacturer,
+  // product category or customer group list that expands to more than 20000
+  // members: use narrower groups), DEADLINE_EXCEEDED, CANCELLED (the caller gave
+  // up), INTERNAL (a server fault, retry later).
   rpc GetOrderTurnover(GetOrderTurnoverRequest) returns (GetOrderTurnoverResponse);
 }
 
@@ -84,10 +89,86 @@ message GetOrderTurnoverRequest {
   repeated string product_ids = 12;
   // Manufacturer ids as linked to the products by the source system. Only the
   // product's direct manufacturer matches: manufacturer groups (parents) are
-  // not expanded, so a group id matches nothing. A product deleted at the source
-  // is not matched by manufacturer (its newest link version carries none), while
-  // product_ids still matches it.
+  // not expanded, so a group id matches nothing (use manufacturer_group_ids for
+  // that). A product deleted at the source is not matched by manufacturer (its
+  // newest link version carries none), while product_ids still matches it.
   repeated string manufacturer_ids = 13;
+
+  // Exclude lists: an order or line that matches any value of an exclude list
+  // is left out. Each list holds at most 1000 values (more is INVALID_ARGUMENT),
+  // empty means no exclusion, and an exclude list is combined with the include
+  // list of the same field by AND (include first, then exclude). The exclusion
+  // follows the semantics of the matching include filter:
+  // - customer, organization, point of sale and manager lists drop whole
+  //   orders; they do not widen the caller's organization scope.
+  // - counterparty managers (with the same main_manager_only rule): without
+  //   DIMENSION_COUNTERPARTY_MANAGER an order is dropped when ANY of its
+  //   counterparty's managers is listed; with that dimension only the rows of
+  //   the listed managers are dropped (the other managers of the same order keep
+  //   their rows). Orders without a known manager are never dropped.
+  // - product, manufacturer and manufacturer group lists act on lines and, like
+  //   the product include filters, switch the result to line mode: product_*
+  //   fields are filled with the lines that are NOT excluded, order_count counts
+  //   the orders that keep at least one line, and turnover, turnover_excluding_vat
+  //   and vat_total are left empty. A product without a known manufacturer is
+  //   never excluded by a manufacturer list or group: this includes a product
+  //   deleted at the source whose newest link version carries no manufacturer
+  //   (the include filters do not find it, the exclude filters leave its lines in
+  //   the sums); only exclude_product_ids drops it.
+  repeated string exclude_customer_ids = 14;
+  repeated string exclude_organization_ids = 15;
+  repeated string exclude_point_of_sale_ids = 16;
+  repeated string exclude_manager_ids = 17;
+  repeated string exclude_counterparty_manager_ids = 18;
+  repeated string exclude_product_ids = 19;
+  repeated string exclude_manufacturer_ids = 20;
+
+  // Manufacturer groups expanded at query time: a group id matches the products
+  // of its own manufacturer and of every manufacturer below it in the
+  // manufacturer hierarchy (parent links, any depth up to 32 levels). Deleted
+  // manufacturers are not members and are not traversed. An unknown or deleted
+  // group id matches nothing: when manufacturer_group_ids is set and none of
+  // its values is a live group the result has no rows, never the unfiltered
+  // answer. Combined with manufacturer_ids and the other include filters by AND;
+  // at most 1000 values; switches the result to line mode like the other
+  // product filters.
+  repeated string manufacturer_group_ids = 21;
+  // Products of these groups (expanded as in manufacturer_group_ids) are left
+  // out. An unknown or deleted group id excludes nothing. At most 1000 values.
+  repeated string exclude_manufacturer_group_ids = 22;
+
+  // Product categories expanded at query time exactly like manufacturer groups:
+  // a category id matches the products whose category is that category or any
+  // category below it in the category hierarchy (parent links, up to 32
+  // levels). Deleted categories are neither members nor traversed. An unknown or
+  // deleted category id matches nothing: when product_category_ids is set and
+  // none of its values is a live category the result has no rows, never the
+  // unfiltered answer. Combined with the other include filters by AND; at most
+  // 1000 values; switches the result to line mode like the other product
+  // filters. A product deleted at the source is not matched (its newest link
+  // version carries no category).
+  repeated string product_category_ids = 23;
+  // Products of these categories (expanded as in product_category_ids) are left
+  // out; line mode. An unknown or deleted category excludes nothing, and a
+  // product without a known category is never excluded by it. At most 1000
+  // values.
+  repeated string exclude_product_category_ids = 24;
+
+  // Customer (counterparty) groups expanded at query time: a group id matches
+  // the customers whose group is that group or any group below it in the
+  // counterparty group hierarchy (parent links, up to 32 levels). Deleted groups
+  // are neither members nor traversed. The group of a customer is the one the
+  // source reported with its latest version; a customer the source has not
+  // re-sent since the group link appeared has no group yet. An unknown or deleted
+  // group id matches nothing: when customer_group_ids is set and none of its
+  // values is a live group the result has no rows. Whole orders are selected (not
+  // lines), combined with the other include filters by AND; at most 1000 values.
+  // Orders without a customer belong to no group.
+  repeated string customer_group_ids = 25;
+  // Orders of customers in these groups (expanded as above) are left out. An
+  // unknown or deleted group excludes nothing, and a customer without a known
+  // group is never excluded by it. At most 1000 values.
+  repeated string exclude_customer_group_ids = 26;
 }
 
 message OrderTurnoverRow {
