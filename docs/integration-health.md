@@ -153,7 +153,7 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   `failed-inbox-rows` issue in the reconciliation list (nightly run, #305); it clears when no failed row remains.
 - Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
   number in the Inbound table, which opens the list pre-filtered by stream): stream, entity id with
-  a copy button, attempts, first failure, last error, plus search and sorting. Payloads are never
+  a copy button, attempts, first failure, last error, plus search by entity id and sorting. Payloads are never
   shown. SQL fallback: `SELECT stream, entity_id, attempts, first_failed_at, last_error FROM
   integration_inbox_event WHERE status = 'failed' ORDER BY updated_at DESC`, or the admin GraphQL
   query `failedIntegrationInboxEvents` (needs `ManageAccessControl`).

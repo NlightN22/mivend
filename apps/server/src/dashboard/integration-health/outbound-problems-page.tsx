@@ -56,9 +56,7 @@ export function OutboundProblemsPage({ route }: Readonly<{ route: AnyRoute }>) {
             title="Integration outbound problems"
             listQuery={outboundProblemsDocument}
             route={route}
-            onSearchTermChange={term =>
-                term ? { eventId: { contains: term }, lastError: { contains: term } } : {}
-            }
+            onSearchTermChange={term => (term ? { eventId: { contains: term } } : {})}
             transformVariables={variables => ({
                 options: { ...variables.options, filterOperator: 'OR' },
             })}
@@ -105,6 +103,7 @@ export function OutboundProblemsPage({ route }: Readonly<{ route: AnyRoute }>) {
                         ) : null,
                 },
                 lastError: {
+                    enableColumnFilter: false,
                     cell: ({ row }) => (
                         <span className="block max-w-96 whitespace-normal break-words text-destructive">
                             {row.original.lastError ?? ''}

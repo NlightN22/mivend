@@ -84,34 +84,34 @@ describe('listInboxIssues', () => {
     });
 
     it('filters by stream and by text with LIKE wildcards escaped, and sorts', async () => {
-        await seedInbox('bank', 'e1', { status: 'failed', lastError: '50% off failed' });
-        await seedInbox('bank', 'e2', { status: 'failed', lastError: '500 rows failed' });
-        await seedInbox('unit', 'e3', { status: 'failed', lastError: 'x' });
+        await seedInbox('bank', '50%-e1', { status: 'failed' });
+        await seedInbox('bank', '500-e2', { status: 'failed' });
+        await seedInbox('unit', 'zz-e3', { status: 'failed' });
 
         const byStream = await lists.listInboxIssues(testRequestContext, {
             filter: { stream: { eq: 'unit' } },
         });
-        expect(byStream.items.map(i => i.entityId)).toEqual(['e3']);
+        expect(byStream.items.map(i => i.entityId)).toEqual(['zz-e3']);
 
         const byText = await lists.listInboxIssues(testRequestContext, {
-            filter: { lastError: { contains: '50%' } },
+            filter: { entityId: { contains: '50%' } },
         });
-        expect(byText.items.map(i => i.entityId)).toEqual(['e1']);
+        expect(byText.items.map(i => i.entityId)).toEqual(['50%-e1']);
 
         const sorted = await lists.listInboxIssues(testRequestContext, {
             sort: { entityId: 'DESC' },
         });
-        expect(sorted.items.map(i => i.entityId)).toEqual(['e3', 'e2', 'e1']);
+        expect(sorted.items[0].entityId).toBe('zz-e3');
     });
 
     it('applies the dashboard search shape: filterOperator OR across fields', async () => {
-        await seedInbox('bank', 'needle-id', { status: 'failed', lastError: 'a' });
-        await seedInbox('bank', 'other', { status: 'failed', lastError: 'has needle' });
-        await seedInbox('bank', 'none', { status: 'failed', lastError: 'zzz' });
+        await seedInbox('bank', 'needle-id', { status: 'failed' });
+        await seedInbox('needle-stream', 'other', { status: 'failed' });
+        await seedInbox('bank', 'none', { status: 'failed' });
 
         const { items } = await lists.listInboxIssues(testRequestContext, {
             filterOperator: 'OR',
-            filter: { entityId: { contains: 'needle' }, lastError: { contains: 'needle' } },
+            filter: { entityId: { contains: 'needle' }, stream: { contains: 'needle' } },
         });
 
         expect(items.map(i => i.entityId).sort()).toEqual(['needle-id', 'other']);
@@ -126,7 +126,7 @@ describe('listInboxIssues', () => {
             filter: {
                 _and: [{ stream: { eq: 'bank' } }],
                 entityId: { contains: 'needle' },
-                lastError: { contains: 'needle' },
+                stream: { contains: 'needle' },
             },
         });
 

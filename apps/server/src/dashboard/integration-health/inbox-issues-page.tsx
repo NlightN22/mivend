@@ -76,9 +76,7 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
             title="Integration inbox issues"
             listQuery={inboxIssuesDocument}
             route={route}
-            onSearchTermChange={term =>
-                term ? { entityId: { contains: term }, lastError: { contains: term } } : {}
-            }
+            onSearchTermChange={term => (term ? { entityId: { contains: term } } : {})}
             transformVariables={variables => ({
                 options: { ...variables.options, filterOperator: 'OR' },
             })}
@@ -123,6 +121,7 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
                         </Badge>
                     ),
                 },
+                outcomeReason: { enableColumnFilter: false },
                 entityId: {
                     cell: ({ row }) => (
                         <span className="flex items-center gap-1 font-mono text-xs">
@@ -132,6 +131,7 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
                     ),
                 },
                 lastError: {
+                    enableColumnFilter: false,
                     cell: ({ row }) => (
                         <span className="block max-w-96 whitespace-normal break-words text-destructive">
                             {row.original.lastError ?? ''}
