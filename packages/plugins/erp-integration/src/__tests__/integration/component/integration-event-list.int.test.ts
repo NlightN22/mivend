@@ -105,16 +105,16 @@ describe('listInboxIssues', () => {
     });
 
     it('applies the dashboard search shape: filterOperator OR across fields', async () => {
-        await seedInbox('bank', 'needle-id', { status: 'failed' });
-        await seedInbox('needle-stream', 'other', { status: 'failed' });
+        await seedInbox('bank', 'ware-id', { status: 'failed' });
+        await seedInbox('warehouse', 'other', { status: 'failed' });
         await seedInbox('bank', 'none', { status: 'failed' });
 
         const { items } = await lists.listInboxIssues(testRequestContext, {
             filterOperator: 'OR',
-            filter: { entityId: { contains: 'needle' }, stream: { contains: 'needle' } },
+            filter: { entityId: { contains: 'ware' }, stream: { contains: 'ware' } },
         });
 
-        expect(items.map(i => i.entityId).sort()).toEqual(['needle-id', 'other']);
+        expect(items.map(i => i.entityId).sort()).toEqual(['other', 'ware-id']);
     });
 
     it('keeps dashboard column filters (_and) ANDed when a search term arrives with filterOperator OR', async () => {
