@@ -10,7 +10,9 @@ function setup(
     variant: Record<string, unknown> | undefined,
     unit: { ratioToBase: number | null } | null = null,
 ) {
-    const query = vi.fn(async () => (variant ? [variant] : []));
+    const query = vi.fn(async (_sql: string, params: string[][]) =>
+        variant ? params[0].map(externalId => ({ ...variant, externalId })) : [],
+    );
     const findByEntityId = vi.fn().mockResolvedValue(unit);
     const resolver = new OrderLineResolver(
         { getRepository: () => ({ query }) } as never,

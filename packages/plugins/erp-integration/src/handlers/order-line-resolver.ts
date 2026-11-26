@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQuery } from 'shared';
+import { ctxQueryBounded } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
 import type { ResolvedOrderLine } from './external-order-input';
 
 const loggerCtx = 'IntegrationOrderLineResolver';
+const VARIANT_CHUNK = 500;
 
 export interface ResolvedOrderLines {
     lines: ResolvedOrderLine[];
@@ -31,6 +32,8 @@ export class OrderLineResolver {
         tolerateUnknown: boolean,
     ): Promise<ResolvedOrderLines> {
         const result: ResolvedOrderLines = { lines: [], withoutProductId: 0, unknownProducts: 0 };
+        const variants = await this.findVariants(ctx, rawLines);
+        const unitRatios = new Map<string, number>();
         for (const rawLine of Array.isArray(rawLines) ? rawLines : []) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
@@ -42,7 +45,7 @@ export class OrderLineResolver {
                 result.withoutProductId += 1;
                 continue;
             }
-            const variant = await this.findVariant(ctx, productId);
+            const variant = variants.get(productId) ?? null;
             if (!variant && tolerateUnknown) {
                 result.unknownProducts += 1;
                 continue;
@@ -53,9 +56,15 @@ export class OrderLineResolver {
                 );
             }
             const unitId = line.unitId != null ? String(line.unitId) : null;
-            const ratio = unitId
-                ? await this.unitRatioToBase(ctx, `${source} ${entityId}`, unitId, variant)
-                : 1;
+            let ratio = 1;
+            if (unitId) {
+                const key = `${unitId}|${variant.id}`;
+                const cached = unitRatios.get(key);
+                ratio =
+                    cached ??
+                    (await this.unitRatioToBase(ctx, `${source} ${entityId}`, unitId, variant));
+                unitRatios.set(key, ratio);
+            }
             result.lines.push({ productVariantId: variant.id, ratioToBase: ratio, raw: line });
         }
         return result;
@@ -79,31 +88,54 @@ export class OrderLineResolver {
         return unit.ratioToBase;
     }
 
-    private async findVariant(
+    // One query per chunk of distinct product ids instead of one per line; the first variant wins.
+    private async findVariants(
         ctx: RequestContext,
-        productId: string,
-    ): Promise<{
-        id: string;
-        defaultSalesUnitId: string | null;
-        unitRatioToBase: number | null;
-    } | null> {
-        const [row] = await ctxQuery<
-            Array<{ id: string; defaultSalesUnitId: string | null; unitRatioToBase: number | null }>
-        >(
-            this.connection,
-            ctx,
-            `SELECT pv.id, pv."customFieldsDefaultsalesunitid" AS "defaultSalesUnitId",
-                    pv."customFieldsUnitratiotobase" AS "unitRatioToBase"
-               FROM product_variant pv INNER JOIN product p ON p.id = pv."productId"
-              WHERE p."customFieldsExternalid" = $1`,
-            [productId],
-        );
-        return row
-            ? {
-                  id: String(row.id),
-                  defaultSalesUnitId: row.defaultSalesUnitId ?? null,
-                  unitRatioToBase: row.unitRatioToBase ?? null,
-              }
-            : null;
+        rawLines: unknown,
+    ): Promise<
+        Map<
+            string,
+            { id: string; defaultSalesUnitId: string | null; unitRatioToBase: number | null }
+        >
+    > {
+        const ids = [
+            ...new Set(
+                (Array.isArray(rawLines) ? rawLines : [])
+                    .map(l => (l as Record<string, unknown>).productId)
+                    .filter(id => id != null && id !== '')
+                    .map(String),
+            ),
+        ];
+        const found = new Map<
+            string,
+            { id: string; defaultSalesUnitId: string | null; unitRatioToBase: number | null }
+        >();
+        for (let i = 0; i < ids.length; i += VARIANT_CHUNK) {
+            const rows = await ctxQueryBounded<{
+                id: string;
+                externalId: string;
+                defaultSalesUnitId: string | null;
+                unitRatioToBase: number | null;
+            }>(
+                this.connection,
+                ctx,
+                `SELECT pv.id, p."customFieldsExternalid" AS "externalId",
+                        pv."customFieldsDefaultsalesunitid" AS "defaultSalesUnitId",
+                        pv."customFieldsUnitratiotobase" AS "unitRatioToBase"
+                   FROM product_variant pv INNER JOIN product p ON p.id = pv."productId"
+                  WHERE p."customFieldsExternalid" = ANY($1::varchar[]) ORDER BY pv.id`,
+                [ids.slice(i, i + VARIANT_CHUNK)],
+                VARIANT_CHUNK * 10,
+            );
+            for (const row of rows) {
+                if (found.has(row.externalId)) continue;
+                found.set(row.externalId, {
+                    id: String(row.id),
+                    defaultSalesUnitId: row.defaultSalesUnitId ?? null,
+                    unitRatioToBase: row.unitRatioToBase ?? null,
+                });
+            }
+        }
+        return found;
     }
 }
