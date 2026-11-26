@@ -22,4 +22,8 @@ export class Manufacturer extends VendureEntity {
     // Cleared by an ERP deletion/deactivation; the row and name stay so products remain labelled.
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
+
+    // ERP id of the parent group; a soft link, set only from the manufacturer stream.
+    @Column({ type: 'varchar', nullable: true })
+    parentExternalId!: string | null;
 }

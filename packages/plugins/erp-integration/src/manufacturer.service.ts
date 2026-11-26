@@ -24,16 +24,35 @@ export class ManufacturerService {
         externalId: string,
         name: string | undefined,
         isActive: boolean,
+        parentExternalId?: string | null,
     ): Promise<Manufacturer | null> {
         const repo = this.connection.getRepository(ctx, Manufacturer);
         const existing = await repo.findOne({ where: { externalId } });
         if (!existing && !name) return null;
         let saved: Manufacturer;
+        const parentChanged =
+            parentExternalId !== undefined &&
+            (existing?.parentExternalId ?? null) !== parentExternalId;
         if (!existing) {
-            saved = await repo.save(repo.create({ externalId, name: name ?? null, isActive }));
-        } else if (existing.isActive !== isActive || (name && existing.name !== name)) {
             saved = await repo.save(
-                Object.assign(existing, { isActive, ...(name ? { name } : {}) }),
+                repo.create({
+                    externalId,
+                    name: name ?? null,
+                    isActive,
+                    parentExternalId: parentExternalId ?? null,
+                }),
+            );
+        } else if (
+            existing.isActive !== isActive ||
+            (name && existing.name !== name) ||
+            parentChanged
+        ) {
+            saved = await repo.save(
+                Object.assign(existing, {
+                    isActive,
+                    ...(name ? { name } : {}),
+                    ...(parentChanged ? { parentExternalId } : {}),
+                }),
             );
         } else {
             saved = existing;

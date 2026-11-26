@@ -18,11 +18,21 @@ export class ManufacturerStreamHandler implements InboundStreamHandler {
     ): Promise<InboundOutcome> {
         const name = typeof payload.name === 'string' ? payload.name.trim() : '';
         const isActive = payload.isActive === true && payload.isDeleted !== true;
+        const deleted = payload.isDeleted === true;
+        // A tombstone carries no hierarchy; it must not clear the parent link.
+        const parent = deleted
+            ? undefined
+            : typeof payload.parentId === 'string' &&
+                payload.parentId &&
+                payload.parentId !== entityId
+              ? payload.parentId
+              : null;
         const saved = await this.manufacturerService.upsert(
             ctx,
             entityId,
             name || undefined,
             isActive,
+            parent,
         );
         return saved
             ? inboundApplied()

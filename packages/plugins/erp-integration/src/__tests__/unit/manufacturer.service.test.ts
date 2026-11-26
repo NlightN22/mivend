@@ -76,6 +76,30 @@ describe('ManufacturerService.upsert activity', () => {
     });
 });
 
+describe('ManufacturerService.upsert parent group', () => {
+    it('stores the parent on create and on a change, keeps it when the event says nothing', async () => {
+        const created = setup(null);
+        await created.service.upsert(ctx, 'mfr-1', 'Brand A', true, 'grp-1');
+        expect(created.repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ parentExternalId: 'grp-1' }),
+        );
+        const stored = {
+            externalId: 'mfr-1',
+            name: 'Brand A',
+            isActive: true,
+            parentExternalId: 'grp-1',
+        };
+        const moved = setup(stored);
+        await moved.service.upsert(ctx, 'mfr-1', 'Brand A', true, 'grp-2');
+        expect(moved.repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ parentExternalId: 'grp-2' }),
+        );
+        const kept = setup({ ...stored });
+        await kept.service.upsert(ctx, 'mfr-1', 'Brand A', true, undefined);
+        expect(kept.repo.save).not.toHaveBeenCalled();
+    });
+});
+
 describe('ManufacturerService.ensureReference', () => {
     it('creates a nameless manufacturer without touching the facet', async () => {
         const { service, facet, repo } = setup(null);
