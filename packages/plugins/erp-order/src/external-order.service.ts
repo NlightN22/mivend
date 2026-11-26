@@ -9,11 +9,16 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import { ctxQueryBounded, findBounded, withAggregateLock } from 'shared';
+import { ctxQueryBounded, keysetBatches, KEYSET_BATCH_SIZE, withAggregateLock } from 'shared';
+import { MoreThan } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { nextExternalErpStatus } from './external-order-state';
-import { buildExternalOrderLines, externalLinesSignature } from './external-order-lines';
+import {
+    batchedLinesSignature,
+    buildExternalOrderLines,
+    externalLinesSignature,
+} from './external-order-lines';
 import type { VariantTaxRef } from './external-order-lines';
 import type {
     ExternalOrderInput,
@@ -290,7 +295,10 @@ export class ExternalOrderService {
             variants,
             input.amountIncludesVat,
         );
-        if (lines.length > 0) await this.connection.getRepository(ctx, OrderLine).save(lines);
+        const repo = this.connection.getRepository(ctx, OrderLine);
+        for (let i = 0; i < lines.length; i += KEYSET_BATCH_SIZE) {
+            await repo.save(lines.slice(i, i + KEYSET_BATCH_SIZE));
+        }
     }
 
     private async replaceLinesIfChanged(
@@ -300,20 +308,23 @@ export class ExternalOrderService {
         variants: Map<string, VariantTaxRef>,
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, OrderLine);
-        const current = await findBounded(repo, {
-            where: { order: { id: orderId } },
-            order: { id: 'ASC' },
-        });
         const wanted = input.lines.filter(l => variants.has(l.productVariantId));
-        const currentSignature = externalLinesSignature(
-            current.map(l => ({
-                productVariantId: String(l.productVariantId),
-                quantity: l.quantity,
-                unitPriceMinor: l.listPrice,
-            })),
+        const { signature, ids } = await batchedLinesSignature(
+            keysetBatches((afterId, take) =>
+                repo.find({
+                    where: {
+                        order: { id: orderId },
+                        ...(afterId === null ? {} : { id: MoreThan(afterId) }),
+                    },
+                    order: { id: 'ASC' },
+                    take,
+                }),
+            ),
         );
-        if (currentSignature === externalLinesSignature(wanted)) return;
-        if (current.length > 0) await repo.delete(current.map(l => String(l.id)));
+        if (signature === externalLinesSignature(wanted)) return;
+        for (let i = 0; i < ids.length; i += KEYSET_BATCH_SIZE) {
+            await repo.delete(ids.slice(i, i + KEYSET_BATCH_SIZE));
+        }
         await this.insertLines(ctx, { id: orderId }, input, variants);
     }
 }

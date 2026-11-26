@@ -14,6 +14,35 @@ export function externalLinesSignature(
     return lines.map(l => `${l.productVariantId}:${l.quantity}:${l.unitPriceMinor}`).join('|');
 }
 
+export async function batchedLinesSignature(
+    batches: AsyncIterable<
+        Array<{
+            id: number | string;
+            productVariantId: number | string;
+            quantity: number;
+            listPrice: number;
+        }>
+    >,
+): Promise<{ signature: string; ids: string[] }> {
+    const parts: string[] = [];
+    const ids: string[] = [];
+    for await (const batch of batches) {
+        for (const l of batch) {
+            ids.push(String(l.id));
+            parts.push(
+                externalLinesSignature([
+                    {
+                        productVariantId: String(l.productVariantId),
+                        quantity: l.quantity,
+                        unitPriceMinor: l.listPrice,
+                    },
+                ]),
+            );
+        }
+    }
+    return { signature: parts.join('|'), ids };
+}
+
 export function buildExternalOrderLines(
     order: Pick<Order, 'id'>,
     lines: ExternalOrderLineInput[],

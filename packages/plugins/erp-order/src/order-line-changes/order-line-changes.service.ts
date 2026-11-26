@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ctxQueryBounded, findBounded } from 'shared';
-import { In } from 'typeorm';
+import { ctxQuery, findBounded, readAllByKeyset } from 'shared';
+import { In, MoreThan, type Repository } from 'typeorm';
 
 import { SalesCorrectionErp } from '../erp-documents/sales-correction-erp.entity';
 import {
@@ -37,19 +37,21 @@ export class OrderLineChangesService {
     }
 
     private async orderLines(ctx: RequestContext, orderId: unknown): Promise<OrderLineRef[]> {
-        const rows = await ctxQueryBounded<{
+        const rows = await readAllByKeyset<{
             id: number;
             quantity: number;
             productErpId: string | null;
-        }>(
-            this.connection,
-            ctx,
-            `SELECT ol.id, ol.quantity, p."customFieldsExternalid" AS "productErpId"
-             FROM order_line ol
-             JOIN product_variant v ON v.id = ol."productVariantId"
-             JOIN product p ON p.id = v."productId"
-             WHERE ol."orderId" = $1 ORDER BY ol.id`,
-            [orderId],
+        }>((afterId, limit) =>
+            ctxQuery<Array<{ id: number; quantity: number; productErpId: string | null }>>(
+                this.connection,
+                ctx,
+                `SELECT ol.id, ol.quantity, p."customFieldsExternalid" AS "productErpId"
+                 FROM order_line ol
+                 JOIN product_variant v ON v.id = ol."productVariantId"
+                 JOIN product p ON p.id = v."productId"
+                 WHERE ol."orderId" = $1 AND ol.id > $2 ORDER BY ol.id LIMIT $3`,
+                [orderId, afterId ?? 0, limit],
+            ),
         );
         return rows.map(r => ({
             id: Number(r.id),
@@ -95,8 +97,18 @@ export class OrderLineChangesService {
         entity: new () => T,
         documentIds: number[],
     ): Promise<T[]> {
-        return findBounded(this.connection.getRepository(ctx, entity), {
-            where: { documentId: In(documentIds) } as never,
-        });
+        const repo = this.connection.getRepository(ctx, entity as never) as Repository<
+            T & { id: number }
+        >;
+        return readAllByKeyset<T & { id: number }>((afterId, take) =>
+            repo.find({
+                where: {
+                    documentId: In(documentIds),
+                    ...(afterId === null ? {} : { id: MoreThan(afterId) }),
+                } as never,
+                order: { id: 'ASC' } as never,
+                take,
+            }),
+        );
     }
 }

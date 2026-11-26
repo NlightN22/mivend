@@ -576,4 +576,32 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             expect(await visibleTo(String(a.id))).toEqual([]);
         });
     });
+    describe('an order with 1897 lines (#408)', () => {
+        const bigLines = (price: number): unknown[] =>
+            Array.from({ length: 1897 }, (_, n) => ({
+                productId: 'prod-1',
+                quantity: n + 1,
+                price,
+                amount: price * (n + 1),
+            }));
+        const lineIds = async (): Promise<number[]> =>
+            (await dataSource.getRepository(TestOrderLine).find({ order: { id: 'ASC' } })).map(
+                l => l.id,
+            );
+
+        it('creates, skips an unchanged update and replaces on a changed one', async () => {
+            await addCounterparty('cp-1');
+            await handler.apply(ctx, ERP_ORDER, payload({ lines: bigLines(10) }));
+            const created = await lineIds();
+            expect(created).toHaveLength(1897);
+
+            await handler.apply(ctx, ERP_ORDER, payload({ lines: bigLines(10) }));
+            expect(await lineIds()).toEqual(created);
+
+            await handler.apply(ctx, ERP_ORDER, payload({ lines: bigLines(11) }));
+            const replaced = await dataSource.getRepository(TestOrderLine).find();
+            expect(replaced).toHaveLength(1897);
+            expect(replaced.every(l => l.listPrice === 1100 && !created.includes(l.id))).toBe(true);
+        });
+    });
 });

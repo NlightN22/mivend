@@ -1,5 +1,6 @@
 import { describe, expect, it, Mock, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
+import { batchedLinesSignature, externalLinesSignature } from '../../external-order-lines';
 import { ExternalOrderService } from '../../external-order.service';
 import type { ExternalOrderInput } from '../../external-order.types';
 
@@ -53,5 +54,30 @@ describe('ExternalOrderService replaceLinesIfChanged', () => {
         await replace(service);
         expect(del).toHaveBeenCalledWith(['9']);
         expect(insertLines).toHaveBeenCalledOnce();
+    });
+});
+
+describe('batchedLinesSignature', () => {
+    it('matches the single-pass signature when lines span several batches', async () => {
+        const rows = Array.from({ length: 2500 }, (_, n) => ({
+            id: n + 1,
+            productVariantId: n % 7,
+            quantity: n + 1,
+            listPrice: 100,
+        }));
+        const batches = (async function* () {
+            for (let i = 0; i < rows.length; i += 1000) yield rows.slice(i, i + 1000);
+        })();
+        const { signature, ids } = await batchedLinesSignature(batches);
+        expect(signature).toBe(
+            externalLinesSignature(
+                rows.map(r => ({
+                    productVariantId: String(r.productVariantId),
+                    quantity: r.quantity,
+                    unitPriceMinor: r.listPrice,
+                })),
+            ),
+        );
+        expect(ids).toHaveLength(2500);
     });
 });
