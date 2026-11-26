@@ -5967,6 +5967,7 @@ export type MyProformaInvoicesQuery = {
             issuedAt: any;
             dueDate: any;
             supersededBy?: { id: string; number: string; version: number } | null;
+            document?: { status: string; pdfUrl?: string | null } | null;
             order?: { id: string; code: string } | null;
         }>;
     };
@@ -7727,6 +7728,10 @@ export const MyProformaInvoicesDocument = new TypedDocumentString(`
       contractName
       issuedAt
       dueDate
+      document {
+        status
+        pdfUrl
+      }
       order {
         id
         code

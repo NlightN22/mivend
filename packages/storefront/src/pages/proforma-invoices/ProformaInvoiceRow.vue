@@ -8,6 +8,7 @@ import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
 import ProformaInvoiceKindBadge from './ProformaInvoiceKindBadge.vue';
 import { isContractKind } from './proformaKind';
 import { formatDate } from './formatDate';
+import { proformaPdfUrl, openPdf } from './proformaPdfUrl';
 import { usePaymentStubAvailable } from './usePaymentStubAvailable';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
@@ -36,6 +37,8 @@ function openProformaInvoice(): void {
 function payProformaInvoice(): void {
     void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
+
+const pdfUrl = computed(() => proformaPdfUrl(props.proformaInvoice.document));
 
 const isPayable = computed(
     () =>
@@ -96,6 +99,9 @@ const isPayable = computed(
             }}</MvButton>
             <MvButton variant="secondary" size="sm" @click="openProformaInvoice">{{
                 t('proformaInvoices.actions.open')
+            }}</MvButton>
+            <MvButton v-if="pdfUrl" variant="secondary" size="sm" @click="openPdf(pdfUrl)">{{
+                t('proformaInvoices.actions.downloadPdf')
             }}</MvButton>
             <MvButton v-if="isPayable" variant="primary" size="sm" @click="payProformaInvoice">{{
                 t('proformaInvoices.actions.pay')

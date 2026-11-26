@@ -18,6 +18,10 @@ query MyProformaInvoices($options: ProformaInvoiceListOptions) {
             contractName
             issuedAt
             dueDate
+            document {
+                status
+                pdfUrl
+            }
             order {
                 id
                 code
