@@ -3827,6 +3827,7 @@ export type Query = {
     orderStatuses: Array<OrderStatusInfo>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
+    /** True only where the demo payment stub is enabled (never in production); gates payProformaInvoice. */
     paymentStubAvailable: Scalars['Boolean']['output'];
     popularProductIds: Array<Scalars['ID']['output']>;
     /** Get a Product either by id or slug. If neither 'id' nor 'slug' is specified, an error will result. */

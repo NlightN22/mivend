@@ -64,6 +64,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
         };
         const env = {
             NODE_ENV: 'test',
+            ONLINE_PAYMENT_STUB_ENABLED: 'true',
             VENDURE_DISABLE_TELEMETRY: 'true',
             INSTANCE_TYPE: 'central',
             INSTANCE_ID: 'access-test',
