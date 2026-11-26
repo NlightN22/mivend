@@ -3,6 +3,10 @@
 Dashboard page: **System -> Integration health** (permission `ManageErpIntegration`, central hub
 only). Two tabs, each with a standard refresh icon above the table. Issue #195.
 
+The manager portal shows the same data read-only under System settings (permission `ReadExchangeHealth` or
+`ManageErpIntegration`, #409): Integration health, Inbox issues, Outbound problems, ERP reconciliation and Data drift
+reports. Replay, dismiss, requeue and rebuild stay in the dashboard.
+
 ## Inbound tab
 
 One row per stream. Rows are the union of the event contract (`@nlightn22/event-contracts`,

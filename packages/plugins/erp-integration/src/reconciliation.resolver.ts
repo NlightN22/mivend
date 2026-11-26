@@ -78,7 +78,10 @@ export class ReconciliationResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async openErpReconciliationIssues(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: OpenErpReconciliationIssueListOptions },

@@ -185,8 +185,13 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
     {
         code: 'portal-admin',
         description:
-            'Portal administrator — activates and deactivates staff accounts and assigns their roles, nothing else',
-        permissions: ['ReadAdministrator', 'ManageAdministratorLifecycle', 'ReadSettings'],
+            'Portal administrator — activates and deactivates staff accounts and assigns their roles, and reads the exchange health views',
+        permissions: [
+            'ReadAdministrator',
+            'ManageAdministratorLifecycle',
+            'ReadSettings',
+            'ReadExchangeHealth',
+        ],
         accessScopeConfig: {
             counterparty: 'all',
             order: 'all',

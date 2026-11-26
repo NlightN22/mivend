@@ -165,6 +165,16 @@ separate permission so viewing a page never implies being able to act on it. `Re
 gates requeueing failed and rebuilding skipped outbound events (issue #200); it is granted explicitly
 to a role, nothing inherits it from `ManageErpIntegration`.
 
+`ReadExchangeHealth` (#409) is the read-only right for the exchange health views in the manager portal under System
+settings (Data drift reports, ERP reconciliation, Inbox issues, Integration health, Outbound problems). The reads
+behind them accept it or `ManageErpIntegration`: `consistencyReports`, `consistencySources`, `exchangeHealth`,
+`integrationStreamHealth`, `integrationOutboxHealth`, `variantUnitHealth`, `variantOrganizationHealth`,
+`rejectedOrderCount`, `kafkaConsumerLag`, `openErpReconciliationIssues`, `integrationInboxIssues`,
+`integrationOutboxProblems`. Every mutation (replay, dismiss, requeue, rebuild, run or resolve reconciliation) stays on
+`ManageErpIntegration` or `RecoverIntegrationEvents`; the manager pages offer no action. `portal-admin` holds it by
+default (delivered to existing environments by the 1.1.51 release grant); no new role. Pinned by
+`exchange-health-read-gating.test.ts` and the `erp-integration/exchange-health-read` access test.
+
 ### Settlement documents (#320)
 
 `visibleSettlementDocuments`, `visibleSettlementTypeCounts` and `settlementDocumentTypes` need `ReadSettlementDocument`, granted to every
@@ -296,7 +306,7 @@ that customer, since core attaches the existing one. The schema test covers core
 order fields added by mivend plugins are scoped by their own services (`OrderVisibilityService`). Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
-Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so a role-assigning user would need the union of all rights. `portal-admin` no longer does (owner decision, migration 1791604000000): it holds only `ManageAdministratorLifecycle`, `ReadAdministrator` and `ReadSettings`, enough to activate and deactivate staff accounts and assign any default role through `setAdministratorRoles`. It cannot open Roles & access (core would hide the other roles from it anyway) or act on sales data, and has no `UpdateAdministrator`. Core hides the general-director role and its holders from it, so no screen may rely on seeing them. A unit test pins the exact set. The manager shows default role names and descriptions translated by role code (`i18n/<locale>/roleLabels.ts`); a custom role keeps its own code and description, and the Vendure admin shows the English description.
+Core lists a role, grants it and shows its administrators only to a user who holds every right of that role, so a role-assigning user would need the union of all rights. `portal-admin` no longer does (owner decision, migration 1791604000000): it holds only `ManageAdministratorLifecycle`, `ReadAdministrator`, `ReadSettings` and the read-only `ReadExchangeHealth`, enough to activate and deactivate staff accounts and assign any default role through `setAdministratorRoles`. It cannot open Roles & access (core would hide the other roles from it anyway) or act on sales data, and has no `UpdateAdministrator`. Core hides the general-director role and its holders from it, so no screen may rely on seeing them. A unit test pins the exact set. The manager shows default role names and descriptions translated by role code (`i18n/<locale>/roleLabels.ts`); a custom role keeps its own code and description, and the Vendure admin shows the English description.
 
 ## Bootstrap only creates (#374)
 

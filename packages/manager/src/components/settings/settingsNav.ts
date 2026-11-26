@@ -15,6 +15,29 @@ interface SettingsNavEntry extends SettingsNavItem {
     visible?: (has: (permission: string) => boolean) => boolean;
 }
 
+const canReadExchangeHealth = (has: (permission: string) => boolean): boolean =>
+    has('ReadExchangeHealth') || has('ManageErpIntegration');
+
+const EXCHANGE_HEALTH_ENTRIES: SettingsNavEntry[] = [
+    { label: 'dataDrift', to: '/settings/data-drift', visible: canReadExchangeHealth },
+    {
+        label: 'erpReconciliation',
+        to: '/settings/erp-reconciliation',
+        visible: canReadExchangeHealth,
+    },
+    { label: 'inboxIssues', to: '/settings/inbox-issues', visible: canReadExchangeHealth },
+    {
+        label: 'integrationHealth',
+        to: '/settings/integration-health',
+        visible: canReadExchangeHealth,
+    },
+    {
+        label: 'outboundProblems',
+        to: '/settings/outbound-problems',
+        visible: canReadExchangeHealth,
+    },
+];
+
 const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
     {
         label: 'access',
@@ -80,6 +103,7 @@ const GROUPS: Array<{ label: string; entries: SettingsNavEntry[] }> = [
                 to: '/settings/system-health',
                 visible: has => has('ManageAccessControl') || has('ManageErpIntegration'),
             },
+            ...EXCHANGE_HEALTH_ENTRIES,
         ],
     },
 ];

@@ -15,7 +15,10 @@ export class ConsistencyReportResolver {
     constructor(private readonly service: ConsistencyReportService) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     consistencyReports(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: ConsistencyReportListOptions },
@@ -24,7 +27,10 @@ export class ConsistencyReportResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     consistencySources(@Ctx() ctx: RequestContext): Promise<ConsistencySourceView[]> {
         return this.service.sources(ctx);
     }

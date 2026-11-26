@@ -10,13 +10,16 @@ import { CONFIG } from './consistency-fixtures';
 
 describe('ConsistencyReportResolver @Allow gating', () => {
     it.each(['consistencyReports', 'consistencySources'])(
-        '%s requires ManageErpIntegration',
+        '%s accepts ManageErpIntegration or ReadExchangeHealth',
         method => {
             const permissions = Reflect.getMetadata(
                 PERMISSIONS_METADATA_KEY,
                 ConsistencyReportResolver.prototype[method as keyof ConsistencyReportResolver],
             );
-            expect(permissions).toEqual([CustomPermission.ManageErpIntegration.Permission]);
+            expect(permissions).toEqual([
+                CustomPermission.ManageErpIntegration.Permission,
+                CustomPermission.ReadExchangeHealth.Permission,
+            ]);
         },
     );
 });

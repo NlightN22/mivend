@@ -22,7 +22,10 @@ export class IntegrationEventListResolver {
     constructor(private readonly lists: IntegrationEventListService) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     integrationInboxIssues(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: ListOptionsInput },
@@ -31,7 +34,10 @@ export class IntegrationEventListResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     integrationOutboxProblems(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: ListOptionsInput },

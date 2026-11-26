@@ -10,7 +10,10 @@ export class VariantOrganizationHealthResolver {
     constructor(private readonly health: VariantOrganizationHealthService) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async variantOrganizationHealth(
         @Ctx() ctx: RequestContext,
     ): Promise<VariantOrganizationHealth> {

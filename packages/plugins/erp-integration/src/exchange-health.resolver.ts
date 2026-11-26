@@ -19,7 +19,10 @@ export class ExchangeHealthResolver {
     ) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async exchangeHealth(@Ctx() ctx: RequestContext): Promise<ExchangeHealthSnapshotView> {
         const stored = await this.connection
             .getRepository(ctx, ExchangeHealthSnapshot)

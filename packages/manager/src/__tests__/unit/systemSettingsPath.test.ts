@@ -26,6 +26,12 @@ describe('systemSettingsPath', () => {
         expect(systemSettingsPath(granted('ManageAdministratorLifecycle'))).toBe('/settings/users');
     });
 
+    it('opens Integration health with only ReadExchangeHealth', () => {
+        expect(systemSettingsPath(granted('ReadExchangeHealth'))).toBe(
+            '/settings/integration-health',
+        );
+    });
+
     it('returns null with neither permission', () => {
         expect(systemSettingsPath(granted('ReadOrder'))).toBeNull();
     });

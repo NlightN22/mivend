@@ -59,14 +59,17 @@ describe('manager card grant', () => {
 });
 
 describe('portal-admin is a staff-accounts role, not a sales role', () => {
-    it('holds only the staff account rights and receives nothing through the release grants', () => {
+    it('holds only the staff account rights and the read-only exchange health right, delivered once by the release grant', () => {
         const portalAdmin = DEFAULT_ROLES.find(r => r.code === 'portal-admin')!.permissions;
         expect([...portalAdmin].sort()).toEqual([
             'ManageAdministratorLifecycle',
             'ReadAdministrator',
+            'ReadExchangeHealth',
             'ReadSettings',
         ]);
-        expect(PERMISSIONS_ADDED_BY_RELEASE.some(g => g.roleCode === 'portal-admin')).toBe(false);
+        expect(PERMISSIONS_ADDED_BY_RELEASE.filter(g => g.roleCode === 'portal-admin')).toEqual([
+            { release: '1.1.51', roleCode: 'portal-admin', permission: 'ReadExchangeHealth' },
+        ]);
     });
 });
 

@@ -45,7 +45,10 @@ export class IntegrationStreamHealthResolver {
     ) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async integrationStreamHealth(
         @Ctx() ctx: RequestContext,
     ): Promise<IntegrationStreamHealthReport> {
@@ -74,19 +77,28 @@ export class IntegrationStreamHealthResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async integrationOutboxHealth(@Ctx() ctx: RequestContext): Promise<OutboxHealthByEventType[]> {
         return this.outboxHealth.getHealthByEventType(ctx);
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async variantUnitHealth(@Ctx() ctx: RequestContext): Promise<VariantUnitHealth> {
         return this.variantUnits.getHealth(ctx);
     }
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async rejectedOrderCount(@Ctx() ctx: RequestContext): Promise<number> {
         return this.rejectedOrders.getRejectedCount(ctx);
     }

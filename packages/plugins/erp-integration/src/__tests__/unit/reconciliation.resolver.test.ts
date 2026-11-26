@@ -9,15 +9,25 @@ import { ReconciliationResolver } from '../../reconciliation.resolver';
 describe('ReconciliationResolver @Allow gating', () => {
     const prototype = ReconciliationResolver.prototype;
 
-    it.each([
-        'openErpReconciliationIssues',
-        'runErpReconciliation',
-        'resolveErpReconciliationIssue',
-    ])('%s requires ManageErpIntegration', methodName => {
+    it('openErpReconciliationIssues accepts ManageErpIntegration or ReadExchangeHealth', () => {
         const permissions = Reflect.getMetadata(
             PERMISSIONS_METADATA_KEY,
-            prototype[methodName as keyof typeof prototype],
+            prototype.openErpReconciliationIssues,
         );
-        expect(permissions).toEqual([CustomPermission.ManageErpIntegration.Permission]);
+        expect(permissions).toEqual([
+            CustomPermission.ManageErpIntegration.Permission,
+            CustomPermission.ReadExchangeHealth.Permission,
+        ]);
     });
+
+    it.each(['runErpReconciliation', 'resolveErpReconciliationIssue'])(
+        '%s requires ManageErpIntegration alone',
+        methodName => {
+            const permissions = Reflect.getMetadata(
+                PERMISSIONS_METADATA_KEY,
+                prototype[methodName as keyof typeof prototype],
+            );
+            expect(permissions).toEqual([CustomPermission.ManageErpIntegration.Permission]);
+        },
+    );
 });

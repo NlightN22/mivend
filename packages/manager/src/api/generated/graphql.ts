@@ -7894,6 +7894,8 @@ export type Permission =
     | 'ReadDeletedContractPowerOfAttorney'
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     | 'ReadEntityHistory'
+    /** Open the read-only exchange health views (data drift, ERP reconciliation, inbox issues, integration health, outbound problems); no replay, dismiss, requeue or rebuild (#409) */
+    | 'ReadExchangeHealth'
     /** Grants permission to read Facet */
     | 'ReadFacet'
     /** Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362) */
@@ -13690,6 +13692,211 @@ export type RelatedErpDocumentCountsQuery = {
     };
 };
 
+export type ExchangeConsistencyReportsQueryVariables = Exact<{
+    options?: InputMaybe<ConsistencyReportListOptions>;
+}>;
+
+export type ExchangeConsistencyReportsQuery = {
+    consistencyReports: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: number;
+            source: string;
+            type: string;
+            severity: string;
+            entityType: string;
+            entityId: string;
+            expected: any | null;
+            actual: any | null;
+            details: string;
+            occurrences: number;
+            lastDetectedAt: any;
+            resolvedAt: any | null;
+            status: string;
+        }>;
+    };
+};
+
+export type ExchangeConsistencySourcesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ExchangeConsistencySourcesQuery = {
+    consistencySources: Array<{
+        source: string;
+        health: string;
+        healthDetail: string;
+        summary: any | null;
+        lastFinishedAt: any | null;
+        lastSuccessAt: any | null;
+        localOpenByType: any;
+        localOpenBySeverity: any;
+        ignoredEntityTypes: Array<{ entityType: string; reason: string }>;
+    }>;
+};
+
+export type ExchangeReconciliationIssuesQueryVariables = Exact<{
+    options?: InputMaybe<OpenErpReconciliationIssueListOptions>;
+}>;
+
+export type ExchangeReconciliationIssuesQuery = {
+    openErpReconciliationIssues: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            issueType: string;
+            aggregateType: string;
+            ourCount: number;
+            theirActiveCount: number;
+            detectedAt: any;
+            status: string;
+            triggeredBy: string;
+        }>;
+    };
+};
+
+export type ExchangeInboxIssuesQueryVariables = Exact<{
+    options?: InputMaybe<IntegrationInboxIssueListOptions>;
+}>;
+
+export type ExchangeInboxIssuesQuery = {
+    integrationInboxIssues: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            stream: string;
+            entityId: string;
+            status: string;
+            attempts: number;
+            firstFailedAt: any | null;
+            lastError: string | null;
+            updatedAt: any;
+            outcome: string | null;
+            outcomeReason: string | null;
+        }>;
+    };
+};
+
+export type ExchangeOutboxProblemsQueryVariables = Exact<{
+    options?: InputMaybe<IntegrationOutboxProblemListOptions>;
+}>;
+
+export type ExchangeOutboxProblemsQuery = {
+    integrationOutboxProblems: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            eventId: string;
+            eventType: string;
+            status: string;
+            retryCount: number;
+            lastError: string | null;
+            lastErrorAt: any | null;
+            createdAt: any;
+            subjectId: string | null;
+        }>;
+    };
+};
+
+export type ExchangeStreamHealthQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ExchangeStreamHealthQuery = {
+    integrationStreamHealth: {
+        contractVersion: string;
+        versionDrift: { installed: string; latest: string | null; status: string };
+        streams: Array<{
+            stream: string;
+            topic: string | null;
+            inContract: boolean;
+            consumed: boolean;
+            ignoredReason: string | null;
+            drift: string | null;
+            pending: number;
+            processing: number;
+            failed: number;
+            dependencyMissing: number;
+            replayPending: number;
+            oldestPendingAt: any | null;
+            noop24h: number;
+            lag: { totalLag: string | null; polledAt: any } | null;
+        }>;
+    };
+    variantUnitHealth: { total: number; unitMissing: number };
+    variantOrganizationHealth: { total: number; withoutOrganization: number };
+};
+
+export type ExchangeOutboxHealthQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ExchangeOutboxHealthQuery = {
+    rejectedOrderCount: number;
+    integrationOutboxHealth: Array<{
+        eventType: string;
+        pending: number;
+        failed: number;
+        skipped: number;
+        held: number;
+        oldestPendingAt: any | null;
+        lastPublishedAt: any | null;
+        lastError: string | null;
+        lastSkipReason: string | null;
+        schemaSource: string | null;
+    }>;
+};
+
+export type ExchangeHealthSnapshotQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ExchangeHealthSnapshotQuery = {
+    exchangeHealth: {
+        state: string;
+        reason: string | null;
+        polledAt: any | null;
+        health: {
+            channels: Array<{
+                channel: string;
+                status: string;
+                lastActivityAt: string | null;
+                streams: Array<{
+                    stream: string;
+                    status: string;
+                    lastActivityAt: string | null;
+                    pending: number | null;
+                    oldestAgeSeconds: number | null;
+                    failedLast24h: number | null;
+                }>;
+            }>;
+            publish: {
+                status: string;
+                aggregates: Array<{
+                    aggregateType: string;
+                    status: string;
+                    mappingErrorsLast24h: number | null;
+                    mappingErrorCodes: Array<string>;
+                    deadLetteredLast24h: number | null;
+                    pending: number | null;
+                    oldestPendingAgeSeconds: number | null;
+                    lastPublishedAt: string | null;
+                }>;
+            } | null;
+            mappingErrors: Array<{
+                kind: string;
+                code: string;
+                message: string;
+                occurrences: number | null;
+            }>;
+            failures: {
+                inboxFailedLast24h: number | null;
+                outboxFailedLast24h: number | null;
+                outboundRejectedLast24h: number | null;
+            };
+            resync: {
+                pending: number | null;
+                delivered: number | null;
+                acknowledgedLast24h: number | null;
+                rejectedLast24h: number | null;
+            };
+        } | null;
+    };
+};
+
 export type GeoConfigQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GeoConfigQuery = {
@@ -18157,6 +18364,235 @@ export const RelatedErpDocumentCountsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RelatedErpDocumentCountsQuery,
     RelatedErpDocumentCountsQueryVariables
+>;
+export const ExchangeConsistencyReportsDocument = new TypedDocumentString(`
+    query ExchangeConsistencyReports($options: ConsistencyReportListOptions) {
+  consistencyReports(options: $options) {
+    items {
+      id
+      number
+      source
+      type
+      severity
+      entityType
+      entityId
+      expected
+      actual
+      details
+      occurrences
+      lastDetectedAt
+      resolvedAt
+      status
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeConsistencyReportsQuery,
+    ExchangeConsistencyReportsQueryVariables
+>;
+export const ExchangeConsistencySourcesDocument = new TypedDocumentString(`
+    query ExchangeConsistencySources {
+  consistencySources {
+    source
+    health
+    healthDetail
+    summary
+    lastFinishedAt
+    lastSuccessAt
+    localOpenByType
+    localOpenBySeverity
+    ignoredEntityTypes {
+      entityType
+      reason
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeConsistencySourcesQuery,
+    ExchangeConsistencySourcesQueryVariables
+>;
+export const ExchangeReconciliationIssuesDocument = new TypedDocumentString(`
+    query ExchangeReconciliationIssues($options: OpenErpReconciliationIssueListOptions) {
+  openErpReconciliationIssues(options: $options) {
+    items {
+      id
+      issueType
+      aggregateType
+      ourCount
+      theirActiveCount
+      detectedAt
+      status
+      triggeredBy
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeReconciliationIssuesQuery,
+    ExchangeReconciliationIssuesQueryVariables
+>;
+export const ExchangeInboxIssuesDocument = new TypedDocumentString(`
+    query ExchangeInboxIssues($options: IntegrationInboxIssueListOptions) {
+  integrationInboxIssues(options: $options) {
+    items {
+      id
+      stream
+      entityId
+      status
+      attempts
+      firstFailedAt
+      lastError
+      updatedAt
+      outcome
+      outcomeReason
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeInboxIssuesQuery,
+    ExchangeInboxIssuesQueryVariables
+>;
+export const ExchangeOutboxProblemsDocument = new TypedDocumentString(`
+    query ExchangeOutboxProblems($options: IntegrationOutboxProblemListOptions) {
+  integrationOutboxProblems(options: $options) {
+    items {
+      id
+      eventId
+      eventType
+      status
+      retryCount
+      lastError
+      lastErrorAt
+      createdAt
+      subjectId
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeOutboxProblemsQuery,
+    ExchangeOutboxProblemsQueryVariables
+>;
+export const ExchangeStreamHealthDocument = new TypedDocumentString(`
+    query ExchangeStreamHealth {
+  integrationStreamHealth {
+    contractVersion
+    versionDrift {
+      installed
+      latest
+      status
+    }
+    streams {
+      stream
+      topic
+      inContract
+      consumed
+      ignoredReason
+      drift
+      pending
+      processing
+      failed
+      dependencyMissing
+      replayPending
+      oldestPendingAt
+      noop24h
+      lag {
+        totalLag
+        polledAt
+      }
+    }
+  }
+  variantUnitHealth {
+    total
+    unitMissing
+  }
+  variantOrganizationHealth {
+    total
+    withoutOrganization
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeStreamHealthQuery,
+    ExchangeStreamHealthQueryVariables
+>;
+export const ExchangeOutboxHealthDocument = new TypedDocumentString(`
+    query ExchangeOutboxHealth {
+  integrationOutboxHealth {
+    eventType
+    pending
+    failed
+    skipped
+    held
+    oldestPendingAt
+    lastPublishedAt
+    lastError
+    lastSkipReason
+    schemaSource
+  }
+  rejectedOrderCount
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeOutboxHealthQuery,
+    ExchangeOutboxHealthQueryVariables
+>;
+export const ExchangeHealthSnapshotDocument = new TypedDocumentString(`
+    query ExchangeHealthSnapshot {
+  exchangeHealth {
+    state
+    reason
+    polledAt
+    health {
+      channels {
+        channel
+        status
+        lastActivityAt
+        streams {
+          stream
+          status
+          lastActivityAt
+          pending
+          oldestAgeSeconds
+          failedLast24h
+        }
+      }
+      publish {
+        status
+        aggregates {
+          aggregateType
+          status
+          mappingErrorsLast24h
+          mappingErrorCodes
+          deadLetteredLast24h
+          pending
+          oldestPendingAgeSeconds
+          lastPublishedAt
+        }
+      }
+      mappingErrors {
+        kind
+        code
+        message
+        occurrences
+      }
+      failures {
+        inboxFailedLast24h
+        outboxFailedLast24h
+        outboundRejectedLast24h
+      }
+      resync {
+        pending
+        delivered
+        acknowledgedLast24h
+        rejectedLast24h
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeHealthSnapshotQuery,
+    ExchangeHealthSnapshotQueryVariables
 >;
 export const GeoConfigDocument = new TypedDocumentString(`
     query GeoConfig {

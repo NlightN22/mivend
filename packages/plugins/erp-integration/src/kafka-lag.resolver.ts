@@ -61,7 +61,10 @@ export class KafkaLagResolver {
     constructor(private connection: TransactionalConnection) {}
 
     @Query()
-    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
     async kafkaConsumerLag(@Ctx() ctx: RequestContext): Promise<KafkaTopicLag[]> {
         const rows = await findBounded(this.connection.getRepository(ctx, KafkaConsumerLagEntry));
         return groupLagRowsByTopic(rows);

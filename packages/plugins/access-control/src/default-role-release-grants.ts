@@ -34,6 +34,7 @@ export const PERMISSIONS_ADDED_BY_RELEASE: ReleasePermissionGrant[] = [
         roleCode,
         permission: 'ManageCounterpartyPortalAccess',
     })),
+    { release: '1.1.51', roleCode: 'portal-admin', permission: 'ReadExchangeHealth' },
 ];
 
 export const SCOPE_KEYS_ADDED_BY_RELEASE: ReleaseScopeKeyGrant[] = [];

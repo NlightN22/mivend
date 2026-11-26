@@ -10,13 +10,16 @@ describe('IntegrationEventListResolver', () => {
     const prototype = IntegrationEventListResolver.prototype;
 
     it.each(['integrationInboxIssues', 'integrationOutboxProblems'])(
-        '%s is read-only: ManageErpIntegration, not the recovery permission',
+        '%s is read-only: ManageErpIntegration or ReadExchangeHealth, not the recovery permission',
         methodName => {
             const permissions = Reflect.getMetadata(
                 PERMISSIONS_METADATA_KEY,
                 prototype[methodName as keyof typeof prototype],
             );
-            expect(permissions).toEqual([CustomPermission.ManageErpIntegration.Permission]);
+            expect(permissions).toEqual([
+                CustomPermission.ManageErpIntegration.Permission,
+                CustomPermission.ReadExchangeHealth.Permission,
+            ]);
         },
     );
 

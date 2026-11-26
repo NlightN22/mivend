@@ -144,6 +144,11 @@ export const CustomPermission = {
         description:
             'Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84)',
     }),
+    ReadExchangeHealth: new PermissionDefinition({
+        name: 'ReadExchangeHealth',
+        description:
+            'Open the read-only exchange health views (data drift, ERP reconciliation, inbox issues, integration health, outbound problems); no replay, dismiss, requeue or rebuild (#409)',
+    }),
     RecoverIntegrationEvents: new PermissionDefinition({
         name: 'RecoverIntegrationEvents',
         description:

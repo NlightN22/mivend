@@ -220,6 +220,36 @@ export const router = createRouter({
                             meta: { requiresAuth: true },
                         },
                         {
+                            path: 'data-drift',
+                            name: 'settings-data-drift',
+                            component: () => import('../pages/settings/DataDriftPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'erp-reconciliation',
+                            name: 'settings-erp-reconciliation',
+                            component: () => import('../pages/settings/ErpReconciliationPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'inbox-issues',
+                            name: 'settings-inbox-issues',
+                            component: () => import('../pages/settings/InboxIssuesPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'integration-health',
+                            name: 'settings-integration-health',
+                            component: () => import('../pages/settings/IntegrationHealthPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'outbound-problems',
+                            name: 'settings-outbound-problems',
+                            component: () => import('../pages/settings/OutboundProblemsPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
                             path: 'check-policies',
                             name: 'settings-check-policies',
                             component: () => import('../pages/settings/CheckPoliciesPage.vue'),

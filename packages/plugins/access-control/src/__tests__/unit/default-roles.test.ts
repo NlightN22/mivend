@@ -96,4 +96,11 @@ describe('default roles: user administration (#395)', () => {
         expect(rights).not.toContain('UpdateAdministrator');
         expect(rights).not.toContain('ManageAccessControl');
     });
+
+    it('the portal admin reads the exchange health views but cannot change them', () => {
+        const rights = byCode('portal-admin');
+        expect(rights).toContain('ReadExchangeHealth');
+        expect(rights).not.toContain('ManageErpIntegration');
+        expect(rights).not.toContain('RecoverIntegrationEvents');
+    });
 });

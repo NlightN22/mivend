@@ -27,5 +27,6 @@ export function systemSettingsPath(hasPermission: (name: string) => boolean): st
     if (hasPermission('ManageAccessControl')) return '/settings';
     if (hasPermission('ManageVisibilityGrants')) return '/settings/visibility-grants';
     if (hasPermission('ManageAdministratorLifecycle')) return '/settings/users';
+    if (hasPermission('ReadExchangeHealth')) return '/settings/integration-health';
     return null;
 }

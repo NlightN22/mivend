@@ -1,0 +1,196 @@
+query ExchangeConsistencyReports($options: ConsistencyReportListOptions) {
+    consistencyReports(options: $options) {
+        items {
+            id
+            number
+            source
+            type
+            severity
+            entityType
+            entityId
+            expected
+            actual
+            details
+            occurrences
+            lastDetectedAt
+            resolvedAt
+            status
+        }
+        totalItems
+    }
+}
+
+query ExchangeConsistencySources {
+    consistencySources {
+        source
+        health
+        healthDetail
+        summary
+        lastFinishedAt
+        lastSuccessAt
+        localOpenByType
+        localOpenBySeverity
+        ignoredEntityTypes {
+            entityType
+            reason
+        }
+    }
+}
+
+query ExchangeReconciliationIssues($options: OpenErpReconciliationIssueListOptions) {
+    openErpReconciliationIssues(options: $options) {
+        items {
+            id
+            issueType
+            aggregateType
+            ourCount
+            theirActiveCount
+            detectedAt
+            status
+            triggeredBy
+        }
+        totalItems
+    }
+}
+
+query ExchangeInboxIssues($options: IntegrationInboxIssueListOptions) {
+    integrationInboxIssues(options: $options) {
+        items {
+            id
+            stream
+            entityId
+            status
+            attempts
+            firstFailedAt
+            lastError
+            updatedAt
+            outcome
+            outcomeReason
+        }
+        totalItems
+    }
+}
+
+query ExchangeOutboxProblems($options: IntegrationOutboxProblemListOptions) {
+    integrationOutboxProblems(options: $options) {
+        items {
+            id
+            eventId
+            eventType
+            status
+            retryCount
+            lastError
+            lastErrorAt
+            createdAt
+            subjectId
+        }
+        totalItems
+    }
+}
+
+query ExchangeStreamHealth {
+    integrationStreamHealth {
+        contractVersion
+        versionDrift {
+            installed
+            latest
+            status
+        }
+        streams {
+            stream
+            topic
+            inContract
+            consumed
+            ignoredReason
+            drift
+            pending
+            processing
+            failed
+            dependencyMissing
+            replayPending
+            oldestPendingAt
+            noop24h
+            lag {
+                totalLag
+                polledAt
+            }
+        }
+    }
+    variantUnitHealth {
+        total
+        unitMissing
+    }
+    variantOrganizationHealth {
+        total
+        withoutOrganization
+    }
+}
+
+query ExchangeOutboxHealth {
+    integrationOutboxHealth {
+        eventType
+        pending
+        failed
+        skipped
+        held
+        oldestPendingAt
+        lastPublishedAt
+        lastError
+        lastSkipReason
+        schemaSource
+    }
+    rejectedOrderCount
+}
+
+query ExchangeHealthSnapshot {
+    exchangeHealth {
+        state
+        reason
+        polledAt
+        health {
+            channels {
+                channel
+                status
+                lastActivityAt
+                streams {
+                    stream
+                    status
+                    lastActivityAt
+                    pending
+                    oldestAgeSeconds
+                    failedLast24h
+                }
+            }
+            publish {
+                status
+                aggregates {
+                    aggregateType
+                    status
+                    mappingErrorsLast24h
+                    mappingErrorCodes
+                    deadLetteredLast24h
+                    pending
+                    oldestPendingAgeSeconds
+                    lastPublishedAt
+                }
+            }
+            mappingErrors {
+                kind
+                code
+                message
+                occurrences
+            }
+            failures {
+                inboxFailedLast24h
+                outboxFailedLast24h
+                outboundRejectedLast24h
+            }
+            resync {
+                pending
+                delivered
+                acknowledgedLast24h
+                rejectedLast24h
+            }
+        }
+    }
+}
