@@ -11,6 +11,8 @@ const props = defineProps<{
     suggest?: SuggestFetcher;
     placeholder?: string;
     testid?: string;
+    // Text shown for a suggestion when it differs from the value it picks.
+    display?: (item: string) => string;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [value: string] }>();
 
@@ -71,7 +73,7 @@ function onInput(text: string): void {
                     close();
                 "
             >
-                {{ item }}
+                {{ display ? display(item) : item }}
             </li>
         </ul>
     </div>

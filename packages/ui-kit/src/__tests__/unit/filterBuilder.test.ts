@@ -4,8 +4,12 @@ import {
     conditionsFromQuery,
     conditionsToQuery,
     describeCondition,
+    groupToken,
+    groupTokenId,
+    groupTokenName,
     referenceColumn,
     isValueComplete,
+    operatorLabel,
     operatorsFor,
     sanitizeConditions,
     toVendureFilter,
@@ -223,5 +227,65 @@ describe('reference columns', () => {
         };
         expect(toVendureFilter([picked], [customer])).toEqual({ customer: { in: ['A', 'B'] } });
         expect(describeCondition(picked, customer)).toBe('Customer is one of A, B');
+    });
+});
+
+describe('reference group operators', () => {
+    const lookup = async (): Promise<string[]> => [];
+    const groups = { lookup };
+    const product = referenceColumn({
+        key: 'product',
+        label: 'Product',
+        lookup,
+        exclude: true,
+        groups,
+    });
+    const customer = referenceColumn({ key: 'customer', label: 'Customer', lookup });
+
+    it('offers in group and not in group only where a group lookup is declared', () => {
+        expect(operatorsFor(product)).toEqual(['contains', 'in', 'notIn', 'inGroup', 'notInGroup']);
+        expect(operatorsFor(customer)).toEqual(['contains', 'in']);
+        expect(operatorsFor(referenceColumn({ key: 'c', label: 'C', lookup, groups }))).toEqual([
+            'contains',
+            'in',
+            'inGroup',
+        ]);
+        expect(product.groupSuggest).toBe(lookup);
+    });
+
+    it('carries the id and the readable path in one token, even when the path holds a colon', () => {
+        const token = groupToken('12', 'Pumps: heavy / Industrial');
+        expect(groupTokenId(token)).toBe('12');
+        expect(groupTokenName(token)).toBe('Pumps: heavy / Industrial');
+        expect(groupTokenName('plain')).toBe('plain');
+    });
+
+    it('round-trips group tokens through the URL and drops group operators of a plain column', () => {
+        const picked: FilterCondition = {
+            columnKey: 'product',
+            operator: 'notInGroup',
+            value: [groupToken('1', 'A; B, C'), groupToken('2', 'Tools')],
+        };
+        const query = conditionsToQuery([picked]);
+        expect(conditionsFromQuery(query, [product])).toEqual([picked]);
+        expect(conditionsFromQuery(query.replace('product', 'customer'), [customer])).toEqual([]);
+        expect(conditionsFromQuery('product:inGroup:', [product])).toEqual([]);
+    });
+
+    it('reads a group chip as the path, not the token, and keeps group operators out of a server filter it cannot express', () => {
+        const picked: FilterCondition = {
+            columnKey: 'product',
+            operator: 'inGroup',
+            value: [groupToken('1', 'Tools / Saws')],
+        };
+        expect(describeCondition(picked, product)).toBe('Product in group Tools / Saws');
+        expect(toVendureFilter([picked], [customer])).toEqual({});
+    });
+
+    it('labels the operators through the app translation', () => {
+        const ru = (key: string, fallback: string): string =>
+            ({ operatorReference_inGroup: 'в группе' })[key] ?? fallback;
+        expect(operatorLabel(product, 'inGroup', ru)).toBe('в группе');
+        expect(operatorLabel(product, 'notInGroup')).toBe('not in group');
     });
 });

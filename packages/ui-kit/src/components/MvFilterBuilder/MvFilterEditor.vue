@@ -16,6 +16,7 @@ import type {
 } from './filterBuilderTypes';
 import {
     emptyValueFor,
+    isGroupOperator,
     isValueComplete,
     operatorLabel,
     operatorValueKind,
@@ -54,8 +55,14 @@ const inputType = computed(() => (props.column.type === 'number' ? 'number' : 't
 
 function onOperator(next: string): void {
     const previous = kind.value;
+    const wasGroup = isGroupOperator(operator.value);
     operator.value = next as FilterOperator;
-    if (operatorValueKind(operator.value) !== previous) value.value = emptyValueFor(operator.value);
+    if (
+        operatorValueKind(operator.value) !== previous ||
+        wasGroup !== isGroupOperator(operator.value)
+    ) {
+        value.value = emptyValueFor(operator.value);
+    }
 }
 function setPart(index: number, part: string): void {
     const next = Array.isArray(value.value) ? [...value.value] : ['', ''];
@@ -161,7 +168,8 @@ function apply(): void {
         <MvSuggestMultiInput
             v-else-if="kind === 'multi' && column.type === 'reference'"
             :model-value="value as string[]"
-            :suggest="column.suggest"
+            :suggest="isGroupOperator(operator) ? column.groupSuggest : column.suggest"
+            :group="isGroupOperator(operator)"
             testid="filter-value"
             @update:model-value="value = $event"
         />

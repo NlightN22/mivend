@@ -18,7 +18,7 @@ export const OPERATORS_BY_TYPE: Record<FilterType, FilterOperator[]> = {
     boolean: ['isTrue', 'isFalse'],
     select: ['eq', 'notEq', 'in', 'notIn'],
     id: ['eq', 'notEq', 'isNull', 'notNull'],
-    reference: ['contains', 'in', 'notIn'],
+    reference: ['contains', 'in', 'notIn', 'inGroup', 'notInGroup'],
 };
 
 export const OPERATOR_LABEL: Record<FilterOperator, string> = {
@@ -41,6 +41,8 @@ export const OPERATOR_LABEL: Record<FilterOperator, string> = {
     isFalse: 'is false',
     in: 'is any of',
     notIn: 'is none of',
+    inGroup: 'is in group',
+    notInGroup: 'is not in group',
 };
 
 const SELECT_LABEL: Partial<Record<FilterOperator, string>> = {
@@ -51,6 +53,8 @@ const SELECT_LABEL: Partial<Record<FilterOperator, string>> = {
 const REFERENCE_LABEL: Partial<Record<FilterOperator, string>> = {
     in: 'is one of',
     notIn: 'is not one of',
+    inGroup: 'in group',
+    notInGroup: 'not in group',
 };
 
 const SYMBOL: Partial<Record<FilterOperator, string>> = {
@@ -61,6 +65,9 @@ const SYMBOL: Partial<Record<FilterOperator, string>> = {
     eq: '=',
     notEq: '≠',
 };
+
+export const isGroupOperator = (operator: FilterOperator): boolean =>
+    operator === 'inGroup' || operator === 'notInGroup';
 
 export function operatorsFor(column: FilterColumn): FilterOperator[] {
     const all = OPERATORS_BY_TYPE[column.type];
@@ -105,6 +112,8 @@ export function operatorValueKind(operator: FilterOperator): OperatorValueKind {
             return 'range';
         case 'in':
         case 'notIn':
+        case 'inGroup':
+        case 'notInGroup':
             return 'multi';
         default:
             return 'single';

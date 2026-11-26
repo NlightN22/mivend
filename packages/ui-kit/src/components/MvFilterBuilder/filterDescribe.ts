@@ -1,12 +1,19 @@
-import type { FilterColumn, FilterCondition } from './filterBuilderTypes';
-import { operatorChipLabel, operatorValueKind, type OperatorUiLabel } from './filterOperators';
+import type { FilterColumn, FilterCondition, FilterOperator } from './filterBuilderTypes';
+import { groupTokenName } from './filterReference';
+import {
+    isGroupOperator,
+    operatorChipLabel,
+    operatorValueKind,
+    type OperatorUiLabel,
+} from './filterOperators';
 
 function displayDate(iso: string): string {
     const [y, m, d] = iso.split('-');
     return y && m && d ? `${d}.${m}.${y}` : iso;
 }
 
-function displayOne(column: FilterColumn, value: string): string {
+function displayOne(column: FilterColumn, value: string, operator: FilterOperator): string {
+    if (column.type === 'reference' && isGroupOperator(operator)) return groupTokenName(value);
     if (column.type === 'date') return displayDate(value);
     return column.options?.find(o => o.value === value)?.label ?? value;
 }
@@ -21,7 +28,7 @@ export function describeCondition(
     const kind = operatorValueKind(condition.operator);
     if (kind === 'none') return `${column.label} ${op}`;
     const values = Array.isArray(condition.value) ? condition.value : [condition.value];
-    const shown = values.map(v => displayOne(column, v));
+    const shown = values.map(v => displayOne(column, v, condition.operator));
     if (kind === 'range') return `${column.label} ${shown[0]} – ${shown[1]}`;
     return `${column.label} ${op} ${shown.join(', ')}`;
 }

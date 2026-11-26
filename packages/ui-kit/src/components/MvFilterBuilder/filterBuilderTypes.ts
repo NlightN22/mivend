@@ -19,7 +19,9 @@ export type FilterOperator =
     | 'isTrue'
     | 'isFalse'
     | 'in'
-    | 'notIn';
+    | 'notIn'
+    | 'inGroup'
+    | 'notInGroup';
 
 // Scalar for one-value operators, `[from, to]` for between, a list for in/notIn. Dates are `YYYY-MM-DD`.
 export type FilterValue = string | string[];
@@ -52,4 +54,6 @@ export interface FilterColumn {
     scale?: number;
     // String columns: typeahead for the value input; free text stays allowed.
     suggest?: FilterSuggest;
+    // Reference columns: lookup of hierarchical groups; picked values are group tokens (`id:path`).
+    groupSuggest?: FilterSuggest;
 }
