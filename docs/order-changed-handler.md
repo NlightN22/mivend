@@ -41,7 +41,9 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
   removed, a genuine ERP cancel stays terminal. The last received value is kept in `erpMarkedForDeletion`, and while it
   is true a posted event without a mark of its own (order state) does not reopen the order. An unknown marked order is
   created cancelled, unless its order date is already older than the retention window below: then it is not created
-  and the event is a no-op with that reason (the cleaner would remove it anyway); an absent order date creates it, a
+  and the event is a no-op with that reason (the cleaner would remove it anyway). These skipped events end with outcome `noop`,
+  so a re-seed of old orders shows thousands of them in the 24 h no-op summary and in the inbox problems list: that is intended;
+  an absent order date creates it, a
   stored order keeps the behaviour above (#411). `is_deleted` is true only for a really vanished row and stays a no-op. Mivend orders are not
   affected.
 - Retention: the scheduled task `external-order-retention` removes external orders with `erpMarkedForDeletion = true`
