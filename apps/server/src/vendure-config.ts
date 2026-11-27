@@ -951,6 +951,8 @@ export const config: VendureConfig = {
             // streams above, same host/API key family as Integration Service's Ingestion API.
             reconciliationApiUrl: process.env.INTEGRATION_SERVICE_BASE_URL,
             reconciliationApiKey: process.env.INTEGRATION_SERVICE_API_KEY ?? '',
+            reconciliationHealApiKey:
+                process.env.INTEGRATION_RECONCILIATION_HEAL_API_KEY || undefined,
             integrationOpsApiKey: process.env.INTEGRATION_SERVICE_OPS_API_KEY ?? '',
             exchangeHealthPollIntervalMs:
                 Number(process.env.EXCHANGE_HEALTH_POLL_INTERVAL_MS) || undefined,

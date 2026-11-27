@@ -6,7 +6,9 @@ export type ErpReconciliationIssueType =
     | 'upstream-higher'
     | 'local-higher'
     | 'failed-inbox-rows'
-    | 'missing-coordinates';
+    | 'missing-coordinates'
+    | 'seeding-stuck'
+    | 'heal-alarm';
 export type ErpReconciliationIssueStatus = 'open' | 'resolved';
 export type ErpReconciliationTrigger = 'scheduled' | 'manual';
 

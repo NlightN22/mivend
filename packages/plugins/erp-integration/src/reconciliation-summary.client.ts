@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
+import { filterFor } from './reconciliation-filters';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
@@ -16,6 +17,8 @@ export interface ReconciliationSummary {
     // Subset whose product is unresolved; preferred over unresolved* when present.
     unresolvedProductCount?: number | null;
     unresolvedProductActiveCount?: number | null;
+    // customer-order with excludeDeleted: outbox entries not yet published; absent or null is unknown, never zero.
+    pendingPublish?: number | null;
 }
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -36,9 +39,11 @@ export class ReconciliationSummaryClient {
         if (!baseUrl) throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
         const url = new URL('/api/reconciliation/v1/summary', baseUrl);
         if (aggregateType) url.searchParams.set('aggregateType', aggregateType);
-        // Upstream activeCount includes stock tied to deleted warehouses, which mivend cannot track locally.
-        // Filter aligns both sides on one definition of active stock to avoid an unresolvable mismatch.
-        if (aggregateType === 'stock') url.searchParams.set('excludeDeletedWarehouse', 'true');
+        if (aggregateType) {
+            for (const [name, value] of Object.entries(filterFor(aggregateType).summaryParams)) {
+                url.searchParams.set(name, value);
+            }
+        }
 
         let lastError: Error | undefined;
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {

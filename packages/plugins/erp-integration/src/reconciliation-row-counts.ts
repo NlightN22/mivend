@@ -1,3 +1,5 @@
+import { CUSTOMER_ORDER_COUNT_CONDITION } from './reconciliation-filters';
+
 // Table and condition per type: the stored rows Integration Service counts as active (not deleted).
 // Constants only, never user input.
 export const ROW_COUNT_RULES = {
@@ -34,4 +36,5 @@ export const ROW_COUNT_RULES = {
         table: 'order_status_reference',
         condition: `source = 'erp' AND "isDeleted" = false`,
     },
+    'customer-order': { table: '"order"', condition: CUSTOMER_ORDER_COUNT_CONDITION },
 } as const;

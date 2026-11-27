@@ -33,6 +33,7 @@ export const RECONCILED_STREAMS: Readonly<Partial<Record<InboundStream, Compared
     'order-status': 'orderStatus',
     currency: 'currency',
     'promo-rule': 'promoRule',
+    'order-changed': 'customer-order',
 };
 
 // Streams whose newest processed payload is still read: standing-count queries (reconciliation-local-counts)
@@ -80,7 +81,6 @@ export const NOT_COMPARABLE_STREAMS: Readonly<Partial<Record<InboundStream, stri
     'storage-location':
         'Upstream counts rows without an organization and tombstones, which mivend does not store',
     'order-registration-result': EVENT_STREAM,
-    'order-changed': EVENT_STREAM,
     'order-cancel-result': EVENT_STREAM,
     'counterparty-credit-balance':
         'Register entries are folded into a counterparty column; no entry is stored, deleted ones are skipped',

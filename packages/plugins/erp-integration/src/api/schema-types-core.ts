@@ -63,6 +63,30 @@ export const coreTypes = `
         triggeredByAdministratorId: ID
     }
 
+    type ErpReconciliationKindState {
+        aggregateType: String!
+        "in-sync | seeding | converging | stalled"
+        state: String!
+        reason: String
+        "The predicate the local count and the upstream request share."
+        filter: String!
+        ourCount: Int!
+        theirCount: Int!
+        "Upstream minus local."
+        gap: Int!
+        "Part of the gap upstream answered not_found for; a legitimate difference."
+        explainedGap: Int!
+        seedingSince: DateTime
+        seedingAlarm: Boolean!
+        lastRunAt: DateTime!
+        healAttempts: Int!
+        healRequestedAt: DateTime
+        healOutcome: String
+        healDetail: String
+        "true: republished for real; false: dry run only; null: never ran."
+        healRealRun: Boolean
+    }
+
     type ErpReconciliationIssueList {
         items: [ErpReconciliationIssue!]!
         totalItems: Int!

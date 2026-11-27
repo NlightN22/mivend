@@ -1,5 +1,6 @@
 import { describe, expect, it, Mock, vi } from 'vitest';
 
+import { idleHealFake, stalledStateFake } from './reconciliation-fakes';
 import { ReconciliationService } from '../../reconciliation.service';
 interface MakeSummaryResult {
     aggregateType: string;
@@ -35,6 +36,8 @@ describe('ReconciliationService failed inbox rows', () => {
                     Object.entries(failedByStream).map(([stream, failed]) => ({ stream, failed })),
             } as never,
             { countMissing: async () => missingCoordinates } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
         return { service, save, findOne };
     }

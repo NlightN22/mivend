@@ -94,6 +94,10 @@ import {
 } from './product-manufacturer.resolver';
 import { ProductGalleryService } from './product-gallery.service';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
+import { ReconciliationDiffClient } from './reconciliation-diff.client';
+import { ReconciliationStateService } from './reconciliation-state.service';
+import { ReconciliationHealService } from './reconciliation-heal.service';
+import { ReconciliationLocalIdsService } from './reconciliation-local-ids.service';
 import { ReconciliationLocalCountsService } from './reconciliation-local-counts.service';
 import { ConsistencyPollerService } from './consistency/consistency-poller.service';
 import { ConsistencyReportStore } from './consistency/consistency-report.store';
@@ -212,6 +216,10 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         CharacteristicFacetService,
         ProductAncillaryDataService,
         ReconciliationSummaryClient,
+        ReconciliationDiffClient,
+        ReconciliationStateService,
+        ReconciliationHealService,
+        ReconciliationLocalIdsService,
         IntegrationOutboxHealthService,
         ContractVersionClient,
         VariantUnitHealthService,

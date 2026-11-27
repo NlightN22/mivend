@@ -504,6 +504,35 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 
 ---
 
+### Shared filters, comparison state and self-healing (#410)
+
+- **One filter per aggregate** (`reconciliation-filters.ts`): the local count and the summary request read the same
+  definition, so both sides count the same set. `customer-order` is compared by "not deleted and not marked for
+  deletion" (status, total and realization do not matter) with `excludeDeleted=true`, against the summary `count`;
+  `stock` keeps `excludeDeletedWarehouse=true`. The filter text is shown on the exchange health screen.
+- **Per-kind state, stored per run** (`erp_reconciliation_state`): `in-sync`; `seeding` (our inbox for the stream is
+  behind or has failed rows, the source publish queue is not empty, a signal is unknown, or the gap was just seen:
+  the gap is only recorded); `converging` (the gap shrank since the previous run); `stalled` (the gap stayed equal for
+  3 advancing runs with quiet signals; runs less than an hour apart do not advance). An unknown signal is unknown,
+  never zero. Only `stalled` opens the drift issue and starts healing. Seeding or converging for more than 48 h
+  opens a `seeding-stuck` issue.
+- **Self-healing, only from `stalled`, only when upstream is higher.** The exact missing ids come from the platform
+  `POST /api/reconciliation/v1/diff` (our ids walked in windows of 50 000, C collation), at most 2000 ids per run,
+  batches of 200 sequentially with a pause, a stop at the first failed batch, 429 retried 3 times after a pause.
+  A document kind first sends one `dryRun` batch to `/replay-documents`; an answer of `republished` to a dry run
+  stops with an alarm. Per id `republished | would_republish | not_found`; an unknown status or an answered id set
+  that differs from the sent one stops healing. `not_found` ids are remembered (`erp_reconciliation_not_found`),
+  shown as the explained gap and never asked again; `not_found` with nothing republished is an alarm. A request is
+  retried only after 6 h; the attempt counter resets only on success (or when the kind is in sync), an alarm opens a
+  `heal-alarm` issue after 3 failed attempts. Extra rows on our side are never deleted.
+- **A real republish needs `INTEGRATION_RECONCILIATION_HEAL_API_KEY`**, a separate key that is absent by default
+  and is not part of the compose or timer configuration: a republish re-broadcasts to every consumer of the shared
+  topics. Without it a run only does the dry run (documents) or reports the missing ids (other kinds) and says so.
+- Aggregates other than `customer-order` have no local id source yet: their healing reports `no-id-source` and the
+  gap stays visible. Add an entry to `ID_SOURCES` in `reconciliation-local-ids.service.ts` to enable one.
+- The manager screen "ERP reconciliation" shows, per kind, the state, the filter, our and upstream counts, the gap,
+  the explained gap and the last healing outcome (`erpReconciliationStates`).
+
 ## What is never synced
 
 - Admin sessions, API tokens — never leave the instance that issued them.

@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getPageAndCount } from 'shared';
 import {
     PaginatedList,
     RequestContext,
@@ -10,10 +9,10 @@ import { NotificationService } from '@mivend/plugin-notification';
 import { TradingPointLocationReportService } from '@mivend/plugin-counterparty';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
-import type {
-    ErpReconciliationIssueType,
-    ErpReconciliationTrigger,
-} from './entities/erp-reconciliation-issue.entity';
+import { ReconciliationIssues } from './reconciliation-issues';
+import type { OpenErpReconciliationIssueListOptions } from './reconciliation-issues';
+import type { ErpReconciliationState } from './entities/erp-reconciliation-state.entity';
+import type { ErpReconciliationTrigger } from './entities/erp-reconciliation-issue.entity';
 import {
     COMPARED_AGGREGATE_TYPES,
     ReconciliationLocalCountsService,
@@ -21,11 +20,42 @@ import {
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
 import type { ReconciliationSummary } from './reconciliation-summary.client';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
-import { classifyDiscrepancy, resolveTheirCount } from './reconciliation-decision';
+import { resolveTheirCount } from './reconciliation-decision';
+import { RECONCILED_STREAMS } from './reconciled-streams';
+import { ReconciliationHealService } from './reconciliation-heal.service';
+import { ReconciliationStateService } from './reconciliation-state.service';
+import type { ComparisonSignals } from './reconciliation-state';
 import { ALL_INBOUND_STREAMS, loggerCtx } from './types';
+import type { IntegrationInboxBacklogByStream } from './integration-inbox-health.service';
 
 export const FAILED_INBOX_ISSUE_PREFIX = 'inbox-failed:';
 export const MISSING_COORDINATES_AGGREGATE = 'trading-point-no-coordinates';
+export const SEEDING_STUCK_PREFIX = 'seeding-stuck:';
+export const HEAL_ALARM_PREFIX = 'heal-alarm:';
+
+const STREAM_OF_AGGREGATE = new Map<string, string>(
+    Object.entries(RECONCILED_STREAMS).map(([stream, type]) => [type as string, stream]),
+);
+
+function signalsFor(
+    aggregateType: string,
+    summary: ReconciliationSummary,
+    backlog: Map<string, IntegrationInboxBacklogByStream> | null,
+): ComparisonSignals {
+    const stream = STREAM_OF_AGGREGATE.get(aggregateType);
+    const row = stream ? backlog?.get(stream) : undefined;
+    const known = backlog !== null;
+    return {
+        inboxBacklog: known
+            ? row
+                ? row.pending + row.processing + row.dependencyMissing + row.replayPending
+                : 0
+            : null,
+        inboxFailed: known ? (row?.failed ?? 0) : null,
+        sourceQueue:
+            aggregateType === 'customer-order' ? (summary.pendingPublish ?? null) : undefined,
+    };
+}
 
 export interface RunComparisonInput {
     triggeredBy: ErpReconciliationTrigger;
@@ -38,17 +68,14 @@ export interface RunComparisonResult {
     skipped: string[];
 }
 
-export interface OpenErpReconciliationIssueListOptions {
-    take?: number;
-    skip?: number;
-}
-
-const OPEN_ISSUES_MAX_TAKE = 100;
+export type { OpenErpReconciliationIssueListOptions } from './reconciliation-issues';
 
 // Shared by the scheduled task and manual admin mutation; must never auto-resolve a discrepancy.
 // Every mismatch is persisted as an open ErpReconciliationIssue for a human to act on.
 @Injectable()
 export class ReconciliationService {
+    private readonly issues: ReconciliationIssues;
+
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly requestContextService: RequestContextService,
@@ -57,13 +84,18 @@ export class ReconciliationService {
         private readonly notificationService: NotificationService,
         private readonly inboxHealth: IntegrationInboxHealthService,
         private readonly locationReport: TradingPointLocationReportService,
-    ) {}
+        private readonly states: ReconciliationStateService,
+        private readonly heal: ReconciliationHealService,
+    ) {
+        this.issues = new ReconciliationIssues(connection, notificationService);
+    }
 
     async runComparison(input: RunComparisonInput): Promise<RunComparisonResult> {
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const skipped: string[] = [];
         let issuesFound = 0;
         let checked = 0;
+        const backlog = await this.readBacklog(ctx);
 
         for (const aggregateType of COMPARED_AGGREGATE_TYPES) {
             let summaries: ReconciliationSummary[];
@@ -101,23 +133,93 @@ export class ReconciliationService {
             const ourCount = await this.localCounts.getLocalActiveCount(ctx, aggregateType);
             checked += 1;
 
-            if (ourCount !== theirCount) {
-                await this.recordIssue(ctx, {
-                    aggregateType,
-                    ourCount,
-                    theirActiveCount: theirCount,
-                    triggeredBy: input.triggeredBy,
-                    triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
-                });
-                issuesFound += 1;
-            } else {
-                await this.autoResolveIfOpen(ctx, aggregateType);
-            }
+            const state = await this.states.record(ctx, {
+                aggregateType,
+                ourCount,
+                theirCount,
+                signals: signalsFor(aggregateType, summary, backlog),
+                now: new Date(),
+            });
+            issuesFound += await this.actOnState(ctx, input, state, ourCount, theirCount);
         }
 
         issuesFound += await this.reconcileFailedInboxRows(ctx, input);
         issuesFound += await this.reconcileMissingCoordinates(ctx, input);
         return { checked, issuesFound, skipped };
+    }
+
+    // Only a stalled gap is real drift and only it is healed; seeding and converging gaps are recorded in the state row.
+    private async actOnState(
+        ctx: RequestContext,
+        input: RunComparisonInput,
+        state: ErpReconciliationState,
+        ourCount: number,
+        theirCount: number,
+    ): Promise<number> {
+        const { aggregateType } = state;
+        const trigger = {
+            triggeredBy: input.triggeredBy,
+            triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
+        };
+        if (state.state === 'in-sync') {
+            for (const key of [
+                aggregateType,
+                SEEDING_STUCK_PREFIX + aggregateType,
+                HEAL_ALARM_PREFIX + aggregateType,
+            ]) {
+                await this.issues.autoResolveIfOpen(ctx, key);
+            }
+            return 0;
+        }
+        let found = 0;
+        if (state.seedingAlarm) {
+            await this.issues.recordIssue(ctx, {
+                aggregateType: SEEDING_STUCK_PREFIX + aggregateType,
+                issueType: 'seeding-stuck',
+                ourCount,
+                theirActiveCount: theirCount,
+                ...trigger,
+            });
+            found += 1;
+        } else {
+            await this.issues.autoResolveIfOpen(ctx, SEEDING_STUCK_PREFIX + aggregateType);
+        }
+        if (state.state !== 'stalled') return found;
+        await this.issues.recordIssue(ctx, {
+            aggregateType,
+            ourCount,
+            theirActiveCount: theirCount,
+            ...trigger,
+        });
+        found += 1;
+        const report = await this.heal.healIfDue(ctx, aggregateType);
+        if (report.alarm) {
+            await this.issues.recordIssue(ctx, {
+                aggregateType: HEAL_ALARM_PREFIX + aggregateType,
+                issueType: 'heal-alarm',
+                ourCount,
+                theirActiveCount: theirCount,
+                ...trigger,
+            });
+            found += 1;
+        }
+        return found;
+    }
+
+    // An unreadable backlog is an unknown signal for every kind, never an empty one.
+    private async readBacklog(
+        ctx: RequestContext,
+    ): Promise<Map<string, IntegrationInboxBacklogByStream> | null> {
+        try {
+            const rows = await this.inboxHealth.getBacklogByStream(ctx);
+            return new Map(rows.map(r => [r.stream as string, r]));
+        } catch (err) {
+            Logger.error(
+                `Reconciliation could not read the inbox backlog: ${err instanceof Error ? err.message : String(err)}`,
+                loggerCtx,
+            );
+            return null;
+        }
     }
 
     // ERP points may arrive without coordinates; they stay valid but are reported until backfilled.
@@ -127,10 +229,10 @@ export class ReconciliationService {
     ): Promise<number> {
         const missing = await this.locationReport.countMissing(ctx);
         if (missing === 0) {
-            await this.autoResolveIfOpen(ctx, MISSING_COORDINATES_AGGREGATE);
+            await this.issues.autoResolveIfOpen(ctx, MISSING_COORDINATES_AGGREGATE);
             return 0;
         }
-        await this.recordIssue(ctx, {
+        await this.issues.recordIssue(ctx, {
             aggregateType: MISSING_COORDINATES_AGGREGATE,
             issueType: 'missing-coordinates',
             ourCount: missing,
@@ -154,7 +256,7 @@ export class ReconciliationService {
             const aggregateType = `${FAILED_INBOX_ISSUE_PREFIX}${stream}`;
             const failed = failedByStream.get(stream) ?? 0;
             if (failed > 0) {
-                await this.recordIssue(ctx, {
+                await this.issues.recordIssue(ctx, {
                     aggregateType,
                     issueType: 'failed-inbox-rows',
                     ourCount: failed,
@@ -164,7 +266,7 @@ export class ReconciliationService {
                 });
                 found += 1;
             } else {
-                await this.autoResolveIfOpen(ctx, aggregateType);
+                await this.issues.autoResolveIfOpen(ctx, aggregateType);
             }
         }
         return found;
@@ -174,101 +276,13 @@ export class ReconciliationService {
         ctx: RequestContext,
         options?: OpenErpReconciliationIssueListOptions,
     ): Promise<PaginatedList<ErpReconciliationIssue>> {
-        const take = Math.min(options?.take ?? 20, OPEN_ISSUES_MAX_TAKE);
-        const skip = options?.skip ?? 0;
-
-        const qb = this.connection
-            .getRepository(ctx, ErpReconciliationIssue)
-            .createQueryBuilder('issue')
-            .where('issue.status = :status', { status: 'open' })
-            .orderBy('issue.detectedAt', 'DESC')
-            .addOrderBy('issue.id', 'DESC');
-
-        return getPageAndCount(qb, take, skip);
+        return this.issues.findOpen(ctx, options);
     }
 
     async resolve(
         ctx: RequestContext,
         input: { id: string; resolution: string },
     ): Promise<ErpReconciliationIssue> {
-        const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
-        const issue = await repo.findOneOrFail({ where: { id: input.id } });
-        issue.status = 'resolved';
-        issue.resolution = input.resolution;
-        const saved = await repo.save(issue);
-        await this.notificationService.resolveBySource(
-            ctx,
-            { sourceType: 'erp-reconciliation', sourceId: saved.aggregateType },
-            input.resolution,
-        );
-        return saved;
-    }
-
-    // recordIssue only runs on mismatch, so a resolved drift would leave a stale open issue forever.
-    // Safe to auto-close here: both counts were just re-verified equal, so nothing is guessed.
-    private async autoResolveIfOpen(ctx: RequestContext, aggregateType: string): Promise<void> {
-        const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
-        const existing = await repo.findOne({ where: { aggregateType, status: 'open' } });
-        if (!existing) return;
-        const resolution = 'Auto-resolved: counts matched on a later reconciliation run.';
-        existing.status = 'resolved';
-        existing.resolution = resolution;
-        await repo.save(existing);
-        await this.notificationService.resolveBySource(
-            ctx,
-            { sourceType: 'erp-reconciliation', sourceId: aggregateType },
-            resolution,
-        );
-    }
-
-    // Persistent drift is re-detected on every scheduled run; update the open issue per aggregateType
-    // in place instead of adding a row daily; a new row only after the prior one is resolved.
-    private async recordIssue(
-        ctx: RequestContext,
-        params: {
-            aggregateType: string;
-            issueType?: ErpReconciliationIssueType;
-            ourCount: number;
-            theirActiveCount: number;
-            triggeredBy: ErpReconciliationTrigger;
-            triggeredByAdministratorId: string | null;
-        },
-    ): Promise<void> {
-        const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
-        const existing = await repo.findOne({
-            where: { aggregateType: params.aggregateType, status: 'open' },
-        });
-
-        const fields = {
-            issueType:
-                params.issueType ?? classifyDiscrepancy(params.ourCount, params.theirActiveCount),
-            aggregateType: params.aggregateType,
-            ourCount: params.ourCount,
-            theirActiveCount: params.theirActiveCount,
-            detectedAt: new Date(),
-            status: 'open' as const,
-            resolution: null,
-            triggeredBy: params.triggeredBy,
-            triggeredByAdministratorId: params.triggeredByAdministratorId,
-        };
-
-        if (existing) {
-            await repo.save(Object.assign(existing, fields));
-        } else {
-            await repo.save(new ErpReconciliationIssue(fields));
-        }
-
-        // Scheduled runs have no administrator to notify; a re-detected open issue is not re-announced.
-        if (!existing && params.triggeredByAdministratorId) {
-            await this.notificationService.create(ctx, {
-                recipientType: 'administrator',
-                recipientId: params.triggeredByAdministratorId,
-                kind: 'warning',
-                sourceType: 'erp-reconciliation',
-                sourceId: params.aggregateType,
-                title: 'ERP reconciliation drift detected',
-                message: `${fields.issueType} for ${params.aggregateType} (ours=${params.ourCount}, theirs=${params.theirActiveCount})`,
-            });
-        }
+        return this.issues.resolve(ctx, input);
     }
 }

@@ -1,8 +1,6 @@
 import type { ErpReconciliationIssueType } from './entities/erp-reconciliation-issue.entity';
+import { filterFor } from './reconciliation-filters';
 import type { ReconciliationSummary } from './reconciliation-summary.client';
-
-// storageLocation has no active split upstream, so its count is compared.
-const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation'];
 
 // Pure decisions extracted from ReconciliationService so they're unit-testable without a DB or a
 // mocked HTTP client, mirroring retry-policy.ts's own split in this same plugin.
@@ -15,7 +13,7 @@ const STORES_UNRESOLVED_TYPES: readonly string[] = ['stockOrganization'];
 
 export function resolveTheirCount(summary: ReconciliationSummary): number {
     const useActive =
-        summary.activeCount != null && !NO_ACTIVE_CONCEPT_TYPES.includes(summary.aggregateType);
+        summary.activeCount != null && filterFor(summary.aggregateType).theirFigure === 'active';
     const total = useActive ? (summary.activeCount as number) : summary.count;
     if (STORES_UNRESOLVED_TYPES.includes(summary.aggregateType)) return total;
     const anyLink =

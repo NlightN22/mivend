@@ -1,5 +1,6 @@
 import { describe, expect, it, Mock, vi } from 'vitest';
 
+import { idleHealFake, stalledStateFake } from './reconciliation-fakes';
 import { ReconciliationService } from '../../reconciliation.service';
 import type { ReconciliationSummary } from '../../reconciliation-summary.client';
 import { COMPARED_AGGREGATE_TYPES } from '../../reconciliation-local-counts.service';
@@ -47,6 +48,8 @@ describe('ReconciliationService.runComparison', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
             { countMissing: async () => 0 } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
         return { service, save, findOne, notificationService };
     }
@@ -183,6 +186,8 @@ describe('ReconciliationService.runComparison', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
             { countMissing: async () => 0 } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -232,7 +237,9 @@ describe('ReconciliationService.runComparison', () => {
         const result = await service.runComparison({ triggeredBy: 'scheduled' });
 
         expect(result.skipped).toEqual(
-            COMPARED_AGGREGATE_TYPES.filter(type => type !== 'stockOrganization'),
+            COMPARED_AGGREGATE_TYPES.filter(
+                type => type !== 'stockOrganization' && type !== 'customer-order',
+            ),
         );
         expect(save).not.toHaveBeenCalled();
     });
@@ -275,6 +282,8 @@ describe('ReconciliationService.runComparison', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
             { countMissing: async () => 0 } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -314,6 +323,8 @@ describe('ReconciliationService.resolve', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
             { countMissing: async () => 0 } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
 
         const result = await service.resolve({} as never, {
@@ -350,6 +361,8 @@ describe('ReconciliationService.resolve', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
             { countMissing: async () => 0 } as never,
+            stalledStateFake() as never,
+            idleHealFake() as never,
         );
 
         await service.resolve({} as never, { id: '3', resolution: 'stale seed row' });

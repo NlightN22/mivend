@@ -13,6 +13,8 @@ import { ProductVariantBarcode } from './entities/product-variant-barcode.entity
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
+import { ErpReconciliationState } from './entities/erp-reconciliation-state.entity';
+import { ErpReconciliationNotFound } from './entities/erp-reconciliation-not-found.entity';
 import { UnitRecord } from './entities/unit-record.entity';
 import { RegionRecord } from './entities/region-record.entity';
 import { ProductGroupErp } from './entities/product-group-erp.entity';
@@ -41,6 +43,8 @@ export const PLUGIN_ENTITIES = [
     ProductCharacteristic,
     ProductManufacturerCode,
     ErpReconciliationIssue,
+    ErpReconciliationState,
+    ErpReconciliationNotFound,
     UnitRecord,
     RegionRecord,
     ProductGroupErp,

@@ -8,6 +8,8 @@ import {
     TradingPointLocationReportService,
 } from '@mivend/plugin-counterparty';
 
+import { ReconciliationStateService } from './reconciliation-state.service';
+import type { ReconciliationKindView } from './reconciliation-state.service';
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import {
     OpenErpReconciliationIssueListOptions,
@@ -21,6 +23,7 @@ export class ReconciliationResolver {
         private reconciliationService: ReconciliationService,
         private locationReport: TradingPointLocationReportService,
         private counterpartyDrift: CounterpartyErpDriftService,
+        private states: ReconciliationStateService,
     ) {}
 
     @Query()
@@ -87,6 +90,15 @@ export class ReconciliationResolver {
         @Args() args: { options?: OpenErpReconciliationIssueListOptions },
     ): Promise<PaginatedList<ErpReconciliationIssue>> {
         return this.reconciliationService.findOpen(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(
+        CustomPermission.ManageErpIntegration.Permission,
+        CustomPermission.ReadExchangeHealth.Permission,
+    )
+    async erpReconciliationStates(@Ctx() ctx: RequestContext): Promise<ReconciliationKindView[]> {
+        return this.states.listViews(ctx);
     }
 
     @Mutation()

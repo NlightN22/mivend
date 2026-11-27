@@ -13,6 +13,8 @@ export const operations = `
         openErpReconciliationIssues(
             options: OpenErpReconciliationIssueListOptions
         ): ErpReconciliationIssueList!
+        "Per compared aggregate: comparison state (in-sync, seeding, converging, stalled), the filter both sides count with, counts, gap, explained gap and the last healing outcome (issue #410)."
+        erpReconciliationStates: [ErpReconciliationKindState!]!
         "Active trading points with no coordinates (ERP-sourced or legacy), for backfill (issue #315)."
         tradingPointsWithoutLocation(
             options: OpenErpReconciliationIssueListOptions

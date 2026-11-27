@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ResyncReplayClient } from '../../resync-replay.client';
+import { ReplayRateLimitedError, ResyncReplayClient } from '../../resync-replay.client';
 
 const client = new ResyncReplayClient({
     reconciliationApiUrl: 'https://is.example',
@@ -81,5 +81,37 @@ describe('ResyncReplayClient', () => {
             vi.fn(async () => new Response('', { status: 500 })),
         );
         await expect(client.replay('productPhoto', ['a'])).rejects.toThrow('500');
+    });
+});
+
+describe('ResyncReplayClient documents and rate limit', () => {
+    it('posts a document kind with the dry-run flag and an override key', async () => {
+        const fetchMock = vi.fn(
+            async () =>
+                new Response(
+                    JSON.stringify({ results: [{ entityId: 'a', status: 'would_republish' }] }),
+                ),
+        );
+        vi.stubGlobal('fetch', fetchMock);
+        const out = await client.replayDocuments('customer-order', ['a'], true, 'heal-key');
+        expect(out).toEqual([{ entityId: 'a', status: 'would_republish' }]);
+        const [url, init] = fetchMock.mock.calls[0] as unknown as [URL, RequestInit];
+        expect(String(url)).toBe('https://is.example/api/resync/v1/replay-documents');
+        expect(JSON.parse(String(init.body))).toEqual({
+            kind: 'customer-order',
+            entityIds: ['a'],
+            dryRun: true,
+        });
+        expect((init.headers as Record<string, string>)['X-Api-Key']).toBe('heal-key');
+    });
+
+    it('throws a rate-limit error on 429', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response('', { status: 429 })),
+        );
+        await expect(client.replayDocuments('customer-order', ['a'], true)).rejects.toBeInstanceOf(
+            ReplayRateLimitedError,
+        );
     });
 });

@@ -217,6 +217,8 @@ export interface ErpIntegrationPluginOptions {
     // Never hardcoded or logged. Required by the REST clients (they throw naming the missing key).
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
+    // Separate key that lets self-healing republish for real (a republish reaches every consumer of the topic); absent means dry run only.
+    reconciliationHealApiKey?: string;
     // Separate read-only key for GET /api/ops/v1/exchange-health; never the reconciliation/replay key, never logged.
     integrationOpsApiKey?: string;
     // Defaults to EXCHANGE_HEALTH_POLL_INTERVAL_DEFAULT.

@@ -11,6 +11,12 @@ export interface ReplayResult {
 export const REPLAY_MAX_IDS = 200;
 const FETCH_TIMEOUT_MS = 15_000;
 
+export class ReplayRateLimitedError extends Error {
+    constructor() {
+        super('Replay endpoint returned 429');
+    }
+}
+
 // Asks Integration Service to re-publish specific entities (POST /api/resync/v1/replay); the
 // events then arrive through the normal consumer. Same base URL and API key as reconciliation.
 @Injectable()
@@ -20,31 +26,50 @@ export class ResyncReplayClient {
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
 
-    async replay(aggregateType: string, entityIds: string[]): Promise<ReplayResult[]> {
-        const { reconciliationApiUrl, resyncSourceSystem } = this.options;
-        if (!reconciliationApiUrl)
-            throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
+    async replay(
+        aggregateType: string,
+        entityIds: string[],
+        apiKey?: string,
+    ): Promise<ReplayResult[]> {
+        const { resyncSourceSystem } = this.options;
         if (!resyncSourceSystem) {
             throw new Error('INTEGRATION_RESYNC_SOURCE_SYSTEM is not configured');
         }
-        const url = new URL('/api/resync/v1/replay', reconciliationApiUrl);
-        const response = await fetch(url, {
+        return this.post(
+            '/api/resync/v1/replay',
+            { aggregateType, sourceSystem: resyncSourceSystem, entityIds },
+            apiKey,
+        );
+    }
+
+    // Documents (orders and other ERP document kinds) are republished by uuid; dryRun reports without publishing.
+    async replayDocuments(
+        kind: string,
+        entityIds: string[],
+        dryRun: boolean,
+        apiKey?: string,
+    ): Promise<ReplayResult[]> {
+        return this.post('/api/resync/v1/replay-documents', { kind, entityIds, dryRun }, apiKey);
+    }
+
+    private async post(path: string, body: unknown, apiKey?: string): Promise<ReplayResult[]> {
+        const { reconciliationApiUrl } = this.options;
+        if (!reconciliationApiUrl)
+            throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
+        const response = await fetch(new URL(path, reconciliationApiUrl), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Api-Key': this.options.reconciliationApiKey ?? '',
+                'X-Api-Key': apiKey ?? this.options.reconciliationApiKey ?? '',
             },
-            body: JSON.stringify({
-                aggregateType,
-                sourceSystem: resyncSourceSystem,
-                entityIds,
-            }),
+            body: JSON.stringify(body),
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
+        if (response.status === 429) throw new ReplayRateLimitedError();
         if (!response.ok) {
             throw new Error(`Replay endpoint returned ${response.status}`);
         }
-        const body = (await response.json()) as ReplayResult[] | { results: ReplayResult[] };
-        return Array.isArray(body) ? body : body.results;
+        const parsed = (await response.json()) as ReplayResult[] | { results: ReplayResult[] };
+        return Array.isArray(parsed) ? parsed : parsed.results;
     }
 }
