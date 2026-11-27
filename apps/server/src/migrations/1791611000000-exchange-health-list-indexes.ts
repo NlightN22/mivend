@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // #413: the exchange-health lists and the stream backlog summary stop scanning the inbox and outbox tables.
-export class ExchangeHealthListIndexes1791610000000 implements MigrationInterface {
-    name = 'ExchangeHealthListIndexes1791610000000';
+export class ExchangeHealthListIndexes1791611000000 implements MigrationInterface {
+    name = 'ExchangeHealthListIndexes1791611000000';
     // CONCURRENTLY cannot run in a transaction; Vendure runs migrations with transaction 'each'.
     transaction = false;
     // Must run with no statement_timeout (a timeout aborts the build and leaves an INVALID index, dropped on rerun).
