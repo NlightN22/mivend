@@ -15,6 +15,7 @@ import {
 import { BLANK_FILTERS, useExchangeList } from '../../composables/useExchangeList';
 import type { TableViewState } from '../../composables/tableViewState';
 import { sortFromState, sortToState } from '../orders/ordersTableFilters';
+import ExchangeCappedNote from './ExchangeCappedNote.vue';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { ExchangeListConfig } from './lists';
 
@@ -174,9 +175,6 @@ function applyView(state: TableViewState): void {
                 :active="list.filters.value.view"
                 @select="update({ view: $event })"
             />
-            <small v-if="list.totalItemsCapped.value" class="exchange-list__capped">{{
-                t('exchangeHealth.common.cappedTotal', { count: list.totalItems.value })
-            }}</small>
         </template>
 
         <template #toolbar-end>
@@ -215,16 +213,13 @@ function applyView(state: TableViewState): void {
             <span v-else>{{ text(data as Row, c.field) }}</span>
         </template>
     </MvAdvancedDataTable>
+    <ExchangeCappedNote :capped="list.totalItemsCapped.value" :count="list.totalItems.value" />
 </template>
 
 <style scoped>
 .exchange-list__code {
     font-size: 12px;
     overflow-wrap: anywhere;
-}
-
-.exchange-list__capped {
-    color: var(--el-text-color-secondary);
 }
 
 .exchange-list__wrap {

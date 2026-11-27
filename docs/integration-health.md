@@ -357,3 +357,4 @@ separate follow-up.
   this many". A page offset past the ceiling fails with `QUERY_TOO_LARGE`; narrow the filters instead.
 - Free-text search on `entityId` and sorts other than the default scan the partial index's rows (the problem set,
   not the whole table).
+- The Vendure Dashboard ListPage cannot show an "at least" marker, so its problem lists show 10000 without a '+' when capped (known limitation; the manager portal shows the note and the chip '+').
