@@ -6,8 +6,6 @@ import { SalesAnalyticsService } from '../../sales-analytics/sales-analytics.ser
 import type { SalesAnalyticsInput } from '../../sales-analytics/sales-analytics.service';
 import type { SalesAmount, SalesTurnoverRow } from '../../sales-analytics/sales-metrics.types';
 
-import type { AnalyticsPluginOptions } from '../../types';
-
 const ctx = {} as RequestContext;
 const getSalesTurnover = vi.fn();
 const visibleCustomerErpIds = vi.fn();
@@ -16,7 +14,6 @@ const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
 const erpIds = vi.fn();
-const options: AnalyticsPluginOptions = {};
 
 const service = new SalesAnalyticsService(
     { getSalesTurnover } as never,
@@ -25,7 +22,6 @@ const service = new SalesAnalyticsService(
     { find: findNamed } as never,
     { resolver } as never,
     { erpIds } as never,
-    options,
 );
 
 const input = (over: Partial<SalesAnalyticsInput> = {}): SalesAnalyticsInput => ({
@@ -114,40 +110,25 @@ describe('SalesAnalyticsService exclusions and groups', () => {
         });
     });
 
-    it('offers only counterparty groups, and only while the switch is on', async () => {
+    it('offers only counterparty groups', async () => {
         const wanted = input({ groupFilters: [{ kind: 'CUSTOMER_GROUP', ids: ['1'] }] });
-        await expect(service.query(ctx, wanted)).rejects.toBeInstanceOf(UserInputError);
-
-        options.productCategoryAndCustomerGroupFilters = true;
         erpIds.mockResolvedValue(['g-erp']);
-        try {
-            await service.query(ctx, wanted);
-            await expect(
-                service.query(
-                    ctx,
-                    input({ groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }] }),
-                ),
-            ).rejects.toBeInstanceOf(UserInputError);
-        } finally {
-            options.productCategoryAndCustomerGroupFilters = undefined;
-        }
+        await service.query(ctx, wanted);
+        await expect(
+            service.query(ctx, input({ groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }] })),
+        ).rejects.toBeInstanceOf(UserInputError);
         expect(getSalesTurnover.mock.calls[0][0]).toMatchObject({
             counterpartyGroupIds: ['g-erp'],
         });
     });
 
     it('answers no rows for an unknown include group', async () => {
-        options.productCategoryAndCustomerGroupFilters = true;
         erpIds.mockResolvedValue([]);
-        try {
-            const result = await service.query(
-                ctx,
-                input({ groupFilters: [{ kind: 'CUSTOMER_GROUP', ids: ['404'] }] }),
-            );
-            expect(result.rows).toEqual([]);
-        } finally {
-            options.productCategoryAndCustomerGroupFilters = undefined;
-        }
+        const result = await service.query(
+            ctx,
+            input({ groupFilters: [{ kind: 'CUSTOMER_GROUP', ids: ['404'] }] }),
+        );
+        expect(result.rows).toEqual([]);
         expect(getSalesTurnover).not.toHaveBeenCalled();
     });
 });

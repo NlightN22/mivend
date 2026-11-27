@@ -1,9 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, UserInputError } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
-import { ANALYTICS_PLUGIN_OPTIONS, loggerCtx } from '../types';
-import type { AnalyticsPluginOptions } from '../types';
+import { loggerCtx } from '../types';
 import { resolveEntityFilters } from './order-analytics-entity-filters';
 import type { EntityNameFilter } from './order-analytics-entity-filters';
 import { GROUP_KINDS, resolveGroupFilters } from './order-analytics-group-filters';
@@ -78,7 +77,6 @@ export class OrderAnalyticsService {
         private readonly entityNames: OrderAnalyticsEntityNamesService,
         private readonly currencies: SalesCurrencyResolverService,
         private readonly groups: OrderAnalyticsGroupsService,
-        @Inject(ANALYTICS_PLUGIN_OPTIONS) private readonly options: AnalyticsPluginOptions,
     ) {}
 
     async query(ctx: RequestContext, input: OrderAnalyticsInput): Promise<OrderAnalyticsResult> {
@@ -96,13 +94,9 @@ export class OrderAnalyticsService {
                 this.entityNames,
                 input.entityFilters ?? [],
             );
-            const grouped = await resolveGroupFilters(
-                ctx,
-                this.groups,
-                input.groupFilters ?? [],
-                this.options.productCategoryAndCustomerGroupFilters === true,
-                [...GROUP_KINDS],
-            );
+            const grouped = await resolveGroupFilters(ctx, this.groups, input.groupFilters ?? [], [
+                ...GROUP_KINDS,
+            ]);
             if (named.unmatched || grouped.unmatched) {
                 return { state: 'OK', rows: [], limitedToVisibleCustomers: true };
             }

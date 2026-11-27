@@ -8,8 +8,6 @@ export interface AnalyticsPluginOptions {
     orderMetricsCredentials?: ChannelCredentials;
     // Plain-text channel for the access-test double; the server config never enables it in production.
     orderMetricsInsecure?: boolean;
-    // The analytics service has not deployed category and customer group filters yet; off sends and offers none.
-    productCategoryAndCustomerGroupFilters?: boolean;
 }
 
 export const ANALYTICS_PLUGIN_OPTIONS = Symbol('ANALYTICS_PLUGIN_OPTIONS');

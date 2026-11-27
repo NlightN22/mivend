@@ -75,13 +75,10 @@ integration service: the sum of order amounts, not sales documents; cancelled an
   manufacturer stream; rows stay without a parent until the stream is re-sent), product categories from the category
   collections built by the category stream (`cat-<erp id>` slugs, not the product group mirror), customer groups from
   `CounterpartyGroupErp`. Group names are catalog data, not customer data; scope still applies to every result.
-- **Group filters behind a switch.** Manufacturer groups and all exclusions are live. Product categories and customer
-  groups (orders `product_category_ids`, `exclude_product_category_ids`, `customer_group_ids`,
-  `exclude_customer_group_ids`; sales `counterparty_group_ids`, `exclude_counterparty_group_ids`) are built but off: the
-  analytics service has not deployed them. `ANALYTICS_CATEGORY_CUSTOMER_GROUP_FILTERS=true` (default `false`, plugin
-  option `productCategoryAndCustomerGroupFilters`) turns them on. While off the client never puts these fields on the wire,
-  the query `analyticsFilterCapabilities` does not list the group kinds, the lookup answers empty and a request that
-  names them is refused, so the builder does not offer "in group" for products and customers.
+- **Group filters.** Manufacturer, product category, customer and counterparty groups and all exclusions are always on
+  (orders `product_category_ids`, `exclude_product_category_ids`, `customer_group_ids`, `exclude_customer_group_ids`; sales
+  `counterparty_group_ids`, `exclude_counterparty_group_ids`; contract v0.8.x, deployed in the analytics service). There is no
+  switch. Customer and counterparty groups see only counterparties whose `group_id` the platform has already re-sent.
 - **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
   different managers must not be added together; orders of a customer without a manager fall into an empty id. For a
   restricted viewer the rows keep only the managers the team visibility allows, like the order manager dimension.

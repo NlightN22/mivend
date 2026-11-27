@@ -7,9 +7,6 @@ import { MAX_FILTER_VALUES } from './order-metrics.types';
 export const GROUP_KINDS = ['MANUFACTURER_GROUP', 'PRODUCT_CATEGORY', 'CUSTOMER_GROUP'] as const;
 export type GroupFilterKind = (typeof GROUP_KINDS)[number];
 
-// The analytics service has not deployed these two yet; they stay behind one switch.
-export const DEFERRED_GROUP_KINDS: GroupFilterKind[] = ['PRODUCT_CATEGORY', 'CUSTOMER_GROUP'];
-
 // Our own entity ids as picked in the group lookup; the group is expanded by the analytics service.
 export interface GroupFilter {
     kind: GroupFilterKind;
@@ -50,16 +47,12 @@ export async function resolveGroupFilters(
     ctx: RequestContext,
     groups: OrderAnalyticsGroupsService,
     filters: GroupFilter[],
-    deferredEnabled: boolean,
     allowed: GroupFilterKind[],
 ): Promise<ResolvedGroupFilters> {
     const resolved = emptyResolvedGroupFilters();
     for (const { kind, ids, exclude } of filters) {
         if (!allowed.includes(kind))
             throw new UserInputError('This report cannot filter by that group');
-        if (DEFERRED_GROUP_KINDS.includes(kind) && !deferredEnabled) {
-            throw new UserInputError('This group filter is not available');
-        }
         const wanted = [...new Set(ids)];
         if (wanted.length === 0) continue;
         if (wanted.length > MAX_FILTER_VALUES) throw new QueryTooLargeError(MAX_FILTER_VALUES);

@@ -8,8 +8,6 @@ import { SalesAnalyticsService } from '../../sales-analytics/sales-analytics.ser
 import type { SalesAnalyticsInput } from '../../sales-analytics/sales-analytics.service';
 import type { SalesAmount, SalesTurnoverRow } from '../../sales-analytics/sales-metrics.types';
 
-import type { AnalyticsPluginOptions } from '../../types';
-
 const ctx = {} as RequestContext;
 const getSalesTurnover = vi.fn();
 const visibleCustomerErpIds = vi.fn();
@@ -18,7 +16,6 @@ const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
 const erpIds = vi.fn();
-const options: AnalyticsPluginOptions = {};
 
 const service = new SalesAnalyticsService(
     { getSalesTurnover } as never,
@@ -27,7 +24,6 @@ const service = new SalesAnalyticsService(
     { find: findNamed } as never,
     { resolver } as never,
     { erpIds } as never,
-    options,
 );
 
 const input = (over: Partial<SalesAnalyticsInput> = {}): SalesAnalyticsInput => ({

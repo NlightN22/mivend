@@ -25,7 +25,6 @@ describe('resolveGroupFilters', () => {
                 { kind: 'MANUFACTURER_GROUP', ids: ['1', '2', '1'] },
                 { kind: 'MANUFACTURER_GROUP', ids: ['3'], exclude: true },
             ],
-            false,
             ALL,
         );
 
@@ -43,7 +42,6 @@ describe('resolveGroupFilters', () => {
             ctx,
             groups,
             [{ kind: 'MANUFACTURER_GROUP', ids: ['9'] }],
-            false,
             ALL,
         );
         expect(result.unmatched).toBe(true);
@@ -55,22 +53,12 @@ describe('resolveGroupFilters', () => {
             ctx,
             groups,
             [{ kind: 'MANUFACTURER_GROUP', ids: ['9'], exclude: true }],
-            false,
             ALL,
         );
         expect(result).toMatchObject({ unmatched: false, excludeManufacturerGroupIds: [] });
     });
 
-    it('refuses category and customer groups while the switch is off, and never looks them up', async () => {
-        for (const kind of ['PRODUCT_CATEGORY', 'CUSTOMER_GROUP'] as const) {
-            await expect(
-                resolveGroupFilters(ctx, groups, [{ kind, ids: ['1'] }], false, ALL),
-            ).rejects.toBeInstanceOf(UserInputError);
-        }
-        expect(erpIds).not.toHaveBeenCalled();
-    });
-
-    it('maps category and customer groups when the switch is on', async () => {
+    it('maps category and customer groups', async () => {
         erpIds.mockImplementation(async (_c, _k, ids: string[]) => ids.map(id => `erp-${id}`));
         const result = await resolveGroupFilters(
             ctx,
@@ -81,7 +69,6 @@ describe('resolveGroupFilters', () => {
                 { kind: 'CUSTOMER_GROUP', ids: ['3'] },
                 { kind: 'CUSTOMER_GROUP', ids: ['4'], exclude: true },
             ],
-            true,
             ALL,
         );
         expect(result).toMatchObject({
@@ -94,16 +81,19 @@ describe('resolveGroupFilters', () => {
 
     it('refuses a group kind the report does not offer', async () => {
         await expect(
-            resolveGroupFilters(ctx, groups, [{ kind: 'MANUFACTURER_GROUP', ids: ['1'] }], true, [
-                'CUSTOMER_GROUP',
-            ]),
+            resolveGroupFilters(
+                ctx,
+                groups,
+                [{ kind: 'MANUFACTURER_GROUP', ids: ['1'] }],
+                ['CUSTOMER_GROUP'],
+            ),
         ).rejects.toBeInstanceOf(UserInputError);
     });
 
     it('fails closed above 1000 group ids instead of cutting the list', async () => {
         const ids = Array.from({ length: 1001 }, (_, i) => String(i + 1));
         await expect(
-            resolveGroupFilters(ctx, groups, [{ kind: 'MANUFACTURER_GROUP', ids }], false, ALL),
+            resolveGroupFilters(ctx, groups, [{ kind: 'MANUFACTURER_GROUP', ids }], ALL),
         ).rejects.toBeInstanceOf(QueryTooLargeError);
         expect(erpIds).not.toHaveBeenCalled();
     });
@@ -120,7 +110,6 @@ describe('resolveGroupFilters', () => {
                     { kind: 'MANUFACTURER_GROUP', ids: half },
                     { kind: 'MANUFACTURER_GROUP', ids: other },
                 ],
-                false,
                 ALL,
             ),
         ).rejects.toBeInstanceOf(QueryTooLargeError);

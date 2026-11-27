@@ -34,12 +34,11 @@ let echo: EchoOrderMetricsServer;
 let dir: string;
 let keyFile: string;
 
-const clientFor = (file = keyFile, groups = false): SalesMetricsClient =>
+const clientFor = (file = keyFile): SalesMetricsClient =>
     new SalesMetricsClient({
         orderMetricsAddress: echo.address,
         orderMetricsKeyFile: file,
         orderMetricsCredentials: grpc.credentials.createInsecure(),
-        productCategoryAndCustomerGroupFilters: groups,
     });
 
 beforeAll(async () => {
@@ -78,7 +77,7 @@ describe('SalesMetricsClient', () => {
         expect(result.unresolvedCurrencies).toEqual([]);
     });
 
-    it('sends the exclude lists, and counterparty groups only while the switch is on', async () => {
+    it('sends the exclude lists and the counterparty groups', async () => {
         const wanted = {
             ...request,
             excludeCounterpartyIds: ['c9'],
@@ -89,18 +88,12 @@ describe('SalesMetricsClient', () => {
             excludeCounterpartyGroupIds: ['g2'],
         };
 
-        const off = await clientFor().getSalesTurnover(wanted);
-        expect(JSON.parse(off.rows[0].dimensionId)).toMatchObject({
+        const sent = await clientFor().getSalesTurnover(wanted);
+        expect(JSON.parse(sent.rows[0].dimensionId)).toMatchObject({
             excludeCounterpartyIds: ['c9'],
             excludeOrganizationIds: ['o9'],
             excludeContractIds: ['k9'],
             excludeCounterpartyManagerIds: ['m9'],
-            counterpartyGroupIds: [],
-            excludeCounterpartyGroupIds: [],
-        });
-
-        const on = await clientFor(keyFile, true).getSalesTurnover(wanted);
-        expect(JSON.parse(on.rows[0].dimensionId)).toMatchObject({
             counterpartyGroupIds: ['g1'],
             excludeCounterpartyGroupIds: ['g2'],
         });

@@ -121,12 +121,8 @@ export class SalesMetricsClient {
                     excludeOrganizationIds: request.excludeOrganizationIds,
                     excludeContractIds: request.excludeContractIds,
                     excludeCounterpartyManagerIds: request.excludeCounterpartyManagerIds,
-                    ...(this.options.productCategoryAndCustomerGroupFilters
-                        ? {
-                              counterpartyGroupIds: request.counterpartyGroupIds,
-                              excludeCounterpartyGroupIds: request.excludeCounterpartyGroupIds,
-                          }
-                        : {}),
+                    counterpartyGroupIds: request.counterpartyGroupIds,
+                    excludeCounterpartyGroupIds: request.excludeCounterpartyGroupIds,
                 },
                 metadata,
                 { deadline: Date.now() + CALL_TIMEOUT_MS },

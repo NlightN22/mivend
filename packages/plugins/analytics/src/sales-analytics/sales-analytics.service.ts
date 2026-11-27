@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, UserInputError } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
@@ -12,8 +12,7 @@ import { OrderAnalyticsLabelsService } from '../order-analytics/order-analytics-
 import { OrderAnalyticsScopeService } from '../order-analytics/order-analytics-scope.service';
 import { MAX_FILTER_VALUES, OrderMetricsError } from '../order-analytics/order-metrics.types';
 import type { OrderGranularity } from '../order-analytics/order-metrics.types';
-import { ANALYTICS_PLUGIN_OPTIONS, loggerCtx } from '../types';
-import type { AnalyticsPluginOptions } from '../types';
+import { loggerCtx } from '../types';
 import { SalesCurrencyResolverService } from './sales-currency-resolver.service';
 import { SalesMetricsClient } from './sales-metrics.client';
 import type { SalesDimension, SalesTurnover, SalesTurnoverRow } from './sales-metrics.types';
@@ -78,7 +77,6 @@ export class SalesAnalyticsService {
         private readonly entityNames: OrderAnalyticsEntityNamesService,
         private readonly currencies: SalesCurrencyResolverService,
         private readonly groups: OrderAnalyticsGroupsService,
-        @Inject(ANALYTICS_PLUGIN_OPTIONS) private readonly options: AnalyticsPluginOptions,
     ) {}
 
     async query(ctx: RequestContext, input: SalesAnalyticsInput): Promise<SalesAnalyticsResult> {
@@ -88,13 +86,9 @@ export class SalesAnalyticsService {
                 throw new UserInputError('Sales cannot be filtered by this kind');
             }
             const named = await resolveEntityFilters(ctx, this.entityNames, filters);
-            const grouped = await resolveGroupFilters(
-                ctx,
-                this.groups,
-                input.groupFilters ?? [],
-                this.options.productCategoryAndCustomerGroupFilters === true,
-                ['CUSTOMER_GROUP'],
-            );
+            const grouped = await resolveGroupFilters(ctx, this.groups, input.groupFilters ?? [], [
+                'CUSTOMER_GROUP',
+            ]);
             const [visibleCustomers, visibleManagers] = await Promise.all([
                 this.scope.visibleCustomerErpIds(ctx),
                 this.scope.visibleManagerErpIds(ctx),

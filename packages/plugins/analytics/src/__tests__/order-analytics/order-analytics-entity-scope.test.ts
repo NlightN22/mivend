@@ -2,12 +2,9 @@ import { OrderMetricsError } from '../../order-analytics/order-metrics.types';
 import type { RequestContext } from '@vendure/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserInputError } from '@vendure/core';
 import { OrderAnalyticsService } from '../../order-analytics/order-analytics.service';
 import type { OrderAnalyticsInput } from '../../order-analytics/order-analytics.service';
 import type { OrderTurnoverRow } from '../../order-analytics/order-metrics.types';
-
-import type { AnalyticsPluginOptions } from '../../types';
 
 const ctx = {} as RequestContext;
 const getOrderTurnover = vi.fn();
@@ -19,7 +16,6 @@ const labelsFor = vi.fn();
 const findNamed = vi.fn();
 const resolver = vi.fn();
 const erpIds = vi.fn();
-const options: AnalyticsPluginOptions = {};
 
 const service = new OrderAnalyticsService(
     { getOrderTurnover } as never,
@@ -28,7 +24,6 @@ const service = new OrderAnalyticsService(
     { find: findNamed } as never,
     { resolver } as never,
     { erpIds } as never,
-    options,
 );
 
 const input = (over: Partial<OrderAnalyticsInput> = {}): OrderAnalyticsInput => ({
@@ -238,18 +233,10 @@ describe('OrderAnalyticsService exclusions and groups', () => {
         expect(getOrderTurnover).not.toHaveBeenCalled();
     });
 
-    it('rejects category and customer groups while the switch is off, accepts them when on', async () => {
+    it('accepts category groups and sends them as ERP ids', async () => {
         const wanted = input({ groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }] });
-        await expect(service.query(ctx, wanted)).rejects.toBeInstanceOf(UserInputError);
-        expect(getOrderTurnover).not.toHaveBeenCalled();
-
-        options.productCategoryAndCustomerGroupFilters = true;
         erpIds.mockResolvedValue(['cat-erp']);
-        try {
-            await service.query(ctx, wanted);
-        } finally {
-            options.productCategoryAndCustomerGroupFilters = undefined;
-        }
+        await service.query(ctx, wanted);
         expect(getOrderTurnover.mock.calls[0][0]).toMatchObject({
             productCategoryIds: ['cat-erp'],
         });

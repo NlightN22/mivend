@@ -43,12 +43,11 @@ let echo: EchoOrderMetricsServer;
 let dir: string;
 let keyFile: string;
 
-const clientFor = (groups: boolean): OrderMetricsClient =>
+const clientFor = (): OrderMetricsClient =>
     new OrderMetricsClient({
         orderMetricsAddress: echo.address,
         orderMetricsKeyFile: keyFile,
         orderMetricsCredentials: grpc.credentials.createInsecure(),
-        productCategoryAndCustomerGroupFilters: groups,
     });
 
 const askedBy = async (client: OrderMetricsClient): Promise<Record<string, unknown>> => {
@@ -81,21 +80,12 @@ afterAll(async () => {
 });
 
 describe('OrderMetricsClient exclusions and groups', () => {
-    it('sends the exclude lists and manufacturer groups, but holds category and customer groups back by default', async () => {
-        expect(await askedBy(clientFor(false))).toMatchObject({
+    it('sends the exclude lists, manufacturer, category and customer groups', async () => {
+        expect(await askedBy(clientFor())).toMatchObject({
             excludeCustomerIds: ['c9'],
             excludeProductIds: ['p9'],
             manufacturerGroupIds: ['g1'],
             excludeManufacturerGroupIds: ['g2'],
-            productCategoryIds: [],
-            excludeProductCategoryIds: [],
-            customerGroupIds: [],
-            excludeCustomerGroupIds: [],
-        });
-    });
-
-    it('sends category and customer groups once the switch is on', async () => {
-        expect(await askedBy(clientFor(true))).toMatchObject({
             productCategoryIds: ['k1'],
             excludeProductCategoryIds: ['k2'],
             customerGroupIds: ['u1'],
