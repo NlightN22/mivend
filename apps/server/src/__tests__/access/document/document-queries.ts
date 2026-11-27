@@ -18,6 +18,7 @@ export interface SampleDocument {
     number: string;
     pdfUrl: string;
     total: number;
+    storefrontTotal: number;
 }
 
 export async function documents(
@@ -43,6 +44,7 @@ export async function samples(): Promise<SampleDocument[]> {
             ...contract!,
             pdfUrl: contract!.pdfUrl!,
             total: page.totalItems,
+            storefrontTotal: page.items.filter(d => d.type !== 'proforma-invoice').length,
         });
     }
     return out;

@@ -133,7 +133,7 @@ describe.each(CUSTOMERS.map(c => c.key))(
             const own = await shop<MyDocs>(token, MY_DOCS);
             expect(own.errors).toEqual([]);
             expect(own.data!.myDocuments.totalItems).toBe(
-                all.find(s => s.counterparty === mine)!.total,
+                all.find(s => s.counterparty === mine)!.storefrontTotal,
             );
             for (const s of all.filter(d => d.counterparty !== mine)) {
                 const found = await shop<MyDocs>(token, MY_DOCS, { search: s.number });
