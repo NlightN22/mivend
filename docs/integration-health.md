@@ -148,7 +148,8 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   documents, claims, corrections, settlement documents, discount and retro-bonus streams, #414): their target rejects a
   version not newer than the stored one, so the newest tombstoned row goes too after `INBOX_FLOOR_RETENTION_DAYS` (30).
   After the floor row is gone, a redelivery of the same event is processed again and ends `noop` ("version not newer
-  than stored"); it shows in the 24 h noop summary and the issues list and is not a fault. A slice cancelled by the 30 s
+  than stored"); it shows in the 24 h noop summary and the issues list and is not a fault. For these streams an admin Replay of an event the target already holds also ends `noop`
+  (a version not newer than stored is ignored, equal included), so a replay does not repair their data. A slice cancelled by the 30 s
   statement timeout keeps the cursor, so the next tick retries from there, not from the start; a pass longer than 6 h
   logs a warning (`Inbox expiry pass finished ... over the lag budget`). State streams (price, stock, offer, product and the like) and the order streams (`order-changed`, `order-state`, no
   version guard in the target yet) keep the newest row. A full pass reads every row older than the horizon
