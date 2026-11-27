@@ -2,14 +2,6 @@ import type en from '../en/documents';
 
 const ru: typeof en = {
     documents: {
-        title: 'Документы',
-        subtitle:
-            'Документы по договорам, возвраты и акты сверки по вашей учётной записи. Счета на оплату находятся в своём разделе.',
-        total: 'Всего документов',
-        allTypes: 'Все типы',
-        all: 'Все документы',
-        empty: 'Документы не найдены.',
-        searchPlaceholder: 'Найти документ по номеру',
         type: {
             'proforma-invoice': 'Счёт на оплату',
             contract: 'Договор',
@@ -31,6 +23,11 @@ const ru: typeof en = {
             order: 'Заказ',
             orderRef: 'Заказ №{id}',
         },
+    },
+    returns: {
+        title: 'Возвраты',
+        subtitle: 'Документы возвратов по вашей учётной записи.',
+        empty: 'Возвраты не найдены.',
     },
     settlements: {
         title: 'Выписка по счёту',

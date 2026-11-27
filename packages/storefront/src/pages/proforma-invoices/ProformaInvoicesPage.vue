@@ -55,15 +55,6 @@ onMounted(reload);
                 </div>
             </div>
 
-            <div class="proforma-invoices-page__stats">
-                <div class="proforma-invoices-page__stat-card">
-                    <div class="proforma-invoices-page__stat-title">
-                        {{ t('proformaInvoices.list.onPage') }}
-                    </div>
-                    <div class="proforma-invoices-page__stat-value">{{ totalItems }}</div>
-                </div>
-            </div>
-
             <div class="proforma-invoices-page__main">
                 <div class="proforma-invoices-page__filters">
                     <button
@@ -147,42 +138,6 @@ onMounted(reload);
     line-height: 1.45;
 }
 
-.proforma-invoices-page__stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-.proforma-invoices-page__stat-card {
-    min-height: 112px;
-    background: var(--app-surface);
-    border: 1px solid var(--app-border-glass);
-    border-radius: 20px;
-    box-shadow: 0 14px 36px var(--app-ink-08);
-    padding: 18px;
-}
-
-.proforma-invoices-page__stat-title {
-    color: var(--app-nav-label);
-    font-size: 13px;
-    font-weight: 850;
-    margin-bottom: 13px;
-}
-
-.proforma-invoices-page__stat-value {
-    font-size: 28px;
-    font-weight: 950;
-    letter-spacing: -0.055em;
-    margin-bottom: 4px;
-}
-
-.proforma-invoices-page__stat-note {
-    color: var(--app-nav-label);
-    font-size: 13px;
-    line-height: 1.35;
-}
-
 .proforma-invoices-page__main {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -231,9 +186,6 @@ onMounted(reload);
         grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
-    }
-    .proforma-invoices-page__stats {
-        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

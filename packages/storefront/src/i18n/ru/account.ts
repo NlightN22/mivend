@@ -142,7 +142,7 @@ const ru: typeof en = {
         documents: 'Документы',
         proformaInvoices: 'Счета на оплату',
         contracts: 'Договоры',
-        documentFiles: 'Документы',
+        returns: 'Возвраты',
         reconciliationActs: 'Акты сверки',
         favorites: 'Избранное',
         requests: 'Обращения',

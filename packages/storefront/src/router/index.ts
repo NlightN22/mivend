@@ -121,9 +121,10 @@ export const router = createRouter({
                     component: () => import('../pages/checkout/PaymentResultPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                { path: 'documents', redirect: '/returns' },
                 {
-                    path: 'documents',
-                    component: () => import('../pages/documents/DocumentsPage.vue'),
+                    path: 'returns',
+                    component: () => import('../pages/returns/ReturnsPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {

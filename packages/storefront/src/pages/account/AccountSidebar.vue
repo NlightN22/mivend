@@ -5,12 +5,12 @@ import { useI18n } from 'vue-i18n';
 import { IconChevronDown } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
 import { useFavoritesStore } from '../../stores/favorites';
-import { useDocuments } from '../documents/useDocuments';
 import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 import { useOrders } from '../orders/useOrders';
 import { useCompanyName } from './useCompanyName';
 import { useTradingPoints } from './useTradingPoints';
 import { withoutDemoOnly } from './demoOnlyLinks';
+import { DOCUMENT_LINKS } from '../../composables/accountMenuItems';
 import { useDemoMode } from '../../composables/useDemoMode';
 
 const authStore = useAuthStore();
@@ -18,14 +18,12 @@ const route = useRoute();
 
 const { totalItems: proformaInvoiceCount, load: loadProformaInvoices } = useProformaInvoices();
 const { totalItems: orderCount, load: loadOrders } = useOrders();
-const { totalItems: documentCount, load: loadDocuments } = useDocuments();
 const { visiblePoints, loadPoints } = useTradingPoints();
 const tradingPointCount = computed(() => visiblePoints.value.length);
 const favoritesStore = useFavoritesStore();
 const favoriteCount = computed(() => favoritesStore.count);
 onMounted(() => {
     void loadOrders({ take: 1, skip: 0 });
-    void loadDocuments({ take: 1, skip: 0 });
     void loadPoints();
     void loadProformaInvoices({ take: 1, skip: 0 });
 });
@@ -54,18 +52,8 @@ const customerLinks = computed<NavItem[]>(() => [
     { to: '/settlements', key: 'statement' },
 ]);
 const documentLinks = computed<NavItem[]>(() =>
-    withoutDemoOnly(
-        [
-            {
-                to: '/proforma-invoices',
-                key: 'proformaInvoices',
-                count: proformaInvoiceCount.value,
-            },
-            { to: '/contracts', key: 'contracts' },
-            { to: '/documents', key: 'documentFiles', count: documentCount.value },
-            { to: '/reconciliation-acts', key: 'reconciliationActs' },
-        ],
-        demoAllowed,
+    withoutDemoOnly(DOCUMENT_LINKS, demoAllowed).map(link =>
+        link.to === '/proforma-invoices' ? { ...link, count: proformaInvoiceCount.value } : link,
     ),
 );
 const afterDocumentLinks = computed<NavItem[]>(() =>

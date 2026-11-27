@@ -147,7 +147,7 @@ export async function importClients(organizationId: number): Promise<void> {
             'document',
             CLIENTS.map(c => ({
                 erpId: `${clientErpId(c.key)}-document`,
-                type: 'reconciliation',
+                type: 'return',
                 counterpartyErpId: clientErpId(c.key),
                 number: documentNumber(c.key),
                 issueDate: '2026-09-15T00:00:00.000Z',

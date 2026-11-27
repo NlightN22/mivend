@@ -1,13 +1,5 @@
 export default {
     documents: {
-        title: 'Documents',
-        subtitle:
-            'Contract documents, returns and reconciliation reports linked to your account. Proforma invoices are in their own section.',
-        total: 'Total documents',
-        allTypes: 'All types',
-        all: 'All documents',
-        empty: 'No documents found.',
-        searchPlaceholder: 'Find document by number',
         type: {
             'proforma-invoice': 'Proforma invoice',
             contract: 'Contract',
@@ -29,6 +21,11 @@ export default {
             order: 'Order',
             orderRef: 'Order #{id}',
         },
+    },
+    returns: {
+        title: 'Returns',
+        subtitle: 'Return documents linked to your account.',
+        empty: 'No returns found.',
     },
     settlements: {
         title: 'Account statement',

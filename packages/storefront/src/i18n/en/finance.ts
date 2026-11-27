@@ -18,7 +18,6 @@ export default {
         list: {
             title: 'Proforma invoices',
             subtitle: 'Payment obligations and links to their orders.',
-            onPage: 'Proforma invoices on this page',
             all: 'All proforma invoices',
             empty: 'No proforma invoices found.',
         },

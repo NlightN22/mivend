@@ -2,16 +2,16 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
-import DocumentsPage from './DocumentsPage.vue';
+import ReturnsPage from './ReturnsPage.vue';
 
-const meta: Meta<typeof DocumentsPage> = {
-    title: 'Pages/Documents/DocumentsPage',
-    component: DocumentsPage,
+const meta: Meta<typeof ReturnsPage> = {
+    title: 'Pages/Returns/ReturnsPage',
+    component: ReturnsPage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof DocumentsPage>;
+type Story = StoryObj<typeof ReturnsPage>;
 
 export const Default: Story = {
     loaders: [
@@ -22,12 +22,12 @@ export const Default: Story = {
                     items: [
                         {
                             id: '1',
-                            type: 'proformaInvoice',
-                            number: 'INV-0001',
+                            type: 'return',
+                            number: 'RET-0001',
                             issueDate: new Date().toISOString(),
                             amount: 460000,
                             currencyCode: 'RUB',
-                            status: 'issued',
+                            status: 'ready',
                             orderId: '1',
                             fileUrl: '#',
                             pdfUrl: null,
@@ -36,12 +36,12 @@ export const Default: Story = {
                     totalItems: 1,
                 },
             }));
-            await router.push('/documents');
+            await router.push('/returns');
         },
     ],
     render: () => ({
-        components: { DocumentsPage },
-        template: '<DocumentsPage />',
+        components: { ReturnsPage },
+        template: '<ReturnsPage />',
     }),
 };
 
@@ -50,11 +50,11 @@ export const Empty: Story = {
         async () => {
             registerDefaultMocks();
             registerMock('MyDocuments', () => ({ myDocuments: { items: [], totalItems: 0 } }));
-            await router.push('/documents');
+            await router.push('/returns');
         },
     ],
     render: () => ({
-        components: { DocumentsPage },
-        template: '<DocumentsPage />',
+        components: { ReturnsPage },
+        template: '<ReturnsPage />',
     }),
 };

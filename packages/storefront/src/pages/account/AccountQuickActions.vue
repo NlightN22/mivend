@@ -39,7 +39,7 @@ const limitText = computed(() => {
         </div>
 
         <div class="quick-actions__grid" :class="{ 'quick-actions__grid--two': !demoAllowed }">
-            <RouterLink to="/documents" class="quick-actions__card">
+            <RouterLink to="/returns" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">📄</div>
                     <div class="quick-actions__card-title">

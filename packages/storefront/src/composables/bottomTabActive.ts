@@ -3,7 +3,8 @@ export type BottomTabKey = 'catalog' | 'orders' | 'favorites' | 'cabinet' | 'mor
 // Account-zone pages without their own tab (documents, settings, ...) belong to "More".
 const MORE_PREFIXES = [
     '/account',
-    '/documents',
+    '/contracts',
+    '/returns',
     '/proforma-invoices',
     '/settlements',
     '/reconciliation-acts',

@@ -41,7 +41,7 @@ const demoReconciliationNote = computed(() =>
                     {{ t('account.recentDocuments.subtitle') }}
                 </div>
             </div>
-            <RouterLink to="/documents" class="account-documents__link-more">{{
+            <RouterLink to="/returns" class="account-documents__link-more">{{
                 t('account.recentDocuments.all')
             }}</RouterLink>
         </div>

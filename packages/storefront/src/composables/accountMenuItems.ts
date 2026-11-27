@@ -27,9 +27,10 @@ export interface AccountMenuNode {
     children?: AccountMenuLink[];
 }
 
-const DOCUMENT_LINKS = [
+export const DOCUMENT_LINKS = [
     { key: 'proformaInvoices', to: '/proforma-invoices' },
-    { key: 'contracts', to: '/documents' },
+    { key: 'contracts', to: '/contracts' },
+    { key: 'returns', to: '/returns' },
     { key: 'reconciliationActs', to: '/reconciliation-acts' },
 ];
 

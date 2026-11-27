@@ -47,8 +47,8 @@ async function waitForDocumentReady(
 
 // ERP-sourced documents can only be seeded via the erp-import REST endpoint;
 // Vendure-generated ones need a real checkout or the Admin contract mutation.
-test.describe('Documents page — all document types', () => {
-    test('ERP-pushed return and reconciliation documents render with the correct type, number and a working download link', async ({
+test.describe('Returns page and document API', () => {
+    test('an ERP-pushed return renders on the Returns page with a working download link, a reconciliation document does not', async ({
         page,
     }) => {
         const returnErpId = `e2e-return-${Date.now()}`;
@@ -88,11 +88,11 @@ test.describe('Documents page — all document types', () => {
             },
         ]);
 
-        await page.goto('/documents');
+        await page.goto('/returns');
         await page.waitForLoadState('domcontentloaded');
 
         await expect(page.getByText(returnNumber)).toBeVisible({ timeout: 10000 });
-        await expect(page.getByText(reconciliationNumber)).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(reconciliationNumber)).toHaveCount(0);
 
         const returnRow = page.locator('.doc-row', { hasText: returnNumber });
         const [popup] = await Promise.all([
@@ -129,12 +129,12 @@ test.describe('Documents page — all document types', () => {
             0,
         );
 
-        await page.goto('/documents');
+        await page.goto('/returns');
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByRole('button', { name: /Proforma invoice/i })).toHaveCount(0);
+        await expect(page.locator('.doc-row', { hasText: /proforma/i })).toHaveCount(0);
     });
 
-    test('the Admin generateContract mutation produces a real, downloadable contract document', async ({
+    test('the Admin generateContract mutation produces a ready contract document', async ({
         page,
     }) => {
         const token = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
@@ -163,32 +163,18 @@ test.describe('Documents page — all document types', () => {
 
         const contract = await waitForDocumentReady(page, d => d.type === 'contract');
         expect(contract.status).toBe('ready');
-
-        await page.goto('/documents');
-        await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByText(contract.number)).toBeVisible({ timeout: 10000 });
-
-        const contractRow = page.locator('.doc-row', { hasText: contract.number });
-        const [download] = await Promise.all([
-            page.waitForEvent('download'),
-            contractRow.getByRole('link', { name: 'Download' }).click(),
-        ]);
-        expect(download.url()).toContain('/document-pdf/');
     });
 
-    test('type filter chip narrows the list to matching documents only', async ({ page }) => {
+    test('the old /documents link redirects to the Returns page, which lists only returns', async ({
+        page,
+    }) => {
         await page.goto('/documents');
-        await page.waitForLoadState('domcontentloaded');
-
-        const allChip = page.getByRole('button', { name: /All documents/i });
-        await expect(allChip).toBeVisible();
-
-        const returnChip = page.getByRole('button', { name: /^Return/i });
-        await expect(returnChip).toBeVisible();
-        await returnChip.click();
+        await expect(page).toHaveURL(/\/returns$/);
+        await expect(page.getByRole('heading', { name: 'Returns' })).toBeVisible();
+        await expect(page.getByRole('button', { name: /All documents/i })).toHaveCount(0);
 
         const rows = page.locator('.doc-row');
         await expect(rows.first()).toContainText('RET', { timeout: 10000 });
-        await expect(rows.filter({ hasNotText: 'RET' })).toHaveCount(0, { timeout: 15000 });
+        await expect(rows.filter({ hasNotText: 'RET' })).toHaveCount(0);
     });
 });

@@ -137,7 +137,7 @@ export default {
         documents: 'Documents',
         proformaInvoices: 'Proforma invoices',
         contracts: 'Contracts',
-        documentFiles: 'Documents',
+        returns: 'Returns',
         reconciliationActs: 'Reconciliation acts',
         favorites: 'Favorites',
         requests: 'Requests',

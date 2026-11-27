@@ -18,7 +18,8 @@ test.describe('Account statement section', () => {
         await group.click();
         await expect(group).toHaveAttribute('aria-expanded', 'true');
         await expect(nav.getByRole('link', { name: 'Proforma invoices' })).toBeVisible();
-        await expect(nav.getByRole('link', { name: 'Contracts and files' })).toBeVisible();
+        await expect(nav.getByRole('link', { name: 'Contracts' })).toBeVisible();
+        await expect(nav.getByRole('link', { name: 'Returns' })).toBeVisible();
         await expect(nav.getByRole('link', { name: 'Reconciliation acts' })).toBeVisible();
 
         await statement.click();

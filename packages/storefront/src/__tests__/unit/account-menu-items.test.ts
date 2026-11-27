@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAccountMenu } from '../../composables/accountMenuItems';
+import { DOCUMENT_LINKS, buildAccountMenu } from '../../composables/accountMenuItems';
 
 const keys = (nodes: { key: string }[]): string[] => nodes.map(n => n.key);
 
@@ -26,7 +26,22 @@ describe('buildAccountMenu', () => {
         expect(all).not.toContain('/requests');
         expect(all).not.toContain('/account/employees');
         expect(all).not.toContain('/reconciliation-acts');
-        expect(menu.find(n => n.key === 'documents')?.children).toHaveLength(2);
+        expect(menu.find(n => n.key === 'documents')?.children?.map(c => c.to)).toEqual([
+            '/proforma-invoices',
+            '/contracts',
+            '/returns',
+        ]);
+    });
+
+    it('lists proforma invoices, contracts, returns and reconciliation acts, each on its own page', () => {
+        expect(DOCUMENT_LINKS.map(l => [l.key, l.to])).toEqual([
+            ['proformaInvoices', '/proforma-invoices'],
+            ['contracts', '/contracts'],
+            ['returns', '/returns'],
+            ['reconciliationActs', '/reconciliation-acts'],
+        ]);
+        const docs = buildAccountMenu(true).find(n => n.key === 'documents');
+        expect(docs?.children?.map(c => c.to)).toEqual(DOCUMENT_LINKS.map(l => l.to));
     });
 
     it('omits entries that already have a header or tab-bar slot', () => {

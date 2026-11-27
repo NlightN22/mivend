@@ -64,7 +64,7 @@ for (const { customer, client, other, otherClient } of PAIRS) {
         test('17: own documents only', async ({ browser }) => {
             const s = await openStorefrontAs(browser, customer);
             try {
-                await s.page.goto('/documents');
+                await s.page.goto('/returns');
                 await expect(s.page.getByText(documentNumber(client)).first()).toBeVisible({
                     timeout: 15000,
                 });
