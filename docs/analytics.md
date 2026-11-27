@@ -99,7 +99,7 @@ Same client, key and scope rules as the orders report.
 - Dimensions: none, customer, organization, contract, customer manager (a customer with several managers is counted under each,
   so rows are not added across managers). Filters are the same four entities, typed as names and resolved server side inside the
   viewer scope; a name that matches nothing gives no rows, a too broad name answers `TOO_LARGE`. Contract v0.8.0 adds the exclude
-  lists (customer, organization, contract, customer manager; live) and customer groups (behind the switch above). Sales rows
+  lists (customer, organization, contract, customer manager; live) and customer groups (live). Sales rows
   of the customer manager dimension drop only the excluded managers' rows.
 - The UI always says the figures are preliminary: the signs and meaning of the amounts per document kind are not yet confirmed by
   the ERP side.
