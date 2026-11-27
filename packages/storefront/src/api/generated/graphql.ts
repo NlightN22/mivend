@@ -3235,6 +3235,8 @@ export enum Permission {
     ReadDeletedContractPowerOfAttorney = 'ReadDeletedContractPowerOfAttorney',
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     ReadEntityHistory = 'ReadEntityHistory',
+    /** Open the read-only exchange health views (data drift, ERP reconciliation, inbox issues, integration health, outbound problems); no replay, dismiss, requeue or rebuild (#409) */
+    ReadExchangeHealth = 'ReadExchangeHealth',
     /** Grants permission to read Facet */
     ReadFacet = 'ReadFacet',
     /** Open a manager's analytics card (sales, receivables, lost customers, dynamics); whose card is decided by the team visibility and counterparty scopes (#362) */
