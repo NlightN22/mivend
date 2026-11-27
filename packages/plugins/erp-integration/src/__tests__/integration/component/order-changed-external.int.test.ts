@@ -203,6 +203,7 @@ beforeAll(async () => {
         resolver,
         externalOrders,
         { attachOrder: vi.fn() } as never,
+        { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
     );
     const stateHandler = new OrderStateStreamHandler(
         { handleOrderState: vi.fn() } as never,
@@ -412,6 +413,7 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             { resolve: vi.fn() } as never,
             externalOrders,
             { attachOrder: vi.fn() } as never,
+            { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
         );
 
         await mivendHandler.apply(ctx, ERP_ORDER, { lines: [] });

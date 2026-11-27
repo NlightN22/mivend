@@ -66,6 +66,7 @@ describe('order-changed deletion mark', () => {
             } as never,
             { findByErpOrderId: vi.fn().mockResolvedValue(existing), upsert } as never,
             { attachOrder: vi.fn() } as never,
+            { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
         );
         return { handler, upsert };
     };

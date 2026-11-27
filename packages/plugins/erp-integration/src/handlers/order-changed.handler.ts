@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
-import { ExternalOrderService } from '@mivend/plugin-erp-order';
+import { ExternalOrderRetentionService, ExternalOrderService } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
@@ -20,6 +20,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         private readonly lineResolver: OrderLineResolver,
         private readonly externalOrderService: ExternalOrderService,
         private readonly settlementPending: SettlementPendingService,
+        private readonly retention: ExternalOrderRetentionService,
     ) {}
 
     async apply(
@@ -38,10 +39,8 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         const documentNumber =
             payload.documentNumber != null ? String(payload.documentNumber) : null;
 
-        const route = decideOrderChangedRoute(
-            orderUuid,
-            await this.externalOrderService.findByErpOrderId(ctx, entityId),
-        );
+        const stored = await this.externalOrderService.findByErpOrderId(ctx, entityId);
+        const route = decideOrderChangedRoute(orderUuid, stored);
         if (route === 'apply-to-mivend-order') {
             await this.reservationWriteOffSyncService.handleOrderChanged(ctx, {
                 orderUuid,
@@ -54,6 +53,18 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             });
             await this.settlementPending.attachOrder(ctx, entityId);
             return inboundApplied();
+        }
+
+        const orderDate = parseTimestamp(payload.orderDate);
+        if (
+            route === 'create-external' &&
+            payload.markedForDeletion === true &&
+            orderDate &&
+            (await this.retention.isBeyondWindow(ctx, orderDate))
+        ) {
+            return inboundNoop(
+                `order-changed ${entityId}: deletion-marked order older than the retention window, not created`,
+            );
         }
 
         const resolved = await this.lineResolver.resolve(

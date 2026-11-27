@@ -21,6 +21,17 @@ const BATCH_SIZE = 200;
 const MAX_BATCHES_PER_RUN = 25;
 const loggerCtx = 'ExternalOrderRetention';
 
+// Same cut as the sweep predicate: orderPlacedAt < now() - window.
+export function isBeyondRetention(
+    orderDate: Date,
+    months: number,
+    now: Date = new Date(),
+): boolean {
+    const cutoff = new Date(now);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+    return orderDate < cutoff;
+}
+
 @Injectable()
 export class ExternalOrderRetentionService {
     constructor(
@@ -34,6 +45,10 @@ export class ExternalOrderRetentionService {
         return months && months >= 1 && months <= MAX_EXTERNAL_ORDER_RETENTION_MONTHS
             ? Math.floor(months)
             : DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS;
+    }
+
+    async isBeyondWindow(ctx: RequestContext, orderDate: Date): Promise<boolean> {
+        return isBeyondRetention(orderDate, await this.retentionMonths(ctx));
     }
 
     // Each delete re-checks the predicate under the order's lock, so an order the ERP un-marked or

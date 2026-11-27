@@ -5,7 +5,8 @@ import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler'
 
 const ctx = {} as RequestContext;
 
-function setup(stored: { id: string; isExternal: boolean } | null) {
+function setup(stored: { id: string; isExternal: boolean } | null, beyondWindow = false) {
+    const isBeyondWindow = vi.fn().mockResolvedValue(beyondWindow);
     const sync = { handleOrderChanged: vi.fn() };
     const upsert = vi.fn().mockResolvedValue({ kind: 'created', counterpartyPending: false });
     const resolve = vi
@@ -16,8 +17,9 @@ function setup(stored: { id: string; isExternal: boolean } | null) {
         { resolve } as never,
         { findByErpOrderId: vi.fn().mockResolvedValue(stored), upsert } as never,
         { attachOrder: vi.fn() } as never,
+        { isBeyondWindow } as never,
     );
-    return { handler, sync, upsert, resolve };
+    return { handler, sync, upsert, resolve, isBeyondWindow };
 }
 
 describe('OrderChangedStreamHandler', () => {
@@ -125,5 +127,43 @@ describe('OrderChangedStreamHandler', () => {
 
         expect(outcome).toMatchObject({ kind: 'noop' });
         expect(JSON.stringify(outcome)).toContain('2 line(s) without a known product skipped');
+    });
+
+    describe('deletion-marked unknown order outside the retention window (#411)', () => {
+        const old = { markedForDeletion: true, orderDate: '2020-01-01T00:00:00Z' };
+
+        it('is not created and reports a noop with the reason; a repeat is the same noop', async () => {
+            const { handler, upsert, resolve } = setup(null, true);
+            for (let i = 0; i < 2; i += 1) {
+                const outcome = await handler.apply(ctx, 'old-1', old);
+                expect(outcome).toMatchObject({ kind: 'noop' });
+                expect(JSON.stringify(outcome)).toContain('retention window');
+            }
+            expect(upsert).not.toHaveBeenCalled();
+            expect(resolve).not.toHaveBeenCalled();
+        });
+
+        it('is created when inside the window', async () => {
+            const { handler, upsert } = setup(null, false);
+            await handler.apply(ctx, 'new-1', old);
+            expect(upsert).toHaveBeenCalledTimes(1);
+        });
+
+        it('is created when the order date is absent', async () => {
+            const { handler, upsert, isBeyondWindow } = setup(null, true);
+            await handler.apply(ctx, 'nodate-1', { markedForDeletion: true });
+            expect(isBeyondWindow).not.toHaveBeenCalled();
+            expect(upsert).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not affect an unmarked order or a stored external order', async () => {
+            const unmarked = setup(null, true);
+            await unmarked.handler.apply(ctx, 'u-1', { orderDate: old.orderDate });
+            expect(unmarked.upsert).toHaveBeenCalledTimes(1);
+
+            const stored = setup({ id: '1', isExternal: true }, true);
+            await stored.handler.apply(ctx, 'u-2', old);
+            expect(stored.upsert).toHaveBeenCalledTimes(1);
+        });
     });
 });
