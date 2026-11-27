@@ -20,7 +20,7 @@ export const EXPIRY_SLICE_SQL = `WITH slice AS (
        SELECT id, stream, entity_id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
      ), cand AS (
-       SELECT id, stream, entity_id FROM slice
+       SELECT id, stream, entity_id, created_at FROM slice
         WHERE status = 'processed' AND payload = '{}'::jsonb
           AND created_at < now() - make_interval(days => $3::int)
      ), newest AS MATERIALIZED (
