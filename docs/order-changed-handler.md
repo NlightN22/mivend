@@ -61,6 +61,10 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
 
 - Retention leaves rows that hold the order id as a string (notifications, documents, order line changes, reservation
   shortfall and check-failure rows) on purpose: they are harmless because every reader joins them to the order.
+- The order version fields leave with the order. After the inbox floor window (30 days) a replay of an order the retention
+  already removed is no longer dropped as stale: it creates the external order again and the next sweep removes it.
+- The version guard adds one advisory lock, a SELECT and an UPDATE of the order row per applied event; take a dated
+  rows-per-second reading on the first bulk re-send and compare it with the earlier one.
 
 ## Deliberately not consumed
 
