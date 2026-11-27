@@ -50,6 +50,8 @@ class TestOrderCustomFields {
     erpContractId!: string | null;
     @Column({ name: 'customFieldsErppaidamount', type: 'float', nullable: true })
     erpPaidAmount!: number | null;
+    @Column({ name: 'customFieldsErpisposted', type: 'boolean', nullable: true })
+    erpIsPosted!: boolean | null;
     @Column({ name: 'customFieldsIsexternal', type: 'boolean', default: false })
     isExternal!: boolean;
     @Column({ name: 'customFieldsCounterpartyid', type: 'varchar', nullable: true })
