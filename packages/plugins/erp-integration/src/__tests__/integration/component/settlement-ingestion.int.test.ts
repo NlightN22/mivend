@@ -37,6 +37,7 @@ import { SettlementBalanceStreamHandler } from '../../../handlers/settlement-bal
 import { SettlementDocumentStreamHandler } from '../../../handlers/settlement-document.handler';
 import { SettlementDocumentTypeStreamHandler } from '../../../handlers/settlement-document-type.handler';
 import { classifyInboundMessage } from '../../../kafka-inbound-message';
+import { streamsOf } from '../../guarded-stream-families';
 
 const { schema, extra } = testSchemaOptions('settlement_ingestion');
 let dataSource: DataSource;
@@ -208,6 +209,25 @@ describe('settlement ingestion (decode -> handler -> real Postgres)', () => {
 
         expect(second.kind).toBe('noop');
         expect(await entries()).toHaveLength(1);
+    });
+
+    it('a delivery older than the stored version changes nothing once the inbox floor row is gone (#414)', async () => {
+        expect(streamsOf('settlement-document')).toEqual(['settlement-document']);
+        await documentHandler.apply(
+            ctx,
+            DOC_ID,
+            documentPayload({ version: '2026-10-02T10:00:00Z', number: '15' }),
+        );
+
+        const older = await documentHandler.apply(
+            ctx,
+            DOC_ID,
+            documentPayload({ version: '2026-10-01T10:00:00Z', number: '99' }),
+        );
+
+        expect(older.kind).toBe('noop');
+        const [doc] = await dataSource.getRepository(SettlementDocument).find();
+        expect(doc.number).toBe('15');
     });
 
     it('a decoded tombstone voids the document', async () => {

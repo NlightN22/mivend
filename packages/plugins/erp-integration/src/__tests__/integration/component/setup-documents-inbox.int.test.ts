@@ -25,6 +25,7 @@ import { DiscountSetupStreamHandler } from '../../../handlers/discount-setup.han
 import { RetroBonusSetupStreamHandler } from '../../../handlers/retro-bonus-setup.handler';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import type { InboundStream } from '../../../types';
+import { streamsOf } from '../../guarded-stream-families';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 import {
     TestDiscountSetup,
@@ -268,6 +269,40 @@ describe('retro-bonus-setup through the inbox (real Postgres)', () => {
         expect(await dataSource.query(`SELECT count(*)::int AS n FROM retro_bonus_rule`)).toEqual([
             { n: 1 },
         ]);
+        expect(
+            await dataSource.query(`SELECT "counterpartyErpId" FROM retro_bonus_rule_counterparty`),
+        ).toEqual([{ counterpartyErpId: 'cp-3' }]);
+    });
+});
+
+describe('version guard once the inbox floor row is gone (#414)', () => {
+    it('covers the setup streams of the guarded list', () => {
+        expect(streamsOf('setup-document').sort()).toEqual(['discount-setup', 'retro-bonus-setup']);
+    });
+
+    it('discount-setup: a delivery older than the stored version changes nothing', async () => {
+        await handlers.discount.apply(testRequestContext, 'doc-d', discountMessage('3', ['p3']));
+        const older = await handlers.discount.apply(
+            testRequestContext,
+            'doc-d',
+            discountMessage('2', ['p1', 'p2']),
+        );
+
+        expect(older.kind).toBe('noop');
+        expect(await dataSource.query(`SELECT "productErpId" FROM discount_setup_product`)).toEqual(
+            [{ productErpId: 'p3' }],
+        );
+    });
+
+    it('retro-bonus-setup: a delivery older than the stored version changes nothing', async () => {
+        await handlers.retro.apply(testRequestContext, 'doc-r', retroMessage('3', ['cp-3']));
+        const older = await handlers.retro.apply(
+            testRequestContext,
+            'doc-r',
+            retroMessage('2', ['cp-1', 'cp-2']),
+        );
+
+        expect(older.kind).toBe('noop');
         expect(
             await dataSource.query(`SELECT "counterpartyErpId" FROM retro_bonus_rule_counterparty`),
         ).toEqual([{ counterpartyErpId: 'cp-3' }]);

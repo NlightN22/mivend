@@ -424,6 +424,8 @@ export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 30_000;
 export const INBOX_DEDUP_HORIZON_DAYS = 2;
 // A version-guarded document stream also loses its newest tombstoned row after this many days (#414).
 export const INBOX_FLOOR_RETENTION_DAYS = 30;
+// An expiry pass longer than this is logged as a warning: cleanup lags behind arrivals.
+export const INBOX_EXPIRY_LAG_WARN_MS = 6 * 3_600_000;
 export const INBOX_EXPIRY_SLICE_SIZE = 5000;
 // A full pass reads every row older than the horizon (~80 s on 4.4M rows), so it runs hourly, not every tick.
 export const INBOX_EXPIRY_PASS_INTERVAL_MS = 60 * 60_000;

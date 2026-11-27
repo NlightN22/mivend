@@ -48,6 +48,14 @@ describe('GrantedDiscountService.upsert', () => {
     });
 });
 
+describe('GrantedDiscountService version guard', () => {
+    it.each(['2', '1'])('ignores a live upsert at version %s against stored 2', async version => {
+        const { repo, service } = setup({ erpId: 'gd-1', sourceVersion: '2', isDeleted: false });
+        await service.upsert(ctx, { ...input, sourceVersion: version });
+        expect(repo.save).not.toHaveBeenCalled();
+    });
+});
+
 describe('GrantedDiscountService tombstones', () => {
     it('soft-deletes at an equal version and keeps it removed against a same-version upsert', async () => {
         const row = { erpId: 'gd-1', sourceVersion: '2', isDeleted: false };

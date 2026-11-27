@@ -19,6 +19,11 @@ import {
 } from 'shared';
 
 import { CustomerClaimStreamHandler } from '../../../handlers/customer-claim.handler';
+import type { InboundStreamHandler } from '../../../handlers/inbound-stream-handler';
+import { OrderCorrectionStreamHandler } from '../../../handlers/order-correction.handler';
+import { SalesCorrectionStreamHandler } from '../../../handlers/sales-correction.handler';
+import { SalesDocumentStreamHandler } from '../../../handlers/sales-document.handler';
+import { streamsOf } from '../../guarded-stream-families';
 import { OrderChangeResultStreamHandler } from '../../../handlers/order-change-result.handler';
 
 const { schema, extra } = testSchemaOptions('erp_documents');
@@ -26,6 +31,7 @@ let dataSource: DataSource;
 let claims: CustomerClaimStreamHandler;
 let results: OrderChangeResultStreamHandler;
 let powers: PowerOfAttorneyErpService;
+let handlerFor: (stream: string) => InboundStreamHandler;
 type ClaimResult = {
     version: string;
     number: string;
@@ -75,6 +81,14 @@ beforeAll(async () => {
     const writer = new ErpDocumentWriter(connection);
     claims = new CustomerClaimStreamHandler(writer, { codeOf: async () => null } as never);
     results = new OrderChangeResultStreamHandler(writer);
+    const currencies = { codeOf: async () => null } as never;
+    const sales = new SalesDocumentStreamHandler(writer, currencies);
+    const dedicated: Record<string, InboundStreamHandler> = {
+        'customer-claim': claims,
+        'sales-correction': new SalesCorrectionStreamHandler(writer, currencies),
+        'order-correction': new OrderCorrectionStreamHandler(writer),
+    };
+    handlerFor = stream => dedicated[stream] ?? sales.forStream(stream);
     powers = new PowerOfAttorneyErpService(connection);
 });
 
@@ -155,6 +169,33 @@ describe('ERP document tables', () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({ orderId: 'o-1', requestId: 'r-1', status: 'rejected' });
     });
+});
+
+describe('version guard once the inbox floor row is gone (#414)', () => {
+    it.each(streamsOf('document-writer'))(
+        '%s: a delivery older than the stored version changes nothing',
+        async stream => {
+            const handler = handlerFor(stream);
+            const entityId = `${stream}-1`;
+
+            expect((await handler.apply(ctx, entityId, { version: '3', number: '200' })).kind).toBe(
+                'applied',
+            );
+            const older = await handler.apply(ctx, entityId, { version: '2', number: '100' });
+
+            expect(older).toMatchObject({
+                kind: 'noop',
+                reason: expect.stringContaining('not newer'),
+            });
+            const [{ n }] = await dataSource.query(
+                `SELECT count(*)::int AS n FROM (SELECT "number" FROM erp_sales_document WHERE "number" = '100'
+                  UNION ALL SELECT "number" FROM customer_claim_erp WHERE "number" = '100'
+                  UNION ALL SELECT "number" FROM sales_correction_erp WHERE "number" = '100'
+                  UNION ALL SELECT "number" FROM order_correction_erp WHERE "number" = '100') x`,
+            );
+            expect(n).toBe(0);
+        },
+    );
 });
 
 describe('contract powers of attorney', () => {

@@ -34,8 +34,7 @@ export class GrantedDiscountService {
         });
     }
 
-    // Out-of-order protection against live rows is the inbox's own version guard; a deleted row is
-    // only revived by a strictly newer version.
+    // A version not newer than the stored one is ignored, so a late redelivery never overwrites a newer fact (#414).
     async upsert(ctx: RequestContext, input: GrantedDiscountInput): Promise<void> {
         await withAggregateLock(
             this.connection,
@@ -44,12 +43,8 @@ export class GrantedDiscountService {
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, GrantedDiscount);
                 const existing = await repo.findOne({ where: { erpId: input.erpId } });
-                if (
-                    existing?.isDeleted &&
-                    !isVersionNewer(input.sourceVersion, existing.sourceVersion)
-                ) {
+                if (existing && !isVersionNewer(input.sourceVersion, existing.sourceVersion))
                     return;
-                }
                 const values = { ...input, isDeleted: false };
                 await repo.save(
                     existing ? Object.assign(existing, values) : new GrantedDiscount(values),

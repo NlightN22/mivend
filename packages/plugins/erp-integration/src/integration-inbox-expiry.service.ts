@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RequestContextService, TransactionalConnection } from '@vendure/core';
 import { ctxQuery, tryLockAggregate } from 'shared';
 
@@ -6,7 +6,9 @@ import {
     INBOX_DEDUP_HORIZON_DAYS,
     INBOX_EXPIRY_PASS_INTERVAL_MS,
     INBOX_EXPIRY_SLICE_SIZE,
+    INBOX_EXPIRY_LAG_WARN_MS,
     INBOX_FLOOR_RETENTION_DAYS,
+    loggerCtx,
 } from './types';
 import { VERSION_GUARDED_STREAMS } from './reconciled-streams';
 
@@ -61,6 +63,8 @@ export class IntegrationInboxExpiryService {
     private cursor = '0';
     // A finished pass re-reads every old row, so the next one waits for the interval.
     private nextPassAt = 0;
+    private passStartedAt = 0;
+    private passDeleted = 0;
 
     constructor(
         private readonly connection: TransactionalConnection,
@@ -93,14 +97,32 @@ export class IntegrationInboxExpiryService {
                     ],
                 );
                 const finished = row.scanned < INBOX_EXPIRY_SLICE_SIZE || row.reached_horizon;
-                if (finished) this.nextPassAt = Date.now() + INBOX_EXPIRY_PASS_INTERVAL_MS;
+                this.passStartedAt ||= Date.now();
+                this.passDeleted += row.deleted;
+                if (finished) this.reportPass();
                 this.cursor = finished || row.last_id === null ? '0' : row.last_id;
                 return { deleted: row.deleted, finished, outcome: 'swept' as const };
             });
         } catch (error) {
             const e = error as { code?: string; driverError?: { code?: string } };
             if (e?.code !== '57014' && e?.driverError?.code !== '57014') throw error;
+            Logger.warn(
+                `Inbox expiry slice timed out; the pass resumes from the same cursor`,
+                loggerCtx,
+            );
             return { deleted: 0, finished: true, outcome: 'timeout' };
         }
+    }
+
+    // A pass that takes longer than the lag budget means cleanup is not keeping up with arrivals.
+    private reportPass(): void {
+        const durationMs = Date.now() - this.passStartedAt;
+        const message = `Inbox expiry pass finished: deleted ${this.passDeleted} rows in ${Math.round(durationMs / 1000)} s`;
+        if (durationMs > INBOX_EXPIRY_LAG_WARN_MS)
+            Logger.warn(`${message}, over the lag budget`, loggerCtx);
+        else Logger.log(message, loggerCtx);
+        this.passStartedAt = 0;
+        this.passDeleted = 0;
+        this.nextPassAt = Date.now() + INBOX_EXPIRY_PASS_INTERVAL_MS;
     }
 }
