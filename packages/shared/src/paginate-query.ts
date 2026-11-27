@@ -39,6 +39,7 @@ export function cappedCountQuery<T extends ObjectLiteral>(
         .orderBy()
         .select('1')
         .limit(ceiling + 1);
+    // queryRunner is protected, so the count uses the pool, not a caller's transaction; callers here read outside one.
     const counting = qb.connection.createQueryBuilder();
     return counting
         .select('COUNT(*)', 'total')
