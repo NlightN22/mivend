@@ -163,6 +163,7 @@ describe('OrderStateStreamHandler', () => {
         expect(sync.handleOrderState).not.toHaveBeenCalled();
         expect(external.applyDerived).toHaveBeenCalledWith(ctx, 'o-2', {
             erpStatus: 'DELIVERED',
+            isPosted: null,
             erpStatusAt: null,
             paidAmountMinor: 500,
             erpFacts: {},

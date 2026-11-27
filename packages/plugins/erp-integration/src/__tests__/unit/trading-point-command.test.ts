@@ -155,11 +155,11 @@ describe('trading point contract pin', () => {
         expect(TRADING_POINT_COMMANDS_TOPIC).toBe('mivend.trading-point.commands.v1');
     });
 
-    it('requires a contracts package that ships the command (^0.90.0)', () => {
+    it('requires a contracts package that ships the command (>=0.90.0)', () => {
         const pkg = JSON.parse(readFileSync(`${__dirname}/../../../package.json`, 'utf8')) as {
             dependencies: Record<string, string>;
         };
-        expect(pkg.dependencies['@nlightn22/event-contracts']).toMatch(/^\^0\.(9\d)\./);
+        expect(pkg.dependencies['@nlightn22/event-contracts']).toMatch(/^\^0\.(9\d|[1-9]\d{2,})\./);
         expect(compareContractVersions(installedContracts, '0.90.0').status).not.toBe('BEHIND');
     });
 });

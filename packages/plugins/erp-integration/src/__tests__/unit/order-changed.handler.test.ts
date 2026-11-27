@@ -105,7 +105,7 @@ describe('OrderChangedStreamHandler', () => {
         expect(outcome).toEqual({ kind: 'applied' });
         expect(upsert).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ counterpartyErpId: null, notPosted: true }),
+            expect.objectContaining({ counterpartyErpId: null, isPosted: false }),
         );
     });
 

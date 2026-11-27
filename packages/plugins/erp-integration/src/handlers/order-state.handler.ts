@@ -43,6 +43,7 @@ export class OrderStateStreamHandler implements InboundStreamHandler {
         if (stored.isExternal) {
             await this.externalOrderService.applyDerived(ctx, entityId, {
                 erpStatus: derivedStatus,
+                isPosted: typeof payload.isPosted === 'boolean' ? payload.isPosted : null,
                 erpStatusAt: derivedStatusAt,
                 paidAmountMinor: paidAmountMinor(payload),
                 erpFacts: orderStateFacts(payload),

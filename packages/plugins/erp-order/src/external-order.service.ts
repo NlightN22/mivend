@@ -13,7 +13,7 @@ import { ctxQueryBounded, keysetBatches, KEYSET_BATCH_SIZE, withAggregateLock } 
 import { MoreThan } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import { nextExternalErpStatus } from './external-order-state';
+import { nextExternalStatusWithPosting } from './external-order-state';
 import {
     batchedLinesSignature,
     buildExternalOrderLines,
@@ -58,19 +58,30 @@ export class ExternalOrderService {
     async findByErpOrderId(
         ctx: RequestContext,
         erpOrderId: string,
-    ): Promise<{ id: string; isExternal: boolean; erpStatus: string | null } | null> {
-        const rows: Array<{ id: string; isExternal: boolean; erpStatus: string | null }> =
-            await this.connection.getRepository(ctx, Order).query(
-                `SELECT id, "customFieldsIsexternal" AS "isExternal",
-                        "customFieldsErpstatus" AS "erpStatus" FROM "order"
+    ): Promise<{
+        id: string;
+        isExternal: boolean;
+        erpStatus: string | null;
+        erpIsPosted: boolean | null;
+    } | null> {
+        const rows: Array<{
+            id: string;
+            isExternal: boolean;
+            erpStatus: string | null;
+            erpIsPosted: boolean | null;
+        }> = await this.connection.getRepository(ctx, Order).query(
+            `SELECT id, "customFieldsIsexternal" AS "isExternal",
+                        "customFieldsErpstatus" AS "erpStatus",
+                        "customFieldsErpisposted" AS "erpIsPosted" FROM "order"
                  WHERE "customFieldsErporderid" = $1 LIMIT 1`,
-                [erpOrderId],
-            );
+            [erpOrderId],
+        );
         return rows[0]
             ? {
                   id: String(rows[0].id),
                   isExternal: rows[0].isExternal === true,
                   erpStatus: rows[0].erpStatus ?? null,
+                  erpIsPosted: rows[0].erpIsPosted ?? null,
               }
             : null;
     }
@@ -98,6 +109,7 @@ export class ExternalOrderService {
         erpOrderId: string,
         derived: {
             erpStatus: string | null;
+            isPosted?: boolean | null;
             erpStatusAt: Date | null;
             paidAmountMinor: number | null;
             erpFacts: OrderErpFacts;
@@ -111,9 +123,10 @@ export class ExternalOrderService {
                 const existing = await this.findByErpOrderId(txCtx, erpOrderId);
                 if (!existing?.isExternal) return false;
                 const dictionary = await this.statusReference.dictionary(txCtx);
-                const nextStatus = nextExternalErpStatus(
-                    existing.erpStatus,
+                const nextStatus = nextExternalStatusWithPosting(
+                    existing,
                     derived.erpStatus,
+                    derived.isPosted,
                     dictionary,
                 );
                 const customFields = {
@@ -121,6 +134,7 @@ export class ExternalOrderService {
                         ? {}
                         : { erpPaidAmount: derived.paidAmountMinor }),
                     ...derived.erpFacts,
+                    ...(derived.isPosted == null ? {} : { erpIsPosted: derived.isPosted }),
                     ...(nextStatus === null
                         ? {}
                         : {
@@ -193,10 +207,11 @@ export class ExternalOrderService {
             );
         }
         const dictionary = await this.statusReference.dictionary(ctx);
-        const incomingStatus = input.notPosted ? dictionary.codeWith('cancelled') : input.erpStatus;
         const nextStatus = existing
-            ? nextExternalErpStatus(existing.erpStatus, incomingStatus, dictionary)
-            : (incomingStatus ?? dictionary.codeWith('externalDefault'));
+            ? nextExternalStatusWithPosting(existing, input.erpStatus, input.isPosted, dictionary)
+            : input.isPosted === false
+              ? dictionary.codeWith('cancelled')
+              : (input.erpStatus ?? dictionary.codeWith('externalDefault'));
         const counterpartyFields = input.counterpartyErpId
             ? {
                   counterpartyId: counterparty ? String(counterparty.id) : null,
@@ -214,6 +229,7 @@ export class ExternalOrderService {
             ...(input.contractId === null ? {} : { erpContractId: input.contractId }),
             ...(input.paidAmountMinor === null ? {} : { erpPaidAmount: input.paidAmountMinor }),
             ...input.erpFacts,
+            ...(input.isPosted == null ? {} : { erpIsPosted: input.isPosted }),
             ...(nextStatus === null
                 ? {}
                 : { erpStatus: nextStatus, erpStatusAt: input.erpStatusAt ?? new Date() }),
