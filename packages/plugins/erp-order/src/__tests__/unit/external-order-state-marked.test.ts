@@ -104,3 +104,40 @@ describe('planExternalStatus with a deletion mark', () => {
         expect(plans[1].status).toBe('SHIPPING');
     });
 });
+
+describe('planExternalStatus un-mark without a posted flag', () => {
+    const marked = (): PostingState => run(shipped, [{ marked: true }]).state;
+
+    it('restores the saved status and clears the flags', () => {
+        const { plans, state } = run(marked(), [{ marked: false }]);
+        expect(plans[0].status).toBe('SHIPPING');
+        expect(plans[0].facts).toMatchObject({
+            erpIsPosted: true,
+            erpStatusBeforeUnposted: null,
+            erpMarkedForDeletion: false,
+        });
+        expect(state.erpStatus).toBe('SHIPPING');
+    });
+
+    it('stays cancelled when the same event says not posted', () => {
+        const { plans, state } = run(marked(), [{ marked: false, isPosted: false }]);
+        expect(plans[0].status).toBeNull();
+        expect(plans[0].facts).toMatchObject({ erpIsPosted: false, erpMarkedForDeletion: false });
+        expect(state.erpStatus).toBe('CANCELLED');
+    });
+
+    it('stays terminal when the order is also genuinely cancelled', () => {
+        const { plans, state } = run(shipped, [
+            { marked: true },
+            { incoming: 'CANCELLED', marked: true },
+            { marked: false },
+        ]);
+        expect(plans[2].status).toBeNull();
+        expect(state.erpStatus).toBe('CANCELLED');
+    });
+
+    it('a repeated un-mark changes nothing', () => {
+        const { plans } = run(marked(), [{ marked: false }, { marked: false }]);
+        expect(plans[1].status).toBeNull();
+    });
+});

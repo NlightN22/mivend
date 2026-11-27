@@ -33,7 +33,10 @@ export function planExternalStatus(
     markedForDeletion?: boolean | null,
 ): PostingPlan {
     const marked = markedForDeletion ?? current.erpMarkedForDeletion;
-    const plan = planPosting(current, incoming, marked === true ? false : isPosted, dictionary);
+    const unmarked =
+        current.erpMarkedForDeletion === true && markedForDeletion === false && isPosted !== false;
+    const effectivePosted = marked === true ? false : unmarked ? true : isPosted;
+    const plan = planPosting(current, incoming, effectivePosted, dictionary);
     return typeof markedForDeletion === 'boolean'
         ? { ...plan, facts: { ...plan.facts, erpMarkedForDeletion: markedForDeletion } }
         : plan;

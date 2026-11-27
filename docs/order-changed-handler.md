@@ -52,6 +52,9 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
   stored as received and is not filtered (#411). The #410 reconciliation predicate for customer orders is: not a
   vanished row and `erpMarkedForDeletion` is not true.
 
+- Retention leaves rows that hold the order id as a string (notifications, documents, order line changes, reservation
+  shortfall and check-failure rows) on purpose: they are harmless because every reader joins them to the order.
+
 ## Deliberately not consumed
 
 - Per-line `appliedDiscountAmount` / `priceTypeId` and `comment`: no feature reads them yet (#101/#108).

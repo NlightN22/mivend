@@ -16,6 +16,7 @@ import {
 import './types';
 
 export const DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS = 12;
+export const MAX_EXTERNAL_ORDER_RETENTION_MONTHS = 600;
 const BATCH_SIZE = 200;
 const MAX_BATCHES_PER_RUN = 25;
 const loggerCtx = 'ExternalOrderRetention';
@@ -30,7 +31,9 @@ export class ExternalOrderRetentionService {
     async retentionMonths(ctx: RequestContext): Promise<number> {
         const settings = await this.globalSettingsService.getSettings(ctx);
         const months = settings.customFields?.externalOrderRetentionMonths;
-        return months && months > 0 ? months : DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS;
+        return months && months >= 1 && months <= MAX_EXTERNAL_ORDER_RETENTION_MONTHS
+            ? Math.floor(months)
+            : DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS;
     }
 
     // Each delete re-checks the predicate under the order's lock, so an order the ERP un-marked or
