@@ -29,6 +29,7 @@ export const RECONCILED_STREAMS: Readonly<Partial<Record<InboundStream, Compared
     'granted-retro-bonus': 'grantedRetroBonus',
     'settlement-balance': 'settlementBalance',
     'settlement-document-type': 'settlementDocumentType',
+    'counterparty-group': 'counterpartyGroup',
     'order-status': 'orderStatus',
     currency: 'currency',
     'promo-rule': 'promoRule',
@@ -84,7 +85,6 @@ export const NOT_COMPARABLE_STREAMS: Readonly<Partial<Record<InboundStream, stri
     'settlement-document':
         'The retention cleaner removes old documents, so the local count is lower than upstream by design',
     'counterparty-contact': NO_SUMMARY,
-    'counterparty-group': NO_SUMMARY,
     'product-group': NO_SUMMARY,
     'point-of-sale-type': NO_SUMMARY,
     individual: NO_SUMMARY,

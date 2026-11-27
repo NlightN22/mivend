@@ -71,6 +71,9 @@ beforeAll(async () => {
         );
     }
     await dataSource.query(
+        `CREATE TABLE counterparty_group_erp (id serial PRIMARY KEY, "isActive" boolean NOT NULL, "isDeleted" boolean NOT NULL DEFAULT false)`,
+    );
+    await dataSource.query(
         `CREATE TABLE manufacturer (id serial PRIMARY KEY, name varchar, "isActive" boolean NOT NULL DEFAULT true)`,
     );
     for (const t of [
@@ -104,7 +107,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point, counterparty, erp_position, region_record, legal_form_record, bank_record, bank_account_record, manufacturer, product_photo, granted_discount, granted_retro_bonus, settlement_balance, settlement_document_type, discount_setup, retro_bonus_rule, order_status_reference RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point, counterparty, erp_position, region_record, legal_form_record, bank_record, bank_account_record, counterparty_group_erp, manufacturer, product_photo, granted_discount, granted_retro_bonus, settlement_balance, settlement_document_type, discount_setup, retro_bonus_rule, order_status_reference RESTART IDENTITY`,
     );
 });
 
@@ -286,6 +289,13 @@ describe('reconciliation local counts against real Postgres', () => {
             expect(await service.getLocalActiveCount(ctx, type)).toBe(3);
         },
     );
+
+    it('counts only active, not deleted counterparty groups', async () => {
+        await dataSource.query(
+            `INSERT INTO counterparty_group_erp ("isActive", "isDeleted") VALUES (true, false), (true, false), (false, false), (true, true)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'counterpartyGroup')).toBe(2);
+    });
 
     it('counts only active named manufacturers, not placeholders or deactivated ones', async () => {
         await dataSource.query(

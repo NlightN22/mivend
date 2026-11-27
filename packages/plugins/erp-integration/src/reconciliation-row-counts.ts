@@ -3,6 +3,10 @@
 export const ROW_COUNT_RULES = {
     position: { table: 'erp_position', condition: '"isActive" = true' },
     counterparty: { table: 'counterparty', condition: '"isActive" = true' },
+    counterpartyGroup: {
+        table: 'counterparty_group_erp',
+        condition: '"isActive" = true AND "isDeleted" = false',
+    },
     // Product-referenced placeholders carry no name and are not counted upstream.
     manufacturer: { table: 'manufacturer', condition: '"isActive" = true AND name IS NOT NULL' },
     region: { table: 'region_record', condition: '"isActive" = true' },
