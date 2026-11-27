@@ -3840,6 +3840,8 @@ export type IntegrationInboxIssueFilterParameter = {
 
 export type IntegrationInboxIssueList = PaginatedList & {
     items: Array<IntegrationInboxIssue>;
+    /** True when more rows matched than totalItems counts: read totalItems as 'at least'. */
+    totalItemsCapped: Scalars['Boolean']['output'];
     totalItems: Scalars['Int']['output'];
 };
 
@@ -3924,6 +3926,8 @@ export type IntegrationOutboxProblemFilterParameter = {
 
 export type IntegrationOutboxProblemList = PaginatedList & {
     items: Array<IntegrationOutboxProblem>;
+    /** True when more rows matched than totalItems counts: read totalItems as 'at least'. */
+    totalItemsCapped: Scalars['Boolean']['output'];
     totalItems: Scalars['Int']['output'];
 };
 
@@ -13896,6 +13900,7 @@ export type ExchangeInboxIssuesQueryVariables = Exact<{
 export type ExchangeInboxIssuesQuery = {
     integrationInboxIssues: {
         totalItems: number;
+        totalItemsCapped: boolean;
         items: Array<{
             id: string;
             stream: string;
@@ -13918,6 +13923,7 @@ export type ExchangeOutboxProblemsQueryVariables = Exact<{
 export type ExchangeOutboxProblemsQuery = {
     integrationOutboxProblems: {
         totalItems: number;
+        totalItemsCapped: boolean;
         items: Array<{
             id: string;
             eventId: string;
@@ -18651,6 +18657,7 @@ export const ExchangeInboxIssuesDocument = new TypedDocumentString(`
       outcomeReason
     }
     totalItems
+    totalItemsCapped
   }
 }
     `) as unknown as TypedDocumentString<
@@ -18672,6 +18679,7 @@ export const ExchangeOutboxProblemsDocument = new TypedDocumentString(`
       subjectId
     }
     totalItems
+    totalItemsCapped
   }
 }
     `) as unknown as TypedDocumentString<

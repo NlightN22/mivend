@@ -6,6 +6,10 @@ export type IntegrationOutboxStatus = 'pending' | 'published' | 'failed' | 'skip
 
 @Entity('integration_outbox')
 @Index('integration_outbox_pending', ['createdAt'], { where: '"status" = \'pending\'' })
+// Serves the outbox problem list (#413).
+@Index('integration_outbox_problem', ['createdAt', 'id'], {
+    where: `"status" IN ('failed', 'skipped')`,
+})
 export class IntegrationOutboxEntry {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;

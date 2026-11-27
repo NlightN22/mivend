@@ -345,3 +345,15 @@ committed), not in the order's own transaction; a crash between the two is repai
 required field" no-ops are recorded but not dead-lettered. `plugin-sync`'s own hub-to-branch
 outbox is not covered. Drill-down pages for failed/skipped rows, Replay and Requeue buttons are a
 separate follow-up.
+
+## Problem lists on large tables (issue #413)
+
+- The inbox problem list (`failed` / `dependency_missing` / `replay_requested` rows plus no-op rows) and the
+  outbox problem list read through partial indexes that match their predicate and default sort
+  (`integration_inbox_event_problem`, `integration_inbox_event_problem_status`, `integration_outbox_problem`);
+  the per-stream backlog summary reads `integration_inbox_event_backlog` index-only. The int test
+  `integration-event-list-paging.int.test.ts` asserts through `EXPLAIN` that none of them seq-scans the table.
+- `totalItems` of both lists stops at `CAPPED_COUNT_CEILING` (10,000) and `totalItemsCapped: true` says "at least
+  this many". A page offset past the ceiling fails with `QUERY_TOO_LARGE`; narrow the filters instead.
+- Free-text search on `entityId` and sorts other than the default scan the partial index's rows (the problem set,
+  not the whole table).

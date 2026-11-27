@@ -15,6 +15,8 @@ export interface FilterChip {
     variant?: StatusBadgeVariant;
     // Server COUNT for the chip; shown as a pill after the label.
     count?: number;
+    // The count is a ceiling: more rows match than it says (shown as "N+").
+    countCapped?: boolean;
     // Shows a placeholder of the pill's width instead of the count while it is being fetched.
     countLoading?: boolean;
     // Inverts the count pill while count > 0, for the chip people look at first.
@@ -28,7 +30,10 @@ const expanded = ref(false);
 const { visible, overflows, hiddenCount } = useChipsOverflow(
     row,
     toggle,
-    () => [props.chips.map(c => `${c.key}|${c.label}|${c.count}|${c.countLoading}`), props.active],
+    () => [
+        props.chips.map(c => `${c.key}|${c.label}|${c.count}|${c.countCapped}|${c.countLoading}`),
+        props.active,
+    ],
     () => props.chips.findIndex(c => c.key === props.active),
 );
 function isHidden(index: number): boolean {
@@ -71,7 +76,7 @@ const emit = defineEmits<{ select: [key: string] }>();
                 class="mv-filter-chip__count"
                 :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
                 :title="formatExactCount(chip.count)"
-                >{{ formatCompactCount(chip.count) }}</span
+                >{{ formatCompactCount(chip.count) }}{{ chip.countCapped ? '+' : '' }}</span
             >
         </button>
         <MvButton

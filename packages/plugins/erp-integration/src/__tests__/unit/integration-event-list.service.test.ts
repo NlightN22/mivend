@@ -9,7 +9,11 @@ const rows = vi.hoisted(() => ({ page: [] as unknown[] }));
 
 vi.mock('shared', async importOriginal => ({
     ...(await importOriginal<Record<string, unknown>>()),
-    getPageAndCount: vi.fn(async () => ({ items: rows.page, totalItems: rows.page.length })),
+    getPageAndCappedCount: vi.fn(async () => ({
+        items: rows.page,
+        totalItems: rows.page.length,
+        totalItemsCapped: false,
+    })),
     ctxQueryBounded: vi.fn(async () => rows.page),
 }));
 

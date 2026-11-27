@@ -11,6 +11,8 @@ const exchangeHealth: typeof en = {
         never: 'никогда',
         ago: 'назад',
         refresh: 'Обновить',
+        cappedTotal:
+            'Подходит больше {count} строк. Листать можно только первые {count}; сузьте фильтры, чтобы увидеть остальные.',
     },
     units: { s: 'с', min: 'мин', h: 'ч', d: 'дн' },
     states: { OK: 'В порядке', DEGRADED: 'Деградация', DOWN: 'Сбой', UNKNOWN: 'Неизвестно' },

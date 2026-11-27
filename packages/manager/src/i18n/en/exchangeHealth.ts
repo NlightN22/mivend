@@ -9,6 +9,8 @@ export default {
         never: 'never',
         ago: 'ago',
         refresh: 'Refresh',
+        cappedTotal:
+            'More than {count} rows match. Only the first {count} can be paged; narrow the filters to see the rest.',
     },
     units: { s: 's', min: 'min', h: 'h', d: 'd' },
     states: { OK: 'OK', DEGRADED: 'DEGRADED', DOWN: 'DOWN', UNKNOWN: 'UNKNOWN' },

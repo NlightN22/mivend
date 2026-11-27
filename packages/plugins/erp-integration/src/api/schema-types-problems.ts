@@ -21,6 +21,8 @@ export const problemTypes = `
     type IntegrationInboxIssueList implements PaginatedList {
         items: [IntegrationInboxIssue!]!
         totalItems: Int!
+        "True when more rows matched than totalItems counts: read totalItems as 'at least'."
+        totalItemsCapped: Boolean!
     }
 
     input IntegrationInboxIssueFilterParameter {
@@ -68,6 +70,8 @@ export const problemTypes = `
     type IntegrationOutboxProblemList implements PaginatedList {
         items: [IntegrationOutboxProblem!]!
         totalItems: Int!
+        "True when more rows matched than totalItems counts: read totalItems as 'at least'."
+        totalItemsCapped: Boolean!
     }
 
     input IntegrationOutboxProblemFilterParameter {

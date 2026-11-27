@@ -5,7 +5,7 @@ import { Brackets, ObjectLiteral, SelectQueryBuilder, WhereExpressionBuilder } f
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
-import { getPageAndCount } from 'shared';
+import { getPageAndCappedCount } from 'shared';
 import { sanitizeErrorText } from './error-text';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
@@ -15,6 +15,7 @@ import type { FilterNode, ListOptionsInput } from './list-options';
 export interface IntegrationEventList<T> {
     items: T[];
     totalItems: number;
+    totalItemsCapped: boolean;
 }
 
 export interface OutboxProblemRow {
@@ -120,10 +121,10 @@ function applyList(
 export class IntegrationEventListService {
     constructor(private readonly connection: TransactionalConnection) {}
 
-    async listInboxIssues(
+    inboxIssuesQuery(
         ctx: RequestContext,
         options: ListOptionsInput = {},
-    ): Promise<IntegrationEventList<IntegrationInboxEvent>> {
+    ): SelectQueryBuilder<IntegrationInboxEvent> {
         const qb = this.connection
             .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('e')
@@ -151,19 +152,30 @@ export class IntegrationEventListService {
             column: 'e.updatedAt',
             direction: 'DESC',
         });
+        return qb;
+    }
+
+    async listInboxIssues(
+        ctx: RequestContext,
+        options: ListOptionsInput = {},
+    ): Promise<IntegrationEventList<IntegrationInboxEvent>> {
         const { skip, take } = parsePaging(options);
-        const { items, totalItems } = await getPageAndCount(qb, take, skip);
+        const { items, ...page } = await getPageAndCappedCount(
+            this.inboxIssuesQuery(ctx, options),
+            take,
+            skip,
+        );
         for (const item of items) {
             item.lastError = sanitizeErrorText(item.lastError);
             item.outcomeReason = sanitizeErrorText(item.outcomeReason);
         }
-        return { items, totalItems };
+        return { items, ...page };
     }
 
-    async listOutboxProblems(
+    outboxProblemsQuery(
         ctx: RequestContext,
         options: ListOptionsInput = {},
-    ): Promise<IntegrationEventList<OutboxProblemRow>> {
+    ): SelectQueryBuilder<IntegrationOutboxEntry> {
         const qb = this.connection
             .getRepository(ctx, IntegrationOutboxEntry)
             .createQueryBuilder('e')
@@ -172,9 +184,20 @@ export class IntegrationEventListService {
             column: 'e.createdAt',
             direction: 'DESC',
         });
+        return qb;
+    }
+
+    async listOutboxProblems(
+        ctx: RequestContext,
+        options: ListOptionsInput = {},
+    ): Promise<IntegrationEventList<OutboxProblemRow>> {
         const { skip, take } = parsePaging(options);
-        const { items, totalItems } = await getPageAndCount(qb, take, skip);
-        return { items: items.map(toOutboxProblemRow), totalItems };
+        const { items, ...page } = await getPageAndCappedCount(
+            this.outboxProblemsQuery(ctx, options),
+            take,
+            skip,
+        );
+        return { items: items.map(toOutboxProblemRow), ...page };
     }
 }
 

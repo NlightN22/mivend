@@ -37,6 +37,7 @@ export type ExchangeSnapshot = ExchangeHealthSnapshotQuery['exchangeHealth'];
 export interface Page<T> {
     items: T[];
     totalItems: number;
+    totalItemsCapped?: boolean;
 }
 
 export async function fetchConsistencyReports(

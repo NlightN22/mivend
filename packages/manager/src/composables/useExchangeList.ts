@@ -38,6 +38,8 @@ const URL_DEFAULTS = {
 export interface ExchangeListState {
     items: Ref<Array<{ id: string }>>;
     totalItems: Ref<number>;
+    totalItemsCapped: Ref<boolean>;
+    viewCapped: Ref<Record<string, boolean>>;
     loading: Ref<boolean>;
     failed: Ref<boolean>;
     filters: Ref<ExchangeListFilters>;
@@ -67,6 +69,8 @@ export function useExchangeList(source: ExchangeListSource): ExchangeListState {
     const pageSize = ref(Number(url.pageSize) > 0 ? Number(url.pageSize) : 20);
     const items = ref<Array<{ id: string }>>([]);
     const totalItems = ref(0);
+    const totalItemsCapped = ref(false);
+    const viewCapped = ref<Record<string, boolean>>({});
     const failed = ref(false);
     const viewCounts = ref<Record<string, number> | null>(null);
 
@@ -93,6 +97,7 @@ export function useExchangeList(source: ExchangeListSource): ExchangeListState {
             failed.value = result === null;
             items.value = result?.items ?? [];
             totalItems.value = result?.totalItems ?? 0;
+            totalItemsCapped.value = result?.totalItemsCapped ?? false;
         },
     );
     const reload = (): void => void run();
@@ -103,6 +108,9 @@ export function useExchangeList(source: ExchangeListSource): ExchangeListState {
             const counts = await Promise.all(source.views.map(v => source.fetch(request(v, 0, 1))));
             viewCounts.value = Object.fromEntries(
                 source.views.map((v, i) => [v, counts[i].totalItems]),
+            );
+            viewCapped.value = Object.fromEntries(
+                source.views.map((v, i) => [v, counts[i].totalItemsCapped ?? false]),
             );
         } catch {
             viewCounts.value = null;
@@ -139,6 +147,8 @@ export function useExchangeList(source: ExchangeListSource): ExchangeListState {
     return {
         items,
         totalItems,
+        totalItemsCapped,
+        viewCapped,
         loading,
         failed,
         filters,

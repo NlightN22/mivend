@@ -92,6 +92,7 @@ const chips = computed<FilterChip[]>(() =>
         label: t(`exchangeHealth.views.${config.id}.${key}`),
         variant: key === 'all' ? undefined : statusVariant?.(key),
         count: list.viewCounts.value?.[key],
+        countCapped: list.viewCapped.value[key],
         countLoading: list.viewCounts.value === null,
     })),
 );
@@ -173,6 +174,9 @@ function applyView(state: TableViewState): void {
                 :active="list.filters.value.view"
                 @select="update({ view: $event })"
             />
+            <small v-if="list.totalItemsCapped.value" class="exchange-list__capped">{{
+                t('exchangeHealth.common.cappedTotal', { count: list.totalItems.value })
+            }}</small>
         </template>
 
         <template #toolbar-end>
@@ -217,6 +221,10 @@ function applyView(state: TableViewState): void {
 .exchange-list__code {
     font-size: 12px;
     overflow-wrap: anywhere;
+}
+
+.exchange-list__capped {
+    color: var(--el-text-color-secondary);
 }
 
 .exchange-list__wrap {

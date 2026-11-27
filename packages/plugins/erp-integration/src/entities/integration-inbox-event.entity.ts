@@ -43,6 +43,17 @@ export type IntegrationInboxEventStatus =
 @Index('integration_inbox_event_contact_failure', ['stream', 'processedAt'], {
     where: `"outcome" = 'applied' AND "outcome_reason" IS NOT NULL`,
 })
+// Serve the exchange-health problem list (#413): newest first, and per status chip without scanning the no-op rows.
+@Index('integration_inbox_event_problem', ['updatedAt', 'id'], {
+    where: `"status" IN ('failed', 'dependency_missing', 'replay_requested') OR "outcome" = 'noop'`,
+})
+@Index('integration_inbox_event_problem_status', ['status', 'updatedAt', 'id'], {
+    where: `"status" IN ('failed', 'dependency_missing', 'replay_requested')`,
+})
+// Index-only per-stream backlog summary of stream health (#413); unprocessed rows are a small share of the table.
+@Index('integration_inbox_event_backlog', ['stream', 'status', 'createdAt'], {
+    where: `"status" IN ('pending', 'processing', 'failed', 'dependency_missing', 'replay_requested')`,
+})
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;
