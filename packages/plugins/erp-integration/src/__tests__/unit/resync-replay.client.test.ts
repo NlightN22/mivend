@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ReplayRateLimitedError, ResyncReplayClient } from '../../resync-replay.client';
+import {
+    ReplayDryRunIgnoredError,
+    ReplayRateLimitedError,
+    ResyncReplayClient,
+} from '../../resync-replay.client';
 
 const client = new ResyncReplayClient({
     reconciliationApiUrl: 'https://is.example',
@@ -127,5 +131,45 @@ describe('ResyncReplayClient generic dry run', () => {
         );
         expect(bodies[0].dryRun).toBe(true);
         expect(bodies[1].dryRun).toBeUndefined();
+    });
+});
+
+describe('ResyncReplayClient.replayForHeal', () => {
+    const answer = (body: unknown): void => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response(JSON.stringify(body))),
+        );
+    };
+
+    it('maps a dry-run source to would_republish and keeps not_found', async () => {
+        answer({
+            dryRun: true,
+            results: [
+                { entityId: 'a', status: 'replayed_from_outbox' },
+                { entityId: 'b', status: 'not_found' },
+            ],
+        });
+        expect(await client.replayForHeal('productPhoto', ['a', 'b'], true)).toEqual([
+            { entityId: 'a', status: 'would_republish' },
+            { entityId: 'b', status: 'not_found' },
+        ]);
+    });
+
+    it('throws when a dry-run answer does not carry dryRun: true', async () => {
+        answer({ results: [{ entityId: 'a', status: 'replayed_from_state' }] });
+        await expect(client.replayForHeal('productPhoto', ['a'], true)).rejects.toBeInstanceOf(
+            ReplayDryRunIgnoredError,
+        );
+    });
+
+    it('maps a real run source to republished', async () => {
+        answer({
+            dryRun: false,
+            results: [{ entityId: 'a', status: 'replayed_from_business_db' }],
+        });
+        expect(await client.replayForHeal('productPhoto', ['a'], false)).toEqual([
+            { entityId: 'a', status: 'republished' },
+        ]);
     });
 });

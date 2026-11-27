@@ -11,6 +11,12 @@ export interface ReplayResult {
 export const REPLAY_MAX_IDS = 200;
 const FETCH_TIMEOUT_MS = 15_000;
 
+export class ReplayDryRunIgnoredError extends Error {
+    constructor() {
+        super('Replay dry-run answer did not carry dryRun: true');
+    }
+}
+
 export class ReplayRateLimitedError extends Error {
     constructor() {
         super('Replay endpoint returned 429');
@@ -32,6 +38,15 @@ export class ResyncReplayClient {
         apiKey?: string,
         dryRun = false,
     ): Promise<ReplayResult[]> {
+        return (await this.replayRaw(aggregateType, entityIds, apiKey, dryRun)).results;
+    }
+
+    private async replayRaw(
+        aggregateType: string,
+        entityIds: string[],
+        apiKey: string | undefined,
+        dryRun: boolean,
+    ): Promise<{ results: ReplayResult[]; dryRun?: boolean }> {
         const { resyncSourceSystem } = this.options;
         if (!resyncSourceSystem) {
             throw new Error('INTEGRATION_RESYNC_SOURCE_SYSTEM is not configured');
@@ -55,10 +70,38 @@ export class ResyncReplayClient {
         dryRun: boolean,
         apiKey?: string,
     ): Promise<ReplayResult[]> {
-        return this.post('/api/resync/v1/replay-documents', { kind, entityIds, dryRun }, apiKey);
+        return (
+            await this.post('/api/resync/v1/replay-documents', { kind, entityIds, dryRun }, apiKey)
+        ).results;
     }
 
-    private async post(path: string, body: unknown, apiKey?: string): Promise<ReplayResult[]> {
+    // Generic replay answers a source per id (replayed_from_* or not_found), not republished/would_republish;
+    // a dry-run answer must carry dryRun: true or the platform ignored the flag.
+    async replayForHeal(
+        aggregateType: string,
+        entityIds: string[],
+        dryRun: boolean,
+        apiKey?: string,
+    ): Promise<ReplayResult[]> {
+        const { results, dryRun: answeredDryRun } = await this.replayRaw(
+            aggregateType,
+            entityIds,
+            apiKey,
+            dryRun,
+        );
+        if (dryRun && answeredDryRun !== true) throw new ReplayDryRunIgnoredError();
+        return results.map(r =>
+            r.status.startsWith('replayed_from_')
+                ? { ...r, status: dryRun ? 'would_republish' : 'republished' }
+                : r,
+        );
+    }
+
+    private async post(
+        path: string,
+        body: unknown,
+        apiKey?: string,
+    ): Promise<{ results: ReplayResult[]; dryRun?: boolean }> {
         const { reconciliationApiUrl } = this.options;
         if (!reconciliationApiUrl)
             throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
@@ -75,7 +118,11 @@ export class ResyncReplayClient {
         if (!response.ok) {
             throw new Error(`Replay endpoint returned ${response.status}`);
         }
-        const parsed = (await response.json()) as ReplayResult[] | { results: ReplayResult[] };
-        return Array.isArray(parsed) ? parsed : parsed.results;
+        const parsed = (await response.json()) as
+            | ReplayResult[]
+            | { results: ReplayResult[]; dryRun?: boolean };
+        return Array.isArray(parsed)
+            ? { results: parsed }
+            : { results: parsed.results, dryRun: parsed.dryRun };
     }
 }
