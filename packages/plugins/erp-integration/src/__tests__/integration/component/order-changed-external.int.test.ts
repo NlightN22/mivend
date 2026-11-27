@@ -16,6 +16,7 @@ import {
     EXTERNAL_ORDER_OWNER_CLAUSE,
     ExternalOrderReconcileService,
     ExternalOrderService,
+    OrderEventVersionService,
     OrderStatusReference,
     OrderStatusReferenceService,
     seedTestOrderStatuses,
@@ -27,6 +28,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { passThroughOrderVersions } from '../../order-version-stub';
 import { OrderLineResolver } from '../../../handlers/order-line-resolver';
 import { OrderStateStreamHandler } from '../../../handlers/order-state.handler';
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
@@ -56,6 +58,10 @@ class TestOrderCustomFields {
     erpMarkedForDeletion!: boolean | null;
     @Column({ name: 'customFieldsErpstatusbeforeunposted', type: 'varchar', nullable: true })
     erpStatusBeforeUnposted!: string | null;
+    @Column({ name: 'customFieldsErpchangedversion', type: 'varchar', nullable: true })
+    erpChangedVersion!: string | null;
+    @Column({ name: 'customFieldsErpstateversion', type: 'varchar', nullable: true })
+    erpStateVersion!: string | null;
     @Column({ name: 'customFieldsIsexternal', type: 'boolean', default: false })
     isExternal!: boolean;
     @Column({ name: 'customFieldsCounterpartyid', type: 'varchar', nullable: true })
@@ -130,6 +136,8 @@ let handler: {
     ) => ReturnType<OrderChangedStreamHandler['apply']>;
 };
 let externalOrders: ExternalOrderService;
+let changedHandler: OrderChangedStreamHandler;
+let stateHandler: OrderStateStreamHandler;
 let ctx: RequestContext;
 
 const entityMap = new Map<unknown, unknown>([
@@ -198,18 +206,21 @@ beforeAll(async () => {
         connection as never,
         { findByEntityId: vi.fn() } as never,
     );
-    const changedHandler = new OrderChangedStreamHandler(
+    const orderVersions = new OrderEventVersionService(connection as never);
+    changedHandler = new OrderChangedStreamHandler(
         { handleOrderChanged: vi.fn() } as never,
         resolver,
         externalOrders,
         { attachOrder: vi.fn() } as never,
         { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
+        orderVersions,
     );
-    const stateHandler = new OrderStateStreamHandler(
+    stateHandler = new OrderStateStreamHandler(
         { handleOrderState: vi.fn() } as never,
         externalOrders,
         resolver,
         statusReference,
+        orderVersions,
     );
     // The ERP sends the derived status and paid amount on order-state, the rest on order-changed.
     handler = {
@@ -414,12 +425,103 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             externalOrders,
             { attachOrder: vi.fn() } as never,
             { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
+            passThroughOrderVersions,
         );
 
         await mivendHandler.apply(ctx, ERP_ORDER, { lines: [] });
 
         expect(sync.handleOrderChanged).toHaveBeenCalledTimes(1);
         expect(await orders()).toHaveLength(1);
+    });
+
+    describe('version guard once the inbox floor row is gone (#414)', () => {
+        beforeEach(async () => {
+            await addCounterparty('cp-1');
+        });
+
+        it('order-changed: a delivery older than the stored version changes nothing', async () => {
+            await changedHandler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ version: '2026-11-02T10:00:00Z', documentNumber: 'DOC-NEW' }),
+            );
+
+            const older = await changedHandler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ version: '2026-11-01T10:00:00Z', documentNumber: 'DOC-OLD' }),
+            );
+
+            expect(older).toMatchObject({
+                kind: 'noop',
+                reason: expect.stringContaining('not newer'),
+            });
+            const [order] = await orders();
+            expect(order.customFields).toMatchObject({
+                erpRegistrationDocumentNumber: 'DOC-NEW',
+                erpChangedVersion: '2026-11-02T10:00:00Z',
+            });
+        });
+
+        it('order-state: a delivery older than the stored version changes nothing', async () => {
+            await changedHandler.apply(ctx, ERP_ORDER, payload());
+            await stateHandler.apply(ctx, ERP_ORDER, {
+                version: '2026-11-02T10:00:00Z',
+                statusCode: 'DELIVERED',
+            });
+
+            const older = await stateHandler.apply(ctx, ERP_ORDER, {
+                version: '2026-11-01T10:00:00Z',
+                statusCode: 'CONFIRMED',
+            });
+
+            expect(older.kind).toBe('noop');
+            const [order] = await orders();
+            expect(order.customFields).toMatchObject({
+                erpStatus: 'DELIVERED',
+                erpStateVersion: '2026-11-02T10:00:00Z',
+            });
+        });
+
+        it('an equal version is applied again, so a replay can repair the order', async () => {
+            await changedHandler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ version: '2026-11-02T10:00:00Z', documentNumber: 'DOC-1' }),
+            );
+
+            const again = await changedHandler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ version: '2026-11-02T10:00:00Z', documentNumber: 'DOC-2' }),
+            );
+
+            expect(again.kind).not.toBe('noop');
+            expect((await orders())[0].customFields.erpRegistrationDocumentNumber).toBe('DOC-2');
+        });
+
+        it('concurrent deliveries of two versions leave the newest one stored', async () => {
+            await changedHandler.apply(ctx, ERP_ORDER, payload());
+
+            await Promise.all([
+                changedHandler.apply(
+                    ctx,
+                    ERP_ORDER,
+                    payload({ version: '2026-11-03T10:00:00Z', documentNumber: 'DOC-3' }),
+                ),
+                changedHandler.apply(
+                    ctx,
+                    ERP_ORDER,
+                    payload({ version: '2026-11-02T10:00:00Z', documentNumber: 'DOC-2' }),
+                ),
+            ]);
+
+            const [order] = await orders();
+            expect(order.customFields).toMatchObject({
+                erpRegistrationDocumentNumber: 'DOC-3',
+                erpChangedVersion: '2026-11-03T10:00:00Z',
+            });
+        });
     });
 
     describe('status never rolls back', () => {

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
-import { ExternalOrderService, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
+import {
+    ExternalOrderService,
+    OrderEventVersionService,
+    OrderStatusReferenceService,
+} from '@mivend/plugin-erp-order';
 import {
     ReservationOrderStateSyncService,
     UnknownOrderUuidError,
@@ -22,9 +26,30 @@ export class OrderStateStreamHandler implements InboundStreamHandler {
         private readonly externalOrderService: ExternalOrderService,
         private readonly lineResolver: OrderLineResolver,
         private readonly statusReference: OrderStatusReferenceService,
+        private readonly orderVersions: OrderEventVersionService,
     ) {}
 
     async apply(
+        ctx: RequestContext,
+        entityId: string,
+        payload: Record<string, unknown>,
+    ): Promise<InboundOutcome> {
+        const version = typeof payload.version === 'string' ? payload.version : '';
+        if (payload.isDeleted === true || version === '')
+            return this.applyEvent(ctx, entityId, payload);
+        const guarded = await this.orderVersions.apply(
+            ctx,
+            entityId,
+            'order-state',
+            version,
+            txCtx => this.applyEvent(txCtx, entityId, payload),
+        );
+        return guarded.stale
+            ? inboundNoop(`order-state ${entityId}: version not newer than stored`)
+            : guarded.value;
+    }
+
+    private async applyEvent(
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,

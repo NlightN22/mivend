@@ -33,6 +33,7 @@ import {
     ExternalOrderRetentionService,
 } from './external-order-retention.service';
 import { ExternalOrderService } from './external-order.service';
+import { OrderEventVersionService } from './order-event-version.service';
 import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
 import { externalOrderProcess } from './external-order.guard';
 import { freightPointGuard } from './freight-point.guard';
@@ -118,6 +119,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         { provide: 'APP_INTERCEPTOR', useClass: CoreOrderScopeInterceptor },
         DraftOrderDeliveryService,
         ExternalOrderService,
+        OrderEventVersionService,
         ExternalOrderCounterpartyListener,
         ExternalOrderReconcileService,
     ],
@@ -128,6 +130,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         OrderStatusReferenceService,
         OrderVisibilityService,
         ExternalOrderService,
+        OrderEventVersionService,
     ],
     entities: [OrderStatusHistoryEntry, OrderStatusReference, ...ERP_DOCUMENT_ENTITIES],
     shopApiExtensions: {
@@ -196,6 +199,29 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
                 defaultValue: false,
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Lines incomplete' }],
+            },
+            {
+                name: 'erpChangedVersion',
+                type: 'string',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Newest order-changed version applied',
+                    },
+                ],
+            },
+            {
+                name: 'erpStateVersion',
+                type: 'string',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [
+                    { languageCode: LanguageCode.en, value: 'Newest order-state version applied' },
+                ],
             },
             {
                 name: 'erpIsPosted',

@@ -8,6 +8,8 @@ export type { ErpStatusUpdatePayload } from './src/types';
 export { OrderStatusDictionary } from './src/order-status-dictionary';
 export type { OrderStatusEntry, StatusFlag } from './src/order-status-dictionary';
 export { ExternalOrderService } from './src/external-order.service';
+export { OrderEventVersionService } from './src/order-event-version.service';
+export type { OrderEventStream } from './src/order-event-version.service';
 export { ExternalOrderAccessStrategy } from './src/external-order-access.strategy';
 export { ExternalOrderReconcileService } from './src/external-order-reconcile.service';
 export { ExternalOrderRetentionService } from './src/external-order-retention.service';

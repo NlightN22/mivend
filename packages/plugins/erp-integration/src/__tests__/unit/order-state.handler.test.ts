@@ -3,6 +3,7 @@ import type { RequestContext } from '@vendure/core';
 import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
 import { OrderStateStreamHandler } from '../../handlers/order-state.handler';
+import { passThroughOrderVersions } from '../order-version-stub';
 import { MissingDependencyError } from '../../types';
 
 const ctx = {} as RequestContext;
@@ -38,6 +39,7 @@ function setup(
                 has: () => false,
             }),
         } as never,
+        passThroughOrderVersions,
     );
     return { handler, sync, external, resolve };
 }

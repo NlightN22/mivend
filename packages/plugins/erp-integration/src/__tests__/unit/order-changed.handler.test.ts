@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler';
+import { passThroughOrderVersions } from '../order-version-stub';
 
 const ctx = {} as RequestContext;
 
@@ -18,6 +19,7 @@ function setup(stored: { id: string; isExternal: boolean } | null, beyondWindow 
         { findByErpOrderId: vi.fn().mockResolvedValue(stored), upsert } as never,
         { attachOrder: vi.fn() } as never,
         { isBeyondWindow } as never,
+        passThroughOrderVersions,
     );
     return { handler, sync, upsert, resolve, isBeyondWindow };
 }

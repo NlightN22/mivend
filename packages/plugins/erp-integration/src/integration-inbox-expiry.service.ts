@@ -16,11 +16,12 @@ const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
 // Keeps the newest version per entity, except version-guarded streams past the floor window (#414).
 // SQL order matches isVersionNewer only for all-numeric (<=30 digits) or all-string versions; slices end at `reached_horizon`.
+// A deleted order-changed / order-state floor row first hands its version to the order (OrderEventVersionService).
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
-       SELECT id, stream, entity_id, status, payload, created_at FROM integration_inbox_event
+       SELECT id, stream, entity_id, version, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
      ), cand AS (
-       SELECT id, stream, entity_id, created_at FROM slice
+       SELECT id, stream, entity_id, version, created_at FROM slice
         WHERE status = 'processed' AND payload = '{}'::jsonb
           AND created_at < now() - make_interval(days => $3::int)
      ), newest AS MATERIALIZED (
@@ -31,6 +32,26 @@ export const EXPIRY_SLICE_SQL = `WITH slice AS (
             WHERE n.stream = k.stream AND n.entity_id = k.entity_id AND n.status = 'processed'
             ORDER BY CASE WHEN n.version ~ '^[0-9]{1,30}$' THEN n.version::numeric END DESC NULLS LAST,
                      n.version COLLATE "C" DESC, n.id DESC LIMIT 1) x
+     ), floor_rows AS (
+       SELECT c.stream, c.entity_id, c.version FROM cand c JOIN newest w ON w.stream = c.stream AND w.entity_id = c.entity_id AND w.keep_id = c.id
+        WHERE c.stream IN ('order-changed', 'order-state')
+          AND c.created_at < now() - make_interval(days => $5::int)
+     ), stamp AS (
+       UPDATE "order" o SET
+         "customFieldsErpchangedversion" = CASE
+           WHEN f.changed IS NOT NULL AND (o."customFieldsErpchangedversion" IS NULL
+                OR o."customFieldsErpchangedversion" COLLATE "C" < f.changed COLLATE "C")
+           THEN f.changed ELSE o."customFieldsErpchangedversion" END,
+         "customFieldsErpstateversion" = CASE
+           WHEN f.state IS NOT NULL AND (o."customFieldsErpstateversion" IS NULL
+                OR o."customFieldsErpstateversion" COLLATE "C" < f.state COLLATE "C")
+           THEN f.state ELSE o."customFieldsErpstateversion" END
+         FROM (SELECT entity_id,
+                      max(version) FILTER (WHERE stream = 'order-changed') AS changed,
+                      max(version) FILTER (WHERE stream = 'order-state') AS state
+                 FROM floor_rows GROUP BY entity_id) f
+        WHERE o."customFieldsErporderid" = f.entity_id
+       RETURNING o.id
      ), del AS (
        DELETE FROM integration_inbox_event
         WHERE id IN (SELECT c.id FROM cand c JOIN newest w ON w.stream = c.stream AND w.entity_id = c.entity_id
@@ -39,6 +60,7 @@ export const EXPIRY_SLICE_SQL = `WITH slice AS (
        RETURNING id
      )
      SELECT (SELECT count(*) FROM del)::int AS deleted,
+            (SELECT count(*) FROM stamp)::int AS stamped,
             (SELECT max(id) FROM slice) AS last_id,
             (SELECT count(*) FROM slice)::int AS scanned,
             COALESCE((SELECT bool_or(created_at >= now() - make_interval(days => $3::int)) FROM slice), true) AS reached_horizon`;

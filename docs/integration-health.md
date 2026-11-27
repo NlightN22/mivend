@@ -151,8 +151,10 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   than stored"); it shows in the 24 h noop summary and the issues list and is not a fault. For these streams an admin Replay of an event the target already holds also ends `noop`
   (a version not newer than stored is ignored, equal included), so a replay does not repair their data. A slice cancelled by the 30 s
   statement timeout keeps the cursor, so the next tick retries from there, not from the start; a pass longer than 6 h
-  logs a warning (`Inbox expiry pass finished ... over the lag budget`). State streams (price, stock, offer, product and the like) and the order streams (`order-changed`, `order-state`, no
-  version guard in the target yet) keep the newest row. A full pass reads every row older than the horizon
+  logs a warning (`Inbox expiry pass finished ... over the lag budget`). The order streams (`order-changed`, `order-state`) are in that list too: the order stores the source version of
+  the newest event of each stream (`erpChangedVersion`, `erpStateVersion`, `OrderEventVersionService`), a strictly older
+  delivery is ignored (an equal one is applied again), and the expiry statement copies a floor row's version into the
+  order in the same statement that deletes the row. State streams (price, stock, offer, product and the like) keep the newest row. A full pass reads every row older than the horizon
   (about 80 s on 4.4M rows), so the pass runs at most once an hour per process (decision, #343); a part-way pass
   resumes on the next tick. A partial index on tombstones would make it proportional to the tombstones; not added.
 - One-time reclaim after the first purge (#343): the file keeps its size until rewritten. Let the nightly job do it: after a fresh `make prod-backup` and a `df` check (new table file plus WAL needs about

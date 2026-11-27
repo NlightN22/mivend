@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler';
+import { passThroughOrderVersions } from '../order-version-stub';
 import { OrderCorrectionStreamHandler } from '../../handlers/order-correction.handler';
 import { SalesCorrectionStreamHandler } from '../../handlers/sales-correction.handler';
 
@@ -67,6 +68,7 @@ describe('order-changed deletion mark', () => {
             { findByErpOrderId: vi.fn().mockResolvedValue(existing), upsert } as never,
             { attachOrder: vi.fn() } as never,
             { isBeyondWindow: vi.fn().mockResolvedValue(false) } as never,
+            passThroughOrderVersions,
         );
         return { handler, upsert };
     };

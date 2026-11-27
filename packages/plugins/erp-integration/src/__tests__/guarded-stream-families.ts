@@ -2,7 +2,12 @@ import { VERSION_GUARDED_STREAMS } from '../reconciled-streams';
 import type { InboundStream } from '../types';
 
 // Which replay test proves the target's version guard; a stream added to VERSION_GUARDED_STREAMS needs a row here.
-export type GuardFamily = 'document-writer' | 'settlement-document' | 'setup-document' | 'granted';
+export type GuardFamily =
+    | 'document-writer'
+    | 'settlement-document'
+    | 'setup-document'
+    | 'granted'
+    | 'order-event';
 
 export const GUARD_FAMILY: Record<string, GuardFamily> = {
     'goods-and-services-sale': 'document-writer',
@@ -24,6 +29,8 @@ export const GUARD_FAMILY: Record<string, GuardFamily> = {
     'retro-bonus-setup': 'setup-document',
     'granted-discount': 'granted',
     'granted-retro-bonus': 'granted',
+    'order-changed': 'order-event',
+    'order-state': 'order-event',
 };
 
 export function streamsOf(family: GuardFamily): InboundStream[] {

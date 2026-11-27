@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ContactInfoStreamHandler } from '../../../handlers/contact-info.handler';
 import { OrderStateStreamHandler } from '../../../handlers/order-state.handler';
+import { passThroughOrderVersions } from '../../order-version-stub';
 import { classifyEnvelopeMessage, classifyInboundMessage } from '../../../kafka-inbound-message';
 import { ENVELOPE_INNER_SCHEMA, SCHEMA_BY_STREAM } from '../../../kafka-consumer-schemas';
 
@@ -59,6 +60,7 @@ describe('order-state contract (0.99.0)', () => {
                 })),
             } as never,
             { dictionary: async () => ({ get: () => ({}), has: () => false }) } as never,
+            passThroughOrderVersions,
         );
         await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
         const input = sync.handleOrderState.mock.calls[0][1];

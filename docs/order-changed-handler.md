@@ -10,6 +10,8 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
   correlation, status/contract persistence and the release/quantity-match decision live in
   `ReservationWriteOffSyncService.handleOrderChanged` (reservation plugin).
 - An order with no `orderUuid` and no local match becomes an external order (#215, see `order-contracts.md`).
+- A delivery whose `version` is older than `erpChangedVersion` on the order is ignored (noop, #414); `order-state` does the
+  same with `erpStateVersion`. An equal version is applied again, so an admin replay still repairs an order.
 - `isDeleted` is a legitimate no-op here, not a missing-dependency retry. `=== true` is correct for both the old
   plain bool and the current `optional bool` shape.
 

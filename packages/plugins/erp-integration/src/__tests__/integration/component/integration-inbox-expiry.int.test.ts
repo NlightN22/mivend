@@ -33,6 +33,10 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await dataSource.query(
+        `CREATE TABLE "order" (id serial PRIMARY KEY, "customFieldsErporderid" varchar,
+            "customFieldsErpchangedversion" varchar, "customFieldsErpstateversion" varchar)`,
+    );
 });
 
 beforeEach(() => {
@@ -44,6 +48,7 @@ beforeEach(() => {
 
 afterEach(async () => {
     await dataSource.getRepository(IntegrationInboxEvent).clear();
+    await dataSource.query(`TRUNCATE "order"`);
 });
 
 afterAll(async () => {
@@ -125,6 +130,74 @@ describe('IntegrationInboxExpiryService (integration, real Postgres)', () => {
         await drain();
 
         expect(await remaining()).toEqual(['sale-in-window', 'stock-old']);
+    });
+
+    describe('order streams hand their floor version to the order before the row goes (#414)', () => {
+        const stored = async (): Promise<Array<Record<string, string | null>>> =>
+            dataSource.query(
+                `SELECT "customFieldsErpchangedversion" AS changed, "customFieldsErpstateversion" AS state
+                   FROM "order" ORDER BY id`,
+            );
+
+        it('stamps the version, then deletes the floor rows past the window', async () => {
+            await dataSource.query(`INSERT INTO "order" ("customFieldsErporderid") VALUES ('o1')`);
+            await insert(
+                'chg',
+                'processed',
+                '{}',
+                40,
+                'o1',
+                '2026-10-01T10:00:00Z',
+                'order-changed',
+            );
+            await insert('st', 'processed', '{}', 40, 'o1', '2026-10-02T10:00:00Z', 'order-state');
+
+            await drain();
+
+            expect(await remaining()).toEqual([]);
+            expect(await stored()).toEqual([
+                { changed: '2026-10-01T10:00:00Z', state: '2026-10-02T10:00:00Z' },
+            ]);
+        });
+
+        it('never lowers a version the order already holds', async () => {
+            await dataSource.query(
+                `INSERT INTO "order" ("customFieldsErporderid", "customFieldsErpchangedversion")
+                 VALUES ('o1', '2026-11-20T10:00:00Z')`,
+            );
+            await insert(
+                'chg',
+                'processed',
+                '{}',
+                40,
+                'o1',
+                '2026-10-01T10:00:00Z',
+                'order-changed',
+            );
+
+            await drain();
+
+            expect(await remaining()).toEqual([]);
+            expect((await stored())[0].changed).toBe('2026-11-20T10:00:00Z');
+        });
+
+        it('keeps the floor row and the order untouched inside the window', async () => {
+            await dataSource.query(`INSERT INTO "order" ("customFieldsErporderid") VALUES ('o1')`);
+            await insert(
+                'chg',
+                'processed',
+                '{}',
+                10,
+                'o1',
+                '2026-10-01T10:00:00Z',
+                'order-changed',
+            );
+
+            await drain();
+
+            expect(await remaining()).toEqual(['chg']);
+            expect(await stored()).toEqual([{ changed: null, state: null }]);
+        });
     });
 
     it('keeps an old tombstone whose entity has no full-payload processed row', async () => {

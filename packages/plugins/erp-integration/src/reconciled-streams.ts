@@ -45,7 +45,7 @@ export const LATEST_PAYLOAD_STREAMS: ReadonlySet<InboundStream> = new Set<Inboun
 ]);
 
 // Document streams whose target rejects a version not newer than the stored one (ErpDocumentWriter,
-// settlement-document and the discount services), so the inbox row of the newest version can go after the floor window.
+// settlement-document, the discount services and the order version fields), so the newest version's row can go after the floor window.
 export const VERSION_GUARDED_STREAMS: readonly InboundStream[] = [
     'goods-and-services-sale',
     'customer-goods-return',
@@ -66,6 +66,8 @@ export const VERSION_GUARDED_STREAMS: readonly InboundStream[] = [
     'granted-discount',
     'retro-bonus-setup',
     'granted-retro-bonus',
+    'order-changed',
+    'order-state',
 ];
 
 const NO_SUMMARY = 'ERP-owned mirror; the upstream reconciliation summary does not cover it yet';

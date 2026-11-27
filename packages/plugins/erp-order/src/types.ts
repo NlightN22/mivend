@@ -45,6 +45,9 @@ declare module '@vendure/core' {
         // Set when an external order's event had lines for products not imported yet (skipped).
         externalLinesIncomplete?: boolean;
         // OrderState.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
+        // Source version of the newest order-changed / order-state event applied (#414); older deliveries are ignored.
+        erpChangedVersion?: string | null;
+        erpStateVersion?: string | null;
         // ERP is_posted as last received; null when never sent. False means a draft, shown as cancelled.
         erpIsPosted?: boolean | null;
         // ERP marked-for-deletion as last received; such orders are cancelled and removed after the retention window.
