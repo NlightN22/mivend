@@ -2,10 +2,8 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MvErrorState, MvSkeleton } from '@mivend/ui-kit';
-import { formatDate } from '../../i18n/format';
 import { toDocData, type DocumentSummary } from '../documents/useDocuments';
 import { describeLoadError } from '../../api/describeLoadError';
-import { useDemoMode } from '../../composables/useDemoMode';
 
 const LATEST_COUNT = 3;
 
@@ -13,7 +11,6 @@ const props = defineProps<{ documents: DocumentSummary[]; loading: boolean; erro
 defineEmits<{ retry: [] }>();
 
 const { t } = useI18n();
-const { demoAllowed } = useDemoMode();
 const errorText = computed(() => (props.error ? describeLoadError(props.error) : null));
 
 const rows = computed(() =>
@@ -26,9 +23,6 @@ const rows = computed(() =>
             url: data.downloadUrl,
         };
     }),
-);
-const demoReconciliationNote = computed(() =>
-    formatDate('2026-06-01', { month: 'long', year: 'numeric' }),
 );
 </script>
 
@@ -73,17 +67,6 @@ const demoReconciliationNote = computed(() =>
                     class="account-documents__action"
                     >{{ t('account.recentDocuments.download') }}</a
                 >
-            </div>
-            <div v-if="demoAllowed" class="account-documents__row">
-                <div>
-                    <div class="account-documents__doc-title">
-                        {{ t('account.recentDocuments.reconciliation') }}
-                    </div>
-                    <div class="account-documents__doc-note">{{ demoReconciliationNote }}</div>
-                </div>
-                <RouterLink to="/reconciliation-acts" class="account-documents__action">{{
-                    t('account.recentDocuments.open')
-                }}</RouterLink>
             </div>
         </div>
     </div>

@@ -165,3 +165,12 @@ there are more cards than fit, so short rows show each product once.
 Brand shown anywhere in the storefront comes from the Shop API `manufacturer { name }` field on
 `Product`/`SearchResult` via `brandOf` — not from a `brand` facet (none exists). See
 `docs/pricing.md` "Brand / manufacturer".
+
+## Storefront document pages
+
+The account menu group "Documents" has exactly one page per document kind: proforma invoices
+(`/proforma-invoices`), contracts (`/contracts`), returns (`/returns`) and reconciliation acts
+(`/reconciliation-acts`); `DOCUMENT_LINKS` in `composables/accountMenuItems.ts` is the single list
+behind the sidebar, the account dropdown and the mobile More sheet. Documents of any other type have
+no storefront page by design. The old `/documents` route only redirects to `/returns`, and the
+dashboard documents blocks show returns only.

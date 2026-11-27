@@ -43,7 +43,7 @@ export function useAccountSummary(): AccountSummary {
         );
 
     function loadDocuments(): Promise<void> {
-        return docs.load({ take: DOCUMENTS_SCAN, skip: 0 });
+        return docs.load({ take: DOCUMENTS_SCAN, skip: 0, type: 'return' });
     }
 
     async function loadOrders(): Promise<void> {
