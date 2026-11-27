@@ -52,6 +52,8 @@ class TestOrderCustomFields {
     erpPaidAmount!: number | null;
     @Column({ name: 'customFieldsErpisposted', type: 'boolean', nullable: true })
     erpIsPosted!: boolean | null;
+    @Column({ name: 'customFieldsErpmarkedfordeletion', type: 'boolean', nullable: true })
+    erpMarkedForDeletion!: boolean | null;
     @Column({ name: 'customFieldsErpstatusbeforeunposted', type: 'varchar', nullable: true })
     erpStatusBeforeUnposted!: string | null;
     @Column({ name: 'customFieldsIsexternal', type: 'boolean', default: false })
@@ -288,6 +290,36 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         const lines = await dataSource.getRepository(TestOrderLine).find();
         expect(lines).toHaveLength(1);
         expect(lines[0]).toMatchObject({ quantity: 2, listPrice: 12525 });
+    });
+
+    it('cancels a stored order marked for deletion and restores it when the mark is removed', async () => {
+        await addCounterparty('cp-1');
+        await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED', isPosted: true }));
+
+        await handler.apply(ctx, ERP_ORDER, payload({ isPosted: true, markedForDeletion: true }));
+        const [marked] = await orders();
+        expect(marked.state).toBe('Cancelled');
+        expect(marked.customFields).toMatchObject({
+            erpStatus: 'CANCELLED',
+            erpStatusBeforeUnposted: 'DELIVERED',
+            erpMarkedForDeletion: true,
+        });
+
+        await handler.apply(ctx, ERP_ORDER, payload({ isPosted: true, markedForDeletion: false }));
+        const [restored] = await orders();
+        expect(restored.customFields).toMatchObject({
+            erpStatus: 'DELIVERED',
+            erpStatusBeforeUnposted: null,
+            erpMarkedForDeletion: false,
+        });
+    });
+
+    it('creates an unknown order marked for deletion as cancelled', async () => {
+        await addCounterparty('cp-1');
+        await handler.apply(ctx, ERP_ORDER, payload({ isPosted: true, markedForDeletion: true }));
+        const [order] = await orders();
+        expect(order.state).toBe('Cancelled');
+        expect(order.customFields.erpMarkedForDeletion).toBe(true);
     });
 
     it('stores totals above 2^31 minor units and reads them back as numbers (#400)', async () => {

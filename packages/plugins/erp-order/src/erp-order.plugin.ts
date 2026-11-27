@@ -27,6 +27,11 @@ import { ErpOrderService } from './erp-order.service';
 import { ExternalOrderAccessStrategy } from './external-order-access.strategy';
 import { ExternalOrderReconcileService } from './external-order-reconcile.service';
 import { createExternalOrderReconcileTask } from './external-order-reconcile.scheduled-task';
+import { createExternalOrderRetentionTask } from './external-order-retention.scheduled-task';
+import {
+    DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS,
+    ExternalOrderRetentionService,
+} from './external-order-retention.service';
 import { ExternalOrderService } from './external-order.service';
 import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
 import { externalOrderProcess } from './external-order.guard';
@@ -94,6 +99,7 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
     providers: [
         OrderSearchProvider,
         ErpDocumentWriter,
+        ExternalOrderRetentionService,
         ErpOrderService,
         OrderStatusHistoryService,
         OrderLineChangesService,
@@ -200,6 +206,14 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
                 label: [{ languageCode: LanguageCode.en, value: 'Posted in the ERP' }],
             },
             {
+                name: 'erpMarkedForDeletion',
+                type: 'boolean',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Marked for deletion in the ERP' }],
+            },
+            {
                 name: 'erpStatusBeforeUnposted',
                 type: 'string',
                 nullable: true,
@@ -253,6 +267,23 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createExternalOrderReconcileTask(),
+            createExternalOrderRetentionTask(),
+        ];
+        config.customFields.GlobalSettings = [
+            ...(config.customFields.GlobalSettings ?? []),
+            {
+                name: 'externalOrderRetentionMonths',
+                type: 'int' as const,
+                nullable: true,
+                public: false,
+                defaultValue: DEFAULT_EXTERNAL_ORDER_RETENTION_MONTHS,
+                label: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'ERP orders marked for deletion: keep for (months after the order date)',
+                    },
+                ],
+            },
         ];
         return config;
     },

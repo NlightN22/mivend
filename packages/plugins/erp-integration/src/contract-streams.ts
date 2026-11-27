@@ -10,6 +10,7 @@ const NOT_EVENT_SCHEMAS = new Set([
     'CounterpartySnapshotSchema',
     'ErpOrderEventSchema',
     'OrderChangedLineSchema',
+    'OrderChangedServiceSchema',
     'OrderChangedLinkedDocumentSchema',
     'OrganizationSignatorySchema',
     'PowerOfAttorneySchema',

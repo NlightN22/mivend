@@ -17,6 +17,7 @@ export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly str
     GlobalSettings: [
         'organizationSplitEnabled',
         'settlementRetentionMonths',
+        'externalOrderRetentionMonths',
         'deferredOrderMaxAgeDays',
         'autoReserveOnPlacement',
         'stockTierLowMax',

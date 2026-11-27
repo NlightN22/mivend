@@ -92,6 +92,8 @@ export function buildExternalOrderInput(
         counterpartyErpId: optionalString(payload.customerId),
         erpStatus: null,
         isPosted: typeof payload.isPosted === 'boolean' ? payload.isPosted : null,
+        markedForDeletion:
+            typeof payload.markedForDeletion === 'boolean' ? payload.markedForDeletion : null,
         erpStatusAt: parseTimestamp(payload.updatedAt) ?? parseTimestamp(payload.occurredAt),
         erpOrderStatus: payload.status != null ? String(payload.status) : '',
         documentNumber: optionalString(payload.documentNumber),

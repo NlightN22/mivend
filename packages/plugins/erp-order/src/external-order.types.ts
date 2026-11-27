@@ -14,6 +14,8 @@ export interface ExternalOrderInput {
     erpStatus: string | null;
     // is_posted as received; null or absent when the event did not carry it.
     isPosted?: boolean | null;
+    // OrderChanged.marked_for_deletion; null or absent when the event did not carry it.
+    markedForDeletion?: boolean | null;
     erpStatusAt: Date | null;
     erpOrderStatus: string;
     documentNumber: string | null;

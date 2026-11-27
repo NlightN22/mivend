@@ -4,12 +4,17 @@ export interface PostingState {
     erpStatus: string | null;
     erpIsPosted: boolean | null;
     erpStatusBeforeUnposted: string | null;
+    erpMarkedForDeletion?: boolean | null;
 }
 
 export interface PostingPlan {
     status: string | null;
     // undefined leaves the stored value; null clears it.
-    facts: { erpIsPosted?: boolean | null; erpStatusBeforeUnposted?: string | null };
+    facts: {
+        erpIsPosted?: boolean | null;
+        erpStatusBeforeUnposted?: string | null;
+        erpMarkedForDeletion?: boolean;
+    };
 }
 
 export const NEW_ORDER_POSTING: PostingState = {
@@ -21,6 +26,22 @@ export const NEW_ORDER_POSTING: PostingState = {
 // Not posted cancels and remembers the old status; posted restores it. A genuine ERP cancel is terminal
 // (the flag becomes null so a later posted event cannot reopen it).
 export function planExternalStatus(
+    current: PostingState,
+    incoming: string | null,
+    isPosted: boolean | null | undefined,
+    dictionary: OrderStatusDictionary,
+    markedForDeletion?: boolean | null,
+): PostingPlan {
+    const marked = markedForDeletion ?? current.erpMarkedForDeletion;
+    const plan = planPosting(current, incoming, marked === true ? false : isPosted, dictionary);
+    return typeof markedForDeletion === 'boolean'
+        ? { ...plan, facts: { ...plan.facts, erpMarkedForDeletion: markedForDeletion } }
+        : plan;
+}
+
+// A deletion mark acts like not posted; a stored mark also holds the order cancelled when a later event
+// (order state) carries no mark of its own.
+function planPosting(
     current: PostingState,
     incoming: string | null,
     isPosted: boolean | null | undefined,

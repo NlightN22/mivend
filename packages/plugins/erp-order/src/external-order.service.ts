@@ -27,6 +27,8 @@ import type {
 } from './external-order.types';
 import './types';
 
+export const externalOrderLockKey = (erpOrderId: string): string => `external-order:${erpOrderId}`;
+
 const counterpartyLockKey = (erpId: string): string => `external-order-counterparty:${erpId}`;
 
 interface OrderTotals {
@@ -64,6 +66,7 @@ export class ExternalOrderService {
         erpStatus: string | null;
         erpIsPosted: boolean | null;
         erpStatusBeforeUnposted: string | null;
+        erpMarkedForDeletion: boolean | null;
     } | null> {
         const rows: Array<{
             id: string;
@@ -71,11 +74,13 @@ export class ExternalOrderService {
             erpStatus: string | null;
             erpIsPosted: boolean | null;
             erpStatusBeforeUnposted: string | null;
+            erpMarkedForDeletion: boolean | null;
         }> = await this.connection.getRepository(ctx, Order).query(
             `SELECT id, "customFieldsIsexternal" AS "isExternal",
                         "customFieldsErpstatus" AS "erpStatus",
                         "customFieldsErpisposted" AS "erpIsPosted",
-                        "customFieldsErpstatusbeforeunposted" AS "erpStatusBeforeUnposted" FROM "order"
+                        "customFieldsErpstatusbeforeunposted" AS "erpStatusBeforeUnposted",
+                        "customFieldsErpmarkedfordeletion" AS "erpMarkedForDeletion" FROM "order"
                  WHERE "customFieldsErporderid" = $1 LIMIT 1`,
             [erpOrderId],
         );
@@ -86,6 +91,7 @@ export class ExternalOrderService {
                   erpStatus: rows[0].erpStatus ?? null,
                   erpIsPosted: rows[0].erpIsPosted ?? null,
                   erpStatusBeforeUnposted: rows[0].erpStatusBeforeUnposted ?? null,
+                  erpMarkedForDeletion: rows[0].erpMarkedForDeletion ?? null,
               }
             : null;
     }
@@ -94,7 +100,7 @@ export class ExternalOrderService {
         return withAggregateLock(
             this.connection,
             ctx,
-            `external-order:${input.erpOrderId}`,
+            externalOrderLockKey(input.erpOrderId),
             txCtx =>
                 input.counterpartyErpId
                     ? withAggregateLock(
@@ -114,6 +120,7 @@ export class ExternalOrderService {
         derived: {
             erpStatus: string | null;
             isPosted?: boolean | null;
+            markedForDeletion?: boolean | null;
             erpStatusAt: Date | null;
             paidAmountMinor: number | null;
             erpFacts: OrderErpFacts;
@@ -122,7 +129,7 @@ export class ExternalOrderService {
         return withAggregateLock(
             this.connection,
             ctx,
-            `external-order:${erpOrderId}`,
+            externalOrderLockKey(erpOrderId),
             async txCtx => {
                 const existing = await this.findByErpOrderId(txCtx, erpOrderId);
                 if (!existing?.isExternal) return false;
@@ -132,6 +139,7 @@ export class ExternalOrderService {
                     derived.erpStatus,
                     derived.isPosted,
                     dictionary,
+                    derived.markedForDeletion,
                 );
                 const customFields = {
                     ...(derived.paidAmountMinor === null
@@ -216,6 +224,7 @@ export class ExternalOrderService {
             input.erpStatus,
             input.isPosted,
             dictionary,
+            input.markedForDeletion,
         );
         const nextStatus = existing
             ? plan.status

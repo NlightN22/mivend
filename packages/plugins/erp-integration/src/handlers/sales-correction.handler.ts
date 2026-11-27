@@ -8,7 +8,7 @@ import {
 } from '@mivend/plugin-erp-order';
 
 import { CurrencyResolver } from '../currency-resolver.service';
-import { documentEnvelope, documentOutcome } from './erp-document-payload';
+import { correctionEnvelope, documentOutcome } from './erp-document-payload';
 import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import {
@@ -30,7 +30,7 @@ export class SalesCorrectionStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const envelope = documentEnvelope(payload, 'number');
+        const envelope = correctionEnvelope(payload, 'number');
         if (!envelope) return inboundNoop(`sales-correction ${entityId}: missing version`);
         const result = await this.writer.write(ctx, {
             target: SalesCorrectionErp,

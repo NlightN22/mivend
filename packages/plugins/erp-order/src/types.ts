@@ -1,4 +1,8 @@
 declare module '@vendure/core' {
+    interface CustomGlobalSettingsFields {
+        externalOrderRetentionMonths?: number | null;
+    }
+
     interface CustomOrderFields {
         // Immutable identity for idempotency/exchange, assigned at insert — see
         // docs/identifiers.md and apps/server/src/order-uuid.subscriber.ts.
@@ -43,6 +47,8 @@ declare module '@vendure/core' {
         // OrderState.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
         // ERP is_posted as last received; null when never sent. False means a draft, shown as cancelled.
         erpIsPosted?: boolean | null;
+        // ERP marked-for-deletion as last received; such orders are cancelled and removed after the retention window.
+        erpMarkedForDeletion?: boolean | null;
         // Status held before a not-posted cancel; restored when the order is posted again.
         erpStatusBeforeUnposted?: string | null;
         erpPaidAmount?: number | null;

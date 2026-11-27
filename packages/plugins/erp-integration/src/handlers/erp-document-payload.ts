@@ -83,3 +83,12 @@ export function documentOutcome(
     }
     return inboundApplied();
 }
+
+// A correction counts only when posted and not marked for deletion; otherwise it is stored as removed, so a
+// newer posted version brings it back. Absent flags change nothing.
+export function correctionEnvelope(payload: Payload, bodyKey: string): DocumentEnvelope | null {
+    const envelope = documentEnvelope(payload, bodyKey);
+    if (!envelope) return null;
+    const notCounted = payload.isPosted === false || payload.isDeletionMarked === true;
+    return notCounted ? { ...envelope, isDeleted: true } : envelope;
+}

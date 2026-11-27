@@ -36,6 +36,22 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
   become null, so a later `true` cannot reopen it, and a cancelled order with `erpIsPosted` not false is never marked
   not posted. Absent changes nothing; mivend orders are not affected. An empty `customerId` means no counterparty.
 
+- `marked_for_deletion` (OrderChanged 18; the contract has no `is_deletion_marked` here) on an external order acts
+  like not posted: the order is cancelled, the status held before is remembered and restored when the mark is
+  removed, a genuine ERP cancel stays terminal. The last received value is kept in `erpMarkedForDeletion`, and while it
+  is true a posted event without a mark of its own (order state) does not reopen the order. An unknown marked order is
+  created cancelled. `is_deleted` is true only for a really vanished row and stays a no-op. Mivend orders are not
+  affected.
+- Retention: the scheduled task `external-order-retention` removes external orders with `erpMarkedForDeletion = true`
+  whose order date is older than the window set in the admin dashboard (global setting
+  `externalOrderRetentionMonths`, default 12), never one with an open payment attempt, open proforma invoice or a
+  payment. Bounded per run, each delete re-checks the predicate under the order lock. No marker is kept: the newest
+  processed inbox version of the entity stays, so a late older version is dropped as stale.
+- `SalesCorrectionChanged` and `OrderCorrectionChanged` count only with `is_posted` true and `is_deletion_marked` not
+  true; otherwise the version is stored as removed (a newer posted version brings it back). `CustomerClaimChanged` is
+  stored as received and is not filtered (#411). The #410 reconciliation predicate for customer orders is: not a
+  vanished row and `erpMarkedForDeletion` is not true.
+
 ## Deliberately not consumed
 
 - Per-line `appliedDiscountAmount` / `priceTypeId` and `comment`: no feature reads them yet (#101/#108).

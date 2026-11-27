@@ -10,6 +10,7 @@ export type { OrderStatusEntry, StatusFlag } from './src/order-status-dictionary
 export { ExternalOrderService } from './src/external-order.service';
 export { ExternalOrderAccessStrategy } from './src/external-order-access.strategy';
 export { ExternalOrderReconcileService } from './src/external-order-reconcile.service';
+export { ExternalOrderRetentionService } from './src/external-order-retention.service';
 export { EXTERNAL_ORDER_OWNER_CLAUSE } from './src/external-order-visibility';
 export { externalOrderProcess } from './src/external-order.guard';
 export { nextExternalErpStatus } from './src/external-order-state';

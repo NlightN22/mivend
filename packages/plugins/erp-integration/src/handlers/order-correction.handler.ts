@@ -8,7 +8,7 @@ import {
     OrderCorrectionServiceLineErp,
 } from '@mivend/plugin-erp-order';
 
-import { documentEnvelope, documentOutcome } from './erp-document-payload';
+import { correctionEnvelope, documentOutcome } from './erp-document-payload';
 import { inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import {
@@ -28,7 +28,7 @@ export class OrderCorrectionStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const envelope = documentEnvelope(payload, 'number');
+        const envelope = correctionEnvelope(payload, 'number');
         if (!envelope) return inboundNoop(`order-correction ${entityId}: missing version`);
         const result = await this.writer.write(ctx, {
             target: OrderCorrectionErp,
