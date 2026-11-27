@@ -39,7 +39,7 @@ export function cappedCountQuery<T extends ObjectLiteral>(
         .orderBy()
         .select('1')
         .limit(ceiling + 1);
-    const counting: SelectQueryBuilder<ObjectLiteral> = qb.createQueryBuilder();
+    const counting = qb.connection.createQueryBuilder();
     return counting
         .select('COUNT(*)', 'total')
         .from(`(${bounded.getQuery()})`, 'capped')
