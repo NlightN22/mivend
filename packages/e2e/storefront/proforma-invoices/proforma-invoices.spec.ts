@@ -70,7 +70,7 @@ test.describe('Proforma invoices page', () => {
             .click();
 
         await expect(page).toHaveURL(/\/proforma-invoices\/[a-zA-Z0-9]+$/, { timeout: 10000 });
-        await expect(page.locator('.id-title')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.pih-title')).toBeVisible({ timeout: 10000 });
         expect(pageErrors).toEqual([]);
     });
 });
@@ -98,24 +98,24 @@ test.describe('Proforma invoice detail page', () => {
     test('detail page shows the proforma invoice title and status', async ({ page }) => {
         await page.goto(`/proforma-invoices/${proformaInvoiceId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.id-title')).toBeVisible({ timeout: 10000 });
-        const title = await page.locator('.id-title').textContent();
+        await expect(page.locator('.pih-title')).toBeVisible({ timeout: 10000 });
+        const title = await page.locator('.pih-title').textContent();
         expect(title).toMatch(/Proforma invoice\s+#[\d-]+/);
     });
 
     test('detail page shows proforma invoice line items', async ({ page }) => {
         await page.goto(`/proforma-invoices/${proformaInvoiceId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.id-row').first()).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.pil-table tbody tr').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('detail page shows the linked order and its own Open order link', async ({ page }) => {
         await page.goto(`/proforma-invoices/${proformaInvoiceId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.id-linked-order')).toBeVisible({ timeout: 10000 });
-        await expect(
-            page.locator('.id-linked-order').getByRole('link', { name: 'Open order' }),
-        ).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Linked order' })).toBeVisible({
+            timeout: 10000,
+        });
+        await expect(page.getByRole('link', { name: 'Open order' })).toBeVisible();
     });
 
     test('Pay proforma invoice button opens the pay flow and settles the proforma invoice end-to-end', async ({
