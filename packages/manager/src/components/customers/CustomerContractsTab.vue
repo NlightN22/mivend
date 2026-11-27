@@ -28,7 +28,10 @@ const authStore = useAuthStore();
 const canManage = authStore.hasPermission('ManageContractFiles');
 
 const columns = computed(() =>
-    buildContractColumns(f => t(`customers.contracts.columns.${f}`), t('customers.contracts.search')),
+    buildContractColumns(
+        f => t(`customers.contracts.columns.${f}`),
+        t('customers.contracts.search'),
+    ),
 );
 const baseColumns = columns.value;
 const { state: tableState } = useDataTableState<{ [key: string]: unknown; name: string }>(
@@ -86,13 +89,10 @@ function refresh(): void {
 watch([() => tableState.value.filters.name, view, () => tableState.value.pageSize], () => {
     page.value = 1;
 });
-watch(
-    [() => tableState.value.filters.name, view, page, () => tableState.value.pageSize],
-    () => {
-        toQuery({ search: String(tableState.value.filters.name), view: view.value }, page);
-        void load();
-    },
-);
+watch([() => tableState.value.filters.name, view, page, () => tableState.value.pageSize], () => {
+    toQuery({ search: String(tableState.value.filters.name), view: view.value }, page);
+    void load();
+});
 onMounted(refresh);
 
 const chips = computed<FilterChip[]>(() => [

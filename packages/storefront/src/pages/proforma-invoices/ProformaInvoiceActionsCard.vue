@@ -28,7 +28,9 @@ const { t } = useI18n();
                 t('proformaInvoices.detail.downloadPdf')
             }}</MvButton>
             <router-link v-if="orderId" :to="`/orders/${orderId}`">
-                <MvButton variant="secondary">{{ t('proformaInvoices.detail.openOrder') }}</MvButton>
+                <MvButton variant="secondary">{{
+                    t('proformaInvoices.detail.openOrder')
+                }}</MvButton>
             </router-link>
         </div>
     </ProformaInvoiceCard>
