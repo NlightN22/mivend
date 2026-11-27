@@ -1,24 +1,63 @@
 import type { OrderStatusDictionary } from './order-status-dictionary';
 
-// A not-posted order is cancelled; a later posted event reopens it only when posting was the sole reason.
-export function nextExternalStatusWithPosting(
-    current: { erpStatus: string | null; erpIsPosted: boolean | null },
+export interface PostingState {
+    erpStatus: string | null;
+    erpIsPosted: boolean | null;
+    erpStatusBeforeUnposted: string | null;
+}
+
+export interface PostingPlan {
+    status: string | null;
+    // undefined leaves the stored value; null clears it.
+    facts: { erpIsPosted?: boolean | null; erpStatusBeforeUnposted?: string | null };
+}
+
+export const NEW_ORDER_POSTING: PostingState = {
+    erpStatus: null,
+    erpIsPosted: null,
+    erpStatusBeforeUnposted: null,
+};
+
+// Not posted cancels and remembers the old status; posted restores it. A genuine ERP cancel is terminal
+// (the flag becomes null so a later posted event cannot reopen it).
+export function planExternalStatus(
+    current: PostingState,
     incoming: string | null,
     isPosted: boolean | null | undefined,
     dictionary: OrderStatusDictionary,
-): string | null {
+): PostingPlan {
+    const cancelledNow = dictionary.has(current.erpStatus, 'cancelled');
+    if (incoming !== null && dictionary.has(incoming, 'cancelled')) {
+        return {
+            status: cancelledNow ? null : incoming,
+            facts: { erpIsPosted: null, erpStatusBeforeUnposted: null },
+        };
+    }
     if (isPosted === false) {
-        const cancelled = dictionary.codeWith('cancelled');
-        return current.erpStatus === cancelled ? null : cancelled;
+        if (cancelledNow) {
+            return {
+                status: null,
+                facts: current.erpIsPosted === false ? { erpIsPosted: false } : {},
+            };
+        }
+        return {
+            status: dictionary.codeWith('cancelled'),
+            facts: { erpIsPosted: false, erpStatusBeforeUnposted: current.erpStatus },
+        };
     }
-    if (
-        isPosted === true &&
-        current.erpIsPosted === false &&
-        dictionary.has(current.erpStatus, 'cancelled')
-    ) {
-        return incoming ?? dictionary.codeWith('externalDefault');
+    if (isPosted === true && current.erpIsPosted === false && cancelledNow) {
+        return {
+            status:
+                current.erpStatusBeforeUnposted ??
+                incoming ??
+                dictionary.codeWith('externalDefault'),
+            facts: { erpIsPosted: true, erpStatusBeforeUnposted: null },
+        };
     }
-    return nextExternalErpStatus(current.erpStatus, incoming, dictionary);
+    return {
+        status: nextExternalErpStatus(current.erpStatus, incoming, dictionary),
+        facts: isPosted === true ? { erpIsPosted: true } : {},
+    };
 }
 
 // Same forward-only rule as mivend orders. Null means "leave as is".

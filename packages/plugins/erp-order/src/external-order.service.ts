@@ -13,7 +13,7 @@ import { ctxQueryBounded, keysetBatches, KEYSET_BATCH_SIZE, withAggregateLock } 
 import { MoreThan } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import { nextExternalStatusWithPosting } from './external-order-state';
+import { NEW_ORDER_POSTING, planExternalStatus } from './external-order-state';
 import {
     batchedLinesSignature,
     buildExternalOrderLines,
@@ -63,16 +63,19 @@ export class ExternalOrderService {
         isExternal: boolean;
         erpStatus: string | null;
         erpIsPosted: boolean | null;
+        erpStatusBeforeUnposted: string | null;
     } | null> {
         const rows: Array<{
             id: string;
             isExternal: boolean;
             erpStatus: string | null;
             erpIsPosted: boolean | null;
+            erpStatusBeforeUnposted: string | null;
         }> = await this.connection.getRepository(ctx, Order).query(
             `SELECT id, "customFieldsIsexternal" AS "isExternal",
                         "customFieldsErpstatus" AS "erpStatus",
-                        "customFieldsErpisposted" AS "erpIsPosted" FROM "order"
+                        "customFieldsErpisposted" AS "erpIsPosted",
+                        "customFieldsErpstatusbeforeunposted" AS "erpStatusBeforeUnposted" FROM "order"
                  WHERE "customFieldsErporderid" = $1 LIMIT 1`,
             [erpOrderId],
         );
@@ -82,6 +85,7 @@ export class ExternalOrderService {
                   isExternal: rows[0].isExternal === true,
                   erpStatus: rows[0].erpStatus ?? null,
                   erpIsPosted: rows[0].erpIsPosted ?? null,
+                  erpStatusBeforeUnposted: rows[0].erpStatusBeforeUnposted ?? null,
               }
             : null;
     }
@@ -123,7 +127,7 @@ export class ExternalOrderService {
                 const existing = await this.findByErpOrderId(txCtx, erpOrderId);
                 if (!existing?.isExternal) return false;
                 const dictionary = await this.statusReference.dictionary(txCtx);
-                const nextStatus = nextExternalStatusWithPosting(
+                const { status: nextStatus, facts } = planExternalStatus(
                     existing,
                     derived.erpStatus,
                     derived.isPosted,
@@ -134,7 +138,7 @@ export class ExternalOrderService {
                         ? {}
                         : { erpPaidAmount: derived.paidAmountMinor }),
                     ...derived.erpFacts,
-                    ...(derived.isPosted == null ? {} : { erpIsPosted: derived.isPosted }),
+                    ...facts,
                     ...(nextStatus === null
                         ? {}
                         : {
@@ -207,11 +211,15 @@ export class ExternalOrderService {
             );
         }
         const dictionary = await this.statusReference.dictionary(ctx);
+        const plan = planExternalStatus(
+            existing ?? NEW_ORDER_POSTING,
+            input.erpStatus,
+            input.isPosted,
+            dictionary,
+        );
         const nextStatus = existing
-            ? nextExternalStatusWithPosting(existing, input.erpStatus, input.isPosted, dictionary)
-            : input.isPosted === false
-              ? dictionary.codeWith('cancelled')
-              : (input.erpStatus ?? dictionary.codeWith('externalDefault'));
+            ? plan.status
+            : (plan.status ?? input.erpStatus ?? dictionary.codeWith('externalDefault'));
         const counterpartyFields = input.counterpartyErpId
             ? {
                   counterpartyId: counterparty ? String(counterparty.id) : null,
@@ -229,7 +237,7 @@ export class ExternalOrderService {
             ...(input.contractId === null ? {} : { erpContractId: input.contractId }),
             ...(input.paidAmountMinor === null ? {} : { erpPaidAmount: input.paidAmountMinor }),
             ...input.erpFacts,
-            ...(input.isPosted == null ? {} : { erpIsPosted: input.isPosted }),
+            ...plan.facts,
             ...(nextStatus === null
                 ? {}
                 : { erpStatus: nextStatus, erpStatusAt: input.erpStatusAt ?? new Date() }),

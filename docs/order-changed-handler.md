@@ -29,10 +29,12 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
 - `documentNumber` (15) refreshes `erpRegistrationDocumentNumber`; stale events are dropped upstream by the inbox
   version check.
 
-- `is_posted` (OrderChanged 41, OrderState 17): stored as the nullable order custom field `erpIsPosted`. An explicit
-  `false` on an external order sets the dictionary's `cancelled` status. A later `true` reopens it to the status
-  derived by the event (the default status when none) only while `erpIsPosted` was false; a genuine ERP cancellation
-  stays terminal. Absent changes nothing; mivend orders are not affected here. An empty `customerId` means no counterparty.
+- `is_posted` (OrderChanged 41, OrderState 17) on an external order is kept in `erpIsPosted`. `false` stores the
+  current status in `erpStatusBeforeUnposted` and sets the dictionary's `cancelled` status; a later `true` restores
+  that status (the event's status, then the default, when none was saved) and clears the saved one. Repeats change
+  nothing. A genuine ERP cancel (the event itself derives `cancelled`) is terminal: `erpIsPosted` and the saved status
+  become null, so a later `true` cannot reopen it, and a cancelled order with `erpIsPosted` not false is never marked
+  not posted. Absent changes nothing; mivend orders are not affected. An empty `customerId` means no counterparty.
 
 ## Deliberately not consumed
 

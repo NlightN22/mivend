@@ -43,6 +43,8 @@ declare module '@vendure/core' {
         // OrderState.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
         // ERP is_posted as last received; null when never sent. False means a draft, shown as cancelled.
         erpIsPosted?: boolean | null;
+        // Status held before a not-posted cancel; restored when the order is posted again.
+        erpStatusBeforeUnposted?: string | null;
         erpPaidAmount?: number | null;
         // OrderChanged.reserve_until: kept on the order because the reserve rows come from order-state.
         erpReserveUntil?: Date | null;

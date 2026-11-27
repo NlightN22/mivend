@@ -200,6 +200,16 @@ import { ErpDocumentListService } from './erp-document-list/erp-document-list.se
                 label: [{ languageCode: LanguageCode.en, value: 'Posted in the ERP' }],
             },
             {
+                name: 'erpStatusBeforeUnposted',
+                type: 'string',
+                nullable: true,
+                public: false,
+                readonly: true,
+                label: [
+                    { languageCode: LanguageCode.en, value: 'Status before not-posted cancel' },
+                ],
+            },
+            {
                 name: 'erpPaidAmount',
                 type: 'float',
                 nullable: true,

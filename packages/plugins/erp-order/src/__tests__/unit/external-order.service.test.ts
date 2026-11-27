@@ -5,11 +5,18 @@ import type { ExternalOrderInput } from '../../external-order.types';
 
 const ctx = {} as RequestContext;
 
+interface Stored {
+    erpStatus: string | null;
+    erpIsPosted: boolean | null;
+    erpStatusBeforeUnposted: string | null;
+}
+
 function makeService(
     update: ReturnType<typeof vi.fn>,
-    stored: { erpStatus: string | null; erpIsPosted: boolean | null } = {
+    stored: Stored = {
         erpStatus: null,
         erpIsPosted: null,
+        erpStatusBeforeUnposted: null,
     },
 ): ExternalOrderService {
     const dictionary = {
@@ -66,61 +73,120 @@ describe('ExternalOrderService status time', () => {
     });
 
     describe('is_posted', () => {
+        type Fields = Record<string, unknown>;
         const run = async (
-            stored: { erpStatus: string | null; erpIsPosted: boolean | null },
-            patch: Partial<ExternalOrderInput>,
-            times = 1,
-        ): Promise<Array<Record<string, unknown>>> => {
+            initial: Stored,
+            events: Array<Partial<ExternalOrderInput>>,
+        ): Promise<Fields[]> => {
             const update = vi.fn();
+            let stored = { ...initial };
             const service = makeService(update, stored);
+            const internals = service as unknown as Record<string, unknown>;
             const apply = (
                 service as unknown as {
                     apply: (c: RequestContext, i: ExternalOrderInput) => Promise<unknown>;
                 }
             ).apply.bind(service);
-            for (let n = 0; n < times; n += 1) {
-                await apply(ctx, { ...input, erpStatus: null, ...patch });
+            const seen: Fields[] = [];
+            for (const event of events) {
+                internals.findByErpOrderId = vi
+                    .fn()
+                    .mockResolvedValue({ id: '1', isExternal: true, ...stored });
+                await apply(ctx, { ...input, erpStatus: null, ...event });
+                const fields = update.mock.calls.at(-1)?.[1].customFields as Fields;
+                seen.push(fields);
+                stored = {
+                    erpStatus: (fields.erpStatus as string | undefined) ?? stored.erpStatus,
+                    erpIsPosted:
+                        'erpIsPosted' in fields
+                            ? (fields.erpIsPosted as boolean | null)
+                            : stored.erpIsPosted,
+                    erpStatusBeforeUnposted:
+                        'erpStatusBeforeUnposted' in fields
+                            ? (fields.erpStatusBeforeUnposted as string | null)
+                            : stored.erpStatusBeforeUnposted,
+                };
             }
-            return update.mock.calls.map(call => call[1].customFields);
+            return seen;
         };
-
-        it('posted to not posted: stores the fact and cancels', async () => {
-            const [fields] = await run(
-                { erpStatus: 'SHIPPING', erpIsPosted: true },
-                { isPosted: false },
-            );
-            expect(fields).toMatchObject({ erpIsPosted: false, erpStatus: 'CANCELLED' });
+        const posted = (erpStatus: string): Stored => ({
+            erpStatus,
+            erpIsPosted: true,
+            erpStatusBeforeUnposted: null,
         });
 
-        it('not posted to posted: reopens to the derived status, or the default without one', async () => {
-            const stored = { erpStatus: 'CANCELLED', erpIsPosted: false };
-            const [derived] = await run(stored, { isPosted: true, erpStatus: 'SHIPPING' });
+        it('shipped, not posted, posted again restores shipped and clears the saved status', async () => {
+            const [off, on] = await run(posted('SHIPPING'), [
+                { isPosted: false },
+                { isPosted: true },
+            ]);
+            expect(off).toMatchObject({
+                erpIsPosted: false,
+                erpStatus: 'CANCELLED',
+                erpStatusBeforeUnposted: 'SHIPPING',
+            });
+            expect(on).toMatchObject({
+                erpIsPosted: true,
+                erpStatus: 'SHIPPING',
+                erpStatusBeforeUnposted: null,
+            });
+        });
+
+        it('posted again with nothing saved falls back to the incoming status, then the default', async () => {
+            const stored = {
+                erpStatus: 'CANCELLED',
+                erpIsPosted: false,
+                erpStatusBeforeUnposted: null,
+            };
+            const [derived] = await run(stored, [{ isPosted: true, erpStatus: 'SHIPPING' }]);
             expect(derived).toMatchObject({ erpIsPosted: true, erpStatus: 'SHIPPING' });
-            const [fallback] = await run(stored, { isPosted: true });
+            const [fallback] = await run(stored, [{ isPosted: true }]);
             expect(fallback).toMatchObject({ erpIsPosted: true, erpStatus: 'NEW' });
         });
 
-        it('a genuine ERP cancellation stays cancelled when the order is posted', async () => {
-            const [fields] = await run(
-                { erpStatus: 'CANCELLED', erpIsPosted: true },
-                { isPosted: true, erpStatus: 'SHIPPING' },
-            );
-            expect(fields).toMatchObject({ erpIsPosted: true });
-            expect(fields).not.toHaveProperty('erpStatus');
+        it('not posted, then a genuine cancel, then posted stays cancelled', async () => {
+            const [, genuine, again] = await run(posted('SHIPPING'), [
+                { isPosted: false },
+                { erpStatus: 'CANCELLED' },
+                { isPosted: true },
+            ]);
+            expect(genuine).toMatchObject({ erpIsPosted: null, erpStatusBeforeUnposted: null });
+            expect(again).not.toHaveProperty('erpStatus');
         });
 
-        it('the same not-posted event twice has one effect', async () => {
-            const [first, second] = await run(
-                { erpStatus: 'CANCELLED', erpIsPosted: false },
+        it('a genuine cancel with is_posted=false is terminal and the flag is not false', async () => {
+            const [cancel, later] = await run(posted('SHIPPING'), [
+                { isPosted: false, erpStatus: 'CANCELLED' },
+                { isPosted: true },
+            ]);
+            expect(cancel).toMatchObject({ erpStatus: 'CANCELLED', erpIsPosted: null });
+            expect(later).not.toHaveProperty('erpStatus');
+        });
+
+        it('a repeated not-posted event changes neither the status nor the saved status', async () => {
+            const [, repeat] = await run(posted('SHIPPING'), [
                 { isPosted: false },
-                2,
-            );
-            expect(second).toEqual(first);
-            expect(first).not.toHaveProperty('erpStatus');
+                { isPosted: false },
+            ]);
+            expect(repeat).not.toHaveProperty('erpStatus');
+            expect(repeat).not.toHaveProperty('erpStatusBeforeUnposted');
+        });
+
+        it('a repeated posted event after restore changes nothing', async () => {
+            const [, , repeat] = await run(posted('SHIPPING'), [
+                { isPosted: false },
+                { isPosted: true },
+                { isPosted: true },
+            ]);
+            expect(repeat).not.toHaveProperty('erpStatus');
+            expect(repeat).toMatchObject({ erpIsPosted: true });
         });
 
         it('an event without is_posted leaves the fact and the status rules alone', async () => {
-            const [fields] = await run({ erpStatus: 'CANCELLED', erpIsPosted: false }, {});
+            const [fields] = await run(
+                { erpStatus: 'CANCELLED', erpIsPosted: false, erpStatusBeforeUnposted: 'SHIPPING' },
+                [{}],
+            );
             expect(fields).not.toHaveProperty('erpIsPosted');
             expect(fields).not.toHaveProperty('erpStatus');
         });
