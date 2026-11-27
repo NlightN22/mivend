@@ -3840,9 +3840,9 @@ export type IntegrationInboxIssueFilterParameter = {
 
 export type IntegrationInboxIssueList = PaginatedList & {
     items: Array<IntegrationInboxIssue>;
+    totalItems: Scalars['Int']['output'];
     /** True when more rows matched than totalItems counts: read totalItems as 'at least'. */
     totalItemsCapped: Scalars['Boolean']['output'];
-    totalItems: Scalars['Int']['output'];
 };
 
 export type IntegrationInboxIssueListOptions = {
@@ -3926,9 +3926,9 @@ export type IntegrationOutboxProblemFilterParameter = {
 
 export type IntegrationOutboxProblemList = PaginatedList & {
     items: Array<IntegrationOutboxProblem>;
+    totalItems: Scalars['Int']['output'];
     /** True when more rows matched than totalItems counts: read totalItems as 'at least'. */
     totalItemsCapped: Scalars['Boolean']['output'];
-    totalItems: Scalars['Int']['output'];
 };
 
 export type IntegrationOutboxProblemListOptions = {
