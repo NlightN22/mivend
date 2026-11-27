@@ -11,10 +11,6 @@ export default {
             'personal-data-consentLink': 'processing of personal data',
             'marketing-consent': 'I agree to receive informational and promotional mailings',
         },
-        login: {
-            required: 'Tick the required documents to sign in.',
-            confirm: 'Sign in and confirm',
-        },
         consent: {
             title: 'Sign in',
             subtitle: 'To continue, please confirm the documents below.',

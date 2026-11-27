@@ -72,42 +72,40 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
         await expect(page.getByText('E2E text of policy v1')).toBeVisible();
     });
 
-    test('the form carries the documents, the required ones are needed to sign in', async ({
+    test('the form never carries the documents; a new customer confirms them in the same card after a correct password', async ({
         page,
     }) => {
         await page.goto('/login');
         await page.locator('input[type="email"]').fill(email);
-        await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
+        await expect(page.getByTestId('legal-check-agreement')).toHaveCount(0);
         await signIn(page);
         await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
+        await expect(page.locator('input[type="password"]')).toHaveCount(0);
         await expect(page).toHaveURL(/\/login/);
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('0');
+        const submit = page.getByTestId('legal-consent-submit');
+        await expect(submit).toBeDisabled();
         await page.getByTestId('legal-check-agreement').locator('input').check();
         await page.getByTestId('legal-check-personal-data-consent').locator('input').check();
-        await page.getByRole('button', { name: 'Sign in' }).click();
+        await submit.click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('3');
     });
 
-    test('a customer who already accepted signs in without ticking', async ({ page }) => {
+    test('a customer who already accepted signs in without any box and never sees the form again', async ({
+        page,
+    }) => {
         await signIn(page);
+        await expect(page.getByTestId('login-progress')).toBeVisible();
+        await expect(page.locator('input[type="password"]')).toHaveCount(0);
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(`SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId}`),
         ).toBe('3');
-    });
-
-    test('a browser that saved the acceptance hides the boxes', async ({ page }) => {
-        await signIn(page);
-        await page.waitForURL(url => !url.pathname.includes('/login'));
-        await page.context().clearCookies();
-        await page.goto('/login');
-        await page.locator('input[type="email"]').fill(email);
-        await expect(page.getByTestId('legal-check-agreement')).toHaveCount(0);
     });
 
     test('a new version that requires re-acceptance asks again, for that document only', async ({
@@ -115,15 +113,29 @@ test.describe.serial('Legal documents acceptance (#272)', () => {
     }) => {
         publish('agreement', 2);
         await signIn(page);
-        await expect(page).toHaveURL(/\/login/);
         await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
+        await expect(page.getByTestId('legal-check-personal-data-consent')).toHaveCount(0);
         await page.getByTestId('legal-check-agreement').locator('input').check();
-        await page.getByRole('button', { name: 'Sign in' }).click();
+        await page.getByTestId('legal-consent-submit').click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(
             psql(
                 `SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId} AND kind = 'agreement' AND version = 2`,
             ),
         ).toBe('1');
+    });
+
+    test('leaving the confirmation signs out and shows the form again', async ({ page }) => {
+        publish('agreement', 3);
+        await signIn(page);
+        await expect(page.getByTestId('legal-check-agreement')).toBeVisible();
+        await page.getByRole('button', { name: 'Sign out' }).click();
+        await expect(page.locator('input[type="password"]')).toBeVisible();
+        await expect(page.getByTestId('legal-check-agreement')).toHaveCount(0);
+        expect(
+            psql(
+                `SELECT count(*) FROM legal_acceptance WHERE "customerId" = ${customerId} AND kind = 'agreement' AND version = 3`,
+            ),
+        ).toBe('0');
     });
 });

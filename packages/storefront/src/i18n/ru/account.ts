@@ -8,6 +8,7 @@ const ru: typeof en = {
         password: 'Пароль',
         loginError: 'Неверный email или пароль',
         signIn: 'Вход',
+        signingIn: 'Выполняем вход…',
         signInSubtitle: 'Введите email и пароль для входа в личный кабинет.',
         emailOrPhone: 'Телефон или email',
         emailPlaceholder: '+7 900 000-00-00 или email',

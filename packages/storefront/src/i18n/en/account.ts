@@ -6,6 +6,7 @@ export default {
         password: 'Password',
         loginError: 'Invalid email or password',
         signIn: 'Sign in',
+        signingIn: 'Signing you in…',
         signInSubtitle: 'Enter your email and password to access your account.',
         emailOrPhone: 'Phone or email',
         emailPlaceholder: '+7 900 000-00-00 or email',
