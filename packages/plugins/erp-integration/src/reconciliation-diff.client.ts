@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { filterFor } from './reconciliation-filters';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
@@ -43,6 +44,9 @@ export class ReconciliationDiffClient {
                 entityIds: knownIds,
                 direction: 'oursOnly',
                 includeTotal: false,
+                ...(filterFor(aggregateType).summaryParams.excludeDeleted === 'true'
+                    ? { excludeDeleted: true }
+                    : {}),
                 ...window,
             }),
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

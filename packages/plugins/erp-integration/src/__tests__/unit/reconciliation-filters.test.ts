@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ReconciliationDiffClient } from '../../reconciliation-diff.client';
 import { resolveTheirCount } from '../../reconciliation-decision';
 import { CUSTOMER_ORDER_COUNT_CONDITION, filterFor } from '../../reconciliation-filters';
 import { COMPARED_AGGREGATE_TYPES } from '../../reconciliation-local-counts.service';
@@ -47,5 +48,23 @@ describe('aggregate filters', () => {
         expect(resolveTheirCount(summary)).toBe(90);
         expect(resolveTheirCount({ ...summary, aggregateType: 'unit' })).toBe(80);
         expect(resolveTheirCount({ ...summary, aggregateType: 'storageLocation' })).toBe(90);
+    });
+});
+
+describe('diff request filter', () => {
+    it('sends excludeDeleted for orders only', async () => {
+        const fetchMock = vi.fn(async () => new Response('{"items":[]}'));
+        vi.stubGlobal('fetch', fetchMock);
+        const client = new ReconciliationDiffClient({
+            reconciliationApiUrl: 'https://is.example',
+            resyncSourceSystem: 's',
+        } as never);
+        await client.missingIds('customer-order', [], {}, 10);
+        await client.missingIds('unit', [], {}, 10);
+        const bodies = fetchMock.mock.calls.map(c =>
+            JSON.parse(String((c as unknown as [URL, RequestInit])[1].body)),
+        );
+        expect(bodies[0].excludeDeleted).toBe(true);
+        expect(bodies[1].excludeDeleted).toBeUndefined();
     });
 });

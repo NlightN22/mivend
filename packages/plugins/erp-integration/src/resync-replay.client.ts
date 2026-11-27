@@ -30,6 +30,7 @@ export class ResyncReplayClient {
         aggregateType: string,
         entityIds: string[],
         apiKey?: string,
+        dryRun = false,
     ): Promise<ReplayResult[]> {
         const { resyncSourceSystem } = this.options;
         if (!resyncSourceSystem) {
@@ -37,7 +38,12 @@ export class ResyncReplayClient {
         }
         return this.post(
             '/api/resync/v1/replay',
-            { aggregateType, sourceSystem: resyncSourceSystem, entityIds },
+            {
+                aggregateType,
+                sourceSystem: resyncSourceSystem,
+                entityIds,
+                ...(dryRun ? { dryRun: true } : {}),
+            },
             apiKey,
         );
     }

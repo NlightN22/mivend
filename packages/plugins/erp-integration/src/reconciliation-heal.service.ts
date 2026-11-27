@@ -115,23 +115,14 @@ export class ReconciliationHealService {
             };
         }
         const batches = toBatches(ids);
-        const isDocument = DOCUMENT_KINDS.has(aggregateType);
-        if (isDocument) {
-            const dry = await this.sendBatch(ctx, aggregateType, batches[0], true, undefined);
-            if (dry.wouldRepublish === 0) {
-                throw new HealStop('all-not-found', 'The dry-run batch found no id upstream');
-            }
-            if (!realRun) {
-                return {
-                    outcome: 'dry-run-only',
-                    detail: `${ids.length} ids missing locally; first batch: ${dry.wouldRepublish} would republish, ${dry.notFound.length} not found`,
-                    success: false,
-                };
-            }
-        } else if (!realRun) {
+        const dry = await this.sendBatch(ctx, aggregateType, batches[0], true, undefined);
+        if (dry.wouldRepublish === 0) {
+            throw new HealStop('all-not-found', 'The dry-run batch found no id upstream');
+        }
+        if (!realRun) {
             return {
                 outcome: 'dry-run-only',
-                detail: `${ids.length} ids missing locally; no platform dry run exists for this kind`,
+                detail: `${ids.length} ids missing locally; first batch: ${dry.wouldRepublish} would republish, ${dry.notFound.length} not found`,
                 success: false,
             };
         }
@@ -204,7 +195,7 @@ export class ReconciliationHealService {
             try {
                 return DOCUMENT_KINDS.has(aggregateType)
                     ? await this.replay.replayDocuments(aggregateType, batch, dryRun, apiKey)
-                    : await this.replay.replay(aggregateType, batch, apiKey);
+                    : await this.replay.replay(aggregateType, batch, apiKey, dryRun);
             } catch (err) {
                 if (
                     !(err instanceof ReplayRateLimitedError) ||

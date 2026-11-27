@@ -517,9 +517,9 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   never zero. Only `stalled` opens the drift issue and starts healing. Seeding or converging for more than 48 h
   opens a `seeding-stuck` issue.
 - **Self-healing, only from `stalled`, only when upstream is higher.** The exact missing ids come from the platform
-  `POST /api/reconciliation/v1/diff` (our ids walked in windows of 50 000, C collation), at most 2000 ids per run,
+  `POST /api/reconciliation/v1/diff` (with `excludeDeleted=true` from the filter definition; our ids walked in windows of 50 000, C collation), at most 2000 ids per run,
   batches of 200 sequentially with a pause, a stop at the first failed batch, 429 retried 3 times after a pause.
-  A document kind first sends one `dryRun` batch to `/replay-documents`; an answer of `republished` to a dry run
+  Every kind first sends one `dryRun` batch (`/replay-documents` for documents, `/replay` otherwise); an answer of `republished` to a dry run
   stops with an alarm. Per id `republished | would_republish | not_found`; an unknown status or an answered id set
   that differs from the sent one stops healing. `not_found` ids are remembered (`erp_reconciliation_not_found`),
   shown as the explained gap and never asked again; `not_found` with nothing republished is an alarm. A request is
@@ -527,9 +527,9 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `heal-alarm` issue after 3 failed attempts. Extra rows on our side are never deleted.
 - **A real republish needs `INTEGRATION_RECONCILIATION_HEAL_API_KEY`**, a separate key that is absent by default
   and is not part of the compose or timer configuration: a republish re-broadcasts to every consumer of the shared
-  topics. Without it a run only does the dry run (documents) or reports the missing ids (other kinds) and says so.
+  topics. Without it a run only does the dry run and says so.
 - Aggregates other than `customer-order` have no local id source yet: their healing reports `no-id-source` and the
-  gap stays visible. Add an entry to `ID_SOURCES` in `reconciliation-local-ids.service.ts` to enable one.
+  gap stays visible. The heal key needs only the `resync:replay` scope; the diff uses the normal key. Add an entry to `ID_SOURCES` in `reconciliation-local-ids.service.ts` to enable one.
 - The manager screen "ERP reconciliation" shows, per kind, the state, the filter, our and upstream counts, the gap,
   the explained gap and the last healing outcome (`erpReconciliationStates`).
 

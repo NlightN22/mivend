@@ -115,3 +115,17 @@ describe('ResyncReplayClient documents and rate limit', () => {
         );
     });
 });
+
+describe('ResyncReplayClient generic dry run', () => {
+    it('sends dryRun only when asked', async () => {
+        const fetchMock = vi.fn(async () => new Response('[]'));
+        vi.stubGlobal('fetch', fetchMock);
+        await client.replay('productPhoto', ['a'], undefined, true);
+        await client.replay('productPhoto', ['a']);
+        const bodies = fetchMock.mock.calls.map(c =>
+            JSON.parse(String((c as unknown as [URL, RequestInit])[1].body)),
+        );
+        expect(bodies[0].dryRun).toBe(true);
+        expect(bodies[1].dryRun).toBeUndefined();
+    });
+});
