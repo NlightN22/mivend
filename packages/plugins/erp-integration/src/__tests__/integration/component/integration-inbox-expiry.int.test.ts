@@ -58,11 +58,12 @@ async function insert(
     ageDays: number,
     entityId = 'e1',
     version = '1',
+    stream = 'stock',
 ): Promise<void> {
     await dataSource.query(
         `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, created_at)
-         VALUES ('stock', $1, $2, $3, $4::jsonb, $5, now() - make_interval(days => $6::int))`,
-        [entityId, version, eventId, payload, status, ageDays],
+         VALUES ($7, $1, $2, $3, $4::jsonb, $5, now() - make_interval(days => $6::int))`,
+        [entityId, version, eventId, payload, status, ageDays, stream],
     );
 }
 
@@ -98,6 +99,32 @@ describe('IntegrationInboxExpiryService (integration, real Postgres)', () => {
             'old-pending',
             'recent-tomb',
         ]);
+    });
+
+    it('drops the newest tombstoned row of a version-guarded stream past the floor window, not inside it', async () => {
+        await insert(
+            'sale-old',
+            'processed',
+            '{}',
+            40,
+            'd1',
+            '2026-01-01',
+            'goods-and-services-sale',
+        );
+        await insert(
+            'sale-in-window',
+            'processed',
+            '{}',
+            10,
+            'd2',
+            '2026-01-01',
+            'goods-and-services-sale',
+        );
+        await insert('stock-old', 'processed', '{}', 40, 's1', '2026-01-01', 'stock');
+
+        await drain();
+
+        expect(await remaining()).toEqual(['sale-in-window', 'stock-old']);
     });
 
     it('keeps an old tombstone whose entity has no full-payload processed row', async () => {

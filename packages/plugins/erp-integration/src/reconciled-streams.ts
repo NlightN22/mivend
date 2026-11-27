@@ -43,6 +43,30 @@ export const LATEST_PAYLOAD_STREAMS: ReadonlySet<InboundStream> = new Set<Inboun
     'warehouse',
 ]);
 
+// Document streams whose target rejects a version not newer than the stored one (ErpDocumentWriter,
+// settlement-document and the discount services), so the inbox row of the newest version can go after the floor window.
+export const VERSION_GUARDED_STREAMS: readonly InboundStream[] = [
+    'goods-and-services-sale',
+    'customer-goods-return',
+    'customer-order-closing',
+    'customer-proforma-invoice',
+    'issued-vat-invoice',
+    'incoming-payment-order',
+    'cash-receipt-order',
+    'customer-card-payment',
+    'debt-correction',
+    'warehouse-order',
+    'tl-warehouse-work-result',
+    'customer-claim',
+    'sales-correction',
+    'order-correction',
+    'settlement-document',
+    'discount-setup',
+    'granted-discount',
+    'retro-bonus-setup',
+    'granted-retro-bonus',
+];
+
 const NO_SUMMARY = 'ERP-owned mirror; the upstream reconciliation summary does not cover it yet';
 const STORED_AS_RECEIVED = 'Stored as received (#254); no upstream summary is compared yet';
 const EVENT_STREAM = 'Event or command result, not an entity with a standing count';

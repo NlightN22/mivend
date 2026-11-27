@@ -144,7 +144,11 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   reads a stored payload, so an emptied row is harmless. Tombstoned rows older than the horizon are deleted by the
   same task (`IntegrationInboxExpiryService`, #343) when another processed row of the entity has a newer version
   (equal versions: the higher id), so the newest version is never deleted, emptied or not. Table size stays bounded by
-  entities + 2 days of events. A full pass reads every row older than the horizon
+  entities + 2 days of events, except the version-guarded document streams (`VERSION_GUARDED_STREAMS`: sales-chain
+  documents, claims, corrections, settlement documents, discount and retro-bonus streams, #414): their target rejects a
+  version not newer than the stored one, so the newest tombstoned row goes too after `INBOX_FLOOR_RETENTION_DAYS` (30).
+  State streams (price, stock, offer, product and the like) and the order streams (`order-changed`, `order-state`, no
+  version guard in the target yet) keep the newest row. A full pass reads every row older than the horizon
   (about 80 s on 4.4M rows), so the pass runs at most once an hour per process (decision, #343); a part-way pass
   resumes on the next tick. A partial index on tombstones would make it proportional to the tombstones; not added.
 - One-time reclaim after the first purge (#343): the file keeps its size until rewritten. Let the nightly job do it: after a fresh `make prod-backup` and a `df` check (new table file plus WAL needs about

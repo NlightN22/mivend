@@ -6,12 +6,14 @@ import {
     INBOX_DEDUP_HORIZON_DAYS,
     INBOX_EXPIRY_PASS_INTERVAL_MS,
     INBOX_EXPIRY_SLICE_SIZE,
+    INBOX_FLOOR_RETENTION_DAYS,
 } from './types';
+import { VERSION_GUARDED_STREAMS } from './reconciled-streams';
 
 const EXPIRY_LOCK_KEY = 'inbox-expiry';
 
-// Keeps the newest version per entity; SQL order matches isVersionNewer only when one entity's versions are
-// all numeric (up to 30 digits) or all strings. Id-ordered slices end at `reached_horizon`.
+// Keeps the newest version per entity, except version-guarded streams past the floor window (#414).
+// SQL order matches isVersionNewer only for all-numeric (<=30 digits) or all-string versions; slices end at `reached_horizon`.
 export const EXPIRY_SLICE_SQL = `WITH slice AS (
        SELECT id, stream, entity_id, status, payload, created_at FROM integration_inbox_event
         WHERE id > $1::bigint ORDER BY id LIMIT $2
@@ -30,7 +32,8 @@ export const EXPIRY_SLICE_SQL = `WITH slice AS (
      ), del AS (
        DELETE FROM integration_inbox_event
         WHERE id IN (SELECT c.id FROM cand c JOIN newest w ON w.stream = c.stream AND w.entity_id = c.entity_id
-                      WHERE c.id <> w.keep_id)
+                      WHERE c.id <> w.keep_id
+                         OR (c.stream = ANY($4::text[]) AND c.created_at < now() - make_interval(days => $5::int)))
        RETURNING id
      )
      SELECT (SELECT count(*) FROM del)::int AS deleted,
@@ -52,7 +55,7 @@ interface ExpirySliceRow {
 }
 
 // Deletes tombstoned processed rows past the dedup horizon (docs/integration-health.md). The newest
-// processed version per entity is never deleted, so a redelivered old event is still caught as superseded.
+// processed version per entity stays until the floor window (state streams forever), so a redelivered old event is still caught as superseded.
 @Injectable()
 export class IntegrationInboxExpiryService {
     private cursor = '0';
@@ -81,7 +84,13 @@ export class IntegrationInboxExpiryService {
                     this.connection,
                     txCtx,
                     EXPIRY_SLICE_SQL,
-                    [this.cursor, INBOX_EXPIRY_SLICE_SIZE, INBOX_DEDUP_HORIZON_DAYS],
+                    [
+                        this.cursor,
+                        INBOX_EXPIRY_SLICE_SIZE,
+                        INBOX_DEDUP_HORIZON_DAYS,
+                        VERSION_GUARDED_STREAMS,
+                        INBOX_FLOOR_RETENTION_DAYS,
+                    ],
                 );
                 const finished = row.scanned < INBOX_EXPIRY_SLICE_SIZE || row.reached_horizon;
                 if (finished) this.nextPassAt = Date.now() + INBOX_EXPIRY_PASS_INTERVAL_MS;

@@ -174,6 +174,13 @@ pack`+extract to a scratch dir (or read the freshly-bumped `node_modules` copy) 
    create a second external effect, `eventId` alone is not idempotency); a test publishes the same entity twice (including
    re-confirm / release / re-submit paths) and asserts one external effect.
 
+6. **Version guard in the target (#414).** The handler's target stores the source `version` (`sourceVersion`) and refuses a
+   version not newer than the stored one (`shouldApplyDocument`; documents go through `ErpDocumentWriter`). The inbox
+   keeps the newest row of an entity only for the dedup window, and a document stream listed in
+   `VERSION_GUARDED_STREAMS` (`reconciled-streams.ts`) loses it after `INBOX_FLOOR_RETENTION_DAYS`, so a stream without
+   its own guard must not be listed. A test redelivers an older version and asserts the stored row is unchanged. A
+   state stream (price, stock, offer, anything read as the latest value) stays out of the list.
+
 ### Mandatory checklist — auditor's side
 
 A final audit of any stream-consumption change (`mivend.audit.*`'s own remit, AGENTS.md's "Final
