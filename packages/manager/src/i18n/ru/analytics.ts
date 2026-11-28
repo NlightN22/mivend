@@ -63,6 +63,9 @@ const analytics: typeof en = {
             counterpartyManager: 'Менеджер клиента',
             product: 'Товар',
             manufacturer: 'Производитель',
+            shipmentScheme: 'Схема отгрузки',
+            orderStatus: 'Статус заказа',
+            notSpecified: 'Не указано',
         },
         mainManagerOnly: 'Только главный менеджер',
         productBasis:

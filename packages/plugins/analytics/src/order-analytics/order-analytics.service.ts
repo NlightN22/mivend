@@ -4,7 +4,8 @@ import { QueryTooLargeError } from 'shared';
 
 import { loggerCtx } from '../types';
 import { resolveEntityFilters } from './order-analytics-entity-filters';
-import type { EntityNameFilter } from './order-analytics-entity-filters';
+import { splitValueFilters } from './order-analytics-value-filters';
+import type { ReportFilter } from './order-analytics-value-filters';
 import { GROUP_KINDS, resolveGroupFilters } from './order-analytics-group-filters';
 import type { GroupFilter } from './order-analytics-group-filters';
 import { OrderAnalyticsEntityNamesService } from './order-analytics-entity-names.service';
@@ -27,7 +28,7 @@ export type OrderAnalyticsState = 'OK' | 'NOT_CONFIGURED' | 'TOO_LARGE' | 'UNAVA
 export interface OrderAnalyticsInput extends Partial<OrderMetricsFilters> {
     mainManagerOnly?: boolean | null;
     // Names typed in the filter builder; resolved to ERP ids here, inside the viewer's scope.
-    entityFilters?: EntityNameFilter[] | null;
+    entityFilters?: ReportFilter[] | null;
     // Groups picked in the filter builder (our own ids); the analytics service expands them.
     groupFilters?: GroupFilter[] | null;
     // mivend ids of an embedding card; resolved to ERP ids here, inside the viewer's scope.
@@ -89,11 +90,8 @@ export class OrderAnalyticsService {
             if (input.entityFilters?.some(f => f.kind === 'CONTRACT')) {
                 throw new UserInputError('Orders cannot be filtered by contract');
             }
-            const named = await resolveEntityFilters(
-                ctx,
-                this.entityNames,
-                input.entityFilters ?? [],
-            );
+            const split = splitValueFilters(input.entityFilters ?? []);
+            const named = await resolveEntityFilters(ctx, this.entityNames, split.named);
             const grouped = await resolveGroupFilters(ctx, this.groups, input.groupFilters ?? [], [
                 ...GROUP_KINDS,
             ]);
@@ -146,6 +144,7 @@ export class OrderAnalyticsService {
                         timeZone: input.timeZone ?? '',
                         mainManagerOnly: input.mainManagerOnly ?? false,
                         ...filters,
+                        ...split.values,
                         customerIds: customers,
                         managerIds,
                         counterpartyManagerIds,

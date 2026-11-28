@@ -21,6 +21,8 @@ import {
     usesCounterpartyManager,
     usesProductFilter,
 } from '../../api/orderAnalyticsFilter';
+import { buildValueFilterColumns } from '../../api/orderAnalyticsValueFilter';
+import { useOrderValueOptions } from '../../composables/useOrderValueOptions';
 import { useAnalyticsGroupKinds } from '../../composables/useAnalyticsGroupKinds';
 import { useOrderAnalytics } from '../../composables/useOrderAnalytics';
 import { activeTag, formatDate } from '../../i18n/format';
@@ -69,9 +71,11 @@ const columns = computed(() =>
     ),
 );
 const groupKinds = useAnalyticsGroupKinds();
-const entityFilterColumns = computed(() =>
-    buildEntityFilterColumns(undefined, 'orders', groupKinds.value),
-);
+const valueOptions = useOrderValueOptions();
+const entityFilterColumns = computed(() => [
+    ...buildEntityFilterColumns(undefined, 'orders', groupKinds.value),
+    ...buildValueFilterColumns(valueOptions.value),
+]);
 const showMainManager = computed(
     () =>
         filters.value.dimension === 'COUNTERPARTY_MANAGER' ||

@@ -29,7 +29,7 @@ partial view must say so (visible against total), as the manager card does.
 ## Orders report (#389)
 
 The first report, `orders`, reads order amounts from the analytics service over gRPC
-(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.8.1, additive over v0.2.0). The data is order turnover taken from the
+(`analytics.v1.OrderMetricsService/GetOrderTurnover`, contract v0.10.1, additive over v0.2.0). The data is order turnover taken from the
 integration service: the sum of order amounts, not sales documents; cancelled and deleted orders are not counted.
 
 - **One report, many places.** The table is one shared component with filters and a dimension (customer, order
@@ -79,6 +79,13 @@ integration service: the sum of order amounts, not sales documents; cancelled an
   (orders `product_category_ids`, `exclude_product_category_ids`, `customer_group_ids`, `exclude_customer_group_ids`; sales
   `counterparty_group_ids`, `exclude_counterparty_group_ids`; contract v0.8.x, deployed in the analytics service). There is no
   switch. Customer and counterparty groups see only counterparties whose `group_id` the platform has already re-sent.
+- **Shipment scheme and order status.** Two ordinary filter-builder fields, "is one of" / "is not one of", over the exact
+  text the source sends (`shipment_schemes`, `exclude_shipment_schemes`, `order_statuses`, `exclude_order_statuses`, contract
+  v0.10.1). They are not resolved to ids; values go through as typed, at most 1000 per list. Choices come from the admin
+  query `orderAnalyticsFilterValues` (`ListOrderTurnoverFilterValues`), each with its order count; the empty value is shown as
+  "Not specified" and matches orders the source gave no scheme or status. The counts are service-wide for the analytics key,
+  not narrowed to the viewer's scope (the report itself still is). Matching is exact: when the source renames a value, the
+  list shows the new one and a saved view holding the old one returns no rows. Without these filters the numbers are unchanged.
 - **Customer manager dimension.** A customer with several managers is counted under each of them, so the rows of
   different managers must not be added together; orders of a customer without a manager fall into an empty id. For a
   restricted viewer the rows keep only the managers the team visibility allows, like the order manager dimension.

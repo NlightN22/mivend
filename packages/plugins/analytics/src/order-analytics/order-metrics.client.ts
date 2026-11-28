@@ -9,6 +9,8 @@ import type { AnalyticsPluginOptions } from '../types';
 import { ORDER_METRICS_PROTO, TIMESTAMP_PROTO } from './order-metrics.proto';
 import { OrderMetricsError } from './order-metrics.types';
 import type {
+    OrderFilterKind,
+    OrderFilterValue,
     OrderMetricsErrorKind,
     OrderMetricsRequest,
     OrderTurnoverRow,
@@ -42,7 +44,26 @@ type TurnoverCall = (
     callback: (error: grpc.ServiceError | null, response?: { rows: WireRow[] }) => void,
 ) => void;
 
-type TurnoverClient = grpc.Client & { GetOrderTurnover: TurnoverCall };
+type ValuesCall = (
+    request: object,
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+    callback: (
+        error: grpc.ServiceError | null,
+        response?: { values: Array<{ value: string; orderCount: string | number }> },
+    ) => void,
+) => void;
+
+type TurnoverClient = grpc.Client & {
+    GetOrderTurnover: TurnoverCall;
+    ListOrderTurnoverFilterValues: ValuesCall;
+};
+
+const toClientError = (error: grpc.ServiceError): OrderMetricsError =>
+    new OrderMetricsError(
+        ERROR_KINDS[error.code] ?? 'UNAVAILABLE',
+        `order metrics call failed with status ${error.code}`,
+    );
 
 const ERROR_KINDS: Record<number, OrderMetricsErrorKind> = {
     [grpc.status.UNAUTHENTICATED]: 'UNAUTHENTICATED',
@@ -118,18 +139,15 @@ export class OrderMetricsClient {
                     excludeProductCategoryIds: request.excludeProductCategoryIds,
                     customerGroupIds: request.customerGroupIds,
                     excludeCustomerGroupIds: request.excludeCustomerGroupIds,
+                    shipmentSchemes: request.shipmentSchemes ?? [],
+                    excludeShipmentSchemes: request.excludeShipmentSchemes ?? [],
+                    orderStatuses: request.orderStatuses ?? [],
+                    excludeOrderStatuses: request.excludeOrderStatuses ?? [],
                 },
                 metadata,
                 { deadline: Date.now() + CALL_TIMEOUT_MS },
                 (error, result) =>
-                    error
-                        ? reject(
-                              new OrderMetricsError(
-                                  ERROR_KINDS[error.code] ?? 'UNAVAILABLE',
-                                  `order metrics call failed with status ${error.code}`,
-                              ),
-                          )
-                        : resolve(result ?? { rows: [] }),
+                    error ? reject(toClientError(error)) : resolve(result ?? { rows: [] }),
             );
         });
         return response.rows.map(row => ({
@@ -145,6 +163,32 @@ export class OrderMetricsClient {
             productAmount: row.productAmount,
             productLinesWithoutAmount: Number(row.productLinesWithoutAmount),
         }));
+    }
+
+    async listOrderTurnoverFilterValues(
+        kind: OrderFilterKind,
+        from?: Date,
+        to?: Date,
+    ): Promise<OrderFilterValue[]> {
+        const key = await this.readKey();
+        const metadata = new grpc.Metadata();
+        metadata.set('authorization', `Bearer ${key}`);
+        const client = this.connection();
+        const response = await new Promise<{
+            values: Array<{ value: string; orderCount: string | number }>;
+        }>((resolve, reject) => {
+            client.ListOrderTurnoverFilterValues(
+                {
+                    kind: `ORDER_FILTER_KIND_${kind}`,
+                    ...(from && to ? { from: toTimestamp(from), to: toTimestamp(to) } : {}),
+                },
+                metadata,
+                { deadline: Date.now() + CALL_TIMEOUT_MS },
+                (error, result) =>
+                    error ? reject(toClientError(error)) : resolve(result ?? { values: [] }),
+            );
+        });
+        return response.values.map(v => ({ value: v.value, orderCount: Number(v.orderCount) }));
     }
 
     private async readKey(): Promise<string> {

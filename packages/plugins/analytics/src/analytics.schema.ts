@@ -59,6 +59,25 @@ export const adminApiSchema: DocumentNode = gql`
         COUNTERPARTY_MANAGER
         PRODUCT
         MANUFACTURER
+        "Order filters matched by the exact text the source sends; the empty value means not specified."
+        SHIPMENT_SCHEME
+        ORDER_STATUS
+    }
+
+    enum OrderAnalyticsValueKind {
+        SHIPMENT_SCHEME
+        ORDER_STATUS
+    }
+
+    type OrderAnalyticsFilterValue {
+        "Empty means orders without a value."
+        value: String!
+        orderCount: Int!
+    }
+
+    type OrderAnalyticsFilterValues {
+        state: OrderAnalyticsState!
+        values: [OrderAnalyticsFilterValue!]!
     }
 
     input OrderAnalyticsEntityFilterInput {
@@ -164,6 +183,11 @@ export const adminApiSchema: DocumentNode = gql`
         salesAnalytics(input: SalesAnalyticsInput!): SalesAnalytics!
         analyticsReports: [AnalyticsReport!]!
         orderAnalytics(input: OrderAnalyticsInput!): OrderAnalytics!
+        orderAnalyticsFilterValues(
+            kind: OrderAnalyticsValueKind!
+            from: DateTime
+            to: DateTime
+        ): OrderAnalyticsFilterValues!
         orderAnalyticsSuggest(kind: OrderAnalyticsFilterKind!, prefix: String!): [String!]!
         orderAnalyticsGroupSuggest(
             kind: OrderAnalyticsGroupKind!

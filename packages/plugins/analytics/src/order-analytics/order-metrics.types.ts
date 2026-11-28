@@ -31,7 +31,21 @@ export interface OrderMetricsFilters {
     excludeCustomerGroupIds: string[];
 }
 
-export interface OrderMetricsRequest extends OrderMetricsFilters {
+export interface ValueFilters {
+    shipmentSchemes: string[];
+    excludeShipmentSchemes: string[];
+    orderStatuses: string[];
+    excludeOrderStatuses: string[];
+}
+
+export type OrderFilterKind = 'SHIPMENT_SCHEME' | 'ORDER_STATUS';
+
+export interface OrderFilterValue {
+    value: string;
+    orderCount: number;
+}
+
+export interface OrderMetricsRequest extends OrderMetricsFilters, Partial<ValueFilters> {
     mainManagerOnly: boolean;
     from: Date;
     to: Date;

@@ -1,4 +1,4 @@
-// The consumer's copy of analytics.v1 order_metrics.proto (contract v0.8.1, go_package option dropped).
+// The consumer's copy of analytics.v1 order_metrics.proto (contract v0.10.1, go_package option dropped, example values removed from comments).
 // Keep it identical to the contract; update it together with the version note in docs/analytics.md.
 export const ORDER_METRICS_PROTO = `
 syntax = "proto3";
@@ -24,6 +24,29 @@ service OrderMetricsService {
   // members: use narrower groups), DEADLINE_EXCEEDED, CANCELLED (the caller gave
   // up), INTERNAL (a server fault, retry later).
   rpc GetOrderTurnover(GetOrderTurnoverRequest) returns (GetOrderTurnoverResponse);
+
+  // The values the shipment scheme or the processing status of the orders
+  // actually have, with the number of orders of each value, so that a client can
+  // offer them as a choice list for the shipment_schemes / order_statuses
+  // filters of GetOrderTurnover. The orders are the ones GetOrderTurnover counts
+  // without any filter (posted, not deleted, not cancelled, with an order date),
+  // limited to the organizations the caller is allowed to see. The empty string is
+  // a value of its own: orders for which the source gave no scheme or no status.
+  // Until the source has re-sent all orders with the scheme, the empty value also
+  // counts orders that are not loaded yet.
+  //
+  // Errors: UNAUTHENTICATED, INVALID_ARGUMENT (kind is not set, a period that is
+  // not valid, only one of from and to), PERMISSION_DENIED (an organization
+  // outside the caller's scope), RESOURCE_EXHAUSTED (more than 1000 distinct
+  // values: narrow the period or the organizations), DEADLINE_EXCEEDED, CANCELLED,
+  // INTERNAL.
+  rpc ListOrderTurnoverFilterValues(ListOrderTurnoverFilterValuesRequest) returns (ListOrderTurnoverFilterValuesResponse);
+}
+
+enum OrderFilterKind {
+  ORDER_FILTER_KIND_UNSPECIFIED = 0;
+  ORDER_FILTER_KIND_SHIPMENT_SCHEME = 1;
+  ORDER_FILTER_KIND_ORDER_STATUS = 2;
 }
 
 enum Granularity {
@@ -169,6 +192,23 @@ message GetOrderTurnoverRequest {
   // unknown or deleted group excludes nothing, and a customer without a known
   // group is never excluded by it. At most 1000 values.
   repeated string exclude_customer_group_ids = 26;
+
+  // Shipment scheme and processing status of the order as the source system
+  // states them, matched exactly (case and spelling as sent). The empty string is a value of its own: it matches orders for
+  // which the source gave no scheme or no status (the status is empty for orders
+  // created before statuses existed). These filters act on whole orders, do not
+  // switch the result to line mode, and are combined with every other filter by
+  // AND (include first, then exclude). Each list holds at most 1000 values (more
+  // is INVALID_ARGUMENT). Without them nothing changes: orders are counted as
+  // before (posted, not deleted, not cancelled) whatever their scheme and status.
+  // Until the source has re-sent all orders with the scheme, the scheme (and
+  // often the status) of older orders is empty in this service: the result of
+  // these filters is then incomplete, and the empty value also matches orders
+  // that are not loaded yet, not only orders that really have no value.
+  repeated string shipment_schemes = 27;
+  repeated string exclude_shipment_schemes = 28;
+  repeated string order_statuses = 29;
+  repeated string exclude_order_statuses = 30;
 }
 
 message OrderTurnoverRow {
@@ -208,6 +248,33 @@ message OrderTurnoverRow {
 
 message GetOrderTurnoverResponse {
   repeated OrderTurnoverRow rows = 1;
+}
+
+message ListOrderTurnoverFilterValuesRequest {
+  // Required: UNSPECIFIED is rejected.
+  OrderFilterKind kind = 1;
+  // Optional period by order date, from inclusive and to exclusive, with the same
+  // limits as GetOrderTurnover (between 2000-01-01 and 2100-01-01, at most 5
+  // years). Both or neither: without them all orders are counted.
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to = 3;
+  // Optional: narrow to these organizations (each must be inside the caller's
+  // scope, else PERMISSION_DENIED). Empty means every organization the caller may
+  // see. At most 1000 values.
+  repeated string organization_ids = 4;
+}
+
+message OrderFilterValue {
+  // The value exactly as the source sent it (case and spelling kept); empty for
+  // orders without a value.
+  string value = 1;
+  int64 order_count = 2;
+}
+
+message ListOrderTurnoverFilterValuesResponse {
+  // Distinct values sorted by value (the empty value first), at most one row per
+  // value.
+  repeated OrderFilterValue values = 1;
 }
 `;
 

@@ -56,6 +56,21 @@ export async function startEchoOrderMetricsServer(key: string): Promise<EchoOrde
                 ],
             });
         },
+        ListOrderTurnoverFilterValues: (
+            call: grpc.ServerUnaryCall<Record<string, unknown>, unknown>,
+            cb: grpc.sendUnaryData<object>,
+        ) => {
+            if (call.metadata.get('authorization')[0] !== `Bearer ${key}`) {
+                cb({ code: grpc.status.UNAUTHENTICATED, name: 'Unauthenticated', message: '' });
+                return;
+            }
+            cb(null, {
+                values: [
+                    { value: '', orderCount: '2' },
+                    { value: JSON.stringify(call.request), orderCount: '5' },
+                ],
+            });
+        },
     });
     const zero = {
         amount: '0.00',

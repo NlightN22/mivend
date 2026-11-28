@@ -61,6 +61,9 @@ export default {
             counterpartyManager: 'Customer manager',
             product: 'Product',
             manufacturer: 'Manufacturer',
+            shipmentScheme: 'Shipment scheme',
+            orderStatus: 'Order status',
+            notSpecified: 'Not specified',
         },
         mainManagerOnly: 'Main manager only',
         productBasis:

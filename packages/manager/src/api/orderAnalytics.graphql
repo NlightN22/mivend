@@ -35,3 +35,13 @@ query AnalyticsFilterCapabilities {
         groupKinds
     }
 }
+
+query OrderAnalyticsFilterValues($kind: OrderAnalyticsValueKind!) {
+    orderAnalyticsFilterValues(kind: $kind) {
+        state
+        values {
+            value
+            orderCount
+        }
+    }
+}

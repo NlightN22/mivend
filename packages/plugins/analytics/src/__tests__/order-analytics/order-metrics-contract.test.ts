@@ -13,7 +13,7 @@ function fieldIds(proto: string, message: string): Record<string, number> {
     return Object.fromEntries(Object.values(type.fields).map(f => [f.name, f.id]));
 }
 
-describe('analytics contract v0.8.1 consumer copy', () => {
+describe('analytics contract v0.10.1 consumer copy', () => {
     it('carries the order exclude, manufacturer group, category and customer group fields', () => {
         expect(fieldIds(ORDER_METRICS_PROTO, 'GetOrderTurnoverRequest')).toMatchObject({
             excludeCustomerIds: 14,
@@ -29,6 +29,28 @@ describe('analytics contract v0.8.1 consumer copy', () => {
             excludeProductCategoryIds: 24,
             customerGroupIds: 25,
             excludeCustomerGroupIds: 26,
+        });
+    });
+
+    it('carries the shipment scheme and order status fields and the filter values rpc', () => {
+        expect(fieldIds(ORDER_METRICS_PROTO, 'GetOrderTurnoverRequest')).toMatchObject({
+            shipmentSchemes: 27,
+            excludeShipmentSchemes: 28,
+            orderStatuses: 29,
+            excludeOrderStatuses: 30,
+        });
+        expect(fieldIds(ORDER_METRICS_PROTO, 'ListOrderTurnoverFilterValuesRequest')).toEqual({
+            kind: 1,
+            from: 2,
+            to: 3,
+            organizationIds: 4,
+        });
+        expect(fieldIds(ORDER_METRICS_PROTO, 'OrderFilterValue')).toEqual({
+            value: 1,
+            orderCount: 2,
+        });
+        expect(fieldIds(ORDER_METRICS_PROTO, 'ListOrderTurnoverFilterValuesResponse')).toEqual({
+            values: 1,
         });
     });
 

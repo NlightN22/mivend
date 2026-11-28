@@ -8,6 +8,7 @@ import { OrderAnalyticsGroupsResolver } from './order-analytics/order-analytics-
 import { OrderAnalyticsGroupsService } from './order-analytics/order-analytics-groups.service';
 import { OrderAnalyticsEntityNamesService } from './order-analytics/order-analytics-entity-names.service';
 import { SalesCurrencyResolverService } from './sales-analytics/sales-currency-resolver.service';
+import { OrderAnalyticsFilterValuesService } from './order-analytics/order-analytics-filter-values.service';
 import { OrderAnalyticsLabelsService } from './order-analytics/order-analytics-labels.service';
 import { OrderAnalyticsResolver } from './order-analytics/order-analytics.resolver';
 import { OrderAnalyticsScopeService } from './order-analytics/order-analytics-scope.service';
@@ -30,6 +31,7 @@ import type { AnalyticsPluginOptions } from './types';
         OrderAnalyticsEntityNamesService,
         OrderAnalyticsGroupsService,
         OrderAnalyticsService,
+        OrderAnalyticsFilterValuesService,
         SalesMetricsClient,
         SalesAnalyticsService,
     ],

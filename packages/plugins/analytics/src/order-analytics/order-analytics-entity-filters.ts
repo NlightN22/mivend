@@ -2,7 +2,10 @@ import { RequestContext } from '@vendure/core';
 import { QueryTooLargeError } from 'shared';
 
 import type { EntityFilterKind } from './order-analytics-entity-names.service';
-import { OrderAnalyticsEntityNamesService } from './order-analytics-entity-names.service';
+import {
+    ENTITY_FILTER_KINDS,
+    OrderAnalyticsEntityNamesService,
+} from './order-analytics-entity-names.service';
 import { MAX_FILTER_VALUES } from './order-metrics.types';
 
 export interface EntityNameFilter {
@@ -118,7 +121,7 @@ export async function suggestEntityNames(
     kind: EntityFilterKind,
     prefix: string,
 ): Promise<string[]> {
-    if (prefix.trim().length < 2) return [];
+    if (!ENTITY_FILTER_KINDS.includes(kind) || prefix.trim().length < 2) return [];
     const found = await names.find(ctx, kind, prefix, SUGGEST_LIMIT * 3);
     return [...new Set(found.map(f => f.name))].slice(0, SUGGEST_LIMIT);
 }
