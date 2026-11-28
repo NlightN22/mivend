@@ -22,6 +22,7 @@ import type { ReconciliationSummary } from './reconciliation-summary.client';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { resolveTheirCount } from './reconciliation-decision';
 import { RECONCILED_STREAMS } from './reconciled-streams';
+import { HEAL_TIME_BUDGET_MS } from './reconciliation-heal-policy';
 import { ReconciliationHealService } from './reconciliation-heal.service';
 import { ReconciliationStateService } from './reconciliation-state.service';
 import type { ComparisonSignals } from './reconciliation-state';
@@ -55,6 +56,12 @@ function signalsFor(
         sourceQueue:
             aggregateType === 'customer-order' ? (summary.pendingPublish ?? null) : undefined,
     };
+}
+
+interface StalledKind {
+    aggregateType: string;
+    ourCount: number;
+    theirCount: number;
 }
 
 export interface RunComparisonInput {
@@ -96,6 +103,7 @@ export class ReconciliationService {
         let issuesFound = 0;
         let checked = 0;
         const backlog = await this.readBacklog(ctx);
+        const stalled: StalledKind[] = [];
 
         for (const aggregateType of COMPARED_AGGREGATE_TYPES) {
             let summaries: ReconciliationSummary[];
@@ -140,9 +148,10 @@ export class ReconciliationService {
                 signals: signalsFor(aggregateType, summary, backlog),
                 now: new Date(),
             });
-            issuesFound += await this.actOnState(ctx, input, state, ourCount, theirCount);
+            issuesFound += await this.actOnState(ctx, input, state, ourCount, theirCount, stalled);
         }
 
+        issuesFound += await this.healStalled(ctx, input, stalled);
         issuesFound += await this.reconcileFailedInboxRows(ctx, input);
         issuesFound += await this.reconcileMissingCoordinates(ctx, input);
         return { checked, issuesFound, skipped };
@@ -155,6 +164,7 @@ export class ReconciliationService {
         state: ErpReconciliationState,
         ourCount: number,
         theirCount: number,
+        stalled: StalledKind[],
     ): Promise<number> {
         const { aggregateType } = state;
         const trigger = {
@@ -191,15 +201,35 @@ export class ReconciliationService {
             theirActiveCount: theirCount,
             ...trigger,
         });
-        found += 1;
-        const report = await this.heal.healIfDue(ctx, aggregateType);
-        if (report.alarm) {
+        stalled.push({ aggregateType, ourCount, theirCount });
+        return found + 1;
+    }
+
+    // Healing runs after every comparison so one slow kind cannot starve the rest; kinds past the time budget wait for the next run.
+    private async healStalled(
+        ctx: RequestContext,
+        input: RunComparisonInput,
+        stalled: StalledKind[],
+    ): Promise<number> {
+        const startedAt = Date.now();
+        let found = 0;
+        for (const { aggregateType, ourCount, theirCount } of stalled) {
+            if (Date.now() - startedAt > HEAL_TIME_BUDGET_MS) {
+                Logger.warn(
+                    `Reconciliation healing of ${aggregateType} deferred: time budget spent`,
+                    loggerCtx,
+                );
+                continue;
+            }
+            const report = await this.heal.healIfDue(ctx, aggregateType);
+            if (!report.alarm) continue;
             await this.issues.recordIssue(ctx, {
                 aggregateType: HEAL_ALARM_PREFIX + aggregateType,
                 issueType: 'heal-alarm',
                 ourCount,
                 theirActiveCount: theirCount,
-                ...trigger,
+                triggeredBy: input.triggeredBy,
+                triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
             });
             found += 1;
         }

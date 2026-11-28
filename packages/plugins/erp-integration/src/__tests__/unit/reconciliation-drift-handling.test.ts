@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReconciliationService } from '../../reconciliation.service';
+import { HEAL_TIME_BUDGET_MS } from '../../reconciliation-heal-policy';
 import { filterFor } from '../../reconciliation-filters';
 
 const summary = (aggregateType: string, count: number): Record<string, unknown> => ({
@@ -74,6 +75,28 @@ describe('ReconciliationService drift handling', () => {
         expect(issueTypes(save)).not.toContain('heal-alarm');
         expect(healIfDue).toHaveBeenCalled();
         expect(issueTypes(save).every(t => t === 'upstream-higher')).toBe(true);
+    });
+
+    it('heals only after every kind was compared and skips healing once the time budget is spent', async () => {
+        const { service, record, healIfDue } = setup({
+            state: { state: 'stalled', seedingAlarm: false },
+        });
+        const order: string[] = [];
+        record.mockImplementation(async (_c: unknown, i: { aggregateType: string }) => {
+            order.push('record');
+            return { aggregateType: i.aggregateType, state: 'stalled', seedingAlarm: false };
+        });
+        let now = 0;
+        vi.spyOn(Date, 'now').mockImplementation(() => now);
+        healIfDue.mockImplementation(async () => {
+            order.push('heal');
+            now += HEAL_TIME_BUDGET_MS + 1;
+            return { outcome: 'healed', detail: '', alarm: false };
+        });
+        await service.runComparison({ triggeredBy: 'scheduled' });
+        vi.restoreAllMocks();
+        expect(order.lastIndexOf('record')).toBeLessThan(order.indexOf('heal'));
+        expect(healIfDue).toHaveBeenCalledTimes(1);
     });
 
     it('opens a heal alarm issue when healing reports an alarm', async () => {
