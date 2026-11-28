@@ -11,6 +11,7 @@ export default defineConfig({
             'src/__tests__/integration/**/*.test.ts',
         ),
         testTimeout: 30_000,
+        hookTimeout: 60_000,
         // Each test file gets its own Postgres schema, so fileParallelism can stay on.
         // Avoid dropSchema on shared public. See docs/testing-strategy.md (Database isolation).
     },

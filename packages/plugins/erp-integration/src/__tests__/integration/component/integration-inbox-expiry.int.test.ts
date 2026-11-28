@@ -11,6 +11,7 @@ import {
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { drainExpiry } from './expiry-drain';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 import { IntegrationInboxExpiryService } from '../../../integration-inbox-expiry.service';
 import { INBOX_EXPIRY_SLICE_SIZE } from '../../../types';
@@ -72,14 +73,7 @@ async function insert(
     );
 }
 
-async function drain(): Promise<number> {
-    let deleted = 0;
-    for (;;) {
-        const slice = await expiry.deleteExpiredTombstones(30_000);
-        deleted += slice.deleted;
-        if (slice.finished) return deleted;
-    }
-}
+const drain = (): Promise<number> => drainExpiry(expiry);
 
 async function remaining(): Promise<string[]> {
     const rows: Array<{ source_event_id: string }> = await dataSource.query(

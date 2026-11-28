@@ -11,6 +11,7 @@ export default defineConfig({
             'src/__tests__/integration/**/*.test.ts',
         ),
         testTimeout: 30_000,
+        hookTimeout: 60_000,
         // Each test file needs its own Postgres schema; a shared `public` schema breaks test isolation.
     },
 });

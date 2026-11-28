@@ -9,6 +9,7 @@ import {
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
+import { drainExpiry } from './expiry-drain';
 import { IntegrationInboxExpiryService } from '../../../integration-inbox-expiry.service';
 import { IntegrationInboxRetentionService } from '../../../integration-inbox-retention.service';
 import { INBOX_DEDUP_HORIZON_DAYS } from '../../../types';
@@ -78,15 +79,6 @@ async function sweep(): Promise<number> {
     }
 }
 
-async function drainExpiry(): Promise<number> {
-    let deleted = 0;
-    for (;;) {
-        const slice = await expiry.deleteExpiredTombstones(30_000);
-        deleted += slice.deleted;
-        if (slice.finished) return deleted;
-    }
-}
-
 async function state(): Promise<Record<string, boolean>> {
     const rows: Array<{ source_event_id: string; full: boolean }> = await dataSource.query(
         `SELECT source_event_id, payload <> '{}'::jsonb AS "full" FROM integration_inbox_event`,
@@ -133,7 +125,7 @@ describe('latest-version payload retention (integration, real Postgres)', () => 
         await insert('v2', 'price', 'processed', OLD, '2');
         await sweep();
 
-        expect(await drainExpiry()).toBe(2);
+        expect(await drainExpiry(expiry)).toBe(2);
         expect(await state()).toEqual({ v10: false });
         expect((await expiry.deleteExpiredTombstones(30_000)).outcome).toBe('skipped');
     });
@@ -143,7 +135,7 @@ describe('latest-version payload retention (integration, real Postgres)', () => 
         await insert('v3-redelivered', 'price', 'processed', OLD, '3');
         await dataSource.query(`UPDATE integration_inbox_event SET payload = '{}'::jsonb`);
 
-        await drainExpiry();
+        await drainExpiry(expiry);
 
         expect(await state()).toEqual({ v5: false });
     });

@@ -11,6 +11,7 @@ export default defineConfig({
             'src/__tests__/integration/**/*.test.ts',
         ),
         testTimeout: 30_000,
+        hookTimeout: 60_000,
         // Each file gets its own Postgres schema: dropSchema on the shared public schema would race
         // with other plugins' integration tests running in parallel on the same mivend_test database.
     },

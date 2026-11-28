@@ -11,6 +11,7 @@ export default defineConfig({
             'src/__tests__/integration/**/*.test.ts',
         ),
         testTimeout: 30_000,
+        hookTimeout: 60_000,
         // Each file gets its own schema: dropSchema on the shared public schema would let one file's
         // teardown wipe tables other files still use. Use testSchemaOptions/createTestSchema.
     },

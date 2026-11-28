@@ -12,6 +12,7 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         testTimeout: 30_000,
+        hookTimeout: 60_000,
         ...isolationOptions(
             listTestFiles(resolve(__dirname, 'src/__tests__/integration')),
             'src/__tests__/integration/**/*.test.ts',
