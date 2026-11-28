@@ -28,19 +28,19 @@ const col = (
     field,
     header: t(`exchangeHealth.reconciliationStates.columns.${field}`),
     width,
-    minWidth: Math.min(width, 90),
+    minWidth: width,
     filterConfig: { type: 'none' },
     ...extra,
 });
 const columns = [
-    col('aggregateType', 150, { required: true, priority: 10, mobile: { primary: true } }),
-    col('state', 120, { priority: 9, mobile: { badge: true } }),
-    col('filter', 260, { priority: 5 }),
-    col('ourCount', 90, { align: 'end', priority: 8 }),
-    col('theirCount', 110, { align: 'end', priority: 8 }),
-    col('gap', 80, { align: 'end', priority: 9 }),
-    col('explainedGap', 100, { align: 'end', priority: 6 }),
-    col('heal', 280, { priority: 7 }),
+    col('aggregateType', 130, { required: true, priority: 10, mobile: { primary: true } }),
+    col('state', 160, { priority: 9, mobile: { badge: true } }),
+    col('filter', 110, { priority: 5 }),
+    col('ourCount', 100, { align: 'end', priority: 8 }),
+    col('theirCount', 130, { align: 'end', priority: 8 }),
+    col('gap', 90, { align: 'end', priority: 9 }),
+    col('explainedGap', 110, { align: 'end', priority: 6 }),
+    col('heal', 180, { priority: 7 }),
 ];
 
 const variantOf: Record<string, Variant> = {
