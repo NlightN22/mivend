@@ -6,6 +6,7 @@ import {
     formatAge,
     formatAgeSeconds,
     isLagOverThreshold,
+    pageOf,
     stockDefectsView,
     streamLags,
     totalOpen,
@@ -86,5 +87,24 @@ describe('exchange health view helpers', () => {
         expect(unknownReasonKey('TIMEOUT')).toBe('TIMEOUT');
         expect(unknownReasonKey('SOMETHING')).toBe('OTHER');
         expect(unknownReasonKey(null)).toBe('OTHER');
+    });
+});
+
+describe('pageOf', () => {
+    const rows = Array.from({ length: 45 }, (_, i) => i + 1);
+
+    it('cuts each page from the full list', () => {
+        expect(pageOf(rows, 1, 20)).toEqual(rows.slice(0, 20));
+        expect(pageOf(rows, 2, 20)).toEqual(rows.slice(20, 40));
+        expect(pageOf(rows, 3, 20)).toEqual([41, 42, 43, 44, 45]);
+    });
+
+    it('returns nothing past the last page and treats page 0 as the first', () => {
+        expect(pageOf(rows, 4, 20)).toEqual([]);
+        expect(pageOf(rows, 0, 20)).toEqual(rows.slice(0, 20));
+    });
+
+    it('shows a short list whole', () => {
+        expect(pageOf([1, 2, 3], 1, 20)).toEqual([1, 2, 3]);
     });
 });

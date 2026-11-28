@@ -3,13 +3,13 @@ import { computed, ref } from 'vue';
 import {
     MvAdvancedDataTable,
     useDataTableState,
-    useIsMobileViewport,
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
+import { pageOf } from '../../api/exchangeHealthView';
 
 type Row = { [key: string]: unknown };
 
-// A fixed, small set (streams, event types, channels): one page, no filters; the page-level refresh reloads it.
+// A fixed, small set (streams, event types, channels): paged here, no filters; the page-level refresh reloads it.
 const props = defineProps<{
     columns: AdvancedDataTableColumn[];
     rows: Row[];
@@ -35,16 +35,8 @@ const { state } = useDataTableState<{ [key: string]: unknown }>(
 );
 const page = ref(1);
 const total = computed(() => props.rows.length);
-const isMobile = useIsMobileViewport(800);
-// The phone card list shows exactly the rows it is given, so the page is cut here; the desktop grid pages itself.
-const shownRows = computed(() =>
-    isMobile.value
-        ? props.rows.slice(
-              (page.value - 1) * state.value.pageSize,
-              page.value * state.value.pageSize,
-          )
-        : props.rows,
-);
+// The grid is lazy: it shows exactly the rows it is given, so every viewport gets the page cut here.
+const shownRows = computed(() => pageOf(props.rows, page.value, state.value.pageSize));
 </script>
 
 <template>
@@ -62,6 +54,7 @@ const shownRows = computed(() =>
         :default-filters="{}"
         :empty-message="emptyMessage"
         @update:page="page = $event"
+        @reset-page="page = 1"
     >
         <template v-for="c in columns" :key="c.field" #[`cell-${c.field}`]="slotProps">
             <slot :name="`cell-${c.field}`" v-bind="slotProps">{{

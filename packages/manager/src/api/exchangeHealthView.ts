@@ -212,3 +212,8 @@ export function differenceText(mirror: number | null, expected: number | null): 
     if (diff === 0) return '—';
     return diff > 0 ? `+${diff}` : String(diff);
 }
+
+export function pageOf<T>(rows: T[], page: number, size: number): T[] {
+    const start = (Math.max(page, 1) - 1) * size;
+    return rows.slice(start, start + size);
+}
