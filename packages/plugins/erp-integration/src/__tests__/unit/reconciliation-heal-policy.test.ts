@@ -4,7 +4,7 @@ import {
     HEAL_BATCH_SIZE,
     HEAL_MAX_ATTEMPTS,
     HEAL_RETRY_AFTER_MS,
-    attemptsAfterComparison,
+    judgeHeal,
     checkBatch,
     decideHeal,
     isAlarmOutcome,
@@ -133,46 +133,46 @@ describe('isAlarmOutcome', () => {
     });
 });
 
-describe('attemptsAfterComparison', () => {
-    const t0 = new Date('2026-01-01T00:00:00Z');
-    const t1 = new Date('2026-01-01T06:00:00Z');
-    const base = {
-        attempts: 0,
-        healOutcome: 'healed' as const,
-        healRequestedAt: t1,
-        lastRunAt: t0,
-        previousGap: 10,
-        newGap: 10,
-    };
+describe('judgeHeal', () => {
+    const base = { attempts: 0, pending: true, quiet: true, previousGap: 10, newGap: 10 };
 
-    it('counts a heal that left the gap flat as a failed attempt', () => {
-        expect(attemptsAfterComparison(base)).toBe(1);
+    it('counts a flat gap at a quiet comparison as a failed attempt and clears the marker', () => {
+        expect(judgeHeal(base)).toEqual({ attempts: 1, pending: false });
+    });
+
+    it('keeps the verdict pending on a busy or too-soon comparison, then judges the next quiet one', () => {
+        const busy = judgeHeal({ ...base, quiet: false });
+        expect(busy).toEqual({ attempts: 0, pending: true });
+        expect(judgeHeal({ ...base, ...busy })).toEqual({ attempts: 1, pending: false });
     });
 
     it('stops the heal loop after the maximum attempts when the same ids stay missing', () => {
-        let attempts = 0;
+        let state = { attempts: 0, pending: true };
         for (let run = 0; run < HEAL_MAX_ATTEMPTS; run += 1) {
-            attempts = attemptsAfterComparison({ ...base, attempts });
+            state = judgeHeal({ ...base, ...state, pending: true });
         }
         const decision = decideHeal({
             state: 'stalled',
             gap: 10,
-            attempts,
-            lastRequestedAt: t1,
-            now: new Date(t1.getTime() + HEAL_RETRY_AFTER_MS),
+            attempts: state.attempts,
+            lastRequestedAt: NOW,
+            now: new Date(NOW.getTime() + HEAL_RETRY_AFTER_MS),
             healKeyConfigured: true,
         });
         expect(decision).toEqual({ heal: false, reason: 'attempts-exhausted' });
     });
 
     it('resets attempts when the gap shrank', () => {
-        expect(attemptsAfterComparison({ ...base, attempts: 2, newGap: 4 })).toBe(0);
+        expect(judgeHeal({ ...base, attempts: 2, newGap: 4 })).toEqual({
+            attempts: 0,
+            pending: false,
+        });
     });
 
-    it('leaves attempts alone when no real heal ran since the last comparison', () => {
-        expect(attemptsAfterComparison({ ...base, attempts: 2, healRequestedAt: t0 })).toBe(2);
-        expect(attemptsAfterComparison({ ...base, attempts: 2, healOutcome: 'dry-run-only' })).toBe(
-            2,
-        );
+    it('does nothing when no heal is pending', () => {
+        expect(judgeHeal({ ...base, attempts: 2, pending: false })).toEqual({
+            attempts: 2,
+            pending: false,
+        });
     });
 });

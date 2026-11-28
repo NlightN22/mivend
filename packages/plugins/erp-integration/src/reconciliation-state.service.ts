@@ -6,11 +6,11 @@ import { In } from 'typeorm';
 
 import { ErpReconciliationNotFound } from './entities/erp-reconciliation-not-found.entity';
 import { ErpReconciliationState } from './entities/erp-reconciliation-state.entity';
-import { attemptsAfterComparison, decideHeal } from './reconciliation-heal-policy';
+import { decideHeal, judgeHeal } from './reconciliation-heal-policy';
 import type { HealDecision, HealOutcome } from './reconciliation-heal-policy';
 import { FAILED_OUTCOMES } from './reconciliation-heal-policy';
 import { filterFor } from './reconciliation-filters';
-import { nextComparison } from './reconciliation-state';
+import { nextComparison, quietReason } from './reconciliation-state';
 import type { ComparisonSignals } from './reconciliation-state';
 
 export interface RecordComparisonInput {
@@ -68,6 +68,18 @@ export class ReconciliationStateService {
                           }
                         : null,
                 });
+                const verdict =
+                    outcome.state === 'in-sync' || !previous
+                        ? { attempts: 0, pending: false }
+                        : judgeHeal({
+                              attempts: previous.healAttempts,
+                              pending: previous.healVerdictPending,
+                              quiet:
+                                  quietReason(input.signals) === null &&
+                                  outcome.reason !== 'too-soon',
+                              previousGap: previous.gap,
+                              newGap: outcome.gap,
+                          });
                 const fields = {
                     state: outcome.state,
                     reason: outcome.reason,
@@ -80,17 +92,8 @@ export class ReconciliationStateService {
                     inboxBacklog: input.signals.inboxBacklog,
                     sourceQueue: input.signals.sourceQueue ?? null,
                     lastRunAt: input.now,
-                    healAttempts:
-                        outcome.state === 'in-sync' || !previous
-                            ? 0
-                            : attemptsAfterComparison({
-                                  attempts: previous.healAttempts,
-                                  healOutcome: previous.healOutcome,
-                                  healRequestedAt: previous.healRequestedAt,
-                                  lastRunAt: previous.lastRunAt,
-                                  previousGap: previous.gap,
-                                  newGap: outcome.gap,
-                              }),
+                    healAttempts: verdict.attempts,
+                    healVerdictPending: verdict.pending,
                 };
                 if (previous) {
                     await repo.update(previous.id, fields);
@@ -144,6 +147,7 @@ export class ReconciliationStateService {
             const failed = FAILED_OUTCOMES.includes(input.outcome);
             await repo.update(row.id, {
                 healAttempts: row.healAttempts + (failed ? 1 : 0),
+                healVerdictPending: input.outcome === 'healed',
                 healOutcome: input.outcome,
                 healDetail: input.detail.slice(0, 250),
                 healRealRun: input.realRun,

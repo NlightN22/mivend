@@ -104,21 +104,18 @@ export function isAlarmOutcome(outcome: HealOutcome | null, attempts: number): b
     );
 }
 
-// A real heal since the last comparison only counts as a success when the gap shrank; republished ids that
-// create no order leave the gap flat and must run into the attempt limit instead of being re-sent forever.
-export function attemptsAfterComparison(input: {
+// A real heal is judged by the first quiet comparison after it: a smaller gap is a success, a flat one a failed
+// attempt (republished ids that create no order stay in the diff). Busy or too-soon comparisons leave the verdict pending.
+export function judgeHeal(input: {
     attempts: number;
-    healOutcome: HealOutcome | null;
-    healRequestedAt: Date | null;
-    lastRunAt: Date | null;
+    pending: boolean;
+    quiet: boolean;
     previousGap: number;
     newGap: number;
-}): number {
-    const healedSinceLastRun =
-        input.healOutcome === 'healed' &&
-        input.healRequestedAt !== null &&
-        input.lastRunAt !== null &&
-        input.healRequestedAt > input.lastRunAt;
-    if (!healedSinceLastRun) return input.attempts;
-    return input.newGap < input.previousGap ? 0 : input.attempts + 1;
+}): { attempts: number; pending: boolean } {
+    if (!input.pending || !input.quiet) return { attempts: input.attempts, pending: input.pending };
+    return {
+        attempts: input.newGap < input.previousGap ? 0 : input.attempts + 1,
+        pending: false,
+    };
 }

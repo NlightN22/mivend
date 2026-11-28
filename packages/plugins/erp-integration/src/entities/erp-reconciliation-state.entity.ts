@@ -57,6 +57,9 @@ export class ErpReconciliationState extends UuidEntity {
     @Column({ type: 'timestamp', nullable: true })
     healRequestedAt!: Date | null;
 
+    @Column({ type: 'boolean', default: false })
+    healVerdictPending!: boolean;
+
     @Column({ type: 'varchar', nullable: true })
     healOutcome!: HealOutcome | null;
 

@@ -164,7 +164,7 @@ describe('heal claim', () => {
         );
     });
 
-    it('counts failures, keeps the counter on neutral outcomes and resets it only on success', async () => {
+    it('counts failures, keeps the counter on neutral outcomes and leaves it on success (judged by the next quiet comparison)', async () => {
         await stall();
         const finish = (
             outcome: 'batch-failed' | 'dry-run-only' | 'healed',
@@ -179,7 +179,7 @@ describe('heal claim', () => {
         expect((await finish('batch-failed')).healAttempts).toBe(1);
         expect((await finish('dry-run-only')).healAttempts).toBe(1);
         expect((await finish('batch-failed')).healAttempts).toBe(2);
-        expect((await finish('healed', true)).healAttempts).toBe(0);
+        expect((await finish('healed', true)).healAttempts).toBe(2);
     });
 
     it('does not lose attempts when two failures are recorded at once', async () => {

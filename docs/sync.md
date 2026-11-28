@@ -523,7 +523,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   stops with an alarm. Per id `republished | would_republish | not_found`; an unknown status or an answered id set
   that differs from the sent one stops healing. `not_found` ids are remembered (`erp_reconciliation_not_found`),
   shown as the explained gap and never asked again; `not_found` with nothing republished is an alarm. A request is
-  retried only after 6 h. A real heal counts as a failed attempt unless the next comparison shows a smaller gap (ids republished that create no order stay in the diff), so the same ids are not re-sent forever; the counter resets when the gap shrinks or the kind is in sync, and an alarm opens a
+  retried only after 6 h. A real heal is judged by the first quiet comparison after it (busy signals or a too-soon run leave the verdict pending) and counts as a failed attempt unless the gap is smaller then (ids republished that create no order stay in the diff), so the same ids are not re-sent forever; the counter resets when the gap shrinks or the kind is in sync, and an alarm opens a
   `heal-alarm` issue after 3 failed attempts. Healing runs after all kinds were compared, within a 30 min budget; kinds past it wait for the next run. Extra rows on our side are never deleted.
 - **A real republish needs `INTEGRATION_RECONCILIATION_HEAL_API_KEY`**, a separate key that is absent by default
   and is not part of the compose or timer configuration: a republish re-broadcasts to every consumer of the shared
