@@ -38,7 +38,7 @@ describe('search.plugin searchPlugins backend switch', () => {
         // The internal branch's first element is ElasticsearchPlugin.init(...)'s return
         // value — a plugin config object, not the ExternalSearchPlugin class.
         expect(searchPlugins[0]).not.toBe(ExternalSearchPlugin);
-    }, 20000);
+    });
 
     it('registers ElasticsearchPlugin when SEARCH_BACKEND=internal', async () => {
         process.env.SEARCH_BACKEND = 'internal';
@@ -47,7 +47,7 @@ describe('search.plugin searchPlugins backend switch', () => {
 
         expect(searchPlugins).toHaveLength(3);
         expect(searchPlugins).not.toContain(ExternalSearchPlugin);
-    }, 20000);
+    });
 
     it('registers ExternalSearchPlugin (and not ElasticsearchPlugin) when SEARCH_BACKEND=external', async () => {
         process.env.SEARCH_BACKEND = 'external';
@@ -57,14 +57,14 @@ describe('search.plugin searchPlugins backend switch', () => {
         const { ExternalSearchPlugin } = await import('../../external-search.plugin');
 
         expect(searchPlugins).toEqual([SearchPlugin, ExternalSearchPlugin]);
-    }, 20000);
+    });
 
     it('throws at module load when SEARCH_BACKEND=external but SEARCH_SERVICE_URL is missing', async () => {
         process.env.SEARCH_BACKEND = 'external';
         delete process.env.SEARCH_SERVICE_URL;
 
         await expect(import('../../search.plugin')).rejects.toThrow(/SEARCH_SERVICE_URL/);
-    }, 20000);
+    });
 
     it('throws at module load when SEARCH_BACKEND=external but a role API key is missing', async () => {
         process.env.SEARCH_BACKEND = 'external';
@@ -74,5 +74,5 @@ describe('search.plugin searchPlugins backend switch', () => {
         await expect(import('../../search.plugin')).rejects.toThrow(
             /SEARCH_SERVICE_API_KEY_PUBLIC/,
         );
-    }, 20000);
+    });
 });
