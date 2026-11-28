@@ -122,7 +122,8 @@ and checks are registered by the plugins that own them (the one exception is the
   for a decision that needs facts the stored subject lacks (the payment form is known only at `addPaymentToOrder`); providers read
   them as `CheckContext.input`, and a branch row overrides the global one through the subject's `branchId`. The eight
   `payment.confirmation.*` checks (rule text: `docs/payments.md` "Confirmation matrix") use it: `hold` routes the order to manager
-  confirmation, `warn`/`info`/disabled lets it go on. The order subject needs no new consequence for it.
+  confirmation, `warn`/`info`/disabled lets it go on. The order subject needs no new consequence for it. A failure of the check
+  itself never stops the order (#415): it is logged, recorded in `order_check_failure` at stage `placement`, and the order waits for a manager.
 - **Run.** `ChecksService.runChecks(ctx, subjectType, subjectRef, stage)` takes the subject's
   advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
   that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.
