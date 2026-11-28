@@ -30,7 +30,10 @@ export default defineConfig({
         ['./timing-reporter.ts'],
         ...(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ? [['json'] as ['json']] : []),
     ],
+    expect: { timeout: 15_000 },
     use: {
+        actionTimeout: 30_000,
+        navigationTimeout: 60_000,
         locale: 'en-GB',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',

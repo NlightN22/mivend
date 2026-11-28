@@ -57,6 +57,8 @@ export default async function globalSetup(): Promise<void> {
         signIn: (page: Page) => Promise<void>,
     ): Promise<void> => {
         const context = await browser.newContext({ baseURL, userAgent: E2E_BROWSER_USER_AGENT });
+        context.setDefaultNavigationTimeout(120_000);
+        context.setDefaultTimeout(60_000);
         await signIn(await context.newPage());
         await context.storageState({ path: path.join(AUTH_DIR, file) });
         await context.close();

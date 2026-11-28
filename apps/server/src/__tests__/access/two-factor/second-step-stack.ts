@@ -163,8 +163,22 @@ function hasSubject(actual: string, subject: string): boolean {
     return actual === subject || actual.endsWith(`] ${subject}`);
 }
 
+// A loaded host answers the listing with an error body before the dev mailbox is ready; wait for a real list.
+async function mailList(url: string): Promise<MailItem[]> {
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+        const res = await fetch(`${url}/mailbox/list`);
+        const body: unknown = await res.json().catch(() => null);
+        if (res.ok && Array.isArray(body)) return body as MailItem[];
+        if (Date.now() > deadline) {
+            throw new Error(`mailbox list answered ${res.status}: ${JSON.stringify(body)}`);
+        }
+        await new Promise(done => setTimeout(done, 500));
+    }
+}
+
 async function mailFiles(url: string, recipient: string, subject: string): Promise<string[]> {
-    const list = (await (await fetch(`${url}/mailbox/list`)).json()) as MailItem[];
+    const list = await mailList(url);
     return list
         .filter(item => item.recipient === recipient && hasSubject(item.subject, subject))
         .map(item => item.fileName);
