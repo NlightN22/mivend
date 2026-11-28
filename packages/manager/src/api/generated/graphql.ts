@@ -6827,9 +6827,23 @@ export type OrderAnalyticsFilterKind =
     | 'CUSTOMER'
     | 'MANAGER'
     | 'MANUFACTURER'
+    | 'ORDER_STATUS'
     | 'ORGANIZATION'
     | 'POINT_OF_SALE'
-    | 'PRODUCT';
+    | 'PRODUCT'
+    /** Order filters matched by the exact text the source sends; the empty value means not specified. */
+    | 'SHIPMENT_SCHEME';
+
+export type OrderAnalyticsFilterValue = {
+    orderCount: Scalars['Int']['output'];
+    /** Empty means orders without a value. */
+    value: Scalars['String']['output'];
+};
+
+export type OrderAnalyticsFilterValues = {
+    state: OrderAnalyticsState;
+    values: Array<OrderAnalyticsFilterValue>;
+};
 
 export type OrderAnalyticsGranularity = 'DAY' | 'MONTH' | 'NONE';
 
@@ -6882,6 +6896,8 @@ export type OrderAnalyticsRow = {
 
 export type OrderAnalyticsState = 'NOT_CONFIGURED' | 'OK' | 'TOO_LARGE' | 'UNAVAILABLE';
 
+export type OrderAnalyticsValueKind = 'ORDER_STATUS' | 'SHIPMENT_SCHEME';
+
 export type OrderCancelOutcome = 'ALREADY_CANCELLED' | 'CANCELLED' | 'CANCEL_REQUESTED';
 
 export type OrderCancelRefusalReason = 'IN_PROGRESS' | 'PAID' | 'REGISTRATION_REJECTED' | 'SHIPPED';
@@ -6927,6 +6943,7 @@ export type OrderCustomFields = {
     counterpartyId: Maybe<Scalars['String']['output']>;
     deliveryAddress: Maybe<Scalars['String']['output']>;
     erpAccounting: Maybe<Scalars['String']['output']>;
+    erpChangedVersion: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
     erpIsPosted: Maybe<Scalars['Boolean']['output']>;
     erpLinkedDocuments: Maybe<Scalars['String']['output']>;
@@ -6940,6 +6957,7 @@ export type OrderCustomFields = {
     erpRejectionReasonText: Maybe<Scalars['String']['output']>;
     erpReserveUntil: Maybe<Scalars['DateTime']['output']>;
     erpShippedInSettlements: Maybe<Scalars['String']['output']>;
+    erpStateVersion: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
     erpStatusBeforeUnposted: Maybe<Scalars['String']['output']>;
@@ -6987,6 +7005,7 @@ export type OrderFilterParameter = {
     customerLastName?: InputMaybe<StringOperators>;
     deliveryAddress?: InputMaybe<StringOperators>;
     erpAccounting?: InputMaybe<StringOperators>;
+    erpChangedVersion?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
     erpIsPosted?: InputMaybe<BooleanOperators>;
     erpLinkedDocuments?: InputMaybe<StringOperators>;
@@ -7000,6 +7019,7 @@ export type OrderFilterParameter = {
     erpRejectionReasonText?: InputMaybe<StringOperators>;
     erpReserveUntil?: InputMaybe<DateOperators>;
     erpShippedInSettlements?: InputMaybe<StringOperators>;
+    erpStateVersion?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     erpStatusBeforeUnposted?: InputMaybe<StringOperators>;
@@ -7376,6 +7396,7 @@ export type OrderSortParameter = {
     customerLastName?: InputMaybe<SortOrder>;
     deliveryAddress?: InputMaybe<SortOrder>;
     erpAccounting?: InputMaybe<SortOrder>;
+    erpChangedVersion?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
     erpIsPosted?: InputMaybe<SortOrder>;
     erpLinkedDocuments?: InputMaybe<SortOrder>;
@@ -7389,6 +7410,7 @@ export type OrderSortParameter = {
     erpRejectionReasonText?: InputMaybe<SortOrder>;
     erpReserveUntil?: InputMaybe<SortOrder>;
     erpShippedInSettlements?: InputMaybe<SortOrder>;
+    erpStateVersion?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     erpStatusBeforeUnposted?: InputMaybe<SortOrder>;
@@ -9161,6 +9183,7 @@ export type Query = {
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
     orderAnalytics: OrderAnalytics;
+    orderAnalyticsFilterValues: OrderAnalyticsFilterValues;
     orderAnalyticsGroupSuggest: Array<OrderAnalyticsGroupOption>;
     orderAnalyticsSuggest: Array<Scalars['String']['output']>;
     /** Orders with a failing ERP-requirement check, per check code and reason (issue #237). */
@@ -9709,6 +9732,12 @@ export type QueryOrderArgs = {
 
 export type QueryOrderAnalyticsArgs = {
     input: OrderAnalyticsInput;
+};
+
+export type QueryOrderAnalyticsFilterValuesArgs = {
+    from?: InputMaybe<Scalars['DateTime']['input']>;
+    kind: OrderAnalyticsValueKind;
+    to?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type QueryOrderAnalyticsGroupSuggestArgs = {
@@ -14487,6 +14516,17 @@ export type AnalyticsFilterCapabilitiesQueryVariables = Exact<{ [key: string]: n
 
 export type AnalyticsFilterCapabilitiesQuery = {
     analyticsFilterCapabilities: { groupKinds: Array<OrderAnalyticsGroupKind> };
+};
+
+export type OrderAnalyticsFilterValuesQueryVariables = Exact<{
+    kind: OrderAnalyticsValueKind;
+}>;
+
+export type OrderAnalyticsFilterValuesQuery = {
+    orderAnalyticsFilterValues: {
+        state: OrderAnalyticsState;
+        values: Array<{ value: string; orderCount: number }>;
+    };
 };
 
 export type CancelOrderAsStaffMutationVariables = Exact<{
@@ -19306,6 +19346,20 @@ export const AnalyticsFilterCapabilitiesDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     AnalyticsFilterCapabilitiesQuery,
     AnalyticsFilterCapabilitiesQueryVariables
+>;
+export const OrderAnalyticsFilterValuesDocument = new TypedDocumentString(`
+    query OrderAnalyticsFilterValues($kind: OrderAnalyticsValueKind!) {
+  orderAnalyticsFilterValues(kind: $kind) {
+    state
+    values {
+      value
+      orderCount
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderAnalyticsFilterValuesQuery,
+    OrderAnalyticsFilterValuesQueryVariables
 >;
 export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     mutation CancelOrderAsStaff($orderId: ID!) {
