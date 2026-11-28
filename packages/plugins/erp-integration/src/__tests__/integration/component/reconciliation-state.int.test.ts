@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DataSource, EntityManager } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    DataSource,
+    Entity,
+    EntityManager,
+    Index,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 import type { RequestContext } from '@vendure/core';
 import {
     createTestSchema,
@@ -8,12 +17,54 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { ErpReconciliationNotFound } from '../../../entities/erp-reconciliation-not-found.entity';
 import { ErpReconciliationState } from '../../../entities/erp-reconciliation-state.entity';
 import { ReconciliationLocalCountsService } from '../../../reconciliation-local-counts.service';
 import { ReconciliationLocalIdsService } from '../../../reconciliation-local-ids.service';
 import { ReconciliationStateService } from '../../../reconciliation-state.service';
 import { HEAL_RETRY_AFTER_MS } from '../../../reconciliation-heal-policy';
+
+// VendureEntity needs a bootstrapped EntityIdStrategy, so plain mirrors on the real table shape
+// stand in for the plugin entities (matched by class name in the connection shim below).
+abstract class Base {
+    @PrimaryGeneratedColumn() id!: number;
+    @CreateDateColumn() createdAt!: Date;
+    @UpdateDateColumn() updatedAt!: Date;
+    @Column({ type: 'uuid', unique: true, default: () => 'gen_random_uuid()' }) uuid!: string;
+}
+
+@Entity('erp_reconciliation_state')
+class StateMirror extends Base {
+    @Index({ unique: true }) @Column({ type: 'varchar' }) aggregateType!: string;
+    @Column({ type: 'varchar' }) state!: string;
+    @Column({ type: 'varchar', nullable: true }) reason!: string | null;
+    @Column({ type: 'int' }) ourCount!: number;
+    @Column({ type: 'int' }) theirCount!: number;
+    @Column({ type: 'int' }) gap!: number;
+    @Column({ type: 'int', default: 0 }) flatRuns!: number;
+    @Column({ type: 'timestamp', nullable: true }) seedingSince!: Date | null;
+    @Column({ type: 'boolean', default: false }) seedingAlarm!: boolean;
+    @Column({ type: 'int', nullable: true }) inboxBacklog!: number | null;
+    @Column({ type: 'int', nullable: true }) sourceQueue!: number | null;
+    @Column({ type: 'timestamp' }) lastRunAt!: Date;
+    @Column({ type: 'int', default: 0 }) healAttempts!: number;
+    @Column({ type: 'timestamp', nullable: true }) healRequestedAt!: Date | null;
+    @Column({ type: 'varchar', nullable: true }) healOutcome!: string | null;
+    @Column({ type: 'varchar', nullable: true }) healDetail!: string | null;
+    @Column({ type: 'boolean', nullable: true }) healRealRun!: boolean | null;
+    @Column({ type: 'boolean', default: false }) healVerdictPending!: boolean;
+}
+
+@Entity('erp_reconciliation_not_found')
+@Index(['aggregateType', 'entityId'], { unique: true })
+class NotFoundMirror extends Base {
+    @Column({ type: 'varchar' }) aggregateType!: string;
+    @Column({ type: 'varchar' }) entityId!: string;
+}
+
+const mirrors: Record<string, unknown> = {
+    ErpReconciliationState: StateMirror,
+    ErpReconciliationNotFound: NotFoundMirror,
+};
 
 const { schema, extra } = testSchemaOptions('erp_reconciliation_state');
 let dataSource: DataSource;
@@ -37,7 +88,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [ErpReconciliationState, ErpReconciliationNotFound],
+        entities: [StateMirror, NotFoundMirror],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -60,7 +111,7 @@ beforeAll(async () => {
             const manager = managerOf(c) ?? dataSource.manager;
             return typeof entity === 'string'
                 ? { query: manager.query.bind(manager) }
-                : manager.getRepository(entity as never);
+                : manager.getRepository(mirrors[(entity as { name: string }).name] as never);
         },
     };
     states = new ReconciliationStateService(connection as never);
@@ -118,7 +169,7 @@ describe('comparison state table', () => {
         expect(await run(105, 48)).toMatchObject({ state: 'seeding', flatRuns: 1 });
         expect(await run(105, 72)).toMatchObject({ flatRuns: 2 });
         expect(await run(105, 96)).toMatchObject({ state: 'stalled', flatRuns: 3 });
-        expect(await dataSource.getRepository(ErpReconciliationState).count()).toBe(1);
+        expect(await dataSource.getRepository(StateMirror).count()).toBe(1);
         expect(await run(100, 120)).toMatchObject({ state: 'in-sync', healAttempts: 0 });
     });
 
@@ -134,8 +185,8 @@ describe('comparison state table', () => {
                 }),
             ),
         );
-        expect(await dataSource.getRepository(ErpReconciliationState).count()).toBe(1);
-        const [row] = await dataSource.getRepository(ErpReconciliationState).find();
+        expect(await dataSource.getRepository(StateMirror).count()).toBe(1);
+        const [row] = await dataSource.getRepository(StateMirror).find();
         expect(row.flatRuns).toBe(0);
     });
 });
@@ -194,7 +245,7 @@ describe('heal claim', () => {
                 }),
             ),
         );
-        const [row] = await dataSource.getRepository(ErpReconciliationState).find();
+        const [row] = await dataSource.getRepository(StateMirror).find();
         expect(row.healAttempts).toBe(3);
     });
 });
