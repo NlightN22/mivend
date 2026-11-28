@@ -33,6 +33,10 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await dataSource.query(
+        `CREATE TABLE "order" (id serial PRIMARY KEY, "customFieldsErporderid" varchar,
+            "customFieldsErpchangedversion" varchar, "customFieldsErpstateversion" varchar)`,
+    );
 });
 
 beforeEach(() => {

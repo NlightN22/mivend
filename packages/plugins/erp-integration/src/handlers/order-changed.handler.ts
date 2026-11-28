@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
-import { ExternalOrderRetentionService, ExternalOrderService, OrderEventVersionService } from '@mivend/plugin-erp-order';
+import {
+    ExternalOrderRetentionService,
+    ExternalOrderService,
+    OrderEventVersionService,
+} from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
