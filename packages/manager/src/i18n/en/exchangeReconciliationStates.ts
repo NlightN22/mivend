@@ -14,6 +14,12 @@ export const reconciliationStates = {
         explainedGap: 'Explained',
         heal: 'Healing',
     },
+    filters: {
+        default: 'active rows',
+        'customer-order': 'not deleted or marked for deletion',
+        stock: 'received stock of active warehouses',
+        storageLocation: 'all rows',
+    },
     states: {
         'in-sync': 'In sync',
         seeding: 'Seeding',

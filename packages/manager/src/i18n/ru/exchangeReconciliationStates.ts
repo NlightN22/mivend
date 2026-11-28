@@ -14,6 +14,12 @@ export const reconciliationStates = {
         explainedGap: 'Учтено',
         heal: 'Лечение',
     },
+    filters: {
+        default: 'активные записи',
+        'customer-order': 'не удалённые и не помеченные на удаление',
+        stock: 'полученные остатки активных складов',
+        storageLocation: 'все записи',
+    },
     states: {
         'in-sync': 'Совпадает',
         seeding: 'Загрузка',

@@ -7,7 +7,7 @@ import ExchangeStaticTable from './ExchangeStaticTable.vue';
 
 type Variant = 'success' | 'warning' | 'danger' | 'neutral';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const rows = ref<ReconciliationStateRow[]>([]);
 const failed = ref(false);
 
@@ -53,6 +53,9 @@ const tableRows = computed(() =>
     rows.value.map(r => ({
         ...r,
         id: r.aggregateType,
+        filter: te(`exchangeHealth.reconciliationStates.filters.${r.aggregateType}`)
+            ? t(`exchangeHealth.reconciliationStates.filters.${r.aggregateType}`)
+            : t('exchangeHealth.reconciliationStates.filters.default'),
         heal: r.healOutcome
             ? `${t(`exchangeHealth.reconciliationStates.outcomes.${r.healOutcome}`)}${
                   r.healRealRun === false
