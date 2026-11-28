@@ -11,16 +11,11 @@ import {
 } from './reconciliation-heal-policy';
 import type { BatchTally, HealOutcome } from './reconciliation-heal-policy';
 import {
-    DOCUMENT_KINDS,
     ReconciliationLocalIdsService,
     hasLocalIdSource,
 } from './reconciliation-local-ids.service';
 import { ReconciliationStateService } from './reconciliation-state.service';
-import {
-    ReplayDryRunIgnoredError,
-    ReplayRateLimitedError,
-    ResyncReplayClient,
-} from './resync-replay.client';
+import { ReplayRateLimitedError, ResyncReplayClient } from './resync-replay.client';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
@@ -197,13 +192,8 @@ export class ReconciliationHealService {
     ): Promise<Array<{ entityId: string; status: string }>> {
         for (let attempt = 0; ; attempt += 1) {
             try {
-                return DOCUMENT_KINDS.has(aggregateType)
-                    ? await this.replay.replayDocuments(aggregateType, batch, dryRun, apiKey)
-                    : await this.replay.replayForHeal(aggregateType, batch, dryRun, apiKey);
+                return await this.replay.replayDocuments(aggregateType, batch, dryRun, apiKey);
             } catch (err) {
-                if (err instanceof ReplayDryRunIgnoredError) {
-                    throw new HealStop('dry-run-ignored', err.message);
-                }
                 if (
                     !(err instanceof ReplayRateLimitedError) ||
                     attempt >= HEAL_RATE_LIMIT_RETRIES

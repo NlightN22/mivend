@@ -11,12 +11,6 @@ export interface ReplayResult {
 export const REPLAY_MAX_IDS = 200;
 const FETCH_TIMEOUT_MS = 15_000;
 
-export class ReplayDryRunIgnoredError extends Error {
-    constructor() {
-        super('Replay dry-run answer did not carry dryRun: true');
-    }
-}
-
 export class ReplayRateLimitedError extends Error {
     constructor() {
         super('Replay endpoint returned 429');
@@ -73,28 +67,6 @@ export class ResyncReplayClient {
         return (
             await this.post('/api/resync/v1/replay-documents', { kind, entityIds, dryRun }, apiKey)
         ).results;
-    }
-
-    // Generic replay answers a source per id (replayed_from_* or not_found), not republished/would_republish;
-    // a dry-run answer must carry dryRun: true or the platform ignored the flag.
-    async replayForHeal(
-        aggregateType: string,
-        entityIds: string[],
-        dryRun: boolean,
-        apiKey?: string,
-    ): Promise<ReplayResult[]> {
-        const { results, dryRun: answeredDryRun } = await this.replayRaw(
-            aggregateType,
-            entityIds,
-            apiKey,
-            dryRun,
-        );
-        if (dryRun && answeredDryRun !== true) throw new ReplayDryRunIgnoredError();
-        return results.map(r =>
-            r.status.startsWith('replayed_from_')
-                ? { ...r, status: dryRun ? 'would_republish' : 'republished' }
-                : r,
-        );
     }
 
     private async post(

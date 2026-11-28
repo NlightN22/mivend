@@ -13,9 +13,6 @@ const ID_SOURCES: Readonly<Record<string, IdSource>> = {
     'customer-order': { table: '"order"', column: '"customFieldsErporderid"' },
 };
 
-// Document kinds are republished by uuid through the documents endpoint, which also supports a dry run.
-export const DOCUMENT_KINDS: ReadonlySet<string> = new Set(['customer-order']);
-
 export const hasLocalIdSource = (aggregateType: string): boolean => aggregateType in ID_SOURCES;
 
 @Injectable()
