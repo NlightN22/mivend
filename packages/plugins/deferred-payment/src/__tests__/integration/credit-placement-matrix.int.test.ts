@@ -11,47 +11,39 @@ const ORDER_ID = 999_999;
 async function placeCase(
     c: PlacementCase,
     metadata: Record<string, unknown> = {},
+    orderId = ORDER_ID,
 ): Promise<PlacementResult> {
     const buyer = await h.addBuyer(1_000_000, 0, c.terms === 'deferred' ? 14 : 0);
     await h.addShippingLine(
-        ORDER_ID,
+        orderId,
         c.fulfillment === 'delivery' ? FREIGHT_SHIPPING_METHOD_CODE : 'pickup',
     );
-    return h.place(buyer, 1_000, c.form, ORDER_ID, metadata);
+    return h.place(buyer, 1_000, c.form, orderId, metadata);
 }
 
 describe('confirmation matrix at placement (real Postgres)', () => {
     it('keeps every case on the ERP route with the default policies', async () => {
-        for (const c of PLACEMENT_CASES) {
-            const { decision } = await placeCase(c);
+        for (const [i, c] of PLACEMENT_CASES.entries()) {
+            const { decision } = await placeCase(c, {}, ORDER_ID + i);
             expect(decision, c.code).toMatchObject({
                 route: 'erp-now',
                 creditLimitExceeded: false,
             });
-            await h.run(
-                `TRUNCATE shipping_line, shipping_method, customer, counterparty RESTART IDENTITY`,
-            );
         }
     });
 
-    it('holds exactly the case whose policy is hold, with no code change', async () => {
-        for (const target of PLACEMENT_CASES) {
-            await h.run(`TRUNCATE check_policy`);
-            await h.setCasePolicy(target.code, 'hold');
-            for (const c of PLACEMENT_CASES) {
-                const { decision, metadata } = await placeCase(c);
-                const held = c.code === target.code;
-                expect(decision.route, `${target.code} / ${c.code}`).toBe(
-                    held ? 'manager-confirmation' : 'erp-now',
-                );
-                expect(metadata.public).toMatchObject({
-                    awaitingManagerConfirmation: held,
-                    creditLimitExceeded: false,
-                });
-                await h.run(
-                    `TRUNCATE shipping_line, shipping_method, customer, counterparty RESTART IDENTITY`,
-                );
-            }
+    it.each(PLACEMENT_CASES)('holds exactly $code when its policy is hold', async target => {
+        await h.setCasePolicy(target.code, 'hold');
+        for (const [i, c] of PLACEMENT_CASES.entries()) {
+            const { decision, metadata } = await placeCase(c, {}, ORDER_ID + i);
+            const held = c.code === target.code;
+            expect(decision.route, `${target.code} / ${c.code}`).toBe(
+                held ? 'manager-confirmation' : 'erp-now',
+            );
+            expect(metadata.public).toMatchObject({
+                awaitingManagerConfirmation: held,
+                creditLimitExceeded: false,
+            });
         }
     });
 

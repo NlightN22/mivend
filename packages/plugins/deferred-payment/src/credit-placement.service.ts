@@ -119,7 +119,7 @@ export class CreditPlacementService {
                 },
             };
         };
-        if (!counterparty) return evaluate(ctx);
+        if (!counterparty) return this.connection.withTransaction(ctx, evaluate);
         return withAggregateLock(
             this.connection,
             ctx,
