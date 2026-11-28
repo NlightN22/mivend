@@ -53,6 +53,26 @@ query ExchangeReconciliationIssues($options: OpenErpReconciliationIssueListOptio
     }
 }
 
+query ExchangeReconciliationStates {
+    erpReconciliationStates {
+        aggregateType
+        state
+        reason
+        filter
+        ourCount
+        theirCount
+        gap
+        explainedGap
+        seedingSince
+        seedingAlarm
+        lastRunAt
+        healAttempts
+        healOutcome
+        healDetail
+        healRealRun
+    }
+}
+
 query ExchangeInboxIssues($options: IntegrationInboxIssueListOptions) {
     integrationInboxIssues(options: $options) {
         items {

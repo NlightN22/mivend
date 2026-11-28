@@ -1,3 +1,5 @@
+import { reconciliationStates } from './exchangeReconciliationStates';
+
 export default {
     common: {
         loadFailedTitle: 'Could not load the data',
@@ -158,11 +160,14 @@ export default {
             noMatch: 'No open ERP discrepancies.',
         },
     },
+    reconciliationStates,
     reconciliation: {
         issueTypes: {
             'upstream-higher': 'Integration Service has more than mivend',
             'local-higher': 'mivend has more than Integration Service',
             'failed-inbox-rows': 'Inbox rows failed processing and need attention',
+            'seeding-stuck': 'Comparison has been seeding for over 48 hours',
+            'heal-alarm': 'Self-healing raised an alarm and needs attention',
             'missing-coordinates': 'Trading points have no coordinates and need a location',
         },
     },

@@ -1,3 +1,5 @@
+import { reconciliationStates } from './exchangeReconciliationStates';
+
 import type en from '../en/exchangeHealth';
 
 const exchangeHealth: typeof en = {
@@ -165,11 +167,14 @@ const exchangeHealth: typeof en = {
             noMatch: 'Открытых расхождений с ERP нет.',
         },
     },
+    reconciliationStates,
     reconciliation: {
         issueTypes: {
             'upstream-higher': 'В Integration Service больше, чем в mivend',
             'local-higher': 'В mivend больше, чем в Integration Service',
             'failed-inbox-rows': 'Входящие строки завершились сбоем и требуют внимания',
+            'seeding-stuck': 'Загрузка идёт дольше 48 часов',
+            'heal-alarm': 'Автоисправление подало тревогу и требует внимания',
             'missing-coordinates': 'У торговых точек нет координат, нужно указать местоположение',
         },
     },

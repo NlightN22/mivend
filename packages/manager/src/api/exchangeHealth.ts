@@ -7,6 +7,7 @@ import {
     ExchangeOutboxHealthDocument,
     ExchangeOutboxProblemsDocument,
     ExchangeReconciliationIssuesDocument,
+    ExchangeReconciliationStatesDocument,
     ExchangeStreamHealthDocument,
     type ExchangeConsistencyReportsQuery,
     type ExchangeConsistencySourcesQuery,
@@ -15,6 +16,7 @@ import {
     type ExchangeOutboxHealthQuery,
     type ExchangeOutboxProblemsQuery,
     type ExchangeReconciliationIssuesQuery,
+    type ExchangeReconciliationStatesQuery,
     type ExchangeStreamHealthQuery,
     type ConsistencyReportListOptions,
     type IntegrationInboxIssueListOptions,
@@ -27,6 +29,8 @@ export type ConsistencyReportRow =
 export type ConsistencySourceRow = ExchangeConsistencySourcesQuery['consistencySources'][number];
 export type ReconciliationIssueRow =
     ExchangeReconciliationIssuesQuery['openErpReconciliationIssues']['items'][number];
+export type ReconciliationStateRow =
+    ExchangeReconciliationStatesQuery['erpReconciliationStates'][number];
 export type InboxIssueRow = ExchangeInboxIssuesQuery['integrationInboxIssues']['items'][number];
 export type OutboxProblemRow =
     ExchangeOutboxProblemsQuery['integrationOutboxProblems']['items'][number];
@@ -55,6 +59,10 @@ export async function fetchReconciliationIssues(
 ): Promise<Page<ReconciliationIssueRow>> {
     return (await adminApi(ExchangeReconciliationIssuesDocument, { options }))
         .openErpReconciliationIssues;
+}
+
+export async function fetchReconciliationStates(): Promise<ReconciliationStateRow[]> {
+    return (await adminApi(ExchangeReconciliationStatesDocument)).erpReconciliationStates;
 }
 
 export async function fetchInboxIssues(

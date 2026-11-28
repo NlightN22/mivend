@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import ExchangeListTable from '../../components/exchange-health/ExchangeListTable.vue';
+import ReconciliationStatesSection from '../../components/exchange-health/ReconciliationStatesSection.vue';
 import ExchangePageShell from '../../components/exchange-health/ExchangePageShell.vue';
 import { reconciliationConfig } from '../../components/exchange-health/lists';
 
@@ -15,6 +16,7 @@ const config = reconciliationConfig();
         :title="t('exchangeHealth.lists.reconciliation.title')"
         :intro="t('exchangeHealth.lists.reconciliation.intro')"
     >
+        <ReconciliationStatesSection />
         <ExchangeListTable :config="config" :administrator-id="administratorId" />
     </ExchangePageShell>
 </template>

@@ -3023,6 +3023,30 @@ export type ErpReconciliationIssueList = {
     totalItems: Scalars['Int']['output'];
 };
 
+export type ErpReconciliationKindState = {
+    aggregateType: Scalars['String']['output'];
+    /** Part of the gap upstream answered not_found for; a legitimate difference. */
+    explainedGap: Scalars['Int']['output'];
+    /** The predicate the local count and the upstream request share. */
+    filter: Scalars['String']['output'];
+    /** Upstream minus local. */
+    gap: Scalars['Int']['output'];
+    healAttempts: Scalars['Int']['output'];
+    healDetail: Maybe<Scalars['String']['output']>;
+    healOutcome: Maybe<Scalars['String']['output']>;
+    /** true: republished for real; false: dry run only; null: never ran. */
+    healRealRun: Maybe<Scalars['Boolean']['output']>;
+    healRequestedAt: Maybe<Scalars['DateTime']['output']>;
+    lastRunAt: Scalars['DateTime']['output'];
+    ourCount: Scalars['Int']['output'];
+    reason: Maybe<Scalars['String']['output']>;
+    seedingAlarm: Scalars['Boolean']['output'];
+    seedingSince: Maybe<Scalars['DateTime']['output']>;
+    /** in-sync | seeding | converging | stalled */
+    state: Scalars['String']['output'];
+    theirCount: Scalars['Int']['output'];
+};
+
 export type ErpReconciliationRunResult = {
     checked: Scalars['Int']['output'];
     issuesFound: Scalars['Int']['output'];
@@ -3543,6 +3567,7 @@ export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
     defaultLanguage: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
+    externalOrderRetentionMonths: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
     pickingWorkStages: Maybe<Array<Scalars['String']['output']>>;
     settlementRetentionMonths: Maybe<Scalars['Int']['output']>;
@@ -6903,7 +6928,9 @@ export type OrderCustomFields = {
     deliveryAddress: Maybe<Scalars['String']['output']>;
     erpAccounting: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
+    erpIsPosted: Maybe<Scalars['Boolean']['output']>;
     erpLinkedDocuments: Maybe<Scalars['String']['output']>;
+    erpMarkedForDeletion: Maybe<Scalars['Boolean']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
     erpOrderStatus: Maybe<Scalars['String']['output']>;
     erpPaidAmount: Maybe<Scalars['Float']['output']>;
@@ -6915,6 +6942,7 @@ export type OrderCustomFields = {
     erpShippedInSettlements: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
+    erpStatusBeforeUnposted: Maybe<Scalars['String']['output']>;
     externalLinesIncomplete: Maybe<Scalars['Boolean']['output']>;
     hasCheckFindings: Maybe<Scalars['Boolean']['output']>;
     isExternal: Maybe<Scalars['Boolean']['output']>;
@@ -6960,7 +6988,9 @@ export type OrderFilterParameter = {
     deliveryAddress?: InputMaybe<StringOperators>;
     erpAccounting?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
+    erpIsPosted?: InputMaybe<BooleanOperators>;
     erpLinkedDocuments?: InputMaybe<StringOperators>;
+    erpMarkedForDeletion?: InputMaybe<BooleanOperators>;
     erpOrderId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpPaidAmount?: InputMaybe<NumberOperators>;
@@ -6972,6 +7002,7 @@ export type OrderFilterParameter = {
     erpShippedInSettlements?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
+    erpStatusBeforeUnposted?: InputMaybe<StringOperators>;
     externalLinesIncomplete?: InputMaybe<BooleanOperators>;
     hasCheckFindings?: InputMaybe<BooleanOperators>;
     id?: InputMaybe<IdOperators>;
@@ -7346,7 +7377,9 @@ export type OrderSortParameter = {
     deliveryAddress?: InputMaybe<SortOrder>;
     erpAccounting?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
+    erpIsPosted?: InputMaybe<SortOrder>;
     erpLinkedDocuments?: InputMaybe<SortOrder>;
+    erpMarkedForDeletion?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpPaidAmount?: InputMaybe<SortOrder>;
@@ -7358,6 +7391,7 @@ export type OrderSortParameter = {
     erpShippedInSettlements?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
+    erpStatusBeforeUnposted?: InputMaybe<SortOrder>;
     externalLinesIncomplete?: InputMaybe<SortOrder>;
     hasCheckFindings?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -9064,6 +9098,8 @@ export type Query = {
     entityDuplicators: Array<EntityDuplicatorDefinition>;
     entityVersions: Array<EntityVersion>;
     entityVersionsForEntities: EntityVersionList;
+    /** Per compared aggregate: comparison state (in-sync, seeding, converging, stalled), the filter both sides count with, counts, gap, explained gap and the last healing outcome (issue #410). */
+    erpReconciliationStates: Array<ErpReconciliationKindState>;
     /** ERP exchange health read from the Integration Service on a schedule (issue #386); UNKNOWN with a reason when it cannot be read. */
     exchangeHealth: ExchangeHealthReport;
     /** Top soonest-expiring grants plus the total count, so an alert is not sized by the whole set. */
@@ -11689,6 +11725,7 @@ export type UpdateGlobalSettingsCustomFieldsInput = {
     autoReserveOnPlacement?: InputMaybe<Scalars['Boolean']['input']>;
     defaultLanguage?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
+    externalOrderRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
     pickingWorkStages?: InputMaybe<Array<Scalars['String']['input']>>;
     settlementRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
@@ -13891,6 +13928,28 @@ export type ExchangeReconciliationIssuesQuery = {
             triggeredBy: string;
         }>;
     };
+};
+
+export type ExchangeReconciliationStatesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ExchangeReconciliationStatesQuery = {
+    erpReconciliationStates: Array<{
+        aggregateType: string;
+        state: string;
+        reason: string | null;
+        filter: string;
+        ourCount: number;
+        theirCount: number;
+        gap: number;
+        explainedGap: number;
+        seedingSince: any | null;
+        seedingAlarm: boolean;
+        lastRunAt: any;
+        healAttempts: number;
+        healOutcome: string | null;
+        healDetail: string | null;
+        healRealRun: boolean | null;
+    }>;
 };
 
 export type ExchangeInboxIssuesQueryVariables = Exact<{
@@ -18640,6 +18699,30 @@ export const ExchangeReconciliationIssuesDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ExchangeReconciliationIssuesQuery,
     ExchangeReconciliationIssuesQueryVariables
+>;
+export const ExchangeReconciliationStatesDocument = new TypedDocumentString(`
+    query ExchangeReconciliationStates {
+  erpReconciliationStates {
+    aggregateType
+    state
+    reason
+    filter
+    ourCount
+    theirCount
+    gap
+    explainedGap
+    seedingSince
+    seedingAlarm
+    lastRunAt
+    healAttempts
+    healOutcome
+    healDetail
+    healRealRun
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeReconciliationStatesQuery,
+    ExchangeReconciliationStatesQueryVariables
 >;
 export const ExchangeInboxIssuesDocument = new TypedDocumentString(`
     query ExchangeInboxIssues($options: IntegrationInboxIssueListOptions) {
