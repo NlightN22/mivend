@@ -26,6 +26,7 @@
         "@mivend/plugin-checks": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
+        "@mivend/plugin-reservation": "workspace:*",
         "@nestjs/graphql": "^13.0.0",
         "graphql": "^16.0.0",
         "graphql-tag": "^2.12.6",

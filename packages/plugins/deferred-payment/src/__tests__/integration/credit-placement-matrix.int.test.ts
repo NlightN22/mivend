@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FREIGHT_SHIPPING_METHOD_CODE } from 'shared';
 
 import { PLACEMENT_CASES, type PlacementCase } from '../../placement-cases';
@@ -111,5 +111,45 @@ describe('confirmation matrix at placement (real Postgres)', () => {
         for (const c of PLACEMENT_CASES) await h.setCasePolicy(c.code, 'hold');
         const buyer = await h.addBuyer(1_000_000);
         expect((await h.place(buyer, 1_000, 'card')).decision.route).toBe('after-payment');
+    });
+});
+
+describe('a failing placement check never stops the order (#415)', () => {
+    const c = PLACEMENT_CASES[0];
+
+    it('waits for a manager and records the failure when the case policy cannot be read', async () => {
+        await h.run(`ALTER TABLE check_policy RENAME TO check_policy_gone`);
+        try {
+            const { decision, metadata } = await placeCase(c);
+            expect(decision.route).toBe('manager-confirmation');
+            expect(metadata.public).toMatchObject({ awaitingManagerConfirmation: true });
+            expect(h.recordFailure).toHaveBeenCalledWith('999999', 'placement', expect.any(Error));
+        } finally {
+            await h.run(`ALTER TABLE check_policy_gone RENAME TO check_policy`);
+        }
+    });
+
+    it('does the same when the check provider throws', async () => {
+        const spy = vi.spyOn(h.checks, 'evaluateWithInput').mockRejectedValue(new Error('boom'));
+        try {
+            const { decision } = await placeCase(c);
+            expect(decision.route).toBe('manager-confirmation');
+            expect(h.recordFailure).toHaveBeenCalledWith('999999', 'placement', expect.any(Error));
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('does not consult the check when the credit limit already decides', async () => {
+        const spy = vi.spyOn(h.checks, 'evaluateWithInput').mockRejectedValue(new Error('boom'));
+        try {
+            const buyer = await h.addBuyer(100, 0, 14);
+            const { decision } = await h.place(buyer, 1_000, 'cash', ORDER_ID);
+            expect(decision.creditLimitExceeded).toBe(true);
+            expect(spy).not.toHaveBeenCalled();
+            expect(h.recordFailure).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
     });
 });

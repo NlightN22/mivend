@@ -9,6 +9,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
 import { OpenDeferredExposureService } from './open-deferred-exposure.service';
 import { DeferredCreditAssessmentService } from './deferred-credit-assessment.service';
@@ -29,6 +30,7 @@ import { CreditPlacementService } from './credit-placement.service';
         ChecksPlugin,
         CounterpartyPlugin,
         ErpOrderPlugin,
+        ReservationPlugin,
     ],
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [DeferredCreditShopResolver] },
     adminApiExtensions: {

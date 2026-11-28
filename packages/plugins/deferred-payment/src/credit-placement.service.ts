@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ChecksService } from '@mivend/plugin-checks';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { OrderChecksService } from '@mivend/plugin-reservation';
 import {
     Order,
     PaymentMetadata,
@@ -20,6 +21,7 @@ import {
     PLACEMENT_KEY,
     hasFreightShippingLine,
     withAggregateLock,
+    withSavepoint,
     type PaymentForm,
     type PlacementMetadata,
 } from 'shared';
@@ -67,6 +69,7 @@ export class CreditPlacementService {
         private readonly assessmentService: DeferredCreditAssessmentService,
         private readonly paymentMethodService: PaymentMethodService,
         private readonly checks: ChecksService,
+        private readonly orderChecks: OrderChecksService,
     ) {}
 
     async place(
@@ -151,14 +154,23 @@ export class CreditPlacementService {
         const branchId = customerId
             ? await this.assessmentService.resolveBranchId(ctx, order, customerId)
             : null;
-        const result = await this.checks.evaluateWithInput(
-            ctx,
-            'order',
-            { branchId },
-            PLACEMENT_CHECK_STAGE,
-            key,
-        );
-        return { code: placementCaseCode(key), hold: result.strongestConsequence === 'hold' };
+        const code = placementCaseCode(key);
+        try {
+            const result = await withSavepoint(this.connection, ctx, () =>
+                this.checks.evaluateWithInput(
+                    ctx,
+                    'order',
+                    { branchId },
+                    PLACEMENT_CHECK_STAGE,
+                    key,
+                ),
+            );
+            return { code, hold: result.strongestConsequence === 'hold' };
+        } catch (error) {
+            // A failing check never stops the order (#241); it waits for a manager instead of going straight to the ERP.
+            this.orderChecks.recordFailure(String(order.id), PLACEMENT_CHECK_STAGE, error);
+            return { code, hold: true };
+        }
     }
 
     async preview(ctx: RequestContext, order: Order): Promise<PlacementPreview> {

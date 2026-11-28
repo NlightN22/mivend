@@ -1,5 +1,5 @@
 import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
-import { afterAll, beforeAll, beforeEach } from 'vitest';
+import { afterAll, beforeAll, beforeEach, vi } from 'vitest';
 import { DataSource, Repository } from 'typeorm';
 import { CheckPolicyService, CheckRegistry, ChecksService } from '@mivend/plugin-checks';
 import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
@@ -74,6 +74,8 @@ interface UseCreditPlacementHarnessResult {
         branchId?: string | null,
     ) => Promise<void>;
     addShippingLine: (orderId: number, methodCode: string) => Promise<void>;
+    checks: ChecksService;
+    recordFailure: ReturnType<typeof vi.fn>;
     connection: {
         withTransaction<T>(c: TxCtx, work: (tx: TxCtx) => Promise<T>): Promise<T>;
         getRepository: (
@@ -177,12 +179,14 @@ export function useCreditPlacementHarness(schemaName: string): UseCreditPlacemen
         registry,
         new CheckPolicyService(connection as never, registry, null as never, null as never),
     );
+    const recordFailure = vi.fn();
     const placement = new CreditPlacementService(
         connection as never,
         counterpartyService as never,
         assessment,
         { getEligiblePaymentMethods: async () => [] } as never,
         checks,
+        { recordFailure } as never,
     );
 
     async function setCasePolicy(
@@ -330,6 +334,7 @@ export function useCreditPlacementHarness(schemaName: string): UseCreditPlacemen
     });
 
     beforeEach(async () => {
+        recordFailure.mockClear();
         state.maxAgeDays = 7;
         state.allowExceeding = false;
         state.reserveDays = 3;
@@ -351,6 +356,8 @@ export function useCreditPlacementHarness(schemaName: string): UseCreditPlacemen
         addShippingLine,
         connection,
         placement,
+        checks,
+        recordFailure,
         ctx,
         get dataSource() {
             return dataSource;

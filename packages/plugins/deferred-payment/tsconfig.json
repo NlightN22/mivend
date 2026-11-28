@@ -21,6 +21,9 @@
         },
         {
             "path": "../erp-order"
+        },
+        {
+            "path": "../reservation"
         }
     ]
 }
