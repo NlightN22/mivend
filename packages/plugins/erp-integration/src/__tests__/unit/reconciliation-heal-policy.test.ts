@@ -4,6 +4,7 @@ import {
     HEAL_BATCH_SIZE,
     HEAL_MAX_ATTEMPTS,
     HEAL_RETRY_AFTER_MS,
+    attemptsAfterComparison,
     checkBatch,
     decideHeal,
     isAlarmOutcome,
@@ -129,5 +130,49 @@ describe('isAlarmOutcome', () => {
         expect(isAlarmOutcome('batch-failed', HEAL_MAX_ATTEMPTS)).toBe(true);
         expect(isAlarmOutcome('batch-failed', 1)).toBe(false);
         expect(isAlarmOutcome('dry-run-only', 0)).toBe(false);
+    });
+});
+
+describe('attemptsAfterComparison', () => {
+    const t0 = new Date('2026-01-01T00:00:00Z');
+    const t1 = new Date('2026-01-01T06:00:00Z');
+    const base = {
+        attempts: 0,
+        healOutcome: 'healed' as const,
+        healRequestedAt: t1,
+        lastRunAt: t0,
+        previousGap: 10,
+        newGap: 10,
+    };
+
+    it('counts a heal that left the gap flat as a failed attempt', () => {
+        expect(attemptsAfterComparison(base)).toBe(1);
+    });
+
+    it('stops the heal loop after the maximum attempts when the same ids stay missing', () => {
+        let attempts = 0;
+        for (let run = 0; run < HEAL_MAX_ATTEMPTS; run += 1) {
+            attempts = attemptsAfterComparison({ ...base, attempts });
+        }
+        const decision = decideHeal({
+            state: 'stalled',
+            gap: 10,
+            attempts,
+            lastRequestedAt: t1,
+            now: new Date(t1.getTime() + HEAL_RETRY_AFTER_MS),
+            healKeyConfigured: true,
+        });
+        expect(decision).toEqual({ heal: false, reason: 'attempts-exhausted' });
+    });
+
+    it('resets attempts when the gap shrank', () => {
+        expect(attemptsAfterComparison({ ...base, attempts: 2, newGap: 4 })).toBe(0);
+    });
+
+    it('leaves attempts alone when no real heal ran since the last comparison', () => {
+        expect(attemptsAfterComparison({ ...base, attempts: 2, healRequestedAt: t0 })).toBe(2);
+        expect(attemptsAfterComparison({ ...base, attempts: 2, healOutcome: 'dry-run-only' })).toBe(
+            2,
+        );
     });
 });

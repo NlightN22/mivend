@@ -3,6 +3,7 @@ import type { ComparisonState } from './reconciliation-state';
 export const HEAL_BATCH_SIZE = 200;
 export const HEAL_MAX_IDS_PER_RUN = 2000;
 export const HEAL_RETRY_AFTER_MS = 6 * 60 * 60 * 1000;
+export const HEAL_TIME_BUDGET_MS = 30 * 60 * 1000;
 export const HEAL_MAX_ATTEMPTS = 3;
 export const HEAL_RATE_LIMIT_RETRIES = 3;
 
@@ -101,4 +102,23 @@ export function isAlarmOutcome(outcome: HealOutcome | null, attempts: number): b
         outcome === 'dry-run-ignored' ||
         outcome === 'all-not-found'
     );
+}
+
+// A real heal since the last comparison only counts as a success when the gap shrank; republished ids that
+// create no order leave the gap flat and must run into the attempt limit instead of being re-sent forever.
+export function attemptsAfterComparison(input: {
+    attempts: number;
+    healOutcome: HealOutcome | null;
+    healRequestedAt: Date | null;
+    lastRunAt: Date | null;
+    previousGap: number;
+    newGap: number;
+}): number {
+    const healedSinceLastRun =
+        input.healOutcome === 'healed' &&
+        input.healRequestedAt !== null &&
+        input.lastRunAt !== null &&
+        input.healRequestedAt > input.lastRunAt;
+    if (!healedSinceLastRun) return input.attempts;
+    return input.newGap < input.previousGap ? 0 : input.attempts + 1;
 }

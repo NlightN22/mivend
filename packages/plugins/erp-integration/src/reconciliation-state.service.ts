@@ -6,7 +6,7 @@ import { In } from 'typeorm';
 
 import { ErpReconciliationNotFound } from './entities/erp-reconciliation-not-found.entity';
 import { ErpReconciliationState } from './entities/erp-reconciliation-state.entity';
-import { decideHeal } from './reconciliation-heal-policy';
+import { attemptsAfterComparison, decideHeal } from './reconciliation-heal-policy';
 import type { HealDecision, HealOutcome } from './reconciliation-heal-policy';
 import { FAILED_OUTCOMES } from './reconciliation-heal-policy';
 import { filterFor } from './reconciliation-filters';
@@ -80,7 +80,17 @@ export class ReconciliationStateService {
                     inboxBacklog: input.signals.inboxBacklog,
                     sourceQueue: input.signals.sourceQueue ?? null,
                     lastRunAt: input.now,
-                    ...(outcome.state === 'in-sync' ? { healAttempts: 0 } : {}),
+                    healAttempts:
+                        outcome.state === 'in-sync' || !previous
+                            ? 0
+                            : attemptsAfterComparison({
+                                  attempts: previous.healAttempts,
+                                  healOutcome: previous.healOutcome,
+                                  healRequestedAt: previous.healRequestedAt,
+                                  lastRunAt: previous.lastRunAt,
+                                  previousGap: previous.gap,
+                                  newGap: outcome.gap,
+                              }),
                 };
                 if (previous) {
                     await repo.update(previous.id, fields);
@@ -122,7 +132,7 @@ export class ReconciliationStateService {
         });
     }
 
-    // Attempts reset only on success; a failed outcome adds one, a neutral one (dry run only, nothing missing) leaves it.
+    // A failed outcome adds an attempt; success is judged by the next comparison (attemptsAfterComparison).
     async finishHeal(
         ctx: RequestContext,
         aggregateType: string,
@@ -133,7 +143,7 @@ export class ReconciliationStateService {
             const row = await repo.findOneOrFail({ where: { aggregateType } });
             const failed = FAILED_OUTCOMES.includes(input.outcome);
             await repo.update(row.id, {
-                healAttempts: input.success ? 0 : row.healAttempts + (failed ? 1 : 0),
+                healAttempts: row.healAttempts + (failed ? 1 : 0),
                 healOutcome: input.outcome,
                 healDetail: input.detail.slice(0, 250),
                 healRealRun: input.realRun,
