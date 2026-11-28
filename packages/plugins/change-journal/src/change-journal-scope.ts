@@ -38,6 +38,8 @@ export const EXCLUDED_ENTITIES: Readonly<Record<string, string>> = {
     ConsistencyReport: 'computed consistency report',
     ConsistencySourceState: 'consistency sweep cursor',
     ErpReconciliationIssue: 'computed reconciliation finding, rewritten by sweeps',
+    ErpReconciliationState: 'computed comparison state, rewritten by every reconciliation run',
+    ErpReconciliationNotFound: 'ids the platform could not replay, bookkeeping of the healing run',
     CheckResult: 'computed check result cache',
     CheckStaleRequest: 'recompute request queue',
     SettlementTurnoverDaily: 'derived rollup of settlement documents, recomputed on every apply',
