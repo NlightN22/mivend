@@ -197,12 +197,16 @@ describe('exclusions and group filters scope', () => {
         expect(request!.excludeCustomerIds).toEqual([]);
     });
 
-    it('offers only manufacturer groups while the category and customer group switch is off', async () => {
+    it('offers manufacturer, category and customer groups', async () => {
         const result = await admin<{ analyticsFilterCapabilities: { groupKinds: string[] } }>(
             await staffToken('manager-a'),
             CAPABILITIES,
         );
-        expect(result.data!.analyticsFilterCapabilities.groupKinds).toEqual(['MANUFACTURER_GROUP']);
+        expect(result.data!.analyticsFilterCapabilities.groupKinds).toEqual([
+            'MANUFACTURER_GROUP',
+            'PRODUCT_CATEGORY',
+            'CUSTOMER_GROUP',
+        ]);
     });
 
     it.each(['analyticsFilterCapabilities', 'orderAnalyticsGroupSuggest'])(
@@ -220,17 +224,11 @@ describe('exclusions and group filters scope', () => {
         },
     );
 
-    it('refuses a category group while the switch is off', async () => {
-        const result = await admin(await staffToken('manager-a'), QUERY, {
-            input: {
-                from: '2026-01-01T00:00:00Z',
-                to: '2026-02-01T00:00:00Z',
-                granularity: 'NONE',
-                dimension: 'CUSTOMER',
-                groupFilters: [{ kind: 'PRODUCT_CATEGORY', ids: ['1'] }],
-            },
+    it.each(['PRODUCT_CATEGORY', 'CUSTOMER_GROUP'])('accepts a %s filter', async kind => {
+        const { state } = await asked('manager-a', {
+            groupFilters: [{ kind, ids: ['1'] }],
         });
 
-        expect(result.errors?.length ?? 0).toBeGreaterThan(0);
+        expect(state).toBe('OK');
     });
 });
